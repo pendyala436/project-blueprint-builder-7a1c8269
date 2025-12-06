@@ -31,7 +31,7 @@ interface MatchableWoman {
   isOnline: boolean;
   isBusy: boolean;
   currentChatCount: number;
-  canEarn: boolean; // Only Indian women can earn
+  isIndian: boolean; // Used for fallback matching priority
 }
 
 const MatchingScreen = () => {
@@ -194,7 +194,7 @@ const MatchingScreen = () => {
             isOnline: true,
             isBusy,
             currentChatCount: avail?.current_chat_count || 0,
-            canEarn: isIndian, // Only Indian women can earn
+            isIndian, // Used for fallback matching priority
           };
         })
       );
@@ -238,8 +238,8 @@ const MatchingScreen = () => {
       return sameLanguageWomen[0];
     }
 
-    // Priority 2: If no same language women, fallback to Indian women (who can earn)
-    const indianWomen = availableWomen.filter(w => w.canEarn);
+    // Priority 2: If no same language women, fallback to Indian women
+    const indianWomen = availableWomen.filter(w => w.isIndian);
     if (indianWomen.length > 0) {
       return indianWomen[0];
     }
@@ -584,12 +584,10 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }
               Same Language
             </div>
           )}
-          {woman.canEarn && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
-              <IndianRupee className="w-3 h-3" />
-              <span>Earns</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
+            <IndianRupee className="w-3 h-3" />
+            <span>Earns</span>
+          </div>
         </div>
       </div>
 
