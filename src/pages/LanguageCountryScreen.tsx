@@ -43,11 +43,11 @@ const LanguageCountryScreen = () => {
 
     toast({
       title: "Preferences saved! 🎉",
-      description: "Let's create your account.",
+      description: "Let's complete your profile.",
     });
     
-    // Navigate to auth screen
-    navigate("/auth");
+    // Navigate to basic info screen
+    navigate("/basic-info");
   };
 
   const isComplete = selectedLanguage && selectedCountry;

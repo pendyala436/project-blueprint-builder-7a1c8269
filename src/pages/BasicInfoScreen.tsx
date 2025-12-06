@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowLeft, User, Calendar, Heart } from "lucide-react";
-import { format, differenceInYears, parse } from "date-fns";
+import { ArrowRight, ArrowLeft, User, Calendar, Heart, Mail, Phone } from "lucide-react";
+import { format, differenceInYears } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -24,8 +26,12 @@ const genderOptions = [
   { value: "prefer-not-to-say", label: "Prefer not to say", emoji: "🤫" },
 ];
 
+const phoneSchema = z.string().regex(/^\+?[1-9]\d{6,14}$/, "Please enter a valid phone number");
+
 const BasicInfoScreen = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
   const [dob, setDob] = useState<Date | undefined>(undefined);
   const [gender, setGender] = useState<Gender>("");
@@ -36,13 +42,26 @@ const BasicInfoScreen = () => {
     fullName?: string;
     dob?: string;
     gender?: string;
+    phone?: string;
   }>({});
   const [shakeField, setShakeField] = useState<string | null>(null);
   const [touched, setTouched] = useState<{
     fullName?: boolean;
     dob?: boolean;
     gender?: boolean;
+    phone?: boolean;
   }>({});
+
+  // Fetch user email on mount
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+    };
+    getUser();
+  }, []);
 
   // Trigger shake animation
   const triggerShake = (field: string) => {
@@ -74,8 +93,16 @@ const BasicInfoScreen = () => {
     return undefined;
   };
 
+  // Validate phone
+  const validatePhone = (value: string) => {
+    if (!value.trim()) return "Phone number is required";
+    const result = phoneSchema.safeParse(value.trim());
+    if (!result.success) return result.error.errors[0].message;
+    return undefined;
+  };
+
   // Handle field blur
-  const handleBlur = (field: "fullName" | "dob" | "gender") => {
+  const handleBlur = (field: "fullName" | "dob" | "gender" | "phone") => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     let error: string | undefined;
@@ -85,6 +112,8 @@ const BasicInfoScreen = () => {
       error = validateDob(dob);
     } else if (field === "gender") {
       error = validateGender(gender);
+    } else if (field === "phone") {
+      error = validatePhone(phone);
     }
 
     if (error) {
@@ -107,22 +136,25 @@ const BasicInfoScreen = () => {
     const fullNameError = validateFullName(fullName);
     const dobError = validateDob(dob);
     const genderError = validateGender(gender);
+    const phoneError = validatePhone(phone);
 
     const newErrors = {
       fullName: fullNameError,
       dob: dobError,
       gender: genderError,
+      phone: phoneError,
     };
 
     setErrors(newErrors);
-    setTouched({ fullName: true, dob: true, gender: true });
+    setTouched({ fullName: true, dob: true, gender: true, phone: true });
 
     // Shake invalid fields
     if (fullNameError) triggerShake("fullName");
+    else if (phoneError) triggerShake("phone");
     else if (dobError) triggerShake("dob");
     else if (genderError) triggerShake("gender");
 
-    if (fullNameError || dobError || genderError) {
+    if (fullNameError || dobError || genderError || phoneError) {
       toast({
         title: "Please complete all fields",
         description: "All information is required to continue.",
@@ -136,18 +168,19 @@ const BasicInfoScreen = () => {
       description: "Your basic info has been saved.",
     });
     
-    // Store gender for photo verification
+    // Store data for next screens
     localStorage.setItem("userGender", gender);
+    localStorage.setItem("userPhone", phone);
     
-    // Navigate to photo upload screen
-    navigate("/photo-upload");
+    // Navigate to password setup screen
+    navigate("/password-setup");
   };
 
   const handleBack = () => {
-    navigate("/");
+    navigate("/language-country");
   };
 
-  const isComplete = fullName.trim() && dob && gender;
+  const isComplete = fullName.trim() && dob && gender && phone.trim();
 
   // Get default month for calendar (18 years ago)
   const defaultMonth = new Date();
@@ -188,6 +221,59 @@ const BasicInfoScreen = () => {
         {/* Form Card */}
         <div className="w-full max-w-md bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-card border border-border/30 animate-slide-up">
           <div className="space-y-6">
+            {/* Email (Read-only) */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Mail className="w-4 h-4 text-primary" />
+                Email
+              </label>
+              <Input
+                type="email"
+                value={email}
+                disabled
+                className="h-12 rounded-xl border-2 border-input bg-muted/50 text-muted-foreground cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">Email from your account</p>
+            </div>
+
+            {/* Phone Number */}
+            <div 
+              className={cn(
+                "space-y-2 transition-all",
+                shakeField === "phone" && "animate-shake"
+              )}
+            >
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Phone className="w-4 h-4 text-primary" />
+                Phone Number
+              </label>
+              <Input
+                type="tel"
+                placeholder="+1234567890"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (touched.phone) {
+                    const error = validatePhone(e.target.value);
+                    setErrors((prev) => ({ ...prev, phone: error }));
+                  }
+                }}
+                onBlur={() => handleBlur("phone")}
+                className={cn(
+                  "h-12 rounded-xl border-2 transition-all focus:ring-2 focus:ring-primary/20",
+                  errors.phone && touched.phone 
+                    ? "border-destructive focus:border-destructive" 
+                    : "border-input focus:border-primary"
+                )}
+              />
+              {errors.phone && touched.phone && (
+                <p className="text-xs text-destructive flex items-center gap-1 animate-fade-in">
+                  <span className="inline-block w-1 h-1 rounded-full bg-destructive" />
+                  {errors.phone}
+                </p>
+              )}
+            </div>
+
             {/* Full Name */}
             <div 
               className={cn(
