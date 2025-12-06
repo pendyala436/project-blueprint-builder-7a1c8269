@@ -1,7 +1,7 @@
 /**
  * seed-sample-users Edge Function
  * Creates sample auth users with profiles, wallets, and roles.
- * - male1-15, female1-15, admin1-15
+ * - male1-15, female1-15, lesbian1-15, transgender1-15, admin1-15
  * - Password: Chinn@2589
  * - Wallets with free balance (no recharge required)
  */
@@ -16,7 +16,7 @@ const corsHeaders = {
 interface UserToCreate {
   email: string;
   password: string;
-  gender: "male" | "female";
+  gender: string;
   role: "user" | "admin";
   name: string;
 }
@@ -28,6 +28,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Starting sample users seeding...");
+
     // Initialize Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
         password,
         gender: "male",
         role: "user",
-        name: `Sample Male ${i}`,
+        name: `Test Male ${i}`,
       });
     }
 
@@ -60,7 +62,29 @@ Deno.serve(async (req) => {
         password,
         gender: "female",
         role: "user",
-        name: `Sample Female ${i}`,
+        name: `Test Female ${i}`,
+      });
+    }
+
+    // Generate lesbian users (lesbian1 to lesbian15)
+    for (let i = 1; i <= 15; i++) {
+      usersToCreate.push({
+        email: `lesbian${i}@sample.meow.app`,
+        password,
+        gender: "lesbian",
+        role: "user",
+        name: `Test Lesbian ${i}`,
+      });
+    }
+
+    // Generate transgender users (transgender1 to transgender15)
+    for (let i = 1; i <= 15; i++) {
+      usersToCreate.push({
+        email: `transgender${i}@sample.meow.app`,
+        password,
+        gender: "transgender",
+        role: "user",
+        name: `Test Transgender ${i}`,
       });
     }
 
@@ -75,6 +99,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log(`Total users to create: ${usersToCreate.length}`);
+
     const results = {
       created: [] as string[],
       skipped: [] as string[],
@@ -83,14 +109,17 @@ Deno.serve(async (req) => {
 
     for (const user of usersToCreate) {
       try {
-        // Check if user already exists
+        // Check if user already exists by email
         const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
         const existingUser = existingUsers?.users?.find((u) => u.email === user.email);
 
         if (existingUser) {
+          console.log(`Skipping existing user: ${user.email}`);
           results.skipped.push(user.email);
           continue;
         }
+
+        console.log(`Creating user: ${user.email}`);
 
         // Create auth user
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -100,11 +129,13 @@ Deno.serve(async (req) => {
         });
 
         if (authError) {
+          console.error(`Auth error for ${user.email}:`, authError.message);
           results.errors.push(`${user.email}: ${authError.message}`);
           continue;
         }
 
         const userId = authData.user.id;
+        console.log(`Created auth user ${user.email} with ID: ${userId}`);
 
         // Create profile
         const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
@@ -114,17 +145,17 @@ Deno.serve(async (req) => {
           age: 25 + Math.floor(Math.random() * 10),
           country: "IN",
           state: "Maharashtra",
-          bio: `I am ${user.name}, a sample user for testing.`,
+          bio: `I am ${user.name}, a test user for development.`,
           verification_status: true,
           is_verified: true,
           profile_completeness: 100,
         });
 
         if (profileError) {
-          console.error(`Profile error for ${user.email}:`, profileError);
+          console.error(`Profile error for ${user.email}:`, profileError.message);
         }
 
-        // Create wallet with free balance (10000 INR)
+        // Create wallet with free balance (10000 INR - no recharge required)
         const { data: walletData, error: walletError } = await supabaseAdmin
           .from("wallets")
           .upsert({
@@ -136,7 +167,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (walletError) {
-          console.error(`Wallet error for ${user.email}:`, walletError);
+          console.error(`Wallet error for ${user.email}:`, walletError.message);
         }
 
         // Add initial wallet transaction for the free credits
@@ -147,7 +178,7 @@ Deno.serve(async (req) => {
             amount: 10000,
             type: "credit",
             status: "completed",
-            description: "Sample user initial credits - No recharge required",
+            description: "Test account - Free credits (no recharge required)",
           });
         }
 
@@ -158,6 +189,15 @@ Deno.serve(async (req) => {
           status_text: "Available",
         });
 
+        // Create user settings
+        await supabaseAdmin.from("user_settings").upsert({
+          user_id: userId,
+          theme: "system",
+          language: "English",
+          notification_messages: true,
+          notification_matches: true,
+        });
+
         // If admin, add admin role
         if (user.role === "admin") {
           const { error: roleError } = await supabaseAdmin.from("user_roles").upsert({
@@ -166,16 +206,27 @@ Deno.serve(async (req) => {
           });
 
           if (roleError) {
-            console.error(`Role error for ${user.email}:`, roleError);
+            console.error(`Role error for ${user.email}:`, roleError.message);
+          } else {
+            console.log(`Added admin role for ${user.email}`);
           }
         }
 
         results.created.push(user.email);
+        console.log(`Successfully created: ${user.email}`);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error(`Error creating ${user.email}:`, errorMessage);
         results.errors.push(`${user.email}: ${errorMessage}`);
       }
     }
+
+    console.log("Seeding completed. Summary:", {
+      total: usersToCreate.length,
+      created: results.created.length,
+      skipped: results.skipped.length,
+      errors: results.errors.length,
+    });
 
     return new Response(
       JSON.stringify({
@@ -187,6 +238,17 @@ Deno.serve(async (req) => {
           created: results.created.length,
           skipped: results.skipped.length,
           errors: results.errors.length,
+        },
+        credentials: {
+          password: "Chinn@2589",
+          walletBalance: "₹10,000 (free)",
+          categories: [
+            "male1-15@sample.meow.app",
+            "female1-15@sample.meow.app",
+            "lesbian1-15@sample.meow.app",
+            "transgender1-15@sample.meow.app",
+            "admin1-15@sample.meow.app",
+          ],
         },
       }),
       {

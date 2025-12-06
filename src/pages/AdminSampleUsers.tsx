@@ -241,12 +241,12 @@ export default function AdminSampleUsers() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <UserPlus className="h-5 w-5 text-primary" />
-              Create Sample Auth Users
+              Create Test Accounts
             </CardTitle>
             <CardDescription>
-              Creates 45 test users: male1-15, female1-15, admin1-15 with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
+              Creates 75 test users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
               <br />
-              Each user gets ₹10,000 wallet balance (no recharge required)
+              Each user gets ₹10,000 wallet balance (no recharge required for chatting)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -260,22 +260,32 @@ export default function AdminSampleUsers() {
                 ) : (
                   <>
                     <UserPlus className="h-4 w-4" />
-                    Seed Sample Users
+                    Create Test Accounts
                   </>
                 )}
               </Button>
-              <div className="flex gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-blue-500" /> 15 Males
+                  <User className="h-3 w-3 text-blue-500" /> male1-15
                 </Badge>
                 <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-pink-500" /> 15 Females
+                  <User className="h-3 w-3 text-pink-500" /> female1-15
                 </Badge>
                 <Badge variant="outline" className="gap-1">
-                  <Shield className="h-3 w-3 text-amber-500" /> 15 Admins
+                  <User className="h-3 w-3 text-purple-500" /> lesbian1-15
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <User className="h-3 w-3 text-cyan-500" /> transgender1-15
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <Shield className="h-3 w-3 text-amber-500" /> admin1-15
                 </Badge>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Email format: <code className="bg-muted px-1 rounded">male1@sample.meow.app</code>, 
+              <code className="bg-muted px-1 rounded ml-1">female5@sample.meow.app</code>, etc.
+            </p>
           </CardContent>
         </Card>
 
