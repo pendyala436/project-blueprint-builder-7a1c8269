@@ -36,7 +36,8 @@ import {
   Gift,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar
+  Calendar,
+  FileText
 } from "lucide-react";
 
 interface WalletTransaction {
@@ -276,8 +277,13 @@ const AdminFinanceDashboard = () => {
               <Button onClick={loadFinanceData} variant="outline" size="icon">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button onClick={exportCSV} className="gap-2">
+              <Button onClick={exportCSV} variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
+                Export
+              </Button>
+              <Button onClick={() => navigate("/admin/finance-reports")} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Monthly Reports
                 Export CSV
               </Button>
             </div>
