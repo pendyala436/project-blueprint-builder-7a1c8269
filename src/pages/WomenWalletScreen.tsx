@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -32,10 +26,54 @@ import {
   History,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  Zap,
+  Building2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
+interface PayoutMethod {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  features: string[];
+  regions: string;
+  color: string;
+}
+
+const PAYOUT_METHODS: PayoutMethod[] = [
+  {
+    id: "payoneer",
+    name: "Payoneer",
+    description: "Global payout for all countries",
+    icon: <Globe className="h-5 w-5" />,
+    features: ["200+ countries", "Multi-currency", "Low fees"],
+    regions: "Worldwide",
+    color: "from-orange-500/10 to-orange-500/5 border-orange-500/20"
+  },
+  {
+    id: "wise",
+    name: "Wise",
+    description: "Fast & cheap international transfers",
+    icon: <Zap className="h-5 w-5" />,
+    features: ["Best exchange rates", "Fast transfers", "Transparent fees"],
+    regions: "Worldwide",
+    color: "from-green-500/10 to-green-500/5 border-green-500/20"
+  },
+  {
+    id: "cashfree",
+    name: "Cashfree",
+    description: "Instant INR payout for India",
+    icon: <Building2 className="h-5 w-5" />,
+    features: ["Instant UPI", "Bank transfer", "IMPS/NEFT"],
+    regions: "India Only",
+    color: "from-purple-500/10 to-purple-500/5 border-purple-500/20"
+  }
+];
 
 interface Earning {
   id: string;
@@ -381,8 +419,8 @@ const WomenWalletScreen = () => {
                         <p className="font-medium">Withdrawal Request</p>
                         {getStatusBadge(withdrawal.status)}
                       </div>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        via {withdrawal.payment_method || "Bank Transfer"}
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        via {PAYOUT_METHODS.find(m => m.id === withdrawal.payment_method)?.name || withdrawal.payment_method || "Bank Transfer"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {format(new Date(withdrawal.created_at), "MMM d, yyyy h:mm a")}
@@ -434,27 +472,71 @@ const WomenWalletScreen = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer (NEFT/IMPS)</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                  <SelectItem value="paytm">Paytm Wallet</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <Label>Choose Payout Method</Label>
+              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                {PAYOUT_METHODS.map((method) => (
+                  <div key={method.id} className="relative">
+                    <RadioGroupItem
+                      value={method.id}
+                      id={`payout-${method.id}`}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`payout-${method.id}`}
+                      className={cn(
+                        "flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                        `bg-gradient-to-br ${method.color}`,
+                        "hover:shadow-md",
+                        paymentMethod === method.id
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-border"
+                      )}
+                    >
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        method.id === "payoneer" && "bg-orange-500/20 text-orange-600",
+                        method.id === "wise" && "bg-green-500/20 text-green-600",
+                        method.id === "cashfree" && "bg-purple-500/20 text-purple-600"
+                      )}>
+                        {method.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">{method.name}</p>
+                          <Badge variant="outline" className="text-[10px]">
+                            {method.regions}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{method.description}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {method.features.map((feature, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-[10px]">
+                              {feature}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {paymentMethod === method.id && (
+                        <CheckCircle2 className="h-5 w-5 text-primary absolute top-2 right-2" />
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
 
             <Button 
               className="w-full" 
               onClick={handleWithdraw}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !paymentMethod}
             >
-              {isSubmitting ? "Submitting..." : "Submit Request"}
+              {isSubmitting ? "Submitting..." : "Submit Withdrawal Request"}
             </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Minimum withdrawal: ₹{minWithdrawal.toLocaleString()} • Processing: 1-3 business days
+            </p>
           </div>
         </DialogContent>
       </Dialog>
