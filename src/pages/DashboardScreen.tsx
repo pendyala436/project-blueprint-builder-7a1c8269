@@ -10,6 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -71,18 +78,18 @@ const CURRENCY_RATES: Record<string, { rate: number; symbol: string; code: strin
   DEFAULT: { rate: 0.012, symbol: "$", code: "USD" },
 };
 
-// Generate recharge amounts (multiples of 200 and 300 up to 10000 INR)
+// Generate recharge amounts (multiples of 200 and 300 up to 1000 INR)
 const generateRechargeAmounts = (): number[] => {
   const amounts = new Set<number>();
   // Multiples of 200
-  for (let i = 200; i <= 10000; i += 200) {
+  for (let i = 200; i <= 1000; i += 200) {
     amounts.add(i);
   }
   // Multiples of 300
-  for (let i = 300; i <= 10000; i += 300) {
+  for (let i = 300; i <= 1000; i += 300) {
     amounts.add(i);
   }
-  return Array.from(amounts).sort((a, b) => a - b).slice(0, 12); // Take first 12 for UI
+  return Array.from(amounts).sort((a, b) => a - b);
 };
 
 const RECHARGE_AMOUNTS_INR = generateRechargeAmounts();
@@ -698,32 +705,40 @@ const DashboardScreen = () => {
               </RadioGroup>
             </div>
 
-            {/* Recharge Amounts */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">Select Amount</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {RECHARGE_AMOUNTS_INR.map((amountINR) => (
-                  <Button
-                    key={amountINR}
-                    variant={selectedAmount === amountINR ? "default" : "outline"}
-                    className={cn(
-                      "h-auto py-3 flex flex-col transition-all",
-                      selectedAmount === amountINR && "scale-95"
-                    )}
-                    onClick={() => handleRecharge(amountINR)}
-                    disabled={processingPayment}
-                  >
-                    {processingPayment && selectedAmount === amountINR ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span className="font-bold">{formatLocalCurrency(amountINR)}</span>
-                        <span className="text-[10px] opacity-70">₹{amountINR}</span>
-                      </>
-                    )}
-                  </Button>
-                ))}
-              </div>
+            {/* Recharge Amounts Dropdown */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium block">Select Amount</Label>
+              <Select
+                value={selectedAmount?.toString() || ""}
+                onValueChange={(value) => setSelectedAmount(Number(value))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose recharge amount" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RECHARGE_AMOUNTS_INR.map((amountINR) => (
+                    <SelectItem key={amountINR} value={amountINR.toString()}>
+                      {formatLocalCurrency(amountINR)} (₹{amountINR})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="gradient"
+                className="w-full gap-2"
+                onClick={() => selectedAmount && handleRecharge(selectedAmount)}
+                disabled={!selectedAmount || processingPayment}
+              >
+                {processingPayment ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4" />
+                    {selectedAmount ? `Pay ${formatLocalCurrency(selectedAmount)}` : "Select Amount"}
+                  </>
+                )}
+              </Button>
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
