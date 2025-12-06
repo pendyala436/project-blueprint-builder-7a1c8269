@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MapPin, Navigation, Loader2, Globe } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { countries } from "@/data/countries";
+import { getStatesForCountry, hasStates } from "@/data/states";
 import { supabase } from "@/integrations/supabase/client";
 
 const LocationSetupScreen = () => {
@@ -31,6 +32,19 @@ const LocationSetupScreen = () => {
     label: c.name,
     icon: c.flag
   }));
+
+  const stateOptions = country ? getStatesForCountry(country).map(s => ({
+    value: s.code,
+    label: s.name
+  })) : [];
+
+  const countryHasStates = country ? hasStates(country) : false;
+
+  // Reset state when country changes
+  const handleCountryChange = (newCountry: string) => {
+    setCountry(newCountry);
+    setState("");
+  };
 
   const detectLocation = useCallback(async () => {
     if (!navigator.geolocation) {
@@ -278,7 +292,7 @@ const LocationSetupScreen = () => {
                 <SearchableSelect
                   options={countryOptions}
                   value={country}
-                  onChange={setCountry}
+                  onChange={handleCountryChange}
                   placeholder="Select your country"
                   searchPlaceholder="Search countries..."
                 />
@@ -286,13 +300,23 @@ const LocationSetupScreen = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="state">State / Province</Label>
-                <Input
-                  id="state"
-                  placeholder="Enter your state or province"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="h-12"
-                />
+                {countryHasStates ? (
+                  <SearchableSelect
+                    options={stateOptions}
+                    value={state}
+                    onChange={setState}
+                    placeholder="Select your state/province"
+                    searchPlaceholder="Search states..."
+                  />
+                ) : (
+                  <Input
+                    id="state"
+                    placeholder="Enter your state or province"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="h-12"
+                  />
+                )}
               </div>
             </div>
           </div>
