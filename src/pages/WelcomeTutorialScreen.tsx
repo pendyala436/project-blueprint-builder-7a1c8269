@@ -111,7 +111,7 @@ const WelcomeTutorialScreen = () => {
 
   const handleSkip = async () => {
     await saveTutorialProgress(true);
-    navigate("/password-setup");
+    navigate("/registration-complete");
   };
 
   const handleComplete = async () => {
@@ -120,7 +120,7 @@ const WelcomeTutorialScreen = () => {
       title: "Tutorial Complete!",
       description: "You're ready to start connecting.",
     });
-    navigate("/password-setup");
+    navigate("/registration-complete");
   };
 
   const saveTutorialProgress = async (skipped: boolean) => {

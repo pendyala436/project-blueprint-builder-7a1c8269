@@ -109,8 +109,8 @@ const PasswordSetupScreen = () => {
     toast.success("Password set successfully! 🎉");
     setIsSubmitting(false);
     
-    // Navigate to registration complete screen
-    navigate("/registration-complete");
+    // Navigate to photo upload screen
+    navigate("/photo-upload");
   };
 
   const getStrengthPercentage = () => {
@@ -122,7 +122,7 @@ const PasswordSetupScreen = () => {
       {/* Header */}
       <header className="p-6 flex items-center justify-between">
         <MeowLogo size="sm" />
-        <ProgressIndicator currentStep={3} totalSteps={6} />
+        <ProgressIndicator currentStep={3} totalSteps={9} />
       </header>
 
       {/* Main Content */}

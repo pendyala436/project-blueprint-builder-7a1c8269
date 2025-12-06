@@ -178,7 +178,7 @@ const LocationSetupScreen = () => {
       {/* Header */}
       <header className="p-6 flex justify-between items-center">
         <MeowLogo />
-        <ProgressIndicator currentStep={4} totalSteps={5} />
+        <ProgressIndicator currentStep={5} totalSteps={9} />
       </header>
 
       {/* Main Content */}

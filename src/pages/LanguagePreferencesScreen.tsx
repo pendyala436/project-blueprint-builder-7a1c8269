@@ -110,7 +110,7 @@ const LanguagePreferencesScreen = () => {
       {/* Header */}
       <header className="p-6 flex justify-between items-center">
         <MeowLogo />
-        <ProgressIndicator currentStep={5} totalSteps={6} />
+        <ProgressIndicator currentStep={6} totalSteps={9} />
       </header>
 
       {/* Main Content */}
