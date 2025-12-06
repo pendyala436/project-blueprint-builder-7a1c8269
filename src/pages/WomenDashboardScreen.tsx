@@ -33,10 +33,11 @@ import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface Notification {
   id: string;
@@ -177,7 +178,9 @@ const WomenDashboardScreen = () => {
   }, []);
 
   const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
+  const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
   const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
+  const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
 
   const loadDashboardData = async () => {
     try {
@@ -204,7 +207,7 @@ const WomenDashboardScreen = () => {
       // Get woman's mother tongue
       const { data: womanLanguages } = await supabase
         .from("user_languages")
-        .select("language_name")
+        .select("language_name, language_code")
         .eq("user_id", user.id)
         .limit(1);
 
@@ -212,8 +215,13 @@ const WomenDashboardScreen = () => {
                            profile?.primary_language || 
                            profile?.preferred_language || 
                            "English";
+      const womanLanguageCode = womanLanguages?.[0]?.language_code || "eng_Latn";
       setCurrentWomanLanguage(womanLanguage);
+      setCurrentWomanLanguageCode(womanLanguageCode);
       setCurrentWomanCountry(profile?.country || "");
+      
+      // Set all supported NLLB languages for women
+      setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
       await Promise.all([
@@ -649,6 +657,36 @@ const WomenDashboardScreen = () => {
               userCountry={currentWomanCountry}
             />
           </div>
+        </div>
+
+        {/* Language Selection Card - Women can select any NLLB-200 language */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
+          <Card className="p-4 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border-indigo-500/20">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-indigo-500/20">
+                <Languages className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground mb-1">Your Language</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all {ALL_NLLB200_LANGUAGES.length} NLLB-200 languages.
+                </p>
+                <LanguageSelector
+                  selectedLanguage={currentWomanLanguage}
+                  selectedLanguageCode={currentWomanLanguageCode}
+                  onLanguageChange={(lang, code) => {
+                    setCurrentWomanLanguage(lang);
+                    setCurrentWomanLanguageCode(code);
+                    // Re-fetch online men with new language
+                    fetchOnlineMen(undefined, lang, currentWomanCountry);
+                  }}
+                  showAllLanguages={true}
+                  label=""
+                  description=""
+                />
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Stats Cards */}
