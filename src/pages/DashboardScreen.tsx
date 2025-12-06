@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -167,6 +168,7 @@ const DashboardScreen = () => {
     unreadNotifications: 0,
   });
   const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState("stripe");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -454,7 +456,7 @@ const DashboardScreen = () => {
       icon: <User className="w-6 h-6" />, 
       label: "Profile", 
       color: "from-violet-500 to-purple-400",
-      action: () => toast({ title: "Profile", description: "Coming soon!" })
+      action: () => setProfileEditOpen(true)
     },
   ];
 
@@ -831,6 +833,13 @@ const DashboardScreen = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Edit Dialog */}
+      <ProfileEditDialog
+        open={profileEditOpen}
+        onOpenChange={setProfileEditOpen}
+        onProfileUpdated={() => loadDashboardData()}
+      />
     </div>
   );
 };

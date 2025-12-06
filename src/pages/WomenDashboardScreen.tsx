@@ -26,6 +26,7 @@ import {
   Search,
   User
 } from "lucide-react";
+import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ const WomenDashboardScreen = () => {
     unreadNotifications: 0,
     todayEarnings: 0
   });
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
 
   const quickActions = [
     { 
@@ -101,7 +103,7 @@ const WomenDashboardScreen = () => {
       icon: <User className="w-6 h-6" />, 
       label: "Profile", 
       color: "from-violet-500 to-purple-400",
-      action: () => toast({ title: "Profile", description: "Coming soon!" })
+      action: () => setProfileEditOpen(true)
     },
   ];
 
@@ -721,6 +723,13 @@ const WomenDashboardScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Profile Edit Dialog */}
+      <ProfileEditDialog
+        open={profileEditOpen}
+        onOpenChange={setProfileEditOpen}
+        onProfileUpdated={() => loadDashboardData()}
+      />
     </div>
   );
 };
