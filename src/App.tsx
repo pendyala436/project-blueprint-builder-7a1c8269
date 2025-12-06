@@ -19,6 +19,7 @@ import DashboardScreen from "./pages/DashboardScreen";
 import OnlineUsersScreen from "./pages/OnlineUsersScreen";
 import MatchDiscoveryScreen from "./pages/MatchDiscoveryScreen";
 import ProfileDetailScreen from "./pages/ProfileDetailScreen";
+import ChatScreen from "./pages/ChatScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/online-users" element={<OnlineUsersScreen />} />
           <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
           <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
+          <Route path="/chat/:oderId" element={<ChatScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          chat_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          is_translated: boolean | null
+          message: string
+          receiver_id: string
+          sender_id: string
+          translated_message: string | null
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          is_translated?: boolean | null
+          message: string
+          receiver_id: string
+          sender_id: string
+          translated_message?: string | null
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          is_translated?: boolean | null
+          message?: string
+          receiver_id?: string
+          sender_id?: string
+          translated_message?: string | null
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string

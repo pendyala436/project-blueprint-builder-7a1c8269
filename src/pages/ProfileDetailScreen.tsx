@@ -202,10 +202,9 @@ const ProfileDetailScreen = () => {
   };
 
   const handleChat = () => {
-    toast({
-      title: "Chat",
-      description: "Messaging feature coming soon!",
-    });
+    if (profile) {
+      navigate(`/chat/${profile.userId}`);
+    }
   };
 
   const formatLastSeen = (lastSeen: string) => {

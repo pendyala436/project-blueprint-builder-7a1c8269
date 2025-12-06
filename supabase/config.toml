@@ -2,3 +2,9 @@ project_id = "tvneohngeracipjajzos"
 
 [functions.verify-photo]
 verify_jwt = false
+
+[functions.reset-password]
+verify_jwt = false
+
+[functions.translate-message]
+verify_jwt = false
