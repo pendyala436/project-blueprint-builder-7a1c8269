@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      processing_logs: {
+        Row: {
+          age_verified: boolean | null
+          completed_at: string | null
+          created_at: string
+          current_step: string | null
+          errors: string[] | null
+          gender_verified: boolean | null
+          id: string
+          language_detected: boolean | null
+          photo_verified: boolean | null
+          processing_status: string
+          progress_percent: number | null
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_verified?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          errors?: string[] | null
+          gender_verified?: boolean | null
+          id?: string
+          language_detected?: boolean | null
+          photo_verified?: boolean | null
+          processing_status?: string
+          progress_percent?: number | null
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_verified?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: string | null
+          errors?: string[] | null
+          gender_verified?: boolean | null
+          id?: string
+          language_detected?: boolean | null
+          photo_verified?: boolean | null
+          processing_status?: string
+          progress_percent?: number | null
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           country: string | null

@@ -84,11 +84,11 @@ const TermsAgreementScreen = () => {
       if (error) throw error;
 
       toast({
-        title: "Welcome!",
-        description: "Your account setup is complete.",
+        title: "Terms Accepted",
+        description: "Proceeding to verification...",
       });
 
-      navigate("/password-setup");
+      navigate("/ai-processing");
     } catch (error) {
       console.error("Error saving consent:", error);
       toast({
