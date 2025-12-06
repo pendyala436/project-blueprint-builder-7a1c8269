@@ -47,6 +47,57 @@ export type Database = {
         }
         Relationships: []
       }
+      active_chat_sessions: {
+        Row: {
+          chat_id: string
+          created_at: string
+          end_reason: string | null
+          ended_at: string | null
+          id: string
+          last_activity_at: string
+          man_user_id: string
+          rate_per_minute: number
+          started_at: string
+          status: string
+          total_earned: number
+          total_minutes: number
+          updated_at: string
+          woman_user_id: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          last_activity_at?: string
+          man_user_id: string
+          rate_per_minute?: number
+          started_at?: string
+          status?: string
+          total_earned?: number
+          total_minutes?: number
+          updated_at?: string
+          woman_user_id: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          last_activity_at?: string
+          man_user_id?: string
+          rate_per_minute?: number
+          started_at?: string
+          status?: string
+          total_earned?: number
+          total_minutes?: number
+          updated_at?: string
+          woman_user_id?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           attendance_date: string
@@ -197,6 +248,36 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
           translated_message?: string | null
+        }
+        Relationships: []
+      }
+      chat_pricing: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          min_withdrawal_balance: number
+          rate_per_minute: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          min_withdrawal_balance?: number
+          rate_per_minute?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          min_withdrawal_balance?: number
+          rate_per_minute?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1021,6 +1102,119 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payment_details: Json | null
+          payment_method: string | null
+          processed_at: string | null
+          processed_by: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      women_availability: {
+        Row: {
+          created_at: string
+          current_chat_count: number
+          id: string
+          is_available: boolean
+          last_assigned_at: string | null
+          max_concurrent_chats: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_chat_count?: number
+          id?: string
+          is_available?: boolean
+          last_assigned_at?: string | null
+          max_concurrent_chats?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_chat_count?: number
+          id?: string
+          is_available?: boolean
+          last_assigned_at?: string | null
+          max_concurrent_chats?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      women_earnings: {
+        Row: {
+          amount: number
+          chat_session_id: string | null
+          created_at: string
+          description: string | null
+          earning_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          chat_session_id?: string | null
+          created_at?: string
+          description?: string | null
+          earning_type?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          chat_session_id?: string | null
+          created_at?: string
+          description?: string | null
+          earning_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "women_earnings_chat_session_id_fkey"
+            columns: ["chat_session_id"]
+            isOneToOne: false
+            referencedRelation: "active_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

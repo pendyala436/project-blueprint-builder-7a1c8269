@@ -24,6 +24,7 @@ import WalletScreen from "./pages/WalletScreen";
 import SettingsScreen from "./pages/SettingsScreen";
 import ShiftManagementScreen from "./pages/ShiftManagementScreen";
 import WomenDashboardScreen from "./pages/WomenDashboardScreen";
+import WomenWalletScreen from "./pages/WomenWalletScreen";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminGiftPricing from "./pages/AdminGiftPricing";
@@ -32,6 +33,7 @@ import AdminChatMonitoring from "./pages/AdminChatMonitoring";
 import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
 import AdminBackupManagement from "./pages/AdminBackupManagement";
 import AdminLegalDocuments from "./pages/AdminLegalDocuments";
+import AdminChatPricing from "./pages/AdminChatPricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +66,7 @@ const App = () => (
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/shift-management" element={<ShiftManagementScreen />} />
           <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
+          <Route path="/women-wallet" element={<WomenWalletScreen />} />
           <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
           <Route path="/admin/users" element={<AdminUserManagement />} />
           <Route path="/admin/gifts" element={<AdminGiftPricing />} />
@@ -72,6 +75,7 @@ const App = () => (
           <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
           <Route path="/admin/backups" element={<AdminBackupManagement />} />
           <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
+          <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
