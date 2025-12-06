@@ -17,6 +17,7 @@ import WelcomeTutorialScreen from "./pages/WelcomeTutorialScreen";
 import RegistrationCompleteScreen from "./pages/RegistrationCompleteScreen";
 import DashboardScreen from "./pages/DashboardScreen";
 import OnlineUsersScreen from "./pages/OnlineUsersScreen";
+import MatchDiscoveryScreen from "./pages/MatchDiscoveryScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
           <Route path="/dashboard" element={<DashboardScreen />} />
           <Route path="/online-users" element={<OnlineUsersScreen />} />
+          <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
