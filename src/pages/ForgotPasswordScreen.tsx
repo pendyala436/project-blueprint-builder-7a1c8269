@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Phone, Lock, ArrowLeft, ArrowRight, Loader2, Check, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 
 type Step = "verify" | "reset";
 
@@ -228,19 +229,15 @@ const ForgotPasswordScreen = () => {
                     <Phone className="w-4 h-4 text-primary" />
                     Phone Number
                   </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+1234567890"
+                  <PhoneInputWithCode
                     value={phone}
-                    onChange={(e) => {
-                      setPhone(e.target.value);
+                    onChange={(value) => {
+                      setPhone(value);
                       setErrors((prev) => ({ ...prev, phone: undefined }));
                     }}
-                    className={cn(
-                      "h-12 rounded-xl border-2 transition-all",
-                      errors.phone ? "border-destructive" : "border-input focus:border-primary"
-                    )}
+                    error={!!errors.phone}
+                    placeholder="Enter your phone number"
+                    defaultCountryCode="IN"
                   />
                   {errors.phone && (
                     <p className="text-xs text-destructive">{errors.phone}</p>
