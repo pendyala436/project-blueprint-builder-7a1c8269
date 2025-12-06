@@ -708,6 +708,63 @@ export type Database = {
         }
         Relationships: []
       }
+      policy_violation_alerts: {
+        Row: {
+          action_taken: string | null
+          admin_notes: string | null
+          alert_type: string
+          content: string | null
+          created_at: string
+          detected_by: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          source_chat_id: string | null
+          source_message_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          violation_type: string
+        }
+        Insert: {
+          action_taken?: string | null
+          admin_notes?: string | null
+          alert_type?: string
+          content?: string | null
+          created_at?: string
+          detected_by?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          source_chat_id?: string | null
+          source_message_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          violation_type: string
+        }
+        Update: {
+          action_taken?: string | null
+          admin_notes?: string | null
+          alert_type?: string
+          content?: string | null
+          created_at?: string
+          detected_by?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          source_chat_id?: string | null
+          source_message_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          violation_type?: string
+        }
+        Relationships: []
+      }
       processing_logs: {
         Row: {
           age_verified: boolean | null

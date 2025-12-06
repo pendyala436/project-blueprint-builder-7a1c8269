@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.shift-scheduler]
 verify_jwt = false
+
+[functions.ai-women-approval]
+verify_jwt = false
+
+[functions.content-moderation]
+verify_jwt = false
