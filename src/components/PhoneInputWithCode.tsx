@@ -312,11 +312,11 @@ export default function PhoneInputWithCode({
     onChange(country.dialCode + phoneWithoutCode);
   };
 
-  // Handle phone number input
+  // Handle phone number input (max 10 digits)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // Only allow numbers after the country code
-    const numbersOnly = inputValue.replace(/[^\d]/g, "");
+    // Only allow numbers after the country code, max 10 digits
+    const numbersOnly = inputValue.replace(/[^\d]/g, "").slice(0, 10);
     onChange(selectedCountry.dialCode + numbersOnly);
   };
 
