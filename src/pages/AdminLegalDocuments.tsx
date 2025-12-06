@@ -50,10 +50,22 @@ interface LegalDocument {
 
 const documentTypes = [
   { value: "terms", label: "Terms of Service" },
+  { value: "terms_of_service", label: "Terms of Service" },
   { value: "privacy", label: "Privacy Policy" },
+  { value: "privacy_policy", label: "Privacy Policy" },
+  { value: "security_policy", label: "Security Policy" },
   { value: "gdpr", label: "GDPR Compliance" },
+  { value: "gdpr_compliance", label: "GDPR Compliance" },
   { value: "ccpa", label: "CCPA Compliance" },
   { value: "dpdp", label: "DPDP Compliance" },
+  { value: "data_storage_policy", label: "Data Storage Policy" },
+  { value: "user_guidelines", label: "User Guidelines" },
+  { value: "anti_sexual_content", label: "Anti-Sexual Content Policy" },
+  { value: "payments_policy", label: "Payments & Payouts" },
+  { value: "content_moderation", label: "Content Moderation" },
+  { value: "age_verification", label: "Age Verification" },
+  { value: "ai_disclosure", label: "AI Usage Disclosure" },
+  { value: "data_retention", label: "Data Retention" },
   { value: "cookie", label: "Cookie Policy" },
   { value: "refund", label: "Refund Policy" },
   { value: "other", label: "Other" },
@@ -67,6 +79,7 @@ const AdminLegalDocuments = () => {
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   
@@ -117,6 +130,31 @@ const AdminLegalDocuments = () => {
       title: "Refreshed",
       description: "Document list updated",
     });
+  };
+
+  const handleSeedDocuments = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-legal-documents');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Documents Seeded",
+        description: `Successfully seeded ${data?.results?.filter((r: any) => r.status === 'created').length || 0} documents`,
+      });
+      
+      await fetchDocuments();
+    } catch (error: any) {
+      console.error("Error seeding documents:", error);
+      toast({
+        title: "Seeding Failed",
+        description: error.message || "Failed to seed default documents",
+        variant: "destructive",
+      });
+    } finally {
+      setSeeding(false);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,6 +415,15 @@ const AdminLegalDocuments = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSeedDocuments}
+                disabled={seeding}
+              >
+                <FileCheck className={`w-4 h-4 mr-2 ${seeding ? 'animate-pulse' : ''}`} />
+                {seeding ? 'Seeding...' : 'Seed Defaults'}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
