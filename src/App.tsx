@@ -25,6 +25,7 @@ import SettingsScreen from "./pages/SettingsScreen";
 import ShiftManagementScreen from "./pages/ShiftManagementScreen";
 import WomenDashboardScreen from "./pages/WomenDashboardScreen";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
+import AdminUserManagement from "./pages/AdminUserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/shift-management" element={<ShiftManagementScreen />} />
           <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
           <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
+          <Route path="/admin/users" element={<AdminUserManagement />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
