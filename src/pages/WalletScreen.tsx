@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
@@ -17,7 +19,8 @@ import {
   History,
   IndianRupee,
   DollarSign,
-  Euro
+  Euro,
+  CheckCircle2
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -37,6 +40,59 @@ interface Transaction {
   created_at: string;
 }
 
+interface PaymentGateway {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+  supportedCurrencies: string[];
+}
+
+const PAYMENT_GATEWAYS: PaymentGateway[] = [
+  {
+    id: "razorpay",
+    name: "Razorpay",
+    logo: "🇮🇳",
+    description: "UPI, Cards, Netbanking",
+    supportedCurrencies: ["INR"]
+  },
+  {
+    id: "paytm",
+    name: "Paytm",
+    logo: "💳",
+    description: "Paytm Wallet, UPI",
+    supportedCurrencies: ["INR"]
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    logo: "💎",
+    description: "Cards, Apple Pay, Google Pay",
+    supportedCurrencies: ["USD", "EUR", "GBP", "INR"]
+  },
+  {
+    id: "paypal",
+    name: "PayPal",
+    logo: "🅿️",
+    description: "PayPal Balance, Cards",
+    supportedCurrencies: ["USD", "EUR", "GBP"]
+  },
+  {
+    id: "adyen",
+    name: "Adyen",
+    logo: "🌐",
+    description: "Global Payments",
+    supportedCurrencies: ["USD", "EUR", "GBP", "INR"]
+  },
+  {
+    id: "ccavenue",
+    name: "CCAvenue",
+    logo: "🏦",
+    description: "Cards, Netbanking, Wallets",
+    supportedCurrencies: ["INR"]
+  }
+];
+
 const RECHARGE_AMOUNTS = [100, 500, 1000, 2000, 5000];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
@@ -52,7 +108,9 @@ const WalletScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedGateway, setSelectedGateway] = useState<string>("razorpay");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     fetchWalletData();
@@ -117,13 +175,20 @@ const WalletScreen = () => {
   };
 
   const handleRecharge = async (amount: number) => {
+    if (!selectedGateway) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    const gateway = PAYMENT_GATEWAYS.find(g => g.id === selectedGateway);
+    if (!gateway) return;
+
     setSelectedAmount(amount);
+    setProcessingPayment(true);
     
-    // Simulate payment gateway integration
-    // In production, this would redirect to Razorpay/PayPal/etc.
-    toast.info(`Opening payment gateway for ₹${amount}...`);
+    toast.info(`Opening ${gateway.name} for ₹${amount}...`);
     
-    // Simulating successful recharge for demo
+    // Simulating payment gateway redirect and callback
     setTimeout(async () => {
       try {
         if (!wallet) return;
@@ -140,7 +205,7 @@ const WalletScreen = () => {
 
         if (updateError) throw updateError;
 
-        // Create transaction record
+        // Create transaction record with gateway info
         const { error: txError } = await supabase
           .from("wallet_transactions")
           .insert({
@@ -148,8 +213,8 @@ const WalletScreen = () => {
             user_id: user.id,
             type: "credit",
             amount: amount,
-            description: `Wallet recharge via Payment Gateway`,
-            reference_id: `TXN${Date.now()}`,
+            description: `Wallet recharge via ${gateway.name}`,
+            reference_id: `${gateway.id.toUpperCase()}_${Date.now()}`,
             status: "completed"
           });
 
@@ -159,12 +224,13 @@ const WalletScreen = () => {
         await fetchWalletData();
         setTimeout(() => setIsAnimating(false), 500);
         
-        toast.success(`₹${amount} added to your wallet!`);
+        toast.success(`₹${amount} added via ${gateway.name}!`);
       } catch (error) {
         console.error("Recharge error:", error);
         toast.error("Recharge failed. Please try again.");
       } finally {
         setSelectedAmount(null);
+        setProcessingPayment(false);
       }
     }, 2000);
   };
@@ -246,12 +312,58 @@ const WalletScreen = () => {
           </CardContent>
         </Card>
 
+        {/* Payment Gateway Selection */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Payment Method
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={selectedGateway}
+              onValueChange={setSelectedGateway}
+              className="grid grid-cols-2 gap-3"
+            >
+              {PAYMENT_GATEWAYS.map((gateway) => (
+                <div key={gateway.id} className="relative">
+                  <RadioGroupItem
+                    value={gateway.id}
+                    id={gateway.id}
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor={gateway.id}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                      "hover:border-primary/50 hover:bg-muted/50",
+                      selectedGateway === gateway.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border"
+                    )}
+                  >
+                    <span className="text-2xl mb-1">{gateway.logo}</span>
+                    <span className="font-medium text-sm">{gateway.name}</span>
+                    <span className="text-[10px] text-muted-foreground text-center">
+                      {gateway.description}
+                    </span>
+                    {selectedGateway === gateway.id && (
+                      <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                    )}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
         {/* Quick Recharge */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Plus className="h-5 w-5 text-primary" />
-              Quick Recharge
+              Select Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -265,16 +377,20 @@ const WalletScreen = () => {
                     selectedAmount === amount && "scale-95"
                   )}
                   onClick={() => handleRecharge(amount)}
-                  disabled={selectedAmount !== null}
+                  disabled={processingPayment}
                 >
-                  ₹{amount}
+                  {processingPayment && selectedAmount === amount ? (
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                  ) : (
+                    `₹${amount}`
+                  )}
                 </Button>
               ))}
               <Button
                 variant="outline"
                 className="h-14 text-lg font-semibold border-dashed"
                 onClick={() => toast.info("Custom amount feature coming soon!")}
-                disabled={selectedAmount !== null}
+                disabled={processingPayment}
               >
                 Other
               </Button>
@@ -282,7 +398,9 @@ const WalletScreen = () => {
             
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <CreditCard className="h-3 w-3" />
-              <span>Powered by Razorpay, PayPal, Paytm, CCAvenue</span>
+              <span>
+                Paying via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name || "selected gateway"}
+              </span>
             </div>
           </CardContent>
         </Card>
