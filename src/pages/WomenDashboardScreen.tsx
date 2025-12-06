@@ -118,16 +118,16 @@ const WomenDashboardScreen = () => {
 
   const quickActions = [
     { 
-      icon: <Search className="w-6 h-6" />, 
-      label: "Discover", 
-      color: "from-primary to-rose-400",
-      action: () => navigate("/online-users")
-    },
-    { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: "Messages", 
       color: "from-blue-500 to-blue-400",
       action: () => navigate("/match-discovery")
+    },
+    { 
+      icon: <Wallet className="w-6 h-6" />, 
+      label: "Withdraw", 
+      color: "from-green-500 to-emerald-400",
+      action: () => navigate("/women-wallet")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
@@ -234,8 +234,13 @@ const WomenDashboardScreen = () => {
 
   const fetchOnlineMen = async (womanUserId?: string, womanLanguage?: string, womanCountry?: string) => {
     try {
-      const isWomanIndian = womanCountry?.toLowerCase() === "india";
       const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
+
+      // Get all NLLB-200 language names for checking
+      const allNllbLanguages = [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
+      const nllbLanguageNames = new Set(allNllbLanguages.map(l => l.name.toLowerCase()));
+      const nonIndianNllbNames = new Set(NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
+      const indianNllbNames = new Set(INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
 
       // Get all online male users with their profiles and wallet info
       const { data: onlineStatuses } = await supabase
@@ -243,111 +248,129 @@ const WomenDashboardScreen = () => {
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      if (!onlineStatuses || onlineStatuses.length === 0) {
-        setRechargedMen([]);
-        setNonRechargedMen([]);
-        setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
-        return;
-      }
-
-      const onlineUserIds = onlineStatuses.map(s => s.user_id);
-
-      // Fetch profiles of online users who are male (check both "male" and "Male")
-      const { data: maleProfiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
-        .in("user_id", onlineUserIds)
+      // Also fetch sample users who are online males
+      const { data: sampleUsers } = await supabase
+        .from("sample_users")
+        .select("*")
+        .eq("is_online", true)
+        .eq("is_active", true)
         .or("gender.eq.male,gender.eq.Male");
 
-      if (!maleProfiles || maleProfiles.length === 0) {
-        setRechargedMen([]);
-        setNonRechargedMen([]);
-        setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
-        return;
+      const onlineMen: OnlineMan[] = [];
+
+      // Process real users
+      if (onlineStatuses && onlineStatuses.length > 0) {
+        const onlineUserIds = onlineStatuses.map(s => s.user_id);
+
+        // Fetch profiles of online users who are male
+        const { data: maleProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
+          .in("user_id", onlineUserIds)
+          .or("gender.eq.male,gender.eq.Male");
+
+        if (maleProfiles && maleProfiles.length > 0) {
+          const maleUserIds = maleProfiles.map(p => p.user_id);
+
+          // Fetch wallet balances
+          const { data: wallets } = await supabase
+            .from("wallets")
+            .select("user_id, balance")
+            .in("user_id", maleUserIds);
+
+          // Fetch languages for each man
+          const { data: userLanguages } = await supabase
+            .from("user_languages")
+            .select("user_id, language_name")
+            .in("user_id", maleUserIds);
+
+          const walletMap = new Map(wallets?.map(w => [w.user_id, Number(w.balance)]) || []);
+          const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
+          const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
+
+          // Process real male profiles
+          maleProfiles.forEach(profile => {
+            const manLanguage = languageMap.get(profile.user_id) || 
+                               profile.primary_language || 
+                               profile.preferred_language || 
+                               "Unknown";
+            const manCountry = profile.country?.toLowerCase() || "";
+            const isManIndian = manCountry === "india";
+            
+            const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
+            const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
+            const isManNonIndianNllb = nonIndianNllbNames.has(manLanguage.toLowerCase());
+            const walletBalance = walletMap.get(profile.user_id) || 0;
+            const hasRecharged = walletBalance > 0;
+
+            // Filter: Only show non-Indian men with NLLB-200 languages who have recharged
+            // OR same language men who have recharged
+            if (!hasRecharged) return; // Must have recharged
+            if (!isManNllbLanguage) return; // Must speak NLLB-200 language
+            if (isManIndian && !isSameLanguage) return; // Indian men only if same language
+
+            onlineMen.push({
+              userId: profile.user_id,
+              fullName: profile.full_name || "Anonymous",
+              age: profile.age,
+              photoUrl: profile.photo_url,
+              country: profile.country,
+              state: profile.state,
+              motherTongue: manLanguage,
+              preferredLanguage: profile.preferred_language,
+              walletBalance,
+              hasRecharged,
+              lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
+              isSameLanguage,
+              isNllbLanguage: isManNllbLanguage,
+            });
+          });
+        }
       }
 
-      const maleUserIds = maleProfiles.map(p => p.user_id);
+      // Process sample users (treat as having recharged with mock balance)
+      if (sampleUsers && sampleUsers.length > 0) {
+        sampleUsers.forEach(sample => {
+          const manLanguage = sample.language || "Unknown";
+          const manCountry = sample.country?.toLowerCase() || "";
+          const isManIndian = manCountry === "india";
+          
+          const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
+          const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
+          
+          // Filter: Only show non-Indian men with NLLB-200 languages
+          // OR same language men
+          if (!isManNllbLanguage) return;
+          if (isManIndian && !isSameLanguage) return;
 
-      // Fetch wallet balances
-      const { data: wallets } = await supabase
-        .from("wallets")
-        .select("user_id, balance")
-        .in("user_id", maleUserIds);
-
-      // Fetch languages for each man
-      const { data: userLanguages } = await supabase
-        .from("user_languages")
-        .select("user_id, language_name")
-        .in("user_id", maleUserIds);
-
-      // Map wallet balances and languages to users
-      const walletMap = new Map(wallets?.map(w => [w.user_id, Number(w.balance)]) || []);
-      const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
-      const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
-
-      // Get all NLLB-200 language names for checking
-      const allNllbLanguages = [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
-      const nllbLanguageNames = new Set(allNllbLanguages.map(l => l.name.toLowerCase()));
-      const nonIndianNllbNames = new Set(NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
-
-      // Create online men list with language matching info
-      const onlineMen: OnlineMan[] = maleProfiles.map(profile => {
-        const manLanguage = languageMap.get(profile.user_id) || 
-                           profile.primary_language || 
-                           profile.preferred_language || 
-                           "Unknown";
-        
-        const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
-        const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
-        const isManNonIndianNllb = nonIndianNllbNames.has(manLanguage.toLowerCase());
-
-        return {
-          userId: profile.user_id,
-          fullName: profile.full_name || "Anonymous",
-          age: profile.age,
-          photoUrl: profile.photo_url,
-          country: profile.country,
-          state: profile.state,
-          motherTongue: manLanguage,
-          preferredLanguage: profile.preferred_language,
-          walletBalance: walletMap.get(profile.user_id) || 0,
-          hasRecharged: (walletMap.get(profile.user_id) || 0) > 0,
-          lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
-          isSameLanguage,
-          isNllbLanguage: isManNllbLanguage,
-        };
-      });
-
-      // Filter men based on woman's country:
-      // - Same language men are always shown
-      // - Indian women also see non-Indian NLLB-200 language men
-      const filteredMen = onlineMen.filter(man => {
-        // Always show same language men
-        if (man.isSameLanguage) return true;
-        
-        // Indian women can see non-Indian NLLB-200 language men
-        if (isWomanIndian && man.isNllbLanguage) return true;
-        
-        // For non-Indian women, only show same language men
-        return isWomanIndian;
-      });
+          onlineMen.push({
+            userId: sample.id,
+            fullName: sample.name || "Anonymous",
+            age: sample.age,
+            photoUrl: sample.photo_url,
+            country: sample.country,
+            state: null,
+            motherTongue: manLanguage,
+            preferredLanguage: null,
+            walletBalance: 500, // Mock balance for sample users
+            hasRecharged: true, // Sample users are treated as recharged
+            lastSeen: sample.updated_at || new Date().toISOString(),
+            isSameLanguage,
+            isNllbLanguage: isManNllbLanguage,
+          });
+        });
+      }
 
       // Sort: same language first, then by wallet balance
-      const sortedMen = filteredMen.sort((a, b) => {
+      const sortedMen = onlineMen.sort((a, b) => {
         if (a.isSameLanguage !== b.isSameLanguage) {
           return a.isSameLanguage ? -1 : 1;
         }
         return b.walletBalance - a.walletBalance;
       });
 
-      // Separate and sort
-      const recharged = sortedMen
-        .filter(m => m.hasRecharged)
-        .sort((a, b) => {
-          if (a.isSameLanguage !== b.isSameLanguage) return a.isSameLanguage ? -1 : 1;
-          return b.walletBalance - a.walletBalance;
-        });
-
+      // Separate recharged (with balance) and non-recharged
+      const recharged = sortedMen.filter(m => m.hasRecharged);
       const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
 
       setRechargedMen(recharged);
