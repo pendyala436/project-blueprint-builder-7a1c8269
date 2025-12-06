@@ -584,7 +584,9 @@ const ShiftManagementScreen = () => {
                     mode="single"
                     selected={selectedBookDate}
                     onSelect={setSelectedBookDate}
-                    disabled={(date) => date < new Date() || isWeekOffDay(date) || isLeaveDay(date)}
+                    disabled={(date) => date < new Date() || isLeaveDay(date)}
+                    modifiers={{ weekOff: (date) => isWeekOffDay(date) }}
+                    modifiersStyles={{ weekOff: { color: "hsl(var(--muted-foreground))", fontStyle: "italic" } }}
                     className="rounded-md border mx-auto"
                   />
                 </div>
@@ -697,8 +699,8 @@ const ShiftManagementScreen = () => {
                 <div className="flex items-center gap-3">
                   <Bot className="h-5 w-5 text-rose-500" />
                   <div>
-                    <p className="font-medium text-sm">AI Scheduled Week Off</p>
-                    <p className="text-xs text-muted-foreground">For load balancing</p>
+                    <p className="font-medium text-sm">AI Suggested Week Off</p>
+                    <p className="text-xs text-muted-foreground">Optional - you can still work if you want</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
