@@ -10,22 +10,16 @@ import {
   ArrowLeft,
   Languages,
   MapPin,
-  Filter,
   Loader2,
   Sparkles,
   RefreshCw,
-  ChevronDown,
-  Eye
+  Eye,
+  Shield,
+  Star
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+import { MatchFiltersPanel, DEFAULT_FILTERS, type MatchFilters } from "@/components/MatchFiltersPanel";
+import { Badge } from "@/components/ui/badge";
 
 interface MatchUser {
   matchId: string;
@@ -36,11 +30,11 @@ interface MatchUser {
   country: string;
   matchScore: number;
   commonLanguages: string[];
-}
-
-interface Filters {
-  language: string;
-  country: string;
+  age?: number;
+  isVerified?: boolean;
+  isPremium?: boolean;
+  isOnline?: boolean;
+  bio?: string;
 }
 
 const MatchDiscoveryScreen = () => {
@@ -50,7 +44,7 @@ const MatchDiscoveryScreen = () => {
   const [matches, setMatches] = useState<MatchUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const [filters, setFilters] = useState<Filters>({ language: "all", country: "all" });
+  const [filters, setFilters] = useState<MatchFilters>(DEFAULT_FILTERS);
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
   const [currentUserGender, setCurrentUserGender] = useState<string>("");
@@ -90,18 +84,97 @@ const MatchDiscoveryScreen = () => {
       const oppositeGender = userGender === "Male" ? "Female" : 
                             userGender === "Female" ? "Male" : "";
 
-      // Fetch potential matches (opposite gender, excluding current user)
+      // Build comprehensive query with all profile fields for filtering
       let profilesQuery = supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, country, preferred_language")
+        .select(`
+          user_id, full_name, photo_url, country, preferred_language,
+          age, height_cm, body_type, education_level, occupation, religion,
+          marital_status, has_children, smoking_habit, drinking_habit,
+          dietary_preference, fitness_level, pet_preference, travel_frequency,
+          personality_type, zodiac_sign, bio, is_verified, is_premium, last_active_at
+        `)
         .neq("user_id", user.id);
 
       if (oppositeGender) {
         profilesQuery = profilesQuery.eq("gender", oppositeGender);
       }
 
+      // Apply demographic filters
       if (filters.country !== "all") {
         profilesQuery = profilesQuery.eq("country", filters.country);
+      }
+      if (filters.bodyType !== "all") {
+        profilesQuery = profilesQuery.eq("body_type", filters.bodyType);
+      }
+      if (filters.educationLevel !== "all") {
+        profilesQuery = profilesQuery.eq("education_level", filters.educationLevel);
+      }
+      if (filters.occupation !== "all") {
+        profilesQuery = profilesQuery.eq("occupation", filters.occupation);
+      }
+      if (filters.religion !== "all") {
+        profilesQuery = profilesQuery.eq("religion", filters.religion);
+      }
+      if (filters.maritalStatus !== "all") {
+        profilesQuery = profilesQuery.eq("marital_status", filters.maritalStatus);
+      }
+      if (filters.hasChildren === "yes") {
+        profilesQuery = profilesQuery.eq("has_children", true);
+      } else if (filters.hasChildren === "no") {
+        profilesQuery = profilesQuery.eq("has_children", false);
+      }
+
+      // Lifestyle filters
+      if (filters.smokingHabit !== "all") {
+        profilesQuery = profilesQuery.eq("smoking_habit", filters.smokingHabit);
+      }
+      if (filters.drinkingHabit !== "all") {
+        profilesQuery = profilesQuery.eq("drinking_habit", filters.drinkingHabit);
+      }
+      if (filters.dietaryPreference !== "all") {
+        profilesQuery = profilesQuery.eq("dietary_preference", filters.dietaryPreference);
+      }
+      if (filters.fitnessLevel !== "all") {
+        profilesQuery = profilesQuery.eq("fitness_level", filters.fitnessLevel);
+      }
+      if (filters.petPreference !== "all") {
+        profilesQuery = profilesQuery.eq("pet_preference", filters.petPreference);
+      }
+      if (filters.travelFrequency !== "all") {
+        profilesQuery = profilesQuery.eq("travel_frequency", filters.travelFrequency);
+      }
+
+      // Personality filters
+      if (filters.zodiacSign !== "all") {
+        profilesQuery = profilesQuery.eq("zodiac_sign", filters.zodiacSign);
+      }
+      if (filters.personalityType !== "all") {
+        profilesQuery = profilesQuery.eq("personality_type", filters.personalityType);
+      }
+
+      // Safety & behavior filters
+      if (filters.verifiedOnly) {
+        profilesQuery = profilesQuery.eq("is_verified", true);
+      }
+      if (filters.premiumOnly) {
+        profilesQuery = profilesQuery.eq("is_premium", true);
+      }
+      if (filters.hasPhoto) {
+        profilesQuery = profilesQuery.not("photo_url", "is", null);
+      }
+      if (filters.hasBio) {
+        profilesQuery = profilesQuery.not("bio", "is", null);
+      }
+      if (filters.newUsersOnly) {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        profilesQuery = profilesQuery.gte("created_at", weekAgo.toISOString());
+      }
+      if (filters.onlineNow) {
+        const fiveMinutesAgo = new Date();
+        fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+        profilesQuery = profilesQuery.gte("last_active_at", fiveMinutesAgo.toISOString());
       }
 
       const { data: profiles } = await profilesQuery;
@@ -120,14 +193,34 @@ const MatchDiscoveryScreen = () => {
 
       const matchedUserIds = new Set(existingMatches?.map(m => m.matched_user_id) || []);
 
+      // Get online status for all profiles
+      const userIds = profiles.map(p => p.user_id);
+      const { data: onlineStatuses } = await supabase
+        .from("user_status")
+        .select("user_id, is_online")
+        .in("user_id", userIds);
+
+      const onlineStatusMap = new Map(onlineStatuses?.map(s => [s.user_id, s.is_online]) || []);
+
       // Collect unique languages and countries for filters
       const languagesSet = new Set<string>();
       const countriesSet = new Set<string>();
 
-      // Calculate match scores based on language compatibility (NLLB-200 rules)
+      // Calculate match scores
       const matchedUsers: MatchUser[] = await Promise.all(
         profiles
           .filter(p => !matchedUserIds.has(p.user_id))
+          .filter(p => {
+            // Age filter (client-side for range)
+            if (p.age) {
+              if (p.age < filters.ageRange[0] || p.age > filters.ageRange[1]) return false;
+            }
+            // Height filter (client-side for range)
+            if (p.height_cm) {
+              if (p.height_cm < filters.heightRange[0] || p.height_cm > filters.heightRange[1]) return false;
+            }
+            return true;
+          })
           .map(async (profile) => {
             const { data: profileLanguages } = await supabase
               .from("user_languages")
@@ -165,6 +258,11 @@ const MatchDiscoveryScreen = () => {
               country: profile.country || "Unknown",
               matchScore: Math.min(matchScore, 100),
               commonLanguages,
+              age: profile.age || undefined,
+              isVerified: profile.is_verified || false,
+              isPremium: profile.is_premium || false,
+              isOnline: onlineStatusMap.get(profile.user_id) || false,
+              bio: profile.bio || undefined,
             };
           })
       );
@@ -283,53 +381,13 @@ const MatchDiscoveryScreen = () => {
           <MeowLogo size="sm" />
           
           <div className="flex items-center gap-2">
-            {/* Filters Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="w-4 h-4" />
-                  Filters
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Language</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => setFilters(prev => ({ ...prev, language: "all" }))}
-                  className={filters.language === "all" ? "bg-accent" : ""}
-                >
-                  All Languages
-                </DropdownMenuItem>
-                {availableLanguages.map(lang => (
-                  <DropdownMenuItem 
-                    key={lang}
-                    onClick={() => setFilters(prev => ({ ...prev, language: lang }))}
-                    className={filters.language === lang ? "bg-accent" : ""}
-                  >
-                    {lang}
-                  </DropdownMenuItem>
-                ))}
-                
-                <DropdownMenuSeparator />
-                
-                <DropdownMenuLabel>Country</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => setFilters(prev => ({ ...prev, country: "all" }))}
-                  className={filters.country === "all" ? "bg-accent" : ""}
-                >
-                  All Countries
-                </DropdownMenuItem>
-                {availableCountries.map(country => (
-                  <DropdownMenuItem 
-                    key={country}
-                    onClick={() => setFilters(prev => ({ ...prev, country: country }))}
-                    className={filters.country === country ? "bg-accent" : ""}
-                  >
-                    {country}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Advanced Filters Panel */}
+            <MatchFiltersPanel
+              filters={filters}
+              onFiltersChange={setFilters}
+              availableLanguages={availableLanguages}
+              availableCountries={availableCountries}
+            />
 
             <Button 
               variant="ghost" 
@@ -356,7 +414,7 @@ const MatchDiscoveryScreen = () => {
             <div className="flex justify-center gap-3">
               <Button 
                 variant="outline" 
-                onClick={() => setFilters({ language: "all", country: "all" })}
+                onClick={() => setFilters(DEFAULT_FILTERS)}
               >
                 Clear Filters
               </Button>
@@ -375,20 +433,31 @@ const MatchDiscoveryScreen = () => {
               </p>
             </div>
 
-            {/* Active Filters */}
-            {(filters.language !== "all" || filters.country !== "all") && (
+            {/* Active Filters Summary */}
+            {(filters.language !== "all" || filters.country !== "all" || filters.verifiedOnly || filters.onlineNow) && (
               <div className="flex flex-wrap justify-center gap-2 animate-fade-in">
                 {filters.language !== "all" && (
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm flex items-center gap-1">
+                  <Badge variant="secondary" className="gap-1">
                     <Languages className="w-3 h-3" />
                     {filters.language}
-                  </span>
+                  </Badge>
                 )}
                 {filters.country !== "all" && (
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm flex items-center gap-1">
+                  <Badge variant="secondary" className="gap-1">
                     <MapPin className="w-3 h-3" />
                     {filters.country}
-                  </span>
+                  </Badge>
+                )}
+                {filters.verifiedOnly && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Shield className="w-3 h-3" />
+                    Verified
+                  </Badge>
+                )}
+                {filters.onlineNow && (
+                  <Badge variant="secondary" className="gap-1 bg-emerald-500/20 text-emerald-600">
+                    Online Now
+                  </Badge>
                 )}
               </div>
             )}
