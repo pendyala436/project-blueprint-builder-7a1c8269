@@ -326,6 +326,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          accent_color: string
+          auto_translate: boolean
+          created_at: string
+          distance_unit: string
+          id: string
+          language: string
+          notification_matches: boolean
+          notification_messages: boolean
+          notification_promotions: boolean
+          notification_sound: boolean
+          notification_vibration: boolean
+          profile_visibility: string
+          show_online_status: boolean
+          show_read_receipts: boolean
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string
+          auto_translate?: boolean
+          created_at?: string
+          distance_unit?: string
+          id?: string
+          language?: string
+          notification_matches?: boolean
+          notification_messages?: boolean
+          notification_promotions?: boolean
+          notification_sound?: boolean
+          notification_vibration?: boolean
+          profile_visibility?: string
+          show_online_status?: boolean
+          show_read_receipts?: boolean
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string
+          auto_translate?: boolean
+          created_at?: string
+          distance_unit?: string
+          id?: string
+          language?: string
+          notification_matches?: boolean
+          notification_messages?: boolean
+          notification_promotions?: boolean
+          notification_sound?: boolean
+          notification_vibration?: boolean
+          profile_visibility?: string
+          show_online_status?: boolean
+          show_read_receipts?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_status: {
         Row: {
           created_at: string
