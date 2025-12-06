@@ -116,6 +116,45 @@ export type Database = {
         }
         Relationships: []
       }
+      tutorial_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          id: string
+          skipped: boolean | null
+          steps_viewed: number[] | null
+          theme_preference: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          skipped?: boolean | null
+          steps_viewed?: number[] | null
+          theme_preference?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          skipped?: boolean | null
+          steps_viewed?: number[] | null
+          theme_preference?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_consent: {
         Row: {
           agreed_terms: boolean

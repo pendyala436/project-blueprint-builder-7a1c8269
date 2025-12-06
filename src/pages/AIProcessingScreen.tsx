@@ -243,7 +243,7 @@ const AIProcessingScreen = () => {
   };
 
   const handleContinue = () => {
-    navigate("/password-setup");
+    navigate("/welcome-tutorial");
   };
 
   const handleRetry = () => {
