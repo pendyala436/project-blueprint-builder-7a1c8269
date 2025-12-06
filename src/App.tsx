@@ -38,6 +38,7 @@ import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
 import AdminSettings from "./pages/AdminSettings";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import GiftSendingScreen from "./pages/GiftSendingScreen";
+import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           <Route path="/send-gift/:receiverId" element={<GiftSendingScreen />} />
+          <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
