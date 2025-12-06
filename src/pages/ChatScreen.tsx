@@ -47,13 +47,36 @@ import {
   Image,        // Image upload icon
   FileText,     // File upload icon
   Camera,       // Selfie/camera icon
-  X             // Close icon
+  X,            // Close icon
+  UserPlus,     // Add friend icon
+  UserMinus,    // Remove friend icon
+  Ban,          // Block icon
+  Shield,       // Unblock icon
+  Heart,        // Friend icon
+  AlertTriangle // Warning icon
 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
 // Billing and earnings display components
@@ -150,6 +173,15 @@ const ChatScreen = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
+  // Friend and block states
+  const [isFriend, setIsFriend] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedByPartner, setIsBlockedByPartner] = useState(false);
+  const [friendshipId, setFriendshipId] = useState<string | null>(null);
+  const [blockId, setBlockId] = useState<string | null>(null);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   
   // ============= REFS =============
   
@@ -390,6 +422,10 @@ const ChatScreen = () => {
         }
       }
 
+      // ============= CHECK FRIEND/BLOCK STATUS =============
+      await checkFriendshipStatus(user.id, partnerId);
+      await checkBlockStatus(user.id, partnerId);
+
     } catch (error) {
       console.error("Error initializing chat:", error);
       toast({
@@ -399,6 +435,213 @@ const ChatScreen = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Check if users are friends
+   */
+  const checkFriendshipStatus = async (userId: string, partnerId: string) => {
+    const { data } = await supabase
+      .from("user_friends")
+      .select("id, status")
+      .or(`and(user_id.eq.${userId},friend_id.eq.${partnerId}),and(user_id.eq.${partnerId},friend_id.eq.${userId})`)
+      .eq("status", "accepted")
+      .maybeSingle();
+    
+    if (data) {
+      setIsFriend(true);
+      setFriendshipId(data.id);
+    } else {
+      setIsFriend(false);
+      setFriendshipId(null);
+    }
+  };
+
+  /**
+   * Check if user is blocked or blocking
+   */
+  const checkBlockStatus = async (userId: string, partnerId: string) => {
+    // Check if current user blocked the partner
+    const { data: blockedByMe } = await supabase
+      .from("user_blocks")
+      .select("id")
+      .eq("blocked_by", userId)
+      .eq("blocked_user_id", partnerId)
+      .maybeSingle();
+    
+    if (blockedByMe) {
+      setIsBlocked(true);
+      setBlockId(blockedByMe.id);
+    } else {
+      setIsBlocked(false);
+      setBlockId(null);
+    }
+
+    // Check if partner blocked current user
+    const { data: blockedByPartner } = await supabase
+      .from("user_blocks")
+      .select("id")
+      .eq("blocked_by", partnerId)
+      .eq("blocked_user_id", userId)
+      .maybeSingle();
+    
+    setIsBlockedByPartner(!!blockedByPartner);
+  };
+
+  /**
+   * Add friend
+   */
+  const handleAddFriend = async () => {
+    if (!chatPartner || actionLoading) return;
+    setActionLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("user_friends")
+        .insert({
+          user_id: currentUserId,
+          friend_id: chatPartner.userId,
+          status: "accepted",
+          created_by: currentUserId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setIsFriend(true);
+      setFriendshipId(data.id);
+      toast({
+        title: "Friend Added",
+        description: `${chatPartner.fullName} is now your friend!`,
+      });
+    } catch (error: any) {
+      console.error("Error adding friend:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add friend",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Remove friend
+   */
+  const handleRemoveFriend = async () => {
+    if (!chatPartner || actionLoading) return;
+    setActionLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from("user_friends")
+        .delete()
+        .or(`and(user_id.eq.${currentUserId},friend_id.eq.${chatPartner.userId}),and(user_id.eq.${chatPartner.userId},friend_id.eq.${currentUserId})`);
+
+      if (error) throw error;
+
+      setIsFriend(false);
+      setFriendshipId(null);
+      toast({
+        title: "Friend Removed",
+        description: `${chatPartner.fullName} has been removed from your friends.`,
+      });
+    } catch (error: any) {
+      console.error("Error removing friend:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove friend",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Block user
+   */
+  const handleBlockUser = async () => {
+    if (!chatPartner || actionLoading) return;
+    setActionLoading(true);
+    setShowBlockDialog(false);
+
+    try {
+      const { data, error } = await supabase
+        .from("user_blocks")
+        .insert({
+          blocked_by: currentUserId,
+          blocked_user_id: chatPartner.userId,
+          block_type: "permanent",
+          reason: "Blocked by user"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setIsBlocked(true);
+      setBlockId(data.id);
+      
+      // Also remove friendship if exists
+      if (isFriend) {
+        await supabase
+          .from("user_friends")
+          .delete()
+          .or(`and(user_id.eq.${currentUserId},friend_id.eq.${chatPartner.userId}),and(user_id.eq.${chatPartner.userId},friend_id.eq.${currentUserId})`);
+        setIsFriend(false);
+        setFriendshipId(null);
+      }
+
+      toast({
+        title: "User Blocked",
+        description: `${chatPartner.fullName} has been blocked. You won't receive messages from them.`,
+      });
+    } catch (error: any) {
+      console.error("Error blocking user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to block user",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /**
+   * Unblock user
+   */
+  const handleUnblockUser = async () => {
+    if (!chatPartner || actionLoading || !blockId) return;
+    setActionLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from("user_blocks")
+        .delete()
+        .eq("id", blockId);
+
+      if (error) throw error;
+
+      setIsBlocked(false);
+      setBlockId(null);
+      toast({
+        title: "User Unblocked",
+        description: `${chatPartner.fullName} has been unblocked.`,
+      });
+    } catch (error: any) {
+      console.error("Error unblocking user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to unblock user",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -462,6 +705,18 @@ const ChatScreen = () => {
     
     // Don't send empty messages or while already sending
     if (!newMessage.trim() || !chatPartner || isSending) return;
+
+    // Check if blocked
+    if (isBlocked || isBlockedByPartner) {
+      toast({
+        title: "Cannot Send Message",
+        description: isBlocked 
+          ? "You have blocked this user. Unblock to send messages."
+          : "You cannot send messages to this user.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Store message and clear input immediately for responsiveness
     const messageText = newMessage.trim();
@@ -849,8 +1104,122 @@ const ChatScreen = () => {
           >
             <Languages className="w-5 h-5" />
           </button>
+
+          {/* Friend/Block Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 rounded-full hover:bg-muted transition-colors">
+                <MoreVertical className="w-5 h-5 text-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {/* Friend Status Indicator */}
+              {isFriend && (
+                <div className="px-2 py-1.5 text-xs text-emerald-500 flex items-center gap-1">
+                  <Heart className="w-3 h-3 fill-current" />
+                  Friends
+                </div>
+              )}
+              
+              {/* Friend/Unfriend */}
+              {isFriend ? (
+                <DropdownMenuItem 
+                  onClick={handleRemoveFriend}
+                  disabled={actionLoading}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <UserMinus className="w-4 h-4 mr-2" />
+                  Unfriend
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem 
+                  onClick={handleAddFriend}
+                  disabled={actionLoading || isBlocked}
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Friend
+                </DropdownMenuItem>
+              )}
+              
+              <DropdownMenuSeparator />
+              
+              {/* Block/Unblock */}
+              {isBlocked ? (
+                <DropdownMenuItem 
+                  onClick={handleUnblockUser}
+                  disabled={actionLoading}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Unblock User
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem 
+                  onClick={() => setShowBlockDialog(true)}
+                  disabled={actionLoading}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  Block User
+                </DropdownMenuItem>
+              )}
+              
+              <DropdownMenuSeparator />
+              
+              {/* View Profile */}
+              <DropdownMenuItem 
+                onClick={() => chatPartner && navigate(`/profile/${chatPartner.userId}`)}
+              >
+                <Circle className="w-4 h-4 mr-2" />
+                View Profile
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
+
+      {/* Block Confirmation Dialog */}
+      <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Block {chatPartner?.fullName}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will prevent you from receiving messages from this user. 
+              They won't be notified that you blocked them.
+              {isFriend && " This will also remove them from your friends list."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBlockUser}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Block User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Blocked by partner warning */}
+      {isBlockedByPartner && (
+        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2">
+          <p className="text-sm text-destructive text-center">
+            You cannot send messages to this user.
+          </p>
+        </div>
+      )}
+
+      {/* Your own block warning */}
+      {isBlocked && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
+          <p className="text-sm text-amber-600 text-center">
+            You have blocked this user. Unblock to send messages.
+          </p>
+        </div>
+      )}
 
       {/* ============= BILLING/EARNINGS BAR ============= */}
       {chatPartner && (
