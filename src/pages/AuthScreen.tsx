@@ -69,7 +69,7 @@ const AuthScreen = () => {
   const checkProfileCompletion = async (userId: string) => {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, verification_status")
+      .select("full_name, verification_status, preferred_language, country")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -77,8 +77,10 @@ const AuthScreen = () => {
       navigate("/dashboard");
     } else if (profile?.full_name) {
       navigate("/photo-upload");
-    } else {
+    } else if (profile?.preferred_language && profile?.country) {
       navigate("/basic-info");
+    } else {
+      navigate("/language-country");
     }
   };
 
@@ -213,7 +215,7 @@ const AuthScreen = () => {
           title: "Welcome to Meow!",
           description: "Let's set up your profile.",
         });
-        navigate("/basic-info");
+        navigate("/language-country");
       }
     } catch (error) {
       toast({
