@@ -99,7 +99,6 @@ const ShiftManagementScreen = () => {
   // Dialog states
   const [bookDialogOpen, setBookDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
-  const [selectedBookDate, setSelectedBookDate] = useState<Date | undefined>();
   const [selectedBookHours, setSelectedBookHours] = useState("9");
   const [selectedLeaveDate, setSelectedLeaveDate] = useState<Date | undefined>();
   const [leaveReason, setLeaveReason] = useState("");
@@ -291,18 +290,13 @@ const ShiftManagementScreen = () => {
   };
 
   const bookShift = async () => {
-    if (!selectedBookDate) {
-      toast.error("Please select a date");
-      return;
-    }
-
     setBookingShift(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const hours = parseInt(selectedBookHours);
-      // Use current local time as start
+      // Use current local time as start - booking for TODAY only
       const now = new Date();
       const startHour = now.getHours();
       const startMinute = now.getMinutes();
@@ -316,7 +310,7 @@ const ShiftManagementScreen = () => {
 
       const { error } = await supabase.from("scheduled_shifts").insert({
         user_id: user.id,
-        scheduled_date: format(selectedBookDate, "yyyy-MM-dd"),
+        scheduled_date: format(now, "yyyy-MM-dd"), // Today's date only
         start_time: startTime,
         end_time: endTime,
         timezone: userTimezone,
@@ -327,9 +321,8 @@ const ShiftManagementScreen = () => {
 
       if (error) throw error;
 
-      toast.success(`Shift booked for ${format(selectedBookDate, "MMM dd")} (${hours} hours)`);
+      toast.success(`Shift booked for today (${hours} hours from ${format(now, "h:mm a")})`);
       setBookDialogOpen(false);
-      setSelectedBookDate(undefined);
       fetchAllData();
     } catch (error) {
       console.error("Error booking shift:", error);
@@ -581,22 +574,15 @@ const ShiftManagementScreen = () => {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <CalendarPlus className="h-5 w-5" />
-                  Book Shift Hours
+                  Book Today's Shift
                 </DialogTitle>
-                <DialogDescription>Schedule your work hours in advance</DialogDescription>
+                <DialogDescription>Book your work hours for today</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Select Date</Label>
-                  <Calendar
-                    mode="single"
-                    selected={selectedBookDate}
-                    onSelect={setSelectedBookDate}
-                    disabled={(date) => date < new Date() || isLeaveDay(date)}
-                    modifiers={{ weekOff: (date) => isWeekOffDay(date) }}
-                    modifiersStyles={{ weekOff: { color: "hsl(var(--muted-foreground))", fontStyle: "italic" } }}
-                    className="rounded-md border mx-auto"
-                  />
+                <div className="p-4 bg-muted/50 rounded-lg text-center">
+                  <p className="text-2xl font-bold">{format(new Date(), "EEEE")}</p>
+                  <p className="text-lg text-muted-foreground">{format(new Date(), "MMMM dd, yyyy")}</p>
+                  <p className="text-sm text-primary mt-2">Starting from {format(new Date(), "h:mm a")}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Hours to Work</Label>
@@ -610,13 +596,16 @@ const ShiftManagementScreen = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Shift will end at approximately {format(new Date(Date.now() + parseInt(selectedBookHours) * 60 * 60 * 1000), "h:mm a")}
+                  </p>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setBookDialogOpen(false)}>Cancel</Button>
-                <Button onClick={bookShift} disabled={bookingShift || !selectedBookDate}>
+                <Button onClick={bookShift} disabled={bookingShift}>
                   {bookingShift ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                  Book Shift
+                  Book {selectedBookHours}h Shift
                 </Button>
               </DialogFooter>
             </DialogContent>
