@@ -250,6 +250,36 @@ serve(async (req) => {
           );
         }
 
+        const MAX_PARALLEL_CHATS = 3;
+
+        // Check man's active chat count (max 3 parallel sessions)
+        const { count: manActiveChats } = await supabase
+          .from("active_chat_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("man_user_id", man_user_id)
+          .eq("status", "active");
+
+        if ((manActiveChats || 0) >= MAX_PARALLEL_CHATS) {
+          return new Response(
+            JSON.stringify({ success: false, message: `Maximum ${MAX_PARALLEL_CHATS} parallel chats allowed` }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check woman's active chat count (max 3 parallel sessions)
+        const { count: womanActiveChats } = await supabase
+          .from("active_chat_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("woman_user_id", woman_user_id)
+          .eq("status", "active");
+
+        if ((womanActiveChats || 0) >= MAX_PARALLEL_CHATS) {
+          return new Response(
+            JSON.stringify({ success: false, message: "This user is at maximum chat capacity" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Remove from queue if present
         await supabase
           .from("chat_wait_queue")

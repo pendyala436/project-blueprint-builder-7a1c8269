@@ -471,12 +471,12 @@ const WomenDashboardScreen = () => {
     navigate(`/profile/${userId}`);
   };
 
-  const UserCard = ({ user, showBalance = false }: { user: OnlineMan; showBalance?: boolean }) => (
+  const UserCard = ({ user }: { user: OnlineMan }) => (
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
         user.isSameLanguage && "ring-2 ring-primary/50",
-        showBalance && user.walletBalance > 1000 && "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent"
+        user.walletBalance > 1000 && "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent"
       )}
       onClick={() => handleViewProfile(user.userId)}
     >
@@ -489,8 +489,9 @@ const WomenDashboardScreen = () => {
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
-            {showBalance && user.walletBalance > 1000 && (
+            {/* Online indicator */}
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+            {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
                 <Crown className="h-4 w-4 text-amber-500" />
               </div>
@@ -501,20 +502,33 @@ const WomenDashboardScreen = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
               {user.age && (
-                <span className="text-sm text-muted-foreground">{user.age} yrs</span>
+                <Badge variant="outline" className="text-xs font-medium">
+                  {user.age} yrs
+                </Badge>
               )}
               {user.isSameLanguage && (
                 <Badge variant="default" className="text-[10px] bg-primary/90">
                   Same Language
                 </Badge>
               )}
-              {showBalance && user.walletBalance > 500 && (
-                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600">
-                  Premium
+            </div>
+            
+            {/* Wallet Balance - Always visible and prominent */}
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                <IndianRupee className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-bold text-green-600">
+                  ₹{user.walletBalance.toFixed(0)}
+                </span>
+              </div>
+              {user.isNllbLanguage && !user.isSameLanguage && (
+                <Badge variant="outline" className="text-[10px]">
+                  <Globe className="h-2.5 w-2.5 mr-1" />
+                  Auto-translate
                 </Badge>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
               <div className="flex items-center gap-1">
                 <Languages className="h-3 w-3" />
@@ -530,21 +544,6 @@ const WomenDashboardScreen = () => {
                 </>
               )}
             </div>
-
-            {showBalance && (
-              <div className="flex items-center gap-1 mt-1">
-                <IndianRupee className="h-3 w-3 text-green-500" />
-                <span className="text-sm font-medium text-green-500">
-                  ₹{user.walletBalance.toFixed(0)}
-                </span>
-                {user.isNllbLanguage && !user.isSameLanguage && (
-                  <Badge variant="outline" className="text-[10px] ml-2">
-                    <Globe className="h-2.5 w-2.5 mr-1" />
-                    Auto-translate
-                  </Badge>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -560,6 +559,9 @@ const WomenDashboardScreen = () => {
       </CardContent>
     </Card>
   );
+
+  // Max parallel sessions allowed
+  const MAX_PARALLEL_CHATS = 3;
 
   if (isLoading) {
     return (
@@ -751,7 +753,7 @@ const WomenDashboardScreen = () => {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <UserCard user={user} showBalance={true} />
+                    <UserCard user={user} />
                   </div>
                 ))}
               </div>
@@ -777,7 +779,7 @@ const WomenDashboardScreen = () => {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <UserCard user={user} showBalance={false} />
+                    <UserCard user={user} />
                   </div>
                 ))}
               </div>
