@@ -319,6 +319,54 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_type: string
+          effective_date: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          is_active: boolean
+          mime_type: string | null
+          name: string
+          updated_at: string
+          uploaded_by: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          effective_date?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          name: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          effective_date?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          name?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
