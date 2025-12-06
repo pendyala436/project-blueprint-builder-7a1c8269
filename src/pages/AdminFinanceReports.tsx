@@ -8,9 +8,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Download, Users, TrendingUp, Globe, Languages, IndianRupee, Calendar } from "lucide-react";
+import { ArrowLeft, Download, Users, TrendingUp, Globe, Languages, IndianRupee, Calendar, BarChart3 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toast } from "sonner";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 interface MenSpending {
   user_id: string;
@@ -48,6 +60,16 @@ interface LanguageSummary {
   user_count: number;
 }
 
+interface MonthlyTrend {
+  month: string;
+  monthLabel: string;
+  menSpending: number;
+  womenEarnings: number;
+  chatSpending: number;
+  giftSpending: number;
+  activeUsers: number;
+}
+
 const MONTHS = Array.from({ length: 12 }, (_, i) => {
   const date = subMonths(new Date(), i);
   return {
@@ -69,6 +91,7 @@ const AdminFinanceReports = () => {
   const [languageSummary, setLanguageSummary] = useState<LanguageSummary[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
+  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
   
   const [totals, setTotals] = useState({
     totalMenSpending: 0,
@@ -79,7 +102,77 @@ const AdminFinanceReports = () => {
 
   useEffect(() => {
     loadReportData();
+    loadTrendData();
   }, [selectedMonth, selectedCountry, selectedLanguage]);
+
+  const loadTrendData = async () => {
+    try {
+      // Load last 6 months of trend data
+      const trends: MonthlyTrend[] = [];
+      
+      for (let i = 5; i >= 0; i--) {
+        const date = subMonths(new Date(), i);
+        const monthKey = format(date, "yyyy-MM");
+        const monthLabel = format(date, "MMM yy");
+        const startDate = startOfMonth(date);
+        const endDate = endOfMonth(date);
+
+        // Get wallet transactions for this month
+        const { data: walletTxns } = await supabase
+          .from("wallet_transactions")
+          .select("user_id, amount, type")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", endDate.toISOString())
+          .in("type", ["chat_payment", "gift_purchase", "debit"]);
+
+        // Get women earnings for this month
+        const { data: womenEarningsData } = await supabase
+          .from("women_earnings")
+          .select("amount")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", endDate.toISOString());
+
+        // Get active chat sessions for this month
+        const { data: chatSessions } = await supabase
+          .from("active_chat_sessions")
+          .select("total_earned")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", endDate.toISOString());
+
+        const menSpendingTotal = (walletTxns || []).reduce((sum, t) => sum + Math.abs(t.amount), 0) +
+          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+        
+        const chatSpending = (walletTxns || [])
+          .filter(t => t.type === "chat_payment")
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0) +
+          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+        
+        const giftSpending = (walletTxns || [])
+          .filter(t => t.type === "gift_purchase")
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+        const womenEarningsTotal = (womenEarningsData || []).reduce((sum, e) => sum + e.amount, 0);
+
+        const uniqueUsers = new Set([
+          ...(walletTxns || []).map(t => t.user_id),
+        ]);
+
+        trends.push({
+          month: monthKey,
+          monthLabel,
+          menSpending: menSpendingTotal,
+          womenEarnings: womenEarningsTotal,
+          chatSpending,
+          giftSpending,
+          activeUsers: uniqueUsers.size,
+        });
+      }
+
+      setMonthlyTrends(trends);
+    } catch (error) {
+      console.error("Error loading trend data:", error);
+    }
+  };
 
   const loadReportData = async () => {
     setLoading(true);
@@ -475,6 +568,79 @@ const AdminFinanceReports = () => {
                   <p className="text-sm text-muted-foreground">Women Earnings</p>
                   <p className="text-2xl font-bold">₹{totals.totalWomenEarnings.toFixed(0)}</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trend Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Spending vs Earnings Trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                6-Month Spending vs Earnings Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="monthLabel" className="text-xs" />
+                    <YAxis className="text-xs" tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(value: number) => [`₹${value.toFixed(2)}`, ""]}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="menSpending"
+                      name="Men Spending"
+                      stroke="hsl(0, 84%, 60%)"
+                      fill="hsl(0, 84%, 60%)"
+                      fillOpacity={0.3}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="womenEarnings"
+                      name="Women Earnings"
+                      stroke="hsl(142, 76%, 36%)"
+                      fill="hsl(142, 76%, 36%)"
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Chat vs Gift Spending */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Chat vs Gift Spending Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="monthLabel" className="text-xs" />
+                    <YAxis className="text-xs" tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(value: number) => [`₹${value.toFixed(2)}`, ""]}
+                    />
+                    <Legend />
+                    <Bar dataKey="chatSpending" name="Chat Spending" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="giftSpending" name="Gift Spending" fill="hsl(316, 73%, 52%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
