@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import LanguageCountryScreen from "./LanguageCountryScreen";
+import AuthScreen from "./AuthScreen";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ const Index = () => {
     );
   }
 
-  return <LanguageCountryScreen />;
+  return <AuthScreen />;
 };
 
 export default Index;
