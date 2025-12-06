@@ -136,8 +136,11 @@ const BasicInfoScreen = () => {
       description: "Your basic info has been saved.",
     });
     
-    // Navigate to password setup screen
-    navigate("/password-setup");
+    // Store gender for photo verification
+    localStorage.setItem("userGender", gender);
+    
+    // Navigate to photo upload screen
+    navigate("/photo-upload");
   };
 
   const handleBack = () => {
