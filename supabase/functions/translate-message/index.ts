@@ -5,8 +5,99 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// NLLB-200 language code mapping
+const languageToNLLB: Record<string, string> = {
+  "english": "eng_Latn",
+  "hindi": "hin_Deva",
+  "spanish": "spa_Latn",
+  "french": "fra_Latn",
+  "german": "deu_Latn",
+  "chinese": "zho_Hans",
+  "japanese": "jpn_Jpan",
+  "arabic": "arb_Arab",
+  "bengali": "ben_Beng",
+  "portuguese": "por_Latn",
+  "russian": "rus_Cyrl",
+  "telugu": "tel_Telu",
+  "tamil": "tam_Taml",
+  "marathi": "mar_Deva",
+  "gujarati": "guj_Gujr",
+  "kannada": "kan_Knda",
+  "malayalam": "mal_Mlym",
+  "punjabi": "pan_Guru",
+  "urdu": "urd_Arab",
+  "korean": "kor_Hang",
+  "vietnamese": "vie_Latn",
+  "thai": "tha_Thai",
+  "indonesian": "ind_Latn",
+  "turkish": "tur_Latn",
+  "polish": "pol_Latn",
+  "ukrainian": "ukr_Cyrl",
+  "dutch": "nld_Latn",
+  "italian": "ita_Latn",
+  "greek": "ell_Grek",
+  "czech": "ces_Latn",
+  "romanian": "ron_Latn",
+  "hungarian": "hun_Latn",
+  "swedish": "swe_Latn",
+  "danish": "dan_Latn",
+  "finnish": "fin_Latn",
+  "norwegian": "nob_Latn",
+  "hebrew": "heb_Hebr",
+  "persian": "pes_Arab",
+  "swahili": "swh_Latn",
+  "tagalog": "tgl_Latn",
+  "malay": "zsm_Latn",
+  "burmese": "mya_Mymr",
+  "khmer": "khm_Khmr",
+  "lao": "lao_Laoo",
+  "nepali": "npi_Deva",
+  "sinhala": "sin_Sinh",
+  "amharic": "amh_Ethi",
+  "yoruba": "yor_Latn",
+  "igbo": "ibo_Latn",
+  "hausa": "hau_Latn",
+  "zulu": "zul_Latn",
+  "xhosa": "xho_Latn",
+  "afrikaans": "afr_Latn",
+  "catalan": "cat_Latn",
+  "croatian": "hrv_Latn",
+  "serbian": "srp_Cyrl",
+  "slovak": "slk_Latn",
+  "slovenian": "slv_Latn",
+  "bulgarian": "bul_Cyrl",
+  "lithuanian": "lit_Latn",
+  "latvian": "lvs_Latn",
+  "estonian": "est_Latn",
+  "albanian": "als_Latn",
+  "macedonian": "mkd_Cyrl",
+  "bosnian": "bos_Latn",
+  "georgian": "kat_Geor",
+  "armenian": "hye_Armn",
+  "azerbaijani": "azj_Latn",
+  "kazakh": "kaz_Cyrl",
+  "uzbek": "uzn_Latn",
+  "mongolian": "khk_Cyrl",
+  "tibetan": "bod_Tibt",
+  "assamese": "asm_Beng",
+  "odia": "ory_Orya",
+  "oriya": "ory_Orya",
+  "konkani": "gom_Deva",
+  "maithili": "mai_Deva",
+  "santali": "sat_Olck",
+  "bodo": "brx_Deva",
+  "dogri": "doi_Deva",
+  "kashmiri": "kas_Arab",
+  "sindhi": "snd_Arab",
+  "manipuri": "mni_Beng",
+};
+
+function getNLLBCode(language: string): string | null {
+  const normalizedLang = language.toLowerCase().trim();
+  return languageToNLLB[normalizedLang] || null;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,9 +112,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    const HF_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
+    if (!HF_TOKEN) {
+      console.error("HUGGING_FACE_ACCESS_TOKEN not configured");
       return new Response(
         JSON.stringify({ 
           translatedMessage: message, 
@@ -34,64 +125,58 @@ serve(async (req) => {
       );
     }
 
-    // Use AI for auto-detection and translation (NLLB-200 style)
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a NLLB-200 style multilingual translator. Your task:
-1. Auto-detect the source language of the input message
-2. Translate it to ${targetLanguage}
-3. Return ONLY a JSON object with this exact format (no markdown, no code blocks):
-{"detectedLanguage": "detected language name", "translatedMessage": "translated text"}
+    const targetNLLBCode = getNLLBCode(targetLanguage);
+    if (!targetNLLBCode) {
+      console.error(`Unsupported target language: ${targetLanguage}`);
+      return new Response(
+        JSON.stringify({ 
+          translatedMessage: message, 
+          isTranslated: false,
+          detectedLanguage: "unknown",
+          error: `Unsupported language: ${targetLanguage}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-Important rules:
-- If the message is already in ${targetLanguage}, return the original message as translatedMessage
-- Keep emojis, names, and special characters intact
-- Preserve the tone and meaning
-- Common language names: English, Hindi, Spanish, French, German, Chinese, Japanese, Arabic, Bengali, Portuguese, Russian, Telugu, Tamil, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu`
+    console.log(`Translating to ${targetLanguage} (${targetNLLBCode}): "${message}"`);
+
+    // Call NLLB-200 via Hugging Face Inference API
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/nllb-200-3.3B",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: message,
+          parameters: {
+            src_lang: "eng_Latn", // Default source as English, NLLB auto-handles
+            tgt_lang: targetNLLBCode,
           },
-          {
-            role: "user",
-            content: message
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 600
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
-      if (response.status === 429) {
-        console.log("Rate limited, returning original message");
+      const errorText = await response.text();
+      console.error("Hugging Face API error:", response.status, errorText);
+      
+      if (response.status === 503) {
+        // Model is loading
         return new Response(
           JSON.stringify({ 
             translatedMessage: message, 
             isTranslated: false,
-            detectedLanguage: "unknown"
+            detectedLanguage: "unknown",
+            error: "Translation model is loading, please try again"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        console.log("Payment required, returning original message");
-        return new Response(
-          JSON.stringify({ 
-            translatedMessage: message, 
-            isTranslated: false,
-            detectedLanguage: "unknown"
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      console.error("Translation API error:", response.status);
+      
       return new Response(
         JSON.stringify({ 
           translatedMessage: message, 
@@ -103,42 +188,29 @@ Important rules:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content?.trim() || "";
+    console.log("NLLB-200 Response:", JSON.stringify(data));
 
-    console.log("AI Response:", content);
-
-    // Parse the JSON response
-    let result = {
-      translatedMessage: message,
-      detectedLanguage: "unknown",
-      isTranslated: false
-    };
-
-    try {
-      // Clean the response - remove any markdown code blocks if present
-      let cleanContent = content;
-      if (cleanContent.startsWith("```")) {
-        cleanContent = cleanContent.replace(/```json?\n?/g, "").replace(/```/g, "");
-      }
-      cleanContent = cleanContent.trim();
-
-      const parsed = JSON.parse(cleanContent);
-      result.translatedMessage = parsed.translatedMessage || message;
-      result.detectedLanguage = parsed.detectedLanguage || "unknown";
-      
-      // Check if translation actually happened (different from source or target language differs)
-      result.isTranslated = result.detectedLanguage.toLowerCase() !== targetLanguage.toLowerCase() &&
-                           result.translatedMessage !== message;
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      // If parsing fails, use the raw content as translation
-      result.translatedMessage = content || message;
+    let translatedText = message;
+    
+    // Handle different response formats from HF API
+    if (Array.isArray(data) && data.length > 0) {
+      translatedText = data[0].translation_text || data[0].generated_text || message;
+    } else if (data.translation_text) {
+      translatedText = data.translation_text;
+    } else if (data.generated_text) {
+      translatedText = data.generated_text;
     }
 
-    console.log(`Detected: ${result.detectedLanguage}, Translated to ${targetLanguage}: "${result.translatedMessage}"`);
+    const isTranslated = translatedText !== message;
+
+    console.log(`Translation result: "${translatedText}" (translated: ${isTranslated})`);
 
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({
+        translatedMessage: translatedText,
+        isTranslated: isTranslated,
+        detectedLanguage: "auto-detected"
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
