@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Users, Globe, Languages, User, RefreshCw } from "lucide-react";
+import { ArrowLeft, Users, Globe, Languages, User, RefreshCw, UserPlus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { countries } from "@/data/countries";
 import { languages } from "@/data/languages";
@@ -49,6 +49,7 @@ export default function AdminSampleUsers() {
   const [sampleUsers, setSampleUsers] = useState<SampleUser[]>([]);
   const [groupedUsers, setGroupedUsers] = useState<GroupedUsers[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   // Fetch all sample users from database
   const fetchSampleUsers = async () => {
@@ -166,6 +167,31 @@ export default function AdminSampleUsers() {
     return country?.flag || "🌍";
   };
 
+  // Seed sample auth users (male1-15, female1-15, admin1-15)
+  const seedAuthUsers = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seed-sample-users");
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(
+          `Created ${data.summary.created} users, skipped ${data.summary.skipped} existing`
+        );
+        if (data.results.errors.length > 0) {
+          console.error("Seeding errors:", data.results.errors);
+        }
+      } else {
+        throw new Error(data.error || "Seeding failed");
+      }
+    } catch (error: any) {
+      toast.error("Failed to seed users: " + error.message);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   useEffect(() => {
     fetchSampleUsers();
   }, []);
@@ -202,11 +228,56 @@ export default function AdminSampleUsers() {
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={fetchSampleUsers}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchSampleUsers}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
+
+        {/* Seed Auth Users Card */}
+        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Create Sample Auth Users
+            </CardTitle>
+            <CardDescription>
+              Creates 45 test users: male1-15, female1-15, admin1-15 with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
+              <br />
+              Each user gets ₹10,000 wallet balance (no recharge required)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 items-center">
+              <Button onClick={seedAuthUsers} disabled={seeding} className="gap-2">
+                {seeding ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Creating Users...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    Seed Sample Users
+                  </>
+                )}
+              </Button>
+              <div className="flex gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" className="gap-1">
+                  <User className="h-3 w-3 text-blue-500" /> 15 Males
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <User className="h-3 w-3 text-pink-500" /> 15 Females
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <Shield className="h-3 w-3 text-amber-500" /> 15 Admins
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
