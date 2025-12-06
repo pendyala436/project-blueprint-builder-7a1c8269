@@ -8,13 +8,28 @@ const corsHeaders = {
 
 const PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
 
+// NLLB-200 supported countries list (countries with NLLB language support)
+const NLLB200_COUNTRIES = [
+  // Major countries with NLLB language support
+  "india", "united states", "united kingdom", "australia", "canada", 
+  "germany", "france", "spain", "italy", "portugal", "russia", "poland", "ukraine",
+  "china", "japan", "korea", "south korea", "vietnam", "thailand", "indonesia", "malaysia", "philippines", "myanmar", "cambodia",
+  "saudi arabia", "uae", "united arab emirates", "iran", "turkey", "israel",
+  "kenya", "tanzania", "ethiopia", "nigeria", "south africa", "egypt",
+  "brazil", "mexico", "argentina", "colombia", "peru", "chile",
+  "greece", "romania", "hungary", "czech republic", "sweden", "denmark", "finland", "norway",
+  "netherlands", "belgium", "switzerland", "austria",
+  "pakistan", "bangladesh", "nepal", "sri lanka"
+];
+
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "join_queue" | "leave_queue" | "check_queue_status";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "join_queue" | "leave_queue" | "check_queue_status";
   man_user_id?: string;
   woman_user_id?: string;
   chat_id?: string;
   end_reason?: string;
   preferred_language?: string;
+  man_country?: string; // Country of the man for NLLB matching
 }
 
 serve(async (req) => {
@@ -27,9 +42,9 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, man_user_id, woman_user_id, chat_id, end_reason, preferred_language }: ChatRequest = await req.json();
+    const { action, man_user_id, woman_user_id, chat_id, end_reason, preferred_language, man_country }: ChatRequest = await req.json();
 
-    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, chat_id, preferred_language });
+    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, chat_id, preferred_language, man_country });
 
     switch (action) {
       case "join_queue": {
@@ -237,6 +252,110 @@ serve(async (req) => {
             woman_user_id: selectedWoman.user_id,
             profile,
             language_matched: matchingGroupId !== null
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Match men from NLLB-200 countries with available Indian women
+      case "get_available_indian_woman": {
+        const requestedLanguage = preferred_language || "en";
+        const manCountryLower = (man_country || "").toLowerCase().trim();
+
+        // Verify man is from an NLLB-200 supported country
+        const isNLLB200Country = NLLB200_COUNTRIES.some(c => 
+          manCountryLower.includes(c) || c.includes(manCountryLower)
+        );
+
+        if (!isNLLB200Country && manCountryLower) {
+          console.log(`Man's country ${man_country} is not in NLLB-200 list`);
+          return new Response(
+            JSON.stringify({ success: false, message: "Country not supported for NLLB translation" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Find Indian women who are:
+        // 1. Available (is_available = true)
+        // 2. Online (check user_status)
+        // 3. Have capacity (current_chat_count < max_concurrent_chats)
+        // 4. From India
+        // Order by load (lowest chat count first) and last assigned (round-robin)
+
+        // Get online Indian women with availability
+        const { data: onlineIndianWomen } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .or("gender.eq.female,gender.eq.Female")
+          .eq("country", "India");
+
+        if (!onlineIndianWomen || onlineIndianWomen.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "No Indian women available" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const indianWomanIds = onlineIndianWomen.map(w => w.user_id);
+
+        // Check which ones are online
+        const { data: onlineStatuses } = await supabase
+          .from("user_status")
+          .select("user_id, is_online")
+          .in("user_id", indianWomanIds)
+          .eq("is_online", true);
+
+        const onlineWomanIds = onlineStatuses?.map(s => s.user_id) || [];
+
+        if (onlineWomanIds.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "No Indian women online" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get availability for online women, ordered by load
+        const { data: availableWomen } = await supabase
+          .from("women_availability")
+          .select("user_id, current_chat_count, max_concurrent_chats")
+          .in("user_id", onlineWomanIds)
+          .eq("is_available", true)
+          .order("current_chat_count", { ascending: true })
+          .order("last_assigned_at", { ascending: true, nullsFirst: true });
+
+        // Filter by capacity
+        const womenWithCapacity = availableWomen?.filter(w => 
+          w.current_chat_count < (w.max_concurrent_chats || 3)
+        ) || [];
+
+        if (womenWithCapacity.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "All Indian women are at capacity" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Select woman with lowest load (first in sorted list)
+        const selectedWoman = womenWithCapacity[0];
+
+        // Get woman's profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, photo_url, primary_language, preferred_language")
+          .eq("user_id", selectedWoman.user_id)
+          .single();
+
+        console.log(`Matched international man (${man_country}) with Indian woman ${selectedWoman.user_id}, load: ${selectedWoman.current_chat_count}`);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            woman_user_id: selectedWoman.user_id,
+            profile,
+            current_load: selectedWoman.current_chat_count,
+            nllb_translation_enabled: true,
+            man_country: man_country,
+            woman_country: "India"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
