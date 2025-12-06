@@ -203,7 +203,7 @@ const DashboardScreen = () => {
       icon: <Heart className="w-6 h-6" />, 
       label: "Matches", 
       color: "from-rose-500 to-pink-400",
-      action: () => toast({ title: "Matches", description: "Coming soon!" })
+      action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
