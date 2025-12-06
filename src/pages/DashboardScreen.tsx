@@ -197,7 +197,7 @@ const DashboardScreen = () => {
       icon: <MessageCircle className="w-6 h-6" />, 
       label: "Messages", 
       color: "from-blue-500 to-blue-400",
-      action: () => toast({ title: "Messages", description: "Coming soon!" })
+      action: () => navigate("/match-discovery") // Navigate to matches where they can start chats
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
