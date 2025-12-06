@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart } from "lucide-react";
+import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone } from "lucide-react";
+import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 
@@ -240,11 +241,13 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Update profile - excluding protected fields (phone, gender)
+      // Update profile - excluding protected field (email only)
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: profile.full_name,
+          phone: profile.phone,
+          gender: profile.gender,
           date_of_birth: profile.date_of_birth,
           country: profile.country,
           state: profile.state,
@@ -315,7 +318,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Lock className="w-4 h-4" />
-                These fields cannot be changed
+                This field cannot be changed
               </p>
 
               {/* Email - Protected */}
@@ -327,26 +330,43 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                   className="bg-muted cursor-not-allowed"
                 />
               </div>
+            </div>
 
-              {/* Mobile - Protected */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Mobile Number</Label>
-                <Input
-                  value={profile.phone || "Not set"}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                />
-              </div>
+            {/* ==================== Editable Fields Section ==================== */}
+            
+            {/* Mobile Number - Editable */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Mobile Number
+              </Label>
+              <PhoneInputWithCode
+                value={profile.phone || ""}
+                onChange={(value) => updateField("phone", value)}
+                placeholder="Enter your phone number"
+                defaultCountryCode="IN"
+              />
+            </div>
 
-              {/* Gender - Protected */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Gender</Label>
-                <Input
-                  value={profile.gender ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : "Not set"}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                />
-              </div>
+            {/* Gender - Editable */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Gender
+              </Label>
+              <Select
+                value={profile.gender || ""}
+                onValueChange={(value) => updateField("gender", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* ==================== Editable Fields Section ==================== */}
