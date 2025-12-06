@@ -67,6 +67,10 @@ import {
   Languages,
   Bot,
   Zap,
+  Heart,
+  HeartOff,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -499,6 +503,70 @@ const AdminUserManagement = () => {
     } catch (error) {
       console.error("Error approving user:", error);
       toast.error("Failed to update approval status");
+    }
+  };
+
+  // Friend/Unfriend users (admin can create friendships between any two users)
+  const [friendDialogOpen, setFriendDialogOpen] = useState(false);
+  const [friendTargetUser, setFriendTargetUser] = useState<UserProfile | null>(null);
+  const [friendWithUserId, setFriendWithUserId] = useState("");
+
+  const handleOpenFriendDialog = (user: UserProfile) => {
+    setFriendTargetUser(user);
+    setFriendWithUserId("");
+    setFriendDialogOpen(true);
+  };
+
+  const handleCreateFriendship = async () => {
+    if (!friendTargetUser || !friendWithUserId) return;
+
+    try {
+      // Check if friendship already exists
+      const { data: existing } = await supabase
+        .from("user_friends")
+        .select("id")
+        .or(`and(user_id.eq.${friendTargetUser.user_id},friend_id.eq.${friendWithUserId}),and(user_id.eq.${friendWithUserId},friend_id.eq.${friendTargetUser.user_id})`)
+        .maybeSingle();
+
+      if (existing) {
+        toast.error("Friendship already exists between these users");
+        return;
+      }
+
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("user_friends")
+        .insert({
+          user_id: friendTargetUser.user_id,
+          friend_id: friendWithUserId,
+          status: "accepted",
+          created_by: currentUser?.id,
+        });
+
+      if (error) throw error;
+
+      toast.success("Friendship created successfully");
+      setFriendDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating friendship:", error);
+      toast.error("Failed to create friendship");
+    }
+  };
+
+  const handleUnfriend = async (userId: string, friendId: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_friends")
+        .delete()
+        .or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`);
+
+      if (error) throw error;
+
+      toast.success("Friendship removed successfully");
+    } catch (error) {
+      console.error("Error removing friendship:", error);
+      toast.error("Failed to remove friendship");
     }
   };
 
@@ -958,6 +1026,12 @@ const AdminUserManagement = () => {
                                     </>
                                   )}
                                   
+                                  {/* Friend Management */}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleOpenFriendDialog(user)}>
+                                    <UserPlus className="h-4 w-4 mr-2" /> Add Friend
+                                  </DropdownMenuItem>
+                                  
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onClick={() => handleDeleteUser(user)}
@@ -1213,6 +1287,52 @@ const AdminUserManagement = () => {
               Cancel
             </Button>
             <Button onClick={handleUpdateLanguageGroupLimit}>Save Limit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Friend Dialog */}
+      <Dialog open={friendDialogOpen} onOpenChange={setFriendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-pink-500" />
+              Add Friend for {friendTargetUser?.full_name || "User"}
+            </DialogTitle>
+            <DialogDescription>
+              Create a friendship between this user and another user
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="friend-user-id">Friend's User ID</Label>
+              <Input
+                id="friend-user-id"
+                placeholder="Enter the user_id of the friend"
+                value={friendWithUserId}
+                onChange={(e) => setFriendWithUserId(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                You can find the user_id in the user table. Enter the UUID of the user to friend.
+              </p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm">
+                <strong>Current User:</strong> {friendTargetUser?.full_name || "Unknown"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ID: {friendTargetUser?.user_id}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFriendDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFriendship} disabled={!friendWithUserId}>
+              <Heart className="h-4 w-4 mr-2" />
+              Create Friendship
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
