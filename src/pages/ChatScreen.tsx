@@ -79,12 +79,13 @@ const ChatScreen = () => {
         async (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate if needed
+          // Translate incoming message to current user's language (auto-detect source)
           let translatedMessage = "";
           let isTranslated = false;
           
-          if (newMsg.sender_id !== currentUserId && chatPartner?.preferredLanguage !== currentUserLanguage) {
-            const translation = await translateMessage(newMsg.message, chatPartner?.preferredLanguage || "", currentUserLanguage);
+          if (newMsg.sender_id !== currentUserId) {
+            // Translate to current user's preferred language
+            const translation = await translateMessage(newMsg.message, currentUserLanguage);
             translatedMessage = translation.translatedMessage;
             isTranslated = translation.isTranslated;
           }
@@ -207,17 +208,21 @@ const ChatScreen = () => {
     }
   };
 
-  const translateMessage = async (message: string, sourceLanguage: string, targetLanguage: string) => {
+  const translateMessage = async (message: string, targetLanguage: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { message, sourceLanguage, targetLanguage }
+        body: { message, targetLanguage }
       });
 
       if (error) throw error;
-      return { translatedMessage: data.translatedMessage, isTranslated: data.isTranslated };
+      return { 
+        translatedMessage: data.translatedMessage, 
+        isTranslated: data.isTranslated,
+        detectedLanguage: data.detectedLanguage 
+      };
     } catch (error) {
       console.error("Translation error:", error);
-      return { translatedMessage: message, isTranslated: false };
+      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown" };
     }
   };
 
@@ -236,15 +241,11 @@ const ChatScreen = () => {
     setIsSending(true);
 
     try {
-      // Translate message for receiver if languages differ
-      let translatedMessage = "";
-      let isTranslated = false;
-
-      if (currentUserLanguage !== chatPartner.preferredLanguage) {
-        const translation = await translateMessage(messageText, currentUserLanguage, chatPartner.preferredLanguage);
-        translatedMessage = translation.translatedMessage;
-        isTranslated = translation.isTranslated;
-      }
+      // Translate message for receiver (auto-detect source language)
+      // The translated message will be shown to the receiver in their language
+      const translation = await translateMessage(messageText, chatPartner.preferredLanguage);
+      const translatedMessage = translation.translatedMessage;
+      const isTranslated = translation.isTranslated;
 
       const { error } = await supabase
         .from("chat_messages")
@@ -429,6 +430,7 @@ const ChatScreen = () => {
 
                       {/* Message bubble */}
                       <div className={`space-y-1`}>
+                        {/* Original message - shown to sender, or if no translation */}
                         <div
                           className={`px-4 py-2.5 rounded-2xl ${
                             isMine 
@@ -436,15 +438,31 @@ const ChatScreen = () => {
                               : "bg-muted text-foreground rounded-bl-md"
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                          {/* For receiver: show translated message as primary if available */}
+                          {!isMine && message.isTranslated && message.translatedMessage ? (
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.translatedMessage}</p>
+                          ) : (
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                          )}
                         </div>
 
-                        {/* Translated message */}
-                        {showTranslations && message.isTranslated && message.translatedMessage && !isMine && (
-                          <div className="px-4 py-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 rounded-bl-md">
+                        {/* Show original message for receiver if translated */}
+                        {showTranslations && !isMine && message.isTranslated && message.translatedMessage && (
+                          <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-border/50 rounded-bl-md">
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                              <Languages className="w-3 h-3" />
+                              Original
+                            </p>
+                            <p className="text-sm text-muted-foreground">{message.message}</p>
+                          </div>
+                        )}
+
+                        {/* Show translated version for sender (what receiver sees) */}
+                        {showTranslations && isMine && message.isTranslated && message.translatedMessage && (
+                          <div className="px-4 py-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 rounded-br-md">
                             <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
-                              Translated
+                              They see
                             </p>
                             <p className="text-sm text-foreground">{message.translatedMessage}</p>
                           </div>
