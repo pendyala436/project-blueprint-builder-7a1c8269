@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowLeft, User, Calendar, Heart, Mail, Phone } from "lucide-react";
 import { format, differenceInYears } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +38,7 @@ const BasicInfoScreen = () => {
   
   // Validation states
   const [errors, setErrors] = useState<{
+    email?: string;
     fullName?: string;
     dob?: string;
     gender?: string;
@@ -46,27 +46,25 @@ const BasicInfoScreen = () => {
   }>({});
   const [shakeField, setShakeField] = useState<string | null>(null);
   const [touched, setTouched] = useState<{
+    email?: boolean;
     fullName?: boolean;
     dob?: boolean;
     gender?: boolean;
     phone?: boolean;
   }>({});
 
-  // Fetch user email on mount
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setEmail(user.email);
-      }
-    };
-    getUser();
-  }, []);
-
   // Trigger shake animation
   const triggerShake = (field: string) => {
     setShakeField(field);
     setTimeout(() => setShakeField(null), 500);
+  };
+
+  // Validate email
+  const validateEmail = (value: string) => {
+    if (!value.trim()) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value.trim())) return "Please enter a valid email";
+    return undefined;
   };
 
   // Validate full name
@@ -102,11 +100,13 @@ const BasicInfoScreen = () => {
   };
 
   // Handle field blur
-  const handleBlur = (field: "fullName" | "dob" | "gender" | "phone") => {
+  const handleBlur = (field: "email" | "fullName" | "dob" | "gender" | "phone") => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     let error: string | undefined;
-    if (field === "fullName") {
+    if (field === "email") {
+      error = validateEmail(email);
+    } else if (field === "fullName") {
       error = validateFullName(fullName);
     } else if (field === "dob") {
       error = validateDob(dob);
@@ -133,12 +133,14 @@ const BasicInfoScreen = () => {
 
   const handleNext = () => {
     // Validate all fields
+    const emailError = validateEmail(email);
     const fullNameError = validateFullName(fullName);
     const dobError = validateDob(dob);
     const genderError = validateGender(gender);
     const phoneError = validatePhone(phone);
 
     const newErrors = {
+      email: emailError,
       fullName: fullNameError,
       dob: dobError,
       gender: genderError,
@@ -146,15 +148,16 @@ const BasicInfoScreen = () => {
     };
 
     setErrors(newErrors);
-    setTouched({ fullName: true, dob: true, gender: true, phone: true });
+    setTouched({ email: true, fullName: true, dob: true, gender: true, phone: true });
 
     // Shake invalid fields
-    if (fullNameError) triggerShake("fullName");
+    if (emailError) triggerShake("email");
+    else if (fullNameError) triggerShake("fullName");
     else if (phoneError) triggerShake("phone");
     else if (dobError) triggerShake("dob");
     else if (genderError) triggerShake("gender");
 
-    if (fullNameError || dobError || genderError || phoneError) {
+    if (emailError || fullNameError || dobError || genderError || phoneError) {
       toast({
         title: "Please complete all fields",
         description: "All information is required to continue.",
@@ -169,6 +172,7 @@ const BasicInfoScreen = () => {
     });
     
     // Store data for next screens
+    localStorage.setItem("userEmail", email);
     localStorage.setItem("userGender", gender);
     localStorage.setItem("userPhone", phone);
     
@@ -180,7 +184,7 @@ const BasicInfoScreen = () => {
     navigate("/");
   };
 
-  const isComplete = fullName.trim() && dob && gender && phone.trim();
+  const isComplete = email.trim() && fullName.trim() && dob && gender && phone.trim();
 
   // Get default month for calendar (18 years ago)
   const defaultMonth = new Date();
@@ -221,19 +225,42 @@ const BasicInfoScreen = () => {
         {/* Form Card */}
         <div className="w-full max-w-md bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-card border border-border/30 animate-slide-up">
           <div className="space-y-6">
-            {/* Email (Read-only) */}
-            <div className="space-y-2">
+            {/* Email */}
+            <div 
+              className={cn(
+                "space-y-2 transition-all",
+                shakeField === "email" && "animate-shake"
+              )}
+            >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Mail className="w-4 h-4 text-primary" />
                 Email
               </label>
               <Input
                 type="email"
+                placeholder="Enter your email"
                 value={email}
-                disabled
-                className="h-12 rounded-xl border-2 border-input bg-muted/50 text-muted-foreground cursor-not-allowed"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (touched.email) {
+                    const error = validateEmail(e.target.value);
+                    setErrors((prev) => ({ ...prev, email: error }));
+                  }
+                }}
+                onBlur={() => handleBlur("email")}
+                className={cn(
+                  "h-12 rounded-xl border-2 transition-all focus:ring-2 focus:ring-primary/20",
+                  errors.email && touched.email 
+                    ? "border-destructive focus:border-destructive" 
+                    : "border-input focus:border-primary"
+                )}
               />
-              <p className="text-xs text-muted-foreground">Email from your account</p>
+              {errors.email && touched.email && (
+                <p className="text-xs text-destructive flex items-center gap-1 animate-fade-in">
+                  <span className="inline-block w-1 h-1 rounded-full bg-destructive" />
+                  {errors.email}
+                </p>
+              )}
             </div>
 
             {/* Phone Number */}
