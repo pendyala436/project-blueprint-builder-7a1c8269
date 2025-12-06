@@ -36,6 +36,7 @@ import AdminLegalDocuments from "./pages/AdminLegalDocuments";
 import AdminChatPricing from "./pages/AdminChatPricing";
 import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
 import AdminSettings from "./pages/AdminSettings";
+import AdminAuditLogs from "./pages/AdminAuditLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
           <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
           <Route path="/admin/performance" element={<AdminPerformanceMonitoring />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

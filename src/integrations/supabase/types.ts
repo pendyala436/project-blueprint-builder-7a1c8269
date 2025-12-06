@@ -200,6 +200,57 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          action_type: string
+          admin_email: string | null
+          admin_id: string
+          created_at: string
+          details: string | null
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          resource_id: string | null
+          resource_type: string
+          status: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          action_type?: string
+          admin_email?: string | null
+          admin_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          status?: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          action_type?: string
+          admin_email?: string | null
+          admin_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          status?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       backup_logs: {
         Row: {
           backup_type: string
