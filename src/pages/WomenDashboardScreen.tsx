@@ -22,11 +22,22 @@ import {
   Crown,
   Sparkles,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  Search,
+  User
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 interface OnlineMan {
   userId: string;
@@ -57,6 +68,7 @@ const WomenDashboardScreen = () => {
   const [userName, setUserName] = useState("");
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalOnlineMen: 0,
     rechargedMen: 0,
@@ -65,6 +77,33 @@ const WomenDashboardScreen = () => {
     unreadNotifications: 0,
     todayEarnings: 0
   });
+
+  const quickActions = [
+    { 
+      icon: <Search className="w-6 h-6" />, 
+      label: "Discover", 
+      color: "from-primary to-rose-400",
+      action: () => navigate("/online-users")
+    },
+    { 
+      icon: <MessageCircle className="w-6 h-6" />, 
+      label: "Messages", 
+      color: "from-blue-500 to-blue-400",
+      action: () => navigate("/match-discovery")
+    },
+    { 
+      icon: <Heart className="w-6 h-6" />, 
+      label: "Matches", 
+      color: "from-rose-500 to-pink-400",
+      action: () => navigate("/match-discovery")
+    },
+    { 
+      icon: <User className="w-6 h-6" />, 
+      label: "Profile", 
+      color: "from-violet-500 to-purple-400",
+      action: () => toast({ title: "Profile", description: "Coming soon!" })
+    },
+  ];
 
   useEffect(() => {
     loadDashboardData();
@@ -127,7 +166,7 @@ const WomenDashboardScreen = () => {
       await Promise.all([
         fetchOnlineMen(),
         fetchMatchCount(user.id),
-        fetchNotificationCount(user.id),
+        fetchNotifications(user.id),
         fetchTodayEarnings(user.id)
       ]);
 
@@ -225,13 +264,16 @@ const WomenDashboardScreen = () => {
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
   };
 
-  const fetchNotificationCount = async (userId: string) => {
-    const { count } = await supabase
+  const fetchNotifications = async (userId: string) => {
+    const { data, count } = await supabase
       .from("notifications")
-      .select("*", { count: "exact", head: true })
+      .select("*", { count: "exact" })
       .eq("user_id", userId)
-      .eq("is_read", false);
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(5);
 
+    setNotifications(data || []);
     setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
   };
 
@@ -573,7 +615,80 @@ const WomenDashboardScreen = () => {
         </Tabs>
 
         {/* Quick Actions */}
-        <Card className="p-4 bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20">
+        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                onClick={action.action}
+                className="group p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+              >
+                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                  {action.icon}
+                </div>
+                <p className="text-sm font-medium text-foreground">{action.label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Notifications */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+            <button className="text-sm text-primary hover:underline flex items-center gap-1">
+              View all <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {notifications.length > 0 ? (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <Card 
+                  key={notification.id}
+                  className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
+                >
+                  <div className={`p-2 rounded-full ${
+                    notification.type === "match" ? "bg-rose-500/10 text-rose-500" :
+                    notification.type === "message" ? "bg-blue-500/10 text-blue-500" :
+                    "bg-primary/10 text-primary"
+                  }`}>
+                    {notification.type === "match" ? <Heart className="w-5 h-5" /> :
+                     notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
+                     <Bell className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{notification.title}</p>
+                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  </div>
+                  {!notification.is_read && (
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  )}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Sparkles className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">No new activity yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start chatting to get matches and notifications!
+              </p>
+              <Button 
+                variant="gradient" 
+                className="mt-4"
+                onClick={() => navigate("/online-users")}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Find Users
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        {/* Shift CTA Card */}
+        <Card className="p-4 bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
@@ -586,6 +701,22 @@ const WomenDashboardScreen = () => {
             </div>
             <Button onClick={() => navigate("/shift-management")}>
               Go <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </Card>
+
+        {/* CTA Banner */}
+        <Card className="p-6 bg-gradient-to-r from-primary/10 via-rose-500/10 to-violet-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-rose-500 text-white">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Boost your profile!</h3>
+              <p className="text-sm text-muted-foreground">Get more visibility with premium features</p>
+            </div>
+            <Button variant="gradient" size="sm">
+              Upgrade
             </Button>
           </div>
         </Card>
