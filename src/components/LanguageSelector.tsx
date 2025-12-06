@@ -206,12 +206,15 @@ export const LanguageSelector = ({
     );
   };
 
+  // Check if user has made a new selection (different from current)
+  const hasNewSelection = tempSelectedLanguage && tempSelectedLanguage.name !== selectedLanguage;
+
   return (
     <div className={cn("space-y-2", className)}>
       {label && <Label className="text-sm font-medium">{label}</Label>}
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
       
-      {/* Current Language Display with Change Button */}
+      {/* Current Language Display with Change/Save Button */}
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/50">
           <div className={cn(
@@ -233,14 +236,40 @@ export const LanguageSelector = ({
           </Badge>
         </div>
         
-        <Button
-          variant="outline"
-          onClick={handleOpenChange}
-          className="gap-2 h-auto py-3"
-        >
-          <Languages className="h-4 w-4" />
-          Change
-        </Button>
+        {/* Alternate between Change and Save buttons */}
+        {!isOpen && !hasNewSelection ? (
+          <Button
+            variant="outline"
+            onClick={handleOpenChange}
+            className="gap-2 h-auto py-3 min-w-[100px]"
+          >
+            <Languages className="h-4 w-4" />
+            Change
+          </Button>
+        ) : hasNewSelection && !isOpen ? (
+          <Button
+            variant="gradient"
+            onClick={handleSaveLanguage}
+            disabled={isUpdating}
+            className="gap-2 h-auto py-3 min-w-[100px]"
+          >
+            {isUpdating ? (
+              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={handleOpenChange}
+            className="gap-2 h-auto py-3 min-w-[100px]"
+          >
+            <Languages className="h-4 w-4" />
+            Change
+          </Button>
+        )}
       </div>
 
       {/* Language Selection Dialog */}
@@ -338,14 +367,16 @@ export const LanguageSelector = ({
             </div>
           </ScrollArea>
 
-          {/* Footer with Cancel and Save */}
+          {/* Footer with Cancel and Save - Save only enabled when selection changed */}
           <DialogFooter className="p-6 pt-4 border-t border-border/50 bg-muted/30">
             <div className="flex items-center justify-between w-full gap-3">
               <div className="text-sm text-muted-foreground">
-                {tempSelectedLanguage && tempSelectedLanguage.name !== selectedLanguage && (
+                {tempSelectedLanguage && tempSelectedLanguage.name !== selectedLanguage ? (
                   <span>
-                    Selected: <strong className="text-foreground">{tempSelectedLanguage.name}</strong>
+                    New selection: <strong className="text-primary">{tempSelectedLanguage.name}</strong>
                   </span>
+                ) : (
+                  <span>Select a different language to save</span>
                 )}
               </div>
               <div className="flex gap-3">
@@ -359,16 +390,18 @@ export const LanguageSelector = ({
                 </Button>
                 <Button
                   variant="gradient"
-                  onClick={handleSaveLanguage}
+                  onClick={() => {
+                    handleSaveLanguage();
+                  }}
                   disabled={!tempSelectedLanguage || tempSelectedLanguage.name === selectedLanguage || isUpdating}
-                  className="gap-2"
+                  className="gap-2 min-w-[120px]"
                 >
                   {isUpdating ? (
                     <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Save Language
+                  {tempSelectedLanguage && tempSelectedLanguage.name !== selectedLanguage ? "Save" : "Select & Save"}
                 </Button>
               </div>
             </div>
