@@ -92,26 +92,36 @@ serve(async (req) => {
     const { action, email, phone, newPassword } = body;
 
     // Validate action
-    if (!action || !['verify', 'reset'].includes(action)) {
+    if (!action || !['verify', 'reset', 'get-email-by-phone'].includes(action)) {
       return new Response(
         JSON.stringify({ error: "Invalid action" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    // Validate inputs
-    if (!email || !validateEmail(email)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email format" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
-    }
+    // For get-email-by-phone, only phone is required
+    if (action === 'get-email-by-phone') {
+      if (!phone || !validatePhone(phone)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid phone format" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+    } else {
+      // Validate inputs for verify and reset
+      if (!email || !validateEmail(email)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid email format" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
 
-    if (!phone || !validatePhone(phone)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone format" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
+      if (!phone || !validatePhone(phone)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid phone format" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
     }
 
     // Rate limit by IP + email combination
@@ -133,6 +143,41 @@ serve(async (req) => {
           }, 
           status: 429 
         }
+      );
+    }
+
+    // Handle get-email-by-phone action for phone login
+    if (action === "get-email-by-phone") {
+      // Add artificial delay to prevent timing attacks
+      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+
+      const { data: profiles, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id")
+        .eq("phone", phone);
+
+      if (profileError || !profiles || profiles.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Account not found" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+        );
+      }
+
+      // Get the first matching profile's email
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(
+        profiles[0].user_id
+      );
+
+      if (userError || !userData?.user?.email) {
+        return new Response(
+          JSON.stringify({ error: "Could not retrieve account information" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ email: userData.user.email }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
