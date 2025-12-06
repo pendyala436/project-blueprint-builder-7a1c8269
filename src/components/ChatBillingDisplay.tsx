@@ -191,6 +191,21 @@ const ChatBillingDisplay = ({
     }, 1000);
   };
 
+  const endChatDueToBalance = async (chatId: string) => {
+    try {
+      await supabase.functions.invoke("chat-manager", {
+        body: { action: "end_chat", chat_id: chatId, end_reason: "insufficient_balance" }
+      });
+    } catch (error) {
+      console.error("Error ending chat:", error);
+    }
+    
+    if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+    if (timerInterval.current) clearInterval(timerInterval.current);
+    setIsSessionActive(false);
+    sessionStarted.current = false;
+  };
+
   const startHeartbeat = (chatId: string) => {
     if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
     
@@ -203,13 +218,17 @@ const ChatBillingDisplay = ({
 
         if (error) throw error;
 
-        if (data.end_chat) {
-          // Chat ended due to insufficient balance
+        if (data.end_chat || data.remaining_balance <= 0) {
+          // Chat ended due to insufficient balance - AUTO DISCONNECT
+          await endChatDueToBalance(chatId);
           setShowRechargeDialog(true);
-          setIsSessionActive(false);
           onSessionEnd?.("insufficient_balance");
-          if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
-          if (timerInterval.current) clearInterval(timerInterval.current);
+          
+          toast({
+            title: "Chat Disconnected",
+            description: "Your wallet balance is zero. Recharge to continue chatting.",
+            variant: "destructive"
+          });
           return;
         }
 

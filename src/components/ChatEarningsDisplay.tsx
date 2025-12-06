@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { IndianRupee, Clock, TrendingUp, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -18,10 +18,27 @@ const ChatEarningsDisplay = ({
   const [activeChats, setActiveChats] = useState(0);
   const [currentSessionEarnings, setCurrentSessionEarnings] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [earningRate, setEarningRate] = useState(2.00);
+
+  // Only women see earnings (they earn from chats)
+  if (userGender !== "female") {
+    return null;
+  }
 
   // Define loadEarningsData BEFORE useEffect
-  const loadEarningsData = async () => {
+  const loadEarningsData = useCallback(async () => {
     try {
+      // Get admin-set earning rate for women
+      const { data: pricing } = await supabase
+        .from("chat_pricing")
+        .select("women_earning_rate")
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (pricing) {
+        setEarningRate(pricing.women_earning_rate);
+      }
+
       // Get today's earnings
       const today = new Date().toISOString().split("T")[0];
       const { data: earnings } = await supabase
@@ -45,26 +62,37 @@ const ChatEarningsDisplay = ({
       // Get current session earnings
       const { data: currentSession } = await supabase
         .from("active_chat_sessions")
-        .select("total_earned")
+        .select("total_earned, started_at")
         .eq("woman_user_id", currentUserId)
         .eq("man_user_id", chatPartnerId)
         .eq("status", "active")
         .maybeSingle();
 
       if (currentSession) {
-        setCurrentSessionEarnings(currentSession.total_earned);
+        // Calculate women's portion of earnings (based on women_earning_rate)
+        const sessionDurationMs = Date.now() - new Date(currentSession.started_at).getTime();
+        const sessionMinutes = sessionDurationMs / (1000 * 60);
+        const womenEarnings = sessionMinutes * (pricing?.women_earning_rate || 2);
+        setCurrentSessionEarnings(womenEarnings);
+        setElapsedSeconds(Math.floor(sessionDurationMs / 1000));
       }
     } catch (error) {
       console.error("Error loading earnings:", error);
     }
-  };
+  }, [currentUserId, chatPartnerId]);
 
   useEffect(() => {
     loadEarningsData();
     
-    // Update timer every second
+    // Update timer and estimated earnings every second
     const timer = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
+      setElapsedSeconds(prev => {
+        const newSeconds = prev + 1;
+        // Update estimated earnings based on elapsed time
+        const minutes = newSeconds / 60;
+        setCurrentSessionEarnings(minutes * earningRate);
+        return newSeconds;
+      });
     }, 1000);
 
     // Subscribe to earnings updates
@@ -79,7 +107,6 @@ const ChatEarningsDisplay = ({
           filter: `user_id=eq.${currentUserId}`
         },
         (payload) => {
-          setCurrentSessionEarnings(prev => prev + (payload.new as any).amount);
           setTodayEarnings(prev => prev + (payload.new as any).amount);
         }
       )
@@ -89,13 +116,7 @@ const ChatEarningsDisplay = ({
       clearInterval(timer);
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, chatPartnerId]);
-
-  // Only women see earnings (they earn from chats)
-  if (userGender !== "female") {
-    return null;
-  }
-
+  }, [currentUserId, chatPartnerId, loadEarningsData, earningRate]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -105,6 +126,12 @@ const ChatEarningsDisplay = ({
 
   return (
     <div className="flex items-center gap-4 px-4 py-2 text-sm bg-emerald-500/10 border-b border-emerald-500/20">
+      {/* Earning Rate */}
+      <div className="flex items-center gap-1.5">
+        <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
+        <span className="font-medium text-emerald-600">₹{earningRate}/min</span>
+      </div>
+
       {/* Session Duration */}
       <div className="flex items-center gap-1.5">
         <Clock className="h-3.5 w-3.5 text-emerald-600" />
@@ -114,7 +141,7 @@ const ChatEarningsDisplay = ({
       {/* This Chat Earnings */}
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-        <span className="text-muted-foreground">This chat:</span>
+        <span className="text-muted-foreground">Earning:</span>
         <span className="font-medium text-emerald-600">₹{currentSessionEarnings.toFixed(2)}</span>
       </div>
 
