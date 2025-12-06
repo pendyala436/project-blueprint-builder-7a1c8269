@@ -16,6 +16,7 @@ import AIProcessingScreen from "./pages/AIProcessingScreen";
 import WelcomeTutorialScreen from "./pages/WelcomeTutorialScreen";
 import RegistrationCompleteScreen from "./pages/RegistrationCompleteScreen";
 import DashboardScreen from "./pages/DashboardScreen";
+import OnlineUsersScreen from "./pages/OnlineUsersScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/welcome-tutorial" element={<WelcomeTutorialScreen />} />
           <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
           <Route path="/dashboard" element={<DashboardScreen />} />
+          <Route path="/online-users" element={<OnlineUsersScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

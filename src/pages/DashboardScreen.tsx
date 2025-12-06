@@ -191,7 +191,7 @@ const DashboardScreen = () => {
       icon: <Search className="w-6 h-6" />, 
       label: "Discover", 
       color: "from-primary to-rose-400",
-      action: () => toast({ title: "Discover", description: "Coming soon!" })
+      action: () => navigate("/online-users")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
