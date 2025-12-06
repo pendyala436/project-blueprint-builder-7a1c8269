@@ -92,7 +92,7 @@ const LanguagePreferencesScreen = () => {
         description: `${selectedLanguages.length} language(s) selected for translation.`,
       });
 
-      navigate("/password-setup");
+      navigate("/terms-agreement");
     } catch (error) {
       console.error("Error saving languages:", error);
       toast({

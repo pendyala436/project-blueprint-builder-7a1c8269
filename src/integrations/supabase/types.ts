@@ -65,6 +65,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_consent: {
+        Row: {
+          agreed_terms: boolean
+          ccpa_consent: boolean | null
+          consent_timestamp: string
+          created_at: string
+          dpdp_consent: boolean | null
+          gdpr_consent: boolean | null
+          id: string
+          ip_address: string | null
+          terms_version: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          agreed_terms?: boolean
+          ccpa_consent?: boolean | null
+          consent_timestamp?: string
+          created_at?: string
+          dpdp_consent?: boolean | null
+          gdpr_consent?: boolean | null
+          id?: string
+          ip_address?: string | null
+          terms_version?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          agreed_terms?: boolean
+          ccpa_consent?: boolean | null
+          consent_timestamp?: string
+          created_at?: string
+          dpdp_consent?: boolean | null
+          gdpr_consent?: boolean | null
+          id?: string
+          ip_address?: string | null
+          terms_version?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_languages: {
         Row: {
           created_at: string

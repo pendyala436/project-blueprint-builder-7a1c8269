@@ -8,6 +8,7 @@ import BasicInfoScreen from "./pages/BasicInfoScreen";
 import PhotoUploadScreen from "./pages/PhotoUploadScreen";
 import LocationSetupScreen from "./pages/LocationSetupScreen";
 import LanguagePreferencesScreen from "./pages/LanguagePreferencesScreen";
+import TermsAgreementScreen from "./pages/TermsAgreementScreen";
 import PasswordSetupScreen from "./pages/PasswordSetupScreen";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/photo-upload" element={<PhotoUploadScreen />} />
           <Route path="/location-setup" element={<LocationSetupScreen />} />
           <Route path="/language-preferences" element={<LanguagePreferencesScreen />} />
+          <Route path="/terms-agreement" element={<TermsAgreementScreen />} />
           <Route path="/password-setup" element={<PasswordSetupScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
