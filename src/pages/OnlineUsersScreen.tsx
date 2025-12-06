@@ -10,9 +10,8 @@ import {
   ArrowLeft,
   Circle,
   Languages,
-  ChevronLeft,
-  ChevronRight,
-  Loader2
+  Loader2,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -305,6 +304,7 @@ const OnlineUsersScreen = () => {
                             : "scale-90 opacity-70 hover:opacity-90"
                         }`}
                         onClick={() => handleUserSelect(user, index)}
+                        onDoubleClick={() => navigate(`/profile/${user.userId}`)}
                       >
                         {/* Avatar */}
                         <div className="relative aspect-[3/4] overflow-hidden bg-muted">
@@ -387,12 +387,12 @@ const OnlineUsersScreen = () => {
                 <Heart className="w-10 h-10 text-white fill-white group-hover:animate-bounce-subtle" />
               </button>
 
-              {/* Super Like - Reserved for future */}
+              {/* View Profile Button */}
               <button
-                onClick={() => toast({ title: "Super Like", description: "Coming soon with premium!" })}
-                className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-blue-500/50 hover:bg-blue-500/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg"
+                onClick={() => selectedUser && navigate(`/profile/${selectedUser.userId}`)}
+                className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-primary/50 hover:bg-primary/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg"
               >
-                <Heart className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                <Eye className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             </div>
 
