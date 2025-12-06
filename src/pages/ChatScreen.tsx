@@ -42,8 +42,18 @@ import {
   Loader2,      // Loading spinner
   MoreVertical, // Options menu icon
   Check,        // Single check (sent)
-  CheckCheck    // Double check (read)
+  CheckCheck,   // Double check (read)
+  Paperclip,    // Attachment icon
+  Image,        // Image upload icon
+  FileText,     // File upload icon
+  Camera,       // Selfie/camera icon
+  X             // Close icon
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
 // Billing and earnings display components
@@ -64,6 +74,8 @@ interface Message {
   isTranslated: boolean;         // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
+  attachmentUrl?: string;        // URL of attached file/image
+  attachmentType?: "image" | "file"; // Type of attachment
 }
 
 /**
@@ -132,6 +144,13 @@ const ChatScreen = () => {
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
   
+  // Attachment states
+  const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  
   // ============= REFS =============
   
   // Reference to bottom of messages for auto-scroll
@@ -139,6 +158,13 @@ const ChatScreen = () => {
   
   // Store chat ID for realtime subscription (consistent format)
   const chatId = useRef<string>("");
+  
+  // Refs for file inputs and camera
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   /**
    * useEffect: Initialize Chat
@@ -482,6 +508,207 @@ const ChatScreen = () => {
   };
 
   /**
+   * Handle Image Selection
+   */
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setIsAttachmentOpen(false);
+    }
+  };
+
+  /**
+   * Handle File Selection
+   */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "File too large",
+          description: "Maximum file size is 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(null);
+      setIsAttachmentOpen(false);
+    }
+  };
+
+  /**
+   * Open Camera for Selfie
+   */
+  const openCamera = async () => {
+    try {
+      setIsCameraOpen(true);
+      setIsAttachmentOpen(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user" },
+        audio: false 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error("Camera error:", error);
+      toast({
+        title: "Camera access denied",
+        description: "Please allow camera access to take a selfie",
+        variant: "destructive",
+      });
+      setIsCameraOpen(false);
+    }
+  };
+
+  /**
+   * Capture Selfie
+   */
+  const captureSelfie = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: "image/jpeg" });
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(blob));
+            closeCamera();
+          }
+        }, "image/jpeg", 0.8);
+      }
+    }
+  };
+
+  /**
+   * Close Camera
+   */
+  const closeCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  /**
+   * Cancel Selected File
+   */
+  const cancelSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  /**
+   * Upload File to Supabase Storage
+   */
+  const uploadFile = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${currentUserId}/${chatId.current}/${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from("profile-photos")
+        .getPublicUrl(fileName);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+  };
+
+  /**
+   * Send Message with Attachment
+   */
+  const handleSendWithAttachment = async () => {
+    if (!selectedFile || !chatPartner || isSending) return;
+
+    setIsSending(true);
+    setIsUploading(true);
+
+    try {
+      const attachmentUrl = await uploadFile(selectedFile);
+      if (!attachmentUrl) {
+        throw new Error("Failed to upload file");
+      }
+
+      const attachmentType = selectedFile.type.startsWith("image/") ? "image" : "file";
+      const messageText = newMessage.trim() || (attachmentType === "image" ? "📷 Image" : `📎 ${selectedFile.name}`);
+
+      // Translate if needed
+      const translation = await translateMessage(messageText, chatPartner.preferredLanguage);
+
+      const { error } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId.current,
+          sender_id: currentUserId,
+          receiver_id: chatPartner.userId,
+          message: `${messageText}\n[attachment:${attachmentUrl}]`,
+          translated_message: translation.translatedMessage || null,
+          is_translated: translation.isTranslated,
+        });
+
+      if (error) throw error;
+
+      setNewMessage("");
+      cancelSelectedFile();
+      toast({
+        title: "Sent",
+        description: attachmentType === "image" ? "Image sent successfully" : "File sent successfully",
+      });
+    } catch (error) {
+      console.error("Error sending attachment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+      setIsUploading(false);
+    }
+  };
+
+  /**
+   * Extract Attachment from Message
+   */
+  const extractAttachment = (message: string): { text: string; attachmentUrl?: string } => {
+    const attachmentMatch = message.match(/\[attachment:(.*?)\]/);
+    if (attachmentMatch) {
+      const text = message.replace(/\n?\[attachment:.*?\]/, "").trim();
+      return { text, attachmentUrl: attachmentMatch[1] };
+    }
+    return { text: message };
+  };
+
+  /**
    * formatTime Function
    * 
    * Formats timestamp to local time string (HH:MM format).
@@ -669,6 +896,11 @@ const ChatScreen = () => {
                 const isMine = message.senderId === currentUserId;
                 // Show avatar only for first message in sequence from same sender
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
+                // Extract attachment from message
+                const { text: messageText, attachmentUrl } = extractAttachment(message.message);
+                const displayText = !isMine && message.isTranslated && message.translatedMessage 
+                  ? extractAttachment(message.translatedMessage).text 
+                  : messageText;
 
                 return (
                   <div
@@ -698,21 +930,42 @@ const ChatScreen = () => {
 
                       {/* Message bubble and translations */}
                       <div className={`space-y-1`}>
+                        {/* Attachment preview */}
+                        {attachmentUrl && (
+                          <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
+                            {attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                              <img 
+                                src={attachmentUrl} 
+                                alt="Attachment" 
+                                className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(attachmentUrl, "_blank")}
+                              />
+                            ) : (
+                              <a 
+                                href={attachmentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}
+                              >
+                                <FileText className="w-5 h-5" />
+                                <span className="text-sm underline">Download File</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        
                         {/* Primary message bubble */}
-                        <div
-                          className={`px-4 py-2.5 rounded-2xl ${
-                            isMine 
-                              ? "bg-primary text-primary-foreground rounded-br-md" 
-                              : "bg-muted text-foreground rounded-bl-md"
-                          }`}
-                        >
-                          {/* For receiver: show translated message if available */}
-                          {!isMine && message.isTranslated && message.translatedMessage ? (
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.translatedMessage}</p>
-                          ) : (
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
-                          )}
-                        </div>
+                        {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && (
+                          <div
+                            className={`px-4 py-2.5 rounded-2xl ${
+                              isMine 
+                                ? "bg-primary text-primary-foreground rounded-br-md" 
+                                : "bg-muted text-foreground rounded-bl-md"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">{displayText}</p>
+                          </div>
+                        )}
 
                         {/* Original message for receiver (when translations shown) */}
                         {showTranslations && !isMine && message.isTranslated && message.translatedMessage && (
@@ -721,7 +974,7 @@ const ChatScreen = () => {
                               <Languages className="w-3 h-3" />
                               Original
                             </p>
-                            <p className="text-sm text-muted-foreground">{message.message}</p>
+                            <p className="text-sm text-muted-foreground">{messageText}</p>
                           </div>
                         )}
 
@@ -732,7 +985,7 @@ const ChatScreen = () => {
                               <Languages className="w-3 h-3" />
                               They see
                             </p>
-                            <p className="text-sm text-foreground">{message.translatedMessage}</p>
+                            <p className="text-sm text-foreground">{extractAttachment(message.translatedMessage).text}</p>
                           </div>
                         )}
 
@@ -761,21 +1014,137 @@ const ChatScreen = () => {
         </div>
       </main>
 
+      {/* ============= CAMERA MODAL ============= */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between p-4">
+            <button onClick={closeCamera} className="p-2 text-white">
+              <X className="w-6 h-6" />
+            </button>
+            <span className="text-white font-medium">Take Selfie</span>
+            <div className="w-10" />
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className="max-w-full max-h-full object-cover"
+              style={{ transform: "scaleX(-1)" }}
+            />
+          </div>
+          <div className="p-6 flex justify-center">
+            <button 
+              onClick={captureSelfie}
+              className="w-16 h-16 rounded-full bg-white border-4 border-primary flex items-center justify-center"
+            >
+              <Camera className="w-8 h-8 text-primary" />
+            </button>
+          </div>
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
+      )}
+
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 bg-background border-t border-border/50 px-4 py-3">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-2">
+          {/* Selected file preview */}
+          {selectedFile && (
+            <div className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded object-cover" />
+              ) : (
+                <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+              <button 
+                onClick={cancelSelectedFile}
+                className="p-1.5 hover:bg-muted-foreground/10 rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          
           <form 
             onSubmit={(e) => {
-              e.preventDefault(); // Prevent form submission page reload
-              handleSendMessage();
+              e.preventDefault();
+              if (selectedFile) {
+                handleSendWithAttachment();
+              } else {
+                handleSendMessage();
+              }
             }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-2"
           >
+            {/* Hidden file inputs */}
+            <input 
+              ref={imageInputRef}
+              type="file" 
+              accept="image/*" 
+              className="hidden"
+              onChange={handleImageSelect}
+            />
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            
+            {/* Attachment button with popover */}
+            <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2" side="top" align="start">
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                  >
+                    <Image className="w-5 h-5 text-primary" />
+                    <span className="text-sm">Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                  >
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <span className="text-sm">File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openCamera}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                  >
+                    <Camera className="w-5 h-5 text-emerald-500" />
+                    <span className="text-sm">Selfie</span>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
             {/* Text input field */}
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={selectedFile ? "Add a caption..." : "Type a message..."}
               className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary"
               disabled={isSending}
             />
@@ -785,7 +1154,7 @@ const ChatScreen = () => {
               type="submit"
               size="icon"
               className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90"
-              disabled={!newMessage.trim() || isSending}
+              disabled={(!newMessage.trim() && !selectedFile) || isSending}
             >
               {isSending ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
