@@ -102,12 +102,12 @@ interface PaymentGateway {
 }
 
 const PAYMENT_GATEWAYS: PaymentGateway[] = [
-  { id: "stripe", name: "Stripe", logo: "💎", description: "Cards, Apple Pay, Google Pay" },
-  { id: "paypal", name: "PayPal", logo: "🅿️", description: "200+ countries supported" },
-  { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "UPI, Cards, Netbanking" },
-  { id: "wise", name: "Wise", logo: "💸", description: "International Transfers" },
-  { id: "adyen", name: "Adyen", logo: "🌐", description: "Global Payments" },
-  { id: "ccavenue", name: "CCAvenue", logo: "🏦", description: "Cards, Wallets, EMI" },
+  { id: "stripe", name: "Stripe", logo: "💎", description: "International - Cards, Apple Pay, Google Pay" },
+  { id: "paypal", name: "PayPal", logo: "🅿️", description: "International - 200+ countries supported" },
+  { id: "wise", name: "Wise", logo: "💸", description: "International - Transfers" },
+  { id: "adyen", name: "Adyen", logo: "🌐", description: "International - Global Payments" },
+  { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "Indian - UPI, Cards, Netbanking" },
+  { id: "ccavenue", name: "CCAvenue", logo: "🏦", description: "Indian - Cards, Wallets, EMI" },
 ];
 
 const DashboardScreen = () => {
