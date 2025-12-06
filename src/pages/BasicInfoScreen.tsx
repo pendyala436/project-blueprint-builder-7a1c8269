@@ -181,7 +181,7 @@ const BasicInfoScreen = () => {
   };
 
   const handleBack = () => {
-    navigate("/");
+    navigate("/register");
   };
 
   const isComplete = email.trim() && fullName.trim() && dob && gender && phone.trim();

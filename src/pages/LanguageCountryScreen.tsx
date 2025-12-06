@@ -50,6 +50,10 @@ const LanguageCountryScreen = () => {
     navigate("/basic-info");
   };
 
+  const handleBack = () => {
+    navigate("/");
+  };
+
   const isComplete = selectedLanguage && selectedCountry;
 
   return (
