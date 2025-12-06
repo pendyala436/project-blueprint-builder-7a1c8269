@@ -20,7 +20,8 @@ import {
   BarChart3,
   Check,
   RefreshCw,
-  Palette
+  Palette,
+  Users
 } from "lucide-react";
 
 interface AdminSetting {
@@ -418,6 +419,25 @@ const AdminSettings = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Sample Users Management Link */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Sample Users Management
+            </CardTitle>
+            <CardDescription>
+              Enable or disable demo profiles by country and language for testing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate('/admin/sample-users')} className="gap-2">
+              <Users className="h-4 w-4" />
+              Manage Sample Users
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

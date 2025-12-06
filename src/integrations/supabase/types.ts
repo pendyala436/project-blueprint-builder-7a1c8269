@@ -876,6 +876,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sample_users: {
+        Row: {
+          age: number
+          bio: string | null
+          country: string
+          created_at: string
+          gender: string
+          id: string
+          is_active: boolean
+          language: string
+          name: string
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          age?: number
+          bio?: string | null
+          country: string
+          created_at?: string
+          gender: string
+          id?: string
+          is_active?: boolean
+          language: string
+          name: string
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          age?: number
+          bio?: string | null
+          country?: string
+          created_at?: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          name?: string
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scheduled_shifts: {
         Row: {
           ai_suggested: boolean
