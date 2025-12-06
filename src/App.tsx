@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AuthScreen from "./pages/AuthScreen";
+import ForgotPasswordScreen from "./pages/ForgotPasswordScreen";
 import LanguageCountryScreen from "./pages/LanguageCountryScreen";
 import BasicInfoScreen from "./pages/BasicInfoScreen";
 import PasswordSetupScreen from "./pages/PasswordSetupScreen";
@@ -25,7 +27,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LanguageCountryScreen />} />
+          <Route path="/" element={<AuthScreen />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/register" element={<LanguageCountryScreen />} />
           <Route path="/basic-info" element={<BasicInfoScreen />} />
           <Route path="/password-setup" element={<PasswordSetupScreen />} />
           <Route path="/photo-upload" element={<PhotoUploadScreen />} />
