@@ -244,7 +244,7 @@ export default function AdminSampleUsers() {
               Create Test Accounts
             </CardTitle>
             <CardDescription>
-              Creates 75 test users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
+              Creates 45 test users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
               <br />
               Each user gets ₹10,000 wallet balance (no recharge required for chatting)
             </CardDescription>
@@ -272,19 +272,14 @@ export default function AdminSampleUsers() {
                   <User className="h-3 w-3 text-pink-500" /> female1-15
                 </Badge>
                 <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-purple-500" /> lesbian1-15
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-cyan-500" /> transgender1-15
-                </Badge>
-                <Badge variant="outline" className="gap-1">
                   <Shield className="h-3 w-3 text-amber-500" /> admin1-15
                 </Badge>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Email format: <code className="bg-muted px-1 rounded">male1@meow-meow.com</code>, 
-              <code className="bg-muted px-1 rounded ml-1">female5@meow-meow.com</code>, etc.
+              <code className="bg-muted px-1 rounded ml-1">female5@meow-meow.com</code>, 
+              <code className="bg-muted px-1 rounded ml-1">admin1@meow-meow.com</code>
             </p>
           </CardContent>
         </Card>

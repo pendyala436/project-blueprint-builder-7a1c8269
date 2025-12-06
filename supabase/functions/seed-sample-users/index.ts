@@ -1,7 +1,7 @@
 /**
  * seed-sample-users Edge Function
  * Creates sample auth users with profiles, wallets, and roles.
- * - male1-15, female1-15, lesbian1-15, transgender1-15, admin1-15
+ * - male1-15, female1-15, admin1-15
  * - Password: Chinn@2589
  * - Wallets with free balance (no recharge required)
  */
@@ -63,28 +63,6 @@ Deno.serve(async (req) => {
         gender: "female",
         role: "user",
         name: `Test Female ${i}`,
-      });
-    }
-
-    // Generate lesbian users (lesbian1 to lesbian15)
-    for (let i = 1; i <= 15; i++) {
-      usersToCreate.push({
-        email: `lesbian${i}@meow-meow.com`,
-        password,
-        gender: "lesbian",
-        role: "user",
-        name: `Test Lesbian ${i}`,
-      });
-    }
-
-    // Generate transgender users (transgender1 to transgender15)
-    for (let i = 1; i <= 15; i++) {
-      usersToCreate.push({
-        email: `transgender${i}@meow-meow.com`,
-        password,
-        gender: "transgender",
-        role: "user",
-        name: `Test Transgender ${i}`,
       });
     }
 
@@ -241,12 +219,10 @@ Deno.serve(async (req) => {
         },
         credentials: {
           password: "Chinn@2589",
-          walletBalance: "₹10,000 (free)",
+          walletBalance: "₹10,000 (free - no recharge required)",
           categories: [
             "male1-15@meow-meow.com",
             "female1-15@meow-meow.com",
-            "lesbian1-15@meow-meow.com",
-            "transgender1-15@meow-meow.com",
             "admin1-15@meow-meow.com",
           ],
         },
