@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
@@ -20,7 +21,9 @@ import {
   IndianRupee,
   DollarSign,
   Euro,
-  CheckCircle2
+  CheckCircle2,
+  Banknote,
+  Building2
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -45,55 +48,86 @@ interface PaymentGateway {
   name: string;
   logo: string;
   description: string;
-  supportedCurrencies: string[];
+  supportedRegions: string[];
 }
 
+interface WithdrawalMethod {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+}
+
+// Global payment gateways for men recharge
 const PAYMENT_GATEWAYS: PaymentGateway[] = [
+  {
+    id: "stripe",
+    name: "Stripe",
+    logo: "💎",
+    description: "Cards, Apple Pay, Google Pay",
+    supportedRegions: ["global"]
+  },
+  {
+    id: "paypal",
+    name: "PayPal",
+    logo: "🅿️",
+    description: "200+ countries supported",
+    supportedRegions: ["global"]
+  },
   {
     id: "razorpay",
     name: "Razorpay",
     logo: "🇮🇳",
     description: "UPI, Cards, Netbanking",
-    supportedCurrencies: ["INR"]
+    supportedRegions: ["IN"]
   },
   {
     id: "paytm",
     name: "Paytm",
     logo: "💳",
     description: "Paytm Wallet, UPI",
-    supportedCurrencies: ["INR"]
-  },
-  {
-    id: "stripe",
-    name: "Stripe",
-    logo: "💎",
-    description: "Cards, Apple Pay, Google Pay",
-    supportedCurrencies: ["USD", "EUR", "GBP", "INR"]
-  },
-  {
-    id: "paypal",
-    name: "PayPal",
-    logo: "🅿️",
-    description: "PayPal Balance, Cards",
-    supportedCurrencies: ["USD", "EUR", "GBP"]
+    supportedRegions: ["IN"]
   },
   {
     id: "adyen",
     name: "Adyen",
     logo: "🌐",
     description: "Global Payments",
-    supportedCurrencies: ["USD", "EUR", "GBP", "INR"]
+    supportedRegions: ["global"]
   },
   {
-    id: "ccavenue",
-    name: "CCAvenue",
-    logo: "🏦",
-    description: "Cards, Netbanking, Wallets",
-    supportedCurrencies: ["INR"]
+    id: "wise",
+    name: "Wise",
+    logo: "💸",
+    description: "International Transfers",
+    supportedRegions: ["global"]
   }
 ];
 
-const RECHARGE_AMOUNTS = [100, 500, 1000, 2000, 5000];
+// India-only withdrawal methods for women
+const WITHDRAWAL_METHODS: WithdrawalMethod[] = [
+  {
+    id: "upi",
+    name: "UPI",
+    logo: "📱",
+    description: "Instant transfer to UPI ID"
+  },
+  {
+    id: "bank",
+    name: "Bank Transfer",
+    logo: "🏦",
+    description: "NEFT/IMPS to bank account"
+  },
+  {
+    id: "paytm_wallet",
+    name: "Paytm Wallet",
+    logo: "💳",
+    description: "Transfer to Paytm"
+  }
+];
+
+const RECHARGE_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+const WITHDRAWAL_AMOUNTS = [500, 1000, 2000, 5000, 10000];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
   INR: <IndianRupee className="h-5 w-5" />,
@@ -108,9 +142,18 @@ const WalletScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [selectedGateway, setSelectedGateway] = useState<string>("razorpay");
+  const [selectedGateway, setSelectedGateway] = useState<string>("stripe");
+  const [selectedWithdrawalMethod, setSelectedWithdrawalMethod] = useState<string>("upi");
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [userGender, setUserGender] = useState<string | null>(null);
+  const [withdrawalDetails, setWithdrawalDetails] = useState({
+    upiId: "",
+    accountNumber: "",
+    ifscCode: "",
+    accountName: "",
+    paytmNumber: ""
+  });
 
   useEffect(() => {
     fetchWalletData();
@@ -122,6 +165,17 @@ const WalletScreen = () => {
       if (!user) {
         navigate("/auth");
         return;
+      }
+
+      // Fetch user profile to get gender
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profileData?.gender) {
+        setUserGender(profileData.gender);
       }
 
       // Fetch or create wallet
@@ -235,6 +289,76 @@ const WalletScreen = () => {
     }, 2000);
   };
 
+  const handleWithdrawal = async (amount: number) => {
+    if (!wallet || wallet.balance < amount) {
+      toast.error("Insufficient balance");
+      return;
+    }
+
+    // Validate withdrawal details based on method
+    if (selectedWithdrawalMethod === "upi" && !withdrawalDetails.upiId) {
+      toast.error("Please enter your UPI ID");
+      return;
+    }
+    if (selectedWithdrawalMethod === "bank" && (!withdrawalDetails.accountNumber || !withdrawalDetails.ifscCode)) {
+      toast.error("Please enter bank account details");
+      return;
+    }
+    if (selectedWithdrawalMethod === "paytm_wallet" && !withdrawalDetails.paytmNumber) {
+      toast.error("Please enter your Paytm number");
+      return;
+    }
+
+    setSelectedAmount(amount);
+    setProcessingPayment(true);
+
+    const method = WITHDRAWAL_METHODS.find(m => m.id === selectedWithdrawalMethod);
+    toast.info(`Processing withdrawal via ${method?.name}...`);
+
+    setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Update wallet balance
+        const newBalance = wallet.balance - amount;
+        const { error: updateError } = await supabase
+          .from("wallets")
+          .update({ balance: newBalance })
+          .eq("id", wallet.id);
+
+        if (updateError) throw updateError;
+
+        // Create transaction record
+        const { error: txError } = await supabase
+          .from("wallet_transactions")
+          .insert({
+            wallet_id: wallet.id,
+            user_id: user.id,
+            type: "debit",
+            amount: amount,
+            description: `Withdrawal via ${method?.name}`,
+            reference_id: `WD_${selectedWithdrawalMethod.toUpperCase()}_${Date.now()}`,
+            status: "pending"
+          });
+
+        if (txError) throw txError;
+
+        setIsAnimating(true);
+        await fetchWalletData();
+        setTimeout(() => setIsAnimating(false), 500);
+
+        toast.success(`₹${amount} withdrawal initiated! Will be credited within 24 hours.`);
+      } catch (error) {
+        console.error("Withdrawal error:", error);
+        toast.error("Withdrawal failed. Please try again.");
+      } finally {
+        setSelectedAmount(null);
+        setProcessingPayment(false);
+      }
+    }, 2000);
+  };
+
   const formatCurrency = (amount: number, currency: string = "INR") => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -242,6 +366,8 @@ const WalletScreen = () => {
       minimumFractionDigits: 2,
     }).format(amount);
   };
+
+  const isFemale = userGender?.toLowerCase() === "female";
 
   if (loading) {
     return (
@@ -312,98 +438,251 @@ const WalletScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Gateway Selection */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Payment Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={selectedGateway}
-              onValueChange={setSelectedGateway}
-              className="grid grid-cols-2 gap-3"
-            >
-              {PAYMENT_GATEWAYS.map((gateway) => (
-                <div key={gateway.id} className="relative">
-                  <RadioGroupItem
-                    value={gateway.id}
-                    id={gateway.id}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={gateway.id}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                      "hover:border-primary/50 hover:bg-muted/50",
-                      selectedGateway === gateway.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border"
-                    )}
-                  >
-                    <span className="text-2xl mb-1">{gateway.logo}</span>
-                    <span className="font-medium text-sm">{gateway.name}</span>
-                    <span className="text-[10px] text-muted-foreground text-center">
-                      {gateway.description}
-                    </span>
-                    {selectedGateway === gateway.id && (
-                      <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
-                    )}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        {/* Quick Recharge */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Plus className="h-5 w-5 text-primary" />
-              Select Amount
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-3">
-              {RECHARGE_AMOUNTS.map((amount) => (
-                <Button
-                  key={amount}
-                  variant={selectedAmount === amount ? "default" : "outline"}
-                  className={cn(
-                    "h-14 text-lg font-semibold transition-all duration-200",
-                    selectedAmount === amount && "scale-95"
-                  )}
-                  onClick={() => handleRecharge(amount)}
-                  disabled={processingPayment}
+        {/* Conditional: Recharge for Men, Withdrawal for Women */}
+        {isFemale ? (
+          <>
+            {/* Withdrawal Method Selection - India Only */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  Withdrawal Method
+                  <Badge variant="secondary" className="ml-2 text-xs">India Only</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RadioGroup
+                  value={selectedWithdrawalMethod}
+                  onValueChange={setSelectedWithdrawalMethod}
+                  className="grid grid-cols-3 gap-3"
                 >
-                  {processingPayment && selectedAmount === amount ? (
-                    <RefreshCw className="h-5 w-5 animate-spin" />
-                  ) : (
-                    `₹${amount}`
+                  {WITHDRAWAL_METHODS.map((method) => (
+                    <div key={method.id} className="relative">
+                      <RadioGroupItem
+                        value={method.id}
+                        id={method.id}
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor={method.id}
+                        className={cn(
+                          "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                          "hover:border-primary/50 hover:bg-muted/50",
+                          selectedWithdrawalMethod === method.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border"
+                        )}
+                      >
+                        <span className="text-2xl mb-1">{method.logo}</span>
+                        <span className="font-medium text-sm">{method.name}</span>
+                        <span className="text-[10px] text-muted-foreground text-center">
+                          {method.description}
+                        </span>
+                        {selectedWithdrawalMethod === method.id && (
+                          <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+
+                {/* Withdrawal Details Form */}
+                <div className="space-y-3 pt-2">
+                  {selectedWithdrawalMethod === "upi" && (
+                    <div>
+                      <Label htmlFor="upiId" className="text-sm">UPI ID</Label>
+                      <Input
+                        id="upiId"
+                        placeholder="yourname@upi"
+                        value={withdrawalDetails.upiId}
+                        onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, upiId: e.target.value }))}
+                        className="mt-1"
+                      />
+                    </div>
                   )}
-                </Button>
-              ))}
-              <Button
-                variant="outline"
-                className="h-14 text-lg font-semibold border-dashed"
-                onClick={() => toast.info("Custom amount feature coming soon!")}
-                disabled={processingPayment}
-              >
-                Other
-              </Button>
-            </div>
-            
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <CreditCard className="h-3 w-3" />
-              <span>
-                Paying via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name || "selected gateway"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+                  {selectedWithdrawalMethod === "bank" && (
+                    <>
+                      <div>
+                        <Label htmlFor="accountName" className="text-sm">Account Holder Name</Label>
+                        <Input
+                          id="accountName"
+                          placeholder="As per bank records"
+                          value={withdrawalDetails.accountName}
+                          onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, accountName: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="accountNumber" className="text-sm">Account Number</Label>
+                        <Input
+                          id="accountNumber"
+                          placeholder="Enter account number"
+                          value={withdrawalDetails.accountNumber}
+                          onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, accountNumber: e.target.value }))}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ifscCode" className="text-sm">IFSC Code</Label>
+                        <Input
+                          id="ifscCode"
+                          placeholder="e.g., SBIN0001234"
+                          value={withdrawalDetails.ifscCode}
+                          onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, ifscCode: e.target.value.toUpperCase() }))}
+                          className="mt-1"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {selectedWithdrawalMethod === "paytm_wallet" && (
+                    <div>
+                      <Label htmlFor="paytmNumber" className="text-sm">Paytm Mobile Number</Label>
+                      <Input
+                        id="paytmNumber"
+                        placeholder="10 digit mobile number"
+                        value={withdrawalDetails.paytmNumber}
+                        onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, paytmNumber: e.target.value }))}
+                        className="mt-1"
+                        maxLength={10}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Withdrawal Amount */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ArrowUpRight className="h-5 w-5 text-primary" />
+                  Withdraw Amount
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  {WITHDRAWAL_AMOUNTS.map((amount) => (
+                    <Button
+                      key={amount}
+                      variant={selectedAmount === amount ? "default" : "outline"}
+                      className={cn(
+                        "h-14 text-lg font-semibold transition-all duration-200",
+                        selectedAmount === amount && "scale-95",
+                        wallet && wallet.balance < amount && "opacity-50"
+                      )}
+                      onClick={() => handleWithdrawal(amount)}
+                      disabled={processingPayment || (wallet && wallet.balance < amount)}
+                    >
+                      {processingPayment && selectedAmount === amount ? (
+                        <RefreshCw className="h-5 w-5 animate-spin" />
+                      ) : (
+                        `₹${amount}`
+                      )}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Building2 className="h-3 w-3" />
+                  <span>
+                    Withdrawing to {WITHDRAWAL_METHODS.find(m => m.id === selectedWithdrawalMethod)?.name || "selected method"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Minimum withdrawal: ₹500 • Processing time: 24 hours
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            {/* Payment Gateway Selection - Global for Men */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Payment Method
+                  <Badge variant="secondary" className="ml-2 text-xs">All Countries</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedGateway}
+                  onValueChange={setSelectedGateway}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  {PAYMENT_GATEWAYS.map((gateway) => (
+                    <div key={gateway.id} className="relative">
+                      <RadioGroupItem
+                        value={gateway.id}
+                        id={gateway.id}
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor={gateway.id}
+                        className={cn(
+                          "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
+                          "hover:border-primary/50 hover:bg-muted/50",
+                          selectedGateway === gateway.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border"
+                        )}
+                      >
+                        <span className="text-2xl mb-1">{gateway.logo}</span>
+                        <span className="font-medium text-sm">{gateway.name}</span>
+                        <span className="text-[10px] text-muted-foreground text-center">
+                          {gateway.description}
+                        </span>
+                        {selectedGateway === gateway.id && (
+                          <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            {/* Quick Recharge */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Plus className="h-5 w-5 text-primary" />
+                  Recharge Amount
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  {RECHARGE_AMOUNTS.map((amount) => (
+                    <Button
+                      key={amount}
+                      variant={selectedAmount === amount ? "default" : "outline"}
+                      className={cn(
+                        "h-14 text-lg font-semibold transition-all duration-200",
+                        selectedAmount === amount && "scale-95"
+                      )}
+                      onClick={() => handleRecharge(amount)}
+                      disabled={processingPayment}
+                    >
+                      {processingPayment && selectedAmount === amount ? (
+                        <RefreshCw className="h-5 w-5 animate-spin" />
+                      ) : (
+                        `₹${amount}`
+                      )}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                  <CreditCard className="h-3 w-3" />
+                  <span>
+                    Paying via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name || "selected gateway"}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Transaction History */}
         <Card>
