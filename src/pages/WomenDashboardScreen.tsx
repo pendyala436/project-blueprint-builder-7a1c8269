@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
+import { RandomChatButton } from "@/components/RandomChatButton";
 
 interface Notification {
   id: string;
@@ -700,6 +701,30 @@ const WomenDashboardScreen = () => {
                 <p className="text-sm font-bold">Shift</p>
                 <p className="text-xs text-muted-foreground">Manage →</p>
               </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Random Chat Button */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
+          <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/20">
+                  <MessageCircle className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Start Random Chat</p>
+                  <p className="text-xs text-muted-foreground">Connect with a man speaking your language</p>
+                </div>
+              </div>
+              <RandomChatButton 
+                userGender="female"
+                userLanguage={currentWomanLanguage}
+                userCountry={currentWomanCountry}
+                variant="gradient"
+                size="default"
+              />
             </div>
           </Card>
         </div>
