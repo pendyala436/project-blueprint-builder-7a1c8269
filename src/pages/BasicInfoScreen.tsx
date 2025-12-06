@@ -136,9 +136,8 @@ const BasicInfoScreen = () => {
       description: "Your basic info has been saved.",
     });
     
-    // Navigate to next screen
-    console.log("Saved:", { fullName, dob, gender });
-    // navigate("/profile-setup"); // Uncomment when next screen is ready
+    // Navigate to password setup screen
+    navigate("/password-setup");
   };
 
   const handleBack = () => {
