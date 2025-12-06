@@ -99,16 +99,58 @@ interface PaymentGateway {
   name: string;
   logo: string;
   description: string;
+  features?: string[];
 }
 
-const PAYMENT_GATEWAYS: PaymentGateway[] = [
-  { id: "stripe", name: "Stripe", logo: "💎", description: "International - Cards, Apple Pay, Google Pay" },
-  { id: "paypal", name: "PayPal", logo: "🅿️", description: "International - 200+ countries supported" },
-  { id: "wise", name: "Wise", logo: "💸", description: "International - Transfers" },
-  { id: "adyen", name: "Adyen", logo: "🌐", description: "International - Global Payments" },
-  { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "Indian - UPI, Cards, Netbanking" },
-  { id: "ccavenue", name: "CCAvenue", logo: "🏦", description: "Indian - Cards, Wallets, EMI" },
+const INDIAN_GATEWAYS: PaymentGateway[] = [
+  { 
+    id: "razorpay", 
+    name: "Razorpay", 
+    logo: "🇮🇳", 
+    description: "UPI, Cards, Netbanking",
+    features: ["UPI", "Debit/Credit Cards", "Netbanking", "Wallets"]
+  },
+  { 
+    id: "ccavenue", 
+    name: "CCAvenue", 
+    logo: "🏦", 
+    description: "Cards, Wallets, EMI",
+    features: ["Cards", "EMI", "Wallets", "Netbanking"]
+  },
 ];
+
+const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [
+  { 
+    id: "stripe", 
+    name: "Stripe", 
+    logo: "💎", 
+    description: "Cards, Apple Pay, Google Pay",
+    features: ["Cards", "Apple Pay", "Google Pay", "Bank Transfers"]
+  },
+  { 
+    id: "paypal", 
+    name: "PayPal", 
+    logo: "🅿️", 
+    description: "200+ countries supported",
+    features: ["PayPal Balance", "Cards", "Bank Account"]
+  },
+  { 
+    id: "wise", 
+    name: "Wise", 
+    logo: "💸", 
+    description: "International Transfers",
+    features: ["Bank Transfer", "Low Fees", "Multi-currency"]
+  },
+  { 
+    id: "adyen", 
+    name: "Adyen", 
+    logo: "🌐", 
+    description: "Global Payments",
+    features: ["Cards", "Local Methods", "Digital Wallets"]
+  },
+];
+
+const ALL_GATEWAYS = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -318,7 +360,7 @@ const DashboardScreen = () => {
     setSelectedAmount(amountINR);
     setProcessingPayment(true);
     
-    const gateway = PAYMENT_GATEWAYS.find(g => g.id === selectedGateway);
+    const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
     toast({
       title: "Processing Payment",
       description: `Opening ${gateway?.name} for ${formatLocalCurrency(amountINR)}...`,
@@ -669,15 +711,56 @@ const DashboardScreen = () => {
               </p>
             </div>
 
-            {/* Payment Gateway Selection */}
+            {/* Indian Payment Gateways */}
             <div>
-              <Label className="text-sm font-medium mb-3 block">Payment Method</Label>
+              <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                🇮🇳 Indian Payment Methods
+              </Label>
               <RadioGroup
                 value={selectedGateway}
                 onValueChange={setSelectedGateway}
                 className="grid grid-cols-2 gap-3"
               >
-                {PAYMENT_GATEWAYS.map((gateway) => (
+                {INDIAN_GATEWAYS.map((gateway) => (
+                  <div key={gateway.id} className="relative">
+                    <RadioGroupItem
+                      value={gateway.id}
+                      id={`gateway-${gateway.id}`}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`gateway-${gateway.id}`}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
+                        "hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20",
+                        selectedGateway === gateway.id
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
+                          : "border-border"
+                      )}
+                    >
+                      <span className="text-2xl mb-1">{gateway.logo}</span>
+                      <span className="font-semibold text-sm">{gateway.name}</span>
+                      <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
+                      {selectedGateway === gateway.id && (
+                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-orange-500" />
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {/* International Payment Gateways */}
+            <div>
+              <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
+                🌍 International Payment Methods
+              </Label>
+              <RadioGroup
+                value={selectedGateway}
+                onValueChange={setSelectedGateway}
+                className="grid grid-cols-2 gap-3"
+              >
+                {INTERNATIONAL_GATEWAYS.map((gateway) => (
                   <div key={gateway.id} className="relative">
                     <RadioGroupItem
                       value={gateway.id}
@@ -694,8 +777,9 @@ const DashboardScreen = () => {
                           : "border-border"
                       )}
                     >
-                      <span className="text-xl mb-1">{gateway.logo}</span>
-                      <span className="font-medium text-xs">{gateway.name}</span>
+                      <span className="text-2xl mb-1">{gateway.logo}</span>
+                      <span className="font-semibold text-sm">{gateway.name}</span>
+                      <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
                       {selectedGateway === gateway.id && (
                         <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
                       )}
@@ -742,7 +826,7 @@ const DashboardScreen = () => {
             </div>
 
             <p className="text-xs text-muted-foreground text-center">
-              Secure payment via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name}
+              Secure payment via {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name}
             </p>
           </div>
         </DialogContent>
