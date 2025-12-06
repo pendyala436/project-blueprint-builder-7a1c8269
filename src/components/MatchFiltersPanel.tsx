@@ -154,12 +154,16 @@ const PERSONALITY_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ
 interface MatchFiltersPanelProps {
   filters: MatchFilters;
   onFiltersChange: (filters: MatchFilters) => void;
+  userCountry?: string; // User's country for showing NLLB-200 feature (India only)
 }
 
 export function MatchFiltersPanel({
   filters,
   onFiltersChange,
+  userCountry = "",
 }: MatchFiltersPanelProps) {
+  // Check if user is from India to show NLLB-200 language feature
+  const isIndianUser = userCountry.toLowerCase() === "india";
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<MatchFilters>(filters);
   const [countryOpen, setCountryOpen] = useState(false);
@@ -478,110 +482,112 @@ export function MatchFiltersPanel({
                   </Popover>
                 </div>
 
-                {/* Language - NLLB-200 Supported with Auto-Translation */}
-                <div className="space-y-2">
-                  <Label className="text-sm flex items-center gap-2">
-                    <Languages className="w-4 h-4" />
-                    Language (NLLB-200 Auto-Translation)
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Select your language - messages auto-translate between all 200+ languages
-                  </p>
-                  <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={languageOpen}
-                        className="w-full justify-between bg-background"
-                      >
-                        {localFilters.language === "all" 
-                          ? "All NLLB-200 Languages" 
-                          : `${localFilters.language} (Auto-Translate)`}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
-                      <Command className="bg-popover">
-                        <CommandInput 
-                          placeholder="Search NLLB-200 language..." 
-                          value={languageSearch}
-                          onValueChange={setLanguageSearch}
-                        />
-                        <CommandList className="max-h-80">
-                          <CommandEmpty>No NLLB-200 language found.</CommandEmpty>
-                          
-                          {/* All Languages Option */}
-                          <CommandGroup>
-                            <CommandItem
-                              value="all"
-                              onSelect={() => {
-                                updateFilter("language", "all");
-                                setLanguageOpen(false);
-                                setLanguageSearch("");
-                              }}
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", localFilters.language === "all" ? "opacity-100" : "opacity-0")} />
-                              🌐 All NLLB-200 Languages (200+)
-                            </CommandItem>
-                          </CommandGroup>
-
-                          {/* Indian Languages Group */}
-                          {filteredIndianLanguages.length > 0 && (
-                            <CommandGroup heading="🇮🇳 Indian Languages">
-                              {filteredIndianLanguages.map((lang) => (
-                                <CommandItem
-                                  key={lang.code}
-                                  value={lang.name}
-                                  onSelect={() => {
-                                    updateFilter("language", lang.name);
-                                    setLanguageOpen(false);
-                                    setLanguageSearch("");
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", localFilters.language === lang.name ? "opacity-100" : "opacity-0")} />
-                                  <span className="flex-1">{lang.name}</span>
-                                  <span className="text-xs text-muted-foreground">{lang.script}</span>
-                                </CommandItem>
-                              ))}
+                {/* Language - NLLB-200 Supported with Auto-Translation (India Only) */}
+                {isIndianUser && (
+                  <div className="space-y-2">
+                    <Label className="text-sm flex items-center gap-2">
+                      <Languages className="w-4 h-4" />
+                      Language (NLLB-200 Auto-Translation)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Select your language - messages auto-translate between all 200+ languages
+                    </p>
+                    <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={languageOpen}
+                          className="w-full justify-between bg-background"
+                        >
+                          {localFilters.language === "all" 
+                            ? "All NLLB-200 Languages" 
+                            : `${localFilters.language} (Auto-Translate)`}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
+                        <Command className="bg-popover">
+                          <CommandInput 
+                            placeholder="Search NLLB-200 language..." 
+                            value={languageSearch}
+                            onValueChange={setLanguageSearch}
+                          />
+                          <CommandList className="max-h-80">
+                            <CommandEmpty>No NLLB-200 language found.</CommandEmpty>
+                            
+                            {/* All Languages Option */}
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  updateFilter("language", "all");
+                                  setLanguageOpen(false);
+                                  setLanguageSearch("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", localFilters.language === "all" ? "opacity-100" : "opacity-0")} />
+                                🌐 All NLLB-200 Languages (200+)
+                              </CommandItem>
                             </CommandGroup>
-                          )}
 
-                          {/* Non-Indian Languages Group */}
-                          {filteredNonIndianLanguages.length > 0 && (
-                            <CommandGroup heading="🌍 International Languages">
-                              {filteredNonIndianLanguages.slice(0, 30).map((lang) => (
-                                <CommandItem
-                                  key={lang.code}
-                                  value={lang.name}
-                                  onSelect={() => {
-                                    updateFilter("language", lang.name);
-                                    setLanguageOpen(false);
-                                    setLanguageSearch("");
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", localFilters.language === lang.name ? "opacity-100" : "opacity-0")} />
-                                  <span className="flex-1">{lang.name}</span>
-                                  <span className="text-xs text-muted-foreground">{lang.script}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  
-                  {/* Auto-Translation Info */}
-                  {localFilters.language !== "all" && (
-                    <div className="flex items-center gap-2 p-2 bg-primary/10 rounded-md text-xs">
-                      <Languages className="w-3 h-3 text-primary" />
-                      <span className="text-primary">
-                        Auto-translation enabled for {localFilters.language}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                            {/* Indian Languages Group */}
+                            {filteredIndianLanguages.length > 0 && (
+                              <CommandGroup heading="🇮🇳 Indian Languages">
+                                {filteredIndianLanguages.map((lang) => (
+                                  <CommandItem
+                                    key={lang.code}
+                                    value={lang.name}
+                                    onSelect={() => {
+                                      updateFilter("language", lang.name);
+                                      setLanguageOpen(false);
+                                      setLanguageSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", localFilters.language === lang.name ? "opacity-100" : "opacity-0")} />
+                                    <span className="flex-1">{lang.name}</span>
+                                    <span className="text-xs text-muted-foreground">{lang.script}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+
+                            {/* Non-Indian Languages Group */}
+                            {filteredNonIndianLanguages.length > 0 && (
+                              <CommandGroup heading="🌍 International Languages">
+                                {filteredNonIndianLanguages.slice(0, 30).map((lang) => (
+                                  <CommandItem
+                                    key={lang.code}
+                                    value={lang.name}
+                                    onSelect={() => {
+                                      updateFilter("language", lang.name);
+                                      setLanguageOpen(false);
+                                      setLanguageSearch("");
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", localFilters.language === lang.name ? "opacity-100" : "opacity-0")} />
+                                    <span className="flex-1">{lang.name}</span>
+                                    <span className="text-xs text-muted-foreground">{lang.script}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    {/* Auto-Translation Info */}
+                    {localFilters.language !== "all" && (
+                      <div className="flex items-center gap-2 p-2 bg-primary/10 rounded-md text-xs">
+                        <Languages className="w-3 h-3 text-primary" />
+                        <span className="text-primary">
+                          Auto-translation enabled for {localFilters.language}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </AccordionContent>
             </AccordionItem>
 

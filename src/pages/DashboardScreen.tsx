@@ -162,6 +162,7 @@ const DashboardScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
   const [userCountry, setUserCountry] = useState("IN");
+  const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -283,6 +284,7 @@ const DashboardScreen = () => {
         setUserName(profile.full_name.split(" ")[0]);
       }
       if (profile?.country) {
+        setUserCountryName(profile.country); // Store full country name for NLLB feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -567,7 +569,8 @@ const DashboardScreen = () => {
             </div>
             <MatchFiltersPanel 
               filters={matchFilters} 
-              onFiltersChange={setMatchFilters} 
+              onFiltersChange={setMatchFilters}
+              userCountry={userCountryName}
             />
           </div>
         </div>
