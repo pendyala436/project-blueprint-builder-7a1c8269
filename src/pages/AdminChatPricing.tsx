@@ -57,9 +57,16 @@ const AdminChatPricing = () => {
       if (data) {
         setPricing(data as ChatPricing);
         setFormData({
-          rate_per_minute: data.rate_per_minute.toString(),
+          rate_per_minute: data.rate_per_minute?.toString() || "5.00",
           women_earning_rate: (data as any).women_earning_rate?.toString() || "2.00",
-          min_withdrawal_balance: data.min_withdrawal_balance.toString()
+          min_withdrawal_balance: data.min_withdrawal_balance?.toString() || "10000"
+        });
+      } else {
+        // Set defaults if no pricing exists
+        setFormData({
+          rate_per_minute: "5.00",
+          women_earning_rate: "2.00",
+          min_withdrawal_balance: "10000"
         });
       }
     } catch (error) {
@@ -224,7 +231,7 @@ const AdminChatPricing = () => {
                       className="pl-10"
                       value={formData.rate_per_minute}
                       onChange={(e) => setFormData(prev => ({ ...prev, rate_per_minute: e.target.value }))}
-                      placeholder="4.00"
+                      placeholder="5.00"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
