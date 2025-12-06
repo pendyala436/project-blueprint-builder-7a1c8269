@@ -30,6 +30,7 @@ import AdminGiftPricing from "./pages/AdminGiftPricing";
 import AdminLanguageGroups from "./pages/AdminLanguageGroups";
 import AdminChatMonitoring from "./pages/AdminChatMonitoring";
 import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
+import AdminBackupManagement from "./pages/AdminBackupManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
           <Route path="/admin/languages" element={<AdminLanguageGroups />} />
           <Route path="/admin/chat-monitoring" element={<AdminChatMonitoring />} />
           <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
+          <Route path="/admin/backups" element={<AdminBackupManagement />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
