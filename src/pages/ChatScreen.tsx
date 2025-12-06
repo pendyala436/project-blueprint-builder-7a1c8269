@@ -46,6 +46,9 @@ import {
 } from "lucide-react";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
+// Billing and earnings display components
+import ChatBillingDisplay from "@/components/ChatBillingDisplay";
+import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 
 /**
  * Message Interface
@@ -125,6 +128,9 @@ const ChatScreen = () => {
   
   // Toggle for showing/hiding translation previews
   const [showTranslations, setShowTranslations] = useState(true);
+  
+  // Current user's gender for billing/earnings display
+  const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
   
   // ============= REFS =============
   
@@ -261,15 +267,16 @@ const ChatScreen = () => {
       const ids = [user.id, partnerId].sort();
       chatId.current = `${ids[0]}_${ids[1]}`;
 
-      // ============= GET USER'S LANGUAGE PREFERENCE =============
+      // ============= GET USER'S LANGUAGE PREFERENCE AND GENDER =============
       
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("preferred_language")
+        .select("preferred_language, gender")
         .eq("user_id", user.id)
         .maybeSingle();
       
       setCurrentUserLanguage(currentProfile?.preferred_language || "English");
+      setCurrentUserGender(currentProfile?.gender === "female" ? "female" : "male");
 
       // ============= FETCH PARTNER PROFILE =============
       
@@ -593,6 +600,31 @@ const ChatScreen = () => {
           </button>
         </div>
       </header>
+
+      {/* ============= BILLING/EARNINGS BAR ============= */}
+      {chatPartner && (
+        <>
+          <ChatBillingDisplay
+            chatPartnerId={chatPartner.userId}
+            currentUserId={currentUserId}
+            userGender={currentUserGender}
+            onSessionEnd={(reason) => {
+              toast({
+                title: "Chat Ended",
+                description: reason === "insufficient_balance" 
+                  ? "Your balance ran out. Please recharge to continue chatting."
+                  : "Chat session ended.",
+                variant: "destructive"
+              });
+            }}
+          />
+          <ChatEarningsDisplay
+            chatPartnerId={chatPartner.userId}
+            currentUserId={currentUserId}
+            userGender={currentUserGender}
+          />
+        </>
+      )}
 
       {/* ============= MESSAGES AREA ============= */}
       <main className="flex-1 overflow-y-auto px-4 py-4">
