@@ -46,9 +46,13 @@ const ChatBillingDisplay = ({
   const [isLowBalance, setIsLowBalance] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const inactivityInterval = useRef<NodeJS.Timeout | null>(null);
   const sessionStarted = useRef(false);
+
+  const INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
 
   // Only men see the billing (they are charged)
   if (userGender !== "male") {
@@ -112,6 +116,7 @@ const ChatBillingDisplay = ({
         sessionStarted.current = true;
         startHeartbeat(existingSession.chat_id);
         startTimer();
+        startInactivityCheck(existingSession.chat_id);
       } else if (wallet && wallet.balance > 0 && !sessionStarted.current) {
         // Start a new session if balance is available
         await startChatSession();
@@ -149,6 +154,7 @@ const ChatBillingDisplay = ({
         });
         startHeartbeat(data.chat_id);
         startTimer();
+        startInactivityCheck(data.chat_id);
         
         toast({
           title: "Chat Started",
@@ -175,12 +181,70 @@ const ChatBillingDisplay = ({
     }
   };
 
+  // Track user activity
+  const updateActivity = useCallback(() => {
+    setLastActivityTime(Date.now());
+  }, []);
+
+  // Add activity listeners
+  useEffect(() => {
+    const handleActivity = () => updateActivity();
+    
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+
+    return () => {
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+    };
+  }, [updateActivity]);
+
+  // Check inactivity and end session if no activity for 3 minutes
+  const startInactivityCheck = useCallback((chatId: string) => {
+    if (inactivityInterval.current) clearInterval(inactivityInterval.current);
+    
+    inactivityInterval.current = setInterval(async () => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      
+      if (timeSinceActivity >= INACTIVITY_TIMEOUT && isSessionActive) {
+        console.log("Session ended due to inactivity");
+        
+        try {
+          await supabase.functions.invoke("chat-manager", {
+            body: { action: "end_chat", chat_id: chatId, end_reason: "inactivity_timeout" }
+          });
+        } catch (error) {
+          console.error("Error ending inactive chat:", error);
+        }
+        
+        if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+        if (timerInterval.current) clearInterval(timerInterval.current);
+        if (inactivityInterval.current) clearInterval(inactivityInterval.current);
+        
+        setIsSessionActive(false);
+        sessionStarted.current = false;
+        onSessionEnd?.("inactivity_timeout");
+        
+        toast({
+          title: "Chat Disconnected",
+          description: "Session ended due to 3 minutes of inactivity.",
+          variant: "destructive"
+        });
+      }
+    }, 10000); // Check every 10 seconds
+  }, [lastActivityTime, isSessionActive, onSessionEnd, toast]);
+
   useEffect(() => {
     loadPricingAndWallet();
     
     return () => {
       if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
       if (timerInterval.current) clearInterval(timerInterval.current);
+      if (inactivityInterval.current) clearInterval(inactivityInterval.current);
     };
   }, [loadPricingAndWallet]);
 

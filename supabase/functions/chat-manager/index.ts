@@ -22,10 +22,13 @@ const NLLB200_COUNTRIES = [
   "pakistan", "bangladesh", "nepal", "sri lanka"
 ];
 
+const INACTIVITY_TIMEOUT_SECONDS = 180; // 3 minutes inactivity timeout
+
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "join_queue" | "leave_queue" | "check_queue_status";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity";
   man_user_id?: string;
   woman_user_id?: string;
+  user_id?: string;
   chat_id?: string;
   end_reason?: string;
   preferred_language?: string;
@@ -42,11 +45,143 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, man_user_id, woman_user_id, chat_id, end_reason, preferred_language, man_country }: ChatRequest = await req.json();
+    const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country }: ChatRequest = await req.json();
 
-    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, chat_id, preferred_language, man_country });
+    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, user_id, chat_id, preferred_language, man_country });
+
+    // Helper function to update user status based on their chat sessions
+    const updateUserStatus = async (userId: string) => {
+      // Get active chat count
+      const { count: manChats } = await supabase
+        .from("active_chat_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("man_user_id", userId)
+        .eq("status", "active");
+
+      const { count: womanChats } = await supabase
+        .from("active_chat_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("woman_user_id", userId)
+        .eq("status", "active");
+
+      const totalChats = (manChats || 0) + (womanChats || 0);
+      
+      // Determine status: 3 sessions = busy, 1-2 = online, 0 = depends on if logged in
+      let statusText = "online";
+      if (totalChats >= 3) {
+        statusText = "busy";
+      } else if (totalChats > 0) {
+        statusText = "online";
+      }
+
+      // Update user_status table
+      const { data: existingStatus } = await supabase
+        .from("user_status")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingStatus) {
+        await supabase
+          .from("user_status")
+          .update({
+            is_online: true,
+            status_text: statusText,
+            last_seen: new Date().toISOString()
+          })
+          .eq("user_id", userId);
+      } else {
+        await supabase
+          .from("user_status")
+          .insert({
+            user_id: userId,
+            is_online: true,
+            status_text: statusText,
+            last_seen: new Date().toISOString()
+          });
+      }
+
+      return { totalChats, statusText };
+    };
 
     switch (action) {
+      // Update user status (login/logout/activity)
+      case "update_status": {
+        const targetUserId = user_id || man_user_id || woman_user_id;
+        if (!targetUserId) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        const { totalChats, statusText } = await updateUserStatus(targetUserId);
+
+        return new Response(
+          JSON.stringify({ success: true, status: statusText, active_chats: totalChats }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check for inactive sessions and end them
+      case "check_inactivity": {
+        const targetUserId = user_id || man_user_id || woman_user_id;
+        if (!targetUserId) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        const now = new Date();
+        const thresholdTime = new Date(now.getTime() - INACTIVITY_TIMEOUT_SECONDS * 1000);
+
+        // Find inactive sessions for this user (as man)
+        const { data: inactiveManSessions } = await supabase
+          .from("active_chat_sessions")
+          .select("*")
+          .eq("man_user_id", targetUserId)
+          .eq("status", "active")
+          .lt("last_activity_at", thresholdTime.toISOString());
+
+        // Find inactive sessions for this user (as woman)
+        const { data: inactiveWomanSessions } = await supabase
+          .from("active_chat_sessions")
+          .select("*")
+          .eq("woman_user_id", targetUserId)
+          .eq("status", "active")
+          .lt("last_activity_at", thresholdTime.toISOString());
+
+        const endedSessions: string[] = [];
+
+        // End inactive man sessions
+        for (const session of inactiveManSessions || []) {
+          await endChatSession(supabase, session.chat_id, "inactivity_timeout", session);
+          endedSessions.push(session.chat_id);
+          console.log(`Ended inactive session (man): ${session.chat_id}`);
+        }
+
+        // End inactive woman sessions
+        for (const session of inactiveWomanSessions || []) {
+          await endChatSession(supabase, session.chat_id, "inactivity_timeout", session);
+          endedSessions.push(session.chat_id);
+          console.log(`Ended inactive session (woman): ${session.chat_id}`);
+        }
+
+        // Update user status after ending sessions
+        if (endedSessions.length > 0) {
+          await updateUserStatus(targetUserId);
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            ended_sessions: endedSessions,
+            count: endedSessions.length 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       case "join_queue": {
         if (!man_user_id || !preferred_language) {
           return new Response(
@@ -462,6 +597,10 @@ serve(async (req) => {
             })
             .eq("user_id", woman_user_id);
         }
+
+        // Update both users' status
+        await updateUserStatus(man_user_id);
+        await updateUserStatus(woman_user_id);
 
         console.log(`Chat started: ${chatId}`);
 
