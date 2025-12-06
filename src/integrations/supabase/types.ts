@@ -98,6 +98,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_sensitive: boolean
+          last_updated_by: string | null
+          setting_key: string
+          setting_name: string
+          setting_type: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_sensitive?: boolean
+          last_updated_by?: string | null
+          setting_key: string
+          setting_name: string
+          setting_type?: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_sensitive?: boolean
+          last_updated_by?: string | null
+          setting_key?: string
+          setting_name?: string
+          setting_type?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           attendance_date: string
