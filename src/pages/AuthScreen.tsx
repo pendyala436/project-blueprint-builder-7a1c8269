@@ -29,10 +29,10 @@ const AuthScreen = () => {
   };
 
   const validatePhone = (phone: string) => {
-    // Extract just the number part (after country code like +91)
-    const numberOnly = phone.replace(/^\+\d+/, '').replace(/\s/g, '');
-    // Validate 10 digits
-    return /^\d{10}$/.test(numberOnly);
+    // Format: +{countryCode 1-5 digits}{phone 10 digits}
+    // e.g., +919876543210 or +12025551234
+    const match = phone.match(/^\+\d{1,5}\d{10}$/);
+    return match !== null;
   };
 
   const handleLogin = async () => {
