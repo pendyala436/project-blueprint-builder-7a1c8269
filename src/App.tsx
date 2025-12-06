@@ -21,6 +21,7 @@ import MatchDiscoveryScreen from "./pages/MatchDiscoveryScreen";
 import ProfileDetailScreen from "./pages/ProfileDetailScreen";
 import ChatScreen from "./pages/ChatScreen";
 import WalletScreen from "./pages/WalletScreen";
+import SettingsScreen from "./pages/SettingsScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
           <Route path="/chat/:oderId" element={<ChatScreen />} />
           <Route path="/wallet" element={<WalletScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
