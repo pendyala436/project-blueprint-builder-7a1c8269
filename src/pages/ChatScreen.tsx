@@ -649,30 +649,38 @@ const ChatScreen = () => {
    * translateMessage Function
    * 
    * Calls the translate-message edge function to translate text.
-   * Uses NLLB-200 neural machine translation model.
+   * Uses NLLB-200 neural machine translation model supporting 200+ languages.
    * 
    * @param message - Text to translate
-   * @param targetLanguage - Target language name (e.g., "Spanish")
+   * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
+   * @param sourceLanguage - Optional source language (auto-detected if not provided)
    * @returns Object with translatedMessage, isTranslated flag, and detectedLanguage
    */
-  const translateMessage = async (message: string, targetLanguage: string) => {
+  const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Call Supabase Edge Function
+      // Call Supabase Edge Function for NLLB-200 translation
       const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { message, targetLanguage }
+        body: { 
+          message, 
+          targetLanguage,
+          sourceLanguage: sourceLanguage || currentUserLanguage // Use current user's language as source
+        }
       });
 
       if (error) throw error;
       
+      console.log(`Translation: ${data.detectedLanguage} → ${targetLanguage}, translated: ${data.isTranslated}`);
+      
       return { 
         translatedMessage: data.translatedMessage, 
         isTranslated: data.isTranslated,
-        detectedLanguage: data.detectedLanguage 
+        detectedLanguage: data.detectedLanguage,
+        translationPair: data.translationPair || `${data.detectedLanguage} → ${targetLanguage}`
       };
     } catch (error) {
       console.error("Translation error:", error);
       // Return original message on error
-      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown" };
+      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
     }
   };
 
@@ -1218,6 +1226,17 @@ const ChatScreen = () => {
           <p className="text-sm text-amber-600 text-center">
             You have blocked this user. Unblock to send messages.
           </p>
+        </div>
+      )}
+
+      {/* ============= TRANSLATION INFO BAR ============= */}
+      {chatPartner && currentUserLanguage !== chatPartner.preferredLanguage && showTranslations && (
+        <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-2">
+          <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+            <Languages className="w-4 h-4" />
+            <span>Auto-translating: <strong>{currentUserLanguage}</strong> ↔ <strong>{chatPartner.preferredLanguage}</strong></span>
+            <span className="text-xs opacity-75">(NLLB-200)</span>
+          </div>
         </div>
       )}
 
