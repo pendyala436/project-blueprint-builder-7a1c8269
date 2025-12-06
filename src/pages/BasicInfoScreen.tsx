@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -263,7 +264,7 @@ const BasicInfoScreen = () => {
               )}
             </div>
 
-            {/* Phone Number */}
+            {/* Phone Number with Country Code */}
             <div 
               className={cn(
                 "space-y-2 transition-all",
@@ -274,24 +275,19 @@ const BasicInfoScreen = () => {
                 <Phone className="w-4 h-4 text-primary" />
                 Phone Number
               </label>
-              <Input
-                type="tel"
-                placeholder="+1234567890"
+              <PhoneInputWithCode
                 value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
+                onChange={(value) => {
+                  setPhone(value);
                   if (touched.phone) {
-                    const error = validatePhone(e.target.value);
+                    const error = validatePhone(value);
                     setErrors((prev) => ({ ...prev, phone: error }));
                   }
                 }}
                 onBlur={() => handleBlur("phone")}
-                className={cn(
-                  "h-12 rounded-xl border-2 transition-all focus:ring-2 focus:ring-primary/20",
-                  errors.phone && touched.phone 
-                    ? "border-destructive focus:border-destructive" 
-                    : "border-input focus:border-primary"
-                )}
+                error={!!(errors.phone && touched.phone)}
+                placeholder="Enter phone number"
+                defaultCountryCode="IN"
               />
               {errors.phone && touched.phone && (
                 <p className="text-xs text-destructive flex items-center gap-1 animate-fade-in">
