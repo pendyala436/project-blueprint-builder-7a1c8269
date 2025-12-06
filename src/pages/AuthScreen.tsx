@@ -93,7 +93,7 @@ const AuthScreen = () => {
         }
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password,
       });
@@ -113,7 +113,22 @@ const AuthScreen = () => {
         description: "Login successful.",
       });
 
-      navigate("/dashboard");
+      // Check user gender to redirect to appropriate dashboard
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("gender")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (profile?.gender === "female") {
+          navigate("/women-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
