@@ -17,7 +17,8 @@ import {
   ALL_NLLB200_LANGUAGES, 
   INDIAN_NLLB200_LANGUAGES, 
   NON_INDIAN_NLLB200_LANGUAGES,
-  NLLB200Language 
+  NLLB200Language,
+  getTotalLanguageCount
 } from "@/data/nllb200Languages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -251,7 +252,7 @@ export const LanguageSelector = ({
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {INDIAN_NLLB200_LANGUAGES.length} Indian + {NON_INDIAN_NLLB200_LANGUAGES.length} World languages
+              Choose from {getTotalLanguageCount()} languages ({INDIAN_NLLB200_LANGUAGES.length} Indian + {NON_INDIAN_NLLB200_LANGUAGES.length} World)
             </p>
           </DialogHeader>
           
