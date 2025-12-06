@@ -1,90 +1,195 @@
+/**
+ * MatchDiscoveryScreen.tsx
+ * 
+ * PURPOSE: This screen displays potential match candidates based on language compatibility
+ * and user preferences. Users can swipe right (like) or left (dislike) on profiles.
+ * 
+ * KEY FEATURES:
+ * - Tinder-style card swiping interface
+ * - Language-based matching algorithm (NLLB-200)
+ * - Advanced filtering (age, location, lifestyle, etc.)
+ * - Real-time match score calculation
+ * - Integration with Supabase for data persistence
+ * 
+ * DATABASE TABLES USED:
+ * - profiles: User profile information
+ * - user_languages: Languages spoken by each user
+ * - matches: Match records between users
+ * - user_status: Online/offline status tracking
+ */
+
+// ============= IMPORTS SECTION =============
+// React hooks for state management and side effects
 import { useState, useEffect, useRef } from "react";
+// React Router hook for programmatic navigation
 import { useNavigate } from "react-router-dom";
+// UI Components from shadcn/ui library
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+// Custom logo component for branding
 import MeowLogo from "@/components/MeowLogo";
+// Toast hook for displaying notifications to user
 import { useToast } from "@/hooks/use-toast";
+// Lucide React icons for visual elements
 import { 
-  Heart, 
-  X, 
-  ArrowLeft,
-  Languages,
-  MapPin,
-  Loader2,
-  Sparkles,
-  RefreshCw,
-  Eye,
-  Shield,
-  Star
+  Heart,           // Like button icon
+  X,               // Dislike button icon
+  ArrowLeft,       // Back navigation icon
+  Languages,       // Language indicator icon
+  MapPin,          // Location indicator icon
+  Loader2,         // Loading spinner icon
+  Sparkles,        // Match score sparkle icon
+  RefreshCw,       // Refresh button icon
+  Eye,             // View profile icon
+  Shield,          // Verified badge icon
+  Star             // Premium badge icon
 } from "lucide-react";
+// Supabase client for database operations
 import { supabase } from "@/integrations/supabase/client";
+// Custom filter panel component and types
 import { MatchFiltersPanel, DEFAULT_FILTERS, type MatchFilters } from "@/components/MatchFiltersPanel";
+// Badge component for displaying tags
 import { Badge } from "@/components/ui/badge";
 
+/**
+ * MatchUser Interface
+ * 
+ * Defines the shape of a potential match user object.
+ * Contains all information needed to display a match card.
+ */
 interface MatchUser {
-  matchId: string;
-  userId: string;
-  fullName: string;
-  avatar: string;
-  languages: string[];
-  country: string;
-  matchScore: number;
-  commonLanguages: string[];
-  age?: number;
-  isVerified?: boolean;
-  isPremium?: boolean;
-  isOnline?: boolean;
-  bio?: string;
+  matchId: string;           // Unique identifier for this match record
+  userId: string;            // User's UUID from auth.users
+  fullName: string;          // Display name of the user
+  avatar: string;            // URL to profile photo
+  languages: string[];       // Array of languages the user speaks
+  country: string;           // User's country of residence
+  matchScore: number;        // Calculated compatibility score (0-100)
+  commonLanguages: string[]; // Languages shared with current user
+  age?: number;              // User's age (optional)
+  isVerified?: boolean;      // Whether user passed verification
+  isPremium?: boolean;       // Premium subscription status
+  isOnline?: boolean;        // Current online status
+  bio?: string;              // User's biography text
 }
 
+/**
+ * MatchDiscoveryScreen Component
+ * 
+ * Main component that renders the match discovery interface.
+ * Handles all match loading, filtering, and user interaction logic.
+ */
 const MatchDiscoveryScreen = () => {
+  // ============= HOOKS INITIALIZATION =============
+  
+  // Navigation hook for redirecting to other pages
   const navigate = useNavigate();
+  
+  // Toast hook for showing notification messages
   const { toast } = useToast();
+  
+  // ============= STATE DECLARATIONS =============
+  
+  // Loading state - true while fetching matches from database
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Array of potential matches fetched from database
   const [matches, setMatches] = useState<MatchUser[]>([]);
+  
+  // Index of currently displayed match in the matches array
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Direction of card swipe animation (null when not animating)
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  
+  // Current filter settings from the filter panel
   const [filters, setFilters] = useState<MatchFilters>(DEFAULT_FILTERS);
+  
+  // Available languages for filter dropdown (populated from matches)
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  
+  // Available countries for filter dropdown (populated from matches)
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+  
+  // Current user's gender (used for opposite gender matching)
   const [currentUserGender, setCurrentUserGender] = useState<string>("");
+  
+  // Reference to the card DOM element for animations
   const cardRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * useEffect: Load Matches on Component Mount or Filter Change
+   * 
+   * This effect runs when:
+   * 1. Component first mounts
+   * 2. Any filter value changes
+   * 
+   * It triggers the loadMatches function to fetch fresh match data.
+   */
   useEffect(() => {
     loadMatches();
-  }, [filters]);
+  }, [filters]); // Dependency array: re-run when filters change
 
+  /**
+   * loadMatches Function
+   * 
+   * Fetches potential matches from the database based on:
+   * - Opposite gender preference
+   * - Language compatibility
+   * - Current filter settings
+   * 
+   * Algorithm:
+   * 1. Get current user's profile and languages
+   * 2. Build query with all applicable filters
+   * 3. Exclude already matched users
+   * 4. Calculate match scores for each candidate
+   * 5. Sort by match score (highest first)
+   */
   const loadMatches = async () => {
     try {
+      // Set loading state to show spinner
       setIsLoading(true);
+      
+      // Get currently authenticated user
       const { data: { user } } = await supabase.auth.getUser();
       
+      // If no user logged in, redirect to auth screen
       if (!user) {
         navigate("/");
         return;
       }
 
-      // Get current user's profile and languages
+      // ============= FETCH CURRENT USER DATA =============
+      
+      // Get current user's profile (gender, country, preferred language)
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("gender, country, preferred_language")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .maybeSingle(); // Returns null instead of error if not found
 
+      // Get all languages the current user speaks
       const { data: currentUserLanguages } = await supabase
         .from("user_languages")
         .select("language_name")
         .eq("user_id", user.id);
 
+      // Extract language names into simple array
       const userLanguages = currentUserLanguages?.map(l => l.language_name) || [];
+      
+      // Store current user's gender for display purposes
       const userGender = currentProfile?.gender || "";
       setCurrentUserGender(userGender);
 
-      // Determine opposite gender for matching
+      // ============= DETERMINE MATCHING GENDER =============
+      
+      // For heterosexual matching: Males see Females, Females see Males
       const oppositeGender = userGender === "Male" ? "Female" : 
                             userGender === "Female" ? "Male" : "";
 
-      // Build comprehensive query with all profile fields for filtering
+      // ============= BUILD DATABASE QUERY =============
+      
+      // Start building the query with all profile fields we need
       let profilesQuery = supabase
         .from("profiles")
         .select(`
@@ -94,154 +199,221 @@ const MatchDiscoveryScreen = () => {
           dietary_preference, fitness_level, pet_preference, travel_frequency,
           personality_type, zodiac_sign, bio, is_verified, is_premium, last_active_at
         `)
-        .neq("user_id", user.id);
+        .neq("user_id", user.id); // Exclude current user from results
 
+      // Apply gender filter if we have opposite gender defined
       if (oppositeGender) {
         profilesQuery = profilesQuery.eq("gender", oppositeGender);
       }
 
-      // Apply demographic filters
+      // ============= APPLY DEMOGRAPHIC FILTERS =============
+      
+      // Country filter - exact match
       if (filters.country !== "all") {
         profilesQuery = profilesQuery.eq("country", filters.country);
       }
+      
+      // Body type filter
       if (filters.bodyType !== "all") {
         profilesQuery = profilesQuery.eq("body_type", filters.bodyType);
       }
+      
+      // Education level filter
       if (filters.educationLevel !== "all") {
         profilesQuery = profilesQuery.eq("education_level", filters.educationLevel);
       }
+      
+      // Occupation filter
       if (filters.occupation !== "all") {
         profilesQuery = profilesQuery.eq("occupation", filters.occupation);
       }
+      
+      // Religion filter
       if (filters.religion !== "all") {
         profilesQuery = profilesQuery.eq("religion", filters.religion);
       }
+      
+      // Marital status filter
       if (filters.maritalStatus !== "all") {
         profilesQuery = profilesQuery.eq("marital_status", filters.maritalStatus);
       }
+      
+      // Has children filter - boolean check
       if (filters.hasChildren === "yes") {
         profilesQuery = profilesQuery.eq("has_children", true);
       } else if (filters.hasChildren === "no") {
         profilesQuery = profilesQuery.eq("has_children", false);
       }
 
-      // Lifestyle filters
+      // ============= APPLY LIFESTYLE FILTERS =============
+      
+      // Smoking habit filter
       if (filters.smokingHabit !== "all") {
         profilesQuery = profilesQuery.eq("smoking_habit", filters.smokingHabit);
       }
+      
+      // Drinking habit filter
       if (filters.drinkingHabit !== "all") {
         profilesQuery = profilesQuery.eq("drinking_habit", filters.drinkingHabit);
       }
+      
+      // Dietary preference filter
       if (filters.dietaryPreference !== "all") {
         profilesQuery = profilesQuery.eq("dietary_preference", filters.dietaryPreference);
       }
+      
+      // Fitness level filter
       if (filters.fitnessLevel !== "all") {
         profilesQuery = profilesQuery.eq("fitness_level", filters.fitnessLevel);
       }
+      
+      // Pet preference filter
       if (filters.petPreference !== "all") {
         profilesQuery = profilesQuery.eq("pet_preference", filters.petPreference);
       }
+      
+      // Travel frequency filter
       if (filters.travelFrequency !== "all") {
         profilesQuery = profilesQuery.eq("travel_frequency", filters.travelFrequency);
       }
 
-      // Personality filters
+      // ============= APPLY PERSONALITY FILTERS =============
+      
+      // Zodiac sign filter
       if (filters.zodiacSign !== "all") {
         profilesQuery = profilesQuery.eq("zodiac_sign", filters.zodiacSign);
       }
+      
+      // Personality type filter (e.g., MBTI types)
       if (filters.personalityType !== "all") {
         profilesQuery = profilesQuery.eq("personality_type", filters.personalityType);
       }
 
-      // Safety & behavior filters
+      // ============= APPLY SAFETY & BEHAVIOR FILTERS =============
+      
+      // Only show verified users
       if (filters.verifiedOnly) {
         profilesQuery = profilesQuery.eq("is_verified", true);
       }
+      
+      // Only show premium users
       if (filters.premiumOnly) {
         profilesQuery = profilesQuery.eq("is_premium", true);
       }
+      
+      // Only show users with profile photos
       if (filters.hasPhoto) {
         profilesQuery = profilesQuery.not("photo_url", "is", null);
       }
+      
+      // Only show users with bio text
       if (filters.hasBio) {
         profilesQuery = profilesQuery.not("bio", "is", null);
       }
+      
+      // Only show users registered in last 7 days
       if (filters.newUsersOnly) {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         profilesQuery = profilesQuery.gte("created_at", weekAgo.toISOString());
       }
+      
+      // Only show users active in last 5 minutes
       if (filters.onlineNow) {
         const fiveMinutesAgo = new Date();
         fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
         profilesQuery = profilesQuery.gte("last_active_at", fiveMinutesAgo.toISOString());
       }
 
+      // Execute the query
       const { data: profiles } = await profilesQuery;
 
+      // Handle empty results
       if (!profiles || profiles.length === 0) {
         setMatches([]);
         setIsLoading(false);
         return;
       }
 
-      // Get already matched users to exclude
+      // ============= EXCLUDE ALREADY MATCHED USERS =============
+      
+      // Get list of users already matched with current user
       const { data: existingMatches } = await supabase
         .from("matches")
         .select("matched_user_id")
         .eq("user_id", user.id);
 
+      // Convert to Set for O(1) lookup performance
       const matchedUserIds = new Set(existingMatches?.map(m => m.matched_user_id) || []);
 
-      // Get online status for all profiles
+      // ============= FETCH ONLINE STATUS FOR ALL PROFILES =============
+      
+      // Get all user IDs from profiles
       const userIds = profiles.map(p => p.user_id);
+      
+      // Batch fetch online status
       const { data: onlineStatuses } = await supabase
         .from("user_status")
         .select("user_id, is_online")
         .in("user_id", userIds);
 
+      // Create Map for O(1) lookup of online status
       const onlineStatusMap = new Map(onlineStatuses?.map(s => [s.user_id, s.is_online]) || []);
 
-      // Collect unique languages and countries for filters
+      // ============= COLLECT FILTER OPTIONS =============
+      
+      // Sets to collect unique languages and countries for filter dropdowns
       const languagesSet = new Set<string>();
       const countriesSet = new Set<string>();
 
-      // Calculate match scores
+      // ============= CALCULATE MATCH SCORES =============
+      
+      // Process each profile to calculate match score
       const matchedUsers: MatchUser[] = await Promise.all(
         profiles
+          // Filter out already matched users
           .filter(p => !matchedUserIds.has(p.user_id))
+          // Apply client-side range filters (age, height)
           .filter(p => {
-            // Age filter (client-side for range)
+            // Age range filter (must be done client-side for range comparison)
             if (p.age) {
               if (p.age < filters.ageRange[0] || p.age > filters.ageRange[1]) return false;
             }
-            // Height filter (client-side for range)
+            // Height range filter (must be done client-side for range comparison)
             if (p.height_cm) {
               if (p.height_cm < filters.heightRange[0] || p.height_cm > filters.heightRange[1]) return false;
             }
             return true;
           })
+          // Map each profile to MatchUser format with calculated score
           .map(async (profile) => {
+            // Fetch languages for this profile
             const { data: profileLanguages } = await supabase
               .from("user_languages")
               .select("language_name")
               .eq("user_id", profile.user_id);
 
+            // Extract language names
             const theirLanguages = profileLanguages?.map(l => l.language_name) || [];
             
             // Add to filter options
             theirLanguages.forEach(l => languagesSet.add(l));
             if (profile.country) countriesSet.add(profile.country);
 
-            // Calculate common languages (NLLB-200 based matching)
+            // ============= LANGUAGE MATCHING ALGORITHM (NLLB-200 BASED) =============
+            
+            // Find common languages between current user and this profile
             const commonLanguages = userLanguages.filter(lang => 
               theirLanguages.includes(lang)
             );
 
-            // Match score calculation based on language overlap
-            let matchScore = 50; // Base score
+            // ============= MATCH SCORE CALCULATION =============
+            
+            // Start with base score of 50%
+            let matchScore = 50;
             
             // Primary scoring: common languages (max 40 points)
+            // Each common language adds 15 points, capped at 40
             matchScore += Math.min(commonLanguages.length * 15, 40);
             
             // Same country bonus (10 points)
@@ -249,6 +421,7 @@ const MatchDiscoveryScreen = () => {
               matchScore += 10;
             }
 
+            // Return formatted MatchUser object
             return {
               matchId: `match_${profile.user_id}`,
               userId: profile.user_id,
@@ -256,7 +429,7 @@ const MatchDiscoveryScreen = () => {
               avatar: profile.photo_url || "",
               languages: theirLanguages,
               country: profile.country || "Unknown",
-              matchScore: Math.min(matchScore, 100),
+              matchScore: Math.min(matchScore, 100), // Cap at 100%
               commonLanguages,
               age: profile.age || undefined,
               isVerified: profile.is_verified || false,
@@ -267,10 +440,12 @@ const MatchDiscoveryScreen = () => {
           })
       );
 
+      // Update filter dropdown options
       setAvailableLanguages(Array.from(languagesSet));
       setAvailableCountries(Array.from(countriesSet));
 
-      // Filter by language if selected
+      // ============= APPLY LANGUAGE FILTER =============
+      
       let filteredMatches = matchedUsers;
       if (filters.language !== "all") {
         filteredMatches = matchedUsers.filter(m => 
@@ -278,53 +453,76 @@ const MatchDiscoveryScreen = () => {
         );
       }
 
-      // Sort by match score (highest first)
+      // ============= SORT BY MATCH SCORE =============
+      
+      // Sort descending: highest match scores first
       filteredMatches.sort((a, b) => b.matchScore - a.matchScore);
 
+      // Update state with processed matches
       setMatches(filteredMatches);
-      setCurrentIndex(0);
+      setCurrentIndex(0); // Reset to first match
+      
     } catch (error) {
+      // Log error for debugging
       console.error("Error loading matches:", error);
+      
+      // Show error toast to user
       toast({
         title: "Error",
         description: "Failed to load matches",
         variant: "destructive",
       });
     } finally {
+      // Always turn off loading state
       setIsLoading(false);
     }
   };
 
+  /**
+   * handleLike Function
+   * 
+   * Called when user swipes right or taps the like button.
+   * Creates a match record in the database and shows animation.
+   * 
+   * @param matchUser - The user being liked
+   */
   const handleLike = async (matchUser: MatchUser) => {
     try {
+      // Get current authenticated user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Trigger swipe right animation
       setSwipeDirection("right");
 
-      // Create match record
+      // ============= CREATE MATCH RECORD =============
+      
+      // Insert new match into database
       await supabase
         .from("matches")
         .insert({
-          user_id: user.id,
-          matched_user_id: matchUser.userId,
-          status: "pending",
-          match_score: matchUser.matchScore,
+          user_id: user.id,              // Current user
+          matched_user_id: matchUser.userId, // Liked user
+          status: "pending",              // Match is pending until other user likes back
+          match_score: matchUser.matchScore, // Store calculated match score
         });
 
+      // Show success toast with match score
       toast({
         title: "Liked! 💕",
         description: `Match score: ${matchUser.matchScore}% with ${matchUser.fullName}`,
       });
 
-      // Move to next after animation
+      // Wait for animation to complete, then move to next match
       setTimeout(() => {
-        setSwipeDirection(null);
-        goToNext();
-      }, 300);
+        setSwipeDirection(null); // Reset animation state
+        goToNext();              // Move to next match
+      }, 300); // 300ms matches CSS animation duration
+      
     } catch (error) {
       console.error("Error liking user:", error);
-      setSwipeDirection(null);
+      setSwipeDirection(null); // Reset animation on error
+      
       toast({
         title: "Error",
         description: "Failed to send like",
@@ -333,18 +531,35 @@ const MatchDiscoveryScreen = () => {
     }
   };
 
+  /**
+   * handleDislike Function
+   * 
+   * Called when user swipes left or taps the X button.
+   * Simply moves to next match without creating a record.
+   */
   const handleDislike = () => {
+    // Trigger swipe left animation
     setSwipeDirection("left");
+    
+    // Wait for animation, then move to next
     setTimeout(() => {
       setSwipeDirection(null);
       goToNext();
     }, 300);
   };
 
+  /**
+   * goToNext Function
+   * 
+   * Advances to the next match in the array.
+   * Shows message when no more matches available.
+   */
   const goToNext = () => {
     if (currentIndex < matches.length - 1) {
+      // Move to next match
       setCurrentIndex(prev => prev + 1);
     } else {
+      // No more matches - show toast
       toast({
         title: "No more matches",
         description: "Check back later for more recommendations!",
@@ -352,12 +567,16 @@ const MatchDiscoveryScreen = () => {
     }
   };
 
+  // Get the currently displayed match
   const currentMatch = matches[currentIndex];
 
+  // ============= LOADING STATE RENDER =============
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
+          {/* Spinning loader icon */}
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
           <p className="text-muted-foreground">Finding your matches...</p>
         </div>
@@ -365,11 +584,14 @@ const MatchDiscoveryScreen = () => {
     );
   }
 
+  // ============= MAIN RENDER =============
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Header */}
+      {/* ============= HEADER SECTION ============= */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          {/* Back button - navigates to dashboard */}
           <button 
             onClick={() => navigate("/dashboard")}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -378,10 +600,12 @@ const MatchDiscoveryScreen = () => {
             <span className="text-sm font-medium">Back</span>
           </button>
           
+          {/* App logo centered */}
           <MeowLogo size="sm" />
           
+          {/* Right side actions */}
           <div className="flex items-center gap-2">
-            {/* Advanced Filters Panel */}
+            {/* Advanced Filters Panel - opens filter drawer */}
             <MatchFiltersPanel
               filters={filters}
               onFiltersChange={setFilters}
@@ -389,6 +613,7 @@ const MatchDiscoveryScreen = () => {
               availableCountries={availableCountries}
             />
 
+            {/* Refresh button - reloads matches */}
             <Button 
               variant="ghost" 
               size="icon"
@@ -401,9 +626,12 @@ const MatchDiscoveryScreen = () => {
         </div>
       </header>
 
+      {/* ============= MAIN CONTENT ============= */}
       <main className="max-w-4xl mx-auto px-6 py-8">
+        {/* No matches state */}
         {matches.length === 0 ? (
           <Card className="p-12 text-center animate-fade-in">
+            {/* Empty state icon */}
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
               <Sparkles className="w-10 h-10 text-muted-foreground" />
             </div>
@@ -411,6 +639,7 @@ const MatchDiscoveryScreen = () => {
             <p className="text-muted-foreground mb-6">
               Try adjusting your filters or check back later
             </p>
+            {/* Action buttons */}
             <div className="flex justify-center gap-3">
               <Button 
                 variant="outline" 
@@ -425,7 +654,7 @@ const MatchDiscoveryScreen = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Title */}
+            {/* ============= PAGE TITLE ============= */}
             <div className="text-center animate-fade-in">
               <h1 className="text-2xl font-bold text-foreground mb-2">Discover Matches</h1>
               <p className="text-muted-foreground">
@@ -433,27 +662,32 @@ const MatchDiscoveryScreen = () => {
               </p>
             </div>
 
-            {/* Active Filters Summary */}
+            {/* ============= ACTIVE FILTERS DISPLAY ============= */}
+            {/* Show badges for currently active filters */}
             {(filters.language !== "all" || filters.country !== "all" || filters.verifiedOnly || filters.onlineNow) && (
               <div className="flex flex-wrap justify-center gap-2 animate-fade-in">
+                {/* Language filter badge */}
                 {filters.language !== "all" && (
                   <Badge variant="secondary" className="gap-1">
                     <Languages className="w-3 h-3" />
                     {filters.language}
                   </Badge>
                 )}
+                {/* Country filter badge */}
                 {filters.country !== "all" && (
                   <Badge variant="secondary" className="gap-1">
                     <MapPin className="w-3 h-3" />
                     {filters.country}
                   </Badge>
                 )}
+                {/* Verified filter badge */}
                 {filters.verifiedOnly && (
                   <Badge variant="secondary" className="gap-1">
                     <Shield className="w-3 h-3" />
                     Verified
                   </Badge>
                 )}
+                {/* Online now filter badge */}
                 {filters.onlineNow && (
                   <Badge variant="secondary" className="gap-1 bg-emerald-500/20 text-emerald-600">
                     Online Now
@@ -462,139 +696,144 @@ const MatchDiscoveryScreen = () => {
               </div>
             )}
 
-            {/* Match Card */}
+            {/* ============= MATCH CARD ============= */}
             {currentMatch && (
               <div className="flex justify-center animate-fade-in" style={{ animationDelay: "0.1s" }}>
+                {/* Animated card container */}
                 <div 
                   ref={cardRef}
                   className={`relative w-full max-w-sm transition-all duration-300 ${
+                    // Swipe left animation: slide left and rotate
                     swipeDirection === "left" 
                       ? "-translate-x-full rotate-[-20deg] opacity-0" 
+                      // Swipe right animation: slide right and rotate
                       : swipeDirection === "right" 
                       ? "translate-x-full rotate-[20deg] opacity-0"
                       : ""
                   }`}
                 >
                   <Card className="overflow-hidden shadow-card border-border/50">
-                    {/* Match Score Badge */}
+                    {/* Match Score Badge - positioned top left */}
                     <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary to-rose-500 text-white">
                       <Sparkles className="w-4 h-4" />
                       <span className="text-sm font-bold">{currentMatch.matchScore}% Match</span>
                     </div>
 
-                    {/* Avatar */}
-                    <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+                    {/* ============= AVATAR SECTION ============= */}
+                    <div className="relative h-96 bg-gradient-to-br from-muted to-muted/50">
                       {currentMatch.avatar ? (
+                        // Profile photo
                         <img 
                           src={currentMatch.avatar} 
                           alt={currentMatch.fullName}
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-rose-500/20">
-                          <span className="text-8xl font-bold text-primary/50">
+                        // Fallback: initial letter avatar
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-8xl font-bold text-muted-foreground/30">
                             {currentMatch.fullName.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
-
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-
-                      {/* User info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
-                        <h3 className="text-2xl font-bold text-foreground">
-                          {currentMatch.fullName}
-                        </h3>
+                      
+                      {/* Gradient overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      
+                      {/* User info overlay at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                        {/* Name and badges row */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <h2 className="text-2xl font-bold">{currentMatch.fullName}</h2>
+                          {/* Age display */}
+                          {currentMatch.age && (
+                            <span className="text-lg opacity-80">{currentMatch.age}</span>
+                          )}
+                          {/* Verified badge */}
+                          {currentMatch.isVerified && (
+                            <Shield className="w-5 h-5 text-blue-400" />
+                          )}
+                          {/* Premium badge */}
+                          {currentMatch.isPremium && (
+                            <Star className="w-5 h-5 text-amber-400" />
+                          )}
+                        </div>
                         
-                        {/* Country */}
-                        <div className="flex items-center gap-2 text-muted-foreground">
+                        {/* Location with online indicator */}
+                        <div className="flex items-center gap-2 text-sm opacity-90 mb-3">
                           <MapPin className="w-4 h-4" />
-                          <span className="text-sm">{currentMatch.country}</span>
-                        </div>
-
-                        {/* Languages */}
-                        <div className="flex flex-wrap gap-2">
-                          {currentMatch.languages.map(lang => (
-                            <span 
-                              key={lang}
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                currentMatch.commonLanguages.includes(lang)
-                                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {currentMatch.commonLanguages.includes(lang) && "✓ "}
-                              {lang}
+                          <span>{currentMatch.country}</span>
+                          {/* Online status indicator */}
+                          {currentMatch.isOnline && (
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              Online
                             </span>
-                          ))}
+                          )}
                         </div>
-
-                        {/* Common languages info */}
+                        
+                        {/* Common languages display */}
                         {currentMatch.commonLanguages.length > 0 && (
-                          <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <Languages className="w-4 h-4" />
-                            {currentMatch.commonLanguages.length} common language{currentMatch.commonLanguages.length !== 1 ? "s" : ""}
-                          </p>
+                            <span className="text-sm">
+                              {currentMatch.commonLanguages.join(", ")}
+                            </span>
+                          </div>
                         )}
                       </div>
                     </div>
-                  </Card>
 
-                  {/* Swipe Indicators */}
-                  <div className={`absolute inset-0 flex items-center justify-start pl-8 pointer-events-none transition-opacity ${
-                    swipeDirection === "left" ? "opacity-100" : "opacity-0"
-                  }`}>
-                    <div className="px-6 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-2xl rotate-[-20deg] border-4 border-destructive">
-                      NOPE
+                    {/* ============= BIO SECTION ============= */}
+                    {currentMatch.bio && (
+                      <div className="p-4 border-t border-border/50">
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {currentMatch.bio}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ============= ACTION BUTTONS ============= */}
+                    <div className="p-4 flex justify-center gap-6">
+                      {/* Dislike (X) button */}
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-16 h-16 rounded-full border-2 border-destructive/50 hover:bg-destructive/10 hover:border-destructive transition-all"
+                        onClick={handleDislike}
+                      >
+                        <X className="w-8 h-8 text-destructive" />
+                      </Button>
+                      
+                      {/* View Profile button */}
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-14 h-14 rounded-full border-2 border-muted-foreground/30 hover:bg-muted"
+                        onClick={() => navigate(`/profile/${currentMatch.userId}`)}
+                      >
+                        <Eye className="w-6 h-6 text-muted-foreground" />
+                      </Button>
+                      
+                      {/* Like (Heart) button */}
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-16 h-16 rounded-full border-2 border-emerald-500/50 hover:bg-emerald-500/10 hover:border-emerald-500 transition-all"
+                        onClick={() => handleLike(currentMatch)}
+                      >
+                        <Heart className="w-8 h-8 text-emerald-500" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className={`absolute inset-0 flex items-center justify-end pr-8 pointer-events-none transition-opacity ${
-                    swipeDirection === "right" ? "opacity-100" : "opacity-0"
-                  }`}>
-                    <div className="px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-2xl rotate-[20deg] border-4 border-emerald-500">
-                      LIKE
-                    </div>
-                  </div>
+                  </Card>
                 </div>
               </div>
             )}
 
-            {/* Action Buttons */}
-            {currentMatch && (
-              <div className="flex justify-center gap-6 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-                {/* Dislike Button */}
-                <button
-                  onClick={handleDislike}
-                  className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-destructive/50 hover:bg-destructive/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg active:scale-95"
-                >
-                  <X className="w-8 h-8 text-muted-foreground group-hover:text-destructive transition-colors" />
-                </button>
-
-                {/* Like Button */}
-                <button
-                  onClick={() => handleLike(currentMatch)}
-                  className="group w-20 h-20 rounded-full bg-gradient-to-br from-primary to-rose-500 hover:from-primary/90 hover:to-rose-500/90 flex items-center justify-center transition-all duration-300 shadow-glow hover:shadow-lg hover:scale-110 active:scale-95"
-                >
-                  <Heart className="w-10 h-10 text-white fill-white" />
-                </button>
-
-                {/* View Profile */}
-                <button
-                  onClick={() => navigate(`/profile/${currentMatch.userId}`)}
-                  className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-primary/50 hover:bg-primary/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg active:scale-95"
-                >
-                  <Eye className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
-                </button>
-              </div>
-            )}
-
-            {/* Progress */}
-            {currentMatch && (
-              <p className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.3s" }}>
-                {currentIndex + 1} of {matches.length} matches
-              </p>
-            )}
+            {/* ============= MATCH COUNTER ============= */}
+            <div className="text-center text-sm text-muted-foreground">
+              {currentIndex + 1} of {matches.length} matches
+            </div>
           </div>
         )}
       </main>
@@ -602,4 +841,5 @@ const MatchDiscoveryScreen = () => {
   );
 };
 
+// Export component as default for use in router
 export default MatchDiscoveryScreen;
