@@ -366,7 +366,6 @@ serve(async (req) => {
 
         // Calculate charges and earnings for this period (different rates)
         const menCharge = minutesElapsed * session.rate_per_minute;
-        const womenEarnings = minutesElapsed * womenEarningRate;
         const newTotalMinutes = session.total_minutes + minutesElapsed;
         const newTotalEarned = session.total_earned + menCharge;
 
@@ -404,16 +403,30 @@ serve(async (req) => {
             status: "completed"
           });
 
-        // Add earnings to woman (women's earning rate)
-        await supabase
-          .from("women_earnings")
-          .insert({
-            user_id: session.woman_user_id,
-            chat_session_id: session.id,
-            amount: womenEarnings,
-            earning_type: "chat",
-            description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
-          });
+        // Check if woman is from India - only Indian women can earn
+        const { data: womanProfile } = await supabase
+          .from("profiles")
+          .select("country")
+          .eq("user_id", session.woman_user_id)
+          .maybeSingle();
+
+        const isIndianWoman = womanProfile?.country?.toLowerCase() === "india";
+        let womenEarnings = 0;
+
+        // Only add earnings for Indian women
+        if (isIndianWoman) {
+          womenEarnings = minutesElapsed * womenEarningRate;
+          
+          await supabase
+            .from("women_earnings")
+            .insert({
+              user_id: session.woman_user_id,
+              chat_session_id: session.id,
+              amount: womenEarnings,
+              earning_type: "chat",
+              description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
+            });
+        }
 
         // Update session
         await supabase
