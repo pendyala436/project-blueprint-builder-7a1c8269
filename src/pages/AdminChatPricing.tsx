@@ -32,6 +32,7 @@ const AdminChatPricing = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditingRates, setIsEditingRates] = useState(false);
   const [pricing, setPricing] = useState<ChatPricing | null>(null);
   const [formData, setFormData] = useState({
     rate_per_minute: "",
@@ -146,6 +147,7 @@ const AdminChatPricing = () => {
         title: "Success",
         description: "Pricing configuration saved successfully"
       });
+      setIsEditingRates(false);
       loadPricing();
     } catch (error) {
       console.error("Error saving pricing:", error);
@@ -187,92 +189,139 @@ const AdminChatPricing = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-        {/* Men Charging Rate */}
+        {/* Pricing Rates Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Men Charged Per Minute
-            </CardTitle>
-            <CardDescription>
-              Amount deducted from men's wallet per minute of active chat
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" />
+                Chat Pricing Rates
+              </CardTitle>
+              <CardDescription>
+                Per-minute charges and earnings configuration
+              </CardDescription>
+            </div>
+            {!isEditingRates && pricing && (
+              <Button variant="outline" onClick={() => setIsEditingRates(true)} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Change
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="rate">Rate per Minute (INR)</Label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="rate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-10"
-                    value={formData.rate_per_minute}
-                    onChange={(e) => setFormData(prev => ({ ...prev, rate_per_minute: e.target.value }))}
-                    placeholder="4.00"
-                  />
+            {isEditingRates || !pricing ? (
+              <div className="space-y-6">
+                {/* Men Rate Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Men Charged Per Minute (INR)</Label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pl-10"
+                      value={formData.rate_per_minute}
+                      onChange={(e) => setFormData(prev => ({ ...prev, rate_per_minute: e.target.value }))}
+                      placeholder="4.00"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Amount deducted from men's wallet per minute of active chat
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Example: If set to ₹4.00, a 30-minute chat costs men ₹120.00
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Women Earning Rate */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-emerald-500" />
-              Women Earning Per Minute
-            </CardTitle>
-            <CardDescription>
-              Amount credited to women's earnings per minute of active chat
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="womenRate">Earning per Minute (INR)</Label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="womenRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-10"
-                    value={formData.women_earning_rate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, women_earning_rate: e.target.value }))}
-                    placeholder="2.00"
-                  />
+                {/* Women Rate Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="womenRate">Women Earning Per Minute (INR)</Label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="womenRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pl-10"
+                      value={formData.women_earning_rate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, women_earning_rate: e.target.value }))}
+                      placeholder="2.00"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Amount credited to women's earnings per minute of active chat
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Example: If set to ₹2.00, a 30-minute chat earns women ₹60.00
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Platform Profit Display */}
-        <Card className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-500/20">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    {isSaving ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Save Rates
+                  </Button>
+                  {pricing && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setFormData({
+                          rate_per_minute: pricing.rate_per_minute.toString(),
+                          women_earning_rate: pricing.women_earning_rate.toString(),
+                          min_withdrawal_balance: pricing.min_withdrawal_balance.toString()
+                        });
+                        setIsEditingRates(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Platform Profit Per Minute</p>
-                <p className="text-xl font-bold text-blue-600">
-                  ₹{platformProfit.toFixed(2)}/min
-                </p>
+            ) : (
+              <div className="space-y-4">
+                {/* Display Mode - Men Rate */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Men Charged Per Minute</p>
+                      <p className="text-2xl font-bold">₹{parseFloat(formData.rate_per_minute).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Display Mode - Women Rate */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-500/10">
+                      <Users className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Women Earning Per Minute</p>
+                      <p className="text-2xl font-bold text-emerald-600">₹{parseFloat(formData.women_earning_rate).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform Profit */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Platform Profit Per Minute</p>
+                      <p className="text-2xl font-bold text-blue-600">₹{platformProfit.toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -312,27 +361,6 @@ const AdminChatPricing = () => {
           </CardContent>
         </Card>
 
-        {/* Summary and Save */}
-        <Card className="bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">Current Configuration</h3>
-                <p className="text-sm text-muted-foreground">
-                  Men: ₹{formData.rate_per_minute || "0"}/min • Women: ₹{formData.women_earning_rate || "0"}/min • Min Withdrawal: ₹{parseInt(formData.min_withdrawal_balance || "0").toLocaleString()}
-                </p>
-              </div>
-              <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                {isSaving ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save Changes
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
