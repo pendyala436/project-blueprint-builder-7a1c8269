@@ -259,55 +259,124 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
+          bio: string | null
+          body_type: string | null
           country: string | null
           created_at: string
           date_of_birth: string | null
+          dietary_preference: string | null
+          drinking_habit: string | null
+          education_level: string | null
+          fitness_level: string | null
           full_name: string | null
           gender: string | null
+          has_children: boolean | null
+          height_cm: number | null
           id: string
+          interests: string[] | null
+          is_premium: boolean | null
+          is_verified: boolean | null
+          last_active_at: string | null
           latitude: number | null
+          life_goals: string[] | null
           longitude: number | null
+          marital_status: string | null
+          occupation: string | null
+          personality_type: string | null
+          pet_preference: string | null
           phone: string | null
           photo_url: string | null
           preferred_language: string | null
+          profile_completeness: number | null
+          religion: string | null
+          smoking_habit: string | null
           state: string | null
+          travel_frequency: string | null
           updated_at: string
           user_id: string
           verification_status: boolean | null
+          zodiac_sign: string | null
         }
         Insert: {
+          age?: number | null
+          bio?: string | null
+          body_type?: string | null
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
+          dietary_preference?: string | null
+          drinking_habit?: string | null
+          education_level?: string | null
+          fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          has_children?: boolean | null
+          height_cm?: number | null
           id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
           latitude?: number | null
+          life_goals?: string[] | null
           longitude?: number | null
+          marital_status?: string | null
+          occupation?: string | null
+          personality_type?: string | null
+          pet_preference?: string | null
           phone?: string | null
           photo_url?: string | null
           preferred_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          smoking_habit?: string | null
           state?: string | null
+          travel_frequency?: string | null
           updated_at?: string
           user_id: string
           verification_status?: boolean | null
+          zodiac_sign?: string | null
         }
         Update: {
+          age?: number | null
+          bio?: string | null
+          body_type?: string | null
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
+          dietary_preference?: string | null
+          drinking_habit?: string | null
+          education_level?: string | null
+          fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          has_children?: boolean | null
+          height_cm?: number | null
           id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
           latitude?: number | null
+          life_goals?: string[] | null
           longitude?: number | null
+          marital_status?: string | null
+          occupation?: string | null
+          personality_type?: string | null
+          pet_preference?: string | null
           phone?: string | null
           photo_url?: string | null
           preferred_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          smoking_habit?: string | null
           state?: string | null
+          travel_frequency?: string | null
           updated_at?: string
           user_id?: string
           verification_status?: boolean | null
+          zodiac_sign?: string | null
         }
         Relationships: []
       }
