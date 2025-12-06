@@ -229,6 +229,39 @@ export type Database = {
         }
         Relationships: []
       }
+      language_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          languages: string[]
+          name: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          languages?: string[]
+          name: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          languages?: string[]
+          name?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
