@@ -302,9 +302,17 @@ const ShiftManagementScreen = () => {
       if (!user) return;
 
       const hours = parseInt(selectedBookHours);
-      const startTime = "09:00:00";
-      const endHour = 9 + hours;
-      const endTime = `${endHour.toString().padStart(2, "0")}:00:00`;
+      // Use current local time as start
+      const now = new Date();
+      const startHour = now.getHours();
+      const startMinute = now.getMinutes();
+      const startTime = `${startHour.toString().padStart(2, "0")}:${startMinute.toString().padStart(2, "0")}:00`;
+      
+      // Calculate end time (start + hours)
+      const endDate = new Date(now.getTime() + hours * 60 * 60 * 1000);
+      const endHour = endDate.getHours();
+      const endMinute = endDate.getMinutes();
+      const endTime = `${endHour.toString().padStart(2, "0")}:${endMinute.toString().padStart(2, "0")}:00`;
 
       const { error } = await supabase.from("scheduled_shifts").insert({
         user_id: user.id,
@@ -313,7 +321,7 @@ const ShiftManagementScreen = () => {
         end_time: endTime,
         timezone: userTimezone,
         ai_suggested: false,
-        suggested_reason: `User booked ${hours} hours`,
+        suggested_reason: `Booked ${hours}h from ${format(now, "h:mm a")}`,
         status: "confirmed"
       });
 

@@ -145,14 +145,25 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingShift) {
+          // Use current local time as base for scheduling
+          const currentHour = now.getHours();
+          const currentMinute = now.getMinutes();
+          const startTime = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;
+          
+          // Calculate end time (current time + 9 hours)
+          const endDate = new Date(now.getTime() + DEFAULT_SHIFT_HOURS * 60 * 60 * 1000);
+          const endHour = endDate.getHours();
+          const endMinute = endDate.getMinutes();
+          const endTime = `${endHour.toString().padStart(2, "0")}:${endMinute.toString().padStart(2, "0")}:00`;
+
           scheduledShifts.push({
             user_id: userId,
             scheduled_date: scheduleDate.toISOString().split("T")[0],
-            start_time: "09:00:00",
-            end_time: "18:00:00",
+            start_time: startTime,
+            end_time: endTime,
             timezone: userTimezone,
             ai_suggested: true,
-            suggested_reason: `AI scheduled ${DEFAULT_SHIFT_HOURS}h shift`,
+            suggested_reason: `AI: ${DEFAULT_SHIFT_HOURS}h from ${startTime.slice(0,5)}`,
             status: "scheduled"
           });
         }
