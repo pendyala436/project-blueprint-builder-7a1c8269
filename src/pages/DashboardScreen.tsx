@@ -150,13 +150,25 @@ const DashboardScreen = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase
+      // First try to update existing record
+      const { error: updateError } = await supabase
         .from("user_status")
-        .upsert({
-          user_id: user.id,
+        .update({
           is_online: online,
           last_seen: new Date().toISOString(),
-        });
+        })
+        .eq("user_id", user.id);
+
+      // If no rows were updated, insert a new record
+      if (updateError) {
+        await supabase
+          .from("user_status")
+          .insert({
+            user_id: user.id,
+            is_online: online,
+            last_seen: new Date().toISOString(),
+          });
+      }
 
       setIsOnline(online);
     } catch (error) {
