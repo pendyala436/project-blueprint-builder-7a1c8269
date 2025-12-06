@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Generate male users (male1 to male15)
     for (let i = 1; i <= 15; i++) {
       usersToCreate.push({
-        email: `male${i}@sample.meow.app`,
+        email: `male${i}@meow-meow.com`,
         password,
         gender: "male",
         role: "user",
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     // Generate female users (female1 to female15)
     for (let i = 1; i <= 15; i++) {
       usersToCreate.push({
-        email: `female${i}@sample.meow.app`,
+        email: `female${i}@meow-meow.com`,
         password,
         gender: "female",
         role: "user",
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     // Generate lesbian users (lesbian1 to lesbian15)
     for (let i = 1; i <= 15; i++) {
       usersToCreate.push({
-        email: `lesbian${i}@sample.meow.app`,
+        email: `lesbian${i}@meow-meow.com`,
         password,
         gender: "lesbian",
         role: "user",
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     // Generate transgender users (transgender1 to transgender15)
     for (let i = 1; i <= 15; i++) {
       usersToCreate.push({
-        email: `transgender${i}@sample.meow.app`,
+        email: `transgender${i}@meow-meow.com`,
         password,
         gender: "transgender",
         role: "user",
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     // Generate admin users (admin1 to admin15)
     for (let i = 1; i <= 15; i++) {
       usersToCreate.push({
-        email: `admin${i}@sample.meow.app`,
+        email: `admin${i}@meow-meow.com`,
         password,
         gender: i % 2 === 0 ? "female" : "male",
         role: "admin",
@@ -243,11 +243,11 @@ Deno.serve(async (req) => {
           password: "Chinn@2589",
           walletBalance: "₹10,000 (free)",
           categories: [
-            "male1-15@sample.meow.app",
-            "female1-15@sample.meow.app",
-            "lesbian1-15@sample.meow.app",
-            "transgender1-15@sample.meow.app",
-            "admin1-15@sample.meow.app",
+            "male1-15@meow-meow.com",
+            "female1-15@meow-meow.com",
+            "lesbian1-15@meow-meow.com",
+            "transgender1-15@meow-meow.com",
+            "admin1-15@meow-meow.com",
           ],
         },
       }),

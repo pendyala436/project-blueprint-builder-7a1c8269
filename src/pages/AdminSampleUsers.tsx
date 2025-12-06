@@ -283,8 +283,8 @@ export default function AdminSampleUsers() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Email format: <code className="bg-muted px-1 rounded">male1@sample.meow.app</code>, 
-              <code className="bg-muted px-1 rounded ml-1">female5@sample.meow.app</code>, etc.
+              Email format: <code className="bg-muted px-1 rounded">male1@meow-meow.com</code>, 
+              <code className="bg-muted px-1 rounded ml-1">female5@meow-meow.com</code>, etc.
             </p>
           </CardContent>
         </Card>
