@@ -14,7 +14,8 @@ import {
   Loader2,
   Sparkles,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -509,12 +510,12 @@ const MatchDiscoveryScreen = () => {
                   <Heart className="w-10 h-10 text-white fill-white" />
                 </button>
 
-                {/* Super Like */}
+                {/* View Profile */}
                 <button
-                  onClick={() => toast({ title: "Super Like", description: "Coming soon with premium!" })}
-                  className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-blue-500/50 hover:bg-blue-500/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg active:scale-95"
+                  onClick={() => navigate(`/profile/${currentMatch.userId}`)}
+                  className="group w-16 h-16 rounded-full bg-card border-2 border-border hover:border-primary/50 hover:bg-primary/10 flex items-center justify-center transition-all duration-300 shadow-card hover:shadow-lg active:scale-95"
                 >
-                  <Sparkles className="w-7 h-7 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                  <Eye className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
                 </button>
               </div>
             )}
