@@ -32,6 +32,7 @@ import AdminGiftPricing from "./pages/AdminGiftPricing";
 import AdminLanguageGroups from "./pages/AdminLanguageGroups";
 import AdminChatMonitoring from "./pages/AdminChatMonitoring";
 import AdminFinanceDashboard from "./pages/AdminFinanceDashboard";
+import AdminFinanceReports from "./pages/AdminFinanceReports";
 import AdminBackupManagement from "./pages/AdminBackupManagement";
 import AdminLegalDocuments from "./pages/AdminLegalDocuments";
 import AdminChatPricing from "./pages/AdminChatPricing";
@@ -82,6 +83,7 @@ const App = () => (
           <Route path="/admin/languages" element={<AdminLanguageGroups />} />
           <Route path="/admin/chat-monitoring" element={<AdminChatMonitoring />} />
           <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
+          <Route path="/admin/finance-reports" element={<AdminFinanceReports />} />
           <Route path="/admin/backups" element={<AdminBackupManagement />} />
           <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
           <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
