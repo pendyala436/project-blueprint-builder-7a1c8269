@@ -163,10 +163,10 @@ const AdminChatPricing = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Per-Minute Rate
+              Per-Minute Rate (Men Charged)
             </CardTitle>
             <CardDescription>
-              Amount women earn per minute of active chat
+              Amount men are charged per minute of active chat
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -183,11 +183,11 @@ const AdminChatPricing = () => {
                     className="pl-10"
                     value={formData.rate_per_minute}
                     onChange={(e) => setFormData(prev => ({ ...prev, rate_per_minute: e.target.value }))}
-                    placeholder="2.00"
+                    placeholder="4.00"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Example: If set to ₹2.00, a 30-minute chat earns ₹60.00
+                  Example: If set to ₹4.00, a 30-minute chat costs men ₹120.00
                 </p>
               </div>
             </div>
