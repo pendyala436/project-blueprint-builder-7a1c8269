@@ -8,9 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Download, Users, TrendingUp, TrendingDown, Globe, Languages, IndianRupee, Calendar, BarChart3, DollarSign } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Download, Users, TrendingUp, TrendingDown, Globe, Languages, IndianRupee, Calendar, BarChart3, DollarSign, Clock, Timer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toast } from "sonner";
+import { countries } from "@/data/countries";
+import { languages } from "@/data/languages";
 import {
   AreaChart,
   Area,
@@ -76,6 +79,14 @@ interface MonthlyTrend {
   activeUsers: number;
 }
 
+interface QueueStats {
+  country: string;
+  language: string;
+  waitingCount: number;
+  avgWaitTime: number;
+  flag?: string;
+}
+
 const MONTHS = Array.from({ length: 12 }, (_, i) => {
   const date = subMonths(new Date(), i);
   return {
@@ -83,6 +94,10 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => {
     label: format(date, "MMMM yyyy"),
   };
 });
+
+// Use complete world lists
+const ALL_COUNTRIES = countries.map(c => ({ name: c.name, flag: c.flag }));
+const ALL_LANGUAGES = languages.map(l => l.name);
 
 const AdminFinanceReports = () => {
   const navigate = useNavigate();
@@ -95,9 +110,9 @@ const AdminFinanceReports = () => {
   const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [countrySummary, setCountrySummary] = useState<CountrySummary[]>([]);
   const [languageSummary, setLanguageSummary] = useState<LanguageSummary[]>([]);
-  const [countries, setCountries] = useState<string[]>([]);
-  const [languages, setLanguages] = useState<string[]>([]);
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
+  const [queueByCountry, setQueueByCountry] = useState<QueueStats[]>([]);
+  const [queueByLanguage, setQueueByLanguage] = useState<QueueStats[]>([]);
   
   const [totals, setTotals] = useState({
     totalMenSpending: 0,
@@ -110,7 +125,87 @@ const AdminFinanceReports = () => {
   useEffect(() => {
     loadReportData();
     loadTrendData();
+    loadQueueStats();
   }, [selectedMonth, selectedCountry, selectedLanguage]);
+
+  const loadQueueStats = async () => {
+    try {
+      // Load chat wait queue data
+      const { data: queueData } = await supabase
+        .from("chat_wait_queue")
+        .select("user_id, preferred_language, status, wait_time_seconds, joined_at")
+        .eq("status", "waiting");
+
+      // Load profiles for country data
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, country, primary_language");
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      // Group by country
+      const countryQueue = new Map<string, { count: number; totalWait: number; flag: string }>();
+      // Group by language
+      const langQueue = new Map<string, { count: number; totalWait: number }>();
+
+      queueData?.forEach(q => {
+        const profile = profileMap.get(q.user_id);
+        const country = profile?.country || "Unknown";
+        const language = q.preferred_language || profile?.primary_language || "Unknown";
+        const waitTime = q.wait_time_seconds || Math.floor((Date.now() - new Date(q.joined_at).getTime()) / 1000);
+
+        // Find country flag
+        const countryData = ALL_COUNTRIES.find(c => c.name === country);
+        const flag = countryData?.flag || "🌍";
+
+        // Update country stats
+        const existingCountry = countryQueue.get(country) || { count: 0, totalWait: 0, flag };
+        existingCountry.count += 1;
+        existingCountry.totalWait += waitTime;
+        countryQueue.set(country, existingCountry);
+
+        // Update language stats
+        const existingLang = langQueue.get(language) || { count: 0, totalWait: 0 };
+        existingLang.count += 1;
+        existingLang.totalWait += waitTime;
+        langQueue.set(language, existingLang);
+      });
+
+      // Convert to arrays
+      const countryStats: QueueStats[] = Array.from(countryQueue.entries())
+        .map(([country, data]) => ({
+          country,
+          language: "",
+          waitingCount: data.count,
+          avgWaitTime: data.count > 0 ? Math.round(data.totalWait / data.count) : 0,
+          flag: data.flag,
+        }))
+        .sort((a, b) => b.waitingCount - a.waitingCount);
+
+      const langStats: QueueStats[] = Array.from(langQueue.entries())
+        .map(([language, data]) => ({
+          country: "",
+          language,
+          waitingCount: data.count,
+          avgWaitTime: data.count > 0 ? Math.round(data.totalWait / data.count) : 0,
+        }))
+        .sort((a, b) => b.waitingCount - a.waitingCount);
+
+      setQueueByCountry(countryStats);
+      setQueueByLanguage(langStats);
+    } catch (error) {
+      console.error("Error loading queue stats:", error);
+    }
+  };
+
+  const formatWaitTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins < 60) return `${mins}m ${secs}s`;
+    const hours = Math.floor(mins / 60);
+    return `${hours}h ${mins % 60}m`;
+  };
 
   const loadTrendData = async () => {
     try {
@@ -352,16 +447,7 @@ const AdminFinanceReports = () => {
         langMap.set(key, value);
       });
 
-      // Get unique countries and languages for filters
-      const allCountries = new Set<string>();
-      const allLanguages = new Set<string>();
-      profiles?.forEach(p => {
-        if (p.country) allCountries.add(p.country);
-        if (p.primary_language) allLanguages.add(p.primary_language);
-      });
-
-      setCountries(Array.from(allCountries).sort());
-      setLanguages(Array.from(allLanguages).sort());
+      // Country and language data is now from imported complete lists
       setMenSpending(menList);
       setWomenEarnings(womenList);
       setCountrySummary(Array.from(countryMap.values()).sort((a, b) => b.men_spending - a.men_spending));
@@ -512,10 +598,12 @@ const AdminFinanceReports = () => {
                     <SelectValue placeholder="All Countries" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Countries</SelectItem>
-                    {countries.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
+                    <ScrollArea className="h-60">
+                      <SelectItem value="all">All Countries</SelectItem>
+                      {ALL_COUNTRIES.map(c => (
+                        <SelectItem key={c.name} value={c.name}>{c.flag} {c.name}</SelectItem>
+                      ))}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
               </div>
@@ -527,10 +615,12 @@ const AdminFinanceReports = () => {
                     <SelectValue placeholder="All Languages" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Languages</SelectItem>
-                    {languages.map(l => (
-                      <SelectItem key={l} value={l}>{l}</SelectItem>
-                    ))}
+                    <ScrollArea className="h-60">
+                      <SelectItem value="all">All Languages</SelectItem>
+                      {ALL_LANGUAGES.map(l => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
               </div>
@@ -717,6 +807,102 @@ const AdminFinanceReports = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Chat Wait Queue Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Queue by Country */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-500" />
+                Chat Wait Queue by Country
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {queueByCountry.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No users currently waiting in queue
+                </div>
+              ) : (
+                <ScrollArea className="h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Country</TableHead>
+                        <TableHead className="text-right">Waiting</TableHead>
+                        <TableHead className="text-right">Avg Wait</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {queueByCountry.map(q => (
+                        <TableRow key={q.country}>
+                          <TableCell className="font-medium">
+                            <span className="mr-2">{q.flag}</span>
+                            {q.country}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="secondary">{q.waitingCount}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Timer className="h-3 w-3 text-muted-foreground" />
+                              {formatWaitTime(q.avgWaitTime)}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Queue by Language */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Languages className="h-5 w-5 text-purple-500" />
+                Chat Wait Queue by Language
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {queueByLanguage.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  No users currently waiting in queue
+                </div>
+              ) : (
+                <ScrollArea className="h-64">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Language</TableHead>
+                        <TableHead className="text-right">Waiting</TableHead>
+                        <TableHead className="text-right">Avg Wait</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {queueByLanguage.map(q => (
+                        <TableRow key={q.language}>
+                          <TableCell className="font-medium">{q.language}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="secondary">{q.waitingCount}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Timer className="h-3 w-3 text-muted-foreground" />
+                              {formatWaitTime(q.avgWaitTime)}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </div>
