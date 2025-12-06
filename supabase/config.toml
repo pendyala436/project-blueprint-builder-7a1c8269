@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.content-moderation]
 verify_jwt = false
+
+[functions.seed-legal-documents]
+verify_jwt = false
