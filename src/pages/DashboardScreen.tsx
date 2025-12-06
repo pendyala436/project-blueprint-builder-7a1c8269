@@ -237,12 +237,18 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile including country
+      // Fetch user profile including country and gender
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, country")
+        .select("full_name, country, gender")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Redirect women to their dashboard
+      if (profile?.gender === "Female") {
+        navigate("/women-dashboard");
+        return;
+      }
 
       if (profile?.full_name) {
         setUserName(profile.full_name.split(" ")[0]);
@@ -436,9 +442,9 @@ const DashboardScreen = () => {
   const quickActions = [
     { 
       icon: <Search className="w-6 h-6" />, 
-      label: "Discover", 
+      label: "Find Match", 
       color: "from-primary to-rose-400",
-      action: () => navigate("/online-users")
+      action: () => navigate("/find-match")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
@@ -666,7 +672,7 @@ const DashboardScreen = () => {
               <Button 
                 variant="gradient" 
                 className="mt-4"
-                onClick={() => navigate("/online-users")}
+                onClick={() => navigate("/find-match")}
               >
                 <Search className="w-4 h-4 mr-2" />
                 Start Exploring

@@ -17,6 +17,7 @@ import WelcomeTutorialScreen from "./pages/WelcomeTutorialScreen";
 import RegistrationCompleteScreen from "./pages/RegistrationCompleteScreen";
 import DashboardScreen from "./pages/DashboardScreen";
 import OnlineUsersScreen from "./pages/OnlineUsersScreen";
+import MatchingScreen from "./pages/MatchingScreen";
 import MatchDiscoveryScreen from "./pages/MatchDiscoveryScreen";
 import ProfileDetailScreen from "./pages/ProfileDetailScreen";
 import ChatScreen from "./pages/ChatScreen";
@@ -66,6 +67,7 @@ const App = () => (
           <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
           <Route path="/dashboard" element={<DashboardScreen />} />
           <Route path="/online-users" element={<OnlineUsersScreen />} />
+          <Route path="/find-match" element={<MatchingScreen />} />
           <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
           <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
           <Route path="/chat/:oderId" element={<ChatScreen />} />
