@@ -28,6 +28,7 @@ import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminGiftPricing from "./pages/AdminGiftPricing";
 import AdminLanguageGroups from "./pages/AdminLanguageGroups";
+import AdminChatMonitoring from "./pages/AdminChatMonitoring";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/admin/users" element={<AdminUserManagement />} />
           <Route path="/admin/gifts" element={<AdminGiftPricing />} />
           <Route path="/admin/languages" element={<AdminLanguageGroups />} />
+          <Route path="/admin/chat-monitoring" element={<AdminChatMonitoring />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

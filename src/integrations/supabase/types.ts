@@ -111,10 +111,15 @@ export type Database = {
         Row: {
           chat_id: string
           created_at: string
+          flag_reason: string | null
+          flagged: boolean
+          flagged_at: string | null
+          flagged_by: string | null
           id: string
           is_read: boolean | null
           is_translated: boolean | null
           message: string
+          moderation_status: string | null
           receiver_id: string
           sender_id: string
           translated_message: string | null
@@ -122,10 +127,15 @@ export type Database = {
         Insert: {
           chat_id: string
           created_at?: string
+          flag_reason?: string | null
+          flagged?: boolean
+          flagged_at?: string | null
+          flagged_by?: string | null
           id?: string
           is_read?: boolean | null
           is_translated?: boolean | null
           message: string
+          moderation_status?: string | null
           receiver_id: string
           sender_id: string
           translated_message?: string | null
@@ -133,10 +143,15 @@ export type Database = {
         Update: {
           chat_id?: string
           created_at?: string
+          flag_reason?: string | null
+          flagged?: boolean
+          flagged_at?: string | null
+          flagged_by?: string | null
           id?: string
           is_read?: boolean | null
           is_translated?: boolean | null
           message?: string
+          moderation_status?: string | null
           receiver_id?: string
           sender_id?: string
           translated_message?: string | null
