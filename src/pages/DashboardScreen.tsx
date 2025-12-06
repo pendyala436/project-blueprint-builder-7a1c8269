@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -15,9 +23,14 @@ import {
   Sparkles,
   ChevronRight,
   Circle,
-  LogOut
+  LogOut,
+  Wallet,
+  CreditCard,
+  CheckCircle2,
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface Notification {
   id: string;
@@ -34,18 +47,101 @@ interface DashboardStats {
   unreadNotifications: number;
 }
 
+// Currency conversion rates (base: INR)
+const CURRENCY_RATES: Record<string, { rate: number; symbol: string; code: string }> = {
+  IN: { rate: 1, symbol: "₹", code: "INR" },
+  US: { rate: 0.012, symbol: "$", code: "USD" },
+  GB: { rate: 0.0095, symbol: "£", code: "GBP" },
+  EU: { rate: 0.011, symbol: "€", code: "EUR" },
+  AE: { rate: 0.044, symbol: "د.إ", code: "AED" },
+  AU: { rate: 0.018, symbol: "A$", code: "AUD" },
+  CA: { rate: 0.016, symbol: "C$", code: "CAD" },
+  JP: { rate: 1.79, symbol: "¥", code: "JPY" },
+  SG: { rate: 0.016, symbol: "S$", code: "SGD" },
+  MY: { rate: 0.053, symbol: "RM", code: "MYR" },
+  PH: { rate: 0.67, symbol: "₱", code: "PHP" },
+  TH: { rate: 0.41, symbol: "฿", code: "THB" },
+  SA: { rate: 0.045, symbol: "﷼", code: "SAR" },
+  QA: { rate: 0.044, symbol: "ر.ق", code: "QAR" },
+  KW: { rate: 0.0037, symbol: "د.ك", code: "KWD" },
+  BD: { rate: 1.31, symbol: "৳", code: "BDT" },
+  PK: { rate: 3.34, symbol: "Rs", code: "PKR" },
+  NP: { rate: 1.59, symbol: "रू", code: "NPR" },
+  LK: { rate: 3.66, symbol: "Rs", code: "LKR" },
+  DEFAULT: { rate: 0.012, symbol: "$", code: "USD" },
+};
+
+// Generate recharge amounts (multiples of 200 and 300 up to 10000 INR)
+const generateRechargeAmounts = (): number[] => {
+  const amounts = new Set<number>();
+  // Multiples of 200
+  for (let i = 200; i <= 10000; i += 200) {
+    amounts.add(i);
+  }
+  // Multiples of 300
+  for (let i = 300; i <= 10000; i += 300) {
+    amounts.add(i);
+  }
+  return Array.from(amounts).sort((a, b) => a - b).slice(0, 12); // Take first 12 for UI
+};
+
+const RECHARGE_AMOUNTS_INR = generateRechargeAmounts();
+
+interface PaymentGateway {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+}
+
+const PAYMENT_GATEWAYS: PaymentGateway[] = [
+  { id: "stripe", name: "Stripe", logo: "💎", description: "Cards, Apple Pay, Google Pay" },
+  { id: "paypal", name: "PayPal", logo: "🅿️", description: "200+ countries supported" },
+  { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "UPI, Cards, Netbanking" },
+  { id: "wise", name: "Wise", logo: "💸", description: "International Transfers" },
+];
+
 const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
+  const [userCountry, setUserCountry] = useState("IN");
+  const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
     unreadNotifications: 0,
   });
+  const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false);
+  const [selectedGateway, setSelectedGateway] = useState("stripe");
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Get currency info based on user's country
+  const getCurrencyInfo = () => {
+    return CURRENCY_RATES[userCountry] || CURRENCY_RATES.DEFAULT;
+  };
+
+  // Convert INR to local currency
+  const convertToLocal = (amountINR: number) => {
+    const currency = getCurrencyInfo();
+    const converted = amountINR * currency.rate;
+    // Round appropriately based on currency
+    if (currency.code === "JPY" || currency.code === "KRW") {
+      return Math.round(converted);
+    }
+    return Math.round(converted * 100) / 100;
+  };
+
+  // Format currency display
+  const formatLocalCurrency = (amountINR: number) => {
+    const currency = getCurrencyInfo();
+    const converted = convertToLocal(amountINR);
+    return `${currency.symbol}${converted.toLocaleString()}`;
+  };
 
   useEffect(() => {
     loadDashboardData();
@@ -88,15 +184,38 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile
+      // Fetch user profile including country
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, country")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (profile?.full_name) {
         setUserName(profile.full_name.split(" ")[0]);
+      }
+      if (profile?.country) {
+        // Map country name to code
+        const countryCodeMap: Record<string, string> = {
+          "India": "IN", "United States": "US", "United Kingdom": "GB",
+          "Australia": "AU", "Canada": "CA", "Germany": "EU", "France": "EU",
+          "Japan": "JP", "Singapore": "SG", "Malaysia": "MY", "Philippines": "PH",
+          "Thailand": "TH", "Saudi Arabia": "SA", "UAE": "AE", "Qatar": "QA",
+          "Kuwait": "KW", "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP",
+          "Sri Lanka": "LK"
+        };
+        setUserCountry(countryCodeMap[profile.country] || "IN");
+      }
+
+      // Fetch wallet balance
+      const { data: wallet } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (wallet) {
+        setWalletBalance(wallet.balance);
       }
 
       // Fetch stats in parallel
@@ -184,6 +303,81 @@ const DashboardScreen = () => {
       description: "See you soon!",
     });
     navigate("/");
+  };
+
+  const handleRecharge = async (amountINR: number) => {
+    setSelectedAmount(amountINR);
+    setProcessingPayment(true);
+    
+    const gateway = PAYMENT_GATEWAYS.find(g => g.id === selectedGateway);
+    toast({
+      title: "Processing Payment",
+      description: `Opening ${gateway?.name} for ${formatLocalCurrency(amountINR)}...`,
+    });
+
+    // Simulate payment processing
+    setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Get or create wallet
+        let { data: wallet } = await supabase
+          .from("wallets")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!wallet) {
+          const { data: newWallet } = await supabase
+            .from("wallets")
+            .insert({ user_id: user.id })
+            .select()
+            .single();
+          wallet = newWallet;
+        }
+
+        if (!wallet) return;
+
+        // Update wallet balance (store in INR)
+        const newBalance = (wallet.balance || 0) + amountINR;
+        await supabase
+          .from("wallets")
+          .update({ balance: newBalance })
+          .eq("id", wallet.id);
+
+        // Create transaction record
+        await supabase
+          .from("wallet_transactions")
+          .insert({
+            wallet_id: wallet.id,
+            user_id: user.id,
+            type: "credit",
+            amount: amountINR,
+            description: `Recharge via ${gateway?.name} (${formatLocalCurrency(amountINR)})`,
+            reference_id: `${selectedGateway.toUpperCase()}_${Date.now()}`,
+            status: "completed"
+          });
+
+        setWalletBalance(newBalance);
+        setRechargeDialogOpen(false);
+        
+        toast({
+          title: "Recharge Successful!",
+          description: `${formatLocalCurrency(amountINR)} added to your wallet`,
+        });
+      } catch (error) {
+        console.error("Recharge error:", error);
+        toast({
+          title: "Recharge Failed",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      } finally {
+        setSelectedAmount(null);
+        setProcessingPayment(false);
+      }
+    }, 2000);
   };
 
   const quickActions = [
@@ -324,6 +518,37 @@ const DashboardScreen = () => {
           </Card>
         </div>
 
+        {/* Wallet & Recharge Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-primary/20">
+                  <Wallet className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ₹{walletBalance.toLocaleString()}
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      ({formatLocalCurrency(walletBalance)})
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="gradient" 
+                size="lg"
+                onClick={() => setRechargeDialogOpen(true)}
+                className="gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                Recharge
+              </Button>
+            </div>
+          </Card>
+        </div>
+
         {/* Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
@@ -413,6 +638,98 @@ const DashboardScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Recharge Dialog */}
+      <Dialog open={rechargeDialogOpen} onOpenChange={setRechargeDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Recharge Wallet
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Currency Info */}
+            <div className="p-3 rounded-lg bg-muted/50 text-sm">
+              <p className="text-muted-foreground">
+                Your currency: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Prices shown in your local currency (stored as INR)
+              </p>
+            </div>
+
+            {/* Payment Gateway Selection */}
+            <div>
+              <Label className="text-sm font-medium mb-3 block">Payment Method</Label>
+              <RadioGroup
+                value={selectedGateway}
+                onValueChange={setSelectedGateway}
+                className="grid grid-cols-2 gap-3"
+              >
+                {PAYMENT_GATEWAYS.map((gateway) => (
+                  <div key={gateway.id} className="relative">
+                    <RadioGroupItem
+                      value={gateway.id}
+                      id={`gateway-${gateway.id}`}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`gateway-${gateway.id}`}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
+                        "hover:border-primary/50 hover:bg-muted/50",
+                        selectedGateway === gateway.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      )}
+                    >
+                      <span className="text-xl mb-1">{gateway.logo}</span>
+                      <span className="font-medium text-xs">{gateway.name}</span>
+                      {selectedGateway === gateway.id && (
+                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {/* Recharge Amounts */}
+            <div>
+              <Label className="text-sm font-medium mb-3 block">Select Amount</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {RECHARGE_AMOUNTS_INR.map((amountINR) => (
+                  <Button
+                    key={amountINR}
+                    variant={selectedAmount === amountINR ? "default" : "outline"}
+                    className={cn(
+                      "h-auto py-3 flex flex-col transition-all",
+                      selectedAmount === amountINR && "scale-95"
+                    )}
+                    onClick={() => handleRecharge(amountINR)}
+                    disabled={processingPayment}
+                  >
+                    {processingPayment && selectedAmount === amountINR ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="font-bold">{formatLocalCurrency(amountINR)}</span>
+                        <span className="text-[10px] opacity-70">₹{amountINR}</span>
+                      </>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Secure payment via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
