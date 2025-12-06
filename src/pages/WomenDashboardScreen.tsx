@@ -197,11 +197,7 @@ const WomenDashboardScreen = () => {
         setUserName(profile.full_name.split(" ")[0]);
       }
 
-      // Redirect men to regular dashboard
-      if (profile?.gender === "male" || profile?.gender === "Male") {
-        navigate("/dashboard");
-        return;
-      }
+      // Note: Gender check removed for testing - women dashboard accessible to all users
 
       // Get woman's mother tongue
       const { data: womanLanguages } = await supabase
