@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Phone, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 
 type LoginMethod = "email" | "phone";
 
@@ -16,6 +17,7 @@ const AuthScreen = () => {
   const navigate = useNavigate();
   const [loginMethod, setLoginMethod] = useState<LoginMethod>("email");
   const [identifier, setIdentifier] = useState("");
+  const [phoneValue, setPhoneValue] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,19 +29,26 @@ const AuthScreen = () => {
   };
 
   const validatePhone = (phone: string) => {
-    const phoneRegex = /^\+?[1-9]\d{6,14}$/;
-    return phoneRegex.test(phone);
+    // Just validate the number part (without country code)
+    const phoneRegex = /^[0-9]{6,15}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
   };
 
   const handleLogin = async () => {
     const newErrors: { identifier?: string; password?: string } = {};
 
-    if (!identifier.trim()) {
-      newErrors.identifier = loginMethod === "email" ? "Email is required" : "Phone number is required";
-    } else if (loginMethod === "email" && !validateEmail(identifier)) {
-      newErrors.identifier = "Please enter a valid email";
-    } else if (loginMethod === "phone" && !validatePhone(identifier)) {
-      newErrors.identifier = "Please enter a valid phone number";
+    if (loginMethod === "email") {
+      if (!identifier.trim()) {
+        newErrors.identifier = "Email is required";
+      } else if (!validateEmail(identifier)) {
+        newErrors.identifier = "Please enter a valid email";
+      }
+    } else {
+      if (!phoneValue.trim()) {
+        newErrors.identifier = "Phone number is required";
+      } else if (!validatePhone(phoneValue)) {
+        newErrors.identifier = "Please enter a valid phone number";
+      }
     }
 
     if (!password) {
@@ -64,7 +73,7 @@ const AuthScreen = () => {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("user_id")
-          .eq("phone", identifier)
+          .eq("phone", phoneValue)
           .maybeSingle();
 
         if (profileError || !profile) {
@@ -165,6 +174,7 @@ const AuthScreen = () => {
                 onClick={() => {
                   setLoginMethod("email");
                   setIdentifier("");
+                  setPhoneValue("");
                   setErrors({});
                 }}
                 className={cn(
@@ -181,6 +191,7 @@ const AuthScreen = () => {
                 onClick={() => {
                   setLoginMethod("phone");
                   setIdentifier("");
+                  setPhoneValue("");
                   setErrors({});
                 }}
                 className={cn(
@@ -200,27 +211,34 @@ const AuthScreen = () => {
               <Label htmlFor="identifier" className="text-sm font-semibold">
                 {loginMethod === "email" ? "Email Address" : "Phone Number"}
               </Label>
-              <div className="relative">
-                {loginMethod === "email" ? (
+              {loginMethod === "email" ? (
+                <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                )}
-                <Input
-                  id="identifier"
-                  type={loginMethod === "email" ? "email" : "tel"}
-                  placeholder={loginMethod === "email" ? "Enter your email" : "+1234567890"}
-                  value={identifier}
-                  onChange={(e) => {
-                    setIdentifier(e.target.value);
+                  <Input
+                    id="identifier"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={identifier}
+                    onChange={(e) => {
+                      setIdentifier(e.target.value);
+                      setErrors((prev) => ({ ...prev, identifier: undefined }));
+                    }}
+                    className={cn(
+                      "h-12 pl-10 rounded-xl border-2 transition-all",
+                      errors.identifier ? "border-destructive" : "border-input focus:border-primary"
+                    )}
+                  />
+                </div>
+              ) : (
+                <PhoneInputWithCode
+                  value={phoneValue}
+                  onChange={(value) => {
+                    setPhoneValue(value);
                     setErrors((prev) => ({ ...prev, identifier: undefined }));
                   }}
-                  className={cn(
-                    "h-12 pl-10 rounded-xl border-2 transition-all",
-                    errors.identifier ? "border-destructive" : "border-input focus:border-primary"
-                  )}
+                  error={!!errors.identifier}
                 />
-              </div>
+              )}
               {errors.identifier && (
                 <p className="text-xs text-destructive">{errors.identifier}</p>
               )}
