@@ -35,6 +35,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
+import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 
 interface Notification {
   id: string;
@@ -701,6 +702,11 @@ const WomenDashboardScreen = () => {
               </div>
             </div>
           </Card>
+        </div>
+
+        {/* Active Chats Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <ActiveChatsSection maxDisplay={5} />
         </div>
 
         {/* Online Men Tabs */}

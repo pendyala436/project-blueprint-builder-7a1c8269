@@ -41,6 +41,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
+import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 
 interface Notification {
   id: string;
@@ -665,6 +666,11 @@ const DashboardScreen = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Active Chats Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <ActiveChatsSection maxDisplay={5} />
         </div>
 
         {/* Recent Notifications */}
