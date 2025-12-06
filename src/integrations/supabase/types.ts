@@ -22,9 +22,11 @@ export type Database = {
           full_name: string | null
           gender: string | null
           id: string
+          photo_url: string | null
           preferred_language: string | null
           updated_at: string
           user_id: string
+          verification_status: boolean | null
         }
         Insert: {
           country?: string | null
@@ -33,9 +35,11 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          photo_url?: string | null
           preferred_language?: string | null
           updated_at?: string
           user_id: string
+          verification_status?: boolean | null
         }
         Update: {
           country?: string | null
@@ -44,9 +48,11 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          photo_url?: string | null
           preferred_language?: string | null
           updated_at?: string
           user_id?: string
+          verification_status?: boolean | null
         }
         Relationships: []
       }

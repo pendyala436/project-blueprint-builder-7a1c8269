@@ -1,1 +1,4 @@
 project_id = "tvneohngeracipjajzos"
+
+[functions.verify-photo]
+verify_jwt = false
