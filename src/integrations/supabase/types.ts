@@ -107,6 +107,48 @@ export type Database = {
           },
         ]
       }
+      backup_logs: {
+        Row: {
+          backup_type: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          size_bytes: number | null
+          started_at: string
+          status: string
+          storage_path: string | null
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          size_bytes?: number | null
+          started_at?: string
+          status?: string
+          storage_path?: string | null
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          size_bytes?: number | null
+          started_at?: string
+          status?: string
+          storage_path?: string | null
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           chat_id: string
