@@ -77,6 +77,26 @@ interface AbsenceRecord {
   ai_detected: boolean;
 }
 
+interface ShiftTemplate {
+  id: string;
+  name: string;
+  shift_code: string;
+  start_time: string;
+  end_time: string;
+  duration_hours: number;
+  work_hours: number;
+  break_hours: number;
+}
+
+interface ShiftAssignment {
+  id: string;
+  user_id: string;
+  week_off_days: number[];
+  is_active: boolean;
+  shift_template: ShiftTemplate | null;
+  language_group: { id: string; name: string } | null;
+}
+
 const TIMEZONES = [
   { value: "Asia/Kolkata", label: "India (IST)" },
   { value: "America/New_York", label: "New York (EST)" },
@@ -88,6 +108,8 @@ const TIMEZONES = [
   { value: "Australia/Sydney", label: "Sydney (AEST)" },
 ];
 
+const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 const ShiftManagementScreen = () => {
   const navigate = useNavigate();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
@@ -95,6 +117,7 @@ const ShiftManagementScreen = () => {
   const [scheduledShifts, setScheduledShifts] = useState<ScheduledShift[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
+  const [shiftAssignment, setShiftAssignment] = useState<ShiftAssignment | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingShift, setStartingShift] = useState(false);
   const [endingShift, setEndingShift] = useState(false);
@@ -180,13 +203,19 @@ const ShiftManagementScreen = () => {
         shiftsRes,
         scheduledRes,
         attendanceRes,
-        absencesRes
+        absencesRes,
+        assignmentRes
       ] = await Promise.all([
         supabase.from("shifts").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
         supabase.from("shifts").select("*").eq("user_id", user.id).order("start_time", { ascending: false }).limit(10),
         supabase.from("scheduled_shifts").select("*").eq("user_id", user.id).gte("scheduled_date", new Date().toISOString().split("T")[0]).order("scheduled_date", { ascending: true }).limit(14),
         supabase.from("attendance").select("*").eq("user_id", user.id).order("attendance_date", { ascending: false }).limit(30),
-        supabase.from("absence_records").select("*").eq("user_id", user.id).order("absence_date", { ascending: false }).limit(10)
+        supabase.from("absence_records").select("*").eq("user_id", user.id).order("absence_date", { ascending: false }).limit(10),
+        supabase.from("women_shift_assignments").select(`
+          *,
+          shift_template:shift_templates(*),
+          language_group:language_groups(id, name)
+        `).eq("user_id", user.id).eq("is_active", true).maybeSingle()
       ]);
 
       if (activeShiftRes.data) setActiveShift(activeShiftRes.data);
@@ -194,6 +223,7 @@ const ShiftManagementScreen = () => {
       setScheduledShifts(scheduledRes.data || []);
       setAttendance(attendanceRes.data || []);
       setAbsences(absencesRes.data || []);
+      if (assignmentRes.data) setShiftAssignment(assignmentRes.data as ShiftAssignment);
 
       // Calculate summary
       const allShifts = shiftsRes.data?.filter(s => s.status === "completed") || [];
@@ -500,6 +530,56 @@ const ShiftManagementScreen = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Assigned Shift Info */}
+        {shiftAssignment?.shift_template && (
+          <Card className="bg-gradient-to-r from-primary/10 via-violet-500/10 to-rose-500/10 border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Your Assigned Shift
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-background/50 rounded-lg">
+                  <p className="text-lg font-bold text-primary">
+                    {shiftAssignment.shift_template.shift_code}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {shiftAssignment.shift_template.name.replace("Shift ", "").replace(" –", "")}
+                  </p>
+                </div>
+                <div className="text-center p-3 bg-background/50 rounded-lg">
+                  <p className="text-sm font-bold">
+                    {shiftAssignment.shift_template.start_time.slice(0, 5)} - {shiftAssignment.shift_template.end_time.slice(0, 5)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Timing</p>
+                </div>
+                <div className="text-center p-3 bg-background/50 rounded-lg">
+                  <p className="text-sm font-bold">
+                    {shiftAssignment.shift_template.work_hours}h + {shiftAssignment.shift_template.break_hours}h
+                  </p>
+                  <p className="text-xs text-muted-foreground">Work + Break</p>
+                </div>
+                <div className="text-center p-3 bg-background/50 rounded-lg">
+                  <p className="text-sm font-bold text-rose-500">
+                    {shiftAssignment.week_off_days.map(d => DAYS_OF_WEEK[d]?.slice(0, 3)).join(", ")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Week Off</p>
+                </div>
+              </div>
+              {shiftAssignment.language_group && (
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {shiftAssignment.language_group.name} Group
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs for different sections */}
         <Tabs defaultValue="schedule" className="w-full">
