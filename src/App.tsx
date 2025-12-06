@@ -43,6 +43,7 @@ import AdminModerationScreen from "./pages/AdminModerationScreen";
 import AdminSampleUsers from "./pages/AdminSampleUsers";
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
+import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
           <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
           <Route path="/admin/moderation" element={<AdminModerationScreen />} />
           <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
+          <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
