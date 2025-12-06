@@ -19,43 +19,7 @@ const ChatEarningsDisplay = ({
   const [currentSessionEarnings, setCurrentSessionEarnings] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  useEffect(() => {
-    loadEarningsData();
-    
-    // Update timer every second
-    const timer = setInterval(() => {
-      setElapsedSeconds(prev => prev + 1);
-    }, 1000);
-
-    // Subscribe to earnings updates
-    const channel = supabase
-      .channel(`earnings-${currentUserId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'women_earnings',
-          filter: `user_id=eq.${currentUserId}`
-        },
-        (payload) => {
-          setCurrentSessionEarnings(prev => prev + payload.new.amount);
-          setTodayEarnings(prev => prev + payload.new.amount);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      clearInterval(timer);
-      supabase.removeChannel(channel);
-    };
-  }, [currentUserId]);
-
-  // Only women see earnings (they earn from chats)
-  if (userGender !== "female") {
-    return null;
-  }
-
+  // Define loadEarningsData BEFORE useEffect
   const loadEarningsData = async () => {
     try {
       // Get today's earnings
@@ -94,6 +58,44 @@ const ChatEarningsDisplay = ({
       console.error("Error loading earnings:", error);
     }
   };
+
+  useEffect(() => {
+    loadEarningsData();
+    
+    // Update timer every second
+    const timer = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+
+    // Subscribe to earnings updates
+    const channel = supabase
+      .channel(`earnings-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'women_earnings',
+          filter: `user_id=eq.${currentUserId}`
+        },
+        (payload) => {
+          setCurrentSessionEarnings(prev => prev + (payload.new as any).amount);
+          setTodayEarnings(prev => prev + (payload.new as any).amount);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, chatPartnerId]);
+
+  // Only women see earnings (they earn from chats)
+  if (userGender !== "female") {
+    return null;
+  }
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
