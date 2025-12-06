@@ -593,6 +593,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           preferred_language: string | null
+          primary_language: string | null
           profile_completeness: number | null
           religion: string | null
           smoking_habit: string | null
@@ -633,6 +634,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           preferred_language?: string | null
+          primary_language?: string | null
           profile_completeness?: number | null
           religion?: string | null
           smoking_habit?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           preferred_language?: string | null
+          primary_language?: string | null
           profile_completeness?: number | null
           religion?: string | null
           smoking_habit?: string | null
@@ -767,6 +770,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shift_templates: {
+        Row: {
+          break_hours: number
+          created_at: string
+          duration_hours: number
+          end_time: string
+          id: string
+          is_active: boolean
+          name: string
+          shift_code: string
+          start_time: string
+          updated_at: string
+          work_hours: number
+        }
+        Insert: {
+          break_hours?: number
+          created_at?: string
+          duration_hours?: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          name: string
+          shift_code: string
+          start_time: string
+          updated_at?: string
+          work_hours?: number
+        }
+        Update: {
+          break_hours?: number
+          created_at?: string
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          shift_code?: string
+          start_time?: string
+          updated_at?: string
+          work_hours?: number
+        }
+        Relationships: []
       }
       shifts: {
         Row: {
@@ -1212,6 +1257,57 @@ export type Database = {
             columns: ["chat_session_id"]
             isOneToOne: false
             referencedRelation: "active_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      women_shift_assignments: {
+        Row: {
+          assigned_at: string
+          created_at: string
+          id: string
+          is_active: boolean
+          language_group_id: string | null
+          shift_template_id: string | null
+          updated_at: string
+          user_id: string
+          week_off_days: number[]
+        }
+        Insert: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language_group_id?: string | null
+          shift_template_id?: string | null
+          updated_at?: string
+          user_id: string
+          week_off_days?: number[]
+        }
+        Update: {
+          assigned_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language_group_id?: string | null
+          shift_template_id?: string | null
+          updated_at?: string
+          user_id?: string
+          week_off_days?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "women_shift_assignments_language_group_id_fkey"
+            columns: ["language_group_id"]
+            isOneToOne: false
+            referencedRelation: "language_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "women_shift_assignments_shift_template_id_fkey"
+            columns: ["shift_template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_templates"
             referencedColumns: ["id"]
           },
         ]

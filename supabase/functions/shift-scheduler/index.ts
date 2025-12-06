@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Shift templates
+const SHIFT_TEMPLATES = [
+  { code: "A", name: "Morning", startTime: "06:00:00", endTime: "15:00:00" },
+  { code: "B", name: "Evening", startTime: "15:00:00", endTime: "00:00:00" },
+  { code: "C", name: "Night", startTime: "00:00:00", endTime: "09:00:00" }
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,13 +21,6 @@ serve(async (req) => {
   try {
     const { userId, timezone, action } = await req.json();
 
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "User ID is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -28,49 +28,216 @@ serve(async (req) => {
     const userTimezone = timezone || "Asia/Kolkata";
     const now = new Date();
 
-    if (action === "generate_schedule") {
-      // Generate AI-suggested shifts for the next 7 days
-      const scheduledShifts = [];
-      
-      // Fetch user's past shift patterns
-      const { data: pastShifts } = await supabase
-        .from("shifts")
+    // Auto-assign shift for new women users
+    if (action === "auto_assign_shift") {
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "User ID is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if already assigned
+      const { data: existingAssignment } = await supabase
+        .from("women_shift_assignments")
         .select("*")
         .eq("user_id", userId)
-        .eq("status", "completed")
-        .order("start_time", { ascending: false })
-        .limit(30);
+        .maybeSingle();
 
-      // Analyze patterns to suggest optimal shift times
-      let preferredStartHour = 10; // Default 10 AM
-      let preferredEndHour = 18; // Default 6 PM
-      let avgShiftDuration = 8; // Default 8 hours
+      if (existingAssignment) {
+        return new Response(
+          JSON.stringify({ success: true, message: "Already assigned", assignment: existingAssignment }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-      if (pastShifts && pastShifts.length > 0) {
-        const startHours = pastShifts.map(s => new Date(s.start_time).getHours());
-        const durations = pastShifts
-          .filter(s => s.end_time)
-          .map(s => (new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / (1000 * 60 * 60));
+      // Get user's language from profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("preferred_language, primary_language")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-        if (startHours.length > 0) {
-          preferredStartHour = Math.round(startHours.reduce((a, b) => a + b, 0) / startHours.length);
-        }
-        if (durations.length > 0) {
-          avgShiftDuration = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
-          preferredEndHour = preferredStartHour + avgShiftDuration;
+      const userLanguage = profile?.primary_language || profile?.preferred_language || "English";
+
+      // Find matching language group
+      const { data: languageGroups } = await supabase
+        .from("language_groups")
+        .select("*")
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+
+      let matchedLanguageGroup = null;
+      for (const group of languageGroups || []) {
+        if (group.languages.some((lang: string) => 
+          lang.toLowerCase().includes(userLanguage.toLowerCase()) ||
+          userLanguage.toLowerCase().includes(lang.toLowerCase())
+        )) {
+          matchedLanguageGroup = group;
+          break;
         }
       }
+
+      // Get shift templates
+      const { data: shiftTemplates } = await supabase
+        .from("shift_templates")
+        .select("*")
+        .eq("is_active", true);
+
+      // Count current assignments per shift for load balancing
+      const { data: currentAssignments } = await supabase
+        .from("women_shift_assignments")
+        .select("shift_template_id")
+        .eq("is_active", true);
+
+      const shiftCounts: Record<string, number> = {};
+      (currentAssignments || []).forEach(a => {
+        shiftCounts[a.shift_template_id] = (shiftCounts[a.shift_template_id] || 0) + 1;
+      });
+
+      // Assign to shift with least women (load balancing)
+      let selectedShift = shiftTemplates?.[0];
+      let minCount = Infinity;
+
+      for (const shift of shiftTemplates || []) {
+        const count = shiftCounts[shift.id] || 0;
+        if (count < minCount) {
+          minCount = count;
+          selectedShift = shift;
+        }
+      }
+
+      // Assign week off - rotate based on user count
+      const totalAssigned = currentAssignments?.length || 0;
+      const weekOffDay = totalAssigned % 7; // 0=Sunday, 1=Monday, etc.
+
+      // Create assignment
+      const { data: assignment, error: assignError } = await supabase
+        .from("women_shift_assignments")
+        .insert({
+          user_id: userId,
+          shift_template_id: selectedShift?.id,
+          language_group_id: matchedLanguageGroup?.id || null,
+          week_off_days: [weekOffDay],
+          is_active: true
+        })
+        .select(`
+          *,
+          shift_template:shift_templates(*),
+          language_group:language_groups(*)
+        `)
+        .single();
+
+      if (assignError) throw assignError;
+
+      console.log(`Auto-assigned user ${userId} to shift ${selectedShift?.shift_code} with week off on day ${weekOffDay}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          assignment,
+          message: `Assigned to ${selectedShift?.name} with ${getDayName(weekOffDay)} off`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get user's shift assignment
+    if (action === "get_assignment") {
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "User ID is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: assignment } = await supabase
+        .from("women_shift_assignments")
+        .select(`
+          *,
+          shift_template:shift_templates(*),
+          language_group:language_groups(*)
+        `)
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      return new Response(
+        JSON.stringify({ success: true, assignment }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate schedule based on assignment
+    if (action === "generate_schedule") {
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "User ID is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get user's shift assignment
+      const { data: assignment } = await supabase
+        .from("women_shift_assignments")
+        .select(`
+          *,
+          shift_template:shift_templates(*)
+        `)
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!assignment) {
+        // Auto-assign first
+        const autoAssignResponse = await fetch(`${supabaseUrl}/functions/v1/shift-scheduler`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseKey}`
+          },
+          body: JSON.stringify({ userId, action: "auto_assign_shift" })
+        });
+        const autoAssignResult = await autoAssignResponse.json();
+        
+        if (!autoAssignResult.success) {
+          return new Response(
+            JSON.stringify({ error: "Failed to auto-assign shift" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Re-fetch assignment after potential auto-assign
+      const { data: finalAssignment } = await supabase
+        .from("women_shift_assignments")
+        .select(`
+          *,
+          shift_template:shift_templates(*)
+        `)
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!finalAssignment?.shift_template) {
+        return new Response(
+          JSON.stringify({ error: "No shift template assigned" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const shiftTemplate = finalAssignment.shift_template;
+      const weekOffDays = finalAssignment.week_off_days || [0];
+      const scheduledShifts = [];
 
       // Generate schedule for next 7 days
       for (let i = 1; i <= 7; i++) {
         const scheduleDate = new Date(now);
         scheduleDate.setDate(scheduleDate.getDate() + i);
+        const dayOfWeek = scheduleDate.getDay();
         
-        // Skip Sundays (optional rest day)
-        if (scheduleDate.getDay() === 0) continue;
-
-        const startTime = `${preferredStartHour.toString().padStart(2, "0")}:00:00`;
-        const endTime = `${Math.min(preferredEndHour, 23).toString().padStart(2, "0")}:00:00`;
+        // Skip week off days
+        if (weekOffDays.includes(dayOfWeek)) continue;
 
         // Check if shift already scheduled for this date
         const { data: existingShift } = await supabase
@@ -81,18 +248,14 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingShift) {
-          const reason = pastShifts && pastShifts.length > 0
-            ? `Based on your pattern: avg ${avgShiftDuration}h shifts starting around ${preferredStartHour}:00`
-            : "Default schedule - adjust based on your preference";
-
           scheduledShifts.push({
             user_id: userId,
             scheduled_date: scheduleDate.toISOString().split("T")[0],
-            start_time: startTime,
-            end_time: endTime,
+            start_time: shiftTemplate.start_time,
+            end_time: shiftTemplate.end_time,
             timezone: userTimezone,
             ai_suggested: true,
-            suggested_reason: reason,
+            suggested_reason: `${shiftTemplate.name} - ${shiftTemplate.work_hours}h work, ${shiftTemplate.break_hours}h break`,
             status: "scheduled"
           });
         }
@@ -112,13 +275,22 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           scheduledCount: scheduledShifts.length,
-          message: `AI scheduled ${scheduledShifts.length} shifts based on your patterns`
+          shiftName: shiftTemplate.name,
+          weekOffDays: weekOffDays.map(getDayName),
+          message: `Scheduled ${scheduledShifts.length} shifts (${shiftTemplate.name})`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (action === "mark_attendance") {
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: "User ID is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const today = now.toISOString().split("T")[0];
 
       // Get today's scheduled shift
@@ -235,3 +407,8 @@ serve(async (req) => {
     );
   }
 });
+
+function getDayName(dayIndex: number): string {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  return days[dayIndex] || "Unknown";
+}
