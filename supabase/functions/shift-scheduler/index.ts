@@ -44,15 +44,17 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!assignment) {
-        // Count total women for load balancing week offs
+        // Count total women for load balancing week offs across all 7 days (24/7 coverage)
         const { count: totalWomen } = await supabase
           .from("women_shift_assignments")
           .select("*", { count: "exact", head: true })
           .eq("is_active", true);
 
-        // Distribute week offs evenly across days for load balancing
-        // Each woman gets 1 day off, rotated to balance load
-        const weekOffDay = (totalWomen || 0) % 7;
+        // Distribute week offs evenly across ALL 7 days (Mon-Sun) for 24/7 shift coverage
+        // Each woman gets 1 day off, rotated to ensure balanced load every day
+        const weekOffDay = (totalWomen || 0) % 7; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+        
+        console.log(`24/7 Schedule: Assigning ${DAYS_OF_WEEK[weekOffDay]} as week off (total women: ${totalWomen})`);
 
         // Get user's language for group assignment
         const { data: profile } = await supabase

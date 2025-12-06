@@ -707,8 +707,8 @@ const ShiftManagementScreen = () => {
                 <div className="flex items-center gap-3">
                   <Bot className="h-5 w-5 text-rose-500" />
                   <div>
-                    <p className="font-medium text-sm">AI Suggested Week Off</p>
-                    <p className="text-xs text-muted-foreground">Optional - you can still work if you want</p>
+                    <p className="font-medium text-sm">AI Week Off (24/7 Schedule)</p>
+                    <p className="text-xs text-muted-foreground">Optional rest day - you can still work</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
