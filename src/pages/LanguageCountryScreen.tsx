@@ -42,8 +42,8 @@ const LanguageCountryScreen = () => {
       description: "Let's continue setting up your profile.",
     });
     
-    // Navigate to next screen (placeholder for now)
-    console.log("Selected:", { selectedLanguage, selectedCountry });
+    // Navigate to next screen
+    navigate("/basic-info");
   };
 
   const isComplete = selectedLanguage && selectedCountry;
