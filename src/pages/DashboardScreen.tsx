@@ -666,7 +666,7 @@ const DashboardScreen = () => {
               <Button 
                 variant="gradient" 
                 className="mt-4"
-                onClick={() => toast({ title: "Discover", description: "Coming soon!" })}
+                onClick={() => navigate("/online-users")}
               >
                 <Search className="w-4 h-4 mr-2" />
                 Start Exploring
@@ -685,7 +685,7 @@ const DashboardScreen = () => {
               <h3 className="font-semibold text-foreground">Boost your profile!</h3>
               <p className="text-sm text-muted-foreground">Get more matches with premium features</p>
             </div>
-            <Button variant="gradient" size="sm">
+            <Button variant="gradient" size="sm" onClick={() => navigate("/wallet")}>
               Upgrade
             </Button>
           </div>
