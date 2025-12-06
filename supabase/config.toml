@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.translate-message]
 verify_jwt = false
+
+[functions.shift-scheduler]
+verify_jwt = false

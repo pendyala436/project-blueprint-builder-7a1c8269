@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_records: {
+        Row: {
+          absence_date: string
+          ai_detected: boolean
+          approved: boolean | null
+          created_at: string
+          id: string
+          leave_type: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          absence_date: string
+          ai_detected?: boolean
+          approved?: boolean | null
+          created_at?: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          absence_date?: string
+          ai_detected?: boolean
+          approved?: boolean | null
+          created_at?: string
+          id?: string
+          leave_type?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attendance: {
+        Row: {
+          attendance_date: string
+          auto_marked: boolean
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          scheduled_shift_id: string | null
+          shift_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendance_date: string
+          auto_marked?: boolean
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scheduled_shift_id?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendance_date?: string
+          auto_marked?: boolean
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scheduled_shift_id?: string | null
+          shift_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_scheduled_shift_id_fkey"
+            columns: ["scheduled_shift_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           chat_id: string
@@ -215,6 +308,48 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verification_status?: boolean | null
+        }
+        Relationships: []
+      }
+      scheduled_shifts: {
+        Row: {
+          ai_suggested: boolean
+          created_at: string
+          end_time: string
+          id: string
+          scheduled_date: string
+          start_time: string
+          status: string
+          suggested_reason: string | null
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_suggested?: boolean
+          created_at?: string
+          end_time: string
+          id?: string
+          scheduled_date: string
+          start_time: string
+          status?: string
+          suggested_reason?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_suggested?: boolean
+          created_at?: string
+          end_time?: string
+          id?: string
+          scheduled_date?: string
+          start_time?: string
+          status?: string
+          suggested_reason?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
