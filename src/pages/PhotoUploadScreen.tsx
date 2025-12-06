@@ -6,25 +6,31 @@ import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
-type VerificationState = "idle" | "uploading" | "verifying" | "verified" | "failed";
+type VerificationState = "idle" | "verifying" | "verified" | "failed";
+
+const MAX_ADDITIONAL_PHOTOS = 5;
 
 const PhotoUploadScreen = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  // Selfie state (first photo with AI verification)
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [verificationState, setVerificationState] = useState<VerificationState>("idle");
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  
+  // Additional photos state
+  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleSelfieCapture = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -43,23 +49,61 @@ const PhotoUploadScreen = () => {
       return;
     }
 
-    setPhotoFile(file);
     setVerificationState("idle");
     setVerificationResult(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      setPhotoPreview(e.target?.result as string);
+      setSelfiePreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
   }, []);
+
+  const handleAdditionalPhoto = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (additionalPhotos.length >= MAX_ADDITIONAL_PHOTOS) {
+      toast({
+        title: "Maximum photos reached",
+        description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAdditionalPhotos(prev => [...prev, e.target?.result as string]);
+    };
+    reader.readAsDataURL(file);
+  }, [additionalPhotos.length]);
+
+  const removeAdditionalPhoto = (index: number) => {
+    setAdditionalPhotos(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
-  }, [handleFileSelect]);
+    if (file) handleAdditionalPhoto(file);
+  }, [handleAdditionalPhoto]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -83,7 +127,7 @@ const PhotoUploadScreen = () => {
     } catch (error) {
       toast({
         title: "Camera access denied",
-        description: "Please allow camera access to take a photo",
+        description: "Please allow camera access to take a selfie",
         variant: "destructive",
       });
     }
@@ -108,8 +152,8 @@ const PhotoUploadScreen = () => {
         ctx.drawImage(video, 0, 0);
         canvas.toBlob((blob) => {
           if (blob) {
-            const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
-            handleFileSelect(file);
+            const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+            handleSelfieCapture(file);
             stopCamera();
           }
         }, "image/jpeg", 0.9);
@@ -117,15 +161,15 @@ const PhotoUploadScreen = () => {
     }
   };
 
-  const verifyPhoto = async () => {
-    if (!photoPreview) return;
+  const verifySelfie = async () => {
+    if (!selfiePreview) return;
 
     setVerificationState("verifying");
 
     try {
       const { data, error } = await supabase.functions.invoke("verify-photo", {
         body: {
-          imageBase64: photoPreview,
+          imageBase64: selfiePreview,
           expectedGender: localStorage.getItem("userGender") || null
         }
       });
@@ -137,14 +181,14 @@ const PhotoUploadScreen = () => {
       if (data.verified) {
         setVerificationState("verified");
         toast({
-          title: "Photo verified!",
-          description: "Your photo has been successfully verified",
+          title: "Selfie verified!",
+          description: "Your identity has been successfully verified",
         });
       } else {
         setVerificationState("failed");
         toast({
           title: "Verification issue",
-          description: data.reason || "Please try uploading a clearer photo",
+          description: data.reason || "Please try taking a clearer selfie",
           variant: "destructive",
         });
       }
@@ -162,21 +206,24 @@ const PhotoUploadScreen = () => {
   const handleNext = () => {
     if (verificationState !== "verified") {
       toast({
-        title: "Photo not verified",
-        description: "Please verify your photo before continuing",
+        title: "Selfie not verified",
+        description: "Please verify your selfie before continuing",
         variant: "destructive",
       });
       return;
     }
 
     // Store photo data for later upload (after auth)
-    if (photoPreview) {
-      localStorage.setItem("pendingPhotoData", photoPreview);
+    if (selfiePreview) {
+      localStorage.setItem("pendingPhotoData", selfiePreview);
+    }
+    if (additionalPhotos.length > 0) {
+      localStorage.setItem("pendingAdditionalPhotos", JSON.stringify(additionalPhotos));
     }
 
     toast({
-      title: "Photo saved!",
-      description: "Your verified photo has been saved",
+      title: "Photos saved!",
+      description: "Your photos have been saved",
     });
     
     navigate("/password-setup");
@@ -187,9 +234,8 @@ const PhotoUploadScreen = () => {
     navigate("/basic-info");
   };
 
-  const clearPhoto = () => {
-    setPhotoPreview(null);
-    setPhotoFile(null);
+  const clearSelfie = () => {
+    setSelfiePreview(null);
     setVerificationState("idle");
     setVerificationResult(null);
   };
@@ -211,33 +257,41 @@ const PhotoUploadScreen = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        <MeowLogo size="md" className="mb-6" />
+      <div className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto">
+        <MeowLogo size="md" className="mb-4" />
         
         <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-          Add Your Photo
+          Add Your Photos
         </h1>
-        <p className="text-muted-foreground text-center mb-8 max-w-sm">
-          Upload a clear photo of yourself for verification
+        <p className="text-muted-foreground text-center mb-6 max-w-sm">
+          Take a selfie for verification, then add more photos
         </p>
 
         {/* Camera View */}
         {showCamera && (
           <div className="fixed inset-0 z-50 bg-background/95 flex flex-col items-center justify-center p-4">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="max-w-full max-h-[60vh] rounded-2xl border-2 border-primary/20"
-            />
-            <div className="flex gap-4 mt-6">
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="max-w-full max-h-[60vh] rounded-2xl border-2 border-primary/20"
+              />
+              <div className="absolute inset-0 border-4 border-primary/30 rounded-2xl pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-dashed border-primary/50 rounded-full" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4 mb-2">
+              Position your face in the circle
+            </p>
+            <div className="flex gap-4 mt-4">
               <Button variant="outline" onClick={stopCamera}>
                 Cancel
               </Button>
               <Button onClick={capturePhoto} className="gap-2">
                 <Camera className="h-4 w-4" />
-                Capture
+                Take Selfie
               </Button>
             </div>
           </div>
@@ -245,59 +299,36 @@ const PhotoUploadScreen = () => {
 
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Upload Area */}
-        <Card className="w-full max-w-sm p-6 bg-card/50 backdrop-blur-sm border-border/50">
-          {!photoPreview ? (
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              className={`
-                relative border-2 border-dashed rounded-2xl p-8 text-center
-                transition-all duration-300 cursor-pointer
-                ${isDragging 
-                  ? "border-primary bg-primary/10 scale-[1.02]" 
-                  : "border-border hover:border-primary/50 hover:bg-primary/5"
-                }
-              `}
-              onClick={() => fileInputRef.current?.click()}
+        {/* Selfie Section */}
+        <Card className="w-full max-w-sm p-4 bg-card/50 backdrop-blur-sm border-border/50 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Camera className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Selfie for Verification</h2>
+            {verificationState === "verified" && (
+              <span className="ml-auto text-xs bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Check className="h-3 w-3" /> Verified
+              </span>
+            )}
+          </div>
+
+          {!selfiePreview ? (
+            <Button
+              variant="outline"
+              className="w-full h-32 border-dashed border-2 gap-2 flex-col"
+              onClick={startCamera}
             >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileSelect(file);
-                }}
-                className="hidden"
-              />
-              
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Upload className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    Drop your photo here
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    or click to browse
-                  </p>
-                </div>
-              </div>
-            </div>
+              <Camera className="h-8 w-8 text-primary" />
+              <span>Take a Selfie</span>
+            </Button>
           ) : (
             <div className="relative">
-              {/* Photo Preview */}
-              <div className="relative rounded-2xl overflow-hidden aspect-square animate-in fade-in duration-500">
+              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500">
                 <img
-                  src={photoPreview}
-                  alt="Profile preview"
+                  src={selfiePreview}
+                  alt="Selfie preview"
                   className="w-full h-full object-cover"
                 />
                 
-                {/* Verification Overlay */}
                 {verificationState === "verifying" && (
                   <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
                     <div className="relative">
@@ -323,19 +354,20 @@ const PhotoUploadScreen = () => {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-3">
                 <Button
                   variant="outline"
+                  size="sm"
                   className="flex-1"
-                  onClick={clearPhoto}
+                  onClick={clearSelfie}
                 >
-                  Change Photo
+                  Retake
                 </Button>
                 {verificationState !== "verified" && (
                   <Button
+                    size="sm"
                     className="flex-1 gap-2"
-                    onClick={verifyPhoto}
+                    onClick={verifySelfie}
                     disabled={verificationState === "verifying"}
                   >
                     {verificationState === "verifying" ? (
@@ -353,10 +385,9 @@ const PhotoUploadScreen = () => {
                 )}
               </div>
 
-              {/* Verification Result */}
               {verificationResult && verificationState !== "verifying" && (
                 <div className={`
-                  mt-4 p-3 rounded-xl text-sm
+                  mt-3 p-2 rounded-lg text-xs
                   ${verificationState === "verified" 
                     ? "bg-green-500/10 text-green-600 dark:text-green-400" 
                     : "bg-destructive/10 text-destructive"
@@ -367,18 +398,70 @@ const PhotoUploadScreen = () => {
               )}
             </div>
           )}
+        </Card>
 
-          {/* Camera Button */}
-          {!photoPreview && (
-            <Button
-              variant="outline"
-              className="w-full mt-4 gap-2"
-              onClick={startCamera}
-            >
-              <Camera className="h-4 w-4" />
-              Take a Photo
-            </Button>
-          )}
+        {/* Additional Photos Section */}
+        <Card className="w-full max-w-sm p-4 bg-card/50 backdrop-blur-sm border-border/50">
+          <div className="flex items-center gap-2 mb-3">
+            <Upload className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Additional Photos</h2>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS}
+            </span>
+          </div>
+
+          <input
+            ref={additionalFileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleAdditionalPhoto(file);
+              e.target.value = "";
+            }}
+            className="hidden"
+          />
+
+          <div className="grid grid-cols-3 gap-2">
+            {additionalPhotos.map((photo, index) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300">
+                <img
+                  src={photo}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => removeAdditionalPhoto(index)}
+                  className="absolute top-1 right-1 p-1 bg-destructive/90 text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+
+            {additionalPhotos.length < MAX_ADDITIONAL_PHOTOS && (
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => additionalFileInputRef.current?.click()}
+                className={`
+                  aspect-square rounded-lg border-2 border-dashed flex items-center justify-center
+                  cursor-pointer transition-all duration-200
+                  ${isDragging 
+                    ? "border-primary bg-primary/10" 
+                    : "border-border hover:border-primary/50 hover:bg-primary/5"
+                  }
+                `}
+              >
+                <Plus className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-3 text-center">
+            Add up to {MAX_ADDITIONAL_PHOTOS} more photos to your profile
+          </p>
         </Card>
 
         {/* Continue Button */}
