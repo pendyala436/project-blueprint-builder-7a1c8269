@@ -253,7 +253,10 @@ serve(async (req) => {
 
     console.log(`Translating from ${detectedLanguage} (${sourceNLLBCode}) to ${targetLanguage} (${targetNLLBCode}): "${message.substring(0, 50)}..."`);
 
-    // Call NLLB-200 via Hugging Face Inference API
+    // Call NLLB-200 Distilled 600M via Hugging Face Inference API
+    // This model supports 200+ languages with high-quality neural machine translation
+    console.log(`[NLLB-200-Distilled-600M] Starting translation: ${sourceNLLBCode} → ${targetNLLBCode}`);
+    
     const response = await fetch(
       "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
       {
@@ -267,7 +270,11 @@ serve(async (req) => {
           parameters: {
             src_lang: sourceNLLBCode,
             tgt_lang: targetNLLBCode,
+            max_length: 512, // Allow longer translations
           },
+          options: {
+            wait_for_model: true, // Wait if model is loading
+          }
         }),
       }
     );
@@ -325,7 +332,9 @@ serve(async (req) => {
         sourceLanguageCode: sourceNLLBCode,
         targetLanguageCode: targetNLLBCode,
         isIndianSource: isIndianLanguage(detectedLanguage),
-        isIndianTarget: isIndianLanguage(targetLanguage)
+        isIndianTarget: isIndianLanguage(targetLanguage),
+        model: "nllb-200-distilled-600M",
+        translationPair: `${detectedLanguage} → ${targetLanguage}`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
