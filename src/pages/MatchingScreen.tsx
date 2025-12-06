@@ -14,10 +14,12 @@ import {
   MessageCircle,
   RefreshCw,
   User,
-  Clock
+  Clock,
+  IndianRupee
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { isIndianLanguage } from "@/data/nllb200Languages";
 
 interface MatchableWoman {
   userId: string;
@@ -585,6 +587,12 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }
           {isPriority && (
             <div className="px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium text-center">
               Same Language
+            </div>
+          )}
+          {woman.canEarn && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
+              <IndianRupee className="w-3 h-3" />
+              <span>Earns</span>
             </div>
           )}
         </div>
