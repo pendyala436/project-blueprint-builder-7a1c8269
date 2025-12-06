@@ -95,6 +95,7 @@ const BODY_TYPES = [
  */
 const MARITAL_STATUSES = [
   "Single",
+  "Married",
   "Divorced",
   "Widowed",
   "Separated"
