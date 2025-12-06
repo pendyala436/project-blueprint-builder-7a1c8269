@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -121,9 +121,6 @@ const PhotoUploadScreen = () => {
       });
       setStream(mediaStream);
       setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
     } catch (error) {
       toast({
         title: "Camera access denied",
@@ -132,6 +129,13 @@ const PhotoUploadScreen = () => {
       });
     }
   };
+
+  // Set video source when stream and video element are ready
+  useEffect(() => {
+    if (stream && videoRef.current && showCamera) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, showCamera]);
 
   const stopCamera = () => {
     if (stream) {
