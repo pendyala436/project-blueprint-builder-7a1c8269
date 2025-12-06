@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -28,6 +29,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Filter,
   User,
   Heart,
@@ -46,7 +60,13 @@ import {
   Languages,
   MapPin,
   X,
+  Check,
+  ChevronsUpDown,
+  Navigation,
 } from "lucide-react";
+import { languages } from "@/data/languages";
+import { countries } from "@/data/countries";
+import { cn } from "@/lib/utils";
 
 export interface MatchFilters {
   // Demographic
@@ -62,6 +82,7 @@ export interface MatchFilters {
   // Location & Language
   country: string;
   language: string;
+  distanceRange: [number, number];
   
   // Lifestyle
   smokingHabit: string;
@@ -95,6 +116,7 @@ const DEFAULT_FILTERS: MatchFilters = {
   hasChildren: "all",
   country: "all",
   language: "all",
+  distanceRange: [0, 15000],
   smokingHabit: "all",
   drinkingHabit: "all",
   dietaryPreference: "all",
@@ -127,22 +149,35 @@ const PERSONALITY_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ
 interface MatchFiltersPanelProps {
   filters: MatchFilters;
   onFiltersChange: (filters: MatchFilters) => void;
-  availableLanguages: string[];
-  availableCountries: string[];
 }
 
 export function MatchFiltersPanel({
   filters,
   onFiltersChange,
-  availableLanguages,
-  availableCountries,
 }: MatchFiltersPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<MatchFilters>(filters);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [languageSearch, setLanguageSearch] = useState("");
+
+  // All world languages and countries
+  const allLanguages = languages.map(l => l.name);
+  const allCountries = countries.map(c => ({ name: c.name, flag: c.flag }));
+
+  // Filter based on search
+  const filteredCountries = allCountries.filter(c =>
+    c.name.toLowerCase().includes(countrySearch.toLowerCase())
+  );
+  const filteredLanguages = allLanguages.filter(l =>
+    l.toLowerCase().includes(languageSearch.toLowerCase())
+  );
 
   const activeFilterCount = Object.entries(localFilters).filter(([key, value]) => {
     if (key === "ageRange") return value[0] !== 18 || value[1] !== 60;
     if (key === "heightRange") return value[0] !== 140 || value[1] !== 200;
+    if (key === "distanceRange") return value[0] !== 0 || value[1] !== 15000;
     if (typeof value === "boolean") return value === true;
     if (typeof value === "string") return value !== "all";
     return false;
@@ -344,36 +379,153 @@ export function MatchFiltersPanel({
                 </div>
               </AccordionTrigger>
               <AccordionContent className="space-y-5 pt-4">
+                {/* Distance Range */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm flex items-center gap-2">
+                      <Navigation className="w-4 h-4" />
+                      Distance Range
+                    </Label>
+                    <span className="text-sm text-muted-foreground">
+                      {localFilters.distanceRange[0].toLocaleString()} - {localFilters.distanceRange[1].toLocaleString()} km
+                    </span>
+                  </div>
+                  <Slider
+                    value={localFilters.distanceRange}
+                    onValueChange={(value) => updateFilter("distanceRange", value as [number, number])}
+                    min={0}
+                    max={15000}
+                    step={100}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0 km</span>
+                    <span>15,000 km</span>
+                  </div>
+                </div>
+
+                {/* Country - Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
                     Country
                   </Label>
-                  <Select value={localFilters.country} onValueChange={(v) => updateFilter("country", v)}>
-                    <SelectTrigger><SelectValue placeholder="All Countries" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Countries</SelectItem>
-                      {availableCountries.map(country => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryOpen}
+                        className="w-full justify-between bg-background"
+                      >
+                        {localFilters.country === "all" 
+                          ? "All Countries" 
+                          : allCountries.find(c => c.name === localFilters.country)
+                            ? `${allCountries.find(c => c.name === localFilters.country)?.flag} ${localFilters.country}`
+                            : localFilters.country}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
+                      <Command className="bg-popover">
+                        <CommandInput 
+                          placeholder="Search country..." 
+                          value={countrySearch}
+                          onValueChange={setCountrySearch}
+                        />
+                        <CommandList className="max-h-60">
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="all"
+                              onSelect={() => {
+                                updateFilter("country", "all");
+                                setCountryOpen(false);
+                                setCountrySearch("");
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", localFilters.country === "all" ? "opacity-100" : "opacity-0")} />
+                              🌍 All Countries
+                            </CommandItem>
+                            {filteredCountries.slice(0, 50).map((country) => (
+                              <CommandItem
+                                key={country.name}
+                                value={country.name}
+                                onSelect={() => {
+                                  updateFilter("country", country.name);
+                                  setCountryOpen(false);
+                                  setCountrySearch("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", localFilters.country === country.name ? "opacity-100" : "opacity-0")} />
+                                {country.flag} {country.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
+                {/* Language - Searchable */}
                 <div className="space-y-2">
                   <Label className="text-sm flex items-center gap-2">
                     <Languages className="w-4 h-4" />
                     Language
                   </Label>
-                  <Select value={localFilters.language} onValueChange={(v) => updateFilter("language", v)}>
-                    <SelectTrigger><SelectValue placeholder="All Languages" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Languages</SelectItem>
-                      {availableLanguages.map(lang => (
-                        <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={languageOpen}
+                        className="w-full justify-between bg-background"
+                      >
+                        {localFilters.language === "all" ? "All Languages" : localFilters.language}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
+                      <Command className="bg-popover">
+                        <CommandInput 
+                          placeholder="Search language..." 
+                          value={languageSearch}
+                          onValueChange={setLanguageSearch}
+                        />
+                        <CommandList className="max-h-60">
+                          <CommandEmpty>No language found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="all"
+                              onSelect={() => {
+                                updateFilter("language", "all");
+                                setLanguageOpen(false);
+                                setLanguageSearch("");
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", localFilters.language === "all" ? "opacity-100" : "opacity-0")} />
+                              🌐 All Languages
+                            </CommandItem>
+                            {filteredLanguages.slice(0, 50).map((lang) => (
+                              <CommandItem
+                                key={lang}
+                                value={lang}
+                                onSelect={() => {
+                                  updateFilter("language", lang);
+                                  setLanguageOpen(false);
+                                  setLanguageSearch("");
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", localFilters.language === lang ? "opacity-100" : "opacity-0")} />
+                                {lang}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </AccordionContent>
             </AccordionItem>
