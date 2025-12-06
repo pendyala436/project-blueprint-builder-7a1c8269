@@ -281,6 +281,45 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_wait_queue: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          matched_at: string | null
+          preferred_language: string
+          priority: number
+          status: string
+          updated_at: string
+          user_id: string
+          wait_time_seconds: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          matched_at?: string | null
+          preferred_language: string
+          priority?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          wait_time_seconds?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          matched_at?: string | null
+          preferred_language?: string
+          priority?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wait_time_seconds?: number | null
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           created_at: string

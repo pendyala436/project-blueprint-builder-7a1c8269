@@ -6,12 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
+
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "join_queue" | "leave_queue" | "check_queue_status";
   man_user_id?: string;
   woman_user_id?: string;
   chat_id?: string;
   end_reason?: string;
+  preferred_language?: string;
 }
 
 serve(async (req) => {
@@ -24,25 +27,195 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, man_user_id, woman_user_id, chat_id, end_reason }: ChatRequest = await req.json();
+    const { action, man_user_id, woman_user_id, chat_id, end_reason, preferred_language }: ChatRequest = await req.json();
 
-    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, chat_id });
+    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, chat_id, preferred_language });
 
     switch (action) {
-      case "get_available_woman": {
-        // Find an available woman with lowest current chat count
-        const { data: availableWomen, error } = await supabase
-          .from("women_availability")
-          .select("user_id, current_chat_count")
-          .eq("is_available", true)
-          .lt("current_chat_count", 3) // Max 3 concurrent chats
-          .order("current_chat_count", { ascending: true })
-          .order("last_assigned_at", { ascending: true, nullsFirst: true })
-          .limit(1);
+      case "join_queue": {
+        if (!man_user_id || !preferred_language) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID or language" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        // Check if already in queue
+        const { data: existingQueue } = await supabase
+          .from("chat_wait_queue")
+          .select("id")
+          .eq("user_id", man_user_id)
+          .eq("status", "waiting")
+          .maybeSingle();
+
+        if (existingQueue) {
+          return new Response(
+            JSON.stringify({ success: true, message: "Already in queue", queue_id: existingQueue.id }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Add to queue
+        const { data: queueEntry, error } = await supabase
+          .from("chat_wait_queue")
+          .insert({
+            user_id: man_user_id,
+            preferred_language,
+            status: "waiting",
+            priority: 0
+          })
+          .select()
+          .single();
 
         if (error) throw error;
 
-        if (!availableWomen || availableWomen.length === 0) {
+        console.log(`User ${man_user_id} joined queue for language: ${preferred_language}`);
+
+        return new Response(
+          JSON.stringify({ success: true, queue_id: queueEntry.id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "leave_queue": {
+        if (!man_user_id) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        await supabase
+          .from("chat_wait_queue")
+          .update({ status: "left" })
+          .eq("user_id", man_user_id)
+          .eq("status", "waiting");
+
+        console.log(`User ${man_user_id} left queue`);
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "check_queue_status": {
+        if (!man_user_id) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        // Get user's queue entry
+        const { data: queueEntry } = await supabase
+          .from("chat_wait_queue")
+          .select("*")
+          .eq("user_id", man_user_id)
+          .eq("status", "waiting")
+          .maybeSingle();
+
+        if (!queueEntry) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Not in queue" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const waitTimeSeconds = Math.floor((Date.now() - new Date(queueEntry.joined_at).getTime()) / 1000);
+        const isPriority = waitTimeSeconds >= PRIORITY_WAIT_THRESHOLD_SECONDS;
+
+        // Update wait time and priority
+        if (isPriority && queueEntry.priority === 0) {
+          await supabase
+            .from("chat_wait_queue")
+            .update({ priority: 1, wait_time_seconds: waitTimeSeconds })
+            .eq("id", queueEntry.id);
+        } else {
+          await supabase
+            .from("chat_wait_queue")
+            .update({ wait_time_seconds: waitTimeSeconds })
+            .eq("id", queueEntry.id);
+        }
+
+        // Get queue position
+        const { count: positionAhead } = await supabase
+          .from("chat_wait_queue")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "waiting")
+          .eq("preferred_language", queueEntry.preferred_language)
+          .lt("joined_at", queueEntry.joined_at);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            wait_time_seconds: waitTimeSeconds,
+            is_priority: isPriority,
+            queue_position: (positionAhead || 0) + 1,
+            preferred_language: queueEntry.preferred_language
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "get_available_woman": {
+        const requestedLanguage = preferred_language || "en";
+
+        // Find language group for this language
+        const { data: languageGroups } = await supabase
+          .from("language_groups")
+          .select("id, languages")
+          .eq("is_active", true);
+
+        let matchingGroupId: string | null = null;
+        if (languageGroups) {
+          for (const group of languageGroups) {
+            if (group.languages && group.languages.includes(requestedLanguage)) {
+              matchingGroupId = group.id;
+              break;
+            }
+          }
+        }
+
+        // First try to find a woman with matching language group
+        let availableWomen: any[] = [];
+        
+        if (matchingGroupId) {
+          const { data } = await supabase
+            .from("women_availability")
+            .select(`
+              user_id, 
+              current_chat_count,
+              women_shift_assignments!inner(language_group_id)
+            `)
+            .eq("is_available", true)
+            .lt("current_chat_count", 3)
+            .eq("women_shift_assignments.language_group_id", matchingGroupId)
+            .order("current_chat_count", { ascending: true })
+            .order("last_assigned_at", { ascending: true, nullsFirst: true })
+            .limit(1);
+          
+          if (data && data.length > 0) {
+            availableWomen = data;
+          }
+        }
+
+        // If no language match, find any available woman
+        if (availableWomen.length === 0) {
+          const { data, error } = await supabase
+            .from("women_availability")
+            .select("user_id, current_chat_count")
+            .eq("is_available", true)
+            .lt("current_chat_count", 3)
+            .order("current_chat_count", { ascending: true })
+            .order("last_assigned_at", { ascending: true, nullsFirst: true })
+            .limit(1);
+
+          if (error) throw error;
+          availableWomen = data || [];
+        }
+
+        if (availableWomen.length === 0) {
           return new Response(
             JSON.stringify({ success: false, message: "No women available" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -54,7 +227,7 @@ serve(async (req) => {
         // Get woman's profile
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, photo_url")
+          .select("full_name, photo_url, primary_language")
           .eq("user_id", selectedWoman.user_id)
           .single();
 
@@ -62,7 +235,8 @@ serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             woman_user_id: selectedWoman.user_id,
-            profile 
+            profile,
+            language_matched: matchingGroupId !== null
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -75,6 +249,13 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
           );
         }
+
+        // Remove from queue if present
+        await supabase
+          .from("chat_wait_queue")
+          .update({ status: "matched", matched_at: new Date().toISOString() })
+          .eq("user_id", man_user_id)
+          .eq("status", "waiting");
 
         // Check man's wallet balance
         const { data: wallet } = await supabase
@@ -116,16 +297,21 @@ serve(async (req) => {
         if (sessionError) throw sessionError;
 
         // Update woman's availability
-        await supabase
+        const { data: currentAvailability } = await supabase
           .from("women_availability")
-          .update({
-            current_chat_count: supabase.rpc("increment_chat_count"),
-            last_assigned_at: new Date().toISOString()
-          })
-          .eq("user_id", woman_user_id);
+          .select("current_chat_count")
+          .eq("user_id", woman_user_id)
+          .maybeSingle();
 
-        // Increment chat count using raw SQL approach
-        await supabase.rpc("increment_woman_chat_count", { woman_id: woman_user_id });
+        if (currentAvailability) {
+          await supabase
+            .from("women_availability")
+            .update({
+              current_chat_count: currentAvailability.current_chat_count + 1,
+              last_assigned_at: new Date().toISOString()
+            })
+            .eq("user_id", woman_user_id);
+        }
 
         console.log(`Chat started: ${chatId}`);
 
