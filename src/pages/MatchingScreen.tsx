@@ -31,7 +31,6 @@ interface MatchableWoman {
   isOnline: boolean;
   isBusy: boolean;
   currentChatCount: number;
-  canEarn: boolean; // Only Indian women can earn
 }
 
 const MatchingScreen = () => {
@@ -182,7 +181,6 @@ const MatchingScreen = () => {
 
           const avail = availabilityMap.get(profile.user_id);
           const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
-          const isIndian = profile.country?.toLowerCase() === "india";
 
           return {
             userId: profile.user_id,
@@ -194,7 +192,6 @@ const MatchingScreen = () => {
             isOnline: true,
             isBusy,
             currentChatCount: avail?.current_chat_count || 0,
-            canEarn: isIndian, // Only Indian women can earn
           };
         })
       );
@@ -235,18 +232,12 @@ const MatchingScreen = () => {
     );
 
     if (sameLanguageWomen.length > 0) {
-      // Prefer Indian women from same language as they can earn
-      const indianSameLanguage = sameLanguageWomen.filter(w => w.canEarn);
-      if (indianSameLanguage.length > 0) {
-        return indianSameLanguage[0];
-      }
       return sameLanguageWomen[0];
     }
 
-    // Priority 2: If no same language women, fallback to Indian women (who support NLLB-200 translation)
-    const indianWomen = availableWomen.filter(w => w.canEarn);
-    if (indianWomen.length > 0) {
-      return indianWomen[0];
+    // Priority 2: If no same language women, return any available woman
+    if (availableWomen.length > 0) {
+      return availableWomen[0];
     }
 
     // Priority 3: Any available woman
@@ -589,12 +580,10 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }
               Same Language
             </div>
           )}
-          {woman.canEarn && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
-              <IndianRupee className="w-3 h-3" />
-              <span>Earns</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
+            <IndianRupee className="w-3 h-3" />
+            <span>Earns</span>
+          </div>
         </div>
       </div>
 
