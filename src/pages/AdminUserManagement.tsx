@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -55,6 +57,14 @@ import {
   ChevronRight,
   ShieldCheck,
   ShieldAlert,
+  Ban,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Pause,
+  Play,
+  Settings,
+  Languages,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -70,11 +80,23 @@ interface UserProfile {
   photo_url: string | null;
   created_at: string;
   updated_at: string;
+  primary_language: string | null;
+  account_status: string;
+  approval_status: string;
 }
 
 interface UserRole {
   user_id: string;
   role: string;
+}
+
+interface LanguageGroup {
+  id: string;
+  name: string;
+  languages: string[];
+  max_women_users: number;
+  current_women_count: number;
+  is_active: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -90,6 +112,8 @@ const AdminUserManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [accountStatusFilter, setAccountStatusFilter] = useState("all");
+  const [approvalFilter, setApprovalFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -100,6 +124,22 @@ const AdminUserManagement = () => {
     country: "",
     verification_status: false,
   });
+  
+  // Language group management
+  const [languageGroups, setLanguageGroups] = useState<LanguageGroup[]>([]);
+  const [languageGroupDialogOpen, setLanguageGroupDialogOpen] = useState(false);
+  const [selectedLanguageGroup, setSelectedLanguageGroup] = useState<LanguageGroup | null>(null);
+  const [maxWomenInput, setMaxWomenInput] = useState("");
+
+  // Stats
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    blockedUsers: 0,
+    suspendedUsers: 0,
+    pendingApproval: 0,
+    approvedWomen: 0,
+  });
 
   useEffect(() => {
     checkAdminAccess();
@@ -108,8 +148,10 @@ const AdminUserManagement = () => {
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+      loadLanguageGroups();
+      loadStats();
     }
-  }, [isAdmin, currentPage, searchQuery, genderFilter, statusFilter]);
+  }, [isAdmin, currentPage, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
   const checkAdminAccess = async () => {
     try {
@@ -119,7 +161,6 @@ const AdminUserManagement = () => {
         return;
       }
 
-      // Check if user has admin role
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -141,28 +182,67 @@ const AdminUserManagement = () => {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("account_status, approval_status, gender");
+
+      if (allProfiles) {
+        setStats({
+          totalUsers: allProfiles.length,
+          activeUsers: allProfiles.filter(p => p.account_status === "active").length,
+          blockedUsers: allProfiles.filter(p => p.account_status === "blocked").length,
+          suspendedUsers: allProfiles.filter(p => p.account_status === "suspended").length,
+          pendingApproval: allProfiles.filter(p => p.approval_status === "pending" && p.gender?.toLowerCase() === "female").length,
+          approvedWomen: allProfiles.filter(p => p.approval_status === "approved" && p.gender?.toLowerCase() === "female").length,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
+  };
+
+  const loadLanguageGroups = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("language_groups")
+        .select("id, name, languages, max_women_users, current_women_count, is_active")
+        .order("name");
+
+      if (error) throw error;
+      setLanguageGroups((data || []) as LanguageGroup[]);
+    } catch (error) {
+      console.error("Error loading language groups:", error);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       let query = supabase
         .from("profiles")
         .select("*", { count: "exact" });
 
-      // Apply search filter
       if (searchQuery) {
         query = query.or(`full_name.ilike.%${searchQuery}%,country.ilike.%${searchQuery}%,state.ilike.%${searchQuery}%`);
       }
 
-      // Apply gender filter
       if (genderFilter !== "all") {
         query = query.eq("gender", genderFilter);
       }
 
-      // Apply verification status filter
       if (statusFilter !== "all") {
         query = query.eq("verification_status", statusFilter === "verified");
       }
 
-      // Pagination
+      if (accountStatusFilter !== "all") {
+        query = query.eq("account_status", accountStatusFilter);
+      }
+
+      if (approvalFilter !== "all") {
+        query = query.eq("approval_status", approvalFilter);
+      }
+
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
@@ -172,10 +252,9 @@ const AdminUserManagement = () => {
 
       if (error) throw error;
 
-      setUsers(data || []);
+      setUsers((data || []) as UserProfile[]);
       setTotalCount(count || 0);
 
-      // Fetch roles for all users
       if (data && data.length > 0) {
         const userIds = data.map(u => u.user_id);
         const { data: rolesData } = await supabase
@@ -202,6 +281,8 @@ const AdminUserManagement = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchUsers();
+    loadLanguageGroups();
+    loadStats();
   };
 
   const handleEditUser = (user: UserProfile) => {
@@ -260,6 +341,7 @@ const AdminUserManagement = () => {
       toast.success("User deleted successfully");
       setDeleteDialogOpen(false);
       fetchUsers();
+      loadStats();
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error("Failed to delete user");
@@ -288,7 +370,6 @@ const AdminUserManagement = () => {
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
-      // First check if role exists
       const { data: existingRole } = await supabase
         .from("user_roles")
         .select("*")
@@ -296,7 +377,6 @@ const AdminUserManagement = () => {
         .maybeSingle();
 
       if (existingRole) {
-        // Update existing role
         const { error } = await supabase
           .from("user_roles")
           .update({ role: newRole as "admin" | "moderator" | "user" })
@@ -304,7 +384,6 @@ const AdminUserManagement = () => {
 
         if (error) throw error;
       } else {
-        // Insert new role
         const { error } = await supabase
           .from("user_roles")
           .insert({
@@ -323,7 +402,125 @@ const AdminUserManagement = () => {
     }
   };
 
+  // Block/Unblock user
+  const handleBlockUser = async (user: UserProfile) => {
+    try {
+      const newStatus = user.account_status === "blocked" ? "active" : "blocked";
+      const { error } = await supabase
+        .from("profiles")
+        .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast.success(`User ${newStatus === "blocked" ? "blocked" : "unblocked"} successfully`);
+      fetchUsers();
+      loadStats();
+    } catch (error) {
+      console.error("Error blocking user:", error);
+      toast.error("Failed to update block status");
+    }
+  };
+
+  // Suspend/Unsuspend user
+  const handleSuspendUser = async (user: UserProfile) => {
+    try {
+      const newStatus = user.account_status === "suspended" ? "active" : "suspended";
+      const { error } = await supabase
+        .from("profiles")
+        .update({ account_status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast.success(`User ${newStatus === "suspended" ? "suspended" : "unsuspended"} successfully`);
+      fetchUsers();
+      loadStats();
+    } catch (error) {
+      console.error("Error suspending user:", error);
+      toast.error("Failed to update suspend status");
+    }
+  };
+
+  // Approve/Disapprove user (mainly for women)
+  const handleApproveUser = async (user: UserProfile, approve: boolean) => {
+    try {
+      const newStatus = approve ? "approved" : "disapproved";
+      const { error } = await supabase
+        .from("profiles")
+        .update({ approval_status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      toast.success(`User ${approve ? "approved" : "disapproved"} successfully`);
+      fetchUsers();
+      loadStats();
+    } catch (error) {
+      console.error("Error approving user:", error);
+      toast.error("Failed to update approval status");
+    }
+  };
+
+  // Update language group max women
+  const handleUpdateLanguageGroupLimit = async () => {
+    if (!selectedLanguageGroup || !maxWomenInput) return;
+
+    try {
+      const { error } = await supabase
+        .from("language_groups")
+        .update({ max_women_users: parseInt(maxWomenInput), updated_at: new Date().toISOString() })
+        .eq("id", selectedLanguageGroup.id);
+
+      if (error) throw error;
+
+      toast.success("Language group limit updated successfully");
+      setLanguageGroupDialogOpen(false);
+      loadLanguageGroups();
+    } catch (error) {
+      console.error("Error updating language group:", error);
+      toast.error("Failed to update language group");
+    }
+  };
+
+  const openLanguageGroupDialog = (group: LanguageGroup) => {
+    setSelectedLanguageGroup(group);
+    setMaxWomenInput(group.max_women_users.toString());
+    setLanguageGroupDialogOpen(true);
+  };
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  const getAccountStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+      case "blocked":
+        return <Badge variant="destructive"><Ban className="h-3 w-3 mr-1" />Blocked</Badge>;
+      case "suspended":
+        return <Badge className="bg-yellow-500"><Pause className="h-3 w-3 mr-1" />Suspended</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getApprovalStatusBadge = (status: string, gender: string | null) => {
+    // Men are auto-approved
+    if (gender?.toLowerCase() === "male") {
+      return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Auto-Approved</Badge>;
+    }
+    
+    switch (status) {
+      case "approved":
+        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+      case "disapproved":
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Disapproved</Badge>;
+      case "pending":
+        return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   if (loading) {
     return (
@@ -361,7 +558,7 @@ const AdminUserManagement = () => {
                 User Management
               </h1>
               <p className="text-sm text-muted-foreground hidden md:block">
-                View, edit, and manage all registered users
+                Manage users, approvals, blocks, and language group limits
               </p>
             </div>
           </div>
@@ -383,288 +580,436 @@ const AdminUserManagement = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, country, or state..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-3">
-                <Select
-                  value={genderFilter}
-                  onValueChange={(value) => {
-                    setGenderFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Genders</SelectItem>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) => {
-                    setStatusFilter(value);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="unverified">Unverified</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="language-groups">Language Group Limits</TabsTrigger>
+          </TabsList>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total Users</p>
-              <p className="text-2xl font-bold">{totalCount}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Verified</p>
-              <p className="text-2xl font-bold text-green-500">
-                {users.filter(u => u.verification_status).length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Male Users</p>
-              <p className="text-2xl font-bold text-blue-500">
-                {users.filter(u => u.gender?.toLowerCase() === "male").length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Female Users</p>
-              <p className="text-2xl font-bold text-pink-500">
-                {users.filter(u => u.gender?.toLowerCase() === "female").length}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Users Table */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Registered Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No users found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users.map((user, index) => (
-                      <TableRow
-                        key={user.id}
-                        className={cn(
-                          "transition-all duration-200 hover:bg-muted/50 animate-fade-in",
-                        )}
-                        style={{ animationDelay: `${index * 30}ms` }}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
-                              {user.photo_url ? (
-                                <img
-                                  src={user.photo_url}
-                                  alt={user.full_name || "User"}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                                  <Users className="h-5 w-5" />
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{user.full_name || "Unknown"}</p>
-                              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                {user.user_id.slice(0, 8)}...
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              user.gender?.toLowerCase() === "male" && "border-blue-500 text-blue-500",
-                              user.gender?.toLowerCase() === "female" && "border-pink-500 text-pink-500"
-                            )}
-                          >
-                            {user.gender || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p>{user.country || "N/A"}</p>
-                            <p className="text-xs text-muted-foreground">{user.state}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={userRoles[user.user_id] || "user"}
-                            onValueChange={(value) => handleChangeRole(user.user_id, value)}
-                          >
-                            <SelectTrigger className="w-[110px] h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" /> User
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="moderator">
-                                <span className="flex items-center gap-1">
-                                  <ShieldAlert className="h-3 w-3" /> Moderator
-                                </span>
-                              </SelectItem>
-                              <SelectItem value="admin">
-                                <span className="flex items-center gap-1">
-                                  <ShieldCheck className="h-3 w-3" /> Admin
-                                </span>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={user.verification_status ? "default" : "secondary"}
-                            className={cn(
-                              "cursor-pointer transition-all hover:scale-105",
-                              user.verification_status && "bg-green-500 hover:bg-green-600"
-                            )}
-                            onClick={() => handleToggleVerification(user)}
-                          >
-                            {user.verification_status ? (
-                              <><UserCheck className="h-3 w-3 mr-1" /> Verified</>
-                            ) : (
-                              <><UserX className="h-3 w-3 mr-1" /> Unverified</>
-                            )}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(user.created_at), "MMM dd, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleToggleVerification(user)}
-                              >
-                                {user.verification_status ? (
-                                  <><UserX className="h-4 w-4 mr-2" /> Unverify</>
-                                ) : (
-                                  <><UserCheck className="h-4 w-4 mr-2" /> Verify</>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteUser(user)}
-                                className="text-red-500 focus:text-red-500"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+          <TabsContent value="users" className="space-y-6">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Total Users</p>
+                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-2xl font-bold text-green-500">{stats.activeUsers}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Blocked</p>
+                  <p className="text-2xl font-bold text-red-500">{stats.blockedUsers}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Suspended</p>
+                  <p className="text-2xl font-bold text-yellow-500">{stats.suspendedUsers}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Pending Approval</p>
+                  <p className="text-2xl font-bold text-orange-500">{stats.pendingApproval}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Approved Women</p>
+                  <p className="text-2xl font-bold text-pink-500">{stats.approvedWomen}</p>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount} users
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+            {/* Filters */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, country, or state..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    <Select
+                      value={genderFilter}
+                      onValueChange={(value) => {
+                        setGenderFilter(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[130px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Genders</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={accountStatusFilter}
+                      onValueChange={(value) => {
+                        setAccountStatusFilter(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Account Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="blocked">Blocked</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={approvalFilter}
+                      onValueChange={(value) => {
+                        setApprovalFilter(value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Approval" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Approval</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="disapproved">Disapproved</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+
+            {/* Users Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Registered Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Account Status</TableHead>
+                        <TableHead>Approval</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        users.map((user, index) => (
+                          <TableRow
+                            key={user.id}
+                            className={cn(
+                              "transition-all duration-200 hover:bg-muted/50 animate-fade-in",
+                            )}
+                            style={{ animationDelay: `${index * 30}ms` }}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
+                                  {user.photo_url ? (
+                                    <img
+                                      src={user.photo_url}
+                                      alt={user.full_name || "User"}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                                      <Users className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-medium">{user.full_name || "Unknown"}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                    {user.primary_language || "No language"}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  user.gender?.toLowerCase() === "male" && "border-blue-500 text-blue-500",
+                                  user.gender?.toLowerCase() === "female" && "border-pink-500 text-pink-500"
+                                )}
+                              >
+                                {user.gender || "N/A"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <p>{user.country || "N/A"}</p>
+                                <p className="text-xs text-muted-foreground">{user.state}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={userRoles[user.user_id] || "user"}
+                                onValueChange={(value) => handleChangeRole(user.user_id, value)}
+                              >
+                                <SelectTrigger className="w-[110px] h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" /> User
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="moderator">
+                                    <span className="flex items-center gap-1">
+                                      <ShieldAlert className="h-3 w-3" /> Moderator
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="admin">
+                                    <span className="flex items-center gap-1">
+                                      <ShieldCheck className="h-3 w-3" /> Admin
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              {getAccountStatusBadge(user.account_status)}
+                            </TableCell>
+                            <TableCell>
+                              {getApprovalStatusBadge(user.approval_status, user.gender)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(user.created_at), "MMM dd, yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit User
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleToggleVerification(user)}
+                                  >
+                                    {user.verification_status ? (
+                                      <><UserX className="h-4 w-4 mr-2" /> Unverify</>
+                                    ) : (
+                                      <><UserCheck className="h-4 w-4 mr-2" /> Verify</>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  
+                                  {/* Block/Unblock */}
+                                  <DropdownMenuItem onClick={() => handleBlockUser(user)}>
+                                    {user.account_status === "blocked" ? (
+                                      <><Play className="h-4 w-4 mr-2" /> Unblock</>
+                                    ) : (
+                                      <><Ban className="h-4 w-4 mr-2" /> Block</>
+                                    )}
+                                  </DropdownMenuItem>
+                                  
+                                  {/* Suspend/Unsuspend */}
+                                  <DropdownMenuItem onClick={() => handleSuspendUser(user)}>
+                                    {user.account_status === "suspended" ? (
+                                      <><Play className="h-4 w-4 mr-2" /> Unsuspend</>
+                                    ) : (
+                                      <><Pause className="h-4 w-4 mr-2" /> Suspend</>
+                                    )}
+                                  </DropdownMenuItem>
+                                  
+                                  {/* Approve/Disapprove (only for women) */}
+                                  {user.gender?.toLowerCase() === "female" && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      {user.approval_status !== "approved" && (
+                                        <DropdownMenuItem onClick={() => handleApproveUser(user, true)}>
+                                          <CheckCircle className="h-4 w-4 mr-2" /> Approve
+                                        </DropdownMenuItem>
+                                      )}
+                                      {user.approval_status !== "disapproved" && (
+                                        <DropdownMenuItem onClick={() => handleApproveUser(user, false)}>
+                                          <XCircle className="h-4 w-4 mr-2" /> Disapprove
+                                        </DropdownMenuItem>
+                                      )}
+                                    </>
+                                  )}
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="text-red-500 focus:text-red-500"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount} users
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="language-groups" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Languages className="h-5 w-5" />
+                  Language Group Women Limits
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Set the maximum number of women users allowed per language group. Women need admin approval to join.
+                </p>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Language Group</TableHead>
+                        <TableHead>Languages</TableHead>
+                        <TableHead>Current Women</TableHead>
+                        <TableHead>Max Women</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {languageGroups.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No language groups found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        languageGroups.map((group) => (
+                          <TableRow key={group.id}>
+                            <TableCell className="font-medium">{group.name}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {group.languages.slice(0, 3).map((lang, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">
+                                    {lang}
+                                  </Badge>
+                                ))}
+                                {group.languages.length > 3 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{group.languages.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={cn(
+                                "font-medium",
+                                group.current_women_count >= group.max_women_users && "text-red-500"
+                              )}>
+                                {group.current_women_count}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{group.max_women_users}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {group.current_women_count >= group.max_women_users ? (
+                                <Badge variant="destructive">Full</Badge>
+                              ) : (
+                                <Badge className="bg-green-500">Available</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openLanguageGroupDialog(group)}
+                              >
+                                <Settings className="h-4 w-4 mr-1" />
+                                Set Limit
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit Dialog */}
@@ -749,6 +1094,39 @@ const AdminUserManagement = () => {
             <Button variant="destructive" onClick={confirmDeleteUser}>
               Delete User
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Language Group Limit Dialog */}
+      <Dialog open={languageGroupDialogOpen} onOpenChange={setLanguageGroupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Maximum Women Users</DialogTitle>
+            <DialogDescription>
+              Set the maximum number of women users allowed for {selectedLanguageGroup?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-women">Maximum Women Users</Label>
+              <Input
+                id="max-women"
+                type="number"
+                min="0"
+                value={maxWomenInput}
+                onChange={(e) => setMaxWomenInput(e.target.value)}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Current count: {selectedLanguageGroup?.current_women_count || 0} women
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLanguageGroupDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateLanguageGroupLimit}>Save Limit</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

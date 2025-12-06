@@ -505,30 +505,36 @@ export type Database = {
       language_groups: {
         Row: {
           created_at: string
+          current_women_count: number
           description: string | null
           id: string
           is_active: boolean
           languages: string[]
+          max_women_users: number
           name: string
           priority: number
           updated_at: string
         }
         Insert: {
           created_at?: string
+          current_women_count?: number
           description?: string | null
           id?: string
           is_active?: boolean
           languages?: string[]
+          max_women_users?: number
           name: string
           priority?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
+          current_women_count?: number
           description?: string | null
           id?: string
           is_active?: boolean
           languages?: string[]
+          max_women_users?: number
           name?: string
           priority?: number
           updated_at?: string
@@ -755,7 +761,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
           age: number | null
+          approval_status: string
           bio: string | null
           body_type: string | null
           country: string | null
@@ -796,7 +804,9 @@ export type Database = {
           zodiac_sign: string | null
         }
         Insert: {
+          account_status?: string
           age?: number | null
+          approval_status?: string
           bio?: string | null
           body_type?: string | null
           country?: string | null
@@ -837,7 +847,9 @@ export type Database = {
           zodiac_sign?: string | null
         }
         Update: {
+          account_status?: string
           age?: number | null
+          approval_status?: string
           bio?: string | null
           body_type?: string | null
           country?: string | null
