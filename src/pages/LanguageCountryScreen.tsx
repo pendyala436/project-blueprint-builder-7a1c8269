@@ -37,13 +37,17 @@ const LanguageCountryScreen = () => {
       return;
     }
 
+    // Store preferences in sessionStorage for later use
+    sessionStorage.setItem("selectedLanguage", selectedLanguage);
+    sessionStorage.setItem("selectedCountry", selectedCountry);
+
     toast({
       title: "Preferences saved! 🎉",
-      description: "Let's continue setting up your profile.",
+      description: "Let's create your account.",
     });
     
-    // Navigate to next screen
-    navigate("/basic-info");
+    // Navigate to auth screen
+    navigate("/auth");
   };
 
   const isComplete = selectedLanguage && selectedCountry;
