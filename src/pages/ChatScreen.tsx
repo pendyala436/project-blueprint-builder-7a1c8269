@@ -271,18 +271,30 @@ const ChatScreen = () => {
       
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("preferred_language, gender")
+        .select("preferred_language, primary_language, gender")
         .eq("user_id", user.id)
         .maybeSingle();
       
-      setCurrentUserLanguage(currentProfile?.preferred_language || "English");
-      setCurrentUserGender(currentProfile?.gender === "female" ? "female" : "male");
+      // Also check user_languages for mother tongue
+      const { data: userLanguages } = await supabase
+        .from("user_languages")
+        .select("language_name")
+        .eq("user_id", user.id)
+        .limit(1);
+      
+      const motherTongue = userLanguages?.[0]?.language_name || 
+                          currentProfile?.primary_language ||
+                          currentProfile?.preferred_language || 
+                          "English";
+      
+      setCurrentUserLanguage(motherTongue);
+      setCurrentUserGender(currentProfile?.gender === "female" || currentProfile?.gender === "Female" ? "female" : "male");
 
       // ============= FETCH PARTNER PROFILE =============
       
       const { data: partnerProfile } = await supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, preferred_language")
+        .select("user_id, full_name, photo_url, preferred_language, primary_language")
         .eq("user_id", partnerId)
         .maybeSingle();
 
@@ -293,6 +305,18 @@ const ChatScreen = () => {
         .eq("user_id", partnerId)
         .maybeSingle();
 
+      // Fetch partner's mother tongue
+      const { data: partnerLanguages } = await supabase
+        .from("user_languages")
+        .select("language_name")
+        .eq("user_id", partnerId)
+        .limit(1);
+
+      const partnerMotherTongue = partnerLanguages?.[0]?.language_name || 
+                                  partnerProfile?.primary_language ||
+                                  partnerProfile?.preferred_language || 
+                                  "English";
+
       // Set chat partner state
       if (partnerProfile) {
         setChatPartner({
@@ -300,7 +324,7 @@ const ChatScreen = () => {
           fullName: partnerProfile.full_name || "Anonymous",
           avatar: partnerProfile.photo_url || "",
           isOnline: partnerStatus?.is_online || false,
-          preferredLanguage: partnerProfile.preferred_language || "English",
+          preferredLanguage: partnerMotherTongue,
         });
       }
 
