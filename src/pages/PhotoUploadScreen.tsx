@@ -230,7 +230,7 @@ const PhotoUploadScreen = () => {
       description: "Your photos have been saved",
     });
     
-    navigate("/password-setup");
+    navigate("/location-setup");
   };
 
   const handleBack = () => {
