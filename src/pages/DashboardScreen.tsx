@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
+import { RandomChatButton } from "@/components/RandomChatButton";
 
 interface Notification {
   id: string;
@@ -164,6 +165,7 @@ const DashboardScreen = () => {
   const [userName, setUserName] = useState("");
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
+  const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -271,9 +273,22 @@ const DashboardScreen = () => {
       // Fetch user profile including country and gender
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, country, gender")
+        .select("full_name, country, gender, primary_language, preferred_language")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Fetch user's languages
+      const { data: userLanguages } = await supabase
+        .from("user_languages")
+        .select("language_name")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      const motherTongue = userLanguages?.[0]?.language_name || 
+                          profile?.primary_language || 
+                          profile?.preferred_language || 
+                          "English";
+      setUserLanguage(motherTongue);
 
       // Redirect women to their dashboard
       if (profile?.gender === "Female") {
@@ -636,15 +651,24 @@ const DashboardScreen = () => {
                   </p>
                 </div>
               </div>
-              <Button 
-                variant="gradient" 
-                size="lg"
-                onClick={() => setRechargeDialogOpen(true)}
-                className="gap-2"
-              >
-                <CreditCard className="w-5 h-5" />
-                Recharge
-              </Button>
+              <div className="flex gap-3">
+                <RandomChatButton 
+                  userGender="male"
+                  userLanguage={userLanguage}
+                  userCountry={userCountryName}
+                  variant="hero"
+                  size="lg"
+                />
+                <Button 
+                  variant="gradient" 
+                  size="lg"
+                  onClick={() => setRechargeDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Recharge
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

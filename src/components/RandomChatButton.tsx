@@ -1,0 +1,341 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, Shuffle, MessageCircle, UserCheck, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface RandomChatButtonProps {
+  userGender: "male" | "female";
+  userLanguage: string;
+  userCountry: string;
+  variant?: "default" | "gradient" | "hero";
+  size?: "default" | "lg" | "sm";
+  className?: string;
+}
+
+export const RandomChatButton = ({
+  userGender,
+  userLanguage,
+  userCountry,
+  variant = "gradient",
+  size = "lg",
+  className = ""
+}: RandomChatButtonProps) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [searchStatus, setSearchStatus] = useState<string>("");
+  const [matchedUser, setMatchedUser] = useState<{
+    userId: string;
+    fullName: string;
+    photoUrl: string | null;
+    language: string;
+  } | null>(null);
+
+  const findRandomPartner = async () => {
+    setIsSearching(true);
+    setSearchDialogOpen(true);
+    setSearchStatus("Looking for available partners...");
+    setMatchedUser(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to start a chat",
+          variant: "destructive"
+        });
+        setSearchDialogOpen(false);
+        return;
+      }
+
+      if (userGender === "male") {
+        // Men looking for women
+        setSearchStatus("Finding an available woman for you...");
+        
+        // First try language-matched women
+        const { data, error } = await supabase.functions.invoke("chat-manager", {
+          body: {
+            action: "get_available_indian_woman",
+            man_user_id: user.id,
+            preferred_language: userLanguage,
+            man_country: userCountry
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.success && data.woman_user_id) {
+          setSearchStatus("Found a match!");
+          setMatchedUser({
+            userId: data.woman_user_id,
+            fullName: data.profile?.full_name || "Anonymous",
+            photoUrl: data.profile?.photo_url || null,
+            language: data.profile?.primary_language || userLanguage
+          });
+        } else {
+          // Try general matching
+          const { data: generalData, error: generalError } = await supabase.functions.invoke("chat-manager", {
+            body: {
+              action: "get_available_woman",
+              man_user_id: user.id,
+              preferred_language: userLanguage
+            }
+          });
+
+          if (generalError) throw generalError;
+
+          if (generalData.success && generalData.woman_user_id) {
+            setSearchStatus("Found a match!");
+            setMatchedUser({
+              userId: generalData.woman_user_id,
+              fullName: generalData.profile?.full_name || "Anonymous",
+              photoUrl: generalData.profile?.photo_url || null,
+              language: generalData.profile?.primary_language || userLanguage
+            });
+          } else {
+            setSearchStatus("No partners available right now. Please try again later.");
+          }
+        }
+      } else {
+        // Women looking for men - find online men with same language
+        setSearchStatus("Finding an available man for you...");
+        
+        // Get online men with matching language
+        const { data: onlineStatuses } = await supabase
+          .from("user_status")
+          .select("user_id")
+          .eq("is_online", true);
+
+        if (!onlineStatuses || onlineStatuses.length === 0) {
+          setSearchStatus("No men online right now. Please try again later.");
+          return;
+        }
+
+        const onlineUserIds = onlineStatuses.map(s => s.user_id);
+
+        // Get men profiles
+        const { data: menProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language, preferred_language")
+          .in("user_id", onlineUserIds)
+          .or("gender.eq.male,gender.eq.Male");
+
+        if (!menProfiles || menProfiles.length === 0) {
+          setSearchStatus("No men available right now. Please try again later.");
+          return;
+        }
+
+        // Get languages for the men
+        const { data: userLanguages } = await supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", menProfiles.map(p => p.user_id));
+
+        const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
+
+        // Find men with same language first, then any online man
+        const sameLanguageMen = menProfiles.filter(m => {
+          const manLang = languageMap.get(m.user_id) || m.primary_language || m.preferred_language || "";
+          return manLang.toLowerCase() === userLanguage.toLowerCase();
+        });
+
+        const availableMen = sameLanguageMen.length > 0 ? sameLanguageMen : menProfiles;
+
+        // Check wallet balance for men (must have recharged)
+        const { data: wallets } = await supabase
+          .from("wallets")
+          .select("user_id, balance")
+          .in("user_id", availableMen.map(m => m.user_id))
+          .gt("balance", 0);
+
+        const menWithBalance = wallets?.map(w => w.user_id) || [];
+
+        const qualifiedMen = availableMen.filter(m => menWithBalance.includes(m.user_id));
+
+        if (qualifiedMen.length === 0) {
+          setSearchStatus("No available men with wallet balance. Please try again later.");
+          return;
+        }
+
+        // Pick a random man
+        const randomMan = qualifiedMen[Math.floor(Math.random() * qualifiedMen.length)];
+        const manLang = languageMap.get(randomMan.user_id) || randomMan.primary_language || "Unknown";
+
+        setSearchStatus("Found a match!");
+        setMatchedUser({
+          userId: randomMan.user_id,
+          fullName: randomMan.full_name || "Anonymous",
+          photoUrl: randomMan.photo_url || null,
+          language: manLang
+        });
+      }
+    } catch (error: any) {
+      console.error("Error finding partner:", error);
+      setSearchStatus("Something went wrong. Please try again.");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to find a partner",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const startChatWithMatch = async () => {
+    if (!matchedUser) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (userGender === "male") {
+        // Start the chat session via edge function
+        const { data, error } = await supabase.functions.invoke("chat-manager", {
+          body: {
+            action: "start_chat",
+            man_user_id: user.id,
+            woman_user_id: matchedUser.userId
+          }
+        });
+
+        if (error) throw error;
+
+        if (!data.success) {
+          toast({
+            title: "Cannot Start Chat",
+            description: data.message || "Unable to start chat session",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      // Navigate to chat
+      setSearchDialogOpen(false);
+      navigate(`/chat/${matchedUser.userId}`);
+    } catch (error: any) {
+      console.error("Error starting chat:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start chat",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cancelSearch = () => {
+    setSearchDialogOpen(false);
+    setIsSearching(false);
+    setMatchedUser(null);
+    setSearchStatus("");
+  };
+
+  return (
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        onClick={findRandomPartner}
+        className={`gap-2 ${className}`}
+        disabled={isSearching}
+      >
+        {isSearching ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Shuffle className="h-5 w-5" />
+        )}
+        Random Chat
+      </Button>
+
+      <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              {matchedUser ? "Match Found!" : "Finding a Partner"}
+            </DialogTitle>
+            <DialogDescription>
+              {matchedUser 
+                ? "We found someone for you to chat with!"
+                : `Looking for ${userGender === "male" ? "women" : "men"} who speak ${userLanguage}...`
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            {isSearching && !matchedUser && (
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+                <p className="text-muted-foreground">{searchStatus}</p>
+              </div>
+            )}
+
+            {!isSearching && !matchedUser && searchStatus && (
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <X className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">{searchStatus}</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={findRandomPartner}
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {matchedUser && (
+              <div className="text-center">
+                <div className="relative w-20 h-20 mx-auto mb-4">
+                  {matchedUser.photoUrl ? (
+                    <img 
+                      src={matchedUser.photoUrl} 
+                      alt={matchedUser.fullName}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-primary/20"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-rose-500 flex items-center justify-center text-white text-2xl font-bold">
+                      {matchedUser.fullName.charAt(0)}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                    <UserCheck className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold">{matchedUser.fullName}</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Speaks {matchedUser.language}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button variant="outline" onClick={cancelSearch}>
+                    Cancel
+                  </Button>
+                  <Button variant="gradient" onClick={startChatWithMatch}>
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Start Chat
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
