@@ -858,6 +858,84 @@ export type Database = {
         }
         Relationships: []
       }
+      system_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          current_value: number
+          id: string
+          is_resolved: boolean
+          message: string
+          metric_name: string
+          resolved_at: string | null
+          threshold_value: number
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          current_value: number
+          id?: string
+          is_resolved?: boolean
+          message: string
+          metric_name: string
+          resolved_at?: string | null
+          threshold_value: number
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          current_value?: number
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          metric_name?: string
+          resolved_at?: string | null
+          threshold_value?: number
+        }
+        Relationships: []
+      }
+      system_metrics: {
+        Row: {
+          active_connections: number
+          cpu_usage: number
+          created_at: string
+          disk_usage: number | null
+          error_rate: number | null
+          id: string
+          memory_usage: number
+          network_in: number | null
+          network_out: number | null
+          recorded_at: string
+          response_time: number
+        }
+        Insert: {
+          active_connections?: number
+          cpu_usage?: number
+          created_at?: string
+          disk_usage?: number | null
+          error_rate?: number | null
+          id?: string
+          memory_usage?: number
+          network_in?: number | null
+          network_out?: number | null
+          recorded_at?: string
+          response_time?: number
+        }
+        Update: {
+          active_connections?: number
+          cpu_usage?: number
+          created_at?: string
+          disk_usage?: number | null
+          error_rate?: number | null
+          id?: string
+          memory_usage?: number
+          network_in?: number | null
+          network_out?: number | null
+          recorded_at?: string
+          response_time?: number
+        }
+        Relationships: []
+      }
       tutorial_progress: {
         Row: {
           completed: boolean
