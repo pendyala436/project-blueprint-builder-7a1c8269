@@ -109,8 +109,8 @@ const PasswordSetupScreen = () => {
     toast.success("Password set successfully! 🎉");
     setIsSubmitting(false);
     
-    // Navigate to next screen (placeholder)
-    navigate("/");
+    // Navigate to registration complete screen
+    navigate("/registration-complete");
   };
 
   const getStrengthPercentage = () => {
