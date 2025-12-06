@@ -35,10 +35,12 @@ import {
   Wallet,
   CreditCard,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Filter
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 
 interface Notification {
   id: string;
@@ -172,6 +174,33 @@ const DashboardScreen = () => {
   const [selectedGateway, setSelectedGateway] = useState("stripe");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [matchFilters, setMatchFilters] = useState<MatchFilters>({
+    ageRange: [18, 60],
+    heightRange: [140, 200],
+    bodyType: "all",
+    educationLevel: "all",
+    occupation: "all",
+    religion: "all",
+    maritalStatus: "all",
+    hasChildren: "all",
+    country: "all",
+    language: "all",
+    distanceRange: [0, 15000],
+    smokingHabit: "all",
+    drinkingHabit: "all",
+    dietaryPreference: "all",
+    fitnessLevel: "all",
+    petPreference: "all",
+    travelFrequency: "all",
+    zodiacSign: "all",
+    personalityType: "all",
+    onlineNow: false,
+    verifiedOnly: false,
+    premiumOnly: false,
+    newUsersOnly: false,
+    hasPhoto: false,
+    hasBio: false,
+  });
 
   // Get currency info based on user's country
   const getCurrencyInfo = () => {
@@ -519,20 +548,28 @@ const DashboardScreen = () => {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        {/* Welcome Section */}
+        {/* Welcome Section with Filter */}
         <div className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-2">
-            <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
-            <span className="text-sm text-muted-foreground">
-              {isOnline ? "Online" : "Offline"}
-            </span>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
+                <span className="text-sm text-muted-foreground">
+                  {isOnline ? "Online" : "Offline"}
+                </span>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome back{userName ? `, ${userName}` : ""}! 👋
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Ready to make new connections today?
+              </p>
+            </div>
+            <MatchFiltersPanel 
+              filters={matchFilters} 
+              onFiltersChange={setMatchFilters} 
+            />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome back{userName ? `, ${userName}` : ""}! 👋
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Ready to make new connections today?
-          </p>
         </div>
 
         {/* Stats Cards */}

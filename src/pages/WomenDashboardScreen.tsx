@@ -26,13 +26,15 @@ import {
   Search,
   User,
   Languages,
-  Globe
+  Globe,
+  Filter
 } from "lucide-react";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 
 interface Notification {
   id: string;
@@ -86,6 +88,33 @@ const WomenDashboardScreen = () => {
     todayEarnings: 0
   });
   const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [matchFilters, setMatchFilters] = useState<MatchFilters>({
+    ageRange: [18, 60],
+    heightRange: [140, 200],
+    bodyType: "all",
+    educationLevel: "all",
+    occupation: "all",
+    religion: "all",
+    maritalStatus: "all",
+    hasChildren: "all",
+    country: "all",
+    language: "all",
+    distanceRange: [0, 15000],
+    smokingHabit: "all",
+    drinkingHabit: "all",
+    dietaryPreference: "all",
+    fitnessLevel: "all",
+    petPreference: "all",
+    travelFrequency: "all",
+    zodiacSign: "all",
+    personalityType: "all",
+    onlineNow: false,
+    verifiedOnly: false,
+    premiumOnly: false,
+    newUsersOnly: false,
+    hasPhoto: false,
+    hasBio: false,
+  });
 
   const quickActions = [
     { 
@@ -574,20 +603,28 @@ const WomenDashboardScreen = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Welcome Section */}
+        {/* Welcome Section with Filter */}
         <div className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-2">
-            <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
-            <span className="text-sm text-muted-foreground">
-              {isOnline ? "Online" : "Offline"}
-            </span>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
+                <span className="text-sm text-muted-foreground">
+                  {isOnline ? "Online" : "Offline"}
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">
+                Welcome back{userName ? `, ${userName}` : ""}! 👋
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {stats.totalOnlineMen} men online right now
+              </p>
+            </div>
+            <MatchFiltersPanel 
+              filters={matchFilters} 
+              onFiltersChange={setMatchFilters} 
+            />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Welcome back{userName ? `, ${userName}` : ""}! 👋
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {stats.totalOnlineMen} men online right now
-          </p>
         </div>
 
         {/* Stats Cards */}
