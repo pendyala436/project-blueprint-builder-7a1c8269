@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          match_score: number | null
+          matched_at: string
+          matched_user_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          matched_at?: string
+          matched_user_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_score?: number | null
+          matched_at?: string
+          matched_user_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       processing_logs: {
         Row: {
           age_verified: boolean | null
@@ -220,6 +283,36 @@ export type Database = {
           id?: string
           language_code?: string
           language_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_status: {
+        Row: {
+          created_at: string
+          id: string
+          is_online: boolean
+          last_seen: string
+          status_text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          last_seen?: string
+          status_text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          last_seen?: string
+          status_text?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
