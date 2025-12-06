@@ -99,6 +99,8 @@ const PAYMENT_GATEWAYS: PaymentGateway[] = [
   { id: "paypal", name: "PayPal", logo: "🅿️", description: "200+ countries supported" },
   { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "UPI, Cards, Netbanking" },
   { id: "wise", name: "Wise", logo: "💸", description: "International Transfers" },
+  { id: "adyen", name: "Adyen", logo: "🌐", description: "Global Payments" },
+  { id: "ccavenue", name: "CCAvenue", logo: "🏦", description: "Cards, Wallets, EMI" },
 ];
 
 const DashboardScreen = () => {
