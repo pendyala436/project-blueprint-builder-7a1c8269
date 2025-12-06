@@ -763,7 +763,10 @@ export type Database = {
         Row: {
           account_status: string
           age: number | null
+          ai_approved: boolean | null
+          ai_disapproval_reason: string | null
           approval_status: string
+          avg_response_time_seconds: number | null
           bio: string | null
           body_type: string | null
           country: string | null
@@ -787,6 +790,7 @@ export type Database = {
           longitude: number | null
           marital_status: string | null
           occupation: string | null
+          performance_score: number | null
           personality_type: string | null
           pet_preference: string | null
           phone: string | null
@@ -797,6 +801,7 @@ export type Database = {
           religion: string | null
           smoking_habit: string | null
           state: string | null
+          total_chats_count: number | null
           travel_frequency: string | null
           updated_at: string
           user_id: string
@@ -806,7 +811,10 @@ export type Database = {
         Insert: {
           account_status?: string
           age?: number | null
+          ai_approved?: boolean | null
+          ai_disapproval_reason?: string | null
           approval_status?: string
+          avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
           country?: string | null
@@ -830,6 +838,7 @@ export type Database = {
           longitude?: number | null
           marital_status?: string | null
           occupation?: string | null
+          performance_score?: number | null
           personality_type?: string | null
           pet_preference?: string | null
           phone?: string | null
@@ -840,6 +849,7 @@ export type Database = {
           religion?: string | null
           smoking_habit?: string | null
           state?: string | null
+          total_chats_count?: number | null
           travel_frequency?: string | null
           updated_at?: string
           user_id: string
@@ -849,7 +859,10 @@ export type Database = {
         Update: {
           account_status?: string
           age?: number | null
+          ai_approved?: boolean | null
+          ai_disapproval_reason?: string | null
           approval_status?: string
+          avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
           country?: string | null
@@ -873,6 +886,7 @@ export type Database = {
           longitude?: number | null
           marital_status?: string | null
           occupation?: string | null
+          performance_score?: number | null
           personality_type?: string | null
           pet_preference?: string | null
           phone?: string | null
@@ -883,6 +897,7 @@ export type Database = {
           religion?: string | null
           smoking_habit?: string | null
           state?: string | null
+          total_chats_count?: number | null
           travel_frequency?: string | null
           updated_at?: string
           user_id?: string

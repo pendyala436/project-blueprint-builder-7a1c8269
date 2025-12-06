@@ -65,6 +65,8 @@ import {
   Play,
   Settings,
   Languages,
+  Bot,
+  Zap,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -81,6 +83,9 @@ interface UserProfile {
   created_at: string;
   updated_at: string;
   primary_language: string | null;
+  performance_score: number;
+  ai_approved: boolean;
+  ai_disapproval_reason: string | null;
   account_status: string;
   approval_status: string;
 }
@@ -139,7 +144,10 @@ const AdminUserManagement = () => {
     suspendedUsers: 0,
     pendingApproval: 0,
     approvedWomen: 0,
+    aiApprovedWomen: 0,
   });
+  
+  const [runningAI, setRunningAI] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -186,7 +194,7 @@ const AdminUserManagement = () => {
     try {
       const { data: allProfiles } = await supabase
         .from("profiles")
-        .select("account_status, approval_status, gender");
+        .select("account_status, approval_status, gender, ai_approved");
 
       if (allProfiles) {
         setStats({
@@ -196,10 +204,42 @@ const AdminUserManagement = () => {
           suspendedUsers: allProfiles.filter(p => p.account_status === "suspended").length,
           pendingApproval: allProfiles.filter(p => p.approval_status === "pending" && p.gender?.toLowerCase() === "female").length,
           approvedWomen: allProfiles.filter(p => p.approval_status === "approved" && p.gender?.toLowerCase() === "female").length,
+          aiApprovedWomen: allProfiles.filter(p => p.ai_approved === true && p.gender?.toLowerCase() === "female").length,
         });
       }
     } catch (error) {
       console.error("Error loading stats:", error);
+    }
+  };
+  
+  const runAIApproval = async () => {
+    setRunningAI(true);
+    try {
+      const response = await fetch(
+        "https://tvneohngeracipjajzos.supabase.co/functions/v1/ai-women-approval",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmVvaG5nZXJhY2lwamFqem9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5ODgxNDEsImV4cCI6MjA4MDU2NDE0MX0.3YgATF-HMODDQe5iJbpiUuL2SlycM5Z5XmAdKbnjg_A`,
+          },
+        }
+      );
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`AI Approval completed: ${data.results.approved} approved, ${data.results.disapproved} disapproved, ${data.results.rotatedOut} rotated out`);
+        fetchUsers();
+        loadStats();
+        loadLanguageGroups();
+      } else {
+        toast.error("AI Approval failed: " + data.error);
+      }
+    } catch (error) {
+      console.error("Error running AI approval:", error);
+      toast.error("Failed to run AI approval");
+    } finally {
+      setRunningAI(false);
     }
   };
 
@@ -504,21 +544,40 @@ const AdminUserManagement = () => {
     }
   };
 
-  const getApprovalStatusBadge = (status: string, gender: string | null) => {
+  const getApprovalStatusBadge = (user: UserProfile) => {
+    const { approval_status, gender, ai_approved, ai_disapproval_reason, performance_score } = user;
+    
     // Men are auto-approved
     if (gender?.toLowerCase() === "male") {
       return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Auto-Approved</Badge>;
     }
     
-    switch (status) {
+    switch (approval_status) {
       case "approved":
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge className={ai_approved ? "bg-purple-500" : "bg-green-500"}>
+              {ai_approved ? <Bot className="h-3 w-3 mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+              {ai_approved ? "AI Approved" : "Approved"}
+            </Badge>
+            <span className="text-xs text-muted-foreground">Score: {performance_score}/100</span>
+          </div>
+        );
       case "disapproved":
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Disapproved</Badge>;
+        return (
+          <div className="flex flex-col gap-1">
+            <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Disapproved</Badge>
+            {ai_disapproval_reason && (
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={ai_disapproval_reason}>
+                {ai_disapproval_reason}
+              </span>
+            )}
+          </div>
+        );
       case "pending":
         return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{approval_status}</Badge>;
     }
   };
 
@@ -587,8 +646,29 @@ const AdminUserManagement = () => {
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
+            {/* AI Approval Section */}
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-8 w-8 text-primary" />
+                    <div>
+                      <h3 className="font-semibold">AI Women Approval System</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Auto-approves women up to 150 per language. Monitors performance and removes inactive users (30+ days).
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={runAIApproval} disabled={runningAI}>
+                    <Zap className={cn("h-4 w-4 mr-2", runningAI && "animate-pulse")} />
+                    {runningAI ? "Running AI..." : "Run AI Approval"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Total Users</p>
@@ -623,6 +703,12 @@ const AdminUserManagement = () => {
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Approved Women</p>
                   <p className="text-2xl font-bold text-pink-500">{stats.approvedWomen}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">AI Approved</p>
+                  <p className="text-2xl font-bold text-purple-500">{stats.aiApprovedWomen}</p>
                 </CardContent>
               </Card>
             </div>
@@ -807,7 +893,7 @@ const AdminUserManagement = () => {
                               {getAccountStatusBadge(user.account_status)}
                             </TableCell>
                             <TableCell>
-                              {getApprovalStatusBadge(user.approval_status, user.gender)}
+                              {getApprovalStatusBadge(user)}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {format(new Date(user.created_at), "MMM dd, yyyy")}
