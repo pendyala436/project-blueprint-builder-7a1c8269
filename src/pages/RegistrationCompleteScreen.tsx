@@ -100,8 +100,7 @@ const RegistrationCompleteScreen = () => {
       title: "Welcome!",
       description: "Redirecting to your dashboard...",
     });
-    // Navigate to dashboard (placeholder - will go to home for now)
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleShareApp = async () => {
