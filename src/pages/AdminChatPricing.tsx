@@ -33,6 +33,7 @@ const AdminChatPricing = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingRates, setIsEditingRates] = useState(false);
+  const [isEditingWithdrawal, setIsEditingWithdrawal] = useState(false);
   const [pricing, setPricing] = useState<ChatPricing | null>(null);
   const [formData, setFormData] = useState({
     rate_per_minute: "",
@@ -155,6 +156,7 @@ const AdminChatPricing = () => {
         description: "Pricing configuration saved successfully"
       });
       setIsEditingRates(false);
+      setIsEditingWithdrawal(false);
       loadPricing();
     } catch (error) {
       console.error("Error saving pricing:", error);
@@ -334,37 +336,83 @@ const AdminChatPricing = () => {
 
         {/* Withdrawal Settings */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-amber-500" />
-              Withdrawal Settings
-            </CardTitle>
-            <CardDescription>
-              Minimum balance required for withdrawal requests
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-amber-500" />
+                Withdrawal Settings
+              </CardTitle>
+              <CardDescription>
+                Minimum balance required for withdrawal requests
+              </CardDescription>
+            </div>
+            {!isEditingWithdrawal && pricing && (
+              <Button variant="outline" onClick={() => setIsEditingWithdrawal(true)} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Change
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="minWithdrawal">Minimum Withdrawal Balance (INR)</Label>
-                <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="minWithdrawal"
-                    type="number"
-                    step="100"
-                    min="0"
-                    className="pl-10"
-                    value={formData.min_withdrawal_balance}
-                    onChange={(e) => setFormData(prev => ({ ...prev, min_withdrawal_balance: e.target.value }))}
-                    placeholder="10000"
-                  />
+            {isEditingWithdrawal || !pricing ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="minWithdrawal">Minimum Withdrawal Balance (INR)</Label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="minWithdrawal"
+                      type="number"
+                      step="100"
+                      min="0"
+                      className="pl-10"
+                      value={formData.min_withdrawal_balance}
+                      onChange={(e) => setFormData(prev => ({ ...prev, min_withdrawal_balance: e.target.value }))}
+                      placeholder="10000"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Women must have at least this balance to request a withdrawal
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Women must have at least this balance to request a withdrawal
-                </p>
+                <div className="flex gap-3 pt-2">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    {isSaving ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Save
+                  </Button>
+                  {pricing && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          min_withdrawal_balance: pricing.min_withdrawal_balance.toString()
+                        }));
+                        setIsEditingWithdrawal(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-between p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10">
+                    <Wallet className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Minimum Withdrawal Balance</p>
+                    <p className="text-2xl font-bold text-amber-600">₹{parseInt(formData.min_withdrawal_balance).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
