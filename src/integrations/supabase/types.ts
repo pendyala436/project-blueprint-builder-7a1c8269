@@ -888,6 +888,7 @@ export type Database = {
           gender: string
           id: string
           is_active: boolean
+          is_online: boolean
           language: string
           name: string
           photo_url: string | null
@@ -901,6 +902,7 @@ export type Database = {
           gender: string
           id?: string
           is_active?: boolean
+          is_online?: boolean
           language: string
           name: string
           photo_url?: string | null
@@ -914,6 +916,7 @@ export type Database = {
           gender?: string
           id?: string
           is_active?: boolean
+          is_online?: boolean
           language?: string
           name?: string
           photo_url?: string | null
