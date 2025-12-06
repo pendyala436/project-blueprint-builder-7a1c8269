@@ -197,6 +197,7 @@ Deno.serve(async (req) => {
           country: lang.country,
           bio: `Hi, I'm a ${lang.name} speaker from ${lang.country}. Looking for meaningful connections!`,
           is_active: true,
+          is_online: true,
         });
 
         if (error) {
@@ -220,6 +221,7 @@ Deno.serve(async (req) => {
           country: lang.country,
           bio: `Hello! I speak ${lang.name} and I'm from ${lang.country}. Let's chat!`,
           is_active: true,
+          is_online: true,
         });
 
         if (error) {
