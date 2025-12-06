@@ -37,6 +37,7 @@ import AdminChatPricing from "./pages/AdminChatPricing";
 import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
 import AdminSettings from "./pages/AdminSettings";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
+import AdminModerationScreen from "./pages/AdminModerationScreen";
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import NotFound from "./pages/NotFound";
@@ -86,6 +87,7 @@ const App = () => (
           <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
           <Route path="/send-gift/:receiverId" element={<GiftSendingScreen />} />
           <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
+          <Route path="/admin/moderation" element={<AdminModerationScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

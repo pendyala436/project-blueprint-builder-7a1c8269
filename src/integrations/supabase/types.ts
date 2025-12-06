@@ -610,6 +610,62 @@ export type Database = {
         }
         Relationships: []
       }
+      moderation_reports: {
+        Row: {
+          action_reason: string | null
+          action_taken: string | null
+          chat_message_id: string | null
+          content: string | null
+          created_at: string
+          id: string
+          report_type: string
+          reported_user_id: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_reason?: string | null
+          action_taken?: string | null
+          chat_message_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          report_type?: string
+          reported_user_id: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_reason?: string | null
+          action_taken?: string | null
+          chat_message_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          report_type?: string
+          reported_user_id?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_reports_chat_message_id_fkey"
+            columns: ["chat_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
@@ -1107,6 +1163,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_blocks: {
+        Row: {
+          block_type: string
+          blocked_by: string
+          blocked_user_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          block_type?: string
+          blocked_by: string
+          blocked_user_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          block_type?: string
+          blocked_by?: string
+          blocked_user_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       user_consent: {
         Row: {
           agreed_terms: boolean
@@ -1284,6 +1370,36 @@ export type Database = {
           status_text?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          id: string
+          issued_by: string
+          message: string
+          user_id: string
+          warning_type: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          issued_by: string
+          message: string
+          user_id: string
+          warning_type?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          issued_by?: string
+          message?: string
+          user_id?: string
+          warning_type?: string
         }
         Relationships: []
       }
