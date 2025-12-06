@@ -1,6 +1,34 @@
+/**
+ * AdminModerationScreen.tsx
+ * 
+ * PURPOSE: Admin interface for monitoring and moderating user behavior,
+ * reviewing reports, managing flagged content, and blocking/warning users.
+ * 
+ * KEY FEATURES:
+ * - View and resolve user reports
+ * - Monitor flagged chat messages
+ * - Block/unblock users (temporary or permanent)
+ * - Send warnings to users
+ * - Real-time updates via Supabase subscriptions
+ * 
+ * DATABASE TABLES USED:
+ * - moderation_reports: User-submitted reports
+ * - chat_messages: For flagged message review
+ * - user_blocks: Blocked user records
+ * - user_warnings: Warning records
+ * - profiles: User profile data
+ * 
+ * ACCESS CONTROL:
+ * - Requires admin or moderator role (enforced via RLS)
+ */
+
+// ============= IMPORTS SECTION =============
 import React, { useState, useEffect } from 'react';
+// Navigation hook for page redirects
 import { useNavigate } from 'react-router-dom';
+// Supabase client for all database operations
 import { supabase } from '@/integrations/supabase/client';
+// UI Components from shadcn/ui
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,96 +38,149 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Toast for notifications
 import { toast } from 'sonner';
+// Lucide icons
 import { 
-  ArrowLeft, 
-  Shield, 
-  AlertTriangle, 
-  Ban, 
-  MessageSquareWarning,
-  Search,
-  RefreshCw,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Users,
-  Flag,
-  MessageSquare
+  ArrowLeft,           // Back navigation
+  Shield,              // Moderation/security icon
+  AlertTriangle,       // Warning icon
+  Ban,                 // Block icon
+  MessageSquareWarning,// Warning message icon
+  Search,              // Search input icon
+  RefreshCw,           // Refresh button icon
+  Eye,                 // View/review icon
+  CheckCircle,         // Resolved/cleared status
+  XCircle,             // Removed/failed status
+  Clock,               // Pending status
+  Users,               // Users icon
+  Flag,                // Report flag icon
+  MessageSquare        // Message icon
 } from 'lucide-react';
 
+/**
+ * Report Interface
+ * 
+ * Defines structure for user reports submitted through the app.
+ */
 interface Report {
-  id: string;
-  reporter_id: string;
-  reported_user_id: string;
-  report_type: string;
-  content: string | null;
-  status: string;
-  action_taken: string | null;
-  created_at: string;
+  id: string;                    // UUID of report
+  reporter_id: string;           // UUID of user who submitted report
+  reported_user_id: string;      // UUID of reported user
+  report_type: string;           // Category (harassment, spam, etc.)
+  content: string | null;        // Optional description
+  status: string;                // pending, resolved, dismissed
+  action_taken: string | null;   // What action was taken
+  created_at: string;            // When report was submitted
 }
 
+/**
+ * FlaggedMessage Interface
+ * 
+ * Chat messages that have been flagged for review.
+ */
 interface FlaggedMessage {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  message: string;
-  flag_reason: string | null;
-  moderation_status: string | null;
-  created_at: string;
+  id: string;                        // Message UUID
+  sender_id: string;                 // Who sent the message
+  receiver_id: string;               // Who received it
+  message: string;                   // Message content
+  flag_reason: string | null;        // Why it was flagged
+  moderation_status: string | null;  // pending, cleared, removed
+  created_at: string;                // When sent
 }
 
+/**
+ * UserBlock Interface
+ * 
+ * Records of blocked users.
+ */
 interface UserBlock {
-  id: string;
-  blocked_user_id: string;
-  reason: string | null;
-  block_type: string;
-  expires_at: string | null;
-  created_at: string;
+  id: string;                    // Block record UUID
+  blocked_user_id: string;       // Who is blocked
+  reason: string | null;         // Why they were blocked
+  block_type: string;            // temporary or permanent
+  expires_at: string | null;     // When block expires (if temporary)
+  created_at: string;            // When blocked
 }
 
+/**
+ * Profile Interface
+ * 
+ * Minimal profile data for displaying user names.
+ */
 interface Profile {
-  user_id: string;
-  full_name: string | null;
-  photo_url: string | null;
+  user_id: string;           // User UUID
+  full_name: string | null;  // Display name
+  photo_url: string | null;  // Avatar URL
 }
 
+/**
+ * AdminModerationScreen Component
+ * 
+ * Main admin moderation interface with tabs for:
+ * - Reports: User-submitted reports
+ * - Flagged: Auto-flagged chat messages
+ * - Blocked: Currently blocked users
+ */
 const AdminModerationScreen = () => {
+  // ============= HOOKS =============
   const navigate = useNavigate();
+  
+  // ============= STATE =============
+  
+  // Data arrays from database
   const [reports, setReports] = useState<Report[]>([]);
   const [flaggedMessages, setFlaggedMessages] = useState<FlaggedMessage[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<UserBlock[]>([]);
+  
+  // Profile cache for user names
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
+  
+  // Loading state
   const [loading, setLoading] = useState(true);
+  
+  // Search/filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
-  // Dialog states
+  // Dialog states for actions
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<FlaggedMessage | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [warnDialogOpen, setWarnDialogOpen] = useState(false);
+  
+  // Form input states
   const [actionReason, setActionReason] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
   const [blockType, setBlockType] = useState('temporary');
   const [targetUserId, setTargetUserId] = useState('');
 
+  /**
+   * useEffect: Load Data and Setup Realtime
+   * 
+   * On mount:
+   * 1. Load all moderation data
+   * 2. Subscribe to real-time updates
+   */
   useEffect(() => {
     loadData();
     
-    // Set up real-time subscription for new reports
+    // ============= REALTIME SUBSCRIPTIONS =============
+    
+    // Subscribe to new/updated reports
     const reportsChannel = supabase
       .channel('moderation-reports')
       .on('postgres_changes', {
-        event: '*',
+        event: '*',  // All events (INSERT, UPDATE, DELETE)
         schema: 'public',
         table: 'moderation_reports'
       }, () => {
-        loadReports();
+        loadReports(); // Reload reports on any change
       })
       .subscribe();
 
+    // Subscribe to flagged message updates
     const messagesChannel = supabase
       .channel('flagged-messages')
       .on('postgres_changes', {
@@ -108,27 +189,40 @@ const AdminModerationScreen = () => {
         table: 'chat_messages',
         filter: 'flagged=eq.true'
       }, () => {
-        loadFlaggedMessages();
+        loadFlaggedMessages(); // Reload flagged messages
       })
       .subscribe();
 
+    // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(reportsChannel);
       supabase.removeChannel(messagesChannel);
     };
   }, []);
 
+  /**
+   * loadData Function
+   * 
+   * Loads all moderation data in parallel.
+   */
   const loadData = async () => {
     setLoading(true);
+    // Load all data types concurrently
     await Promise.all([loadReports(), loadFlaggedMessages(), loadBlockedUsers()]);
     setLoading(false);
   };
 
+  /**
+   * loadReports Function
+   * 
+   * Fetches all moderation reports from database.
+   * Also loads profiles for reporter and reported users.
+   */
   const loadReports = async () => {
     const { data, error } = await supabase
       .from('moderation_reports')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }); // Newest first
 
     if (error) {
       console.error('Error loading reports:', error);
@@ -137,7 +231,7 @@ const AdminModerationScreen = () => {
 
     setReports(data || []);
     
-    // Load profiles for users in reports
+    // Collect user IDs for profile lookup
     const userIds = new Set<string>();
     data?.forEach(r => {
       userIds.add(r.reporter_id);
@@ -146,13 +240,18 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
+  /**
+   * loadFlaggedMessages Function
+   * 
+   * Fetches chat messages marked as flagged.
+   */
   const loadFlaggedMessages = async () => {
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('flagged', true)
+      .eq('flagged', true)  // Only flagged messages
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(100);  // Limit for performance
 
     if (error) {
       console.error('Error loading flagged messages:', error);
@@ -161,6 +260,7 @@ const AdminModerationScreen = () => {
 
     setFlaggedMessages(data || []);
     
+    // Load profiles for senders and receivers
     const userIds = new Set<string>();
     data?.forEach(m => {
       userIds.add(m.sender_id);
@@ -169,6 +269,11 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
+  /**
+   * loadBlockedUsers Function
+   * 
+   * Fetches all currently blocked users.
+   */
   const loadBlockedUsers = async () => {
     const { data, error } = await supabase
       .from('user_blocks')
@@ -182,10 +287,19 @@ const AdminModerationScreen = () => {
 
     setBlockedUsers(data || []);
     
+    // Load profiles for blocked users
     const userIds = data?.map(b => b.blocked_user_id) || [];
     await loadProfiles(userIds);
   };
 
+  /**
+   * loadProfiles Function
+   * 
+   * Batch loads user profiles for display names.
+   * Updates profile cache Map.
+   * 
+   * @param userIds - Array of user UUIDs to load
+   */
   const loadProfiles = async (userIds: string[]) => {
     if (userIds.length === 0) return;
 
@@ -199,18 +313,38 @@ const AdminModerationScreen = () => {
       return;
     }
 
+    // Add to existing profile cache
     const newProfiles = new Map(profiles);
     data?.forEach(p => newProfiles.set(p.user_id, p));
     setProfiles(newProfiles);
   };
 
+  /**
+   * getUserName Function
+   * 
+   * Retrieves display name from profile cache.
+   * 
+   * @param userId - User UUID to look up
+   * @returns Display name or "Unknown User"
+   */
   const getUserName = (userId: string) => {
     return profiles.get(userId)?.full_name || 'Unknown User';
   };
 
+  /**
+   * handleResolveReport Function
+   * 
+   * Resolves a report with specified action.
+   * Updates report status in database.
+   * 
+   * @param reportId - Report UUID
+   * @param action - Action taken (e.g., "warned", "blocked", "dismissed")
+   */
   const handleResolveReport = async (reportId: string, action: string) => {
+    // Get current admin user
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Update report in database
     const { error } = await supabase
       .from('moderation_reports')
       .update({
@@ -228,17 +362,25 @@ const AdminModerationScreen = () => {
     }
 
     toast.success('Report resolved successfully');
+    // Reset dialog state
     setActionDialogOpen(false);
     setSelectedReport(null);
     setActionReason('');
-    loadReports();
+    loadReports(); // Refresh list
   };
 
+  /**
+   * handleBlockUser Function
+   * 
+   * Creates a block record for a user.
+   * Temporary blocks expire after 7 days.
+   */
   const handleBlockUser = async () => {
     if (!targetUserId) return;
     
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Insert block record
     const { error } = await supabase
       .from('user_blocks')
       .insert({
@@ -246,7 +388,10 @@ const AdminModerationScreen = () => {
         blocked_by: user?.id,
         reason: actionReason,
         block_type: blockType,
-        expires_at: blockType === 'temporary' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null
+        // Set expiry for temporary blocks (7 days)
+        expires_at: blockType === 'temporary' 
+          ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
+          : null
       });
 
     if (error) {
@@ -261,6 +406,13 @@ const AdminModerationScreen = () => {
     loadBlockedUsers();
   };
 
+  /**
+   * handleUnblockUser Function
+   * 
+   * Removes a block record, restoring user access.
+   * 
+   * @param blockId - Block record UUID
+   */
   const handleUnblockUser = async (blockId: string) => {
     const { error } = await supabase
       .from('user_blocks')
@@ -276,11 +428,18 @@ const AdminModerationScreen = () => {
     loadBlockedUsers();
   };
 
+  /**
+   * handleWarnUser Function
+   * 
+   * Sends a warning to a user.
+   * Creates warning record in database.
+   */
   const handleWarnUser = async () => {
     if (!targetUserId || !warningMessage) return;
     
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Insert warning record
     const { error } = await supabase
       .from('user_warnings')
       .insert({
@@ -301,6 +460,14 @@ const AdminModerationScreen = () => {
     setWarningMessage('');
   };
 
+  /**
+   * handleResolveMessage Function
+   * 
+   * Updates moderation status of a flagged message.
+   * 
+   * @param messageId - Message UUID
+   * @param status - New status (cleared, removed)
+   */
   const handleResolveMessage = async (messageId: string, status: string) => {
     const { error } = await supabase
       .from('chat_messages')
@@ -316,6 +483,14 @@ const AdminModerationScreen = () => {
     loadFlaggedMessages();
   };
 
+  /**
+   * getStatusBadge Function
+   * 
+   * Returns appropriate badge component for status.
+   * 
+   * @param status - Status string
+   * @returns JSX Badge element
+   */
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -333,13 +508,25 @@ const AdminModerationScreen = () => {
     }
   };
 
+  /**
+   * filteredReports
+   * 
+   * Applies search and status filters to reports.
+   */
   const filteredReports = reports.filter(r => {
+    // Search filter: match user name or content
     const matchesSearch = getUserName(r.reported_user_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (r.content?.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Status filter
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  /**
+   * stats Object
+   * 
+   * Computed statistics for dashboard cards.
+   */
   const stats = {
     totalReports: reports.length,
     pendingReports: reports.filter(r => r.status === 'pending').length,
@@ -347,6 +534,7 @@ const AdminModerationScreen = () => {
     blockedUsers: blockedUsers.length
   };
 
+  // ============= LOADING STATE =============
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -355,12 +543,14 @@ const AdminModerationScreen = () => {
     );
   }
 
+  // ============= MAIN RENDER =============
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* ============= HEADER ============= */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
+            {/* Back navigation */}
             <Button variant="ghost" size="icon" onClick={() => navigate('/admin/analytics')}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -369,6 +559,7 @@ const AdminModerationScreen = () => {
               <p className="text-sm text-muted-foreground">Monitor and manage user reports</p>
             </div>
           </div>
+          {/* Refresh button */}
           <Button variant="outline" size="sm" onClick={loadData}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -377,8 +568,9 @@ const AdminModerationScreen = () => {
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Stats Cards */}
+        {/* ============= STATS CARDS ============= */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Total Reports Card */}
           <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -393,6 +585,7 @@ const AdminModerationScreen = () => {
             </CardContent>
           </Card>
 
+          {/* Pending Review Card */}
           <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: '50ms' }}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -407,6 +600,7 @@ const AdminModerationScreen = () => {
             </CardContent>
           </Card>
 
+          {/* Flagged Messages Card */}
           <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: '100ms' }}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -421,6 +615,7 @@ const AdminModerationScreen = () => {
             </CardContent>
           </Card>
 
+          {/* Blocked Users Card */}
           <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: '150ms' }}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -436,7 +631,7 @@ const AdminModerationScreen = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
+        {/* ============= TABS NAVIGATION ============= */}
         <Tabs defaultValue="reports" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="reports" className="flex items-center gap-2">
@@ -453,9 +648,9 @@ const AdminModerationScreen = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Reports Tab */}
+          {/* ============= REPORTS TAB ============= */}
           <TabsContent value="reports" className="space-y-4">
-            {/* Filters */}
+            {/* Search and filter controls */}
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -479,10 +674,11 @@ const AdminModerationScreen = () => {
               </Select>
             </div>
 
-            {/* Reports List */}
+            {/* Reports list */}
             <ScrollArea className="h-[500px]">
               <div className="space-y-3">
                 {filteredReports.length === 0 ? (
+                  // Empty state
                   <Card>
                     <CardContent className="p-8 text-center text-muted-foreground">
                       <Shield className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -490,6 +686,7 @@ const AdminModerationScreen = () => {
                     </CardContent>
                   </Card>
                 ) : (
+                  // Map through filtered reports
                   filteredReports.map((report, index) => (
                     <Card 
                       key={report.id}
@@ -499,19 +696,26 @@ const AdminModerationScreen = () => {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
+                            {/* Report type and status badges */}
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="secondary" className="text-xs">{report.report_type.replace(/_/g, ' ')}</Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {report.report_type.replace(/_/g, ' ')}
+                              </Badge>
                               {getStatusBadge(report.status)}
                             </div>
+                            {/* Reported and reporter names */}
                             <p className="font-medium">Reported: {getUserName(report.reported_user_id)}</p>
                             <p className="text-sm text-muted-foreground">By: {getUserName(report.reporter_id)}</p>
+                            {/* Report content if provided */}
                             {report.content && (
                               <p className="text-sm mt-2 p-2 bg-muted rounded-md">{report.content}</p>
                             )}
+                            {/* Timestamp */}
                             <p className="text-xs text-muted-foreground mt-2">
                               {new Date(report.created_at).toLocaleString()}
                             </p>
                           </div>
+                          {/* Action buttons */}
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -524,6 +728,7 @@ const AdminModerationScreen = () => {
                               <Eye className="w-4 h-4 mr-1" />
                               Review
                             </Button>
+                            {/* Show warn/block only for pending reports */}
                             {report.status === 'pending' && (
                               <>
                                 <Button
@@ -560,7 +765,7 @@ const AdminModerationScreen = () => {
             </ScrollArea>
           </TabsContent>
 
-          {/* Flagged Messages Tab */}
+          {/* ============= FLAGGED MESSAGES TAB ============= */}
           <TabsContent value="flagged" className="space-y-4">
             <ScrollArea className="h-[500px]">
               <div className="space-y-3">
@@ -581,6 +786,7 @@ const AdminModerationScreen = () => {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
+                            {/* Flagged badge and moderation status */}
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="destructive" className="text-xs">
                                 <AlertTriangle className="w-3 h-3 mr-1" />
@@ -588,12 +794,15 @@ const AdminModerationScreen = () => {
                               </Badge>
                               {msg.moderation_status && getStatusBadge(msg.moderation_status)}
                             </div>
+                            {/* Sender -> Receiver */}
                             <p className="text-sm">
                               <span className="font-medium">{getUserName(msg.sender_id)}</span>
                               <span className="text-muted-foreground"> → </span>
                               <span className="font-medium">{getUserName(msg.receiver_id)}</span>
                             </p>
+                            {/* Message content */}
                             <p className="text-sm mt-2 p-2 bg-muted rounded-md">{msg.message}</p>
+                            {/* Flag reason if available */}
                             {msg.flag_reason && (
                               <p className="text-xs text-amber-500 mt-2">Reason: {msg.flag_reason}</p>
                             )}
@@ -601,7 +810,9 @@ const AdminModerationScreen = () => {
                               {new Date(msg.created_at).toLocaleString()}
                             </p>
                           </div>
+                          {/* Action buttons for flagged messages */}
                           <div className="flex gap-2">
+                            {/* Clear message button */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -610,6 +821,7 @@ const AdminModerationScreen = () => {
                             >
                               <CheckCircle className="w-4 h-4" />
                             </Button>
+                            {/* Remove message button */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -618,6 +830,7 @@ const AdminModerationScreen = () => {
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>
+                            {/* Warn sender button */}
                             <Button
                               variant="outline"
                               size="sm"
@@ -639,7 +852,7 @@ const AdminModerationScreen = () => {
             </ScrollArea>
           </TabsContent>
 
-          {/* Blocked Users Tab */}
+          {/* ============= BLOCKED USERS TAB ============= */}
           <TabsContent value="blocked" className="space-y-4">
             <ScrollArea className="h-[500px]">
               <div className="space-y-3">
@@ -660,17 +873,21 @@ const AdminModerationScreen = () => {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div>
+                            {/* Blocked user name */}
                             <p className="font-medium">{getUserName(block.blocked_user_id)}</p>
                             <div className="flex items-center gap-2 mt-1">
+                              {/* Block type badge */}
                               <Badge variant={block.block_type === 'permanent' ? 'destructive' : 'secondary'}>
                                 {block.block_type}
                               </Badge>
+                              {/* Expiry date for temporary blocks */}
                               {block.expires_at && (
                                 <span className="text-xs text-muted-foreground">
                                   Expires: {new Date(block.expires_at).toLocaleDateString()}
                                 </span>
                               )}
                             </div>
+                            {/* Block reason */}
                             {block.reason && (
                               <p className="text-sm text-muted-foreground mt-2">{block.reason}</p>
                             )}
@@ -678,6 +895,7 @@ const AdminModerationScreen = () => {
                               Blocked on: {new Date(block.created_at).toLocaleString()}
                             </p>
                           </div>
+                          {/* Unblock button */}
                           <Button
                             variant="outline"
                             size="sm"
@@ -696,7 +914,7 @@ const AdminModerationScreen = () => {
         </Tabs>
       </div>
 
-      {/* Action Dialog for Reports */}
+      {/* ============= REVIEW REPORT DIALOG ============= */}
       <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -705,6 +923,7 @@ const AdminModerationScreen = () => {
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-4">
+              {/* Report summary */}
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm"><strong>Reported User:</strong> {getUserName(selectedReport.reported_user_id)}</p>
                 <p className="text-sm"><strong>Reporter:</strong> {getUserName(selectedReport.reporter_id)}</p>
@@ -713,6 +932,7 @@ const AdminModerationScreen = () => {
                   <p className="text-sm mt-2"><strong>Content:</strong> {selectedReport.content}</p>
                 )}
               </div>
+              {/* Notes textarea */}
               <Textarea
                 placeholder="Add notes about your decision..."
                 value={actionReason}
@@ -737,7 +957,7 @@ const AdminModerationScreen = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Block User Dialog */}
+      {/* ============= BLOCK USER DIALOG ============= */}
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -745,6 +965,7 @@ const AdminModerationScreen = () => {
             <DialogDescription>This will prevent the user from using the platform</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Block type selector */}
             <Select value={blockType} onValueChange={setBlockType}>
               <SelectTrigger>
                 <SelectValue placeholder="Block type" />
@@ -754,6 +975,7 @@ const AdminModerationScreen = () => {
                 <SelectItem value="permanent">Permanent</SelectItem>
               </SelectContent>
             </Select>
+            {/* Block reason */}
             <Textarea
               placeholder="Reason for blocking..."
               value={actionReason}
@@ -770,13 +992,14 @@ const AdminModerationScreen = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Warn User Dialog */}
+      {/* ============= WARN USER DIALOG ============= */}
       <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Warning</DialogTitle>
             <DialogDescription>Send a warning message to this user</DialogDescription>
           </DialogHeader>
+          {/* Warning message input */}
           <Textarea
             placeholder="Warning message..."
             value={warningMessage}
@@ -796,4 +1019,5 @@ const AdminModerationScreen = () => {
   );
 };
 
+// Export as default for router
 export default AdminModerationScreen;
