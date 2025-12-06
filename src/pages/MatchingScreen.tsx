@@ -25,9 +25,11 @@ interface MatchableWoman {
   age: number | null;
   photoUrl: string | null;
   motherTongue: string;
+  country: string | null;
   isOnline: boolean;
   isBusy: boolean;
   currentChatCount: number;
+  canEarn: boolean; // Only Indian women can earn
 }
 
 const MatchingScreen = () => {
@@ -145,10 +147,10 @@ const MatchingScreen = () => {
         return;
       }
 
-      // Fetch female profiles
+      // Fetch female profiles with country info
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, age, primary_language, preferred_language")
+        .select("user_id, full_name, photo_url, age, primary_language, preferred_language, country")
         .eq("gender", "Female")
         .in("user_id", onlineUserIds);
 
@@ -178,6 +180,7 @@ const MatchingScreen = () => {
 
           const avail = availabilityMap.get(profile.user_id);
           const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
+          const isIndian = profile.country?.toLowerCase() === "india";
 
           return {
             userId: profile.user_id,
@@ -185,9 +188,11 @@ const MatchingScreen = () => {
             age: profile.age,
             photoUrl: profile.photo_url,
             motherTongue: womanLanguage,
+            country: profile.country,
             isOnline: true,
             isBusy,
             currentChatCount: avail?.current_chat_count || 0,
+            canEarn: isIndian, // Only Indian women can earn
           };
         })
       );
@@ -222,15 +227,27 @@ const MatchingScreen = () => {
       w.userId !== excludeUserId
     );
 
-    // Prioritize same language
+    // Priority 1: Same language women
     const sameLanguageWomen = availableWomen.filter(
       w => w.motherTongue.toLowerCase() === currentUserLanguage.toLowerCase()
     );
 
     if (sameLanguageWomen.length > 0) {
+      // Prefer Indian women from same language as they can earn
+      const indianSameLanguage = sameLanguageWomen.filter(w => w.canEarn);
+      if (indianSameLanguage.length > 0) {
+        return indianSameLanguage[0];
+      }
       return sameLanguageWomen[0];
     }
 
+    // Priority 2: If no same language women, fallback to Indian women (who support NLLB-200 translation)
+    const indianWomen = availableWomen.filter(w => w.canEarn);
+    if (indianWomen.length > 0) {
+      return indianWomen[0];
+    }
+
+    // Priority 3: Any available woman
     return availableWomen[0] || null;
   }, [matchableWomen, currentUserLanguage]);
 
@@ -577,13 +594,19 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }
       <div className="p-4 space-y-3">
         <div>
           <h4 className="font-semibold text-foreground truncate">{woman.fullName}</h4>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
             {woman.age && <span>{woman.age} yrs</span>}
             <span>•</span>
             <div className="flex items-center gap-1">
               <Languages className="w-3.5 h-3.5" />
               <span>{woman.motherTongue}</span>
             </div>
+            {woman.country && (
+              <>
+                <span>•</span>
+                <span>{woman.country}</span>
+              </>
+            )}
           </div>
         </div>
 
