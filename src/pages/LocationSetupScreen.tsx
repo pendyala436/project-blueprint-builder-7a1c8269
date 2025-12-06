@@ -1,0 +1,322 @@
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import MeowLogo from "@/components/MeowLogo";
+import ProgressIndicator from "@/components/ProgressIndicator";
+import { useToast } from "@/hooks/use-toast";
+import { MapPin, Navigation, Loader2, Globe } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
+import { countries } from "@/data/countries";
+import { supabase } from "@/integrations/supabase/client";
+
+const LocationSetupScreen = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [locationDetected, setLocationDetected] = useState(false);
+  const [pinDropped, setPinDropped] = useState(false);
+  
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [country, setCountry] = useState("");
+  const [state, setState] = useState("");
+  const [manualMode, setManualMode] = useState(false);
+
+  const countryOptions = countries.map(c => ({
+    value: c.code,
+    label: c.name,
+    icon: c.flag
+  }));
+
+  const detectLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser doesn't support location detection. Please enter manually.",
+        variant: "destructive",
+      });
+      setManualMode(true);
+      return;
+    }
+
+    setIsDetecting(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        setLatitude(lat);
+        setLongitude(lng);
+        
+        // Reverse geocoding to get country and state
+        try {
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+          );
+          const data = await response.json();
+          
+          if (data.countryCode) {
+            setCountry(data.countryCode);
+          }
+          if (data.principalSubdivision) {
+            setState(data.principalSubdivision);
+          }
+          
+          setLocationDetected(true);
+          
+          // Trigger pin drop animation
+          setTimeout(() => {
+            setPinDropped(true);
+          }, 500);
+          
+          toast({
+            title: "Location detected",
+            description: `${data.city || data.locality || ''}, ${data.principalSubdivision || ''}, ${data.countryName || ''}`,
+          });
+        } catch (error) {
+          console.error("Reverse geocoding failed:", error);
+          setLocationDetected(true);
+          setTimeout(() => setPinDropped(true), 500);
+        }
+        
+        setIsDetecting(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast({
+          title: "Location detection failed",
+          description: "Please enter your location manually.",
+          variant: "destructive",
+        });
+        setManualMode(true);
+        setIsDetecting(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }, [toast]);
+
+  const handleSubmit = async () => {
+    if (!country) {
+      toast({
+        title: "Country required",
+        description: "Please select your country.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Not authenticated",
+          description: "Please sign in to continue.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          latitude,
+          longitude,
+          country,
+          state: state || null,
+        })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Location saved",
+        description: "Your location has been saved successfully.",
+      });
+
+      navigate("/password-setup");
+    } catch (error) {
+      console.error("Error saving location:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save location. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+      {/* Header */}
+      <header className="p-6 flex justify-between items-center">
+        <MeowLogo />
+        <ProgressIndicator currentStep={4} totalSteps={5} />
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center p-6">
+        <Card className="w-full max-w-lg p-8 space-y-8 bg-card/80 backdrop-blur-sm border-border/50 shadow-xl">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Globe className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Your Location</h1>
+            <p className="text-muted-foreground">
+              Help us personalize your experience
+            </p>
+          </div>
+
+          {/* Map Placeholder */}
+          <div 
+            className={`relative w-full h-48 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/20 border border-border/50 transition-all duration-700 ${
+              locationDetected ? 'scale-100' : 'scale-95 opacity-80'
+            }`}
+          >
+            {/* Grid pattern for map effect */}
+            <div className="absolute inset-0 opacity-30">
+              <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-primary/30" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+              </svg>
+            </div>
+
+            {/* Animated circles for location effect */}
+            {locationDetected && (
+              <>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-32 h-32 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }} />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 rounded-full bg-primary/20 animate-pulse" />
+                </div>
+              </>
+            )}
+
+            {/* Location Pin with drop animation */}
+            <div 
+              className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${
+                pinDropped 
+                  ? 'translate-y-0 opacity-100' 
+                  : locationDetected 
+                    ? '-translate-y-full opacity-0' 
+                    : 'opacity-50'
+              }`}
+            >
+              <div className={`relative ${pinDropped ? 'animate-bounce' : ''}`} style={{ animationIterationCount: 2 }}>
+                <MapPin 
+                  className={`w-12 h-12 text-primary drop-shadow-lg transition-transform duration-300 ${
+                    pinDropped ? 'scale-110' : 'scale-100'
+                  }`} 
+                  fill="currentColor"
+                />
+                {pinDropped && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-2 bg-foreground/20 rounded-full blur-sm" />
+                )}
+              </div>
+            </div>
+
+            {/* Coordinates display */}
+            {latitude && longitude && (
+              <div className="absolute bottom-3 left-3 right-3 flex justify-between text-xs font-mono text-muted-foreground bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2">
+                <span>Lat: {latitude.toFixed(4)}°</span>
+                <span>Lng: {longitude.toFixed(4)}°</span>
+              </div>
+            )}
+          </div>
+
+          {/* Detect Location Button */}
+          <Button
+            variant="outline"
+            className="w-full gap-2 h-12"
+            onClick={detectLocation}
+            disabled={isDetecting}
+          >
+            {isDetecting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Detecting location...
+              </>
+            ) : (
+              <>
+                <Navigation className="w-5 h-5" />
+                Detect My Location
+              </>
+            )}
+          </Button>
+
+          {/* Manual Input Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                {locationDetected ? 'Confirm or edit' : 'Or enter manually'}
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="country">Country *</Label>
+                <SearchableSelect
+                  options={countryOptions}
+                  value={country}
+                  onChange={setCountry}
+                  placeholder="Select your country"
+                  searchPlaceholder="Search countries..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State / Province</Label>
+                <Input
+                  id="state"
+                  placeholder="Enter your state or province"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || !country}
+            className="w-full h-12 text-base font-medium"
+            variant="gradient"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Continue"
+            )}
+          </Button>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+export default LocationSetupScreen;

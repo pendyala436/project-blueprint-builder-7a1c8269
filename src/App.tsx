@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import BasicInfoScreen from "./pages/BasicInfoScreen";
 import PhotoUploadScreen from "./pages/PhotoUploadScreen";
+import LocationSetupScreen from "./pages/LocationSetupScreen";
 import PasswordSetupScreen from "./pages/PasswordSetupScreen";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/basic-info" element={<BasicInfoScreen />} />
           <Route path="/photo-upload" element={<PhotoUploadScreen />} />
+          <Route path="/location-setup" element={<LocationSetupScreen />} />
           <Route path="/password-setup" element={<PasswordSetupScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

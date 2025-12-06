@@ -22,8 +22,11 @@ export type Database = {
           full_name: string | null
           gender: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           photo_url: string | null
           preferred_language: string | null
+          state: string | null
           updated_at: string
           user_id: string
           verification_status: boolean | null
@@ -35,8 +38,11 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           photo_url?: string | null
           preferred_language?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
           verification_status?: boolean | null
@@ -48,8 +54,11 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           photo_url?: string | null
           preferred_language?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
           verification_status?: boolean | null
