@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Download, Users, TrendingUp, Globe, Languages, IndianRupee, Calendar, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, Users, TrendingUp, TrendingDown, Globe, Languages, IndianRupee, Calendar, BarChart3, DollarSign } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -16,12 +16,15 @@ import {
   Area,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
 } from "recharts";
 
 interface MenSpending {
@@ -50,6 +53,7 @@ interface CountrySummary {
   country: string;
   men_spending: number;
   women_earnings: number;
+  profit: number;
   user_count: number;
 }
 
@@ -57,6 +61,7 @@ interface LanguageSummary {
   language: string;
   men_spending: number;
   women_earnings: number;
+  profit: number;
   user_count: number;
 }
 
@@ -67,6 +72,7 @@ interface MonthlyTrend {
   womenEarnings: number;
   chatSpending: number;
   giftSpending: number;
+  profit: number;
   activeUsers: number;
 }
 
@@ -96,6 +102,7 @@ const AdminFinanceReports = () => {
   const [totals, setTotals] = useState({
     totalMenSpending: 0,
     totalWomenEarnings: 0,
+    totalProfit: 0,
     totalMen: 0,
     totalWomen: 0,
   });
@@ -164,6 +171,7 @@ const AdminFinanceReports = () => {
           womenEarnings: womenEarningsTotal,
           chatSpending,
           giftSpending,
+          profit: menSpendingTotal - womenEarningsTotal,
           activeUsers: uniqueUsers.size,
         });
       }
@@ -307,31 +315,41 @@ const AdminFinanceReports = () => {
       // Calculate country summary
       const countryMap = new Map<string, CountrySummary>();
       menList.forEach(m => {
-        const existing = countryMap.get(m.country) || { country: m.country, men_spending: 0, women_earnings: 0, user_count: 0 };
+        const existing = countryMap.get(m.country) || { country: m.country, men_spending: 0, women_earnings: 0, profit: 0, user_count: 0 };
         existing.men_spending += m.total_spent;
         existing.user_count += 1;
         countryMap.set(m.country, existing);
       });
       womenList.forEach(w => {
-        const existing = countryMap.get(w.country) || { country: w.country, men_spending: 0, women_earnings: 0, user_count: 0 };
+        const existing = countryMap.get(w.country) || { country: w.country, men_spending: 0, women_earnings: 0, profit: 0, user_count: 0 };
         existing.women_earnings += w.total_earned;
         existing.user_count += 1;
         countryMap.set(w.country, existing);
+      });
+      // Calculate profit for each country
+      countryMap.forEach((value, key) => {
+        value.profit = value.men_spending - value.women_earnings;
+        countryMap.set(key, value);
       });
 
       // Calculate language summary
       const langMap = new Map<string, LanguageSummary>();
       menList.forEach(m => {
-        const existing = langMap.get(m.language) || { language: m.language, men_spending: 0, women_earnings: 0, user_count: 0 };
+        const existing = langMap.get(m.language) || { language: m.language, men_spending: 0, women_earnings: 0, profit: 0, user_count: 0 };
         existing.men_spending += m.total_spent;
         existing.user_count += 1;
         langMap.set(m.language, existing);
       });
       womenList.forEach(w => {
-        const existing = langMap.get(w.language) || { language: w.language, men_spending: 0, women_earnings: 0, user_count: 0 };
+        const existing = langMap.get(w.language) || { language: w.language, men_spending: 0, women_earnings: 0, profit: 0, user_count: 0 };
         existing.women_earnings += w.total_earned;
         existing.user_count += 1;
         langMap.set(w.language, existing);
+      });
+      // Calculate profit for each language
+      langMap.forEach((value, key) => {
+        value.profit = value.men_spending - value.women_earnings;
+        langMap.set(key, value);
       });
 
       // Get unique countries and languages for filters
@@ -349,9 +367,13 @@ const AdminFinanceReports = () => {
       setCountrySummary(Array.from(countryMap.values()).sort((a, b) => b.men_spending - a.men_spending));
       setLanguageSummary(Array.from(langMap.values()).sort((a, b) => b.men_spending - a.men_spending));
       
+      const totalMenSpend = menList.reduce((sum, m) => sum + m.total_spent, 0);
+      const totalWomenEarn = womenList.reduce((sum, w) => sum + w.total_earned, 0);
+      
       setTotals({
-        totalMenSpending: menList.reduce((sum, m) => sum + m.total_spent, 0),
-        totalWomenEarnings: womenList.reduce((sum, w) => sum + w.total_earned, 0),
+        totalMenSpending: totalMenSpend,
+        totalWomenEarnings: totalWomenEarn,
+        totalProfit: totalMenSpend - totalWomenEarn,
         totalMen: menList.length,
         totalWomen: womenList.length,
       });
@@ -397,11 +419,12 @@ const AdminFinanceReports = () => {
   };
 
   const exportCountrySummary = () => {
-    const headers = ["Country", "Men Spending", "Women Earnings", "User Count"];
+    const headers = ["Country", "Men Spending", "Women Earnings", "Profit", "User Count"];
     const rows = countrySummary.map(c => [
       c.country,
       c.men_spending.toFixed(2),
       c.women_earnings.toFixed(2),
+      c.profit.toFixed(2),
       c.user_count.toString(),
     ]);
     downloadCSV([headers, ...rows], `country_summary_${selectedMonth}.csv`);
@@ -409,11 +432,12 @@ const AdminFinanceReports = () => {
   };
 
   const exportLanguageSummary = () => {
-    const headers = ["Language", "Men Spending", "Women Earnings", "User Count"];
+    const headers = ["Language", "Men Spending", "Women Earnings", "Profit", "User Count"];
     const rows = languageSummary.map(l => [
       l.language,
       l.men_spending.toFixed(2),
       l.women_earnings.toFixed(2),
+      l.profit.toFixed(2),
       l.user_count.toString(),
     ]);
     downloadCSV([headers, ...rows], `language_summary_${selectedMonth}.csv`);
@@ -515,7 +539,7 @@ const AdminFinanceReports = () => {
         </Card>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -548,7 +572,7 @@ const AdminFinanceReports = () => {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-red-500/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-red-500" />
+                  <TrendingDown className="h-6 w-6 text-red-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Men Spending</p>
@@ -561,12 +585,28 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <IndianRupee className="h-6 w-6 text-green-500" />
+                <div className="p-3 bg-orange-500/10 rounded-lg">
+                  <IndianRupee className="h-6 w-6 text-orange-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Women Earnings</p>
                   <p className="text-2xl font-bold">₹{totals.totalWomenEarnings.toFixed(0)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={totals.totalProfit >= 0 ? "border-green-500/50" : "border-red-500/50"}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-lg ${totals.totalProfit >= 0 ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                  <DollarSign className={`h-6 w-6 ${totals.totalProfit >= 0 ? "text-green-500" : "text-red-500"}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Platform Profit</p>
+                  <p className={`text-2xl font-bold ${totals.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {totals.totalProfit >= 0 ? "+" : ""}₹{totals.totalProfit.toFixed(0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -640,6 +680,41 @@ const AdminFinanceReports = () => {
                     <Bar dataKey="chatSpending" name="Chat Spending" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="giftSpending" name="Gift Spending" fill="hsl(316, 73%, 52%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Profit Trend */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                6-Month Profit/Loss Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="monthLabel" className="text-xs" />
+                    <YAxis className="text-xs" tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                      formatter={(value: number) => [`₹${value.toFixed(2)}`, ""]}
+                    />
+                    <Legend />
+                    <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      name="Platform Profit"
+                      stroke="hsl(142, 76%, 36%)"
+                      fill="hsl(142, 76%, 36%)"
+                      fillOpacity={0.4}
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -770,13 +845,14 @@ const AdminFinanceReports = () => {
                       <TableHead>Country</TableHead>
                       <TableHead className="text-right">Men Spending</TableHead>
                       <TableHead className="text-right">Women Earnings</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
                       <TableHead className="text-right">Users</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {countrySummary.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No data for this period
                         </TableCell>
                       </TableRow>
@@ -789,8 +865,11 @@ const AdminFinanceReports = () => {
                               {c.country}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right text-red-600">₹{c.men_spending.toFixed(2)}</TableCell>
-                          <TableCell className="text-right text-green-600">₹{c.women_earnings.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{c.men_spending.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{c.women_earnings.toFixed(2)}</TableCell>
+                          <TableCell className={`text-right font-bold ${c.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {c.profit >= 0 ? "+" : ""}₹{c.profit.toFixed(2)}
+                          </TableCell>
                           <TableCell className="text-right">{c.user_count}</TableCell>
                         </TableRow>
                       ))
@@ -818,13 +897,14 @@ const AdminFinanceReports = () => {
                       <TableHead>Language</TableHead>
                       <TableHead className="text-right">Men Spending</TableHead>
                       <TableHead className="text-right">Women Earnings</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
                       <TableHead className="text-right">Users</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {languageSummary.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No data for this period
                         </TableCell>
                       </TableRow>
@@ -837,8 +917,11 @@ const AdminFinanceReports = () => {
                               {l.language}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right text-red-600">₹{l.men_spending.toFixed(2)}</TableCell>
-                          <TableCell className="text-right text-green-600">₹{l.women_earnings.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{l.men_spending.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">₹{l.women_earnings.toFixed(2)}</TableCell>
+                          <TableCell className={`text-right font-bold ${l.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {l.profit >= 0 ? "+" : ""}₹{l.profit.toFixed(2)}
+                          </TableCell>
                           <TableCell className="text-right">{l.user_count}</TableCell>
                         </TableRow>
                       ))
