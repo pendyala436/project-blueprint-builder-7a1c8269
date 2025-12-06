@@ -1,9 +1,14 @@
 /**
  * seed-sample-users Edge Function
- * Creates sample auth users with profiles, wallets, and roles.
- * - male1-15, female1-15, admin1-15
+ * Creates mock users with profiles per language for testing.
+ * - 3 men and 3 women per NLLB-200 language
  * - Password: Chinn@2589
  * - Wallets with free balance (no recharge required)
+ * 
+ * Supports:
+ * - action: "seed" - Creates mock users for all languages
+ * - action: "clear" - Deletes all mock users
+ * - action: "status" - Returns current mock user count
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -13,24 +18,103 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface UserToCreate {
-  email: string;
-  password: string;
-  gender: string;
-  role: "user" | "admin";
-  name: string;
+// All NLLB-200 languages for mock user generation
+const INDIAN_LANGUAGES = [
+  { code: "hin_Deva", name: "Hindi", country: "India" },
+  { code: "ben_Beng", name: "Bengali", country: "India" },
+  { code: "tel_Telu", name: "Telugu", country: "India" },
+  { code: "tam_Taml", name: "Tamil", country: "India" },
+  { code: "mar_Deva", name: "Marathi", country: "India" },
+  { code: "guj_Gujr", name: "Gujarati", country: "India" },
+  { code: "kan_Knda", name: "Kannada", country: "India" },
+  { code: "mal_Mlym", name: "Malayalam", country: "India" },
+  { code: "pan_Guru", name: "Punjabi", country: "India" },
+  { code: "ory_Orya", name: "Odia", country: "India" },
+  { code: "asm_Beng", name: "Assamese", country: "India" },
+  { code: "npi_Deva", name: "Nepali", country: "Nepal" },
+  { code: "urd_Arab", name: "Urdu", country: "Pakistan" },
+  { code: "gom_Deva", name: "Konkani", country: "India" },
+  { code: "mai_Deva", name: "Maithili", country: "India" },
+  { code: "sat_Olck", name: "Santali", country: "India" },
+  { code: "brx_Deva", name: "Bodo", country: "India" },
+  { code: "doi_Deva", name: "Dogri", country: "India" },
+  { code: "kas_Arab", name: "Kashmiri", country: "India" },
+  { code: "snd_Arab", name: "Sindhi", country: "Pakistan" },
+  { code: "mni_Beng", name: "Manipuri", country: "India" },
+  { code: "sin_Sinh", name: "Sinhala", country: "Sri Lanka" },
+];
+
+const NON_INDIAN_LANGUAGES = [
+  { code: "eng_Latn", name: "English", country: "United States" },
+  { code: "spa_Latn", name: "Spanish", country: "Spain" },
+  { code: "fra_Latn", name: "French", country: "France" },
+  { code: "deu_Latn", name: "German", country: "Germany" },
+  { code: "por_Latn", name: "Portuguese", country: "Brazil" },
+  { code: "ita_Latn", name: "Italian", country: "Italy" },
+  { code: "nld_Latn", name: "Dutch", country: "Netherlands" },
+  { code: "rus_Cyrl", name: "Russian", country: "Russia" },
+  { code: "pol_Latn", name: "Polish", country: "Poland" },
+  { code: "ukr_Cyrl", name: "Ukrainian", country: "Ukraine" },
+  { code: "zho_Hans", name: "Chinese", country: "China" },
+  { code: "jpn_Jpan", name: "Japanese", country: "Japan" },
+  { code: "kor_Hang", name: "Korean", country: "South Korea" },
+  { code: "vie_Latn", name: "Vietnamese", country: "Vietnam" },
+  { code: "tha_Thai", name: "Thai", country: "Thailand" },
+  { code: "ind_Latn", name: "Indonesian", country: "Indonesia" },
+  { code: "zsm_Latn", name: "Malay", country: "Malaysia" },
+  { code: "tgl_Latn", name: "Tagalog", country: "Philippines" },
+  { code: "arb_Arab", name: "Arabic", country: "Saudi Arabia" },
+  { code: "pes_Arab", name: "Persian", country: "Iran" },
+  { code: "tur_Latn", name: "Turkish", country: "Turkey" },
+  { code: "heb_Hebr", name: "Hebrew", country: "Israel" },
+  { code: "swh_Latn", name: "Swahili", country: "Kenya" },
+  { code: "afr_Latn", name: "Afrikaans", country: "South Africa" },
+];
+
+const ALL_LANGUAGES = [...INDIAN_LANGUAGES, ...NON_INDIAN_LANGUAGES];
+
+// Male and female names per region
+const MALE_NAMES = {
+  indian: ["Raj", "Arjun", "Vikram", "Aditya", "Rohan", "Karthik", "Sanjay", "Deepak", "Amit", "Ravi"],
+  western: ["James", "Michael", "David", "Robert", "John", "William", "Richard", "Thomas", "Charles", "Daniel"],
+  asian: ["Wei", "Takeshi", "Min-Jun", "Nguyen", "Somchai", "Ahmad", "Mohammad", "Ali", "Hassan", "Omar"],
+  african: ["Kwame", "Sipho", "Oluwaseun", "Ibrahim", "Kofi", "Nkosi", "Juma", "Abdul", "Malik", "Tariq"],
+};
+
+const FEMALE_NAMES = {
+  indian: ["Priya", "Ananya", "Divya", "Sneha", "Kavitha", "Meera", "Lakshmi", "Pooja", "Nisha", "Anjali"],
+  western: ["Emma", "Olivia", "Sophia", "Isabella", "Charlotte", "Amelia", "Mia", "Harper", "Evelyn", "Abigail"],
+  asian: ["Sakura", "Mei", "Soo-Yeon", "Linh", "Ploy", "Fatima", "Zahra", "Aisha", "Nur", "Layla"],
+  african: ["Amara", "Zuri", "Adaeze", "Aisha", "Nia", "Thandi", "Ayesha", "Halima", "Amina", "Khadija"],
+};
+
+function getRegion(country: string): string {
+  const indianCountries = ["India", "Nepal", "Pakistan", "Sri Lanka", "Bangladesh"];
+  const asianCountries = ["China", "Japan", "South Korea", "Vietnam", "Thailand", "Indonesia", "Malaysia", "Philippines", "Saudi Arabia", "Iran", "Turkey", "Israel"];
+  const africanCountries = ["Kenya", "South Africa", "Nigeria", "Egypt"];
+  
+  if (indianCountries.includes(country)) return "indian";
+  if (asianCountries.includes(country)) return "asian";
+  if (africanCountries.includes(country)) return "african";
+  return "western";
+}
+
+function getRandomName(gender: "male" | "female", region: string, index: number): string {
+  const names = gender === "male" ? MALE_NAMES : FEMALE_NAMES;
+  const regionNames = names[region as keyof typeof names] || names.western;
+  return regionNames[index % regionNames.length];
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Starting sample users seeding...");
+    const { action = "seed" } = await req.json().catch(() => ({ action: "seed" }));
+    
+    console.log(`Mock users action: ${action}`);
 
-    // Initialize Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
@@ -41,209 +125,138 @@ Deno.serve(async (req) => {
       },
     });
 
-    const password = "Chinn@2589";
-    const usersToCreate: UserToCreate[] = [];
+    // Handle status check
+    if (action === "status") {
+      const { count: mockCount } = await supabaseAdmin
+        .from("sample_users")
+        .select("*", { count: "exact", head: true });
 
-    // Generate male users (male1 to male15)
-    for (let i = 1; i <= 15; i++) {
-      usersToCreate.push({
-        email: `male${i}@meow-meow.com`,
-        password,
-        gender: "male",
-        role: "user",
-        name: `Test Male ${i}`,
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          count: mockCount || 0,
+          enabled: (mockCount || 0) > 0,
+          languageCount: ALL_LANGUAGES.length,
+          expectedCount: ALL_LANGUAGES.length * 6, // 3 men + 3 women per language
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Generate female users (female1 to female15)
-    for (let i = 1; i <= 15; i++) {
-      usersToCreate.push({
-        email: `female${i}@meow-meow.com`,
-        password,
-        gender: "female",
-        role: "user",
-        name: `Test Female ${i}`,
-      });
+    // Handle clear action
+    if (action === "clear") {
+      console.log("Clearing all mock users...");
+      
+      const { error } = await supabaseAdmin
+        .from("sample_users")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
+
+      if (error) throw error;
+
+      console.log("All mock users cleared");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "All mock users have been deleted",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Generate admin users (admin1 to admin15)
-    for (let i = 1; i <= 15; i++) {
-      usersToCreate.push({
-        email: `admin${i}@meow-meow.com`,
-        password,
-        gender: i % 2 === 0 ? "female" : "male",
-        role: "admin",
-        name: `Admin User ${i}`,
-      });
-    }
-
-    console.log(`Total users to create: ${usersToCreate.length}`);
-
+    // Handle seed action
+    console.log(`Seeding mock users for ${ALL_LANGUAGES.length} languages...`);
+    
     const results = {
-      created: [] as string[],
-      skipped: [] as string[],
+      created: 0,
+      skipped: 0,
       errors: [] as string[],
+      languages: 0,
     };
 
-    for (const user of usersToCreate) {
-      try {
-        // Check if user already exists by email
-        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-        const existingUser = existingUsers?.users?.find((u) => u.email === user.email);
+    // First, clear existing sample users
+    await supabaseAdmin
+      .from("sample_users")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
-        if (existingUser) {
-          console.log(`Skipping existing user: ${user.email}`);
-          results.skipped.push(user.email);
-          continue;
-        }
-
-        console.log(`Creating user: ${user.email}`);
-
-        // Create auth user
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email: user.email,
-          password: user.password,
-          email_confirm: true, // Auto-confirm email
+    // Create mock users for each language
+    for (const lang of ALL_LANGUAGES) {
+      const region = getRegion(lang.country);
+      
+      // Create 3 men per language
+      for (let i = 0; i < 3; i++) {
+        const name = getRandomName("male", region, i);
+        const age = 25 + Math.floor(Math.random() * 15);
+        
+        const { error } = await supabaseAdmin.from("sample_users").insert({
+          name: `${name} ${lang.name.substring(0, 2)}${i + 1}`,
+          age,
+          gender: "male",
+          language: lang.name,
+          country: lang.country,
+          bio: `Hi, I'm a ${lang.name} speaker from ${lang.country}. Looking for meaningful connections!`,
+          is_active: true,
         });
 
-        if (authError) {
-          console.error(`Auth error for ${user.email}:`, authError.message);
-          results.errors.push(`${user.email}: ${authError.message}`);
-          continue;
+        if (error) {
+          console.error(`Error creating male user for ${lang.name}:`, error.message);
+          results.errors.push(`${lang.name} male ${i + 1}: ${error.message}`);
+        } else {
+          results.created++;
         }
-
-        const userId = authData.user.id;
-        console.log(`Created auth user ${user.email} with ID: ${userId}`);
-
-        // Create profile
-        const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-          user_id: userId,
-          full_name: user.name,
-          gender: user.gender,
-          age: 25 + Math.floor(Math.random() * 10),
-          country: "IN",
-          state: "Maharashtra",
-          bio: `I am ${user.name}, a test user for development.`,
-          verification_status: true,
-          is_verified: true,
-          profile_completeness: 100,
-        });
-
-        if (profileError) {
-          console.error(`Profile error for ${user.email}:`, profileError.message);
-        }
-
-        // Create wallet with free balance (10000 INR - no recharge required)
-        const { data: walletData, error: walletError } = await supabaseAdmin
-          .from("wallets")
-          .upsert({
-            user_id: userId,
-            balance: 10000,
-            currency: "INR",
-          })
-          .select()
-          .single();
-
-        if (walletError) {
-          console.error(`Wallet error for ${user.email}:`, walletError.message);
-        }
-
-        // Add initial wallet transaction for the free credits
-        if (walletData) {
-          await supabaseAdmin.from("wallet_transactions").insert({
-            wallet_id: walletData.id,
-            user_id: userId,
-            amount: 10000,
-            type: "credit",
-            status: "completed",
-            description: "Test account - Free credits (no recharge required)",
-          });
-        }
-
-        // Create user status
-        await supabaseAdmin.from("user_status").upsert({
-          user_id: userId,
-          is_online: false,
-          status_text: "Available",
-        });
-
-        // Create user settings
-        await supabaseAdmin.from("user_settings").upsert({
-          user_id: userId,
-          theme: "system",
-          language: "English",
-          notification_messages: true,
-          notification_matches: true,
-        });
-
-        // If admin, add admin role
-        if (user.role === "admin") {
-          const { error: roleError } = await supabaseAdmin.from("user_roles").upsert({
-            user_id: userId,
-            role: "admin",
-          });
-
-          if (roleError) {
-            console.error(`Role error for ${user.email}:`, roleError.message);
-          } else {
-            console.log(`Added admin role for ${user.email}`);
-          }
-        }
-
-        results.created.push(user.email);
-        console.log(`Successfully created: ${user.email}`);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        console.error(`Error creating ${user.email}:`, errorMessage);
-        results.errors.push(`${user.email}: ${errorMessage}`);
       }
+
+      // Create 3 women per language
+      for (let i = 0; i < 3; i++) {
+        const name = getRandomName("female", region, i);
+        const age = 22 + Math.floor(Math.random() * 12);
+        
+        const { error } = await supabaseAdmin.from("sample_users").insert({
+          name: `${name} ${lang.name.substring(0, 2)}${i + 1}`,
+          age,
+          gender: "female",
+          language: lang.name,
+          country: lang.country,
+          bio: `Hello! I speak ${lang.name} and I'm from ${lang.country}. Let's chat!`,
+          is_active: true,
+        });
+
+        if (error) {
+          console.error(`Error creating female user for ${lang.name}:`, error.message);
+          results.errors.push(`${lang.name} female ${i + 1}: ${error.message}`);
+        } else {
+          results.created++;
+        }
+      }
+
+      results.languages++;
     }
 
-    console.log("Seeding completed. Summary:", {
-      total: usersToCreate.length,
-      created: results.created.length,
-      skipped: results.skipped.length,
-      errors: results.errors.length,
-    });
+    console.log(`Seeding completed. Created ${results.created} users for ${results.languages} languages`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Sample users seeding completed",
-        results,
-        summary: {
-          total: usersToCreate.length,
-          created: results.created.length,
-          skipped: results.skipped.length,
+        message: `Created ${results.created} mock users for ${results.languages} languages`,
+        results: {
+          created: results.created,
+          languages: results.languages,
           errors: results.errors.length,
+          menPerLanguage: 3,
+          womenPerLanguage: 3,
         },
-        credentials: {
-          password: "Chinn@2589",
-          walletBalance: "₹10,000 (free - no recharge required)",
-          categories: [
-            "male1-15@meow-meow.com",
-            "female1-15@meow-meow.com",
-            "admin1-15@meow-meow.com",
-          ],
-        },
+        languageList: ALL_LANGUAGES.map(l => l.name),
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error: unknown) {
-    console.error("Seed error:", error);
+    console.error("Mock users error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
