@@ -103,11 +103,14 @@ const AdminChatMonitoring = () => {
   const [silentMonitorMessages, setSilentMonitorMessages] = useState<ChatMessage[]>([]);
   const [monitorCountryFilter, setMonitorCountryFilter] = useState<string>("all");
   const [monitorLanguageFilter, setMonitorLanguageFilter] = useState<string>("all");
+  const [monitorLanguageGroupFilter, setMonitorLanguageGroupFilter] = useState<string>("all");
+  const [languageGroups, setLanguageGroups] = useState<{ id: string; name: string; languages: string[] }[]>([]);
   const [loadingChats, setLoadingChats] = useState(false);
 
   useEffect(() => {
     loadMessages();
     loadActiveChats();
+    loadLanguageGroups();
     
     // Subscribe to real-time updates
     const channel = supabase
@@ -278,6 +281,21 @@ const AdminChatMonitoring = () => {
     }
   };
 
+  const loadLanguageGroups = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("language_groups")
+        .select("id, name, languages")
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+
+      if (error) throw error;
+      setLanguageGroups(data || []);
+    } catch (error) {
+      console.error("Error loading language groups:", error);
+    }
+  };
+
   const loadSilentMonitorMessages = async (chatId: string) => {
     try {
       const { data, error } = await supabase
@@ -374,14 +392,28 @@ const AdminChatMonitoring = () => {
   };
 
   const filteredActiveChats = activeChats.filter((chat) => {
+    // Country filter
     if (monitorCountryFilter !== "all") {
       if (chat.man_country !== monitorCountryFilter && chat.woman_country !== monitorCountryFilter) {
         return false;
       }
     }
+    // Individual language filter
     if (monitorLanguageFilter !== "all") {
       if (chat.man_language !== monitorLanguageFilter && chat.woman_language !== monitorLanguageFilter) {
         return false;
+      }
+    }
+    // Language group filter
+    if (monitorLanguageGroupFilter !== "all") {
+      const group = languageGroups.find(g => g.id === monitorLanguageGroupFilter);
+      if (group) {
+        const hasMatchingLanguage = group.languages.some(lang => 
+          chat.man_language === lang || chat.woman_language === lang
+        );
+        if (!hasMatchingLanguage) {
+          return false;
+        }
       }
     }
     return true;
@@ -810,7 +842,21 @@ const AdminChatMonitoring = () => {
             ) : (
               <>
                 {/* Monitoring Filters */}
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                  <Select value={monitorLanguageGroupFilter} onValueChange={setMonitorLanguageGroupFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <Users className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Language Group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Language Groups</SelectItem>
+                      {languageGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name} ({group.languages.length} languages)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={monitorCountryFilter} onValueChange={setMonitorCountryFilter}>
                     <SelectTrigger className="w-[200px]">
                       <Globe className="h-4 w-4 mr-2" />

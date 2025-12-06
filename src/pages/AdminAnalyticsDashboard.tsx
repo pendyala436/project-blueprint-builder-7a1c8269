@@ -27,6 +27,9 @@ import {
   MessageSquare,
   Calendar,
   BarChart3,
+  EyeOff,
+  Bell,
+  Shield,
 } from "lucide-react";
 import {
   LineChart,
@@ -641,6 +644,53 @@ const AdminAnalyticsDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={() => navigate("/admin/chat-monitoring")}
+              >
+                <EyeOff className="h-6 w-6 text-primary" />
+                <span className="text-sm font-medium">Live Chat Monitor</span>
+                <span className="text-xs text-muted-foreground">Silent monitoring</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={() => navigate("/admin/moderation")}
+              >
+                <Shield className="h-6 w-6 text-yellow-500" />
+                <span className="text-sm font-medium">Moderation</span>
+                <span className="text-xs text-muted-foreground">Reports & blocks</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={() => navigate("/admin/chat-monitoring")}
+              >
+                <Bell className="h-6 w-6 text-blue-500" />
+                <span className="text-sm font-medium">Broadcast</span>
+                <span className="text-xs text-muted-foreground">Send notifications</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto p-4 flex flex-col items-center gap-2"
+                onClick={() => navigate("/admin/finance-reports")}
+              >
+                <IndianRupee className="h-6 w-6 text-green-500" />
+                <span className="text-sm font-medium">Finance</span>
+                <span className="text-xs text-muted-foreground">Revenue reports</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
         <Card>
