@@ -609,8 +609,6 @@ const MatchDiscoveryScreen = () => {
             <MatchFiltersPanel
               filters={filters}
               onFiltersChange={setFilters}
-              availableLanguages={availableLanguages}
-              availableCountries={availableCountries}
             />
 
             {/* Refresh button - reloads matches */}
