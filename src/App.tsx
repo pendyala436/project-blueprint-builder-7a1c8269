@@ -35,6 +35,7 @@ import AdminBackupManagement from "./pages/AdminBackupManagement";
 import AdminLegalDocuments from "./pages/AdminLegalDocuments";
 import AdminChatPricing from "./pages/AdminChatPricing";
 import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
           <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
           <Route path="/admin/performance" element={<AdminPerformanceMonitoring />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
