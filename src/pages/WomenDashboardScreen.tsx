@@ -24,12 +24,15 @@ import {
   MapPin,
   ChevronRight,
   Search,
-  User
+  User,
+  Languages,
+  Globe
 } from "lucide-react";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 
 interface Notification {
   id: string;
@@ -43,13 +46,17 @@ interface Notification {
 interface OnlineMan {
   userId: string;
   fullName: string;
+  age: number | null;
   photoUrl: string | null;
   country: string | null;
   state: string | null;
+  motherTongue: string;
   preferredLanguage: string | null;
   walletBalance: number;
   hasRecharged: boolean;
   lastSeen: string;
+  isSameLanguage: boolean;
+  isNllbLanguage: boolean;
 }
 
 interface DashboardStats {
@@ -128,7 +135,7 @@ const WomenDashboardScreen = () => {
           table: 'user_status'
         },
         () => {
-          fetchOnlineMen();
+          fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
         }
       )
       .subscribe();
@@ -137,6 +144,9 @@ const WomenDashboardScreen = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
+  const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
 
   const loadDashboardData = async () => {
     try {
@@ -147,10 +157,10 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile
+      // Fetch user profile including country
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, gender")
+        .select("full_name, gender, country, primary_language, preferred_language")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -159,14 +169,28 @@ const WomenDashboardScreen = () => {
       }
 
       // Redirect men to regular dashboard
-      if (profile?.gender === "male") {
+      if (profile?.gender === "male" || profile?.gender === "Male") {
         navigate("/dashboard");
         return;
       }
 
-      // Fetch all data
+      // Get woman's mother tongue
+      const { data: womanLanguages } = await supabase
+        .from("user_languages")
+        .select("language_name")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      const womanLanguage = womanLanguages?.[0]?.language_name || 
+                           profile?.primary_language || 
+                           profile?.preferred_language || 
+                           "English";
+      setCurrentWomanLanguage(womanLanguage);
+      setCurrentWomanCountry(profile?.country || "");
+
+      // Fetch all data with woman's language context
       await Promise.all([
-        fetchOnlineMen(),
+        fetchOnlineMen(user.id, womanLanguage, profile?.country || ""),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
         fetchTodayEarnings(user.id)
@@ -179,8 +203,11 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const fetchOnlineMen = async () => {
+  const fetchOnlineMen = async (womanUserId?: string, womanLanguage?: string, womanCountry?: string) => {
     try {
+      const isWomanIndian = womanCountry?.toLowerCase() === "india";
+      const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
+
       // Get all online male users with their profiles and wallet info
       const { data: onlineStatuses } = await supabase
         .from("user_status")
@@ -196,12 +223,12 @@ const WomenDashboardScreen = () => {
 
       const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-      // Fetch profiles of online users who are male
+      // Fetch profiles of online users who are male (check both "male" and "Male")
       const { data: maleProfiles } = await supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, country, state, preferred_language, gender")
+        .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
         .in("user_id", onlineUserIds)
-        .eq("gender", "male");
+        .or("gender.eq.male,gender.eq.Male");
 
       if (!maleProfiles || maleProfiles.length === 0) {
         setRechargedMen([]);
@@ -218,35 +245,87 @@ const WomenDashboardScreen = () => {
         .select("user_id, balance")
         .in("user_id", maleUserIds);
 
-      // Map wallet balances to users
+      // Fetch languages for each man
+      const { data: userLanguages } = await supabase
+        .from("user_languages")
+        .select("user_id, language_name")
+        .in("user_id", maleUserIds);
+
+      // Map wallet balances and languages to users
       const walletMap = new Map(wallets?.map(w => [w.user_id, Number(w.balance)]) || []);
       const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
+      const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-      // Create online men list
-      const onlineMen: OnlineMan[] = maleProfiles.map(profile => ({
-        userId: profile.user_id,
-        fullName: profile.full_name || "Anonymous",
-        photoUrl: profile.photo_url,
-        country: profile.country,
-        state: profile.state,
-        preferredLanguage: profile.preferred_language,
-        walletBalance: walletMap.get(profile.user_id) || 0,
-        hasRecharged: (walletMap.get(profile.user_id) || 0) > 0,
-        lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString()
-      }));
+      // Get all NLLB-200 language names for checking
+      const allNllbLanguages = [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
+      const nllbLanguageNames = new Set(allNllbLanguages.map(l => l.name.toLowerCase()));
+      const nonIndianNllbNames = new Set(NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
+
+      // Create online men list with language matching info
+      const onlineMen: OnlineMan[] = maleProfiles.map(profile => {
+        const manLanguage = languageMap.get(profile.user_id) || 
+                           profile.primary_language || 
+                           profile.preferred_language || 
+                           "Unknown";
+        
+        const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
+        const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
+        const isManNonIndianNllb = nonIndianNllbNames.has(manLanguage.toLowerCase());
+
+        return {
+          userId: profile.user_id,
+          fullName: profile.full_name || "Anonymous",
+          age: profile.age,
+          photoUrl: profile.photo_url,
+          country: profile.country,
+          state: profile.state,
+          motherTongue: manLanguage,
+          preferredLanguage: profile.preferred_language,
+          walletBalance: walletMap.get(profile.user_id) || 0,
+          hasRecharged: (walletMap.get(profile.user_id) || 0) > 0,
+          lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
+          isSameLanguage,
+          isNllbLanguage: isManNllbLanguage,
+        };
+      });
+
+      // Filter men based on woman's country:
+      // - Same language men are always shown
+      // - Indian women also see non-Indian NLLB-200 language men
+      const filteredMen = onlineMen.filter(man => {
+        // Always show same language men
+        if (man.isSameLanguage) return true;
+        
+        // Indian women can see non-Indian NLLB-200 language men
+        if (isWomanIndian && man.isNllbLanguage) return true;
+        
+        // For non-Indian women, only show same language men
+        return isWomanIndian;
+      });
+
+      // Sort: same language first, then by wallet balance
+      const sortedMen = filteredMen.sort((a, b) => {
+        if (a.isSameLanguage !== b.isSameLanguage) {
+          return a.isSameLanguage ? -1 : 1;
+        }
+        return b.walletBalance - a.walletBalance;
+      });
 
       // Separate and sort
-      const recharged = onlineMen
+      const recharged = sortedMen
         .filter(m => m.hasRecharged)
-        .sort((a, b) => b.walletBalance - a.walletBalance); // High to low balance
+        .sort((a, b) => {
+          if (a.isSameLanguage !== b.isSameLanguage) return a.isSameLanguage ? -1 : 1;
+          return b.walletBalance - a.walletBalance;
+        });
 
-      const nonRecharged = onlineMen.filter(m => !m.hasRecharged);
+      const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
 
       setRechargedMen(recharged);
       setNonRechargedMen(nonRecharged);
       setStats(prev => ({
         ...prev,
-        totalOnlineMen: onlineMen.length,
+        totalOnlineMen: sortedMen.length,
         rechargedMen: recharged.length,
         nonRechargedMen: nonRecharged.length
       }));
@@ -344,6 +423,7 @@ const WomenDashboardScreen = () => {
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
+        user.isSameLanguage && "ring-2 ring-primary/50",
         showBalance && user.walletBalance > 1000 && "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent"
       )}
       onClick={() => handleViewProfile(user.userId)}
@@ -366,8 +446,16 @@ const WomenDashboardScreen = () => {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
+              {user.age && (
+                <span className="text-sm text-muted-foreground">{user.age} yrs</span>
+              )}
+              {user.isSameLanguage && (
+                <Badge variant="default" className="text-[10px] bg-primary/90">
+                  Same Language
+                </Badge>
+              )}
               {showBalance && user.walletBalance > 500 && (
                 <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600">
                   Premium
@@ -375,12 +463,21 @@ const WomenDashboardScreen = () => {
               )}
             </div>
             
-            {(user.state || user.country) && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                <MapPin className="h-3 w-3" />
-                {[user.state, user.country].filter(Boolean).join(", ")}
-              </p>
-            )}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
+              <div className="flex items-center gap-1">
+                <Languages className="h-3 w-3" />
+                <span>{user.motherTongue}</span>
+              </div>
+              {(user.state || user.country) && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1 truncate">
+                    <MapPin className="h-3 w-3" />
+                    {[user.state, user.country].filter(Boolean).join(", ")}
+                  </div>
+                </>
+              )}
+            </div>
 
             {showBalance && (
               <div className="flex items-center gap-1 mt-1">
@@ -388,6 +485,12 @@ const WomenDashboardScreen = () => {
                 <span className="text-sm font-medium text-green-500">
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
+                {user.isNllbLanguage && !user.isSameLanguage && (
+                  <Badge variant="outline" className="text-[10px] ml-2">
+                    <Globe className="h-2.5 w-2.5 mr-1" />
+                    Auto-translate
+                  </Badge>
+                )}
               </div>
             )}
           </div>
@@ -554,16 +657,22 @@ const WomenDashboardScreen = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Recharged Men - Sorted by balance high to low */}
+          {/* Recharged Men - Sorted by same language first, then balance */}
           <TabsContent value="recharged" className="space-y-3 mt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
-                Sorted by wallet balance (highest first)
+                Same language first, then by wallet balance
               </p>
-              <Badge variant="outline" className="text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Priority
-              </Badge>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs">
+                  <Languages className="h-3 w-3 mr-1" />
+                  {currentWomanLanguage}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Priority
+                </Badge>
+              </div>
             </div>
 
             {rechargedMen.length === 0 ? (
