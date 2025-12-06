@@ -274,11 +274,12 @@ serve(async (req) => {
         // Get current pricing
         const { data: pricing } = await supabase
           .from("chat_pricing")
-          .select("rate_per_minute")
+          .select("rate_per_minute, women_earning_rate")
           .eq("is_active", true)
           .maybeSingle();
 
         const ratePerMinute = pricing?.rate_per_minute || 4.00;
+        const womenEarningRate = pricing?.women_earning_rate || 2.00;
 
         // Create chat session
         const chatId = `chat_${man_user_id}_${woman_user_id}_${Date.now()}`;
@@ -349,15 +350,25 @@ serve(async (req) => {
           );
         }
 
+        // Get current pricing for women's earning rate
+        const { data: pricing } = await supabase
+          .from("chat_pricing")
+          .select("women_earning_rate")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        const womenEarningRate = pricing?.women_earning_rate || 2.00;
+
         // Calculate time elapsed since last activity
         const lastActivity = new Date(session.last_activity_at);
         const now = new Date();
         const minutesElapsed = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
 
-        // Calculate earnings for this period
-        const earnings = minutesElapsed * session.rate_per_minute;
+        // Calculate charges and earnings for this period (different rates)
+        const menCharge = minutesElapsed * session.rate_per_minute;
+        const womenEarnings = minutesElapsed * womenEarningRate;
         const newTotalMinutes = session.total_minutes + minutesElapsed;
-        const newTotalEarned = session.total_earned + earnings;
+        const newTotalEarned = session.total_earned + menCharge;
 
         // Check man's wallet balance
         const { data: wallet } = await supabase
@@ -366,7 +377,7 @@ serve(async (req) => {
           .eq("user_id", session.man_user_id)
           .maybeSingle();
 
-        if (!wallet || wallet.balance < earnings) {
+        if (!wallet || wallet.balance < menCharge) {
           // End chat due to insufficient balance
           await endChatSession(supabase, chat_id, "insufficient_balance", session);
           return new Response(
@@ -375,33 +386,33 @@ serve(async (req) => {
           );
         }
 
-        // Deduct from man's wallet
+        // Deduct from man's wallet (what men are charged)
         await supabase
           .from("wallets")
-          .update({ balance: wallet.balance - earnings })
+          .update({ balance: wallet.balance - menCharge })
           .eq("id", wallet.id);
 
-        // Record transaction
+        // Record transaction (what men paid)
         await supabase
           .from("wallet_transactions")
           .insert({
             wallet_id: wallet.id,
             user_id: session.man_user_id,
             type: "debit",
-            amount: earnings,
+            amount: menCharge,
             description: `Chat with partner - ${minutesElapsed.toFixed(2)} minutes`,
             status: "completed"
           });
 
-        // Add earnings to woman
+        // Add earnings to woman (women's earning rate)
         await supabase
           .from("women_earnings")
           .insert({
             user_id: session.woman_user_id,
             chat_session_id: session.id,
-            amount: earnings,
+            amount: womenEarnings,
             earning_type: "chat",
-            description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes`
+            description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
           });
 
         // Update session
@@ -414,14 +425,15 @@ serve(async (req) => {
           })
           .eq("chat_id", chat_id);
 
-        console.log(`Heartbeat processed: ${chat_id}, earnings: ${earnings.toFixed(2)}`);
+        console.log(`Heartbeat processed: ${chat_id}, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
 
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             success: true, 
             minutes_elapsed: minutesElapsed,
-            earnings,
-            remaining_balance: wallet.balance - earnings
+            men_charged: menCharge,
+            women_earned: womenEarnings,
+            remaining_balance: wallet.balance - menCharge
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
