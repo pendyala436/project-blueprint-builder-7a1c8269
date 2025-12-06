@@ -12,13 +12,16 @@ import {
   Clock, 
   Wallet,
   Save,
-  RefreshCw
+  RefreshCw,
+  Users,
+  TrendingUp
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ChatPricing {
   id: string;
   rate_per_minute: number;
+  women_earning_rate: number;
   currency: string;
   min_withdrawal_balance: number;
   is_active: boolean;
@@ -32,6 +35,7 @@ const AdminChatPricing = () => {
   const [pricing, setPricing] = useState<ChatPricing | null>(null);
   const [formData, setFormData] = useState({
     rate_per_minute: "",
+    women_earning_rate: "",
     min_withdrawal_balance: ""
   });
 
@@ -50,9 +54,10 @@ const AdminChatPricing = () => {
       if (error) throw error;
 
       if (data) {
-        setPricing(data);
+        setPricing(data as ChatPricing);
         setFormData({
           rate_per_minute: data.rate_per_minute.toString(),
+          women_earning_rate: (data as any).women_earning_rate?.toString() || "2.00",
           min_withdrawal_balance: data.min_withdrawal_balance.toString()
         });
       }
@@ -70,12 +75,31 @@ const AdminChatPricing = () => {
 
   const handleSave = async () => {
     const ratePerMinute = parseFloat(formData.rate_per_minute);
+    const womenEarningRate = parseFloat(formData.women_earning_rate);
     const minWithdrawal = parseFloat(formData.min_withdrawal_balance);
 
     if (isNaN(ratePerMinute) || ratePerMinute <= 0) {
       toast({
         title: "Invalid Rate",
-        description: "Rate per minute must be a positive number",
+        description: "Men's rate per minute must be a positive number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isNaN(womenEarningRate) || womenEarningRate <= 0) {
+      toast({
+        title: "Invalid Rate",
+        description: "Women's earning rate must be a positive number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (womenEarningRate > ratePerMinute) {
+      toast({
+        title: "Invalid Configuration",
+        description: "Women's earning rate cannot exceed what men are charged",
         variant: "destructive"
       });
       return;
@@ -97,9 +121,10 @@ const AdminChatPricing = () => {
           .from("chat_pricing")
           .update({
             rate_per_minute: ratePerMinute,
+            women_earning_rate: womenEarningRate,
             min_withdrawal_balance: minWithdrawal,
             updated_at: new Date().toISOString()
-          })
+          } as any)
           .eq("id", pricing.id);
 
         if (error) throw error;
@@ -108,10 +133,11 @@ const AdminChatPricing = () => {
           .from("chat_pricing")
           .insert({
             rate_per_minute: ratePerMinute,
+            women_earning_rate: womenEarningRate,
             min_withdrawal_balance: minWithdrawal,
             currency: "INR",
             is_active: true
-          });
+          } as any);
 
         if (error) throw error;
       }
@@ -133,6 +159,8 @@ const AdminChatPricing = () => {
     }
   };
 
+  const platformProfit = parseFloat(formData.rate_per_minute || "0") - parseFloat(formData.women_earning_rate || "0");
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
@@ -153,20 +181,21 @@ const AdminChatPricing = () => {
           </Button>
           <div>
             <h1 className="text-xl font-bold">Chat Pricing Configuration</h1>
-            <p className="text-sm text-muted-foreground">Manage earnings and withdrawal settings</p>
+            <p className="text-sm text-muted-foreground">Manage charging, earnings and withdrawal settings</p>
           </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        {/* Men Charging Rate */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Per-Minute Rate (Men Charged)
+              Men Charged Per Minute
             </CardTitle>
             <CardDescription>
-              Amount men are charged per minute of active chat
+              Amount deducted from men's wallet per minute of active chat
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -194,10 +223,64 @@ const AdminChatPricing = () => {
           </CardContent>
         </Card>
 
+        {/* Women Earning Rate */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-green-500" />
+              <Users className="h-5 w-5 text-emerald-500" />
+              Women Earning Per Minute
+            </CardTitle>
+            <CardDescription>
+              Amount credited to women's earnings per minute of active chat
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="womenRate">Earning per Minute (INR)</Label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="womenRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="pl-10"
+                    value={formData.women_earning_rate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, women_earning_rate: e.target.value }))}
+                    placeholder="2.00"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Example: If set to ₹2.00, a 30-minute chat earns women ₹60.00
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Platform Profit Display */}
+        <Card className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/20">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Platform Profit Per Minute</p>
+                <p className="text-xl font-bold text-blue-600">
+                  ₹{platformProfit.toFixed(2)}/min
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Withdrawal Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-amber-500" />
               Withdrawal Settings
             </CardTitle>
             <CardDescription>
@@ -229,13 +312,14 @@ const AdminChatPricing = () => {
           </CardContent>
         </Card>
 
+        {/* Summary and Save */}
         <Card className="bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Current Configuration</h3>
                 <p className="text-sm text-muted-foreground">
-                  Rate: ₹{formData.rate_per_minute || "0"}/min • Min Withdrawal: ₹{parseInt(formData.min_withdrawal_balance || "0").toLocaleString()}
+                  Men: ₹{formData.rate_per_minute || "0"}/min • Women: ₹{formData.women_earning_rate || "0"}/min • Min Withdrawal: ₹{parseInt(formData.min_withdrawal_balance || "0").toLocaleString()}
                 </p>
               </div>
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">

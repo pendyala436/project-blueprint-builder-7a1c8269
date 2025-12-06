@@ -133,7 +133,7 @@ const ChatBillingDisplay = ({
         setSession(prev => prev ? {
           ...prev,
           totalMinutes: prev.totalMinutes + (data.minutes_elapsed || 0),
-          totalSpent: prev.totalSpent + (data.earnings || 0),
+          totalSpent: prev.totalSpent + (data.men_charged || 0),
           remainingBalance: data.remaining_balance || 0
         } : null);
 
