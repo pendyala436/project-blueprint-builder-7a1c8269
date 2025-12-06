@@ -114,6 +114,9 @@ const MatchDiscoveryScreen = () => {
   // Current user's gender (used for opposite gender matching)
   const [currentUserGender, setCurrentUserGender] = useState<string>("");
   
+  // Current user's country (used for NLLB-200 feature visibility)
+  const [currentUserCountry, setCurrentUserCountry] = useState<string>("");
+  
   // Reference to the card DOM element for animations
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -177,9 +180,10 @@ const MatchDiscoveryScreen = () => {
       // Extract language names into simple array
       const userLanguages = currentUserLanguages?.map(l => l.language_name) || [];
       
-      // Store current user's gender for display purposes
+      // Store current user's gender and country for display purposes
       const userGender = currentProfile?.gender || "";
       setCurrentUserGender(userGender);
+      setCurrentUserCountry(currentProfile?.country || "");
 
       // ============= DETERMINE MATCHING GENDER =============
       
@@ -609,6 +613,7 @@ const MatchDiscoveryScreen = () => {
             <MatchFiltersPanel
               filters={filters}
               onFiltersChange={setFilters}
+              userCountry={currentUserCountry}
             />
 
             {/* Refresh button - reloads matches */}

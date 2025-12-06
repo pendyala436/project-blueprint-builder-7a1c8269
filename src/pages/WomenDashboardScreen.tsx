@@ -647,7 +647,8 @@ const WomenDashboardScreen = () => {
             </div>
             <MatchFiltersPanel 
               filters={matchFilters} 
-              onFiltersChange={setMatchFilters} 
+              onFiltersChange={setMatchFilters}
+              userCountry={currentWomanCountry}
             />
           </div>
         </div>
