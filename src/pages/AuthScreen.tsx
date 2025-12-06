@@ -67,40 +67,18 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
-      // For phone login, we need to find the email associated with the phone
       let loginEmail = identifier;
 
       if (loginMethod === "phone") {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("user_id")
-          .eq("phone", phoneValue)
-          .maybeSingle();
-
-        if (profileError || !profile) {
-          toast({
-            title: "Login failed",
-            description: "No account found with this phone number.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // Get the email from auth.users via a lookup
-        const { data: userData } = await supabase.auth.admin?.getUserById(profile.user_id) || {};
-        if (userData?.user?.email) {
-          loginEmail = userData.user.email;
-        } else {
-          // Fallback: use phone as identifier (won't work, but shows error)
-          toast({
-            title: "Login failed",
-            description: "Unable to authenticate with phone number. Please use email.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
+        // Phone login is not directly supported by Supabase email/password auth
+        // Show a message to use email instead
+        toast({
+          title: "Phone login not available",
+          description: "Please use your email address to login. Phone login will be available soon.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
       const { data: authData, error } = await supabase.auth.signInWithPassword({
