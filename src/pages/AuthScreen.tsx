@@ -70,49 +70,7 @@ const AuthScreen = () => {
       let loginEmail = identifier;
 
       if (loginMethod === "phone") {
-        // Look up user's email from profiles table using phone number
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("user_id")
-          .eq("phone", phoneValue)
-          .maybeSingle();
-
-        if (profileError || !profile) {
-          toast({
-            title: "Account not found",
-            description: "No account found with this phone number. Please check and try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // Get the user's email from auth using the user_id
-        const { data: authUser } = await supabase.auth.admin?.getUserById?.(profile.user_id) || {};
-        
-        // Since we can't access admin API from client, we need to get email from a different approach
-        // We'll use the profiles table or ask user to also provide email
-        // For now, let's look for email in a join or stored field
-        
-        // Alternative: Store email in profiles table during registration
-        const { data: userProfile, error: userError } = await supabase
-          .from("profiles")
-          .select("user_id")
-          .eq("phone", phoneValue)
-          .maybeSingle();
-
-        if (!userProfile) {
-          toast({
-            title: "Account not found",
-            description: "No account found with this phone number.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // We need to get the email associated with this user
-        // Since we can't directly query auth.users, we'll use the edge function
+        // Use edge function to get email by phone (bypasses RLS since user isn't authenticated)
         const { data: resetData, error: resetError } = await supabase.functions.invoke('reset-password', {
           body: { 
             action: 'get-email-by-phone',
@@ -122,8 +80,8 @@ const AuthScreen = () => {
 
         if (resetError || !resetData?.email) {
           toast({
-            title: "Login failed",
-            description: "Could not retrieve account information. Please try email login.",
+            title: "Account not found",
+            description: "No account found with this phone number. Please check and try again.",
             variant: "destructive",
           });
           setIsLoading(false);
