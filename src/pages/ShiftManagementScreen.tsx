@@ -6,6 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
@@ -21,9 +26,15 @@ import {
   Gift,
   Loader2,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Sparkles,
+  CalendarDays,
+  UserCheck,
+  AlertCircle,
+  RefreshCw,
+  MapPin
 } from "lucide-react";
-import { format, formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { format, formatDistanceToNow, differenceInMinutes, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface Shift {
@@ -37,36 +48,78 @@ interface Shift {
   bonus_earnings: number;
 }
 
-interface EarningsSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  totalShifts: number;
-  totalHours: number;
-  avgPerHour: number;
+interface ScheduledShift {
+  id: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  status: string;
+  ai_suggested: boolean;
+  suggested_reason: string | null;
 }
+
+interface Attendance {
+  id: string;
+  attendance_date: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
+  status: string;
+  auto_marked: boolean;
+}
+
+interface AbsenceRecord {
+  id: string;
+  absence_date: string;
+  reason: string | null;
+  leave_type: string;
+  approved: boolean;
+  ai_detected: boolean;
+}
+
+const TIMEZONES = [
+  { value: "Asia/Kolkata", label: "India (IST)" },
+  { value: "America/New_York", label: "New York (EST)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (PST)" },
+  { value: "Europe/London", label: "London (GMT)" },
+  { value: "Europe/Paris", label: "Paris (CET)" },
+  { value: "Asia/Dubai", label: "Dubai (GST)" },
+  { value: "Asia/Singapore", label: "Singapore (SGT)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+];
 
 const ShiftManagementScreen = () => {
   const navigate = useNavigate();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [summary, setSummary] = useState<EarningsSummary>({
+  const [scheduledShifts, setScheduledShifts] = useState<ScheduledShift[]>([]);
+  const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [startingShift, setStartingShift] = useState(false);
+  const [endingShift, setEndingShift] = useState(false);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState("00:00:00");
+  const [animatedEarnings, setAnimatedEarnings] = useState(0);
+  const [selectedTimezone, setSelectedTimezone] = useState("Asia/Kolkata");
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveReason, setLeaveReason] = useState("");
+  const [leaveType, setLeaveType] = useState("casual");
+  const [leaveDate, setLeaveDate] = useState("");
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [summary, setSummary] = useState({
     today: 0,
     thisWeek: 0,
     thisMonth: 0,
     totalShifts: 0,
     totalHours: 0,
-    avgPerHour: 0
+    avgPerHour: 0,
+    attendanceRate: 0
   });
-  const [loading, setLoading] = useState(true);
-  const [startingShift, setStartingShift] = useState(false);
-  const [endingShift, setEndingShift] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState("00:00:00");
-  const [animatedEarnings, setAnimatedEarnings] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetchShiftData();
+    fetchAllData();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -113,7 +166,7 @@ const ShiftManagementScreen = () => {
     }, duration / steps);
   };
 
-  const fetchShiftData = async () => {
+  const fetchAllData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -121,76 +174,107 @@ const ShiftManagementScreen = () => {
         return;
       }
 
-      // Fetch active shift
-      const { data: activeData } = await supabase
-        .from("shifts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+      // Fetch all data in parallel
+      const [
+        activeShiftRes,
+        shiftsRes,
+        scheduledRes,
+        attendanceRes,
+        absencesRes
+      ] = await Promise.all([
+        supabase.from("shifts").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+        supabase.from("shifts").select("*").eq("user_id", user.id).order("start_time", { ascending: false }).limit(10),
+        supabase.from("scheduled_shifts").select("*").eq("user_id", user.id).gte("scheduled_date", new Date().toISOString().split("T")[0]).order("scheduled_date", { ascending: true }).limit(14),
+        supabase.from("attendance").select("*").eq("user_id", user.id).order("attendance_date", { ascending: false }).limit(30),
+        supabase.from("absence_records").select("*").eq("user_id", user.id).order("absence_date", { ascending: false }).limit(10)
+      ]);
 
-      if (activeData) {
-        setActiveShift(activeData);
-      }
-
-      // Fetch recent shifts
-      const { data: shiftsData } = await supabase
-        .from("shifts")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("start_time", { ascending: false })
-        .limit(10);
-
-      setShifts(shiftsData || []);
+      if (activeShiftRes.data) setActiveShift(activeShiftRes.data);
+      setShifts(shiftsRes.data || []);
+      setScheduledShifts(scheduledRes.data || []);
+      setAttendance(attendanceRes.data || []);
+      setAbsences(absencesRes.data || []);
 
       // Calculate summary
+      const allShifts = shiftsRes.data?.filter(s => s.status === "completed") || [];
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const weekStart = new Date(todayStart);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const { data: allShifts } = await supabase
-        .from("shifts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "completed");
+      let todayEarnings = 0, weekEarnings = 0, monthEarnings = 0, totalHours = 0;
 
-      if (allShifts) {
-        let todayEarnings = 0;
-        let weekEarnings = 0;
-        let monthEarnings = 0;
-        let totalHours = 0;
+      allShifts.forEach((shift) => {
+        const shiftDate = new Date(shift.start_time);
+        const earnings = Number(shift.earnings) + Number(shift.bonus_earnings);
+        
+        if (shiftDate >= todayStart) todayEarnings += earnings;
+        if (shiftDate >= weekStart) weekEarnings += earnings;
+        if (shiftDate >= monthStart) monthEarnings += earnings;
 
-        allShifts.forEach((shift) => {
-          const shiftDate = new Date(shift.start_time);
-          const earnings = Number(shift.earnings) + Number(shift.bonus_earnings);
-          
-          if (shiftDate >= todayStart) todayEarnings += earnings;
-          if (shiftDate >= weekStart) weekEarnings += earnings;
-          if (shiftDate >= monthStart) monthEarnings += earnings;
+        if (shift.end_time) {
+          totalHours += differenceInMinutes(new Date(shift.end_time), new Date(shift.start_time)) / 60;
+        }
+      });
 
-          if (shift.end_time) {
-            totalHours += differenceInMinutes(new Date(shift.end_time), new Date(shift.start_time)) / 60;
-          }
-        });
+      const totalEarnings = allShifts.reduce((acc, s) => acc + Number(s.earnings) + Number(s.bonus_earnings), 0);
+      const presentCount = (attendanceRes.data || []).filter(a => a.status === "present" || a.status === "late").length;
+      const totalAttendance = (attendanceRes.data || []).filter(a => a.status !== "pending").length;
 
-        const totalEarnings = allShifts.reduce((acc, s) => acc + Number(s.earnings) + Number(s.bonus_earnings), 0);
-
-        setSummary({
-          today: todayEarnings,
-          thisWeek: weekEarnings,
-          thisMonth: monthEarnings,
-          totalShifts: allShifts.length,
-          totalHours: Math.round(totalHours * 10) / 10,
-          avgPerHour: totalHours > 0 ? Math.round((totalEarnings / totalHours) * 100) / 100 : 0
-        });
-      }
+      setSummary({
+        today: todayEarnings,
+        thisWeek: weekEarnings,
+        thisMonth: monthEarnings,
+        totalShifts: allShifts.length,
+        totalHours: Math.round(totalHours * 10) / 10,
+        avgPerHour: totalHours > 0 ? Math.round((totalEarnings / totalHours) * 100) / 100 : 0,
+        attendanceRate: totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 100
+      });
     } catch (error) {
-      console.error("Error fetching shift data:", error);
-      toast.error("Failed to load shift data");
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateAISchedule = async () => {
+    setGeneratingSchedule(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.functions.invoke("shift-scheduler", {
+        body: { userId: user.id, timezone: selectedTimezone, action: "generate_schedule" }
+      });
+
+      if (error) throw error;
+
+      toast.success(data.message || "Schedule generated!");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error generating schedule:", error);
+      toast.error("Failed to generate schedule");
+    } finally {
+      setGeneratingSchedule(false);
+    }
+  };
+
+  const markAttendance = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.functions.invoke("shift-scheduler", {
+        body: { userId: user.id, action: "mark_attendance" }
+      });
+
+      toast.success("Attendance updated");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error marking attendance:", error);
+      toast.error("Failed to update attendance");
     }
   };
 
@@ -202,18 +286,18 @@ const ShiftManagementScreen = () => {
 
       const { data, error } = await supabase
         .from("shifts")
-        .insert({
-          user_id: user.id,
-          status: "active"
-        })
+        .insert({ user_id: user.id, status: "active" })
         .select()
         .single();
 
       if (error) throw error;
 
       setActiveShift(data);
-      toast.success("Shift started! Good luck! 🎉");
-      fetchShiftData();
+      toast.success("Shift started! 🎉");
+      
+      // Auto mark attendance
+      markAttendance();
+      fetchAllData();
     } catch (error) {
       console.error("Error starting shift:", error);
       toast.error("Failed to start shift");
@@ -228,10 +312,7 @@ const ShiftManagementScreen = () => {
     try {
       const { error } = await supabase
         .from("shifts")
-        .update({
-          status: "completed",
-          end_time: new Date().toISOString()
-        })
+        .update({ status: "completed", end_time: new Date().toISOString() })
         .eq("id", activeShift.id);
 
       if (error) throw error;
@@ -239,12 +320,64 @@ const ShiftManagementScreen = () => {
       const totalEarnings = activeShift.earnings + activeShift.bonus_earnings;
       toast.success(`Shift ended! You earned ₹${totalEarnings.toFixed(2)} 💰`);
       setActiveShift(null);
-      fetchShiftData();
+      markAttendance();
+      fetchAllData();
     } catch (error) {
       console.error("Error ending shift:", error);
       toast.error("Failed to end shift");
     } finally {
       setEndingShift(false);
+    }
+  };
+
+  const confirmScheduledShift = async (shiftId: string) => {
+    try {
+      await supabase
+        .from("scheduled_shifts")
+        .update({ status: "confirmed" })
+        .eq("id", shiftId);
+
+      toast.success("Shift confirmed!");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error confirming shift:", error);
+      toast.error("Failed to confirm shift");
+    }
+  };
+
+  const applyLeave = async () => {
+    if (!leaveDate) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from("absence_records").insert({
+        user_id: user.id,
+        absence_date: leaveDate,
+        reason: leaveReason,
+        leave_type: leaveType,
+        ai_detected: false
+      });
+
+      // Cancel scheduled shift for that date
+      await supabase
+        .from("scheduled_shifts")
+        .update({ status: "cancelled" })
+        .eq("user_id", user.id)
+        .eq("scheduled_date", leaveDate);
+
+      toast.success("Leave applied successfully");
+      setLeaveDialogOpen(false);
+      setLeaveReason("");
+      setLeaveDate("");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error applying leave:", error);
+      toast.error("Failed to apply leave");
     }
   };
 
@@ -254,6 +387,24 @@ const ShiftManagementScreen = () => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", icon: React.ReactNode }> = {
+      present: { variant: "default", icon: <CheckCircle2 className="h-3 w-3 mr-1" /> },
+      late: { variant: "secondary", icon: <Clock className="h-3 w-3 mr-1" /> },
+      absent: { variant: "destructive", icon: <XCircle className="h-3 w-3 mr-1" /> },
+      pending: { variant: "outline", icon: <Clock className="h-3 w-3 mr-1" /> },
+      scheduled: { variant: "outline", icon: <Calendar className="h-3 w-3 mr-1" /> },
+      confirmed: { variant: "default", icon: <CheckCircle2 className="h-3 w-3 mr-1" /> },
+    };
+    const config = variants[status] || { variant: "secondary" as const, icon: null };
+    return (
+      <Badge variant={config.variant} className="text-xs">
+        {config.icon}
+        {status}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -275,12 +426,7 @@ const ShiftManagementScreen = () => {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="rounded-full"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-semibold flex items-center gap-2">
@@ -298,9 +444,7 @@ const ShiftManagementScreen = () => {
         {/* Active Shift Card */}
         <Card className={cn(
           "relative overflow-hidden transition-all duration-500",
-          activeShift 
-            ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30" 
-            : "bg-gradient-to-br from-muted to-muted/50"
+          activeShift ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30" : "bg-gradient-to-br from-muted to-muted/50"
         )}>
           {activeShift && (
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2 animate-pulse" />
@@ -313,9 +457,7 @@ const ShiftManagementScreen = () => {
                 Current Shift
               </span>
               {activeShift && (
-                <span className="text-3xl font-mono font-bold text-green-500">
-                  {elapsedTime}
-                </span>
+                <span className="text-3xl font-mono font-bold text-green-500">{elapsedTime}</span>
               )}
             </CardTitle>
             <CardDescription>
@@ -341,185 +483,372 @@ const ShiftManagementScreen = () => {
                   </div>
                   <div className="text-center p-3 bg-background/50 rounded-lg">
                     <IndianRupee className="h-5 w-5 mx-auto mb-1 text-green-500" />
-                    <p className="text-2xl font-bold text-green-500">
-                      {animatedEarnings.toFixed(2)}
-                    </p>
+                    <p className="text-2xl font-bold text-green-500">{animatedEarnings.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">Earned</p>
                   </div>
                 </div>
-                
-                <Button 
-                  onClick={endShift} 
-                  disabled={endingShift}
-                  variant="destructive"
-                  className="w-full h-12"
-                >
-                  {endingShift ? (
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  ) : (
-                    <Square className="h-5 w-5 mr-2" />
-                  )}
+                <Button onClick={endShift} disabled={endingShift} variant="destructive" className="w-full h-12">
+                  {endingShift ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Square className="h-5 w-5 mr-2" />}
                   End Shift
                 </Button>
               </div>
             ) : (
-              <Button 
-                onClick={startShift} 
-                disabled={startingShift}
-                className="w-full h-14 text-lg bg-green-500 hover:bg-green-600"
-              >
-                {startingShift ? (
-                  <Loader2 className="h-6 w-6 mr-2 animate-spin" />
-                ) : (
-                  <Play className="h-6 w-6 mr-2" />
-                )}
+              <Button onClick={startShift} disabled={startingShift} className="w-full h-14 text-lg bg-green-500 hover:bg-green-600">
+                {startingShift ? <Loader2 className="h-6 w-6 mr-2 animate-spin" /> : <Play className="h-6 w-6 mr-2" />}
                 Start Shift
               </Button>
             )}
           </CardContent>
         </Card>
 
-        {/* Earnings Summary */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Today</p>
-                  <p className="text-2xl font-bold">₹{summary.today.toFixed(2)}</p>
-                </div>
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">This Week</p>
-                  <p className="text-2xl font-bold">₹{summary.thisWeek.toFixed(2)}</p>
-                </div>
-                <div className="p-3 bg-green-500/10 rounded-full">
-                  <Calendar className="h-5 w-5 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">This Month</p>
-                  <p className="text-2xl font-bold">₹{summary.thisMonth.toFixed(2)}</p>
-                </div>
-                <div className="p-3 bg-orange-500/10 rounded-full">
-                  <Gift className="h-5 w-5 text-orange-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg/Hour</p>
-                  <p className="text-2xl font-bold">₹{summary.avgPerHour.toFixed(2)}</p>
-                </div>
-                <div className="p-3 bg-purple-500/10 rounded-full">
-                  <Clock className="h-5 w-5 text-purple-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Tabs for different sections */}
+        <Tabs defaultValue="schedule" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="schedule" className="text-xs">
+              <CalendarDays className="h-4 w-4 mr-1" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="text-xs">
+              <UserCheck className="h-4 w-4 mr-1" />
+              Attendance
+            </TabsTrigger>
+            <TabsTrigger value="earnings" className="text-xs">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              Earnings
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs">
+              <Clock className="h-4 w-4 mr-1" />
+              History
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Stats Row */}
-        <div className="flex gap-4">
-          <Card className="flex-1">
-            <CardContent className="pt-4 text-center">
-              <p className="text-3xl font-bold">{summary.totalShifts}</p>
-              <p className="text-sm text-muted-foreground">Total Shifts</p>
-            </CardContent>
-          </Card>
-          <Card className="flex-1">
-            <CardContent className="pt-4 text-center">
-              <p className="text-3xl font-bold">{summary.totalHours}</p>
-              <p className="text-sm text-muted-foreground">Total Hours</p>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Schedule Tab */}
+          <TabsContent value="schedule" className="space-y-4">
+            {/* AI Schedule Generator */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI Shift Scheduler
+                </CardTitle>
+                <CardDescription>Let AI schedule your shifts based on your patterns</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1 space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Timezone
+                    </Label>
+                    <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONES.map(tz => (
+                          <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={generateAISchedule} disabled={generatingSchedule}>
+                    {generatingSchedule ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                    Generate Schedule
+                  </Button>
+                </div>
 
-        {/* Shift History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-primary" />
-              Recent Shifts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {shifts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>No shifts yet</p>
-                <p className="text-sm">Start your first shift to begin earning</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Chats</TableHead>
-                      <TableHead>Earnings</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shifts.map((shift, index) => (
-                      <TableRow 
+                <div className="flex gap-2">
+                  <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="flex-1">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Apply Leave
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Apply for Leave</DialogTitle>
+                        <DialogDescription>Mark a day as leave or absence</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Date</Label>
+                          <input
+                            type="date"
+                            value={leaveDate}
+                            onChange={(e) => setLeaveDate(e.target.value)}
+                            min={new Date().toISOString().split("T")[0]}
+                            className="w-full p-2 rounded-md border border-input bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Leave Type</Label>
+                          <Select value={leaveType} onValueChange={setLeaveType}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="casual">Casual Leave</SelectItem>
+                              <SelectItem value="sick">Sick Leave</SelectItem>
+                              <SelectItem value="planned">Planned Leave</SelectItem>
+                              <SelectItem value="emergency">Emergency</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Reason (Optional)</Label>
+                          <Textarea
+                            value={leaveReason}
+                            onChange={(e) => setLeaveReason(e.target.value)}
+                            placeholder="Enter reason for leave..."
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setLeaveDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={applyLeave}>Submit</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Button variant="outline" onClick={() => fetchAllData()} className="flex-1">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Scheduled Shifts */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Upcoming Shifts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {scheduledShifts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No scheduled shifts</p>
+                    <p className="text-sm">Generate a schedule using AI</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {scheduledShifts.map((shift, index) => (
+                      <div
                         key={shift.id}
                         className={cn(
-                          "transition-all duration-300 animate-fade-in",
-                          shift.status === "active" && "bg-green-500/5"
+                          "flex items-center justify-between p-3 rounded-lg bg-muted/50 animate-fade-in",
+                          shift.status === "confirmed" && "border-l-4 border-green-500"
                         )}
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <TableCell className="font-medium">
-                          {format(new Date(shift.start_time), "MMM dd, HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          {formatDuration(shift.start_time, shift.end_time)}
-                        </TableCell>
-                        <TableCell>{shift.total_chats}</TableCell>
-                        <TableCell className="font-semibold text-green-500">
-                          ₹{(Number(shift.earnings) + Number(shift.bonus_earnings)).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={shift.status === "active" ? "default" : shift.status === "completed" ? "secondary" : "destructive"}
-                            className="text-xs"
-                          >
-                            {shift.status === "active" && <Play className="h-3 w-3 mr-1" />}
-                            {shift.status === "completed" && <CheckCircle2 className="h-3 w-3 mr-1" />}
-                            {shift.status === "cancelled" && <XCircle className="h-3 w-3 mr-1" />}
-                            {shift.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
+                        <div className="flex items-center gap-3">
+                          <div className="text-center min-w-[60px]">
+                            <p className="text-lg font-bold">{format(new Date(shift.scheduled_date), "dd")}</p>
+                            <p className="text-xs text-muted-foreground">{format(new Date(shift.scheduled_date), "EEE")}</p>
+                          </div>
+                          <div>
+                            <p className="font-medium">{shift.start_time.slice(0, 5)} - {shift.end_time.slice(0, 5)}</p>
+                            {shift.ai_suggested && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                {shift.suggested_reason?.slice(0, 40)}...
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(shift.status)}
+                          {shift.status === "scheduled" && (
+                            <Button size="sm" variant="outline" onClick={() => confirmScheduledShift(shift.id)}>
+                              Confirm
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Attendance Tab */}
+          <TabsContent value="attendance" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-green-500">{summary.attendanceRate}%</p>
+                    <p className="text-sm text-muted-foreground">Attendance Rate</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold">{absences.length}</p>
+                    <p className="text-sm text-muted-foreground">Absences</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                  Recent Attendance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {attendance.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <UserCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No attendance records</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Check In</TableHead>
+                        <TableHead>Check Out</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendance.slice(0, 10).map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{format(new Date(record.attendance_date), "MMM dd")}</TableCell>
+                          <TableCell>{record.check_in_time ? format(new Date(record.check_in_time), "HH:mm") : "-"}</TableCell>
+                          <TableCell>{record.check_out_time ? format(new Date(record.check_out_time), "HH:mm") : "-"}</TableCell>
+                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Earnings Tab */}
+          <TabsContent value="earnings" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Today</p>
+                      <p className="text-2xl font-bold">₹{summary.today.toFixed(2)}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-primary opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">This Week</p>
+                      <p className="text-2xl font-bold">₹{summary.thisWeek.toFixed(2)}</p>
+                    </div>
+                    <Calendar className="h-8 w-8 text-green-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">This Month</p>
+                      <p className="text-2xl font-bold">₹{summary.thisMonth.toFixed(2)}</p>
+                    </div>
+                    <Gift className="h-8 w-8 text-orange-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg/Hour</p>
+                      <p className="text-2xl font-bold">₹{summary.avgPerHour.toFixed(2)}</p>
+                    </div>
+                    <Clock className="h-8 w-8 text-purple-500 opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex gap-4">
+              <Card className="flex-1">
+                <CardContent className="pt-4 text-center">
+                  <p className="text-3xl font-bold">{summary.totalShifts}</p>
+                  <p className="text-sm text-muted-foreground">Total Shifts</p>
+                </CardContent>
+              </Card>
+              <Card className="flex-1">
+                <CardContent className="pt-4 text-center">
+                  <p className="text-3xl font-bold">{summary.totalHours}</p>
+                  <p className="text-sm text-muted-foreground">Total Hours</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Recent Shifts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {shifts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No shifts yet</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Chats</TableHead>
+                        <TableHead>Earnings</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {shifts.map((shift) => (
+                        <TableRow key={shift.id}>
+                          <TableCell>{format(new Date(shift.start_time), "MMM dd, HH:mm")}</TableCell>
+                          <TableCell>{formatDuration(shift.start_time, shift.end_time)}</TableCell>
+                          <TableCell>{shift.total_chats}</TableCell>
+                          <TableCell className="text-green-500 font-semibold">
+                            ₹{(Number(shift.earnings) + Number(shift.bonus_earnings)).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={shift.status === "active" ? "default" : "secondary"}>
+                              {shift.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
