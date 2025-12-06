@@ -218,6 +218,92 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_earnings: {
+        Row: {
+          amount: number
+          chat_id: string | null
+          created_at: string
+          description: string | null
+          earning_type: string
+          id: string
+          shift_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          chat_id?: string | null
+          created_at?: string
+          description?: string | null
+          earning_type: string
+          id?: string
+          shift_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          chat_id?: string | null
+          created_at?: string
+          description?: string | null
+          earning_type?: string
+          id?: string
+          shift_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_earnings_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          bonus_earnings: number
+          created_at: string
+          earnings: number
+          end_time: string | null
+          id: string
+          notes: string | null
+          start_time: string
+          status: string
+          total_chats: number
+          total_messages: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_earnings?: number
+          created_at?: string
+          earnings?: number
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          total_chats?: number
+          total_messages?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_earnings?: number
+          created_at?: string
+          earnings?: number
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          start_time?: string
+          status?: string
+          total_chats?: number
+          total_messages?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tutorial_progress: {
         Row: {
           completed: boolean

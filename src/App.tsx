@@ -22,6 +22,7 @@ import ProfileDetailScreen from "./pages/ProfileDetailScreen";
 import ChatScreen from "./pages/ChatScreen";
 import WalletScreen from "./pages/WalletScreen";
 import SettingsScreen from "./pages/SettingsScreen";
+import ShiftManagementScreen from "./pages/ShiftManagementScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/chat/:oderId" element={<ChatScreen />} />
           <Route path="/wallet" element={<WalletScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/shift-management" element={<ShiftManagementScreen />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
