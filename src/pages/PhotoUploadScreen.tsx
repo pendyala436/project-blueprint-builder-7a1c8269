@@ -235,7 +235,7 @@ const PhotoUploadScreen = () => {
 
   const handleBack = () => {
     stopCamera();
-    navigate("/basic-info");
+    navigate("/password-setup");
   };
 
   const clearSelfie = () => {
@@ -256,7 +256,7 @@ const PhotoUploadScreen = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <ProgressIndicator currentStep={4} totalSteps={5} />
+        <ProgressIndicator currentStep={4} totalSteps={9} />
         <div className="w-10" />
       </div>
 

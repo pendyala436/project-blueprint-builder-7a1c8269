@@ -177,7 +177,7 @@ const BasicInfoScreen = () => {
   };
 
   const handleBack = () => {
-    navigate("/language-country");
+    navigate("/");
   };
 
   const isComplete = fullName.trim() && dob && gender && phone.trim();
@@ -200,7 +200,7 @@ const BasicInfoScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={2} totalSteps={10} />
+            <ProgressIndicator currentStep={2} totalSteps={9} />
           </div>
         </div>
       </header>
