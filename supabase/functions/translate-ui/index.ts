@@ -84,23 +84,21 @@ Example for Telugu:
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.error("Rate limit exceeded");
-        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later" }), {
-          status: 429,
+        console.warn("Rate limit exceeded, returning original texts");
+        return new Response(JSON.stringify({ translations: texts, fallback: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       if (response.status === 402) {
-        console.error("Payment required");
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402,
+        console.warn("Payment required, returning original texts");
+        return new Response(JSON.stringify({ translations: texts, fallback: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Translation failed" }), {
-        status: 500,
+      // Graceful fallback - return original texts instead of failing
+      return new Response(JSON.stringify({ translations: texts, fallback: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
