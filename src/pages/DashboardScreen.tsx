@@ -713,7 +713,7 @@ const DashboardScreen = () => {
                   className="gap-2"
                 >
                   <CreditCard className="w-5 h-5" />
-                  Recharge
+                  {t('rechargeWallet', 'Recharge')}
                 </Button>
               </div>
             </div>
@@ -722,7 +722,7 @@ const DashboardScreen = () => {
 
         {/* Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
               <button
@@ -747,9 +747,9 @@ const DashboardScreen = () => {
         {/* Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
             <button className="text-sm text-primary hover:underline flex items-center gap-1">
-              View all <ChevronRight className="w-4 h-4" />
+              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
@@ -782,9 +782,9 @@ const DashboardScreen = () => {
           ) : (
             <Card className="p-8 text-center">
               <Sparkles className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">No new activity yet</p>
+              <p className="text-muted-foreground">{t('noNotifications', 'No new activity yet')}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Start exploring to get matches and notifications!
+                {t('startExploringToGetMatches', 'Start exploring to get matches and notifications!')}
               </p>
               <Button 
                 variant="gradient" 
@@ -792,7 +792,7 @@ const DashboardScreen = () => {
                 onClick={() => navigate("/find-match")}
               >
                 <Search className="w-4 h-4 mr-2" />
-                Start Exploring
+                {t('startExploring', 'Start Exploring')}
               </Button>
             </Card>
           )}
@@ -805,11 +805,11 @@ const DashboardScreen = () => {
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Boost your profile!</h3>
-              <p className="text-sm text-muted-foreground">Get more matches with premium features</p>
+              <h3 className="font-semibold text-foreground">{t('boostYourProfile', 'Boost your profile!')}</h3>
+              <p className="text-sm text-muted-foreground">{t('getMoreMatchesWithPremium', 'Get more matches with premium features')}</p>
             </div>
             <Button variant="gradient" size="sm" onClick={() => navigate("/wallet")}>
-              Upgrade
+              {t('upgrade', 'Upgrade')}
             </Button>
           </div>
         </Card>
@@ -821,7 +821,7 @@ const DashboardScreen = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              Recharge Wallet
+              {t('rechargeWallet', 'Recharge Wallet')}
             </DialogTitle>
           </DialogHeader>
 
@@ -829,17 +829,17 @@ const DashboardScreen = () => {
             {/* Currency Info */}
             <div className="p-3 rounded-lg bg-muted/50 text-sm">
               <p className="text-muted-foreground">
-                Your currency: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
+                {t('yourCurrency', 'Your currency')}: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Prices shown in your local currency (stored as INR)
+                {t('pricesShownInLocal', 'Prices shown in your local currency (stored as INR)')}
               </p>
             </div>
 
             {/* Indian Payment Gateways */}
             <div>
               <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                🇮🇳 Indian Payment Methods
+                🇮🇳 {t('indianPaymentMethods', 'Indian Payment Methods')}
               </Label>
               <RadioGroup
                 value={selectedGateway}
@@ -878,7 +878,7 @@ const DashboardScreen = () => {
             {/* International Payment Gateways */}
             <div>
               <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                🌍 International Payment Methods
+                🌍 {t('internationalPaymentMethods', 'International Payment Methods')}
               </Label>
               <RadioGroup
                 value={selectedGateway}
