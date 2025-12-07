@@ -514,12 +514,12 @@ const WomenDashboardScreen = () => {
               <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
               {user.age && (
                 <Badge variant="outline" className="text-xs font-medium">
-                  {user.age} yrs
+                  {user.age} {t('yearsOld', 'yrs')}
                 </Badge>
               )}
               {user.isSameLanguage && (
                 <Badge variant="default" className="text-[10px] bg-primary/90">
-                  Same Language
+                  {t('sameLanguage', 'Same Language')}
                 </Badge>
               )}
             </div>
@@ -535,7 +535,7 @@ const WomenDashboardScreen = () => {
               {user.isNllbLanguage && !user.isSameLanguage && (
                 <Badge variant="outline" className="text-[10px]">
                   <Globe className="h-2.5 w-2.5 mr-1" />
-                  Auto-translate
+                  {t('autoTranslateMessages', 'Auto-translate')}
                 </Badge>
               )}
             </div>
@@ -672,9 +672,9 @@ const WomenDashboardScreen = () => {
                 <Languages className="w-5 h-5 text-indigo-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground mb-1">Your Language</p>
+                <p className="text-sm font-medium text-foreground mb-1">{t('yourLanguage', 'Your Language')}</p>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all {ALL_NLLB200_LANGUAGES.length} NLLB-200 languages.
+                  {t('selectLanguageDescription', 'Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all')} {ALL_NLLB200_LANGUAGES.length} {t('nllbLanguages', 'NLLB-200 languages')}.
                 </p>
                 <LanguageSelector
                   selectedLanguage={currentWomanLanguage}
@@ -705,7 +705,7 @@ const WomenDashboardScreen = () => {
               </div>
               <div>
                 <p className="text-xl font-bold">{stats.rechargedMen}</p>
-                <p className="text-xs text-muted-foreground">Premium Men</p>
+                <p className="text-xs text-muted-foreground">{t('premiumUsers', 'Premium Men')}</p>
               </div>
             </div>
           </Card>
@@ -717,7 +717,7 @@ const WomenDashboardScreen = () => {
               </div>
               <div>
                 <p className="text-xl font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
-                <p className="text-xs text-muted-foreground">Today's Earnings</p>
+                <p className="text-xs text-muted-foreground">{t('todayEarnings', "Today's Earnings")}</p>
               </div>
             </div>
           </Card>
@@ -729,7 +729,7 @@ const WomenDashboardScreen = () => {
               </div>
               <div>
                 <p className="text-xl font-bold">{stats.matchCount}</p>
-                <p className="text-xs text-muted-foreground">Matches</p>
+                <p className="text-xs text-muted-foreground">{t('matches', 'Matches')}</p>
               </div>
             </div>
           </Card>
@@ -743,8 +743,8 @@ const WomenDashboardScreen = () => {
                 <Clock className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-sm font-bold">Shift</p>
-                <p className="text-xs text-muted-foreground">Manage →</p>
+                <p className="text-sm font-bold">{t('shifts', 'Shift')}</p>
+                <p className="text-xs text-muted-foreground">{t('shiftManagement', 'Manage')} →</p>
               </div>
             </div>
           </Card>
@@ -759,8 +759,8 @@ const WomenDashboardScreen = () => {
                   <MessageCircle className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">Start Random Chat</p>
-                  <p className="text-xs text-muted-foreground">Connect with a man speaking your language</p>
+                  <p className="text-sm font-bold">{t('randomChat', 'Start Random Chat')}</p>
+                  <p className="text-xs text-muted-foreground">{t('connectWithMan', 'Connect with a man speaking your language')}</p>
                 </div>
               </div>
               <RandomChatButton 
@@ -784,11 +784,11 @@ const WomenDashboardScreen = () => {
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recharged" className="flex items-center gap-2">
               <Crown className="h-4 w-4" />
-              Premium ({stats.rechargedMen})
+              {t('premium', 'Premium')} ({stats.rechargedMen})
             </TabsTrigger>
             <TabsTrigger value="non-recharged" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Regular ({stats.nonRechargedMen})
+              {t('regularUsers', 'Regular')} ({stats.nonRechargedMen})
             </TabsTrigger>
           </TabsList>
 
@@ -796,7 +796,7 @@ const WomenDashboardScreen = () => {
           <TabsContent value="recharged" className="space-y-3 mt-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
-                Same language first, then by wallet balance
+                {t('sameLanguageFirst', 'Same language first, then by wallet balance')}
               </p>
               <div className="flex gap-2">
                 <Badge variant="outline" className="text-xs">
@@ -805,7 +805,7 @@ const WomenDashboardScreen = () => {
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   <Crown className="h-3 w-3 mr-1" />
-                  Priority
+                  {t('priority', 'Priority')}
                 </Badge>
               </div>
             </div>
@@ -813,9 +813,9 @@ const WomenDashboardScreen = () => {
             {rechargedMen.length === 0 ? (
               <Card className="p-8 text-center">
                 <Wallet className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">No premium men online</p>
+                <p className="text-muted-foreground">{t('noPremiumMenOnline', 'No premium men online')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Check back later for users with wallet balance
+                  {t('checkBackLaterForWalletUsers', 'Check back later for users with wallet balance')}
                 </p>
               </Card>
             ) : (
@@ -836,13 +836,13 @@ const WomenDashboardScreen = () => {
           {/* Non-Recharged Men */}
           <TabsContent value="non-recharged" className="space-y-3 mt-4">
             <p className="text-sm text-muted-foreground">
-              Users without wallet balance
+              {t('usersWithoutBalance', 'Users without wallet balance')}
             </p>
 
             {nonRechargedMen.length === 0 ? (
               <Card className="p-8 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">No regular users online</p>
+                <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -862,7 +862,7 @@ const WomenDashboardScreen = () => {
 
         {/* Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
               <button
@@ -882,9 +882,9 @@ const WomenDashboardScreen = () => {
         {/* Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
             <button className="text-sm text-primary hover:underline flex items-center gap-1">
-              View all <ChevronRight className="w-4 h-4" />
+              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
