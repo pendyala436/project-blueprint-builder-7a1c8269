@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TranslationContextType {
@@ -8,6 +8,7 @@ interface TranslationContextType {
   currentLanguage: string;
   setLanguage: (language: string) => void;
   isLoading: boolean;
+  syncUserLanguage: () => Promise<void>;
 }
 
 const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
@@ -16,6 +17,7 @@ const TranslationContext = createContext<TranslationContextType | undefined>(und
 const TRANSLATIONS_CACHE_KEY = 'translations_cache';
 const DYNAMIC_CACHE_KEY = 'dynamic_translations_cache';
 const LANGUAGE_KEY = 'app_language';
+const USER_LANGUAGE_KEY = 'user_language_id';
 
 // Default English UI strings - comprehensive app-wide translations
 const defaultStrings: Record<string, string> = {
@@ -846,42 +848,93 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
   
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialLanguage);
   const [isLoading, setIsLoading] = useState(false);
+  const lastUserId = useRef<string | null>(null);
   
   // Get translations synchronously from memory cache
   const translations = useMemo(() => {
     return memoryCache[currentLanguage] || defaultStrings;
   }, [currentLanguage]);
 
-  // Load user's language preference from database (only if not set in localStorage)
-  useEffect(() => {
-    const loadUserLanguage = async () => {
-      const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
-      if (savedLanguage) return; // Already have preference
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: userLanguages } = await supabase
-          .from('user_languages')
-          .select('language_name')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if (userLanguages && userLanguages.length > 0) {
-          const language = userLanguages[0].language_name;
-          if (language && language !== 'English') {
-            localStorage.setItem(LANGUAGE_KEY, language);
-            setCurrentLanguage(language);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading user language:', error);
+  // Function to fetch and sync user's language from database
+  const syncUserLanguage = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // User logged out - reset to English or keep current
+        return;
       }
-    };
 
-    loadUserLanguage();
+      // Avoid re-fetching for the same user
+      if (lastUserId.current === user.id) {
+        const savedUserId = localStorage.getItem(USER_LANGUAGE_KEY);
+        if (savedUserId === user.id) return;
+      }
+
+      lastUserId.current = user.id;
+      localStorage.setItem(USER_LANGUAGE_KEY, user.id);
+
+      // First check user_languages table (mother tongue)
+      const { data: userLanguages } = await supabase
+        .from('user_languages')
+        .select('language_name')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      if (userLanguages && userLanguages.length > 0) {
+        const language = userLanguages[0].language_name;
+        if (language) {
+          localStorage.setItem(LANGUAGE_KEY, language);
+          setCurrentLanguage(language);
+          return;
+        }
+      }
+
+      // Fallback to profile's preferred_language or primary_language
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('preferred_language, primary_language')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profile) {
+        const language = profile.preferred_language || profile.primary_language;
+        if (language) {
+          localStorage.setItem(LANGUAGE_KEY, language);
+          setCurrentLanguage(language);
+          return;
+        }
+      }
+
+      // Default to English if no language found
+      localStorage.setItem(LANGUAGE_KEY, 'English');
+      setCurrentLanguage('English');
+    } catch (error) {
+      console.error('Error syncing user language:', error);
+    }
   }, []);
+
+  // Listen to auth state changes and sync language
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User just logged in - sync their language
+        setTimeout(() => {
+          syncUserLanguage();
+        }, 0);
+      } else if (event === 'SIGNED_OUT') {
+        // User logged out - clear user-specific data but keep language
+        lastUserId.current = null;
+        localStorage.removeItem(USER_LANGUAGE_KEY);
+      }
+    });
+
+    // Initial sync on mount
+    syncUserLanguage();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [syncUserLanguage]);
 
   // Translate UI when language changes (background task - doesn't block rendering)
   useEffect(() => {
@@ -1042,8 +1095,9 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     translateDynamicBatch,
     currentLanguage,
     setLanguage,
-    isLoading
-  }), [t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading]);
+    isLoading,
+    syncUserLanguage
+  }), [t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading, syncUserLanguage]);
 
   return (
     <TranslationContext.Provider value={value}>
