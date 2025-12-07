@@ -45,6 +45,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface Notification {
   id: string;
@@ -162,6 +163,7 @@ const ALL_GATEWAYS = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, setLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
@@ -410,8 +412,8 @@ const DashboardScreen = () => {
     await updateUserOnlineStatus(false);
     await supabase.auth.signOut();
     toast({
-      title: "Logged out",
-      description: "See you soon!",
+      title: t('loggedOut', 'Logged out'),
+      description: t('seeYouSoon', 'See you soon!'),
     });
     navigate("/");
   };
@@ -494,25 +496,25 @@ const DashboardScreen = () => {
   const quickActions = [
     { 
       icon: <Search className="w-6 h-6" />, 
-      label: "Find Match", 
+      label: t('findMatch', 'Find Match'), 
       color: "from-primary to-rose-400",
       action: () => navigate("/find-match")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
-      label: "Messages", 
+      label: t('messages', 'Messages'), 
       color: "from-blue-500 to-blue-400",
-      action: () => navigate("/match-discovery") // Navigate to matches where they can start chats
+      action: () => navigate("/match-discovery")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
-      label: "Matches", 
+      label: t('matches', 'Matches'), 
       color: "from-rose-500 to-pink-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
-      label: "Profile", 
+      label: t('profile', 'Profile'), 
       color: "from-violet-500 to-purple-400",
       action: () => setProfileEditOpen(true)
     },
@@ -523,7 +525,7 @@ const DashboardScreen = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
+          <p className="text-muted-foreground">{t('loading', 'Loading...')}</p>
         </div>
       </div>
     );
@@ -578,14 +580,14 @@ const DashboardScreen = () => {
               <div className="flex items-center gap-2 mb-2">
                 <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
                 <span className="text-sm text-muted-foreground">
-                  {isOnline ? "Online" : "Offline"}
+                  {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                 </span>
               </div>
               <h1 className="text-3xl font-bold text-foreground">
-                Welcome back{userName ? `, ${userName}` : ""}! 👋
+                {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
               </h1>
               <p className="text-muted-foreground mt-1">
-                Ready to make new connections today?
+                {t('readyToConnect', 'Ready to make new connections today?')}
               </p>
             </div>
             <MatchFiltersPanel 

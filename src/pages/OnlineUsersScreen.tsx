@@ -14,6 +14,7 @@ import {
   Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/contexts/TranslationContext";
 import {
   Carousel,
   CarouselContent,
@@ -35,6 +36,7 @@ interface OnlineUser {
 const OnlineUsersScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -232,7 +234,7 @@ const OnlineUsersScreen = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground">Finding online users...</p>
+          <p className="text-muted-foreground">{t('findingOnlineUsers', 'Finding online users...')}</p>
         </div>
       </div>
     );
@@ -248,14 +250,14 @@ const OnlineUsersScreen = () => {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-sm font-medium">{t('back', 'Back')}</span>
           </button>
           
           <MeowLogo size="sm" />
           
           <div className="flex items-center gap-2">
             <Circle className="w-3 h-3 fill-emerald-500 text-emerald-500" />
-            <span className="text-sm text-muted-foreground">{onlineUsers.length} online</span>
+            <span className="text-sm text-muted-foreground">{onlineUsers.length} {t('online', 'online')}</span>
           </div>
         </div>
       </header>
@@ -266,21 +268,21 @@ const OnlineUsersScreen = () => {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
               <Heart className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">No one online right now</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">{t('noOneOnlineRightNow', 'No one online right now')}</h2>
             <p className="text-muted-foreground mb-6">
-              Check back later to find users matching your preferences
+              {t('checkBackLater', 'Check back later to find users matching your preferences')}
             </p>
             <Button variant="gradient" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
+              {t('backToDashboard', 'Back to Dashboard')}
             </Button>
           </Card>
         ) : (
           <div className="space-y-8">
             {/* Title */}
             <div className="text-center animate-fade-in">
-              <h1 className="text-2xl font-bold text-foreground mb-2">Online Now</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{t('onlineNow', 'Online Now')}</h1>
               <p className="text-muted-foreground">
-                Browse {currentUserGender === "Male" ? "women" : currentUserGender === "Female" ? "men" : "users"} who are online right now
+                {t('browseOnlineUsers', 'Browse users who are online right now')}
               </p>
             </div>
 
@@ -327,7 +329,7 @@ const OnlineUsersScreen = () => {
                           {/* Online indicator */}
                           <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
                             <Circle className="w-2.5 h-2.5 fill-emerald-500 text-emerald-500 animate-pulse" />
-                            <span className="text-xs font-medium text-foreground">Online</span>
+                            <span className="text-xs font-medium text-foreground">{t('online', 'Online')}</span>
                           </div>
 
                           {/* Gradient overlay */}

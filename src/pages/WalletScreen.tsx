@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface WalletData {
   id: string;
@@ -137,6 +138,7 @@ const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
 
 const WalletScreen = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -396,7 +398,7 @@ const WalletScreen = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-semibold">My Wallet</h1>
+            <h1 className="text-xl font-semibold">{t('myWallet', 'My Wallet')}</h1>
           </div>
           <Button
             variant="ghost"
@@ -419,7 +421,7 @@ const WalletScreen = () => {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-primary-foreground/80 font-medium text-sm">
               <Wallet className="h-4 w-4" />
-              Available Balance
+              {t('availableBalance', 'Available Balance')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -433,7 +435,7 @@ const WalletScreen = () => {
               </span>
             </div>
             <p className="text-primary-foreground/60 text-sm mt-2">
-              Currency: {wallet?.currency || "INR"}
+              {t('currency', 'Currency')}: {wallet?.currency || "INR"}
             </p>
           </CardContent>
         </Card>
