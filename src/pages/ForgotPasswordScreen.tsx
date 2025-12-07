@@ -7,29 +7,15 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Mail, Phone, Lock, ArrowLeft, ArrowRight, Loader2, Check, ShieldCheck } from "lucide-react";
+import { Mail, ArrowLeft, ArrowRight, Loader2, ShieldCheck, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import PhoneInputWithCode from "@/components/PhoneInputWithCode";
-
-type Step = "verify" | "reset";
 
 const ForgotPasswordScreen = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("verify");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [errors, setErrors] = useState<{
-    email?: string;
-    phone?: string;
-    newPassword?: string;
-    confirmPassword?: string;
-  }>({});
+  const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
   const validateEmail = (value: string) => {
     if (!value.trim()) return "Email is required";
@@ -38,118 +24,34 @@ const ForgotPasswordScreen = () => {
     return undefined;
   };
 
-  const validatePhone = (value: string) => {
-    if (!value.trim()) return "Phone number is required";
-    const phoneRegex = /^\+?[1-9]\d{6,14}$/;
-    if (!phoneRegex.test(value)) return "Please enter a valid phone number";
-    return undefined;
-  };
-
-  const validatePassword = (value: string) => {
-    if (!value) return "Password is required";
-    if (value.length < 8) return "Password must be at least 8 characters";
-    if (!/[A-Z]/.test(value)) return "Must contain an uppercase letter";
-    if (!/[a-z]/.test(value)) return "Must contain a lowercase letter";
-    if (!/[0-9]/.test(value)) return "Must contain a number";
-    return undefined;
-  };
-
-  const handleVerify = async () => {
+  const handleSendResetLink = async () => {
     const emailError = validateEmail(email);
-    const phoneError = validatePhone(phone);
+    setError(emailError);
 
-    setErrors({ email: emailError, phone: phoneError });
-
-    if (emailError || phoneError) {
+    if (emailError) {
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Call edge function to verify email + phone combination
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: {
-          action: "verify",
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-        },
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/password-setup`,
+        }
+      );
 
       if (error) throw error;
 
-      if (data?.verified) {
-        setIsVerified(true);
-        setStep("reset");
-        toast({
-          title: "Identity verified!",
-          description: "You can now set a new password.",
-        });
-      } else {
-        toast({
-          title: "Verification failed",
-          description: data?.message || "Email and phone number combination not found.",
-          variant: "destructive",
-        });
-      }
+      setEmailSent(true);
+      toast({
+        title: "Reset link sent!",
+        description: "Check your email for the password reset link.",
+      });
     } catch (error: any) {
       toast({
-        title: "Verification failed",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    const passwordError = validatePassword(newPassword);
-    let confirmError: string | undefined;
-
-    if (!confirmPassword) {
-      confirmError = "Please confirm your password";
-    } else if (newPassword !== confirmPassword) {
-      confirmError = "Passwords do not match";
-    }
-
-    setErrors({ newPassword: passwordError, confirmPassword: confirmError });
-
-    if (passwordError || confirmError) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Call edge function to reset password
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: {
-          action: "reset",
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-          newPassword,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        toast({
-          title: "Password reset successful!",
-          description: "You can now login with your new password.",
-        });
-        navigate("/");
-      } else {
-        toast({
-          title: "Reset failed",
-          description: data?.message || "Failed to reset password. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Reset failed",
+        title: "Failed to send reset link",
         description: error.message || "An error occurred. Please try again.",
         variant: "destructive",
       });
@@ -184,19 +86,23 @@ const ForgotPasswordScreen = () => {
             {/* Title */}
             <div className="text-center space-y-2">
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-                <ShieldCheck className="w-8 h-8 text-primary" />
+                {emailSent ? (
+                  <CheckCircle className="w-8 h-8 text-green-500" />
+                ) : (
+                  <ShieldCheck className="w-8 h-8 text-primary" />
+                )}
               </div>
               <h1 className="text-2xl font-bold text-foreground">
-                {step === "verify" ? "Reset Password" : "Set New Password"}
+                {emailSent ? "Check Your Email" : "Reset Password"}
               </h1>
               <p className="text-muted-foreground text-sm">
-                {step === "verify"
-                  ? "Enter your email and phone number to verify your identity"
-                  : "Create a strong password for your account"}
+                {emailSent
+                  ? "We've sent a password reset link to your email address"
+                  : "Enter your email address and we'll send you a link to reset your password"}
               </p>
             </div>
 
-            {step === "verify" ? (
+            {!emailSent ? (
               <>
                 {/* Email Input */}
                 <div className="space-y-2">
@@ -211,55 +117,34 @@ const ForgotPasswordScreen = () => {
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
-                      setErrors((prev) => ({ ...prev, email: undefined }));
+                      setError(undefined);
                     }}
                     className={cn(
                       "h-12 rounded-xl border-2 transition-all",
-                      errors.email ? "border-destructive" : "border-input focus:border-primary"
+                      error ? "border-destructive" : "border-input focus:border-primary"
                     )}
                   />
-                  {errors.email && (
-                    <p className="text-xs text-destructive">{errors.email}</p>
+                  {error && (
+                    <p className="text-xs text-destructive">{error}</p>
                   )}
                 </div>
 
-                {/* Phone Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-semibold flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-primary" />
-                    Phone Number
-                  </Label>
-                  <PhoneInputWithCode
-                    value={phone}
-                    onChange={(value) => {
-                      setPhone(value);
-                      setErrors((prev) => ({ ...prev, phone: undefined }));
-                    }}
-                    error={!!errors.phone}
-                    placeholder="Enter your phone number"
-                    defaultCountryCode="IN"
-                  />
-                  {errors.phone && (
-                    <p className="text-xs text-destructive">{errors.phone}</p>
-                  )}
-                </div>
-
-                {/* Verify Button */}
+                {/* Send Reset Link Button */}
                 <Button
                   variant="hero"
                   size="xl"
                   className="w-full group"
-                  onClick={handleVerify}
+                  onClick={handleSendResetLink}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Verifying...
+                      Sending...
                     </>
                   ) : (
                     <>
-                      Verify Identity
+                      Send Reset Link
                       <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                     </>
                   )}
@@ -267,105 +152,25 @@ const ForgotPasswordScreen = () => {
               </>
             ) : (
               <>
-                {/* Verified Badge */}
-                <div className="flex items-center justify-center gap-2 p-3 bg-green-500/10 rounded-xl border border-green-500/20">
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                    Identity Verified
-                  </span>
+                {/* Success Message */}
+                <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 text-center space-y-2">
+                  <p className="text-sm text-foreground font-medium">
+                    Reset link sent to:
+                  </p>
+                  <p className="text-sm text-primary font-semibold">
+                    {email}
+                  </p>
                 </div>
 
-                {/* New Password Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="text-sm font-semibold flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-primary" />
-                    New Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      onChange={(e) => {
-                        setNewPassword(e.target.value);
-                        setErrors((prev) => ({ ...prev, newPassword: undefined }));
-                      }}
-                      className={cn(
-                        "h-12 pr-10 rounded-xl border-2 transition-all",
-                        errors.newPassword ? "border-destructive" : "border-input focus:border-primary"
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {errors.newPassword && (
-                    <p className="text-xs text-destructive">{errors.newPassword}</p>
-                  )}
-                </div>
-
-                {/* Confirm Password Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-semibold flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-primary" />
-                    Confirm Password
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm new password"
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-                      }}
-                      className={cn(
-                        "h-12 pr-10 rounded-xl border-2 transition-all",
-                        errors.confirmPassword ? "border-destructive" : "border-input focus:border-primary",
-                        confirmPassword && !errors.confirmPassword && newPassword === confirmPassword
-                          ? "border-green-500"
-                          : ""
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                  )}
-                </div>
-
-                {/* Reset Button */}
-                <Button
-                  variant="hero"
-                  size="xl"
-                  className="w-full group"
-                  onClick={handleResetPassword}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Resetting...
-                    </>
-                  ) : (
-                    <>
-                      Reset Password
-                      <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
-                </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Didn't receive the email? Check your spam folder or{" "}
+                  <button
+                    onClick={() => setEmailSent(false)}
+                    className="text-primary hover:text-primary/80 transition-colors font-medium"
+                  >
+                    try again
+                  </button>
+                </p>
               </>
             )}
 
