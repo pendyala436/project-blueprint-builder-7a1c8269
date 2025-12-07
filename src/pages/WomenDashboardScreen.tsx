@@ -191,18 +191,22 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile including country
+      // Fetch user profile including country and approval status
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, gender, country, primary_language, preferred_language")
+        .select("full_name, gender, country, primary_language, preferred_language, approval_status")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Check if female user needs approval
+      if (profile?.gender === "female" && profile?.approval_status !== "approved") {
+        navigate("/approval-pending");
+        return;
+      }
 
       if (profile?.full_name) {
         setUserName(profile.full_name.split(" ")[0]);
       }
-
-      // Note: Gender check removed for testing - women dashboard accessible to all users
 
       // Get woman's mother tongue
       const { data: womanLanguages } = await supabase
