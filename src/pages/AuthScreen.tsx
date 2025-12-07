@@ -9,12 +9,12 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "@/contexts/TranslationContext";
+import useTranslation from "@/hooks/useTranslation";
 import LoginLanguageSelector from "@/components/LoginLanguageSelector";
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { t, isLoading: isTranslating } = useTranslation();
+  const { t, isChangingLanguage } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -120,7 +120,7 @@ const AuthScreen = () => {
             MEOW MEOW
           </h1>
           <p className="text-muted-foreground text-lg">
-            {isTranslating ? '...' : t('findYourPurrfectMatch', 'Find your purrfect match')}
+            {isChangingLanguage ? '...' : t('common.welcome', 'Find your purrfect match')}
           </p>
         </div>
       </header>
@@ -132,14 +132,14 @@ const AuthScreen = () => {
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-semibold">
-                {t('emailAddress', 'Email Address')}
+                {t('common.email', 'Email Address')}
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder={t('enterYourEmail', 'Enter your email')}
+                  placeholder={t('auth.enterEmail', 'Enter your email')}
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -159,14 +159,14 @@ const AuthScreen = () => {
             {/* Password Input */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-semibold">
-                {t('password', 'Password')}
+                {t('common.password', 'Password')}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={t('enterYourPassword', 'Enter your password')}
+                  placeholder={t('auth.enterPassword', 'Enter your password')}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -201,7 +201,7 @@ const AuthScreen = () => {
                 onClick={() => navigate("/forgot-password")}
                 className="text-sm text-primary hover:text-primary/80 transition-colors"
               >
-                {t('forgotPassword', 'Forgot Password?')}
+                {t('auth.forgotPassword', 'Forgot Password?')}
               </button>
             </div>
 
@@ -216,11 +216,11 @@ const AuthScreen = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  {t('loggingIn', 'Logging in...')}
+                  {t('common.loading', 'Logging in...')}
                 </>
               ) : (
                 <>
-                  {t('login', 'Login')}
+                  {t('common.login', 'Login')}
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </>
               )}
@@ -230,7 +230,7 @@ const AuthScreen = () => {
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                {t('newHere', 'New here?')}
+                {t('auth.dontHaveAccount', "New here?")}
               </span>
               <div className="h-px flex-1 bg-border" />
             </div>
@@ -242,7 +242,7 @@ const AuthScreen = () => {
               className="w-full"
               onClick={() => navigate("/register")}
             >
-              {t('createAccount', 'Create an Account')}
+              {t('auth.createAccount', 'Create an Account')}
             </Button>
           </div>
         </Card>
