@@ -32,6 +32,8 @@ import {
   Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/TranslationContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface UserSettings {
   theme: string;
@@ -80,18 +82,15 @@ const THEME_OPTIONS = [
   { id: "system", icon: Monitor, label: "System" },
 ];
 
-const LANGUAGES = [
-  "English", "Hindi", "Spanish", "French", "German", 
-  "Chinese", "Japanese", "Arabic", "Bengali", "Portuguese"
-];
-
 const SettingsScreen = () => {
   const navigate = useNavigate();
+  const { t, setLanguage, currentLanguage, isLoading: isTranslating } = useTranslation();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [originalSettings, setOriginalSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedLanguageCode, setSelectedLanguageCode] = useState("eng_Latn");
 
   useEffect(() => {
     fetchSettings();
@@ -212,12 +211,12 @@ const SettingsScreen = () => {
             </Button>
             <h1 className="text-xl font-semibold flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              Settings
+              {t('settings', 'Settings')}
             </h1>
           </div>
           {hasChanges && (
             <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-              Unsaved changes
+              {t('unsavedChanges', 'Unsaved changes')}
             </span>
           )}
         </div>
@@ -381,25 +380,19 @@ const SettingsScreen = () => {
             <CardDescription>Set your language and translation preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Languages className="h-4 w-4" />
-                App Language
-              </Label>
-              <Select
-                value={settings.language}
-                onValueChange={(value) => updateSetting("language", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <LanguageSelector
+              selectedLanguage={settings.language}
+              selectedLanguageCode={selectedLanguageCode}
+              onLanguageChange={(lang, code) => {
+                updateSetting("language", lang);
+                setSelectedLanguageCode(code);
+                // Update app UI language
+                setLanguage(lang);
+              }}
+              showAllLanguages={true}
+              label={t('language', 'App Language')}
+              description={t('languageDescription', 'Select your preferred language for the app interface')}
+            />
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
