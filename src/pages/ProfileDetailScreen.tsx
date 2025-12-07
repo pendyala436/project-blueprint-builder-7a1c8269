@@ -17,6 +17,7 @@ import {
   X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface ProfileData {
   userId: string;
@@ -37,6 +38,7 @@ const ProfileDetailScreen = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -227,7 +229,7 @@ const ProfileDetailScreen = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading profile...</p>
+          <p className="text-muted-foreground">{t('loadingProfile', 'Loading profile...')}</p>
         </div>
       </div>
     );
@@ -238,9 +240,9 @@ const ProfileDetailScreen = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="p-8 text-center">
           <X className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-foreground mb-2">Profile Not Found</h2>
+          <h2 className="text-xl font-bold text-foreground mb-2">{t('profileNotFound', 'Profile Not Found')}</h2>
           <Button variant="gradient" onClick={() => navigate(-1)}>
-            Go Back
+            {t('goBack', 'Go Back')}
           </Button>
         </Card>
       </div>
@@ -257,7 +259,7 @@ const ProfileDetailScreen = () => {
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Back</span>
+            <span className="text-sm font-medium">{t('back', 'Back')}</span>
           </button>
           
           <MeowLogo size="sm" />
@@ -301,7 +303,7 @@ const ProfileDetailScreen = () => {
               <span className={`text-sm font-medium ${
                 profile.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
               }`}>
-                {profile.isOnline ? "Online" : `Last seen ${formatLastSeen(profile.lastSeen)}`}
+                {profile.isOnline ? t('online', 'Online') : `${t('lastSeen', 'Last seen')} ${formatLastSeen(profile.lastSeen)}`}
               </span>
             </div>
 
@@ -309,7 +311,7 @@ const ProfileDetailScreen = () => {
             {profile.isVerified && (
               <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 backdrop-blur-sm">
                 <Shield className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Verified</span>
+                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('verified', 'Verified')}</span>
               </div>
             )}
           </div>
@@ -341,7 +343,7 @@ const ProfileDetailScreen = () => {
               <div className="flex items-start gap-3">
                 <Languages className="w-5 h-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Mother Tongue</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t('motherTongue', 'Mother Tongue')}</p>
                   <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm">
                     {profile.motherTongue}
                   </span>
@@ -353,7 +355,7 @@ const ProfileDetailScreen = () => {
                 <div className="flex items-start gap-3">
                   <div className="w-5" /> {/* Spacer for alignment */}
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Also speaks</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('alsoSpeaks', 'Also speaks')}</p>
                     <div className="flex flex-wrap gap-2">
                       {profile.optionalLanguages.map(lang => (
                         <span 
@@ -373,7 +375,7 @@ const ProfileDetailScreen = () => {
             {profile.age && (
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Calendar className="w-5 h-5" />
-                <span>{profile.age} years old</span>
+                <span>{profile.age} {t('yearsOld', 'years old')}</span>
               </div>
             )}
           </div>
@@ -389,7 +391,7 @@ const ProfileDetailScreen = () => {
             disabled={isLiked}
           >
             <Heart className={`w-6 h-6 ${isLiked ? "fill-primary text-primary" : ""}`} />
-            {isLiked ? "Liked" : "Like"}
+            {isLiked ? t('liked', 'Liked') : t('like', 'Like')}
           </Button>
 
           {/* Chat Button */}
@@ -399,7 +401,7 @@ const ProfileDetailScreen = () => {
             onClick={handleChat}
           >
             <MessageCircle className="w-6 h-6" />
-            Chat
+            {t('chat', 'Chat')}
           </Button>
         </div>
 
@@ -423,12 +425,12 @@ const ProfileDetailScreen = () => {
               <p className={`font-medium ${
                 profile.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
               }`}>
-                {profile.isOnline ? "Currently Online" : "Currently Offline"}
+                {profile.isOnline ? t('currentlyOnline', 'Currently Online') : t('currentlyOffline', 'Currently Offline')}
               </p>
               <p className="text-sm text-muted-foreground">
                 {profile.isOnline 
-                  ? "Available to chat now"
-                  : `Last active ${formatLastSeen(profile.lastSeen)}`
+                  ? t('availableToChatNow', 'Available to chat now')
+                  : `${t('lastActive', 'Last active')} ${formatLastSeen(profile.lastSeen)}`
                 }
               </p>
             </div>
