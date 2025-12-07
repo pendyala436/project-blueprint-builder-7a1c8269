@@ -67,8 +67,35 @@ const AuthScreen = () => {
         description: "Login successful.",
       });
 
-      // Navigate to welcome tutorial after successful login
-      navigate("/welcome-tutorial");
+      // Check if user has completed the tutorial
+      if (authData.user) {
+        const { data: tutorialProgress } = await supabase
+          .from("tutorial_progress")
+          .select("completed")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        // First-time user or tutorial not completed - show welcome tutorial
+        if (!tutorialProgress || !tutorialProgress.completed) {
+          navigate("/welcome-tutorial");
+          return;
+        }
+
+        // Returning user - go to appropriate dashboard based on gender
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("gender")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (profile?.gender === "female") {
+          navigate("/women-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        navigate("/welcome-tutorial");
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
