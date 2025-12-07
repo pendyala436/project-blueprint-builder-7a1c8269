@@ -30,6 +30,8 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 // Toast hook for displaying notifications to user
 import { useToast } from "@/hooks/use-toast";
+// Translation hook
+import { useTranslation } from "@/contexts/TranslationContext";
 // Lucide React icons for visual elements
 import { 
   Heart,           // Like button icon
@@ -87,6 +89,9 @@ const MatchDiscoveryScreen = () => {
   
   // Toast hook for showing notification messages
   const { toast } = useToast();
+
+  // Translation hook
+  const { t } = useTranslation();
   
   // ============= STATE DECLARATIONS =============
   

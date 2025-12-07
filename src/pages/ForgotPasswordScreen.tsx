@@ -9,9 +9,11 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, ArrowLeft, ArrowRight, Loader2, ShieldCheck, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 const ForgotPasswordScreen = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
