@@ -122,7 +122,8 @@ const MatchingScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (currentProfile?.gender !== "Male") {
+      const userGender = currentProfile?.gender?.toLowerCase();
+      if (userGender !== "male") {
         toast({
           title: "Access Denied",
           description: "This feature is only available for male users",
