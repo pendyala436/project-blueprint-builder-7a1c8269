@@ -1,15 +1,16 @@
 /**
  * ProfilePhotosSection Component
  * 
- * Allows users to upload a selfie and up to 5 additional photos.
+ * Allows users to upload a selfie (with AI gender verification) and up to 5 additional photos.
  * At least one photo is mandatory for all users.
  */
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Upload, X, Loader2, ImagePlus, Star } from "lucide-react";
+import { Camera, Upload, X, Loader2, ImagePlus, Star, ShieldCheck, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UserPhoto {
@@ -23,28 +24,52 @@ interface UserPhoto {
 interface ProfilePhotosSectionProps {
   userId: string;
   onPhotosChange?: (hasPhotos: boolean) => void;
+  onGenderVerified?: (gender: string) => void;
 }
 
 const MAX_ADDITIONAL_PHOTOS = 5;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionProps) => {
+const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: ProfilePhotosSectionProps) => {
   const { toast } = useToast();
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState<'selfie' | 'additional' | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed' | null>(null);
+  const [detectedGender, setDetectedGender] = useState<string | null>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const additionalInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing photos
+  // Load existing photos and check verification status
   useEffect(() => {
     loadPhotos();
+    loadVerificationStatus();
   }, [userId]);
 
   // Notify parent about photo status
   useEffect(() => {
     onPhotosChange?.(photos.length > 0);
   }, [photos, onPhotosChange]);
+
+  const loadVerificationStatus = async () => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("verification_status, gender")
+        .eq("user_id", userId)
+        .single();
+      
+      if (data) {
+        setVerificationStatus(data.verification_status ? 'verified' : 'pending');
+        if (data.gender) {
+          setDetectedGender(data.gender);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading verification status:", error);
+    }
+  };
 
   const loadPhotos = async () => {
     try {
@@ -85,6 +110,67 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
     setUploadingType(type);
 
     try {
+      // For selfie, first verify gender
+      if (type === 'selfie') {
+        setIsVerifying(true);
+        
+        // Convert file to base64 for verification
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        const imageBase64 = await base64Promise;
+
+        // Call verify-photo function
+        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-photo', {
+          body: { imageBase64 }
+        });
+
+        setIsVerifying(false);
+
+        if (verifyError || !verifyData) {
+          toast({
+            title: "Verification failed",
+            description: "Could not verify the photo. Please try again.",
+            variant: "destructive",
+          });
+          setUploadingType(null);
+          return;
+        }
+
+        if (!verifyData.hasFace) {
+          toast({
+            title: "No face detected",
+            description: "Please upload a clear selfie showing your face.",
+            variant: "destructive",
+          });
+          setUploadingType(null);
+          return;
+        }
+
+        // Update detected gender
+        const gender = verifyData.detectedGender;
+        setDetectedGender(gender);
+        setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
+
+        // Update profile with detected gender and verification status
+        await supabase
+          .from("profiles")
+          .update({ 
+            gender: gender,
+            verification_status: verifyData.verified 
+          })
+          .eq("user_id", userId);
+
+        onGenderVerified?.(gender);
+
+        toast({
+          title: verifyData.verified ? "Verification successful" : "Verification complete",
+          description: `Gender detected: ${gender}${verifyData.verified ? " ✓" : ""}`,
+        });
+      }
+
       // Generate unique filename
       const fileExt = file.name.split(".").pop();
       const fileName = `${userId}/${type}-${Date.now()}.${fileExt}`;
@@ -140,8 +226,8 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
       await loadPhotos();
 
       toast({
-        title: "Photo uploaded",
-        description: type === 'selfie' ? "Selfie uploaded successfully" : "Photo added to your profile",
+        title: type === 'selfie' ? "Selfie uploaded" : "Photo added",
+        description: type === 'selfie' ? "Your selfie has been verified and saved" : "Photo added to your profile",
       });
     } catch (error) {
       console.error("Error uploading photo:", error);
@@ -152,6 +238,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
       });
     } finally {
       setUploadingType(null);
+      setIsVerifying(false);
     }
   };
 
@@ -269,12 +356,43 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
 
   return (
     <div className="space-y-6">
+      {/* Gender Verification Status */}
+      {detectedGender && (
+        <div className={cn(
+          "flex items-center gap-2 p-3 rounded-lg",
+          verificationStatus === 'verified' 
+            ? "bg-green-500/10 border border-green-500/30" 
+            : "bg-yellow-500/10 border border-yellow-500/30"
+        )}>
+          {verificationStatus === 'verified' ? (
+            <ShieldCheck className="w-5 h-5 text-green-500" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-yellow-500" />
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              Gender: <span className="capitalize">{detectedGender}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {verificationStatus === 'verified' 
+                ? "Verified via AI selfie analysis" 
+                : "Upload a clear selfie for verification"}
+            </p>
+          </div>
+          {verificationStatus === 'verified' && (
+            <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500/30">
+              Verified
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Selfie Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium flex items-center gap-2">
             <Camera className="w-4 h-4" />
-            Profile Selfie
+            Profile Selfie (Gender Verification)
             <span className="text-destructive">*</span>
           </label>
           {photos.length === 0 && (
@@ -328,10 +446,15 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
             variant="outline"
             className="w-32 h-32 rounded-xl border-dashed flex flex-col gap-2"
             onClick={() => selfieInputRef.current?.click()}
-            disabled={uploadingType !== null}
+            disabled={uploadingType !== null || isVerifying}
           >
-            {uploadingType === 'selfie' ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
+            {uploadingType === 'selfie' || isVerifying ? (
+              <div className="flex flex-col items-center gap-1">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-xs text-muted-foreground">
+                  {isVerifying ? "Verifying..." : "Uploading..."}
+                </span>
+              </div>
             ) : (
               <>
                 <Camera className="w-8 h-8 text-muted-foreground" />
@@ -340,6 +463,10 @@ const ProfilePhotosSection = ({ userId, onPhotosChange }: ProfilePhotosSectionPr
             )}
           </Button>
         )}
+
+        <p className="text-xs text-muted-foreground">
+          Your selfie will be analyzed by AI to verify your gender
+        </p>
       </div>
 
       {/* Additional Photos Section */}
