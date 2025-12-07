@@ -948,21 +948,6 @@ const WomenDashboardScreen = () => {
           </div>
         </Card>
 
-        {/* CTA Banner */}
-        <Card className="p-6 bg-gradient-to-r from-primary/10 via-rose-500/10 to-violet-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.4s" }}>
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-rose-500 text-white">
-              <Sparkles className="w-8 h-8" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Boost your profile!</h3>
-              <p className="text-sm text-muted-foreground">Get more visibility with premium features</p>
-            </div>
-            <Button variant="gradient" size="sm">
-              Upgrade
-            </Button>
-          </div>
-        </Card>
       </main>
 
       {/* Profile Edit Dialog */}
