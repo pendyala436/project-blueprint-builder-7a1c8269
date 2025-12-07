@@ -14,6 +14,8 @@
 
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 
+export type ProfileVisibility = "low" | "medium" | "high" | "very_high";
+
 export interface WomanProfile {
   userId: string;
   fullName: string;
@@ -26,6 +28,35 @@ export interface WomanProfile {
   currentChatCount: number;
   aiVerified: boolean;
   isInShift: boolean;
+  profileVisibility?: ProfileVisibility;
+}
+
+/**
+ * Get visibility weight for sorting (higher = more visible)
+ */
+export function getVisibilityWeight(visibility: ProfileVisibility | undefined): number {
+  switch (visibility) {
+    case "very_high": return 4;
+    case "high": return 3;
+    case "medium": return 2;
+    case "low": return 1;
+    default: return 3; // default to high
+  }
+}
+
+/**
+ * Check if profile should be shown based on visibility setting
+ * Returns a probability-based filter (for randomized visibility)
+ */
+export function shouldShowProfile(visibility: ProfileVisibility | undefined): boolean {
+  const rand = Math.random();
+  switch (visibility) {
+    case "very_high": return true; // Always shown
+    case "high": return rand < 0.9; // 90% chance
+    case "medium": return rand < 0.6; // 60% chance
+    case "low": return rand < 0.3; // 30% chance
+    default: return true;
+  }
 }
 
 export interface VisibilityResult {

@@ -61,7 +61,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   auto_translate: true,
   show_online_status: true,
   show_read_receipts: true,
-  profile_visibility: "everyone",
+  profile_visibility: "high",
   distance_unit: "km"
 };
 
@@ -468,24 +468,47 @@ const SettingsScreen = () => {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Eye className="h-4 w-4" />
                 Profile Visibility
               </Label>
-              <Select
-                value={settings.profile_visibility}
-                onValueChange={(value) => updateSetting("profile_visibility", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select visibility" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="everyone">Everyone</SelectItem>
-                  <SelectItem value="matches">Matches Only</SelectItem>
-                  <SelectItem value="nobody">Nobody</SelectItem>
-                </SelectContent>
-              </Select>
+              <p className="text-xs text-muted-foreground">
+                Control how often your profile appears to others in search results
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "low", label: "Low", description: "Rarely shown", icon: "🔒" },
+                  { value: "medium", label: "Medium", description: "Sometimes shown", icon: "👁️" },
+                  { value: "high", label: "High", description: "Often shown", icon: "⭐" },
+                  { value: "very_high", label: "Very High", description: "Always prioritized", icon: "🔥" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => updateSetting("profile_visibility", option.value)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 text-center",
+                      settings.profile_visibility === option.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <span className="text-2xl mb-1">{option.icon}</span>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      settings.profile_visibility === option.value ? "text-primary" : "text-foreground"
+                    )}>
+                      {option.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {option.description}
+                    </span>
+                    {settings.profile_visibility === option.value && (
+                      <CheckCircle2 className="h-4 w-4 text-primary mt-1" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
