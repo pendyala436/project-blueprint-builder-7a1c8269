@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TranslationContextType {
@@ -11,6 +11,11 @@ interface TranslationContextType {
 }
 
 const TranslationContext = createContext<TranslationContextType | undefined>(undefined);
+
+// Storage keys
+const TRANSLATIONS_CACHE_KEY = 'translations_cache';
+const DYNAMIC_CACHE_KEY = 'dynamic_translations_cache';
+const LANGUAGE_KEY = 'app_language';
 
 // Default English UI strings - comprehensive app-wide translations
 const defaultStrings: Record<string, string> = {
@@ -466,337 +471,319 @@ const defaultStrings: Record<string, string> = {
   'setLanguagePreferences': 'Set your language and translation preferences',
   'appLanguage': 'App Language',
   'languageDescription': 'Select your preferred language for the app interface',
-  'autoTranslateMessages': 'Auto-translate Messages',
+  'autoTranslate': 'Auto-Translate Messages',
+  'autoTranslateDescription': 'Automatically translate messages to your language',
   'distanceUnit': 'Distance Unit',
   'kilometers': 'Kilometers',
   'miles': 'Miles',
-  'privacy': 'Privacy',
-  'controlPrivacy': 'Control your privacy and visibility',
-  'showOnlineStatus': 'Show Online Status',
+  'chatSettings': 'Chat Settings',
+  'manageChatPreferences': 'Manage your chat preferences',
   'readReceipts': 'Read Receipts',
+  'readReceiptsDescription': 'Let others know when you\'ve read their messages',
+  'showOnlineStatus': 'Show Online Status',
+  'showOnlineDescription': 'Let others see when you\'re online',
+  'privacy': 'Privacy',
+  'managePrivacy': 'Manage who can see your profile',
   'profileVisibility': 'Profile Visibility',
-  'controlProfileVisibility': 'Control how often your profile appears to others in search results',
-  'low': 'Low',
-  'medium': 'Medium',
-  'high': 'High',
-  'veryHigh': 'Very High',
-  'rarelyShown': 'Rarely shown',
-  'sometimesShown': 'Sometimes shown',
-  'oftenShown': 'Often shown',
-  'alwaysPrioritized': 'Always prioritized',
-  'unsavedChanges': 'Unsaved changes',
-  'saveChanges': 'Save Changes',
-  'saving': 'Saving...',
-  'loggedOut': 'Logged out',
-  'seeYouSoon': 'See you soon!',
-  'failedToLoadSettings': 'Failed to load settings',
-  'failedToSaveSettings': 'Failed to save settings',
+  'everyone': 'Everyone',
+  'matchesOnly': 'Matches Only',
+  'noOne': 'No One',
+  'account': 'Account',
+  'manageAccount': 'Manage your account settings',
+  'changePassword': 'Change Password',
+  'deleteAccount': 'Delete Account',
+  'dangerZone': 'Danger Zone',
+  'deleteAccountWarning': 'Once you delete your account, there is no going back',
+  'saveSettings': 'Save Settings',
+  'savingSettings': 'Saving settings...',
+  'privacySecurity': 'Privacy & Security',
+  'managePrivacySettings': 'Manage your privacy and security settings',
+  'blockedUsers': 'Blocked Users',
+  'viewBlockedUsers': 'View and manage blocked users',
+  'dataDownload': 'Download Your Data',
+  'downloadDataDescription': 'Get a copy of your data',
+  'helpSupport': 'Help & Support',
+  'getHelp': 'Get help and contact support',
+  'faq': 'FAQ',
+  'contactSupport': 'Contact Support',
+  'reportBug': 'Report a Bug',
+  'termsOfService': 'Terms of Service',
+  'privacyPolicy': 'Privacy Policy',
+  'about': 'About',
+  'version': 'Version',
+  'signOut': 'Sign Out',
+  'areYouSureSignOut': 'Are you sure you want to sign out?',
   
-  // Location
-  'locationSetup': 'Location Setup',
+  // Registration Flow
+  'chooseYourLanguage': 'Choose Your Language',
+  'selectLanguagesYouSpeak': 'Select the languages you speak fluently',
+  'primary': 'Primary',
+  'secondary': 'Secondary',
+  'selectCountry': 'Select Country',
+  'selectState': 'Select State',
   'whereAreYouFrom': 'Where are you from?',
+  'helpUsConnectYou': 'Help us connect you with nearby users',
+  'languagePreferences': 'Language Preferences',
+  'setUpLanguagePreferences': 'Set up your language preferences for chatting',
+  'yourMotherTongue': 'Your Mother Tongue',
+  'selectPrimaryLanguage': 'Select your primary language',
+  'additionalLanguages': 'Additional Languages',
+  'optionalAdditionalLanguages': 'Optional: Select additional languages you speak',
+  'languagesSaved': 'Languages saved!',
+  'yourLanguagePreferencesSaved': 'Your language preferences have been saved',
+  'failedToSaveLanguages': 'Failed to save language preferences',
+  'location': 'Location',
+  'setupYourLocation': 'Set up your location',
+  'locationSaved': 'Location saved!',
+  'yourLocationSaved': 'Your location has been saved',
+  'failedToSaveLocation': 'Failed to save location',
   'selectYourCountry': 'Select your country',
   'selectYourState': 'Select your state',
   
-  // Language Selection
-  'selectLanguage': 'Select Language',
-  'change': 'Change',
-  'searchLanguages': 'Search languages...',
-  'indianLanguages': 'Indian Languages',
-  'worldLanguages': 'World Languages',
-  'noLanguagesFound': 'No languages found',
-  
-  // Registration
-  'registrationComplete': 'Registration Complete',
-  'welcomeToMeowMeow': 'Welcome to Meow Meow!',
-  'profileCreatedSuccessfully': 'Your profile has been created successfully',
-  'goToDashboard': 'Go to Dashboard',
-  
-  // Tutorial
-  'welcomeToMeow': 'Welcome to Meow!',
-  'yourJourneyStarts': 'Your journey to meaningful connections starts here. Let\'s show you around!',
-  'startConversations': 'Start Conversations',
-  'sendMessagesVoicePhotos': 'Send messages, voice notes, and photos. Express yourself freely and connect authentically.',
-  'findYourMatch': 'Find Your Match',
-  'aiPoweredMatching': 'Our AI-powered matching helps you discover people who share your interests and values.',
-  'staySafe': 'Stay Safe',
-  'yourPrivacyMatters': 'Your privacy matters. All profiles are verified, and you control who sees your information.',
-  'connectGlobally': 'Connect Globally',
-  'breakLanguageBarriers': 'Break language barriers with real-time translation. Meet people from around the world!',
-  'youreAllSet': "You're All Set!",
-  'startExploringConnections': 'Start exploring and make meaningful connections. Your perfect match is just a swipe away!',
-  'skipTutorial': 'Skip Tutorial',
-  'previous': 'Previous',
-  'getStarted': 'Get Started',
-  'tutorialComplete': 'Tutorial Complete!',
-  'youreReadyToConnect': "You're ready to start connecting.",
-  'step': 'Step',
-  
-  // Password Setup
-  'createPassword': 'Create Password',
-  'chooseSecurePassword': 'Choose a secure password for your account',
-  'confirmPassword': 'Confirm Password',
-  'reEnterPassword': 'Re-enter your password',
-  'passwordsDoNotMatch': 'Passwords do not match',
-  'passwordTooShort': 'Password too short',
-  'passwordCreated': 'Password created!',
-  'yourAccountIsSecure': 'Your account is now secure',
-  
   // Terms Agreement
-  'termsOfService': 'Terms of Service',
-  'privacyPolicy': 'Privacy Policy',
-  'iAgreeToThe': 'I agree to the',
+  'termsAndConditions': 'Terms and Conditions',
+  'agreeTo': 'I agree to the',
   'and': 'and',
-  'pleaseAgreeToTerms': 'Please agree to the terms to continue',
-  'agreeAndContinue': 'Agree and Continue',
+  'termsAgreement': 'Terms Agreement',
+  'pleaseReadAndAgree': 'Please read and agree to our terms',
+  'iAgreeToTerms': 'I agree to the Terms of Service',
+  'iAgreeToPrivacy': 'I agree to the Privacy Policy',
+  'iAmOver18': 'I confirm that I am over 18 years old',
+  'agreeAndContinue': 'Agree & Continue',
+  'pleaseAgreeToAll': 'Please agree to all terms to continue',
+  'gdprConsent': 'GDPR Consent',
+  'gdprConsentDescription': 'I consent to the processing of my personal data',
+  'dpdpConsent': 'DPDP Consent',
+  'dpdpConsentDescription': 'I consent under India\'s Digital Personal Data Protection Act',
+  'ccpaConsent': 'CCPA Consent',
+  'ccpaConsentDescription': 'I understand my rights under California Consumer Privacy Act',
+  
+  // AI Processing
+  'aiProcessing': 'AI Processing',
+  'verifyingYourProfile': 'Verifying your profile...',
+  'pleaseWait': 'Please wait',
+  'processingYourPhotos': 'Processing your photos',
+  'verifyingAge': 'Verifying age',
+  'detectingLanguage': 'Detecting language',
+  'finalizingProfile': 'Finalizing profile',
+  'almostDone': 'Almost done!',
+  'processingComplete': 'Processing complete!',
+  'yourProfileIsReady': 'Your profile is ready',
+  'startMeeting': 'Start Meeting People',
   
   // Approval Pending
   'approvalPending': 'Approval Pending',
   'profileUnderReview': 'Your profile is under review',
-  'weAreVerifying': "We're verifying your profile to ensure a safe experience for everyone.",
-  'thisUsuallyTakes': 'This usually takes a few minutes',
-  'checkBackSoon': 'Check back soon!',
-  'refreshStatus': 'Refresh Status',
+  'weWillNotifyYou': 'We will notify you once your profile is approved',
+  'estimatedTime': 'Estimated time',
+  'hours': 'hours',
+  'whileYouWait': 'While you wait',
+  'completeYourProfile': 'Complete your profile to increase approval chances',
+  'addMorePhotos': 'Add more photos',
+  'writeABio': 'Write a bio',
+  'addInterests': 'Add interests',
   
   // Women Dashboard
-  'yourDashboard': 'Your Dashboard',
-  'startYourShiftToEarn': 'Start your shift to begin earning',
-  'currentEarnings': 'Current Earnings',
-  'chatRequests': 'Chat Requests',
-  'pendingRequests': 'Pending Requests',
-  'acceptedChats': 'Accepted Chats',
-  'acceptRequest': 'Accept Request',
-  'declineRequest': 'Decline Request',
-  'selectLanguageDescription': 'Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all',
-  'nllbLanguages': 'NLLB-200 languages',
-  'sameLanguageFirst': 'Same language first, then by wallet balance',
-  'noPremiumMenOnline': 'No premium men online',
-  'checkBackLaterForWalletUsers': 'Check back later for users with wallet balance',
-  'usersWithoutBalance': 'Users without wallet balance',
-  'noRegularUsersOnline': 'No regular users online',
-  'connectWithMan': 'Connect with a man speaking your language',
+  'womenDashboard': 'Dashboard',
+  'availableForChat': 'Available for Chat',
+  'yourStatus': 'Your Status',
+  'toggleAvailability': 'Toggle your availability for chat',
+  'noMenOnlineYet': 'No men online yet',
+  'checkBackLaterForMen': 'Check back later to find men looking to chat',
+  'startShiftToChat': 'Start your shift to begin chatting and earning',
+  'shiftRequired': 'Shift Required',
+  'mustBeOnShift': 'You must be on shift to chat with users',
   
   // Women Wallet
+  'womenWallet': 'Wallet',
   'yourEarnings': 'Your Earnings',
-  'withdrawEarnings': 'Withdraw Earnings',
-  'earningsHistory': 'Earnings History',
-  'withdrawalHistory': 'Withdrawal History',
-  
-  // Admin Screens
-  'adminDashboard': 'Admin Dashboard',
-  'userManagement': 'User Management',
-  'moderationPanel': 'Moderation Panel',
-  'analyticsOverview': 'Analytics Overview',
-  'systemSettings': 'System Settings',
-  'auditLogs': 'Audit Logs',
-  'backupManagement': 'Backup Management',
-  'performanceMonitoring': 'Performance Monitoring',
-  'chatMonitoring': 'Chat Monitoring',
-  'financeDashboard': 'Finance Dashboard',
-  'financeReports': 'Finance Reports',
-  'legalDocuments': 'Legal Documents',
-  'policyAlerts': 'Policy Alerts',
-  'languageGroups': 'Language Groups',
-  'sampleUsers': 'Sample Users',
-  'chatPricing': 'Chat Pricing',
-  'giftPricing': 'Gift Pricing',
-  
-  // Misc
-  'loadingProfile': 'Loading profile...',
-  'findingOnlineUsers': 'Finding online users...',
-  'processingPayment': 'Processing Payment',
-  'currency': 'Currency',
-  'hours': 'hours',
-  'minutes': 'minutes',
-  'seconds': 'seconds',
-  'ago': 'ago',
-  'justNow': 'Just now',
-  'via': 'via',
-  'reason': 'Reason',
-  'details': 'Details',
-  'status': 'Status',
-  'date': 'Date',
-  'time': 'Time',
-  'amount': 'Amount',
-  'description': 'Description',
-  'type': 'Type',
-  'category': 'Category',
-  'total': 'Total',
-  'average': 'Average',
-  'min': 'Min',
-  'max': 'Max',
-  'count': 'Count',
-  'percentage': 'Percentage',
-  'progress': 'Progress',
-  'remaining': 'Remaining',
-  'used': 'Used',
-  'required': 'Required',
-  'optional': 'Optional',
-  'recommended': 'Recommended',
-  'suggested': 'Suggested',
-  'default': 'Default',
-  'custom': 'Custom',
-  'other': 'Other',
-  'more': 'More',
-  'less': 'Less',
-  'showMore': 'Show More',
-  'showLess': 'Show Less',
-  'seeAll': 'See All',
-  'viewAll': 'View All',
-  'hideAll': 'Hide All',
-  'expandAll': 'Expand All',
-  'collapseAll': 'Collapse All',
-  'enable': 'Enable',
-  'disable': 'Disable',
-  'enabled': 'Enabled',
-  'disabled': 'Disabled',
-  'on': 'On',
-  'off': 'Off',
-  'start': 'Start',
-  'stop': 'Stop',
-  'pause': 'Pause',
-  'resume': 'Resume',
-  'restart': 'Restart',
-  'finish': 'Finish',
-  'complete': 'Complete',
-  'skip': 'Skip',
-  'first': 'First',
-  'last': 'Last',
-  'newest': 'Newest',
-  'oldest': 'Oldest',
-  'highest': 'Highest',
-  'lowest': 'Lowest',
-  'ascending': 'Ascending',
-  'descending': 'Descending',
-  'sortBy': 'Sort by',
-  'filterBy': 'Filter by',
-  'groupBy': 'Group by',
-  'searchBy': 'Search by',
-  'orderBy': 'Order by',
-  'noResults': 'No results',
-  'noData': 'No data',
-  'noItems': 'No items',
-  'empty': 'Empty',
-  'none': 'None',
-  'unknown': 'Unknown',
-  'notAvailable': 'Not available',
-  'comingSoon': 'Coming soon',
-  'underMaintenance': 'Under maintenance',
-  'pleaseWait': 'Please wait...',
-  'processingRequest': 'Processing your request...',
-  'almostDone': 'Almost done...',
-  'completingSetup': 'Completing setup...',
-  'initializingApp': 'Initializing app...',
-  'connectingToServer': 'Connecting to server...',
-  'synchronizing': 'Synchronizing...',
-  'updating': 'Updating...',
-  'downloading': 'Downloading...',
-  'uploading': 'Uploading...',
-  'deleting': 'Deleting...',
-  'cancelling': 'Cancelling...',
-  'confirming': 'Confirming...',
-  'submitting': 'Submitting...',
-  'processing': 'Processing...',
-  'validating': 'Validating...',
-  'authenticating': 'Authenticating...',
-  'redirecting': 'Redirecting...',
-  
-  // Additional Wallet keys
-  'withdrawAmount': 'Withdraw Amount',
-  'withdrawingTo': 'Withdrawing to',
-  'selectedMethod': 'selected method',
-  'minimumWithdrawal': 'Minimum withdrawal',
-  'processingTime': 'Processing time',
-  'asPerBankRecords': 'As per bank records',
-  'enterAccountNumber': 'Enter account number',
-  'tenDigitMobile': '10 digit mobile number',
-  'rechargeAmount': 'Recharge Amount',
-  'selectPaymentGateway': 'Select Payment Gateway',
-  'globalPaymentMethods': 'Global Payment Methods',
-  'allCountriesSupported': 'All countries supported',
-  
-  // Transaction related
-  'credit': 'Credit',
-  'debit': 'Debit',
-  'walletRecharge': 'Wallet Recharge',
-  'chatPayment': 'Chat Payment',
-  'giftPurchase': 'Gift Purchase',
-  'noTransactionsYet': 'No transactions yet',
-  'startUsingWallet': 'Start using your wallet to see transactions here',
-  'recentTransactions': 'Recent Transactions',
-  'moneyAdded': 'Money Added',
-  'payment': 'Payment',
-  'payingVia': 'Paying via',
-  'selectedGateway': 'selected gateway',
-  'rechargeYourWallet': 'Recharge your wallet to get started',
-  
-  // Chat Screen
-  'chatEnded': 'Chat Ended',
-  'chatEndedDescription': 'This chat session has ended.',
-  'messageBlocked': 'Message blocked',
-  'unblockToChat': 'Unblock this user to continue chatting',
-  'youBlockedUser': 'You have blocked this user',
-  'original': 'Original',
-  'translated': 'Translated',
-  'translating': 'Translating...',
-  'sentAt': 'Sent at',
-  'delivered': 'Delivered',
-  'attachImage': 'Attach Image',
-  'attachFile': 'Attach File',
-  'takePhoto': 'Take Photo',
-  'uploadingAttachment': 'Uploading attachment...',
+  'totalBalance': 'Total Balance',
+  'withdrawableBalance': 'Withdrawable Balance',
+  'lifetimeEarnings': 'Lifetime Earnings',
+  'thisMonthEarnings': 'This Month',
+  'lastMonthEarnings': 'Last Month',
+  'earningsBreakdown': 'Earnings Breakdown',
+  'chatMinutes': 'Chat Minutes',
+  'giftsReceived': 'Gifts Received',
+  'bonuses': 'Bonuses',
+  'recentEarnings': 'Recent Earnings',
+  'noRecentEarnings': 'No recent earnings',
   
   // Profile Detail
+  'profileDetail': 'Profile',
   'aboutMe': 'About Me',
-  'basicInfo': 'Basic Info',
-  'lifestyle': 'Lifestyle',
-  'heightCm': 'Height (cm)',
+  'noAboutInfo': 'No information provided',
+  'details': 'Details',
+  'lookingFor': 'Looking For',
+  'relationship': 'Relationship',
+  'friendship': 'Friendship',
+  'casual': 'Casual',
+  'height': 'Height',
   'bodyType': 'Body Type',
-  'smokingHabit': 'Smoking',
-  'drinkingHabit': 'Drinking',
-  'dietaryPreference': 'Diet',
-  'fitnessLevel': 'Fitness',
+  'slim': 'Slim',
+  'average': 'Average',
+  'athletic': 'Athletic',
+  'curvy': 'Curvy',
+  'religion': 'Religion',
+  'smoking': 'Smoking',
+  'drinking': 'Drinking',
+  'never': 'Never',
+  'sometimes': 'Sometimes',
+  'often': 'Often',
+  'social': 'Social',
+  'regular': 'Regular',
+  'nonSmoker': 'Non-smoker',
+  'socialDrinker': 'Social drinker',
+  'maritalStatus': 'Marital Status',
+  'single': 'Single',
+  'divorced': 'Divorced',
+  'widowed': 'Widowed',
+  'separated': 'Separated',
+  'children': 'Children',
+  'hasChildren': 'Has children',
+  'noChildren': 'No children',
+  'wantsChildren': 'Wants children',
+  'doesntWantChildren': "Doesn't want children",
+  'maybeChildren': 'Maybe',
+  'lifestyle': 'Lifestyle',
+  'fitnessLevel': 'Fitness Level',
+  'notActive': 'Not active',
+  'lightlyActive': 'Lightly active',
+  'moderatelyActive': 'Moderately active',
+  'veryActive': 'Very active',
+  'dietaryPreference': 'Dietary Preference',
+  'noDietPreference': 'No preference',
+  'vegetarian': 'Vegetarian',
+  'vegan': 'Vegan',
+  'pescatarian': 'Pescatarian',
+  'halal': 'Halal',
+  'kosher': 'Kosher',
   'petPreference': 'Pet Preference',
+  'noPets': 'No pets',
+  'hasPets': 'Has pets',
+  'likesPets': 'Likes pets',
   'travelFrequency': 'Travel Frequency',
-  'zodiacSign': 'Zodiac Sign',
+  'rarely': 'Rarely',
+  'yearly': 'A few times a year',
+  'monthly': 'Monthly',
+  'frequently': 'Frequently',
   'personalityType': 'Personality Type',
+  'introvert': 'Introvert',
+  'extrovert': 'Extrovert',
+  'ambivert': 'Ambivert',
   'lifeGoals': 'Life Goals',
-  'lastActiveTime': 'Last active',
-  'memberSince': 'Member since',
-  'responseTime': 'Response time',
-  'chatCount': 'Chat count',
+  'career': 'Career focused',
+  'family': 'Family focused',
+  'travel': 'Travel & adventure',
+  'creative': 'Creative pursuits',
+  'spiritual': 'Spiritual growth',
+  'zodiacSign': 'Zodiac Sign',
+  'educationLevel': 'Education',
+  'highSchool': 'High School',
+  'someCollege': 'Some College',
+  'bachelors': "Bachelor's Degree",
+  'masters': "Master's Degree",
+  'doctorate': 'Doctorate',
+  'professional': 'Professional Degree',
   
-  // Admin Chat Monitoring
-  'totalMessages': 'Total Messages',
+  // Admin
+  'admin': 'Admin',
+  'adminDashboard': 'Admin Dashboard',
+  'userManagement': 'User Management',
+  'contentModeration': 'Content Moderation',
+  'analytics': 'Analytics',
+  'systemSettings': 'System Settings',
+  'totalUsers': 'Total Users',
+  'activeUsers': 'Active Users',
+  'pendingApprovals': 'Pending Approvals',
+  'reportedContent': 'Reported Content',
+  'revenue': 'Revenue',
+  'dailyActive': 'Daily Active',
+  'weeklyActive': 'Weekly Active',
+  'monthlyActive': 'Monthly Active',
+  'approveUser': 'Approve User',
+  'rejectUser': 'Reject User',
+  'suspendUser': 'Suspend User',
+  'banUser': 'Ban User',
+  'viewDetails': 'View Details',
+  'moderationQueue': 'Moderation Queue',
   'flaggedMessages': 'Flagged Messages',
-  'pendingReview': 'Pending Review',
-  'clearedMessages': 'Cleared Messages',
-  'silentMonitor': 'Silent Monitor',
-  'sendNotification': 'Send Notification',
-  'broadcastNotification': 'Broadcast Notification',
-  'notificationTitle': 'Notification Title',
-  'notificationMessage': 'Notification Message',
-  'targetAudience': 'Target Audience',
-  'allUsers': 'All Users',
-  'menOnly': 'Men Only',
-  'womenOnly': 'Women Only',
-  'flagMessage': 'Flag Message',
-  'unflagMessage': 'Unflag Message',
-  'viewMessageDetails': 'View Message Details',
-  'resolveFlag': 'Resolve Flag',
-  'filterByCountry': 'Filter by Country',
-  'filterByLanguage': 'Filter by Language',
-  'filterByLanguageGroup': 'Filter by Language Group',
-  'startMonitoring': 'Start Monitoring',
-  'stopMonitoring': 'Stop Monitoring',
-  'noActiveChats': 'No Active Chats',
-  'selectChatToMonitor': 'Select a chat to start silent monitoring',
-  'monitoringChat': 'Monitoring Chat',
+  'userReports': 'User Reports',
+  'takeAction': 'Take Action',
+  'dismiss': 'Dismiss',
+  'warn': 'Warn',
+  'suspend': 'Suspend',
+  'ban': 'Ban',
   
-  // Misc additions
-  'phoneVerified': 'Phone Verified',
-  'emailVerified': 'Email Verified',
-  'profileComplete': 'Profile Complete',
+  // Time
+  'justNow': 'Just now',
+  'minutesAgo': 'minutes ago',
+  'hoursAgo': 'hours ago',
+  'daysAgo': 'days ago',
+  'yesterday': 'Yesterday',
+  'minute': 'minute',
+  'minutes': 'minutes',
+  'hour': 'hour',
+  'day': 'day',
+  'days': 'days',
+  'week': 'week',
+  'weeks': 'weeks',
+  'month': 'month',
+  'months': 'months',
+  'year': 'year',
+  'years': 'years',
+  
+  // Misc
+  'or': 'or',
+  'with': 'with',
+  'for': 'for',
+  'by': 'by',
+  'at': 'at',
+  'in': 'in',
+  'on': 'on',
+  'the': 'the',
+  'a': 'a',
+  'an': 'an',
+  'is': 'is',
+  'are': 'are',
+  'was': 'was',
+  'were': 'were',
+  'be': 'be',
+  'been': 'been',
+  'being': 'being',
+  'have': 'have',
+  'has': 'has',
+  'had': 'had',
+  'do': 'do',
+  'does': 'does',
+  'did': 'did',
+  'will': 'will',
+  'would': 'would',
+  'could': 'could',
+  'should': 'should',
+  'may': 'may',
+  'might': 'might',
+  'must': 'must',
+  'shall': 'shall',
+  'can': 'can',
+  'not': 'not',
+  'this': 'this',
+  'that': 'that',
+  'these': 'these',
+  'those': 'those',
+  'here': 'here',
+  'there': 'there',
+  'where': 'where',
+  'when': 'when',
+  'why': 'why',
+  'how': 'how',
+  'what': 'what',
+  'which': 'which',
+  'who': 'who',
+  'whom': 'whom',
+  'whose': 'whose',
+  
+  // Profile related
   'profileIncomplete': 'Profile Incomplete',
   'completeProfile': 'Complete Profile',
   'editProfile': 'Edit Profile',
@@ -807,39 +794,74 @@ const defaultStrings: Record<string, string> = {
   'profileLinkCopied': 'Profile link copied to clipboard',
 };
 
-// Cache for translations
-const translationCache: Record<string, Record<string, string>> = {
+// Synchronous cache - loaded from localStorage on init
+let memoryCache: Record<string, Record<string, string>> = {
   'English': defaultStrings,
 };
 
-// Cache for dynamic text translations
-const dynamicTranslationCache: Record<string, Record<string, string>> = {};
+let dynamicMemoryCache: Record<string, Record<string, string>> = {};
+
+// Initialize cache from localStorage synchronously
+const initCacheFromStorage = () => {
+  try {
+    const cached = localStorage.getItem(TRANSLATIONS_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      memoryCache = { ...memoryCache, ...parsed };
+    }
+    
+    const dynamicCached = localStorage.getItem(DYNAMIC_CACHE_KEY);
+    if (dynamicCached) {
+      dynamicMemoryCache = JSON.parse(dynamicCached);
+    }
+  } catch (e) {
+    console.error('Error loading translation cache:', e);
+  }
+};
+
+// Initialize on module load for instant access
+initCacheFromStorage();
+
+// Save cache to localStorage (debounced)
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+const saveToStorage = () => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      localStorage.setItem(TRANSLATIONS_CACHE_KEY, JSON.stringify(memoryCache));
+      localStorage.setItem(DYNAMIC_CACHE_KEY, JSON.stringify(dynamicMemoryCache));
+    } catch (e) {
+      console.error('Error saving translation cache:', e);
+    }
+  }, 100);
+};
 
 interface TranslationProviderProps {
   children: ReactNode;
 }
 
 export const TranslationProvider: React.FC<TranslationProviderProps> = ({ children }) => {
-  const [currentLanguage, setCurrentLanguage] = useState<string>('English');
-  const [translations, setTranslations] = useState<Record<string, string>>(defaultStrings);
+  // Get initial language synchronously from localStorage
+  const initialLanguage = localStorage.getItem(LANGUAGE_KEY) || 'English';
+  
+  const [currentLanguage, setCurrentLanguage] = useState<string>(initialLanguage);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get translations synchronously from memory cache
+  const translations = useMemo(() => {
+    return memoryCache[currentLanguage] || defaultStrings;
+  }, [currentLanguage]);
 
-  // Load user's language preference on mount - prioritize localStorage for persistence after logout
+  // Load user's language preference from database (only if not set in localStorage)
   useEffect(() => {
     const loadUserLanguage = async () => {
-      try {
-        // First check localStorage (persists after logout)
-        const savedLanguage = localStorage.getItem('app_language');
-        if (savedLanguage && savedLanguage !== 'English') {
-          setCurrentLanguage(savedLanguage);
-          return; // Use saved language, skip database check
-        }
+      const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+      if (savedLanguage) return; // Already have preference
 
-        // If no saved language, check database for logged-in users
+      try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Check user_languages for mother tongue
         const { data: userLanguages } = await supabase
           .from('user_languages')
           .select('language_name')
@@ -849,9 +871,8 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
         if (userLanguages && userLanguages.length > 0) {
           const language = userLanguages[0].language_name;
           if (language && language !== 'English') {
+            localStorage.setItem(LANGUAGE_KEY, language);
             setCurrentLanguage(language);
-            // Also save to localStorage for persistence
-            localStorage.setItem('app_language', language);
           }
         }
       } catch (error) {
@@ -862,19 +883,13 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     loadUserLanguage();
   }, []);
 
-  // Translate UI when language changes
+  // Translate UI when language changes (background task - doesn't block rendering)
   useEffect(() => {
     const translateUI = async () => {
-      if (currentLanguage === 'English') {
-        setTranslations(defaultStrings);
-        return;
-      }
-
-      // Check cache first
-      if (translationCache[currentLanguage]) {
-        setTranslations(translationCache[currentLanguage]);
-        return;
-      }
+      if (currentLanguage === 'English') return;
+      
+      // If already cached, no need to fetch
+      if (memoryCache[currentLanguage]) return;
 
       setIsLoading(true);
       try {
@@ -901,9 +916,9 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
             newTranslations[key] = data.translations[index] || defaultStrings[key];
           });
 
-          // Cache the translations
-          translationCache[currentLanguage] = newTranslations;
-          setTranslations(newTranslations);
+          // Update memory cache
+          memoryCache[currentLanguage] = newTranslations;
+          saveToStorage();
         }
       } catch (error) {
         console.error('Error translating UI:', error);
@@ -915,17 +930,20 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     translateUI();
   }, [currentLanguage]);
 
+  // Ultra-fast synchronous translation lookup (~0.1ms)
   const t = useCallback((key: string, fallback?: string): string => {
-    return translations[key] || fallback || defaultStrings[key] || key;
-  }, [translations]);
+    const cache = memoryCache[currentLanguage];
+    if (cache && cache[key]) return cache[key];
+    return fallback || defaultStrings[key] || key;
+  }, [currentLanguage]);
 
   // Translate a single dynamic text (from database)
   const translateDynamic = useCallback(async (text: string): Promise<string> => {
     if (!text || currentLanguage === 'English') return text;
     
-    // Check cache
-    if (dynamicTranslationCache[currentLanguage]?.[text]) {
-      return dynamicTranslationCache[currentLanguage][text];
+    // Check memory cache first (instant)
+    if (dynamicMemoryCache[currentLanguage]?.[text]) {
+      return dynamicMemoryCache[currentLanguage][text];
     }
     
     try {
@@ -940,10 +958,11 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
       if (error || !data?.translations?.[0]) return text;
       
       // Cache the result
-      if (!dynamicTranslationCache[currentLanguage]) {
-        dynamicTranslationCache[currentLanguage] = {};
+      if (!dynamicMemoryCache[currentLanguage]) {
+        dynamicMemoryCache[currentLanguage] = {};
       }
-      dynamicTranslationCache[currentLanguage][text] = data.translations[0];
+      dynamicMemoryCache[currentLanguage][text] = data.translations[0];
+      saveToStorage();
       
       return data.translations[0];
     } catch (error) {
@@ -963,14 +982,14 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     texts.forEach((text, index) => {
       if (!text) {
         cachedResults[index] = text;
-      } else if (dynamicTranslationCache[currentLanguage]?.[text]) {
-        cachedResults[index] = dynamicTranslationCache[currentLanguage][text];
+      } else if (dynamicMemoryCache[currentLanguage]?.[text]) {
+        cachedResults[index] = dynamicMemoryCache[currentLanguage][text];
       } else {
         textsToTranslate.push(text);
       }
     });
     
-    // If all cached, return immediately
+    // If all cached, return immediately (instant)
     if (textsToTranslate.length === 0) {
       return texts.map((_, index) => cachedResults[index] || texts[index]);
     }
@@ -987,15 +1006,16 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
       if (error || !data?.translations) return texts;
       
       // Cache results
-      if (!dynamicTranslationCache[currentLanguage]) {
-        dynamicTranslationCache[currentLanguage] = {};
+      if (!dynamicMemoryCache[currentLanguage]) {
+        dynamicMemoryCache[currentLanguage] = {};
       }
       
       textsToTranslate.forEach((text, i) => {
         if (data.translations[i]) {
-          dynamicTranslationCache[currentLanguage][text] = data.translations[i];
+          dynamicMemoryCache[currentLanguage][text] = data.translations[i];
         }
       });
+      saveToStorage();
       
       // Build final result
       let translateIndex = 0;
@@ -1012,20 +1032,21 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
   }, [currentLanguage]);
 
   const setLanguage = useCallback((language: string) => {
-    // Clear cached translations for this language to force fresh translation
-    if (translationCache[language]) {
-      delete translationCache[language];
-    }
-    if (dynamicTranslationCache[language]) {
-      delete dynamicTranslationCache[language];
-    }
+    localStorage.setItem(LANGUAGE_KEY, language);
     setCurrentLanguage(language);
-    // Save preference to localStorage for persistence
-    localStorage.setItem('app_language', language);
   }, []);
 
+  const value = useMemo(() => ({
+    t,
+    translateDynamic,
+    translateDynamicBatch,
+    currentLanguage,
+    setLanguage,
+    isLoading
+  }), [t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading]);
+
   return (
-    <TranslationContext.Provider value={{ t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading }}>
+    <TranslationContext.Provider value={value}>
       {children}
     </TranslationContext.Provider>
   );
