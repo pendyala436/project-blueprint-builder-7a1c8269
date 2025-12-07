@@ -228,14 +228,14 @@ const SettingsScreen = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Palette className="h-5 w-5 text-primary" />
-              Appearance
+              {t('appearance', 'Appearance')}
             </CardTitle>
-            <CardDescription>Customize how the app looks</CardDescription>
+            <CardDescription>{t('customizeAppLooks', 'Customize how the app looks')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Theme Selector */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Theme</Label>
+              <Label className="text-sm font-medium">{t('theme', 'Theme')}</Label>
               <div className="grid grid-cols-3 gap-3">
                 {THEME_OPTIONS.map((option) => {
                   const Icon = option.icon;
@@ -258,7 +258,7 @@ const SettingsScreen = () => {
                         "text-sm font-medium",
                         settings.theme === option.id ? "text-primary" : "text-muted-foreground"
                       )}>
-                        {option.label}
+                        {t(option.id, option.label)}
                       </span>
                       {settings.theme === option.id && (
                         <CheckCircle2 className="h-4 w-4 text-primary mt-1" />
@@ -273,7 +273,7 @@ const SettingsScreen = () => {
 
             {/* Accent Color */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Accent Color</Label>
+              <Label className="text-sm font-medium">{t('accentColor', 'Accent Color')}</Label>
               <div className="flex gap-3 flex-wrap">
                 {ACCENT_COLORS.map((color) => (
                   <button
@@ -301,15 +301,15 @@ const SettingsScreen = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Bell className="h-5 w-5 text-primary" />
-              Notifications
+              {t('notifications', 'Notifications')}
             </CardTitle>
-            <CardDescription>Manage your notification preferences</CardDescription>
+            <CardDescription>{t('manageNotifications', 'Manage your notification preferences')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Heart className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="notification-matches" className="cursor-pointer">New Matches</Label>
+                <Label htmlFor="notification-matches" className="cursor-pointer">{t('newMatches', 'New Matches')}</Label>
               </div>
               <Switch
                 id="notification-matches"
@@ -321,7 +321,7 @@ const SettingsScreen = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="notification-messages" className="cursor-pointer">Messages</Label>
+                <Label htmlFor="notification-messages" className="cursor-pointer">{t('messages', 'Messages')}</Label>
               </div>
               <Switch
                 id="notification-messages"
@@ -333,7 +333,7 @@ const SettingsScreen = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Megaphone className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="notification-promotions" className="cursor-pointer">Promotions</Label>
+                <Label htmlFor="notification-promotions" className="cursor-pointer">{t('promotions', 'Promotions')}</Label>
               </div>
               <Switch
                 id="notification-promotions"
@@ -347,7 +347,7 @@ const SettingsScreen = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Volume2 className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="notification-sound" className="cursor-pointer">Sound</Label>
+                <Label htmlFor="notification-sound" className="cursor-pointer">{t('sound', 'Sound')}</Label>
               </div>
               <Switch
                 id="notification-sound"
@@ -359,7 +359,7 @@ const SettingsScreen = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Vibrate className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="notification-vibration" className="cursor-pointer">Vibration</Label>
+                <Label htmlFor="notification-vibration" className="cursor-pointer">{t('vibration', 'Vibration')}</Label>
               </div>
               <Switch
                 id="notification-vibration"
@@ -375,9 +375,9 @@ const SettingsScreen = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Globe className="h-5 w-5 text-primary" />
-              Language & Region
+              {t('languageRegion', 'Language & Region')}
             </CardTitle>
-            <CardDescription>Set your language and translation preferences</CardDescription>
+            <CardDescription>{t('setLanguagePreferences', 'Set your language and translation preferences')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <LanguageSelector
@@ -390,14 +390,14 @@ const SettingsScreen = () => {
                 setLanguage(lang);
               }}
               showAllLanguages={true}
-              label={t('language', 'App Language')}
+              label={t('appLanguage', 'App Language')}
               description={t('languageDescription', 'Select your preferred language for the app interface')}
             />
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="auto-translate" className="cursor-pointer">Auto-translate Messages</Label>
+                <Label htmlFor="auto-translate" className="cursor-pointer">{t('autoTranslateMessages', 'Auto-translate Messages')}</Label>
               </div>
               <Switch
                 id="auto-translate"
@@ -409,18 +409,18 @@ const SettingsScreen = () => {
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Map className="h-4 w-4" />
-                Distance Unit
+                {t('distanceUnit', 'Distance Unit')}
               </Label>
               <Select
                 value={settings.distance_unit}
                 onValueChange={(value) => updateSetting("distance_unit", value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select unit" />
+                  <SelectValue placeholder={t('select', 'Select')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="km">Kilometers (km)</SelectItem>
-                  <SelectItem value="miles">Miles</SelectItem>
+                  <SelectItem value="km">{t('kilometers', 'Kilometers')} (km)</SelectItem>
+                  <SelectItem value="miles">{t('miles', 'Miles')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
