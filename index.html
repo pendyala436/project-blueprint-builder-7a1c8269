@@ -2,11 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>MEOW MEOW - Find Your Purrfect Match</title>
     <meta name="description" content="MEOW MEOW is a global dating app connecting people through meaningful chat-only conversations. Find your perfect match worldwide." />
     <meta name="author" content="MEOW MEOW" />
     <meta name="keywords" content="dating app, global dating, chat dating, find love, online dating, international dating" />
+
+    <!-- Mobile App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Meow" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#8B5CF6" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <meta property="og:title" content="MEOW MEOW - Find Your Purrfect Match" />
     <meta property="og:description" content="Global dating app connecting people through meaningful conversations." />
@@ -18,6 +29,16 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
     <link rel="canonical" href="https://meowmeow.app" />
+
+    <style>
+      /* Safe area padding for notched devices */
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+    </style>
   </head>
 
   <body>

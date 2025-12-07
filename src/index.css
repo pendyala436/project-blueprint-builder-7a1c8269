@@ -111,13 +111,44 @@
     @apply border-border;
   }
 
+  html {
+    /* Safe area support for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    /* Prevent pull-to-refresh and overscroll */
+    overscroll-behavior: none;
+    /* Prevent text selection on mobile */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Allow text selection in inputs and textareas */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Quicksand', system-ui, sans-serif;
+  }
+
+  /* Hide scrollbars on mobile for cleaner look */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Disable tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
