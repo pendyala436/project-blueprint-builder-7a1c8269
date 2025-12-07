@@ -218,10 +218,10 @@ const BasicInfoScreen = () => {
         <div className="text-center mb-8 animate-fade-in">
           <MeowLogo size="md" className="mx-auto mb-4" />
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Tell us about you
+            {t('tellUsAboutYou', 'Tell us about you')}
           </h1>
           <p className="text-muted-foreground text-base max-w-xs mx-auto">
-            Help us personalize your experience
+            {t('helpUsPersonalize', 'Help us personalize your experience')}
           </p>
         </div>
 
@@ -237,11 +237,11 @@ const BasicInfoScreen = () => {
             >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Mail className="w-4 h-4 text-primary" />
-                Email
+                {t('email', 'Email')}
               </label>
               <Input
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t('enterYourEmail', 'Enter your email')}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -275,7 +275,7 @@ const BasicInfoScreen = () => {
             >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Phone className="w-4 h-4 text-primary" />
-                Phone Number
+                {t('phoneNumber', 'Phone Number')}
               </label>
               <PhoneInputWithCode
                 value={phone}
@@ -308,11 +308,11 @@ const BasicInfoScreen = () => {
             >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <User className="w-4 h-4 text-primary" />
-                Full Name
+                {t('fullName', 'Full Name')}
               </label>
               <Input
                 type="text"
-                placeholder="Enter your full name"
+                placeholder={t('enterYourFullName', 'Enter your full name')}
                 value={fullName}
                 onChange={(e) => {
                   setFullName(e.target.value);
@@ -346,10 +346,10 @@ const BasicInfoScreen = () => {
             >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Calendar className="w-4 h-4 text-primary" />
-                Date of Birth
+                {t('dateOfBirth', 'Date of Birth')}
                 {getAgeDisplay() && (
                   <span className="ml-auto text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {getAgeDisplay()} years old
+                    {getAgeDisplay()} {t('yearsOld', 'years old')}
                   </span>
                 )}
               </label>
@@ -367,7 +367,7 @@ const BasicInfoScreen = () => {
                     onClick={() => setCalendarOpen(true)}
                   >
                     <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {dob ? format(dob, "MMMM d, yyyy") : "Select your birthday"}
+                    {dob ? format(dob, "MMMM d, yyyy") : t('selectYourBirthday', 'Select your birthday')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 z-50" align="center">
@@ -411,7 +411,7 @@ const BasicInfoScreen = () => {
             >
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Heart className="w-4 h-4 text-primary" />
-                Gender
+                {t('gender', 'Gender')}
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {genderOptions.map((option) => (
