@@ -16,6 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { 
   ArrowLeft, 
   IndianRupee, 
@@ -100,6 +101,7 @@ interface ChatPricing {
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);

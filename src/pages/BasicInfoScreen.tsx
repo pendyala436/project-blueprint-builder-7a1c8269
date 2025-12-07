@@ -16,6 +16,7 @@ import ProgressIndicator from "@/components/ProgressIndicator";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 type Gender = "male" | "female" | "non-binary" | "prefer-not-to-say" | "";
 
@@ -30,6 +31,7 @@ const phoneSchema = z.string().regex(/^\+?[1-9]\d{6,14}$/, "Please enter a valid
 
 const BasicInfoScreen = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
