@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.seed-legal-documents]
 verify_jwt = false
+
+[functions.translate-ui]
+verify_jwt = false
