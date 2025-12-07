@@ -92,22 +92,31 @@ serve(async (req) => {
     const { action, email, phone, newPassword } = body;
 
     // Validate action
-    if (!action || !['verify', 'reset', 'get-email-by-phone'].includes(action)) {
+    if (!action || !['verify', 'reset', 'get-email-by-phone', 'check-email-exists'].includes(action)) {
       return new Response(
         JSON.stringify({ error: "Invalid action" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
+    // For check-email-exists, only email is required
+    if (action === 'check-email-exists') {
+      if (!email || !validateEmail(email)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid email format" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+    }
     // For get-email-by-phone, only phone is required
-    if (action === 'get-email-by-phone') {
+    else if (action === 'get-email-by-phone') {
       if (!phone || !validatePhone(phone)) {
         return new Response(
           JSON.stringify({ error: "Invalid phone format" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
-    } else {
+    } else if (action === 'verify' || action === 'reset') {
       // Validate inputs for verify and reset
       if (!email || !validateEmail(email)) {
         return new Response(
@@ -143,6 +152,32 @@ serve(async (req) => {
           }, 
           status: 429 
         }
+      );
+    }
+
+    // Handle check-email-exists action
+    if (action === "check-email-exists") {
+      // Add artificial delay to prevent timing attacks
+      await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+
+      // Get all users and check if email exists
+      const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (usersError) {
+        console.error("Error listing users:", usersError);
+        return new Response(
+          JSON.stringify({ exists: false, message: "Unable to verify email" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      const emailExists = users.users.some(
+        (user) => user.email?.toLowerCase() === email.toLowerCase()
+      );
+
+      return new Response(
+        JSON.stringify({ exists: emailExists }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 

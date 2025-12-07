@@ -35,6 +35,32 @@ const ForgotPasswordScreen = () => {
     setIsLoading(true);
 
     try {
+      // First check if email exists in database
+      const { data: checkData, error: checkError } = await supabase.functions.invoke(
+        "reset-password",
+        {
+          body: {
+            action: "check-email-exists",
+            email: email.trim().toLowerCase(),
+          },
+        }
+      );
+
+      if (checkError) {
+        throw checkError;
+      }
+
+      if (!checkData?.exists) {
+        toast({
+          title: "Email not found",
+          description: "No account found with this email address. Please check and try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Email exists, send reset link
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
@@ -140,7 +166,7 @@ const ForgotPasswordScreen = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Sending...
+                      Verifying...
                     </>
                   ) : (
                     <>
