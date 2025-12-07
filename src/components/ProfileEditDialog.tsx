@@ -28,11 +28,11 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone } from "lucide-react";
+import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone, Camera } from "lucide-react";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
-
+import ProfilePhotosSection from "@/components/ProfilePhotosSection";
 // ==================== Type Definitions ====================
 
 /**
@@ -143,13 +143,18 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   // User email from auth (protected field)
   const [userEmail, setUserEmail] = useState<string>("");
   
+  // Current user ID
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  
+  // Has at least one photo
+  const [hasPhotos, setHasPhotos] = useState(true);
+  
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
   // Available states based on selected country
   const [availableStates, setAvailableStates] = useState<State[]>([]);
-
   // ==================== Effects ====================
 
   /**
@@ -186,7 +191,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Set email from auth (protected field)
+      // Set user ID and email
+      setCurrentUserId(user.id);
       setUserEmail(user.email || "");
 
       // Fetch profile data from database
@@ -331,6 +337,20 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 />
               </div>
             </div>
+
+            {/* ==================== Profile Photos Section ==================== */}
+            {currentUserId && (
+              <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Camera className="w-4 h-4" />
+                  Profile Photos
+                </div>
+                <ProfilePhotosSection 
+                  userId={currentUserId}
+                  onPhotosChange={setHasPhotos}
+                />
+              </div>
+            )}
 
             {/* ==================== Editable Fields Section ==================== */}
             
@@ -596,7 +616,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || !hasPhotos}
+                title={!hasPhotos ? "At least one photo is required" : ""}
               >
                 {isSaving ? (
                   <>
