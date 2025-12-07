@@ -10,10 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
+import LoginLanguageSelector from "@/components/LoginLanguageSelector";
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, isLoading: isTranslating } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -111,6 +112,11 @@ const AuthScreen = () => {
 
   return (
     <div className="min-h-screen gradient-hero flex flex-col">
+      {/* Language Selector at Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <LoginLanguageSelector />
+      </div>
+
       {/* Header */}
       <header className="px-6 pt-8 pb-4">
         <div className="text-center">
@@ -119,7 +125,7 @@ const AuthScreen = () => {
             MEOW MEOW
           </h1>
           <p className="text-muted-foreground text-lg">
-            {t('findYourPurrfectMatch', 'Find your purrfect match')}
+            {isTranslating ? '...' : t('findYourPurrfectMatch', 'Find your purrfect match')}
           </p>
         </div>
       </header>
