@@ -101,7 +101,7 @@ interface ChatPricing {
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
@@ -172,8 +172,8 @@ const WomenWalletScreen = () => {
     } catch (error) {
       console.error("Error loading wallet data:", error);
       toast({
-        title: "Error",
-        description: "Failed to load wallet data",
+        title: t('error', 'Error'),
+        description: t('failedToLoadWallet', 'Failed to load wallet data'),
         variant: "destructive"
       });
     } finally {
@@ -186,8 +186,8 @@ const WomenWalletScreen = () => {
     
     if (isNaN(amount) || amount <= 0) {
       toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid amount",
+        title: t('invalidAmount', 'Invalid Amount'),
+        description: t('pleaseEnterValidAmount', 'Please enter a valid amount'),
         variant: "destructive"
       });
       return;
@@ -195,8 +195,8 @@ const WomenWalletScreen = () => {
 
     if (amount > availableBalance) {
       toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough balance for this withdrawal",
+        title: t('insufficientBalance', 'Insufficient Balance'),
+        description: t('youNeedMore', "You don't have enough balance for this withdrawal"),
         variant: "destructive"
       });
       return;
@@ -204,8 +204,8 @@ const WomenWalletScreen = () => {
 
     if (availableBalance < minWithdrawal) {
       toast({
-        title: "Minimum Not Met",
-        description: `You need at least ₹${minWithdrawal.toLocaleString()} to withdraw`,
+        title: t('minimumNotMet', 'Minimum Not Met'),
+        description: `${t('youNeedMore', 'You need at least')} ₹${minWithdrawal.toLocaleString()} ${t('withdraw', 'to withdraw')}`,
         variant: "destructive"
       });
       return;
@@ -213,8 +213,8 @@ const WomenWalletScreen = () => {
 
     if (!paymentMethod) {
       toast({
-        title: "Payment Method Required",
-        description: "Please select a payment method",
+        title: t('paymentMethodRequired', 'Payment Method Required'),
+        description: t('pleaseSelectPaymentMethod', 'Please select a payment method'),
         variant: "destructive"
       });
       return;
@@ -237,8 +237,8 @@ const WomenWalletScreen = () => {
       if (error) throw error;
 
       toast({
-        title: "Request Submitted",
-        description: "Your withdrawal request has been submitted for approval"
+        title: t('requestSubmitted', 'Request Submitted'),
+        description: t('withdrawalRequestSubmitted', 'Your withdrawal request has been submitted for approval')
       });
 
       setWithdrawDialogOpen(false);
@@ -248,8 +248,8 @@ const WomenWalletScreen = () => {
     } catch (error) {
       console.error("Error submitting withdrawal:", error);
       toast({
-        title: "Error",
-        description: "Failed to submit withdrawal request",
+        title: t('error', 'Error'),
+        description: t('failedToSubmitWithdrawal', 'Failed to submit withdrawal request'),
         variant: "destructive"
       });
     } finally {
@@ -260,13 +260,13 @@ const WomenWalletScreen = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600"><Clock className="h-3 w-3 mr-1" /> {t('pending', 'Pending')}</Badge>;
       case "approved":
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge>;
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('approved', 'Approved')}</Badge>;
       case "completed":
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600"><CheckCircle2 className="h-3 w-3 mr-1" /> Completed</Badge>;
+        return <Badge variant="outline" className="bg-green-500/10 text-green-600"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('completed', 'Completed')}</Badge>;
       case "rejected":
-        return <Badge variant="outline" className="bg-red-500/10 text-red-600"><XCircle className="h-3 w-3 mr-1" /> Rejected</Badge>;
+        return <Badge variant="outline" className="bg-red-500/10 text-red-600"><XCircle className="h-3 w-3 mr-1" /> {t('rejected', 'Rejected')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -297,8 +297,8 @@ const WomenWalletScreen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">My Wallet</h1>
-            <p className="text-sm text-muted-foreground">Earnings & Withdrawals</p>
+            <h1 className="text-xl font-bold">{t('myWallet', 'My Wallet')}</h1>
+            <p className="text-sm text-muted-foreground">{t('earnings', 'Earnings')} & {t('withdrawals', 'Withdrawals')}</p>
           </div>
         </div>
       </header>
@@ -312,7 +312,7 @@ const WomenWalletScreen = () => {
                 <Wallet className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Available Balance</p>
+                <p className="text-xs text-muted-foreground">{t('availableBalance', 'Available Balance')}</p>
                 <p className="text-xl font-bold">₹{availableBalance.toLocaleString()}</p>
               </div>
             </div>
@@ -324,7 +324,7 @@ const WomenWalletScreen = () => {
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Earned</p>
+                <p className="text-xs text-muted-foreground">{t('totalEarned', 'Total Earned')}</p>
                 <p className="text-xl font-bold">₹{totalEarnings.toLocaleString()}</p>
               </div>
             </div>
@@ -335,11 +335,11 @@ const WomenWalletScreen = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Withdraw Funds</h3>
+              <h3 className="font-semibold">{t('withdrawFunds', 'Withdraw Funds')}</h3>
               <p className="text-sm text-muted-foreground">
                 {canWithdraw 
-                  ? "Request a withdrawal to your bank account"
-                  : `Minimum balance: ₹${minWithdrawal.toLocaleString()}`
+                  ? t('requestWithdrawal', 'Request a withdrawal to your bank account')
+                  : `${t('minimumBalance', 'Minimum balance')}: ₹${minWithdrawal.toLocaleString()}`
                 }
               </p>
             </div>
@@ -349,14 +349,14 @@ const WomenWalletScreen = () => {
               className="gap-2"
             >
               <ArrowDownToLine className="h-4 w-4" />
-              Withdraw
+              {t('withdraw', 'Withdraw')}
             </Button>
           </div>
           {!canWithdraw && (
             <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
               <p className="text-sm text-amber-600">
-                You need ₹{(minWithdrawal - availableBalance).toLocaleString()} more to withdraw
+                {t('youNeedMore', 'You need')} ₹{(minWithdrawal - availableBalance).toLocaleString()} {t('more', 'more')} {t('withdraw', 'to withdraw')}
               </p>
             </div>
           )}
@@ -367,11 +367,11 @@ const WomenWalletScreen = () => {
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="earnings" className="gap-2">
               <IndianRupee className="h-4 w-4" />
-              Earnings
+              {t('earnings', 'Earnings')}
             </TabsTrigger>
             <TabsTrigger value="withdrawals" className="gap-2">
               <History className="h-4 w-4" />
-              Withdrawals
+              {t('withdrawals', 'Withdrawals')}
             </TabsTrigger>
           </TabsList>
 
@@ -379,9 +379,9 @@ const WomenWalletScreen = () => {
             {earnings.length === 0 ? (
               <Card className="p-8 text-center">
                 <IndianRupee className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">No earnings yet</p>
+                <p className="text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Start chatting to earn money!
+                  {t('startChattingToEarn', 'Start chatting to earn money!')}
                 </p>
               </Card>
             ) : (
@@ -410,7 +410,7 @@ const WomenWalletScreen = () => {
             {withdrawals.length === 0 ? (
               <Card className="p-8 text-center">
                 <History className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">No withdrawal requests</p>
+                <p className="text-muted-foreground">{t('noWithdrawalRequests', 'No withdrawal requests')}</p>
               </Card>
             ) : (
               withdrawals.map((withdrawal) => (

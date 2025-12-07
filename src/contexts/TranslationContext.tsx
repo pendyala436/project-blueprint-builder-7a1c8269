@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface TranslationContextType {
   t: (key: string, fallback?: string) => string;
+  translateDynamic: (text: string) => Promise<string>;
+  translateDynamicBatch: (texts: string[]) => Promise<string[]>;
   currentLanguage: string;
   setLanguage: (language: string) => void;
   isLoading: boolean;
@@ -52,6 +54,8 @@ const defaultStrings: Record<string, string> = {
   'clear': 'Clear',
   'to': 'To',
   'from': 'From',
+  'of': 'of',
+  'readyToConnect': 'Ready to make new connections today?',
   
   // Auth Screen
   'login': 'Login',
@@ -550,6 +554,9 @@ const translationCache: Record<string, Record<string, string>> = {
   'English': defaultStrings,
 };
 
+// Cache for dynamic text translations
+const dynamicTranslationCache: Record<string, Record<string, string>> = {};
+
 interface TranslationProviderProps {
   children: ReactNode;
 }
@@ -644,6 +651,98 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     return translations[key] || fallback || defaultStrings[key] || key;
   }, [translations]);
 
+  // Translate a single dynamic text (from database)
+  const translateDynamic = useCallback(async (text: string): Promise<string> => {
+    if (!text || currentLanguage === 'English') return text;
+    
+    // Check cache
+    if (dynamicTranslationCache[currentLanguage]?.[text]) {
+      return dynamicTranslationCache[currentLanguage][text];
+    }
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('translate-ui', {
+        body: {
+          texts: [text],
+          targetLanguage: currentLanguage,
+          sourceLanguage: 'English'
+        }
+      });
+      
+      if (error || !data?.translations?.[0]) return text;
+      
+      // Cache the result
+      if (!dynamicTranslationCache[currentLanguage]) {
+        dynamicTranslationCache[currentLanguage] = {};
+      }
+      dynamicTranslationCache[currentLanguage][text] = data.translations[0];
+      
+      return data.translations[0];
+    } catch (error) {
+      console.error('Error translating dynamic text:', error);
+      return text;
+    }
+  }, [currentLanguage]);
+
+  // Translate multiple dynamic texts in batch
+  const translateDynamicBatch = useCallback(async (texts: string[]): Promise<string[]> => {
+    if (!texts.length || currentLanguage === 'English') return texts;
+    
+    // Check which texts need translation
+    const textsToTranslate: string[] = [];
+    const cachedResults: Record<number, string> = {};
+    
+    texts.forEach((text, index) => {
+      if (!text) {
+        cachedResults[index] = text;
+      } else if (dynamicTranslationCache[currentLanguage]?.[text]) {
+        cachedResults[index] = dynamicTranslationCache[currentLanguage][text];
+      } else {
+        textsToTranslate.push(text);
+      }
+    });
+    
+    // If all cached, return immediately
+    if (textsToTranslate.length === 0) {
+      return texts.map((_, index) => cachedResults[index] || texts[index]);
+    }
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('translate-ui', {
+        body: {
+          texts: textsToTranslate,
+          targetLanguage: currentLanguage,
+          sourceLanguage: 'English'
+        }
+      });
+      
+      if (error || !data?.translations) return texts;
+      
+      // Cache results
+      if (!dynamicTranslationCache[currentLanguage]) {
+        dynamicTranslationCache[currentLanguage] = {};
+      }
+      
+      textsToTranslate.forEach((text, i) => {
+        if (data.translations[i]) {
+          dynamicTranslationCache[currentLanguage][text] = data.translations[i];
+        }
+      });
+      
+      // Build final result
+      let translateIndex = 0;
+      return texts.map((text, index) => {
+        if (cachedResults[index] !== undefined) {
+          return cachedResults[index];
+        }
+        return data.translations[translateIndex++] || text;
+      });
+    } catch (error) {
+      console.error('Error batch translating:', error);
+      return texts;
+    }
+  }, [currentLanguage]);
+
   const setLanguage = useCallback((language: string) => {
     setCurrentLanguage(language);
     // Save preference to localStorage for persistence
@@ -651,7 +750,7 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
   }, []);
 
   return (
-    <TranslationContext.Provider value={{ t, currentLanguage, setLanguage, isLoading }}>
+    <TranslationContext.Provider value={{ t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading }}>
       {children}
     </TranslationContext.Provider>
   );

@@ -91,7 +91,7 @@ const MatchDiscoveryScreen = () => {
   const { toast } = useToast();
 
   // Translation hook
-  const { t } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   
   // ============= STATE DECLARATIONS =============
   
@@ -467,8 +467,27 @@ const MatchDiscoveryScreen = () => {
       // Sort descending: highest match scores first
       filteredMatches.sort((a, b) => b.matchScore - a.matchScore);
 
+      // ============= TRANSLATE DYNAMIC CONTENT =============
+      
+      // Translate bios and country names if not English
+      let translatedMatches = filteredMatches;
+      if (currentLanguage !== 'English' && filteredMatches.length > 0) {
+        const textsToTranslate = filteredMatches.flatMap(m => [
+          m.bio || '',
+          m.country || ''
+        ]);
+        
+        const translated = await translateDynamicBatch(textsToTranslate);
+        
+        translatedMatches = filteredMatches.map((m, i) => ({
+          ...m,
+          bio: translated[i * 2] || m.bio,
+          country: translated[i * 2 + 1] || m.country,
+        }));
+      }
+
       // Update state with processed matches
-      setMatches(filteredMatches);
+      setMatches(translatedMatches);
       setCurrentIndex(0); // Reset to first match
       
     } catch (error) {
@@ -477,8 +496,8 @@ const MatchDiscoveryScreen = () => {
       
       // Show error toast to user
       toast({
-        title: "Error",
-        description: "Failed to load matches",
+        title: t('error', 'Error'),
+        description: t('failedToLoad', 'Failed to load matches'),
         variant: "destructive",
       });
     } finally {
