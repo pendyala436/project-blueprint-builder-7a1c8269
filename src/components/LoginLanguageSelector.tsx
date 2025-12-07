@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Languages, Search, Check, Globe, X } from "lucide-react";
+import { Languages, Search, Check, Globe, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   INDIAN_NLLB200_LANGUAGES, 
@@ -17,10 +17,10 @@ import {
   NLLB200Language,
   getTotalLanguageCount
 } from "@/data/nllb200Languages";
-import { useTranslation } from "@/contexts/TranslationContext";
+import useTranslation from "@/hooks/useTranslation";
 
 export const LoginLanguageSelector = () => {
-  const { currentLanguage, setLanguage } = useTranslation();
+  const { currentLanguageName, setLanguage, isChangingLanguage, t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -51,26 +51,25 @@ export const LoginLanguageSelector = () => {
     [filteredLanguages]
   );
 
-  const handleSelectLanguage = (lang: NLLB200Language) => {
-    setLanguage(lang.name);
-    localStorage.setItem('app_language', lang.name);
+  const handleSelectLanguage = async (lang: NLLB200Language) => {
     setIsOpen(false);
     setSearchQuery("");
+    await setLanguage(lang.name);
   };
 
-  const currentLangData = languages.find(l => l.name === currentLanguage);
-
   const LanguageItem = ({ lang }: { lang: NLLB200Language }) => {
-    const isSelected = currentLanguage === lang.name;
+    const isSelected = currentLanguageName === lang.name;
     
     return (
       <button
         onClick={() => handleSelectLanguage(lang)}
+        disabled={isChangingLanguage}
         className={cn(
           "w-full flex items-center justify-between p-3 rounded-lg transition-all text-left",
           isSelected 
             ? "bg-primary/20 border-2 border-primary shadow-sm" 
-            : "hover:bg-accent border border-transparent"
+            : "hover:bg-accent border border-transparent",
+          isChangingLanguage && "opacity-50 cursor-not-allowed"
         )}
       >
         <div className="flex items-center gap-3">
@@ -103,10 +102,20 @@ export const LoginLanguageSelector = () => {
         variant="ghost"
         size="sm"
         onClick={() => setIsOpen(true)}
+        disabled={isChangingLanguage}
         className="gap-2 text-muted-foreground hover:text-foreground"
       >
-        <Languages className="h-4 w-4" />
-        <span className="font-medium">{currentLanguage}</span>
+        {isChangingLanguage ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="font-medium">{t('common.loading', 'Loading...')}</span>
+          </>
+        ) : (
+          <>
+            <Languages className="h-4 w-4" />
+            <span className="font-medium">{currentLanguageName}</span>
+          </>
+        )}
       </Button>
 
       {/* Language Selection Dialog */}
@@ -115,10 +124,10 @@ export const LoginLanguageSelector = () => {
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Languages className="h-5 w-5 text-primary" />
-              Select Language
+              {t('settings.selectLanguage', 'Select Language')}
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {getTotalLanguageCount()} languages
+              {t('common.language', 'Choose from')} {getTotalLanguageCount()} {t('navigation.messages', 'languages')}
             </p>
           </DialogHeader>
           
@@ -127,7 +136,7 @@ export const LoginLanguageSelector = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search languages..."
+                placeholder={t('common.search', 'Search languages...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-12 text-base bg-background"
@@ -145,6 +154,16 @@ export const LoginLanguageSelector = () => {
               )}
             </div>
           </div>
+          
+          {/* Loading indicator */}
+          {isChangingLanguage && (
+            <div className="px-6 py-3 bg-primary/10 border-b border-primary/20">
+              <div className="flex items-center gap-2 text-primary">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium">{t('common.loading', 'Translating...')}</span>
+              </div>
+            </div>
+          )}
           
           {/* Language List */}
           <ScrollArea className="h-[400px]">
@@ -192,8 +211,8 @@ export const LoginLanguageSelector = () => {
               {filteredLanguages.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Languages className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">No languages found</p>
-                  <p className="text-sm mt-1">Try a different search term</p>
+                  <p className="font-medium">{t('matches.noMatches', 'No languages found')}</p>
+                  <p className="text-sm mt-1">{t('errors.tryAgain', 'Try a different search term')}</p>
                 </div>
               )}
             </div>
