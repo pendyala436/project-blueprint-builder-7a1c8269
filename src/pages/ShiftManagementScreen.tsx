@@ -14,9 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
-import { useTranslation } from "@/contexts/TranslationContext";
 import { 
-  ArrowLeft, 
+  ArrowLeft,
   Clock, 
   Play, 
   Square, 
@@ -81,7 +80,6 @@ const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "F
 
 const ShiftManagementScreen = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [scheduledShifts, setScheduledShifts] = useState<ScheduledShift[]>([]);

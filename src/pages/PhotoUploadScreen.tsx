@@ -7,7 +7,6 @@ import ProgressIndicator from "@/components/ProgressIndicator";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
-import { useTranslation } from "@/contexts/TranslationContext";
 
 type VerificationState = "idle" | "verifying" | "verified" | "failed";
 
@@ -15,7 +14,6 @@ const MAX_ADDITIONAL_PHOTOS = 5;
 
 const PhotoUploadScreen = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
