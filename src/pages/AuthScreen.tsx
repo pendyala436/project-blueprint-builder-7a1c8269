@@ -112,11 +112,6 @@ const AuthScreen = () => {
 
   return (
     <div className="min-h-screen gradient-hero flex flex-col">
-      {/* Language Selector at Top Right */}
-      <div className="absolute top-4 right-4 z-10">
-        <LoginLanguageSelector />
-      </div>
-
       {/* Header */}
       <header className="px-6 pt-8 pb-4">
         <div className="text-center">
@@ -193,6 +188,11 @@ const AuthScreen = () => {
               {errors.password && (
                 <p className="text-xs text-destructive">{errors.password}</p>
               )}
+            </div>
+
+            {/* Language Selector - Below password */}
+            <div className="flex items-center justify-center pt-2">
+              <LoginLanguageSelector />
             </div>
 
             {/* Forgot Password Link */}
