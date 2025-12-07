@@ -9,9 +9,12 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AuthLanguageSelector } from "@/components/AuthLanguageSelector";
+import { useI18n } from "@/hooks/useI18n";
 
 const AuthScreen = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -27,15 +30,15 @@ const AuthScreen = () => {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = t('auth.emailRequired');
     } else if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = t('auth.invalidCredentials');
     }
 
     if (!password) {
-      newErrors.password = "Password is required";
+      newErrors.password = t('auth.passwordRequired');
     } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+      newErrors.password = t('auth.passwordTooShort');
     }
 
     setErrors(newErrors);
@@ -54,7 +57,7 @@ const AuthScreen = () => {
 
       if (error) {
         toast({
-          title: "Login failed",
+          title: t('auth.login'),
           description: error.message,
           variant: "destructive",
         });
@@ -63,8 +66,8 @@ const AuthScreen = () => {
       }
 
       toast({
-        title: "Welcome back!",
-        description: "Login successful.",
+        title: t('dashboard.welcome'),
+        description: t('auth.login'),
       });
 
       // Check if user has completed the tutorial
@@ -98,8 +101,8 @@ const AuthScreen = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Login failed",
-        description: error.message || "An error occurred",
+        title: t('auth.login'),
+        description: error.message || t('errors.unknown'),
         variant: "destructive",
       });
     } finally {
@@ -114,10 +117,10 @@ const AuthScreen = () => {
         <div className="text-center">
           <MeowLogo size="lg" className="mx-auto mb-4" />
           <h1 className="font-display text-4xl font-bold text-foreground mb-2">
-            MEOW MEOW
+            {t('app.name', 'MEOW MEOW')}
           </h1>
           <p className="text-muted-foreground text-lg">
-            Find your purrfect match
+            {t('app.tagline', 'Find your purrfect match')}
           </p>
         </div>
       </header>
@@ -129,14 +132,14 @@ const AuthScreen = () => {
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-semibold">
-                Email Address
+                {t('auth.email')}
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={t('auth.email')}
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -156,14 +159,14 @@ const AuthScreen = () => {
             {/* Password Input */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-semibold">
-                Password
+                {t('auth.password')}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password')}
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -187,13 +190,21 @@ const AuthScreen = () => {
               )}
             </div>
 
+            {/* Language Selector - Below Password */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">
+                {t('settings.language')}
+              </Label>
+              <AuthLanguageSelector />
+            </div>
+
             {/* Forgot Password Link */}
             <div className="text-right">
               <button
                 onClick={() => navigate("/forgot-password")}
                 className="text-sm text-primary hover:text-primary/80 transition-colors"
               >
-                Forgot Password?
+                {t('auth.forgotPassword')}
               </button>
             </div>
 
@@ -208,11 +219,11 @@ const AuthScreen = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Logging in...
+                  {t('common.loading')}
                 </>
               ) : (
                 <>
-                  Login
+                  {t('auth.login')}
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </>
               )}
@@ -222,7 +233,7 @@ const AuthScreen = () => {
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                New here?
+                {t('auth.noAccount')}
               </span>
               <div className="h-px flex-1 bg-border" />
             </div>
@@ -234,7 +245,7 @@ const AuthScreen = () => {
               className="w-full"
               onClick={() => navigate("/register")}
             >
-              Create an Account
+              {t('auth.signup')}
             </Button>
           </div>
         </Card>
