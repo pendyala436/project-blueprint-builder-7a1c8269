@@ -566,10 +566,18 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
   const [translations, setTranslations] = useState<Record<string, string>>(defaultStrings);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load user's language preference on mount
+  // Load user's language preference on mount - prioritize localStorage for persistence after logout
   useEffect(() => {
     const loadUserLanguage = async () => {
       try {
+        // First check localStorage (persists after logout)
+        const savedLanguage = localStorage.getItem('app_language');
+        if (savedLanguage && savedLanguage !== 'English') {
+          setCurrentLanguage(savedLanguage);
+          return; // Use saved language, skip database check
+        }
+
+        // If no saved language, check database for logged-in users
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
@@ -584,6 +592,8 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
           const language = userLanguages[0].language_name;
           if (language && language !== 'English') {
             setCurrentLanguage(language);
+            // Also save to localStorage for persistence
+            localStorage.setItem('app_language', language);
           }
         }
       } catch (error) {
