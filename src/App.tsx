@@ -45,6 +45,7 @@ import AdminSampleUsers from "./pages/AdminSampleUsers";
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
+import PasswordResetScreen from "./pages/PasswordResetScreen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<AuthScreen />} />
           <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/password-reset" element={<PasswordResetScreen />} />
           <Route path="/register" element={<LanguageCountryScreen />} />
           <Route path="/basic-info" element={<BasicInfoScreen />} />
           <Route path="/password-setup" element={<PasswordSetupScreen />} />

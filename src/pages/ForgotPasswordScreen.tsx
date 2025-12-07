@@ -60,20 +60,26 @@ const ForgotPasswordScreen = () => {
         return;
       }
 
-      // Email exists, send reset link
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
+      // Email exists, request password reset via our custom endpoint
+      const { data: resetData, error: resetError } = await supabase.functions.invoke(
+        "reset-password",
         {
-          redirectTo: `${window.location.origin}/password-setup`,
+          body: {
+            action: "request-reset",
+            email: email.trim().toLowerCase(),
+            redirectUrl: window.location.origin,
+          },
         }
       );
 
-      if (error) throw error;
+      if (resetError) {
+        throw resetError;
+      }
 
       setEmailSent(true);
       toast({
         title: "Reset link sent!",
-        description: "Check your email for the password reset link.",
+        description: "Check your email for the password reset link. It expires in 30 minutes.",
       });
     } catch (error: any) {
       toast({
@@ -166,7 +172,7 @@ const ForgotPasswordScreen = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Verifying...
+                      Sending...
                     </>
                   ) : (
                     <>
@@ -185,6 +191,12 @@ const ForgotPasswordScreen = () => {
                   </p>
                   <p className="text-sm text-primary font-semibold">
                     {email}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                    ⏰ The link expires in 30 minutes
                   </p>
                 </div>
 
