@@ -58,15 +58,25 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a professional translator. Translate the following UI texts from ${sourceLanguage} to ${targetLanguage}. 
-Keep the translations natural and appropriate for a mobile/web app interface.
-Maintain the same meaning and tone.
-Return ONLY the translations in the same numbered format, nothing else.
-Do not add any explanations or notes.`
+            content: `You are an expert translator specializing in ${targetLanguage} translations. Your task is to translate UI text from ${sourceLanguage} to ${targetLanguage}.
+
+CRITICAL RULES:
+1. Translate EVERYTHING to ${targetLanguage} - no words should remain in ${sourceLanguage}
+2. Use the native script of ${targetLanguage} (e.g., Telugu uses తెలుగు script, Hindi uses देवनागरी, Tamil uses தமிழ், etc.)
+3. Keep translations natural and appropriate for a mobile/web app interface
+4. Maintain the same meaning, tone and context
+5. For language/country names, use the ${targetLanguage} name (e.g., "India" becomes "భారతదేశం" in Telugu)
+6. Return ONLY the translations in the same numbered format
+7. Do NOT add explanations, notes, or keep any English words
+
+Example for Telugu:
+1. Welcome -> 1. స్వాగతం
+2. Online Now -> 2. ఆన్‌లైన్‌లో ఉన్నారు
+3. Your Language -> 3. మీ భాష`
           },
           {
             role: "user",
-            content: numberedTexts
+            content: `Translate these UI texts to ${targetLanguage}:\n\n${numberedTexts}`
           }
         ],
       }),

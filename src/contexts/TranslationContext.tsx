@@ -109,6 +109,22 @@ const defaultStrings: Record<string, string> = {
   'walletBalance': 'Wallet Balance',
   'myWallet': 'My Wallet',
   'availableBalance': 'Available Balance',
+  'startExploring': 'Start Exploring',
+  'startExploringToGetMatches': 'Start exploring to get matches and notifications!',
+  'boostYourProfile': 'Boost your profile!',
+  'getMoreMatchesWithPremium': 'Get more matches with premium features',
+  'upgrade': 'Upgrade',
+  'yourLanguage': 'Your Language',
+  'youWillBeConnectedWith': "You'll be connected with women who speak",
+  'messagesAutoTranslated': 'Messages are auto-translated.',
+  'indianPaymentMethods': 'Indian Payment Methods',
+  'internationalPaymentMethods': 'International Payment Methods',
+  'selectAmount': 'Select Amount',
+  'yourCurrency': 'Your currency',
+  'pricesShownInLocal': 'Prices shown in your local currency (stored as INR)',
+  'addedToWallet': 'added to your wallet',
+  'rechargeFailed': 'Recharge Failed',
+  'pleaseTryAgain': 'Please try again later',
   
   // Profile
   'fullName': 'Full Name',
@@ -754,6 +770,13 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
   }, [currentLanguage]);
 
   const setLanguage = useCallback((language: string) => {
+    // Clear cached translations for this language to force fresh translation
+    if (translationCache[language]) {
+      delete translationCache[language];
+    }
+    if (dynamicTranslationCache[language]) {
+      delete dynamicTranslationCache[language];
+    }
     setCurrentLanguage(language);
     // Save preference to localStorage for persistence
     localStorage.setItem('app_language', language);
