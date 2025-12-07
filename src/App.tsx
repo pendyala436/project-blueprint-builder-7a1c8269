@@ -26,6 +26,7 @@ import SettingsScreen from "./pages/SettingsScreen";
 import ShiftManagementScreen from "./pages/ShiftManagementScreen";
 import WomenDashboardScreen from "./pages/WomenDashboardScreen";
 import WomenWalletScreen from "./pages/WomenWalletScreen";
+import ApprovalPendingScreen from "./pages/ApprovalPendingScreen";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminGiftPricing from "./pages/AdminGiftPricing";
@@ -78,6 +79,7 @@ const App = () => (
           <Route path="/shift-management" element={<ShiftManagementScreen />} />
           <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
           <Route path="/women-wallet" element={<WomenWalletScreen />} />
+          <Route path="/approval-pending" element={<ApprovalPendingScreen />} />
           <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
           <Route path="/admin/users" element={<AdminUserManagement />} />
           <Route path="/admin/gifts" element={<AdminGiftPricing />} />

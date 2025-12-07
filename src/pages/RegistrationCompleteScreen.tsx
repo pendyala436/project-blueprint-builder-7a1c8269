@@ -74,11 +74,24 @@ const RegistrationCompleteScreen = () => {
     };
   }, [generateConfetti]);
 
+  const [userGender, setUserGender] = useState<string | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+
   const finalizeRegistration = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) return;
+
+      // Fetch profile to get gender
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("gender, approval_status")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserGender(profile?.gender || null);
+      setApprovalStatus(profile?.approval_status || "pending");
 
       // Update profile to mark registration as complete
       await supabase
@@ -100,7 +113,15 @@ const RegistrationCompleteScreen = () => {
       title: "Welcome!",
       description: "Redirecting to your dashboard...",
     });
-    navigate("/dashboard");
+    
+    // Women go to approval pending if not approved, men go to dashboard
+    if (userGender === "female" && approvalStatus !== "approved") {
+      navigate("/approval-pending");
+    } else if (userGender === "female") {
+      navigate("/women-dashboard");
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   const handleShareApp = async () => {
