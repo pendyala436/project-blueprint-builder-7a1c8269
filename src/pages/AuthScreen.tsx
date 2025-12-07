@@ -67,22 +67,8 @@ const AuthScreen = () => {
         description: "Login successful.",
       });
 
-      // Check user gender to redirect to appropriate dashboard
-      if (authData.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("gender")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        if (profile?.gender === "female") {
-          navigate("/women-dashboard");
-        } else {
-          navigate("/dashboard");
-        }
-      } else {
-        navigate("/dashboard");
-      }
+      // Navigate to welcome tutorial after successful login
+      navigate("/welcome-tutorial");
     } catch (error: any) {
       toast({
         title: "Login failed",
