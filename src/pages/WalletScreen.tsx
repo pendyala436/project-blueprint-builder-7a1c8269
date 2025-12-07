@@ -448,8 +448,8 @@ const WalletScreen = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Banknote className="h-5 w-5 text-primary" />
-                  Withdrawal Method
-                  <Badge variant="secondary" className="ml-2 text-xs">India Only</Badge>
+                  {t('withdrawalMethod', 'Withdrawal Method')}
+                  <Badge variant="secondary" className="ml-2 text-xs">{t('indiaOnly', 'India Only')}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -492,10 +492,10 @@ const WalletScreen = () => {
                 <div className="space-y-3 pt-2">
                   {selectedWithdrawalMethod === "upi" && (
                     <div>
-                      <Label htmlFor="upiId" className="text-sm">UPI ID</Label>
+                      <Label htmlFor="upiId" className="text-sm">{t('upi', 'UPI')} ID</Label>
                       <Input
                         id="upiId"
-                        placeholder="yourname@upi"
+                        placeholder={t('enterUpiId', 'Enter UPI ID')}
                         value={withdrawalDetails.upiId}
                         onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, upiId: e.target.value }))}
                         className="mt-1"
@@ -505,27 +505,27 @@ const WalletScreen = () => {
                   {selectedWithdrawalMethod === "bank" && (
                     <>
                       <div>
-                        <Label htmlFor="accountName" className="text-sm">Account Holder Name</Label>
+                        <Label htmlFor="accountName" className="text-sm">{t('accountHolderName', 'Account Holder Name')}</Label>
                         <Input
                           id="accountName"
-                          placeholder="As per bank records"
+                          placeholder={t('asPerBankRecords', 'As per bank records')}
                           value={withdrawalDetails.accountName}
                           onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, accountName: e.target.value }))}
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="accountNumber" className="text-sm">Account Number</Label>
+                        <Label htmlFor="accountNumber" className="text-sm">{t('accountNumber', 'Account Number')}</Label>
                         <Input
                           id="accountNumber"
-                          placeholder="Enter account number"
+                          placeholder={t('enterAccountNumber', 'Enter account number')}
                           value={withdrawalDetails.accountNumber}
                           onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, accountNumber: e.target.value }))}
                           className="mt-1"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="ifscCode" className="text-sm">IFSC Code</Label>
+                        <Label htmlFor="ifscCode" className="text-sm">{t('ifscCode', 'IFSC Code')}</Label>
                         <Input
                           id="ifscCode"
                           placeholder="e.g., SBIN0001234"
@@ -538,10 +538,10 @@ const WalletScreen = () => {
                   )}
                   {selectedWithdrawalMethod === "paytm_wallet" && (
                     <div>
-                      <Label htmlFor="paytmNumber" className="text-sm">Paytm Mobile Number</Label>
+                      <Label htmlFor="paytmNumber" className="text-sm">{t('paytmNumber', 'Paytm Number')}</Label>
                       <Input
                         id="paytmNumber"
-                        placeholder="10 digit mobile number"
+                        placeholder={t('tenDigitMobile', '10 digit mobile number')}
                         value={withdrawalDetails.paytmNumber}
                         onChange={(e) => setWithdrawalDetails(prev => ({ ...prev, paytmNumber: e.target.value }))}
                         className="mt-1"
@@ -558,7 +558,7 @@ const WalletScreen = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <ArrowUpRight className="h-5 w-5 text-primary" />
-                  Withdraw Amount
+                  {t('withdrawAmount', 'Withdraw Amount')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -587,11 +587,11 @@ const WalletScreen = () => {
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                   <Building2 className="h-3 w-3" />
                   <span>
-                    Withdrawing to {WITHDRAWAL_METHODS.find(m => m.id === selectedWithdrawalMethod)?.name || "selected method"}
+                    {t('withdrawingTo', 'Withdrawing to')} {WITHDRAWAL_METHODS.find(m => m.id === selectedWithdrawalMethod)?.name || t('selectedMethod', 'selected method')}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Minimum withdrawal: ₹500 • Processing time: 24 hours
+                  {t('minimumWithdrawal', 'Minimum withdrawal')}: ₹500 • {t('processingTime', 'Processing time')}: 24 {t('hours', 'hours')}
                 </p>
               </CardContent>
             </Card>
@@ -603,8 +603,8 @@ const WalletScreen = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <CreditCard className="h-5 w-5 text-primary" />
-                  Payment Method
-                  <Badge variant="secondary" className="ml-2 text-xs">All Countries</Badge>
+                  {t('paymentMethod', 'Payment Method')}
+                  <Badge variant="secondary" className="ml-2 text-xs">{t('allCountriesSupported', 'All Countries')}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -650,7 +650,7 @@ const WalletScreen = () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Plus className="h-5 w-5 text-primary" />
-                  Recharge Amount
+                  {t('rechargeAmount', 'Recharge Amount')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -678,7 +678,7 @@ const WalletScreen = () => {
                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
                   <CreditCard className="h-3 w-3" />
                   <span>
-                    Paying via {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name || "selected gateway"}
+                    {t('payingVia', 'Paying via')} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name || t('selectedGateway', 'selected gateway')}
                   </span>
                 </div>
               </CardContent>
@@ -691,15 +691,15 @@ const WalletScreen = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <History className="h-5 w-5 text-primary" />
-              Recent Transactions
+              {t('recentTransactions', 'Recent Transactions')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>No transactions yet</p>
-                <p className="text-sm">Recharge your wallet to get started</p>
+                <p>{t('noTransactionsYet', 'No transactions yet')}</p>
+                <p className="text-sm">{t('rechargeYourWallet', 'Recharge your wallet to get started')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -727,7 +727,7 @@ const WalletScreen = () => {
                       </div>
                       <div>
                         <p className="font-medium text-sm line-clamp-1">
-                          {tx.description || (tx.type === "credit" ? "Money Added" : "Payment")}
+                          {tx.description || (tx.type === "credit" ? t('moneyAdded', 'Money Added') : t('payment', 'Payment'))}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(tx.created_at), "MMM dd, yyyy • HH:mm")}
@@ -745,7 +745,7 @@ const WalletScreen = () => {
                         variant={tx.status === "completed" ? "default" : "secondary"}
                         className="text-[10px] px-1.5"
                       >
-                        {tx.status}
+                        {t(tx.status, tx.status)}
                       </Badge>
                     </div>
                   </div>

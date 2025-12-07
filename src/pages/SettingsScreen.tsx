@@ -432,15 +432,15 @@ const SettingsScreen = () => {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Lock className="h-5 w-5 text-primary" />
-              Privacy
+              {t('privacy', 'Privacy')}
             </CardTitle>
-            <CardDescription>Control your privacy and visibility</CardDescription>
+            <CardDescription>{t('controlPrivacy', 'Control your privacy and visibility')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Eye className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="show-online" className="cursor-pointer">Show Online Status</Label>
+                <Label htmlFor="show-online" className="cursor-pointer">{t('showOnlineStatus', 'Show Online Status')}</Label>
               </div>
               <Switch
                 id="show-online"
@@ -452,7 +452,7 @@ const SettingsScreen = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="read-receipts" className="cursor-pointer">Read Receipts</Label>
+                <Label htmlFor="read-receipts" className="cursor-pointer">{t('readReceipts', 'Read Receipts')}</Label>
               </div>
               <Switch
                 id="read-receipts"
@@ -464,17 +464,17 @@ const SettingsScreen = () => {
             <div className="space-y-3">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Eye className="h-4 w-4" />
-                Profile Visibility
+                {t('profileVisibility', 'Profile Visibility')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Control how often your profile appears to others in search results
+                {t('controlProfileVisibility', 'Control how often your profile appears to others in search results')}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { value: "low", label: "Low", description: "Rarely shown", icon: "🔒" },
-                  { value: "medium", label: "Medium", description: "Sometimes shown", icon: "👁️" },
-                  { value: "high", label: "High", description: "Often shown", icon: "⭐" },
-                  { value: "very_high", label: "Very High", description: "Always prioritized", icon: "🔥" },
+                  { value: "low", labelKey: "low", descKey: "rarelyShown", icon: "🔒" },
+                  { value: "medium", labelKey: "medium", descKey: "sometimesShown", icon: "👁️" },
+                  { value: "high", labelKey: "high", descKey: "oftenShown", icon: "⭐" },
+                  { value: "very_high", labelKey: "veryHigh", descKey: "alwaysPrioritized", icon: "🔥" },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -491,10 +491,10 @@ const SettingsScreen = () => {
                       "text-sm font-medium",
                       settings.profile_visibility === option.value ? "text-primary" : "text-foreground"
                     )}>
-                      {option.label}
+                      {t(option.labelKey, option.labelKey.charAt(0).toUpperCase() + option.labelKey.slice(1))}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {option.description}
+                      {t(option.descKey, option.descKey)}
                     </span>
                     {settings.profile_visibility === option.value && (
                       <CheckCircle2 className="h-4 w-4 text-primary mt-1" />
@@ -521,12 +521,12 @@ const SettingsScreen = () => {
             {saving ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Saving...
+                {t('saving', 'Saving...')}
               </>
             ) : (
               <>
                 <Save className="h-5 w-5 mr-2" />
-                Save Changes
+                {t('saveChanges', 'Save Changes')}
               </>
             )}
           </Button>
