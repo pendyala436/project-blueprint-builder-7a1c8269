@@ -7,49 +7,29 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Mail, Phone, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import PhoneInputWithCode from "@/components/PhoneInputWithCode";
-
-type LoginMethod = "email" | "phone";
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>("email");
-  const [identifier, setIdentifier] = useState("");
-  const [phoneValue, setPhoneValue] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  const validatePhone = (phone: string) => {
-    // Format: +{countryCode 1-5 digits}{phone 10 digits}
-    // e.g., +919876543210 or +12025551234
-    const match = phone.match(/^\+\d{1,5}\d{10}$/);
-    return match !== null;
-  };
-
   const handleLogin = async () => {
-    const newErrors: { identifier?: string; password?: string } = {};
+    const newErrors: { email?: string; password?: string } = {};
 
-    if (loginMethod === "email") {
-      if (!identifier.trim()) {
-        newErrors.identifier = "Email is required";
-      } else if (!validateEmail(identifier)) {
-        newErrors.identifier = "Please enter a valid email";
-      }
-    } else {
-      if (!phoneValue.trim()) {
-        newErrors.identifier = "Phone number is required";
-      } else if (!validatePhone(phoneValue)) {
-        newErrors.identifier = "Please enter a valid phone number";
-      }
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Please enter a valid email";
     }
 
     if (!password) {
@@ -67,32 +47,8 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
-      let loginEmail = identifier;
-
-      if (loginMethod === "phone") {
-        // Use edge function to get email by phone (bypasses RLS since user isn't authenticated)
-        const { data: resetData, error: resetError } = await supabase.functions.invoke('reset-password', {
-          body: { 
-            action: 'get-email-by-phone',
-            phone: phoneValue 
-          }
-        });
-
-        if (resetError || !resetData?.email) {
-          toast({
-            title: "Account not found",
-            description: "No account found with this phone number. Please check and try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        loginEmail = resetData.email;
-      }
-
       const { data: authData, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email,
         password,
       });
 
@@ -157,79 +113,30 @@ const AuthScreen = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
         <Card className="w-full max-w-md p-6 bg-card/80 backdrop-blur-sm border border-border/30 shadow-card animate-slide-up">
           <div className="space-y-6">
-            {/* Login Method Toggle */}
-            <div className="flex rounded-xl bg-muted/50 p-1">
-              <button
-                onClick={() => {
-                  setLoginMethod("email");
-                  setIdentifier("");
-                  setPhoneValue("");
-                  setErrors({});
-                }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  loginMethod === "email"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Mail className="w-4 h-4" />
-                Email
-              </button>
-              <button
-                onClick={() => {
-                  setLoginMethod("phone");
-                  setIdentifier("");
-                  setPhoneValue("");
-                  setErrors({});
-                }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  loginMethod === "phone"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Phone className="w-4 h-4" />
-                Phone
-              </button>
-            </div>
-
-            {/* Identifier Input */}
+            {/* Email Input */}
             <div className="space-y-2">
-              <Label htmlFor="identifier" className="text-sm font-semibold">
-                {loginMethod === "email" ? "Email Address" : "Phone Number"}
+              <Label htmlFor="email" className="text-sm font-semibold">
+                Email Address
               </Label>
-              {loginMethod === "email" ? (
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="identifier"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={identifier}
-                    onChange={(e) => {
-                      setIdentifier(e.target.value);
-                      setErrors((prev) => ({ ...prev, identifier: undefined }));
-                    }}
-                    className={cn(
-                      "h-12 pl-10 rounded-xl border-2 transition-all",
-                      errors.identifier ? "border-destructive" : "border-input focus:border-primary"
-                    )}
-                  />
-                </div>
-              ) : (
-                <PhoneInputWithCode
-                  value={phoneValue}
-                  onChange={(value) => {
-                    setPhoneValue(value);
-                    setErrors((prev) => ({ ...prev, identifier: undefined }));
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
-                  error={!!errors.identifier}
+                  className={cn(
+                    "h-12 pl-10 rounded-xl border-2 transition-all",
+                    errors.email ? "border-destructive" : "border-input focus:border-primary"
+                  )}
                 />
-              )}
-              {errors.identifier && (
-                <p className="text-xs text-destructive">{errors.identifier}</p>
+              </div>
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email}</p>
               )}
             </div>
 
