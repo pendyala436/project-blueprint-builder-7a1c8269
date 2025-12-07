@@ -38,7 +38,7 @@ const ProfileDetailScreen = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -145,23 +145,54 @@ const ProfileDetailScreen = () => {
       }
 
       const allLanguages = languages?.map(l => l.language_name) || [];
-      const motherTongue = profileData.preferred_language || allLanguages[0] || "Not specified";
-      const optionalLanguages = allLanguages.filter(l => l !== motherTongue);
+      let motherTongue = profileData.preferred_language || allLanguages[0] || "Not specified";
+      let optionalLanguages = allLanguages.filter(l => l !== motherTongue);
 
-      setProfile({
-        userId: targetUserId,
-        fullName: profileData.full_name || "Anonymous",
-        avatar: profileData.photo_url || "",
-        age,
-        gender: profileData.gender || "Not specified",
-        country: profileData.country || "Unknown",
-        state: profileData.state || "",
-        motherTongue,
-        optionalLanguages,
-        isOnline: statusData?.is_online || false,
-        lastSeen: statusData?.last_seen || "",
-        isVerified: profileData.verification_status || false,
-      });
+      // Translate language names and location if not English
+      if (currentLanguage !== 'English') {
+        const textsToTranslate = [
+          motherTongue,
+          profileData.country || 'Unknown',
+          profileData.state || '',
+          ...optionalLanguages
+        ].filter(Boolean);
+        
+        const translated = await translateDynamicBatch(textsToTranslate);
+        motherTongue = translated[0] || motherTongue;
+        const translatedCountry = translated[1] || profileData.country || 'Unknown';
+        const translatedState = translated[2] || profileData.state || '';
+        const translatedOptionalLangs = optionalLanguages.map((_, i) => translated[3 + i] || optionalLanguages[i]);
+
+        setProfile({
+          userId: targetUserId,
+          fullName: profileData.full_name || "Anonymous",
+          avatar: profileData.photo_url || "",
+          age,
+          gender: profileData.gender || t('notAvailable', 'Not specified'),
+          country: translatedCountry,
+          state: translatedState,
+          motherTongue,
+          optionalLanguages: translatedOptionalLangs,
+          isOnline: statusData?.is_online || false,
+          lastSeen: statusData?.last_seen || "",
+          isVerified: profileData.verification_status || false,
+        });
+      } else {
+        setProfile({
+          userId: targetUserId,
+          fullName: profileData.full_name || "Anonymous",
+          avatar: profileData.photo_url || "",
+          age,
+          gender: profileData.gender || "Not specified",
+          country: profileData.country || "Unknown",
+          state: profileData.state || "",
+          motherTongue,
+          optionalLanguages,
+          isOnline: statusData?.is_online || false,
+          lastSeen: statusData?.last_seen || "",
+          isVerified: profileData.verification_status || false,
+        });
+      }
 
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -210,7 +241,7 @@ const ProfileDetailScreen = () => {
   };
 
   const formatLastSeen = (lastSeen: string) => {
-    if (!lastSeen) return "Unknown";
+    if (!lastSeen) return t('unknown', 'Unknown');
     const date = new Date(lastSeen);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -218,10 +249,10 @@ const ProfileDetailScreen = () => {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    if (diffMins < 1) return t('justNow', 'Just now');
+    if (diffMins < 60) return `${diffMins} ${t('minutes', 'min')} ${t('ago', 'ago')}`;
+    if (diffHours < 24) return `${diffHours} ${t('hours', 'hour')}${diffHours > 1 ? "s" : ""} ${t('ago', 'ago')}`;
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ${t('ago', 'ago')}`;
   };
 
   if (isLoading) {

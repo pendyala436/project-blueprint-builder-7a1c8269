@@ -76,7 +76,7 @@ interface DashboardStats {
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, setLanguage, isLoading: isTranslating } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage, setLanguage, isLoading: isTranslating } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
@@ -123,25 +123,25 @@ const WomenDashboardScreen = () => {
   const quickActions = [
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
-      label: "Messages", 
+      label: t('messages', 'Messages'), 
       color: "from-blue-500 to-blue-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Wallet className="w-6 h-6" />, 
-      label: "Withdraw", 
+      label: t('withdraw', 'Withdraw'), 
       color: "from-green-500 to-emerald-400",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
-      label: "Matches", 
+      label: t('matches', 'Matches'), 
       color: "from-rose-500 to-pink-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
-      label: "Profile", 
+      label: t('profile', 'Profile'), 
       color: "from-violet-500 to-purple-400",
       action: () => setProfileEditOpen(true)
     },
@@ -468,8 +468,8 @@ const WomenDashboardScreen = () => {
     await updateUserOnlineStatus(false);
     await supabase.auth.signOut();
     toast({
-      title: "Logged out",
-      description: "See you soon!",
+      title: t('loggedOut', 'Logged out'),
+      description: t('seeYouSoon', 'See you soon!'),
     });
     navigate("/");
   };

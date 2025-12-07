@@ -36,7 +36,7 @@ interface OnlineUser {
 const OnlineUsersScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -148,15 +148,26 @@ const OnlineUsersScreen = () => {
         })
       );
 
-      setOnlineUsers(users);
-      if (users.length > 0) {
-        setSelectedUser(users[0]);
+      // Translate user data if not English
+      let translatedUsers = users;
+      if (currentLanguage !== 'English' && users.length > 0) {
+        const textsToTranslate = users.map(u => u.motherTongue);
+        const translated = await translateDynamicBatch(textsToTranslate);
+        translatedUsers = users.map((u, i) => ({
+          ...u,
+          motherTongue: translated[i] || u.motherTongue,
+        }));
+      }
+
+      setOnlineUsers(translatedUsers);
+      if (translatedUsers.length > 0) {
+        setSelectedUser(translatedUsers[0]);
       }
     } catch (error) {
       console.error("Error loading online users:", error);
       toast({
-        title: "Error",
-        description: "Failed to load online users",
+        title: t('error', 'Error'),
+        description: t('failedToLoadData', 'Failed to load online users'),
         variant: "destructive",
       });
     } finally {
@@ -177,12 +188,12 @@ const OnlineUsersScreen = () => {
         .maybeSingle();
 
       if (existingMatch) {
-        toast({
-          title: "Already matched!",
-          description: `You've already connected with ${user.fullName}`,
-        });
-        return;
-      }
+      toast({
+        title: t('alreadyMatched', 'Already matched!'),
+        description: `${t('youveAlreadyConnectedWith', "You've already connected with")} ${user.fullName}`,
+      });
+      return;
+    }
 
       // Create match
       await supabase
@@ -195,8 +206,8 @@ const OnlineUsersScreen = () => {
         });
 
       toast({
-        title: "Liked! 💕",
-        description: `You liked ${user.fullName}. Waiting for them to respond!`,
+        title: `${t('liked', 'Liked')}! 💕`,
+        description: `${t('waitingForResponse', 'Waiting for them to respond!')}`,
       });
 
       // Move to next user
@@ -206,8 +217,8 @@ const OnlineUsersScreen = () => {
     } catch (error) {
       console.error("Error liking user:", error);
       toast({
-        title: "Error",
-        description: "Failed to send like",
+        title: t('error', 'Error'),
+        description: t('failedToSave', 'Failed to send like'),
         variant: "destructive",
       });
     }
@@ -218,8 +229,8 @@ const OnlineUsersScreen = () => {
       api.scrollNext();
     } else {
       toast({
-        title: "No more users",
-        description: "Check back later for more online users!",
+        title: t('noMoreUsers', 'No more users'),
+        description: t('checkBackLaterForMore', 'Check back later for more online users!'),
       });
     }
   };
@@ -400,7 +411,7 @@ const OnlineUsersScreen = () => {
 
             {/* User counter */}
             <p className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.4s" }}>
-              {currentIndex + 1} of {onlineUsers.length} online users
+              {currentIndex + 1} {t('of', 'of')} {onlineUsers.length} {t('onlineUsers', 'online users')}
             </p>
           </div>
         )}

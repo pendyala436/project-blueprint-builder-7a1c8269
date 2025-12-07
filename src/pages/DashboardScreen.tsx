@@ -163,7 +163,7 @@ const ALL_GATEWAYS = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, setLanguage } = useTranslation();
+  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
@@ -373,7 +373,20 @@ const DashboardScreen = () => {
       .order("created_at", { ascending: false })
       .limit(5);
 
-    setNotifications(data || []);
+    // Translate notification titles and messages based on current language
+    if (data && data.length > 0 && currentLanguage !== 'English') {
+      const textsToTranslate = data.flatMap(n => [n.title, n.message]);
+      const translated = await translateDynamicBatch(textsToTranslate);
+      
+      const translatedData = data.map((n, i) => ({
+        ...n,
+        title: translated[i * 2] || n.title,
+        message: translated[i * 2 + 1] || n.message,
+      }));
+      setNotifications(translatedData);
+    } else {
+      setNotifications(data || []);
+    }
     setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
   };
 
@@ -606,9 +619,9 @@ const DashboardScreen = () => {
                 <Languages className="w-6 h-6 text-blue-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground mb-1">Your Language</p>
+                <p className="text-sm text-muted-foreground mb-1">{t('appLanguage', 'Your Language')}</p>
                 <p className="text-xs text-muted-foreground mb-2">
-                  You'll be connected with women who speak {userLanguage}. Messages are auto-translated.
+                  {t('languageDescription', "You'll be connected with women who speak")} {userLanguage}. {t('autoTranslateMessages', 'Messages are auto-translated.')}
                 </p>
                 <LanguageSelector
                   selectedLanguage={userLanguage}
@@ -635,7 +648,7 @@ const DashboardScreen = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.onlineUsersCount}</p>
-                <p className="text-sm text-muted-foreground">Online Now</p>
+                <p className="text-sm text-muted-foreground">{t('onlineNow', 'Online Now')}</p>
               </div>
             </div>
           </Card>
@@ -648,7 +661,7 @@ const DashboardScreen = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.matchCount}</p>
-                <p className="text-sm text-muted-foreground">Matches</p>
+                <p className="text-sm text-muted-foreground">{t('matches', 'Matches')}</p>
               </div>
             </div>
           </Card>
@@ -661,7 +674,7 @@ const DashboardScreen = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.unreadNotifications}</p>
-                <p className="text-sm text-muted-foreground">Notifications</p>
+                <p className="text-sm text-muted-foreground">{t('notifications', 'Notifications')}</p>
               </div>
             </div>
           </Card>
@@ -676,7 +689,7 @@ const DashboardScreen = () => {
                   <Wallet className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Wallet Balance</p>
+                  <p className="text-sm text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
                   <p className="text-2xl font-bold text-foreground">
                     ₹{walletBalance.toLocaleString()}
                     <span className="text-sm font-normal text-muted-foreground ml-2">
