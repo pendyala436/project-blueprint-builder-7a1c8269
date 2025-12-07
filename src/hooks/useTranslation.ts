@@ -1,29 +1,16 @@
-import { useTranslation as useI18nTranslation } from 'react-i18next';
-import { useCallback, useState } from 'react';
-import { changeLanguage, getCurrentLanguageName, getStaticLanguages, getNLLBLanguage } from '@/i18n';
+import { useTranslation as useContextTranslation } from '@/contexts/TranslationContext';
 
 export const useTranslation = () => {
-  const { t, i18n } = useI18nTranslation();
-  const [isChangingLanguage, setIsChangingLanguage] = useState(false);
-
-  const setLanguage = useCallback(async (language: string) => {
-    setIsChangingLanguage(true);
-    try {
-      await changeLanguage(language);
-    } finally {
-      setIsChangingLanguage(false);
-    }
-  }, []);
-
+  const context = useContextTranslation();
+  
   return {
-    t,
-    i18n,
-    currentLanguage: i18n.language,
-    currentLanguageName: getCurrentLanguageName(),
-    setLanguage,
-    isChangingLanguage,
-    staticLanguages: getStaticLanguages(),
-    getNLLBLanguage,
+    t: context.t,
+    currentLanguage: context.currentLanguage,
+    currentLanguageName: context.currentLanguage,
+    setLanguage: context.setLanguage,
+    isChangingLanguage: context.isLoading,
+    staticLanguages: ['English'],
+    getNLLBLanguage: () => undefined,
   };
 };
 

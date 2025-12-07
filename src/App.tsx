@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { TranslationProvider } from "@/contexts/TranslationContext";
 import AuthScreen from "./pages/AuthScreen";
 import ForgotPasswordScreen from "./pages/ForgotPasswordScreen";
 import LanguageCountryScreen from "./pages/LanguageCountryScreen";
@@ -53,61 +52,59 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TranslationProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<AuthScreen />} />
-            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-            <Route path="/password-reset" element={<PasswordResetScreen />} />
-            <Route path="/register" element={<LanguageCountryScreen />} />
-            <Route path="/basic-info" element={<BasicInfoScreen />} />
-            <Route path="/password-setup" element={<PasswordSetupScreen />} />
-            <Route path="/photo-upload" element={<PhotoUploadScreen />} />
-            <Route path="/location-setup" element={<LocationSetupScreen />} />
-            <Route path="/language-preferences" element={<LanguagePreferencesScreen />} />
-            <Route path="/terms-agreement" element={<TermsAgreementScreen />} />
-            <Route path="/ai-processing" element={<AIProcessingScreen />} />
-            <Route path="/welcome-tutorial" element={<WelcomeTutorialScreen />} />
-            <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
-            <Route path="/dashboard" element={<DashboardScreen />} />
-            <Route path="/online-users" element={<OnlineUsersScreen />} />
-            <Route path="/find-match" element={<MatchingScreen />} />
-            <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
-            <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
-            <Route path="/chat/:oderId" element={<ChatScreen />} />
-            <Route path="/wallet" element={<WalletScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="/shift-management" element={<ShiftManagementScreen />} />
-            <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
-            <Route path="/women-wallet" element={<WomenWalletScreen />} />
-            <Route path="/approval-pending" element={<ApprovalPendingScreen />} />
-            <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
-            <Route path="/admin/users" element={<AdminUserManagement />} />
-            <Route path="/admin/gifts" element={<AdminGiftPricing />} />
-            <Route path="/admin/languages" element={<AdminLanguageGroups />} />
-            <Route path="/admin/chat-monitoring" element={<AdminChatMonitoring />} />
-            <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
-            <Route path="/admin/finance-reports" element={<AdminFinanceReports />} />
-            <Route path="/admin/backups" element={<AdminBackupManagement />} />
-            <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
-            <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
-            <Route path="/admin/performance" element={<AdminPerformanceMonitoring />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-            <Route path="/send-gift/:receiverId" element={<GiftSendingScreen />} />
-            <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
-            <Route path="/admin/moderation" element={<AdminModerationScreen />} />
-            <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
-            <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </TranslationProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AuthScreen />} />
+          <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+          <Route path="/password-reset" element={<PasswordResetScreen />} />
+          <Route path="/register" element={<LanguageCountryScreen />} />
+          <Route path="/basic-info" element={<BasicInfoScreen />} />
+          <Route path="/password-setup" element={<PasswordSetupScreen />} />
+          <Route path="/photo-upload" element={<PhotoUploadScreen />} />
+          <Route path="/location-setup" element={<LocationSetupScreen />} />
+          <Route path="/language-preferences" element={<LanguagePreferencesScreen />} />
+          <Route path="/terms-agreement" element={<TermsAgreementScreen />} />
+          <Route path="/ai-processing" element={<AIProcessingScreen />} />
+          <Route path="/welcome-tutorial" element={<WelcomeTutorialScreen />} />
+          <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
+          <Route path="/dashboard" element={<DashboardScreen />} />
+          <Route path="/online-users" element={<OnlineUsersScreen />} />
+          <Route path="/find-match" element={<MatchingScreen />} />
+          <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
+          <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
+          <Route path="/chat/:oderId" element={<ChatScreen />} />
+          <Route path="/wallet" element={<WalletScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/shift-management" element={<ShiftManagementScreen />} />
+          <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
+          <Route path="/women-wallet" element={<WomenWalletScreen />} />
+          <Route path="/approval-pending" element={<ApprovalPendingScreen />} />
+          <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
+          <Route path="/admin/users" element={<AdminUserManagement />} />
+          <Route path="/admin/gifts" element={<AdminGiftPricing />} />
+          <Route path="/admin/languages" element={<AdminLanguageGroups />} />
+          <Route path="/admin/chat-monitoring" element={<AdminChatMonitoring />} />
+          <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
+          <Route path="/admin/finance-reports" element={<AdminFinanceReports />} />
+          <Route path="/admin/backups" element={<AdminBackupManagement />} />
+          <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
+          <Route path="/admin/chat-pricing" element={<AdminChatPricing />} />
+          <Route path="/admin/performance" element={<AdminPerformanceMonitoring />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+          <Route path="/send-gift/:receiverId" element={<GiftSendingScreen />} />
+          <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
+          <Route path="/admin/moderation" element={<AdminModerationScreen />} />
+          <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
+          <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
