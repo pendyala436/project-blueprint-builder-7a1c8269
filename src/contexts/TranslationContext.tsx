@@ -567,6 +567,14 @@ const defaultStrings: Record<string, string> = {
   'acceptedChats': 'Accepted Chats',
   'acceptRequest': 'Accept Request',
   'declineRequest': 'Decline Request',
+  'selectLanguageDescription': 'Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all',
+  'nllbLanguages': 'NLLB-200 languages',
+  'sameLanguageFirst': 'Same language first, then by wallet balance',
+  'noPremiumMenOnline': 'No premium men online',
+  'checkBackLaterForWalletUsers': 'Check back later for users with wallet balance',
+  'usersWithoutBalance': 'Users without wallet balance',
+  'noRegularUsersOnline': 'No regular users online',
+  'connectWithMan': 'Connect with a man speaking your language',
   
   // Women Wallet
   'yourEarnings': 'Your Earnings',
