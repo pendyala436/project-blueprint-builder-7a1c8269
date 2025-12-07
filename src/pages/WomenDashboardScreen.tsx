@@ -20,7 +20,6 @@ import {
   Clock,
   IndianRupee,
   Crown,
-  Sparkles,
   MapPin,
   ChevronRight,
   Search,
@@ -38,6 +37,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface Notification {
   id: string;
@@ -76,6 +76,7 @@ interface DashboardStats {
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, setLanguage, isLoading: isTranslating } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [userName, setUserName] = useState("");
@@ -645,14 +646,14 @@ const WomenDashboardScreen = () => {
               <div className="flex items-center gap-2 mb-2">
                 <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
                 <span className="text-sm text-muted-foreground">
-                  {isOnline ? "Online" : "Offline"}
+                  {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                 </span>
               </div>
               <h1 className="text-2xl font-bold text-foreground">
-                Welcome back{userName ? `, ${userName}` : ""}! 👋
+                {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
               </h1>
               <p className="text-muted-foreground mt-1">
-                {stats.totalOnlineMen} men online right now
+                {stats.totalOnlineMen} {t('onlineMen', 'men online right now')}
               </p>
             </div>
             <MatchFiltersPanel 
@@ -681,6 +682,8 @@ const WomenDashboardScreen = () => {
                   onLanguageChange={(lang, code) => {
                     setCurrentWomanLanguage(lang);
                     setCurrentWomanLanguageCode(code);
+                    // Update app UI language
+                    setLanguage(lang);
                     // Re-fetch online men with new language
                     fetchOnlineMen(undefined, lang, currentWomanCountry);
                   }}
@@ -801,7 +804,7 @@ const WomenDashboardScreen = () => {
                   {currentWomanLanguage}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
-                  <Sparkles className="h-3 w-3 mr-1" />
+                  <Crown className="h-3 w-3 mr-1" />
                   Priority
                 </Badge>
               </div>
@@ -913,7 +916,7 @@ const WomenDashboardScreen = () => {
             </div>
           ) : (
             <Card className="p-8 text-center">
-              <Sparkles className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <Heart className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
               <p className="text-muted-foreground">No new activity yet</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Start chatting to get matches and notifications!
