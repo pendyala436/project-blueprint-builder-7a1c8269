@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { isIndianLanguage } from "@/data/nllb200Languages";
-import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile } from "@/hooks/useNLLBVisibility";
+import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +43,7 @@ interface MatchableWoman {
   currentChatCount: number;
   aiVerified: boolean;
   isInShift: boolean;
+  profileVisibility: ProfileVisibility;
 }
 
 const MatchingScreen = () => {
@@ -178,6 +179,16 @@ const MatchingScreen = () => {
         availability?.map(a => [a.user_id, a]) || []
       );
 
+      // Fetch user settings for profile visibility
+      const { data: userSettings } = await supabase
+        .from("user_settings")
+        .select("user_id, profile_visibility")
+        .in("user_id", onlineUserIds);
+
+      const settingsMap = new Map(
+        userSettings?.map(s => [s.user_id, s.profile_visibility]) || []
+      );
+
       // Fetch active shifts to check if women are in shift
       const now = new Date();
       const currentDate = now.toISOString().split('T')[0];
@@ -211,6 +222,7 @@ const MatchingScreen = () => {
           const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
           const aiVerified = profile.ai_approved === true && profile.approval_status === "approved";
           const isInShift = activeShiftUserIds.has(profile.user_id) || (avail?.is_available ?? true);
+          const profileVisibility = (settingsMap.get(profile.user_id) || "high") as ProfileVisibility;
 
           return {
             userId: profile.user_id,
@@ -224,13 +236,17 @@ const MatchingScreen = () => {
             currentChatCount: avail?.current_chat_count || 0,
             aiVerified,
             isInShift,
+            profileVisibility,
           };
         })
       );
 
+      // Apply profile visibility filtering (probability-based)
+      const visibilityFilteredWomen = women.filter(w => shouldShowProfile(w.profileVisibility));
+
       // Apply NLLB-200 visibility rules
       const visibilityResult = filterWomenByNLLBRules(
-        women.map(w => ({
+        visibilityFilteredWomen.map(w => ({
           ...w,
           aiVerified: w.aiVerified,
           isInShift: w.isInShift,
@@ -238,9 +254,17 @@ const MatchingScreen = () => {
         motherTongue
       );
 
-      // Sort visible women: not busy first, then by chat count
+      // Sort visible women: visibility priority first, then not busy, then by chat count
       const sortedWomen = visibilityResult.visibleWomen.sort((a, b) => {
+        // First by visibility priority (higher = first)
+        const visA = getVisibilityWeight(a.profileVisibility);
+        const visB = getVisibilityWeight(b.profileVisibility);
+        if (visA !== visB) return visB - visA;
+        
+        // Then by busy status
         if (a.isBusy !== b.isBusy) return a.isBusy ? 1 : -1;
+        
+        // Finally by chat count
         return a.currentChatCount - b.currentChatCount;
       });
 
