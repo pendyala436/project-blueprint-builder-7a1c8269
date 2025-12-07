@@ -15,11 +15,21 @@ import {
   RefreshCw,
   User,
   Clock,
-  IndianRupee
+  IndianRupee,
+  Shield,
+  Sparkles,
+  Info
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { isIndianLanguage } from "@/data/nllb200Languages";
+import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile } from "@/hooks/useNLLBVisibility";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MatchableWoman {
   userId: string;
@@ -31,7 +41,8 @@ interface MatchableWoman {
   isOnline: boolean;
   isBusy: boolean;
   currentChatCount: number;
-  isIndian: boolean; // Used for fallback matching priority
+  aiVerified: boolean;
+  isInShift: boolean;
 }
 
 const MatchingScreen = () => {
@@ -149,10 +160,10 @@ const MatchingScreen = () => {
         return;
       }
 
-      // Fetch female profiles with country info
+      // Fetch female profiles with country info and AI verification status
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, age, primary_language, preferred_language, country")
+        .select("user_id, full_name, photo_url, age, primary_language, preferred_language, country, ai_approved, approval_status")
         .eq("gender", "Female")
         .in("user_id", onlineUserIds);
 
@@ -165,6 +176,21 @@ const MatchingScreen = () => {
       const availabilityMap = new Map(
         availability?.map(a => [a.user_id, a]) || []
       );
+
+      // Fetch active shifts to check if women are in shift
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().slice(0, 8);
+      
+      const { data: activeShifts } = await supabase
+        .from("scheduled_shifts")
+        .select("user_id")
+        .eq("scheduled_date", currentDate)
+        .eq("status", "scheduled")
+        .lte("start_time", currentTime)
+        .gte("end_time", currentTime);
+      
+      const activeShiftUserIds = new Set(activeShifts?.map(s => s.user_id) || []);
 
       // Fetch languages for each user
       const women: MatchableWoman[] = await Promise.all(
@@ -182,7 +208,8 @@ const MatchingScreen = () => {
 
           const avail = availabilityMap.get(profile.user_id);
           const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
-          const isIndian = profile.country?.toLowerCase() === "india";
+          const aiVerified = profile.ai_approved === true && profile.approval_status === "approved";
+          const isInShift = activeShiftUserIds.has(profile.user_id) || (avail?.is_available ?? true);
 
           return {
             userId: profile.user_id,
@@ -194,22 +221,29 @@ const MatchingScreen = () => {
             isOnline: true,
             isBusy,
             currentChatCount: avail?.current_chat_count || 0,
-            isIndian, // Used for fallback matching priority
+            aiVerified,
+            isInShift,
           };
         })
       );
 
-      // Sort: same language first, then by availability (free first)
-      const sortedWomen = women.sort((a, b) => {
-        const aMatch = a.motherTongue.toLowerCase() === motherTongue.toLowerCase() ? 0 : 1;
-        const bMatch = b.motherTongue.toLowerCase() === motherTongue.toLowerCase() ? 0 : 1;
-        
-        if (aMatch !== bMatch) return aMatch - bMatch;
+      // Apply NLLB-200 visibility rules
+      const visibilityResult = filterWomenByNLLBRules(
+        women.map(w => ({
+          ...w,
+          aiVerified: w.aiVerified,
+          isInShift: w.isInShift,
+        })),
+        motherTongue
+      );
+
+      // Sort visible women: not busy first, then by chat count
+      const sortedWomen = visibilityResult.visibleWomen.sort((a, b) => {
         if (a.isBusy !== b.isBusy) return a.isBusy ? 1 : -1;
         return a.currentChatCount - b.currentChatCount;
       });
 
-      setMatchableWomen(sortedWomen);
+      setMatchableWomen(sortedWomen as MatchableWoman[]);
     } catch (error) {
       console.error("Error loading matchable women:", error);
       toast({
@@ -226,6 +260,8 @@ const MatchingScreen = () => {
     const availableWomen = matchableWomen.filter(w => 
       !w.isBusy && 
       w.isOnline && 
+      w.aiVerified &&
+      w.isInShift &&
       w.userId !== excludeUserId
     );
 
@@ -238,13 +274,20 @@ const MatchingScreen = () => {
       return sameLanguageWomen[0];
     }
 
-    // Priority 2: If no same language women, fallback to Indian women
-    const indianWomen = availableWomen.filter(w => w.isIndian);
-    if (indianWomen.length > 0) {
-      return indianWomen[0];
+    // Priority 2: If man has non-Indian language, fallback to any Indian language women
+    // If man has Indian language, fallback to any available woman
+    const manHasIndianLanguage = isIndianLanguage(currentUserLanguage);
+    
+    if (!manHasIndianLanguage) {
+      // Non-Indian language man: can only see Indian language women
+      const indianLanguageWomen = availableWomen.filter(w => isIndianLanguage(w.motherTongue));
+      if (indianLanguageWomen.length > 0) {
+        return indianLanguageWomen[0];
+      }
+      return null; // Can't match with non-Indian language women
     }
 
-    // Priority 3: Any available woman
+    // Priority 3: Any available woman (for Indian language men)
     return availableWomen[0] || null;
   }, [matchableWomen, currentUserLanguage]);
 
@@ -380,6 +423,9 @@ const MatchingScreen = () => {
     );
   }
 
+  const manHasIndianLanguage = isIndianLanguage(currentUserLanguage);
+  const visibilityExplanation = getVisibilityExplanation(currentUserLanguage);
+
   const sameLanguageWomen = matchableWomen.filter(
     w => w.motherTongue.toLowerCase() === currentUserLanguage.toLowerCase()
   );
@@ -436,13 +482,44 @@ const MatchingScreen = () => {
           </Card>
         )}
 
+        {/* NLLB Visibility Info Banner */}
+        <Card className="p-4 bg-muted/50 border-border/50">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <Languages className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-foreground">Auto-Translation Active</h3>
+                <Badge variant={manHasIndianLanguage ? "default" : "secondary"}>
+                  {manHasIndianLanguage ? "Same Language Priority" : "Cross-Language Mode"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {visibilityExplanation}
+              </p>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-5 h-5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Messages are automatically translated using NLLB-200 neural translation. You can chat with anyone regardless of language!</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </Card>
+
         {/* Quick Connect Button */}
         <Card className="p-6 bg-gradient-to-r from-primary/20 to-rose-500/20 border-primary/30">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-foreground mb-1">Quick Connect</h2>
               <p className="text-sm text-muted-foreground">
-                Auto-connect to the best available match who speaks {currentUserLanguage}
+                Auto-connect to the best available match
+                {sameLanguageWomen.length > 0 ? ` who speaks ${currentUserLanguage}` : " with auto-translation"}
               </p>
             </div>
             <Button 
@@ -496,12 +573,16 @@ const MatchingScreen = () => {
         {otherWomen.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-muted-foreground" />
+              <Sparkles className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-semibold text-foreground">
-                Other Languages
+                {manHasIndianLanguage ? "Other Languages" : "Indian Language Speakers"}
               </h3>
               <Badge variant="outline" className="ml-2">
                 {otherWomen.length} online
+              </Badge>
+              <Badge variant="secondary" className="ml-1">
+                <Languages className="w-3 h-3 mr-1" />
+                Auto-translate
               </Badge>
             </div>
 
@@ -513,6 +594,7 @@ const MatchingScreen = () => {
                   onConnect={() => initiateChat(woman)}
                   onViewProfile={() => navigate(`/profile/${woman.userId}`)}
                   isConnecting={isConnecting && selectedWoman?.userId === woman.userId}
+                  showTranslationBadge
                 />
               ))}
             </div>
@@ -527,7 +609,9 @@ const MatchingScreen = () => {
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">No one online right now</h2>
             <p className="text-muted-foreground mb-6">
-              Check back later to find users who speak {currentUserLanguage}
+              {manHasIndianLanguage 
+                ? `Check back later to find users who speak ${currentUserLanguage}`
+                : "Check back later to find users with auto-translation support"}
             </p>
             <Button variant="gradient" onClick={() => navigate("/dashboard")}>
               Back to Dashboard
@@ -545,9 +629,10 @@ interface WomanCardProps {
   onViewProfile: () => void;
   isConnecting: boolean;
   isPriority?: boolean;
+  showTranslationBadge?: boolean;
 }
 
-const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }: WomanCardProps) => {
+const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, showTranslationBadge }: WomanCardProps) => {
   return (
     <Card className={`overflow-hidden transition-all hover:shadow-lg ${
       isPriority ? "ring-2 ring-primary/50" : ""
@@ -582,6 +667,18 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority }
           {isPriority && (
             <div className="px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium text-center">
               Same Language
+            </div>
+          )}
+          {showTranslationBadge && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/90 text-white text-xs font-medium">
+              <Languages className="w-3 h-3" />
+              <span>Translate</span>
+            </div>
+          )}
+          {woman.aiVerified && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/90 text-white text-xs font-medium">
+              <Shield className="w-3 h-3" />
+              <span>Verified</span>
             </div>
           )}
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
