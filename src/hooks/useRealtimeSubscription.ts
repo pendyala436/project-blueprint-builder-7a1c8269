@@ -18,8 +18,29 @@ type TableName =
   | "user_status"
   | "women_availability"
   | "language_limits"
+  | "language_groups"
   | "chat_pricing"
-  | "notifications";
+  | "notifications"
+  | "gifts"
+  | "gift_transactions"
+  | "shifts"
+  | "scheduled_shifts"
+  | "absence_records"
+  | "women_shift_assignments"
+  | "user_settings"
+  | "matches"
+  | "user_languages"
+  | "withdrawal_requests"
+  | "moderation_reports"
+  | "policy_violation_alerts"
+  | "audit_logs"
+  | "backup_logs"
+  | "system_metrics"
+  | "system_alerts"
+  | "admin_settings"
+  | "legal_documents"
+  | "user_roles"
+  | "attendance";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;

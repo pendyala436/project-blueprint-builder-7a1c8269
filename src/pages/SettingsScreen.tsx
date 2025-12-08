@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface UserSettings {
   theme: string;
@@ -92,15 +93,6 @@ const SettingsScreen = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState("eng_Latn");
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  useEffect(() => {
-    const changed = JSON.stringify(settings) !== JSON.stringify(originalSettings);
-    setHasChanges(changed);
-  }, [settings, originalSettings]);
-
   const fetchSettings = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -154,6 +146,21 @@ const SettingsScreen = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  // Real-time subscription for settings updates
+  useRealtimeSubscription({
+    table: "user_settings",
+    onUpdate: fetchSettings
+  });
+
+  useEffect(() => {
+    const changed = JSON.stringify(settings) !== JSON.stringify(originalSettings);
+    setHasChanges(changed);
+  }, [settings, originalSettings]);
 
   const handleSave = async () => {
     setSaving(true);
