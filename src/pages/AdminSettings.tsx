@@ -370,7 +370,27 @@ const AdminSettings = () => {
           ))}
         </Tabs>
 
-        {/* Theme Preview */}
+        {/* Quick Links Section - Admin Management Tools */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              User Management Tools
+            </CardTitle>
+            <CardDescription>Quick access to user and data management features</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button onClick={() => navigate('/admin/sample-users')} variant="outline" className="w-full justify-start gap-2">
+              <Users className="h-4 w-4" />
+              Sample Users Management
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Mock Users Management */}
+        <MockUsersCard />
+
+        {/* Theme Preview - Only show in General tab */}
         {activeTab === "general" && (
           <Card className="mt-6">
             <CardHeader>
@@ -419,28 +439,6 @@ const AdminSettings = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Mock Users Management */}
-        <MockUsersCard />
-
-        {/* Sample Users Management Link */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Sample Users Management
-            </CardTitle>
-            <CardDescription>
-              Enable or disable demo profiles by country and language for testing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/admin/sample-users')} className="gap-2">
-              <Users className="h-4 w-4" />
-              Manage Sample Users
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

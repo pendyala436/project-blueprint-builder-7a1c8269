@@ -230,7 +230,7 @@ const SettingsScreen = () => {
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
-        {/* Theme Settings */}
+        {/* Section 1: Appearance Settings */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -303,7 +303,7 @@ const SettingsScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
+        {/* Section 2: Notification Settings */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -377,7 +377,7 @@ const SettingsScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Language & Translation */}
+        {/* Section 3: Language & Translation */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -434,7 +434,7 @@ const SettingsScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Privacy Settings */}
+        {/* Section 4: Privacy Settings */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">

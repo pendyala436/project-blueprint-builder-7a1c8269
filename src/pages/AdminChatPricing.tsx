@@ -250,7 +250,7 @@ const AdminChatPricing = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-        {/* Pricing Rates Card */}
+        {/* Section 1: Chat Pricing Rates */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
@@ -259,7 +259,7 @@ const AdminChatPricing = () => {
                 Chat Pricing Rates
               </CardTitle>
               <CardDescription>
-                Per-minute charges and earnings configuration
+                Per-minute charges and earnings for text chat
               </CardDescription>
             </div>
             {!isEditingRates && pricing && (
