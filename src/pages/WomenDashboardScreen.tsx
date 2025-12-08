@@ -36,6 +36,7 @@ import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGE
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
+import { ChatInterface } from "@/components/ChatInterface";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -79,6 +80,7 @@ const WomenDashboardScreen = () => {
   const { t, translateDynamicBatch, currentLanguage, setLanguage, isLoading: isTranslating } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
@@ -191,6 +193,8 @@ const WomenDashboardScreen = () => {
         navigate("/");
         return;
       }
+
+      setCurrentUserId(user.id);
 
       // Fetch user profile including country and approval status
       const { data: profile } = await supabase
@@ -749,6 +753,17 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
+
+        {/* Chat Interface - Accept/Reject Controls */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
+            <ChatInterface
+              userGender="female"
+              currentUserId={currentUserId}
+              currentUserLanguage={currentWomanLanguage}
+            />
+          </div>
+        )}
 
         {/* Online Men Tabs */}
         <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
