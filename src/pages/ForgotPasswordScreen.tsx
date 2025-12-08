@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
+import AuroraBackground from "@/components/AuroraBackground";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, ArrowLeft, ArrowRight, Loader2, ShieldCheck, CheckCircle } from "lucide-react";
@@ -93,9 +94,11 @@ const ForgotPasswordScreen = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <AuroraBackground />
+      
       {/* Header */}
-      <header className="px-6 pt-8 pb-4">
+      <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -112,19 +115,19 @@ const ForgotPasswordScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        <Card className="w-full max-w-md p-6 bg-card/80 backdrop-blur-sm border border-border/30 shadow-card animate-slide-up">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
+        <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
           <div className="space-y-6">
             {/* Title */}
             <div className="text-center space-y-2">
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
                 {emailSent ? (
-                  <CheckCircle className="w-8 h-8 text-green-500" />
+                  <CheckCircle className="w-8 h-8 text-accent" />
                 ) : (
                   <ShieldCheck className="w-8 h-8 text-primary" />
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-2xl font-bold text-foreground font-display">
                 {emailSent ? "Check Your Email" : "Reset Password"}
               </h1>
               <p className="text-muted-foreground text-sm">
@@ -152,7 +155,7 @@ const ForgotPasswordScreen = () => {
                       setError(undefined);
                     }}
                     className={cn(
-                      "h-12 rounded-xl border-2 transition-all",
+                      "h-12 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
                       error ? "border-destructive" : "border-input focus:border-primary"
                     )}
                   />
@@ -163,7 +166,7 @@ const ForgotPasswordScreen = () => {
 
                 {/* Send Reset Link Button */}
                 <Button
-                  variant="hero"
+                  variant="aurora"
                   size="xl"
                   className="w-full group"
                   onClick={handleSendResetLink}
@@ -185,7 +188,7 @@ const ForgotPasswordScreen = () => {
             ) : (
               <>
                 {/* Success Message */}
-                <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 text-center space-y-2">
+                <div className="p-4 bg-accent/10 rounded-xl border border-accent/20 text-center space-y-2">
                   <p className="text-sm text-foreground font-medium">
                     Reset link sent to:
                   </p>
@@ -225,10 +228,6 @@ const ForgotPasswordScreen = () => {
           </div>
         </Card>
       </main>
-
-      {/* Decorative Elements */}
-      <div className="fixed top-20 left-4 w-20 h-20 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
-      <div className="fixed bottom-32 right-4 w-32 h-32 rounded-full bg-accent/20 blur-3xl pointer-events-none" />
     </div>
   );
 };

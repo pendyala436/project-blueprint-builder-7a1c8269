@@ -14,6 +14,7 @@ import {
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
+import AuroraBackground from "@/components/AuroraBackground";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -194,9 +195,11 @@ const BasicInfoScreen = () => {
   defaultMonth.setFullYear(defaultMonth.getFullYear() - 18);
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <AuroraBackground />
+      
       {/* Header */}
-      <header className="px-6 pt-8 pb-4">
+      <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4 mb-4">
           <Button
             variant="ghost"
@@ -213,11 +216,11 @@ const BasicInfoScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-6 pb-8">
+      <main className="flex-1 flex flex-col items-center px-6 pb-8 relative z-10">
         {/* Logo & Title */}
         <div className="text-center mb-8 animate-fade-in">
           <MeowLogo size="md" className="mx-auto mb-4" />
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          <h1 className="font-display text-3xl font-bold text-foreground mb-2 drop-shadow-sm">
             {t('tellUsAboutYou', 'Tell us about you')}
           </h1>
           <p className="text-muted-foreground text-base max-w-xs mx-auto">
@@ -226,7 +229,7 @@ const BasicInfoScreen = () => {
         </div>
 
         {/* Form Card */}
-        <div className="w-full max-w-md bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-card border border-border/30 animate-slide-up">
+        <div className="w-full max-w-md bg-card/70 backdrop-blur-xl rounded-3xl p-6 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] border border-primary/20 animate-slide-up">
           <div className="space-y-6">
             {/* Email */}
             <div 
