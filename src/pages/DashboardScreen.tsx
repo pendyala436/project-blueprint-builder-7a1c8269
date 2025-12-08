@@ -48,6 +48,7 @@ import { RandomChatButton } from "@/components/RandomChatButton";
 import { ChatInterface } from "@/components/ChatInterface";
 
 import { useTranslation } from "@/contexts/TranslationContext";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 
 interface Notification {
   id: string;
@@ -387,6 +388,8 @@ const DashboardScreen = () => {
       }
 
       const onlineUserIds = onlineUsers.map(u => u.user_id);
+      const userHasIndianLanguage = isIndianLanguage(language);
+      const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
 
       // First try to get from female_profiles table
       const { data: femaleProfiles, error: femaleError } = await supabase
@@ -395,19 +398,36 @@ const DashboardScreen = () => {
         .in("user_id", onlineUserIds)
         .eq("approval_status", "approved")
         .eq("account_status", "active")
-        .limit(10);
+        .limit(20);
+
+      const filterAndSortWomen = (women: typeof femaleProfiles) => {
+        if (!women || women.length === 0) return [];
+
+        if (userHasIndianLanguage) {
+          // If man speaks Indian language, show same language women first, then other Indian women
+          const sameLanguageWomen = women.filter(w => 
+            w.primary_language?.toLowerCase() === language.toLowerCase()
+          );
+          const otherIndianWomen = women.filter(w => 
+            w.primary_language?.toLowerCase() !== language.toLowerCase() &&
+            indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
+          );
+          return [...sameLanguageWomen, ...otherIndianWomen].slice(0, 10);
+        } else {
+          // If man speaks non-Indian language (e.g., English, Spanish), show Indian women
+          // They can chat with translation via NLLB-200
+          const indianWomen = women.filter(w => 
+            indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
+          );
+          const otherWomen = women.filter(w => 
+            !indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
+          );
+          return [...indianWomen, ...otherWomen].slice(0, 10);
+        }
+      };
 
       if (femaleProfiles && femaleProfiles.length > 0) {
-        // Get user's language for filtering
-        const sameLanguageWomen = femaleProfiles.filter(w => 
-          w.primary_language?.toLowerCase() === language.toLowerCase()
-        );
-        const otherWomen = femaleProfiles.filter(w => 
-          w.primary_language?.toLowerCase() !== language.toLowerCase()
-        );
-        
-        // Show same language first, then others
-        setOnlineWomen([...sameLanguageWomen, ...otherWomen].slice(0, 10));
+        setOnlineWomen(filterAndSortWomen(femaleProfiles));
       } else {
         // Fallback to profiles table for women
         const { data: profiles } = await supabase
@@ -417,20 +437,9 @@ const DashboardScreen = () => {
           .eq("gender", "Female")
           .eq("approval_status", "approved")
           .eq("account_status", "active")
-          .limit(10);
+          .limit(20);
 
-        if (profiles && profiles.length > 0) {
-          const sameLanguageWomen = profiles.filter(w => 
-            w.primary_language?.toLowerCase() === language.toLowerCase()
-          );
-          const otherWomen = profiles.filter(w => 
-            w.primary_language?.toLowerCase() !== language.toLowerCase()
-          );
-          
-          setOnlineWomen([...sameLanguageWomen, ...otherWomen].slice(0, 10));
-        } else {
-          setOnlineWomen([]);
-        }
+        setOnlineWomen(filterAndSortWomen(profiles));
       }
     } catch (error) {
       console.error("Error fetching online women:", error);
