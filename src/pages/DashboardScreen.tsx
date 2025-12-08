@@ -897,7 +897,7 @@ const DashboardScreen = () => {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        {/* Welcome Section with Filter */}
+        {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -931,8 +931,7 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-
-        {/* Stats Cards */}
+        {/* Section 2: Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
           <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
@@ -974,7 +973,7 @@ const DashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Wallet & Recharge Section */}
+        {/* Section 3: Wallet & Primary Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <div className="flex items-center justify-between">
@@ -1020,7 +1019,7 @@ const DashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Section 4: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1039,7 +1038,12 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Online Women Section - Two Columns */}
+        {/* Section 5: Active Chats */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.22s" }}>
+          <ActiveChatsSection maxDisplay={5} />
+        </div>
+
+        {/* Section 6: Online Women - Two Columns */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -1224,13 +1228,7 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Active Chats Section */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
-          <ActiveChatsSection maxDisplay={5} />
-        </div>
-
-
-        {/* Recent Notifications */}
+        {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
@@ -1284,8 +1282,8 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* CTA Banner */}
-        <Card className="p-6 bg-gradient-to-r from-primary/10 via-rose-500/10 to-violet-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.4s" }}>
+        {/* Section 8: CTA Banner */}
+        <Card className="p-6 bg-gradient-to-r from-primary/10 via-rose-500/10 to-violet-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-rose-500 text-white">
               <Sparkles className="w-8 h-8" />
