@@ -68,6 +68,7 @@ interface OnlineWoman {
   age: number | null;
   country: string | null;
   primary_language: string | null;
+  active_chat_count?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
 interface DashboardStats {
@@ -311,12 +312,19 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return "Free";
-    if (activeChatCount >= 3) return "Busy(3)";
-    return `Busy(${activeChatCount})`;
+    if (activeChatCount === 0) return t('free', 'Free');
+    if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
+    return t('busy', 'Busy') + `(${activeChatCount})`;
   };
 
   const getStatusColor = () => {
+    // Green = Free, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
+  };
+
+  const getStatusDotColor = () => {
     if (activeChatCount === 0) return "bg-green-500";
     if (activeChatCount >= 3) return "bg-red-500";
     return "bg-amber-500";
@@ -577,14 +585,35 @@ const DashboardScreen = () => {
         ? allWomen.filter(w => onlineUserIds.includes(w.user_id))
         : allWomen;
 
+      // Get active chat counts for all women
+      const womenUserIds = onlineWomenList.map(w => w.user_id);
+      const { data: chatCounts } = await supabase
+        .from("active_chat_sessions")
+        .select("woman_user_id")
+        .in("woman_user_id", womenUserIds)
+        .eq("status", "active");
+
+      // Count chats per woman
+      const chatCountMap = new Map<string, number>();
+      chatCounts?.forEach(chat => {
+        const count = chatCountMap.get(chat.woman_user_id) || 0;
+        chatCountMap.set(chat.woman_user_id, count + 1);
+      });
+
+      // Add chat count to each woman
+      const womenWithChatCount = onlineWomenList.map(w => ({
+        ...w,
+        active_chat_count: chatCountMap.get(w.user_id) || 0
+      }));
+
       // Split women into two categories:
       // 1. Same language women
-      const sameLanguage = onlineWomenList.filter(w => 
+      const sameLanguage = womenWithChatCount.filter(w => 
         w.primary_language?.toLowerCase() === language.toLowerCase()
       );
 
       // 2. Indian language women (for non-Indian NLLB users - auto-translate)
-      const indianWomen = onlineWomenList.filter(w => {
+      const indianWomen = womenWithChatCount.filter(w => {
         const womenLang = w.primary_language?.toLowerCase() || "";
         // Must be Indian language and NOT same as user's language
         return indianLanguageNames.includes(womenLang) && 
@@ -845,7 +874,11 @@ const DashboardScreen = () => {
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-white", getStatusColor())}>
+                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
+                    activeChatCount === 0 ? "bg-green-300" : 
+                    activeChatCount >= 3 ? "bg-red-300" : "bg-amber-300"
+                  )} />
                   {getStatusText()}
                 </Badge>
               </div>
@@ -1016,7 +1049,15 @@ const DashboardScreen = () => {
                               {woman.full_name?.charAt(0) || "?"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                          {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
+                            (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+                          )} title={
+                            (woman.active_chat_count || 0) === 0 ? "Free" :
+                            (woman.active_chat_count || 0) >= 3 ? "Busy (3/3)" : `Busy (${woman.active_chat_count}/3)`
+                          } />
                         </div>
                         <p className="font-medium text-xs text-foreground truncate">
                           {woman.full_name || "Anonymous"}
@@ -1031,14 +1072,20 @@ const DashboardScreen = () => {
                           <Button
                             variant="default"
                             size="sm"
-                            className="flex-1 gap-1 bg-emerald-500 hover:bg-emerald-600 text-xs h-7"
+                            className={cn(
+                              "flex-1 gap-1 text-xs h-7",
+                              (woman.active_chat_count || 0) >= 3 
+                                ? "bg-gray-400 cursor-not-allowed" 
+                                : "bg-emerald-500 hover:bg-emerald-600"
+                            )}
+                            disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                             }}
                           >
                             <MessageCircle className="w-3 h-3" />
-                            {t('chat', 'Chat')}
+                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                           </Button>
                         </div>
                       </Card>
@@ -1079,7 +1126,15 @@ const DashboardScreen = () => {
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                            {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
+                            <div className={cn(
+                              "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                              (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+                            )} title={
+                              (woman.active_chat_count || 0) === 0 ? "Free" :
+                              (woman.active_chat_count || 0) >= 3 ? "Busy (3/3)" : `Busy (${woman.active_chat_count}/3)`
+                            } />
                           </div>
                           <p className="font-medium text-xs text-foreground truncate">
                             {woman.full_name || "Anonymous"}
@@ -1100,14 +1155,20 @@ const DashboardScreen = () => {
                             <Button
                               variant="default"
                               size="sm"
-                              className="flex-1 gap-1 bg-blue-500 hover:bg-blue-600 text-xs h-7"
+                              className={cn(
+                                "flex-1 gap-1 text-xs h-7",
+                                (woman.active_chat_count || 0) >= 3 
+                                  ? "bg-gray-400 cursor-not-allowed" 
+                                  : "bg-blue-500 hover:bg-blue-600"
+                              )}
+                              disabled={(woman.active_chat_count || 0) >= 3}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                               }}
                             >
                               <MessageCircle className="w-3 h-3" />
-                              {t('chat', 'Chat')}
+                              {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                             </Button>
                           </div>
                         </Card>
