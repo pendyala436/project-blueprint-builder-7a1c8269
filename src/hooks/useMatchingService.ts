@@ -8,6 +8,22 @@ import {
   ALL_NLLB200_LANGUAGES 
 } from '@/data/nllb200Languages';
 
+// Super user email patterns for bypass
+const SUPER_USER_PATTERNS = {
+  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
+  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
+  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
+};
+
+const isSuperUserEmail = (email: string): boolean => {
+  if (!email) return false;
+  return (
+    SUPER_USER_PATTERNS.female.test(email) ||
+    SUPER_USER_PATTERNS.male.test(email) ||
+    SUPER_USER_PATTERNS.admin.test(email)
+  );
+};
+
 export interface MatchableUser {
   userId: string;
   fullName: string;
@@ -280,8 +296,13 @@ export const useMatchingService = () => {
             const languageCode = langData?.code || getNLLB200Code(manLanguage);
             const walletBalance = walletMap.get(profile.user_id) || 0;
 
-            // Must have recharged and speak NLLB-200 language
-            if (walletBalance <= 0) continue;
+            // Get user email to check if super user
+            const { data: authUser } = await supabase.auth.admin?.getUserById?.(profile.user_id) || {};
+            const userEmail = authUser?.user?.email || "";
+            const isSuperUser = isSuperUserEmail(userEmail);
+
+            // Super users bypass balance check, regular users must have recharged
+            if (!isSuperUser && walletBalance <= 0) continue;
             if (!nllbLanguageNames.has(manLanguage.toLowerCase())) continue;
 
             // For Indian men, only show if same language

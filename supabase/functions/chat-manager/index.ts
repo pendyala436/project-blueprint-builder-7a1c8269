@@ -13,6 +13,30 @@ let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
 let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
+// Super user balance threshold (set by seed-super-users)
+const SUPER_USER_BALANCE = 999999999;
+
+// Super user email patterns
+const SUPER_USER_PATTERNS = {
+  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
+  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
+  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
+};
+
+const isSuperUserEmail = (email: string): boolean => {
+  if (!email) return false;
+  return (
+    SUPER_USER_PATTERNS.female.test(email) ||
+    SUPER_USER_PATTERNS.male.test(email) ||
+    SUPER_USER_PATTERNS.admin.test(email)
+  );
+};
+
+// Check if user is a super user by balance (since we can't easily get email in all contexts)
+const isSuperUserByBalance = (balance: number): boolean => {
+  return balance >= SUPER_USER_BALANCE;
+};
+
 // NLLB-200 supported countries list (countries with NLLB language support)
 const NLLB200_COUNTRIES = [
   // Major countries with NLLB language support
