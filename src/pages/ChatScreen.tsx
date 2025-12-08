@@ -22,7 +22,7 @@
 
 // ============= IMPORTS SECTION =============
 // React hooks for state, effects, and refs
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 // React Router hooks for navigation and URL parameters
 import { useNavigate, useParams } from "react-router-dom";
 // UI Components
@@ -84,6 +84,8 @@ import { supabase } from "@/integrations/supabase/client";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
+
+const MAX_PARALLEL_CHATS = 3;
 
 /**
  * Message Interface
@@ -185,6 +187,14 @@ const ChatScreen = () => {
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
+  // Session and reconnection states
+  const [sessionChatId, setSessionChatId] = useState<string | null>(null);
+  const [isSessionActive, setIsSessionActive] = useState(true);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [partnerDisconnected, setPartnerDisconnected] = useState(false);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 3;
+  
   // ============= REFS =============
   
   // Reference to bottom of messages for auto-scroll
@@ -199,6 +209,70 @@ const ChatScreen = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // ============= AUTO-RECONNECT HANDLER =============
+  
+  /**
+   * Handles auto-reconnection when partner disconnects or is busy
+   */
+  const handleAutoReconnect = useCallback(async (excludeUserIds: string[] = []) => {
+    if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+      toast({
+        title: "Connection Failed",
+        description: "Unable to find available users. Please try again later.",
+        variant: "destructive"
+      });
+      reconnectAttemptsRef.current = 0;
+      setIsReconnecting(false);
+      return;
+    }
+
+    reconnectAttemptsRef.current++;
+    setIsReconnecting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "auto_reconnect",
+          man_user_id: currentUserId,
+          exclude_user_ids: excludeUserIds
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data.woman_user_id) {
+        // Navigate to new chat partner
+        reconnectAttemptsRef.current = 0;
+        toast({
+          title: "Reconnected!",
+          description: `Connecting to ${data.profile?.full_name || "a new user"}...`
+        });
+        navigate(`/chat/${data.woman_user_id}`);
+      } else {
+        // No match found
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+          // Retry
+          await handleAutoReconnect(excludeUserIds);
+        } else {
+          toast({
+            title: "No Users Available",
+            description: "All users are currently busy. Please try again later.",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Auto-reconnect error:", error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to find available users",
+        variant: "destructive"
+      });
+    } finally {
+      setIsReconnecting(false);
+    }
+  }, [currentUserId, navigate, toast]);
 
   /**
    * useEffect: Initialize Chat
@@ -293,6 +367,95 @@ const ChatScreen = () => {
       supabase.removeChannel(channel);
     };
   }, [chatId.current, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+
+  /**
+   * useEffect: Monitor Partner Online Status and Session
+   * 
+   * Detects when partner goes offline or closes chat.
+   * Triggers auto-reconnect for men when partner disconnects.
+   */
+  useEffect(() => {
+    if (!chatPartner?.userId || !currentUserId) return;
+
+    // Monitor partner's online status
+    const statusChannel = supabase
+      .channel(`partner-status-${chatPartner.userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_status',
+          filter: `user_id=eq.${chatPartner.userId}`
+        },
+        (payload: any) => {
+          const newStatus = payload.new;
+          
+          // Partner went offline
+          if (!newStatus.is_online && isSessionActive) {
+            setPartnerDisconnected(true);
+            setChatPartner(prev => prev ? { ...prev, isOnline: false } : null);
+            
+            // If current user is male, trigger auto-reconnect
+            if (currentUserGender === "male") {
+              toast({
+                title: "Partner Disconnected",
+                description: "Finding another available user..."
+              });
+              handleAutoReconnect([chatPartner.userId]);
+            }
+          } else if (newStatus.is_online) {
+            setPartnerDisconnected(false);
+            setChatPartner(prev => prev ? { ...prev, isOnline: true } : null);
+          }
+        }
+      )
+      .subscribe();
+
+    // Monitor active_chat_sessions for this conversation
+    const sessionChannel = supabase
+      .channel(`session-monitor-${chatId.current}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'active_chat_sessions'
+        },
+        (payload: any) => {
+          const session = payload.new;
+          
+          // Check if this is our session and it was ended
+          if (session.status === 'ended' && 
+              (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
+            
+            setIsSessionActive(false);
+            
+            // If ended by partner (woman) and current user is man, auto-reconnect
+            if (session.end_reason === 'woman_closed' || session.end_reason === 'partner_offline') {
+              if (currentUserGender === "male") {
+                toast({
+                  title: "Chat Ended",
+                  description: "Partner closed the chat. Finding another user..."
+                });
+                handleAutoReconnect([chatPartner.userId]);
+              }
+            } else if (session.end_reason === 'man_closed') {
+              toast({
+                title: "Chat Ended",
+                description: "You ended the chat."
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(statusChannel);
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [chatPartner?.userId, currentUserId, currentUserGender, isSessionActive, handleAutoReconnect, toast]);
 
   /**
    * initializeChat Function
