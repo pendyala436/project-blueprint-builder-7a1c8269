@@ -311,12 +311,14 @@ const WomenDashboardScreen = () => {
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      // Fetch sample men from separate table
+      // Fetch sample men from separate table - only with photos
       const { data: sampleUsers } = await supabase
         .from("sample_men")
         .select("*")
         .eq("is_online", true)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .not("photo_url", "is", null)
+        .neq("photo_url", "");
 
       const onlineMen: OnlineMan[] = [];
 
@@ -324,12 +326,14 @@ const WomenDashboardScreen = () => {
       if (onlineStatuses && onlineStatuses.length > 0) {
         const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-        // Fetch profiles of online users who are male
+        // Fetch profiles of online users who are male - only with photos
         const { data: maleProfiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
           .in("user_id", onlineUserIds)
-          .or("gender.eq.male,gender.eq.Male");
+          .or("gender.eq.male,gender.eq.Male")
+          .not("photo_url", "is", null)
+          .neq("photo_url", "");
 
         if (maleProfiles && maleProfiles.length > 0) {
           const maleUserIds = maleProfiles.map(p => p.user_id);

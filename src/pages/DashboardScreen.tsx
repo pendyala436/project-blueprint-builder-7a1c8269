@@ -531,25 +531,29 @@ const DashboardScreen = () => {
       // Fetch women from all sources
       let allWomen: OnlineWoman[] = [];
 
-      // First try female_profiles table
+      // First try female_profiles table - only users with photos
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
+        .not("photo_url", "is", null)
+        .neq("photo_url", "")
         .limit(50);
 
       if (femaleProfiles && femaleProfiles.length > 0) {
         allWomen = [...femaleProfiles];
       }
 
-      // Also try profiles table
+      // Also try profiles table - only users with photos
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("gender", "Female")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
+        .not("photo_url", "is", null)
+        .neq("photo_url", "")
         .limit(50);
 
       if (profiles && profiles.length > 0) {
@@ -559,12 +563,14 @@ const DashboardScreen = () => {
         allWomen = [...allWomen, ...newProfiles];
       }
 
-      // Fallback to sample_women if no real women
+      // Fallback to sample_women if no real women - only with photos
       if (allWomen.length === 0) {
         const { data: sampleWomen } = await supabase
           .from("sample_women")
           .select("id, name, photo_url, age, country, language")
           .eq("is_active", true)
+          .not("photo_url", "is", null)
+          .neq("photo_url", "")
           .limit(50);
 
         if (sampleWomen && sampleWomen.length > 0) {
