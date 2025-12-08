@@ -24,15 +24,28 @@ const NLLB200_COUNTRIES = [
 
 const INACTIVITY_TIMEOUT_SECONDS = 180; // 3 minutes inactivity timeout
 
+// Indian NLLB-200 languages
+const INDIAN_LANGUAGES = [
+  "hindi", "bengali", "marathi", "telugu", "tamil", "gujarati", "urdu", 
+  "kannada", "odia", "malayalam", "punjabi", "assamese", "maithili", 
+  "santali", "kashmiri", "nepali", "sindhi", "dogri", "konkani", "manipuri",
+  "bodo", "sanskrit"
+];
+
+const isIndianLanguage = (lang: string): boolean => {
+  const lowerLang = lang.toLowerCase().trim();
+  return INDIAN_LANGUAGES.some(l => lowerLang.includes(l) || l.includes(lowerLang));
+};
+
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "find_match" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity";
   man_user_id?: string;
   woman_user_id?: string;
   user_id?: string;
   chat_id?: string;
   end_reason?: string;
   preferred_language?: string;
-  man_country?: string; // Country of the man for NLLB matching
+  man_country?: string;
 }
 
 serve(async (req) => {
@@ -303,6 +316,167 @@ serve(async (req) => {
             is_priority: isPriority,
             queue_position: (positionAhead || 0) + 1,
             preferred_language: queueEntry.preferred_language
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // MAIN MATCHING LOGIC: Find best match based on language with load balancing
+      case "find_match": {
+        const manLanguage = (preferred_language || "english").toLowerCase().trim();
+        const manId = man_user_id;
+        
+        if (!manId) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing man user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        console.log(`Finding match for man ${manId} with language: ${manLanguage}`);
+        
+        const manHasIndianLanguage = isIndianLanguage(manLanguage);
+        
+        // Step 1: Get all online women
+        const { data: onlineStatuses } = await supabase
+          .from("user_status")
+          .select("user_id")
+          .eq("is_online", true);
+        
+        const onlineUserIds = onlineStatuses?.map((s: any) => s.user_id) || [];
+        
+        if (onlineUserIds.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "No women online" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Step 2: Get female profiles with their languages
+        const { data: womenProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language, preferred_language, country, ai_approved, approval_status")
+          .or("gender.eq.female,gender.eq.Female")
+          .in("user_id", onlineUserIds);
+
+        if (!womenProfiles || womenProfiles.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "No women profiles found" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Step 3: Get availability for load balancing
+        const womenIds = womenProfiles.map((w: any) => w.user_id);
+        const { data: availabilities } = await supabase
+          .from("women_availability")
+          .select("user_id, current_chat_count, max_concurrent_chats, is_available")
+          .in("user_id", womenIds);
+
+        const availabilityMap = new Map<string, any>();
+        (availabilities || []).forEach((a: any) => availabilityMap.set(a.user_id, a));
+
+        // Step 4: Get languages from user_languages table
+        const { data: userLanguages } = await supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", womenIds);
+
+        const languageMap = new Map<string, string>();
+        (userLanguages || []).forEach((l: any) => {
+          if (!languageMap.has(l.user_id)) {
+            languageMap.set(l.user_id, l.language_name);
+          }
+        });
+
+        // Step 5: Filter and categorize women
+        const eligibleWomen: any[] = [];
+        
+        for (const woman of womenProfiles) {
+          const avail = availabilityMap.get(woman.user_id);
+          const maxChats = avail?.max_concurrent_chats || 3;
+          const currentChats = avail?.current_chat_count || 0;
+          const isAvailable = avail?.is_available !== false;
+          
+          // Check if woman has capacity
+          if (currentChats >= maxChats || !isAvailable) {
+            continue;
+          }
+
+          // Get woman's language
+          const womanLanguage = (
+            languageMap.get(woman.user_id) || 
+            woman.primary_language || 
+            woman.preferred_language || 
+            "english"
+          ).toLowerCase().trim();
+
+          const womanHasIndianLanguage = isIndianLanguage(womanLanguage);
+
+          // Apply visibility rules
+          if (!manHasIndianLanguage) {
+            // Non-Indian language men can ONLY see Indian language women
+            if (!womanHasIndianLanguage) {
+              continue;
+            }
+          }
+
+          eligibleWomen.push({
+            ...woman,
+            language: womanLanguage,
+            hasIndianLanguage: womanHasIndianLanguage,
+            currentChats,
+            isSameLanguage: womanLanguage === manLanguage
+          });
+        }
+
+        if (eligibleWomen.length === 0) {
+          // For non-Indian men, try to find any Indian woman
+          if (!manHasIndianLanguage) {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                message: "No Indian women available for NLLB translation",
+                fallback_needed: true
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          return new Response(
+            JSON.stringify({ success: false, message: "No women available" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Step 6: Sort by priority (same language first, then by load)
+        eligibleWomen.sort((a, b) => {
+          // Priority 1: Same language
+          if (a.isSameLanguage !== b.isSameLanguage) {
+            return a.isSameLanguage ? -1 : 1;
+          }
+          // Priority 2: Lower chat count (load balancing)
+          return a.currentChats - b.currentChats;
+        });
+
+        const selectedWoman = eligibleWomen[0];
+        const translationNeeded = !selectedWoman.isSameLanguage;
+
+        console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            woman_user_id: selectedWoman.user_id,
+            profile: {
+              full_name: selectedWoman.full_name,
+              photo_url: selectedWoman.photo_url,
+              primary_language: selectedWoman.language,
+              country: selectedWoman.country
+            },
+            same_language: selectedWoman.isSameLanguage,
+            translation_needed: translationNeeded,
+            current_load: selectedWoman.currentChats,
+            total_available: eligibleWomen.length
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

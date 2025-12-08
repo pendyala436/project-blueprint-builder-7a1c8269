@@ -282,39 +282,75 @@ const MatchingScreen = () => {
   };
 
   const findNextAvailableWoman = useCallback(async (excludeUserId?: string): Promise<MatchableWoman | null> => {
-    const availableWomen = matchableWomen.filter(w => 
-      !w.isBusy && 
-      w.isOnline && 
-      w.aiVerified &&
-      w.isInShift &&
-      w.userId !== excludeUserId
-    );
+    try {
+      // Use backend to find best match with load balancing
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "find_match",
+          man_user_id: currentUserId,
+          preferred_language: currentUserLanguage
+        }
+      });
 
-    // Priority 1: Same language women
-    const sameLanguageWomen = availableWomen.filter(
-      w => w.motherTongue.toLowerCase() === currentUserLanguage.toLowerCase()
-    );
+      if (error || !data?.success) {
+        console.log("Backend matching failed, falling back to local matching");
+        // Fallback to local matching if backend fails
+        const availableWomen = matchableWomen.filter(w => 
+          !w.isBusy && 
+          w.isOnline && 
+          w.userId !== excludeUserId
+        );
 
-    if (sameLanguageWomen.length > 0) {
-      return sameLanguageWomen[0];
-    }
+        // Priority 1: Same language women
+        const sameLanguageWomen = availableWomen.filter(
+          w => w.motherTongue.toLowerCase() === currentUserLanguage.toLowerCase()
+        );
 
-    // Priority 2: If man has non-Indian language, fallback to any Indian language women
-    // If man has Indian language, fallback to any available woman
-    const manHasIndianLanguage = isIndianLanguage(currentUserLanguage);
-    
-    if (!manHasIndianLanguage) {
-      // Non-Indian language man: can only see Indian language women
-      const indianLanguageWomen = availableWomen.filter(w => isIndianLanguage(w.motherTongue));
-      if (indianLanguageWomen.length > 0) {
-        return indianLanguageWomen[0];
+        if (sameLanguageWomen.length > 0) {
+          // Sort by load (lowest first)
+          return sameLanguageWomen.sort((a, b) => a.currentChatCount - b.currentChatCount)[0];
+        }
+
+        // Priority 2: For non-Indian language men, fallback to Indian women
+        const manHasIndianLanguage = isIndianLanguage(currentUserLanguage);
+        
+        if (!manHasIndianLanguage) {
+          const indianLanguageWomen = availableWomen.filter(w => isIndianLanguage(w.motherTongue));
+          if (indianLanguageWomen.length > 0) {
+            return indianLanguageWomen.sort((a, b) => a.currentChatCount - b.currentChatCount)[0];
+          }
+          return null;
+        }
+
+        return availableWomen.sort((a, b) => a.currentChatCount - b.currentChatCount)[0] || null;
       }
-      return null; // Can't match with non-Indian language women
-    }
 
-    // Priority 3: Any available woman (for Indian language men)
-    return availableWomen[0] || null;
-  }, [matchableWomen, currentUserLanguage]);
+      // Find the matched woman in our local list
+      const matchedWoman = matchableWomen.find(w => w.userId === data.woman_user_id);
+      if (matchedWoman) {
+        return matchedWoman;
+      }
+
+      // If not in local list, construct from backend data
+      return {
+        userId: data.woman_user_id,
+        fullName: data.profile?.full_name || "User",
+        age: null,
+        photoUrl: data.profile?.photo_url,
+        motherTongue: data.profile?.primary_language || "Unknown",
+        country: data.profile?.country,
+        isOnline: true,
+        isBusy: false,
+        currentChatCount: data.current_load || 0,
+        aiVerified: true,
+        isInShift: true,
+        profileVisibility: "high" as ProfileVisibility
+      };
+    } catch (error) {
+      console.error("Error finding match:", error);
+      return null;
+    }
+  }, [matchableWomen, currentUserLanguage, currentUserId]);
 
   const initiateChat = async (woman: MatchableWoman) => {
     if (!currentUserId) return;
