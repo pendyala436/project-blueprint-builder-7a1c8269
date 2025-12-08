@@ -376,70 +376,105 @@ const DashboardScreen = () => {
   const fetchOnlineWomen = async (language: string) => {
     setLoadingOnlineWomen(true);
     try {
+      const userHasIndianLanguage = isIndianLanguage(language);
+      const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
+
       // Get online user IDs
       const { data: onlineUsers } = await supabase
         .from("user_status")
         .select("user_id")
         .eq("is_online", true);
 
-      if (!onlineUsers || onlineUsers.length === 0) {
-        setOnlineWomen([]);
-        return;
-      }
+      const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
 
-      const onlineUserIds = onlineUsers.map(u => u.user_id);
-      const userHasIndianLanguage = isIndianLanguage(language);
-      const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
-
-      // First try to get from female_profiles table
-      const { data: femaleProfiles, error: femaleError } = await supabase
-        .from("female_profiles")
-        .select("id, user_id, full_name, photo_url, age, country, primary_language")
-        .in("user_id", onlineUserIds)
-        .eq("approval_status", "approved")
-        .eq("account_status", "active")
-        .limit(20);
-
-      const filterAndSortWomen = (women: typeof femaleProfiles) => {
+      const filterAndSortWomen = (women: OnlineWoman[], isOnlineFilter = false) => {
         if (!women || women.length === 0) return [];
+
+        // If filtering online, only include online users
+        let filtered = isOnlineFilter && onlineUserIds.length > 0
+          ? women.filter(w => onlineUserIds.includes(w.user_id))
+          : women;
 
         if (userHasIndianLanguage) {
           // If man speaks Indian language, show same language women first, then other Indian women
-          const sameLanguageWomen = women.filter(w => 
+          const sameLanguageWomen = filtered.filter(w => 
             w.primary_language?.toLowerCase() === language.toLowerCase()
           );
-          const otherIndianWomen = women.filter(w => 
+          const otherIndianWomen = filtered.filter(w => 
             w.primary_language?.toLowerCase() !== language.toLowerCase() &&
             indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
           );
-          return [...sameLanguageWomen, ...otherIndianWomen].slice(0, 10);
+          const restWomen = filtered.filter(w => 
+            w.primary_language?.toLowerCase() !== language.toLowerCase() &&
+            !indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
+          );
+          return [...sameLanguageWomen, ...otherIndianWomen, ...restWomen].slice(0, 10);
         } else {
-          // If man speaks non-Indian language (e.g., English, Spanish), show Indian women
-          // They can chat with translation via NLLB-200
-          const indianWomen = women.filter(w => 
+          // If man speaks non-Indian language, show Indian women first (auto-translate via NLLB-200)
+          const indianWomen = filtered.filter(w => 
             indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
           );
-          const otherWomen = women.filter(w => 
+          const otherWomen = filtered.filter(w => 
             !indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
           );
           return [...indianWomen, ...otherWomen].slice(0, 10);
         }
       };
 
-      if (femaleProfiles && femaleProfiles.length > 0) {
-        setOnlineWomen(filterAndSortWomen(femaleProfiles));
-      } else {
-        // Fallback to profiles table for women
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, user_id, full_name, photo_url, age, country, primary_language")
-          .in("user_id", onlineUserIds)
-          .eq("gender", "Female")
-          .eq("approval_status", "approved")
-          .eq("account_status", "active")
-          .limit(20);
+      // First try to get from female_profiles table
+      const { data: femaleProfiles } = await supabase
+        .from("female_profiles")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .eq("approval_status", "approved")
+        .eq("account_status", "active")
+        .limit(20);
 
-        setOnlineWomen(filterAndSortWomen(profiles));
+      if (femaleProfiles && femaleProfiles.length > 0) {
+        const sorted = filterAndSortWomen(femaleProfiles, true);
+        if (sorted.length > 0) {
+          setOnlineWomen(sorted);
+          return;
+        }
+      }
+
+      // Fallback to profiles table for women
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .eq("gender", "Female")
+        .eq("approval_status", "approved")
+        .eq("account_status", "active")
+        .limit(20);
+
+      if (profiles && profiles.length > 0) {
+        const sorted = filterAndSortWomen(profiles, true);
+        if (sorted.length > 0) {
+          setOnlineWomen(sorted);
+          return;
+        }
+      }
+
+      // Fallback to sample_women table if no real women found
+      const { data: sampleWomen } = await supabase
+        .from("sample_women")
+        .select("id, name, photo_url, age, country, language")
+        .eq("is_active", true)
+        .limit(20);
+
+      if (sampleWomen && sampleWomen.length > 0) {
+        // Map sample_women to OnlineWoman format
+        const mappedSampleWomen: OnlineWoman[] = sampleWomen.map(sw => ({
+          id: sw.id,
+          user_id: sw.id, // Use id as user_id for sample users
+          full_name: sw.name,
+          photo_url: sw.photo_url,
+          age: sw.age,
+          country: sw.country,
+          primary_language: sw.language
+        }));
+        setOnlineWomen(filterAndSortWomen(mappedSampleWomen, false));
+      } else {
+        setOnlineWomen([]);
       }
     } catch (error) {
       console.error("Error fetching online women:", error);
