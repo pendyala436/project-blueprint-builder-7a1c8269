@@ -6,107 +6,117 @@
 
 @layer base {
   :root {
-    /* Navy + Teal + White Professional Theme */
-    /* Background 60% - Soft White #FFFFFF */
-    --background: 0 0% 100%;
-    /* Text Primary - Almost Black #111827 */
-    --foreground: 222 47% 11%;
+    /* Aurora Theme - Light Mode */
+    /* Deep cosmic background with aurora-inspired accents */
+    --background: 220 25% 97%;
+    --foreground: 230 25% 18%;
 
-    /* Surface - Cool Grey #F2F5F7 (25%) */
-    --card: 210 25% 96%;
-    --card-foreground: 222 47% 11%;
+    /* Cards with subtle aurora tint */
+    --card: 210 30% 98%;
+    --card-foreground: 230 25% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 230 25% 18%;
 
-    /* Primary - Deep Navy #0A2540 (10%) */
-    --primary: 211 75% 15%;
+    /* Primary - Aurora Teal/Cyan */
+    --primary: 174 72% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 168 76% 42%;
+    --primary-glow: 174 80% 55%;
 
-    /* Secondary - Cool Grey Surface */
-    --secondary: 210 25% 96%;
-    --secondary-foreground: 211 75% 15%;
+    /* Secondary - Aurora Purple */
+    --secondary: 270 50% 94%;
+    --secondary-foreground: 270 60% 35%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 220 9% 34%;
+    /* Muted - Soft aurora grey */
+    --muted: 220 20% 94%;
+    --muted-foreground: 220 15% 45%;
 
-    /* Accent - Teal #1ABC9C (5%) */
-    --accent: 168 76% 42%;
+    /* Accent - Aurora Green */
+    --accent: 160 70% 42%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 92%;
-    --ring: 168 76% 42%;
+    --border: 220 20% 88%;
+    --input: 220 20% 92%;
+    --ring: 174 72% 40%;
 
     --radius: 0.75rem;
 
-    /* Custom tokens - Navy + Teal */
-    --gradient-primary: linear-gradient(135deg, hsl(211 75% 15%), hsl(211 70% 25%));
-    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(200 100% 98%) 100%);
-    --shadow-soft: 0 4px 20px -4px hsl(211 75% 15% / 0.1);
-    --shadow-card: 0 8px 32px -8px hsl(211 75% 15% / 0.12);
-    --shadow-glow: 0 0 40px hsl(168 76% 42% / 0.25);
+    /* Aurora gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(174 72% 40%), hsl(160 70% 45%));
+    --gradient-hero: linear-gradient(180deg, hsl(220 25% 97%) 0%, hsl(200 40% 95%) 100%);
+    --gradient-aurora: linear-gradient(135deg, hsl(174 72% 40%), hsl(270 60% 55%), hsl(320 70% 55%));
+    --shadow-soft: 0 4px 20px -4px hsl(230 25% 18% / 0.08);
+    --shadow-card: 0 8px 32px -8px hsl(230 25% 18% / 0.1);
+    --shadow-glow: 0 0 40px hsl(174 72% 40% / 0.25);
 
-    /* Sidebar - Navy theme */
-    --sidebar-background: 211 75% 15%;
-    --sidebar-foreground: 200 100% 96%;
-    --sidebar-primary: 168 76% 42%;
+    /* Sidebar - Aurora dark theme */
+    --sidebar-background: 230 35% 15%;
+    --sidebar-foreground: 200 50% 95%;
+    --sidebar-primary: 174 72% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 211 60% 22%;
-    --sidebar-accent-foreground: 200 100% 96%;
-    --sidebar-border: 211 50% 25%;
-    --sidebar-ring: 168 76% 42%;
+    --sidebar-accent: 270 40% 25%;
+    --sidebar-accent-foreground: 200 50% 95%;
+    --sidebar-border: 230 30% 25%;
+    --sidebar-ring: 174 72% 50%;
   }
 
   .dark {
-    /* Dark mode - Navy + Teal Professional Theme */
-    --background: 211 75% 8%;
-    --foreground: 200 100% 96%;
+    /* Aurora Theme - Dark Mode */
+    /* Deep cosmic night sky background */
+    --background: 230 35% 8%;
+    --foreground: 200 50% 95%;
 
-    --card: 211 60% 12%;
-    --card-foreground: 200 100% 96%;
+    /* Cards with aurora glow */
+    --card: 230 30% 12%;
+    --card-foreground: 200 50% 95%;
 
-    --popover: 211 70% 10%;
-    --popover-foreground: 200 100% 96%;
+    --popover: 230 35% 10%;
+    --popover-foreground: 200 50% 95%;
 
-    --primary: 168 76% 42%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 168 76% 55%;
+    /* Primary - Aurora Teal/Cyan (glowing) */
+    --primary: 174 72% 50%;
+    --primary-foreground: 230 35% 8%;
+    --primary-glow: 174 80% 60%;
 
-    --secondary: 211 50% 18%;
-    --secondary-foreground: 200 100% 96%;
+    /* Secondary - Aurora Purple */
+    --secondary: 270 45% 20%;
+    --secondary-foreground: 270 60% 80%;
 
-    --muted: 211 40% 20%;
-    --muted-foreground: 210 15% 65%;
+    /* Muted - Deep cosmic grey */
+    --muted: 230 25% 18%;
+    --muted-foreground: 220 20% 65%;
 
-    --accent: 168 76% 42%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - Aurora Green */
+    --accent: 160 70% 45%;
+    --accent-foreground: 230 35% 8%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 211 40% 22%;
-    --input: 211 40% 22%;
-    --ring: 168 76% 42%;
+    --border: 230 25% 20%;
+    --input: 230 25% 18%;
+    --ring: 174 72% 50%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(168 76% 42%), hsl(168 70% 35%));
-    --gradient-hero: linear-gradient(180deg, hsl(211 75% 8%) 0%, hsl(211 60% 12%) 100%);
-    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.3);
-    --shadow-card: 0 8px 32px -8px hsl(0 0% 0% / 0.4);
-    --shadow-glow: 0 0 40px hsl(168 76% 42% / 0.3);
+    /* Aurora gradients - dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(174 72% 50%), hsl(160 70% 50%));
+    --gradient-hero: linear-gradient(180deg, hsl(230 35% 8%) 0%, hsl(270 40% 12%) 100%);
+    --gradient-aurora: linear-gradient(135deg, hsl(174 72% 50%), hsl(270 60% 60%), hsl(320 70% 60%));
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.4);
+    --shadow-card: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 40px hsl(174 72% 50% / 0.35);
 
-    --sidebar-background: 211 75% 10%;
-    --sidebar-foreground: 200 100% 96%;
-    --sidebar-primary: 168 76% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 211 50% 18%;
-    --sidebar-accent-foreground: 200 100% 96%;
-    --sidebar-border: 211 40% 20%;
-    --sidebar-ring: 168 76% 42%;
+    /* Sidebar - Deep aurora */
+    --sidebar-background: 230 40% 10%;
+    --sidebar-foreground: 200 50% 95%;
+    --sidebar-primary: 174 72% 50%;
+    --sidebar-primary-foreground: 230 35% 8%;
+    --sidebar-accent: 270 40% 22%;
+    --sidebar-accent-foreground: 200 50% 95%;
+    --sidebar-border: 230 30% 18%;
+    --sidebar-ring: 174 72% 50%;
   }
 }
 
@@ -169,6 +179,10 @@
     background: var(--gradient-hero);
   }
 
+  .gradient-aurora {
+    background: var(--gradient-aurora);
+  }
+
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
@@ -179,6 +193,15 @@
 
   .shadow-glow {
     box-shadow: var(--shadow-glow);
+  }
+
+  /* Aurora glow effect for buttons and elements */
+  .aurora-glow {
+    box-shadow: 0 0 20px hsl(174 72% 50% / 0.4), 0 0 40px hsl(270 60% 55% / 0.2);
+  }
+
+  .aurora-glow-hover:hover {
+    box-shadow: 0 0 25px hsl(174 72% 50% / 0.5), 0 0 50px hsl(270 60% 55% / 0.3);
   }
 
   .animate-slide-up {
@@ -207,6 +230,10 @@
 
   .animate-pulse-soft {
     animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  .animate-aurora {
+    animation: auroraShift 8s ease-in-out infinite;
   }
 }
 
@@ -277,6 +304,15 @@
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+@keyframes auroraShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
 }
 
