@@ -864,10 +864,10 @@ const WomenDashboardScreen = () => {
 
         {/* Section 2: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-amber-500/20">
-                <Crown className="w-5 h-5 text-amber-500" />
+              <div className="p-2 rounded-xl bg-primary/20">
+                <Crown className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xl font-bold">{stats.rechargedMen}</p>
@@ -876,10 +876,10 @@ const WomenDashboardScreen = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <Card className="p-4 bg-gradient-aurora border-accent/30 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-green-500/20">
-                <IndianRupee className="w-5 h-5 text-green-500" />
+              <div className="p-2 rounded-xl bg-accent/20">
+                <IndianRupee className="w-5 h-5 text-accent" />
               </div>
               <div>
                 <p className="text-xl font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
@@ -888,10 +888,10 @@ const WomenDashboardScreen = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-rose-500/10 to-rose-500/5 border-rose-500/20">
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-rose-500/20">
-                <Heart className="w-5 h-5 text-rose-500" />
+              <div className="p-2 rounded-xl bg-primary/20">
+                <Heart className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xl font-bold">{stats.matchCount}</p>
@@ -901,12 +901,12 @@ const WomenDashboardScreen = () => {
           </Card>
 
           <Card 
-            className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20 cursor-pointer"
+            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer"
             onClick={() => navigate("/shift-management")}
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-purple-500/20">
-                <Clock className="w-5 h-5 text-purple-500" />
+              <div className="p-2 rounded-xl bg-accent/20">
+                <Clock className="w-5 h-5 text-accent" />
               </div>
               <div>
                 <p className="text-sm font-bold">{t('shifts', 'Shift')}</p>
@@ -918,11 +918,11 @@ const WomenDashboardScreen = () => {
 
         {/* Section 3: Primary Action - Random Chat */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
-          <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/20">
-                  <MessageCircle className="w-5 h-5 text-blue-500" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <MessageCircle className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm font-bold">{t('randomChat', 'Start Random Chat')}</p>
@@ -953,9 +953,9 @@ const WomenDashboardScreen = () => {
               <button
                 key={index}
                 onClick={action.action}
-                className="group p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
               >
-                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                   {action.icon}
                 </div>
                 <p className="text-sm font-medium text-foreground">{action.label}</p>
@@ -1100,7 +1100,7 @@ const WomenDashboardScreen = () => {
         </div>
 
         {/* Section 8: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.32s" }}>
+        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.32s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
@@ -1111,7 +1111,7 @@ const WomenDashboardScreen = () => {
                 <p className="text-sm text-muted-foreground">Track earnings automatically</p>
               </div>
             </div>
-            <Button onClick={() => navigate("/shift-management")}>
+            <Button variant="aurora" onClick={() => navigate("/shift-management")}>
               Go <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
