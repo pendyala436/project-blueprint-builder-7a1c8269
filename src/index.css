@@ -235,6 +235,23 @@
   .animate-aurora {
     animation: auroraShift 8s ease-in-out infinite;
   }
+
+  /* Aurora background blob animations */
+  .animate-aurora-1 {
+    animation: aurora-1 15s ease-in-out infinite;
+  }
+
+  .animate-aurora-2 {
+    animation: aurora-2 18s ease-in-out infinite;
+  }
+
+  .animate-aurora-3 {
+    animation: aurora-3 20s ease-in-out infinite;
+  }
+
+  .animate-aurora-4 {
+    animation: aurora-4 16s ease-in-out infinite;
+  }
 }
 
 @keyframes slideUp {
@@ -304,6 +321,67 @@
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+/* Aurora background animations */
+@keyframes aurora-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translate(50px, -30px) scale(1.1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(20px, 40px) scale(0.95);
+    opacity: 0.18;
+  }
+  75% {
+    transform: translate(-30px, 20px) scale(1.05);
+    opacity: 0.22;
+  }
+}
+
+@keyframes aurora-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.25;
+  }
+  33% {
+    transform: translate(-40px, 50px) scale(1.15);
+    opacity: 0.3;
+  }
+  66% {
+    transform: translate(30px, -20px) scale(0.9);
+    opacity: 0.2;
+  }
+}
+
+@keyframes aurora-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(-60px, -40px) scale(1.2);
+    opacity: 0.2;
+  }
+}
+
+@keyframes aurora-4 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.15;
+  }
+  40% {
+    transform: translate(40px, 30px) scale(1.1);
+    opacity: 0.2;
+  }
+  80% {
+    transform: translate(-20px, -50px) scale(0.95);
+    opacity: 0.12;
   }
 }
 

@@ -11,6 +11,27 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
 
+const AuroraBackground = () => {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Base gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-secondary/30" />
+      
+      {/* Aurora blobs */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-primary/20 blur-[100px] animate-aurora-1" />
+      <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-accent/25 blur-[80px] animate-aurora-2" />
+      <div className="absolute bottom-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-[hsl(270_60%_55%/0.15)] blur-[120px] animate-aurora-3" />
+      <div className="absolute bottom-0 right-1/3 w-[350px] h-[350px] rounded-full bg-primary/15 blur-[90px] animate-aurora-4" />
+      
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
+      
+      {/* Noise texture */}
+      <div className="absolute inset-0 opacity-[0.015] bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')]" />
+    </div>
+  );
+};
+
 const AuthScreen = () => {
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -124,12 +145,14 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
+    <div className="min-h-screen flex flex-col relative">
+      <AuroraBackground />
+      
       {/* Header */}
-      <header className="px-6 pt-8 pb-4">
+      <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="text-center">
           <MeowLogo size="lg" className="mx-auto mb-4" />
-          <h1 className="font-display text-4xl font-bold text-foreground mb-2">
+          <h1 className="font-display text-4xl font-bold text-foreground mb-2 drop-shadow-sm">
             {t('app.name', 'MEOW MEOW')}
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -139,8 +162,8 @@ const AuthScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        <Card className="w-full max-w-md p-6 bg-card/80 backdrop-blur-sm border border-border/30 shadow-card animate-slide-up">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
+        <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
           <div className="space-y-6">
             {/* Email Input */}
             <div className="space-y-2">
@@ -159,7 +182,7 @@ const AuthScreen = () => {
                     setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
                   className={cn(
-                    "h-12 pl-10 rounded-xl border-2 transition-all",
+                    "h-12 pl-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
                     errors.email ? "border-destructive" : "border-input focus:border-primary"
                   )}
                 />
@@ -186,7 +209,7 @@ const AuthScreen = () => {
                     setErrors((prev) => ({ ...prev, password: undefined }));
                   }}
                   className={cn(
-                    "h-12 pl-10 pr-10 rounded-xl border-2 transition-all",
+                    "h-12 pl-10 pr-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
                     errors.password ? "border-destructive" : "border-input focus:border-primary"
                   )}
                 />
@@ -215,7 +238,7 @@ const AuthScreen = () => {
 
             {/* Login Button */}
             <Button
-              variant="hero"
+              variant="aurora"
               size="xl"
               className="w-full group"
               onClick={handleLogin}
@@ -236,16 +259,16 @@ const AuthScreen = () => {
 
             {/* Divider */}
             <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
               <span className="text-xs text-muted-foreground uppercase tracking-wider">
                 {t('auth.noAccount')}
               </span>
-              <div className="h-px flex-1 bg-border" />
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             </div>
 
             {/* Register Link */}
             <Button
-              variant="outline"
+              variant="auroraOutline"
               size="lg"
               className="w-full"
               onClick={() => navigate("/register")}
@@ -255,10 +278,6 @@ const AuthScreen = () => {
           </div>
         </Card>
       </main>
-
-      {/* Decorative Elements */}
-      <div className="fixed top-20 left-4 w-20 h-20 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
-      <div className="fixed bottom-32 right-4 w-32 h-32 rounded-full bg-accent/20 blur-3xl pointer-events-none" />
     </div>
   );
 };
