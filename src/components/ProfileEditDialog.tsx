@@ -190,18 +190,27 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       const current = profile[k];
       const original = originalProfile[k];
       
+      // Handle null/undefined normalization
+      const normalizedCurrent = current === undefined ? null : current;
+      const normalizedOriginal = original === undefined ? null : original;
+      
       // Handle arrays
-      if (Array.isArray(current) && Array.isArray(original)) {
-        return JSON.stringify(current) !== JSON.stringify(original);
+      if (Array.isArray(normalizedCurrent) && Array.isArray(normalizedOriginal)) {
+        return JSON.stringify(normalizedCurrent) !== JSON.stringify(normalizedOriginal);
       }
       
-      return current !== original;
+      // Handle null comparisons
+      if (normalizedCurrent === null && normalizedOriginal === null) {
+        return false;
+      }
+      
+      return normalizedCurrent !== normalizedOriginal;
     });
     
     // Check language change
     const languageChanged = 
-      userLanguage?.language_code !== originalLanguage?.language_code ||
-      userLanguage?.language_name !== originalLanguage?.language_name;
+      (userLanguage?.language_code || null) !== (originalLanguage?.language_code || null) ||
+      (userLanguage?.language_name || null) !== (originalLanguage?.language_name || null);
     
     return profileChanged || languageChanged;
   };
