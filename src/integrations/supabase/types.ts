@@ -353,6 +353,8 @@ export type Database = {
           min_withdrawal_balance: number
           rate_per_minute: number
           updated_at: string
+          video_rate_per_minute: number
+          video_women_earning_rate: number
           women_earning_rate: number
         }
         Insert: {
@@ -363,6 +365,8 @@ export type Database = {
           min_withdrawal_balance?: number
           rate_per_minute?: number
           updated_at?: string
+          video_rate_per_minute?: number
+          video_women_earning_rate?: number
           women_earning_rate?: number
         }
         Update: {
@@ -373,6 +377,8 @@ export type Database = {
           min_withdrawal_balance?: number
           rate_per_minute?: number
           updated_at?: string
+          video_rate_per_minute?: number
+          video_women_earning_rate?: number
           women_earning_rate?: number
         }
         Relationships: []
