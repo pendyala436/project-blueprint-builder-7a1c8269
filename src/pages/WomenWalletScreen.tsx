@@ -331,7 +331,7 @@ const WomenWalletScreen = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
-        {/* Balance Cards */}
+        {/* Section 1: Balance Overview Cards */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
             <div className="flex items-center gap-3">
@@ -358,7 +358,22 @@ const WomenWalletScreen = () => {
           </Card>
         </div>
 
-        {/* Withdraw Button */}
+        {/* Section 2: Pending Withdrawals Info */}
+        {pendingWithdrawals > 0 && (
+          <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/20">
+                <Clock className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">{t('pendingWithdrawals', 'Pending Withdrawals')}</p>
+                <p className="text-xl font-bold text-amber-600">₹{pendingWithdrawals.toLocaleString()}</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Section 3: Withdraw Action */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -389,7 +404,7 @@ const WomenWalletScreen = () => {
           )}
         </Card>
 
-        {/* Tabs for History */}
+        {/* Section 4: Transaction History Tabs */}
         <Tabs defaultValue="earnings" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="earnings" className="gap-2">
