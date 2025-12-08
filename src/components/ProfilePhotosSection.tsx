@@ -38,8 +38,12 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed' | null>(null);
   const [detectedGender, setDetectedGender] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const additionalInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Load existing photos and check verification status
   useEffect(() => {
@@ -342,6 +346,64 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
     e.target.value = ''; // Reset input
   };
 
+  // Camera functions for live selfie
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error("Camera access error:", error);
+      toast({
+        title: "Camera Error",
+        description: "Could not access camera. Please allow camera permissions or use file upload.",
+        variant: "destructive",
+      });
+      // Fallback to file input
+      selfieInputRef.current?.click();
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Mirror the image for selfie
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert to blob and upload
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        stopCamera();
+        uploadPhoto(file, 'selfie');
+      }
+    }, 'image/jpeg', 0.9);
+  };
+
   const selfiePhoto = photos.find(p => p.photo_type === 'selfie');
   const additionalPhotos = photos.filter(p => p.photo_type === 'additional');
   const canAddMore = additionalPhotos.length < MAX_ADDITIONAL_PHOTOS;
@@ -441,11 +503,43 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
               </div>
             )}
           </div>
+        ) : showCamera ? (
+          <div className="space-y-3">
+            <div className="relative w-48 h-36 rounded-xl overflow-hidden border-2 border-primary bg-black">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
+              />
+            </div>
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={capturePhoto}
+                disabled={uploadingType !== null}
+              >
+                <Camera className="w-4 h-4 mr-1" />
+                Capture
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={stopCamera}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         ) : (
           <Button
             variant="outline"
             className="w-32 h-32 rounded-xl border-dashed flex flex-col gap-2"
-            onClick={() => selfieInputRef.current?.click()}
+            onClick={startCamera}
             disabled={uploadingType !== null || isVerifying}
           >
             {uploadingType === 'selfie' || isVerifying ? (
@@ -465,7 +559,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
         )}
 
         <p className="text-xs text-muted-foreground">
-          Your selfie will be analyzed by AI to verify your gender
+          Your selfie will be captured live from camera for AI verification
         </p>
       </div>
 

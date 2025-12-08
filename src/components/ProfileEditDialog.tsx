@@ -354,21 +354,36 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       if (error) throw error;
 
       // Update user_languages table for matching
-      if (userLanguage) {
+      if (userLanguage && userLanguage.language_code && userLanguage.language_name) {
         // Delete existing language entries for this user
-        await supabase
+        const { error: deleteError } = await supabase
           .from("user_languages")
           .delete()
           .eq("user_id", user.id);
 
+        if (deleteError) {
+          console.error("Error deleting language:", deleteError);
+        }
+
         // Insert new language
-        await supabase
+        const { error: insertError } = await supabase
           .from("user_languages")
           .insert({
             user_id: user.id,
             language_name: userLanguage.language_name,
             language_code: userLanguage.language_code
           });
+
+        if (insertError) {
+          console.error("Error inserting language:", insertError);
+          throw insertError;
+        }
+
+        // Update original language to reflect saved state
+        setOriginalLanguage({
+          language_name: userLanguage.language_name,
+          language_code: userLanguage.language_code
+        });
       }
 
       toast({
