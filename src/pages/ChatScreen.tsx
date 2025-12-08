@@ -902,7 +902,7 @@ const ChatScreen = () => {
 
       if (error) throw error;
       
-      console.log(`Translation: ${data.detectedLanguage} → ${targetLanguage}, translated: ${data.isTranslated}`);
+      // Translation completed successfully
       
       return { 
         translatedMessage: data.translatedMessage, 

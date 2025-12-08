@@ -211,7 +211,7 @@ const ChatBillingDisplay = ({
       const timeSinceActivity = Date.now() - lastActivityTime;
       
       if (timeSinceActivity >= INACTIVITY_TIMEOUT && isSessionActive) {
-        console.log("Session ended due to inactivity");
+        // Session ended due to inactivity
         
         try {
           await supabase.functions.invoke("chat-manager", {

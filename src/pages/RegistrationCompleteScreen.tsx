@@ -102,9 +102,9 @@ const RegistrationCompleteScreen = () => {
         })
         .eq("user_id", user.id);
 
-      console.log("Registration finalized for user:", user.id);
+      // Registration finalized successfully
     } catch (error) {
-      console.error("Error finalizing registration:", error);
+      // Error finalizing registration - silent fail, not critical
     }
   };
 

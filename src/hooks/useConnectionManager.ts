@@ -89,13 +89,10 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
           filter: `man_user_id=eq.${currentUserId}`
         },
         async (payload) => {
-          console.log("Session change detected:", payload);
-          
           // If session ended by woman, trigger auto-reconnect
           if (payload.eventType === 'UPDATE') {
             const session = payload.new as any;
             if (session.status === 'ended' && session.end_reason === 'woman_closed') {
-              console.log("Woman closed chat, triggering auto-reconnect");
               await autoReconnect([session.woman_user_id]);
             }
           }
