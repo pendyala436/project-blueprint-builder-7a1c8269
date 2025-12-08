@@ -203,6 +203,15 @@ const WomenDashboardScreen = () => {
         { event: '*', schema: 'public', table: 'male_profiles' },
         () => { fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry); }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUserId}` },
+        () => { 
+          if (currentUserId) {
+            fetchNotifications(currentUserId);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
