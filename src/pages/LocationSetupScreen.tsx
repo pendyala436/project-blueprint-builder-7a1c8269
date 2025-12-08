@@ -326,7 +326,7 @@ const LocationSetupScreen = () => {
             onClick={handleSubmit}
             disabled={isLoading || !country}
             className="w-full h-12 text-base font-medium"
-            variant="gradient"
+            variant="aurora"
           >
             {isLoading ? (
               <>

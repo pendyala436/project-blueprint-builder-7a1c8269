@@ -202,7 +202,7 @@ const BasicInfoScreen = () => {
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            variant="ghost"
+            variant="auroraGhost"
             size="icon"
             onClick={handleBack}
             className="shrink-0"

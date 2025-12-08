@@ -403,7 +403,7 @@ const WalletScreen = () => {
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={() => navigate(-1)}
               className="rounded-full"
@@ -414,7 +414,7 @@ const WalletScreen = () => {
           </div>
           <div className="flex items-center gap-1">
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={() => navigate("/transaction-history")}
               className="rounded-full"
@@ -423,7 +423,7 @@ const WalletScreen = () => {
               <History className="h-5 w-5" />
             </Button>
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={handleRefresh}
               disabled={refreshing}
@@ -437,7 +437,7 @@ const WalletScreen = () => {
 
       <div className="max-w-md mx-auto p-4 space-y-6">
         {/* Balance Card */}
-        <Card className="relative overflow-hidden bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0 shadow-lg">
+        <Card className="relative overflow-hidden gradient-aurora text-white border-0 shadow-glow">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
           

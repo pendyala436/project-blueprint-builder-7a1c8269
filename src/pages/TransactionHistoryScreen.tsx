@@ -384,7 +384,7 @@ const TransactionHistoryScreen = () => {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={() => navigate(-1)}
               className="rounded-full"
@@ -399,7 +399,7 @@ const TransactionHistoryScreen = () => {
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="auroraGhost"
             size="icon"
             onClick={handleRefresh}
             disabled={refreshing}

@@ -1015,7 +1015,7 @@ const DashboardScreen = () => {
                   onBalanceChange={setWalletBalance}
                 />
                 <Button 
-                  variant="gradient" 
+                  variant="aurora" 
                   size="lg"
                   onClick={() => setRechargeDialogOpen(true)}
                   className="gap-2"
@@ -1123,13 +1123,11 @@ const DashboardScreen = () => {
                         </span>
                         <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
-                            variant="default"
+                            variant="aurora"
                             size="sm"
                             className={cn(
                               "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 
-                                ? "bg-gray-400 cursor-not-allowed" 
-                                : "bg-emerald-500 hover:bg-emerald-600"
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1205,13 +1203,11 @@ const DashboardScreen = () => {
                         </div>
                         <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
-                            variant="default"
+                            variant="aurora"
                             size="sm"
                             className={cn(
                               "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 
-                                ? "bg-gray-400 cursor-not-allowed" 
-                                : "bg-blue-500 hover:bg-blue-600"
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1280,7 +1276,7 @@ const DashboardScreen = () => {
                 {t('startExploringToGetMatches', 'Start exploring to get matches and notifications!')}
               </p>
               <Button 
-                variant="gradient" 
+                variant="aurora" 
                 className="mt-4"
                 onClick={() => navigate("/find-match")}
               >
@@ -1301,7 +1297,7 @@ const DashboardScreen = () => {
               <h3 className="font-semibold text-foreground">{t('boostYourProfile', 'Boost your profile!')}</h3>
               <p className="text-sm text-muted-foreground">{t('getMoreMatchesWithPremium', 'Get more matches with premium features')}</p>
             </div>
-            <Button variant="gradient" size="sm" onClick={() => navigate("/wallet")}>
+            <Button variant="aurora" size="sm" onClick={() => navigate("/wallet")}>
               {t('upgrade', 'Upgrade')}
             </Button>
           </div>
@@ -1427,7 +1423,7 @@ const DashboardScreen = () => {
               </Select>
 
               <Button
-                variant="gradient"
+                variant="aurora"
                 className="w-full gap-2"
                 onClick={() => selectedAmount && handleRecharge(selectedAmount)}
                 disabled={!selectedAmount || processingPayment}

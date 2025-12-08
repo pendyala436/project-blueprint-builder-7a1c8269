@@ -243,7 +243,7 @@ const RegistrationCompleteScreen = () => {
             <Button
               onClick={handleGoToDashboard}
               className="w-full h-14 text-lg font-medium animate-bounce-subtle"
-              variant="gradient"
+              variant="aurora"
             >
               <LayoutDashboard className="w-5 h-5 mr-2" />
               Go to Dashboard
@@ -251,7 +251,7 @@ const RegistrationCompleteScreen = () => {
             </Button>
 
             <Button
-              variant="outline"
+              variant="auroraOutline"
               onClick={handleShareApp}
               className="w-full h-12 text-base transition-all hover:bg-primary/5"
             >

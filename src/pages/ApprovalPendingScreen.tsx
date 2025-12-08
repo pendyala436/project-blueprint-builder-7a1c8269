@@ -243,7 +243,7 @@ const ApprovalPendingScreen = () => {
                 </div>
 
                 <Button
-                  variant="default"
+                  variant="aurora"
                   className="w-full"
                   onClick={handleReapply}
                   disabled={loading}

@@ -158,7 +158,7 @@ const WelcomeTutorialScreen = () => {
       <header className="p-6 flex justify-between items-center">
         <MeowLogo />
         <Button
-          variant="ghost"
+          variant="auroraGhost"
           onClick={handleSkip}
           className="text-muted-foreground hover:text-foreground"
         >
@@ -220,7 +220,7 @@ const WelcomeTutorialScreen = () => {
           {/* Navigation Buttons */}
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="auroraOutline"
               onClick={handlePrevious}
               disabled={currentStep === 0}
               className="flex-1 h-12"
@@ -233,7 +233,7 @@ const WelcomeTutorialScreen = () => {
               <Button
                 onClick={handleComplete}
                 className="flex-1 h-12 text-base font-medium"
-                variant="gradient"
+                variant="aurora"
               >
                 Get Started
                 <Sparkles className="w-5 h-5 ml-2" />
@@ -242,7 +242,7 @@ const WelcomeTutorialScreen = () => {
               <Button
                 onClick={handleNext}
                 className="flex-1 h-12 text-base font-medium"
-                variant="gradient"
+                variant="aurora"
               >
                 Next
                 <ChevronRight className="w-5 h-5 ml-1" />

@@ -750,7 +750,7 @@ const WomenDashboardScreen = () => {
           <div className="flex flex-col gap-2">
             <Button 
               size="sm" 
-              variant="outline"
+              variant="auroraOutline"
               onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
               title={t('viewProfile', 'View Profile')}
             >
@@ -933,7 +933,7 @@ const WomenDashboardScreen = () => {
                 userGender="female"
                 userLanguage={currentWomanLanguage}
                 userCountry={currentWomanCountry}
-                variant="gradient"
+                variant="aurora"
                 size="default"
               />
             </div>
@@ -1088,7 +1088,7 @@ const WomenDashboardScreen = () => {
                 Start chatting to get matches and notifications!
               </p>
               <Button 
-                variant="gradient" 
+                variant="aurora" 
                 className="mt-4"
                 onClick={() => navigate("/online-users")}
               >
