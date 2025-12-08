@@ -470,6 +470,7 @@ const PhotoUploadScreen = () => {
 
         {/* Continue Button */}
         <Button
+          variant="aurora"
           className="w-full max-w-sm mt-6"
           size="lg"
           onClick={handleNext}
