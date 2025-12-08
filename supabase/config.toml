@@ -23,3 +23,18 @@ verify_jwt = false
 
 [functions.data-cleanup]
 verify_jwt = false
+
+[functions.ai-women-manager]
+verify_jwt = false
+
+[functions.seed-sample-users]
+verify_jwt = false
+
+[functions.chat-manager]
+verify_jwt = false
+
+[functions.trigger-backup]
+verify_jwt = false
+
+[functions.seed-super-users]
+verify_jwt = false

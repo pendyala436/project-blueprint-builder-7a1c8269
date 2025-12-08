@@ -423,6 +423,7 @@ export type Database = {
           ai_approved: boolean | null
           ai_disapproval_reason: string | null
           approval_status: string
+          auto_approved: boolean | null
           avg_response_time_seconds: number | null
           bio: string | null
           body_type: string | null
@@ -448,6 +449,8 @@ export type Database = {
           profile_completeness: number | null
           religion: string | null
           state: string | null
+          suspended_at: string | null
+          suspension_reason: string | null
           total_chats_count: number | null
           updated_at: string
           user_id: string
@@ -458,6 +461,7 @@ export type Database = {
           ai_approved?: boolean | null
           ai_disapproval_reason?: string | null
           approval_status?: string
+          auto_approved?: boolean | null
           avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
@@ -483,6 +487,8 @@ export type Database = {
           profile_completeness?: number | null
           religion?: string | null
           state?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
           total_chats_count?: number | null
           updated_at?: string
           user_id: string
@@ -493,6 +499,7 @@ export type Database = {
           ai_approved?: boolean | null
           ai_disapproval_reason?: string | null
           approval_status?: string
+          auto_approved?: boolean | null
           avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
@@ -518,6 +525,8 @@ export type Database = {
           profile_completeness?: number | null
           religion?: string | null
           state?: string | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
           total_chats_count?: number | null
           updated_at?: string
           user_id?: string
@@ -645,6 +654,42 @@ export type Database = {
           max_women_users?: number
           name?: string
           priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      language_limits: {
+        Row: {
+          created_at: string
+          current_call_women: number
+          current_chat_women: number
+          id: string
+          is_active: boolean
+          language_name: string
+          max_call_women: number
+          max_chat_women: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_call_women?: number
+          current_chat_women?: number
+          id?: string
+          is_active?: boolean
+          language_name: string
+          max_call_women?: number
+          max_chat_women?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_call_women?: number
+          current_chat_women?: number
+          id?: string
+          is_active?: boolean
+          language_name?: string
+          max_call_women?: number
+          max_chat_women?: number
           updated_at?: string
         }
         Relationships: []
@@ -1913,6 +1958,54 @@ export type Database = {
         }
         Relationships: []
       }
+      video_call_sessions: {
+        Row: {
+          call_id: string
+          created_at: string
+          end_reason: string | null
+          ended_at: string | null
+          id: string
+          man_user_id: string
+          rate_per_minute: number
+          started_at: string | null
+          status: string
+          total_earned: number
+          total_minutes: number
+          updated_at: string
+          woman_user_id: string
+        }
+        Insert: {
+          call_id: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          man_user_id: string
+          rate_per_minute?: number
+          started_at?: string | null
+          status?: string
+          total_earned?: number
+          total_minutes?: number
+          updated_at?: string
+          woman_user_id: string
+        }
+        Update: {
+          call_id?: string
+          created_at?: string
+          end_reason?: string | null
+          ended_at?: string | null
+          id?: string
+          man_user_id?: string
+          rate_per_minute?: number
+          started_at?: string | null
+          status?: string
+          total_earned?: number
+          total_minutes?: number
+          updated_at?: string
+          woman_user_id?: string
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -2029,30 +2122,39 @@ export type Database = {
       women_availability: {
         Row: {
           created_at: string
+          current_call_count: number | null
           current_chat_count: number
           id: string
           is_available: boolean
+          is_available_for_calls: boolean | null
           last_assigned_at: string | null
+          max_concurrent_calls: number | null
           max_concurrent_chats: number
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          current_call_count?: number | null
           current_chat_count?: number
           id?: string
           is_available?: boolean
+          is_available_for_calls?: boolean | null
           last_assigned_at?: string | null
+          max_concurrent_calls?: number | null
           max_concurrent_chats?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          current_call_count?: number | null
           current_chat_count?: number
           id?: string
           is_available?: boolean
+          is_available_for_calls?: boolean | null
           last_assigned_at?: string | null
+          max_concurrent_calls?: number | null
           max_concurrent_chats?: number
           updated_at?: string
           user_id?: string
