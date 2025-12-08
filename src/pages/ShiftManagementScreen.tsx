@@ -474,7 +474,7 @@ const ShiftManagementScreen = () => {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+            <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -559,7 +559,7 @@ const ShiftManagementScreen = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <Button onClick={startShift} disabled={startingShift} className="w-full h-14 text-lg bg-green-500 hover:bg-green-600">
+                <Button onClick={startShift} disabled={startingShift} variant="aurora" className="w-full h-14 text-lg">
                   {startingShift ? <Loader2 className="h-6 w-6 mr-2 animate-spin" /> : <Play className="h-6 w-6 mr-2" />}
                   Start Shift Now
                 </Button>
@@ -572,7 +572,7 @@ const ShiftManagementScreen = () => {
         <div className="grid grid-cols-3 gap-3">
           <Dialog open={bookDialogOpen} onOpenChange={setBookDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+              <Button variant="auroraOutline" className="h-auto py-4 flex-col gap-2">
                 <CalendarPlus className="h-5 w-5 text-primary" />
                 <span className="text-xs">Book Hours</span>
               </Button>

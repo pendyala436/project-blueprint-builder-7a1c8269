@@ -283,7 +283,7 @@ const OnlineUsersScreen = () => {
             <p className="text-muted-foreground mb-6">
               {t('checkBackLater', 'Check back later to find users matching your preferences')}
             </p>
-            <Button variant="gradient" onClick={() => navigate("/dashboard")}>
+            <Button variant="aurora" onClick={() => navigate("/dashboard")}>
               {t('backToDashboard', 'Back to Dashboard')}
             </Button>
           </Card>

@@ -154,14 +154,14 @@ const PasswordResetScreen = () => {
             </p>
             <Button
               onClick={() => navigate("/forgot-password")}
-              className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600"
+              variant="aurora"
+              className="w-full"
             >
               Request New Reset Link
             </Button>
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               onClick={() => navigate("/auth")}
-              className="text-muted-foreground"
             >
               Back to Login
             </Button>
@@ -189,7 +189,8 @@ const PasswordResetScreen = () => {
             </p>
             <Button
               onClick={() => navigate("/auth")}
-              className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600"
+              variant="aurora"
+              className="w-full"
             >
               Go to Login
             </Button>
@@ -206,7 +207,7 @@ const PasswordResetScreen = () => {
         <CardHeader className="space-y-4 pb-6">
           <div className="flex items-center gap-4">
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={() => navigate("/auth")}
               className="shrink-0"
@@ -311,7 +312,8 @@ const PasswordResetScreen = () => {
           <Button
             onClick={handleResetPassword}
             disabled={!isPasswordValid || isLoading}
-            className="w-full bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-semibold py-6 text-lg"
+            variant="aurora"
+            className="w-full font-semibold py-6 text-lg"
           >
             {isLoading ? (
               <>

@@ -1005,7 +1005,7 @@ const DashboardScreen = () => {
                   userGender="male"
                   userLanguage={userLanguage}
                   userCountry={userCountryName}
-                  variant="hero"
+                  variant="aurora"
                   size="lg"
                 />
                 <VideoCallButton
