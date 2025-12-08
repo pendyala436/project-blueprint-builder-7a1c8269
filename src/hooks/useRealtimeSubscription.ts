@@ -1,0 +1,118 @@
+import { useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { RealtimeChannel } from "@supabase/supabase-js";
+
+type TableName = 
+  | "profiles"
+  | "female_profiles"
+  | "male_profiles"
+  | "sample_women"
+  | "sample_men"
+  | "sample_users"
+  | "active_chat_sessions"
+  | "video_call_sessions"
+  | "chat_messages"
+  | "wallets"
+  | "wallet_transactions"
+  | "women_earnings"
+  | "user_status"
+  | "women_availability"
+  | "language_limits"
+  | "chat_pricing"
+  | "notifications";
+
+interface UseRealtimeSubscriptionOptions {
+  table: TableName;
+  event?: "INSERT" | "UPDATE" | "DELETE" | "*";
+  filter?: string;
+  onUpdate: () => void;
+  enabled?: boolean;
+}
+
+export const useRealtimeSubscription = ({
+  table,
+  event = "*",
+  filter,
+  onUpdate,
+  enabled = true
+}: UseRealtimeSubscriptionOptions) => {
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  const setupSubscription = useCallback(() => {
+    if (!enabled) return;
+
+    // Clean up existing subscription
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channelName = `realtime-${table}-${Date.now()}`;
+    
+    const subscriptionConfig: any = {
+      event,
+      schema: 'public',
+      table
+    };
+
+    if (filter) {
+      subscriptionConfig.filter = filter;
+    }
+
+    channelRef.current = supabase
+      .channel(channelName)
+      .on('postgres_changes', subscriptionConfig, () => {
+        onUpdate();
+      })
+      .subscribe();
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [table, event, filter, onUpdate, enabled]);
+
+  useEffect(() => {
+    const cleanup = setupSubscription();
+    return cleanup;
+  }, [setupSubscription]);
+
+  return {
+    refresh: onUpdate
+  };
+};
+
+// Hook for multiple table subscriptions
+export const useMultipleRealtimeSubscriptions = (
+  tables: TableName[],
+  onUpdate: () => void,
+  enabled = true
+) => {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const channels: RealtimeChannel[] = [];
+
+    tables.forEach((table, index) => {
+      const channel = supabase
+        .channel(`multi-realtime-${table}-${index}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table },
+          () => {
+            onUpdate();
+          }
+        )
+        .subscribe();
+      
+      channels.push(channel);
+    });
+
+    return () => {
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+    };
+  }, [tables.join(','), onUpdate, enabled]);
+};

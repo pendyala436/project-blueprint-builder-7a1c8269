@@ -47,6 +47,7 @@ import AdminSampleUsers from "./pages/AdminSampleUsers";
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
+import AdminLanguageLimits from "./pages/AdminLanguageLimits";
 import PasswordResetScreen from "./pages/PasswordResetScreen";
 import NotFound from "./pages/NotFound";
 
@@ -104,6 +105,7 @@ const App = () => (
             <Route path="/admin/moderation" element={<AdminModerationScreen />} />
             <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
             <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
+            <Route path="/admin/language-limits" element={<AdminLanguageLimits />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

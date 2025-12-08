@@ -164,43 +164,51 @@ const WomenDashboardScreen = () => {
     };
   }, []);
 
-  // Real-time subscription for online users and chat sessions
+  const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
+  const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
+  const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
+  const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+
+  // Real-time subscription for online users, chat sessions, video calls, and earnings
   useEffect(() => {
     const channel = supabase
       .channel('women-dashboard-updates')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_status'
-        },
-        () => {
-          fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
-        }
+        { event: '*', schema: 'public', table: 'user_status' },
+        () => { fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry); }
       )
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'active_chat_sessions'
-        },
-        () => {
-          loadActiveChatCount();
-        }
+        { event: '*', schema: 'public', table: 'active_chat_sessions' },
+        () => { loadActiveChatCount(); loadDashboardData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_call_sessions' },
+        () => { loadActiveChatCount(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'women_earnings' },
+        () => { loadDashboardData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets' },
+        () => { loadDashboardData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'male_profiles' },
+        () => { fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry); }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
-
-  const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
-  const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
-  const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
-  const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+  }, [currentUserId, currentWomanLanguage, currentWomanCountry]);
 
   const loadActiveChatCount = async () => {
     if (!currentUserId) return;
