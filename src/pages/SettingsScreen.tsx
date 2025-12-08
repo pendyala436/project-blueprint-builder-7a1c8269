@@ -209,7 +209,7 @@ const SettingsScreen = () => {
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant="auroraGhost"
               size="icon"
               onClick={() => navigate(-1)}
               className="rounded-full"

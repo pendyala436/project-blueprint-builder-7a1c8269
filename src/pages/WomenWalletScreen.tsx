@@ -310,7 +310,7 @@ const WomenWalletScreen = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -319,7 +319,7 @@ const WomenWalletScreen = () => {
             </div>
           </div>
           <Button
-            variant="outline"
+            variant="auroraOutline"
             size="sm"
             onClick={() => navigate("/transaction-history")}
             className="gap-2"

@@ -101,7 +101,7 @@ const ForgotPasswordScreen = () => {
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4">
           <Button
-            variant="ghost"
+            variant="auroraGhost"
             size="icon"
             onClick={() => navigate("/")}
             className="shrink-0"

@@ -214,7 +214,7 @@ const LanguagePreferencesScreen = () => {
           {/* Submit Button */}
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="auroraOutline"
               onClick={() => navigate("/location-setup")}
               className="flex-1 h-12"
             >
@@ -224,7 +224,7 @@ const LanguagePreferencesScreen = () => {
               onClick={handleSubmit}
               disabled={isLoading}
               className="flex-1 h-12 text-base font-medium"
-              variant="gradient"
+              variant="aurora"
             >
               {isLoading ? (
                 <>

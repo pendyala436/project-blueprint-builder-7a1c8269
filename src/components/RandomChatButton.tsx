@@ -34,7 +34,7 @@ interface RandomChatButtonProps {
   userGender: "male" | "female";
   userLanguage: string;
   userCountry: string;
-  variant?: "default" | "gradient" | "hero";
+  variant?: "default" | "gradient" | "hero" | "aurora" | "auroraOutline" | "auroraGhost";
   size?: "default" | "lg" | "sm";
   className?: string;
 }
@@ -43,7 +43,7 @@ export const RandomChatButton = ({
   userGender,
   userLanguage,
   userCountry,
-  variant = "gradient",
+  variant = "aurora",
   size = "lg",
   className = ""
 }: RandomChatButtonProps) => {
@@ -333,7 +333,7 @@ export const RandomChatButton = ({
                 </div>
                 <p className="text-muted-foreground">{searchStatus}</p>
                 <Button 
-                  variant="outline" 
+                  variant="auroraOutline" 
                   className="mt-4"
                   onClick={findRandomPartner}
                 >
@@ -377,10 +377,10 @@ export const RandomChatButton = ({
                   )}
                 </div>
                 <div className="flex gap-3 justify-center">
-                  <Button variant="outline" onClick={cancelSearch}>
+                  <Button variant="auroraOutline" onClick={cancelSearch}>
                     Cancel
                   </Button>
-                  <Button variant="gradient" onClick={startChatWithMatch}>
+                  <Button variant="aurora" onClick={startChatWithMatch}>
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Start Chat
                   </Button>

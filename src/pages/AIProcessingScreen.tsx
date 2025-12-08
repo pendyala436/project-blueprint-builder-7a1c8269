@@ -392,7 +392,7 @@ const AIProcessingScreen = () => {
                 <Button
                   onClick={handleContinue}
                   className="flex-1 h-12 text-base font-medium"
-                  variant="gradient"
+                  variant="aurora"
                 >
                   Continue
                 </Button>
