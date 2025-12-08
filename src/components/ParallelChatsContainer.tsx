@@ -16,9 +16,10 @@ interface ActiveChat {
 interface ParallelChatsContainerProps {
   currentUserId: string;
   userGender: "male" | "female";
+  currentUserLanguage?: string;
 }
 
-const ParallelChatsContainer = ({ currentUserId, userGender }: ParallelChatsContainerProps) => {
+const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage = "English" }: ParallelChatsContainerProps) => {
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
 
   useEffect(() => {
@@ -130,6 +131,7 @@ const ParallelChatsContainer = ({ currentUserId, userGender }: ParallelChatsCont
           partnerLanguage={chat.partnerLanguage}
           isPartnerOnline={chat.isPartnerOnline}
           currentUserId={currentUserId}
+          currentUserLanguage={currentUserLanguage}
           userGender={userGender}
           ratePerMinute={chat.ratePerMinute}
           onClose={() => handleCloseChat(chat.chatId)}

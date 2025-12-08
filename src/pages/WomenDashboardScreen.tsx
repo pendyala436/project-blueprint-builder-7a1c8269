@@ -1109,6 +1109,7 @@ const WomenDashboardScreen = () => {
         <ParallelChatsContainer
           currentUserId={currentUserId}
           userGender="female"
+          currentUserLanguage={currentWomanLanguage || "English"}
         />
       )}
     </div>
