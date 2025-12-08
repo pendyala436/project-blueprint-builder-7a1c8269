@@ -215,8 +215,8 @@ export const ChatInterface = ({
           setPendingRequests([]);
         }
       }
-    } catch (error) {
-      console.error("Error loading chat data:", error);
+    } catch {
+      // Error loading chat data - silently handled
     }
   };
 
