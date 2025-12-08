@@ -400,15 +400,26 @@ const WalletScreen = () => {
             </Button>
             <h1 className="text-xl font-semibold">{t('myWallet', 'My Wallet')}</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="rounded-full"
-          >
-            <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/transaction-history")}
+              className="rounded-full"
+              title="Transaction History"
+            >
+              <History className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-full"
+            >
+              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </div>
 
