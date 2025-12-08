@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Calendar,
   User,
-  Filter
+  Filter,
+  Video
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,22 @@ interface ChatSession {
   partner_photo?: string;
 }
 
+interface VideoCallSession {
+  id: string;
+  call_id: string;
+  man_user_id: string;
+  woman_user_id: string;
+  total_earned: number;
+  total_minutes: number;
+  rate_per_minute: number;
+  status: string;
+  started_at: string | null;
+  ended_at: string | null;
+  end_reason: string | null;
+  partner_name?: string;
+  partner_photo?: string;
+}
+
 interface WomenEarning {
   id: string;
   amount: number;
@@ -66,6 +83,7 @@ const TransactionHistoryScreen = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [videoCallSessions, setVideoCallSessions] = useState<VideoCallSession[]>([]);
   const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [activeTab, setActiveTab] = useState("all");
 
@@ -139,6 +157,32 @@ const TransactionHistoryScreen = () => {
 
           setChatSessions(enrichedSessions);
         }
+
+        // Fetch video call sessions for men
+        const { data: videoCalls } = await supabase
+          .from("video_call_sessions")
+          .select("*")
+          .eq("man_user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (videoCalls && videoCalls.length > 0) {
+          const womanIds = videoCalls.map(s => s.woman_user_id);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name, photo_url")
+            .in("user_id", womanIds);
+
+          const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+          
+          const enrichedCalls = videoCalls.map(s => ({
+            ...s,
+            partner_name: profileMap.get(s.woman_user_id)?.full_name || "Anonymous",
+            partner_photo: profileMap.get(s.woman_user_id)?.photo_url
+          }));
+
+          setVideoCallSessions(enrichedCalls);
+        }
       } else if (profile?.gender?.toLowerCase() === "female") {
         // For women: Fetch earnings
         const { data: earnings } = await supabase
@@ -209,6 +253,32 @@ const TransactionHistoryScreen = () => {
           }));
 
           setChatSessions(enrichedSessions);
+        }
+
+        // Fetch video call sessions for women
+        const { data: videoCalls } = await supabase
+          .from("video_call_sessions")
+          .select("*")
+          .eq("woman_user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        if (videoCalls && videoCalls.length > 0) {
+          const manIds = videoCalls.map(s => s.man_user_id);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name, photo_url")
+            .in("user_id", manIds);
+
+          const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+          
+          const enrichedCalls = videoCalls.map(s => ({
+            ...s,
+            partner_name: profileMap.get(s.man_user_id)?.full_name || "Anonymous",
+            partner_photo: profileMap.get(s.man_user_id)?.photo_url
+          }));
+
+          setVideoCallSessions(enrichedCalls);
         }
       }
 
@@ -311,9 +381,10 @@ const TransactionHistoryScreen = () => {
 
       <div className="max-w-2xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="all" className="text-sm">All</TabsTrigger>
-            <TabsTrigger value="chats" className="text-sm">Chat Sessions</TabsTrigger>
+            <TabsTrigger value="chats" className="text-sm">Chats</TabsTrigger>
+            <TabsTrigger value="video" className="text-sm">Video</TabsTrigger>
             <TabsTrigger value="wallet" className="text-sm">
               {isMale ? "Recharges" : "Earnings"}
             </TabsTrigger>
@@ -417,7 +488,32 @@ const TransactionHistoryScreen = () => {
                   </Card>
                 ))}
 
-                {chatSessions.length === 0 && walletTransactions.length === 0 && (
+                {/* Show video call sessions in all tab */}
+                {videoCallSessions.map((session) => (
+                  <Card key={`video-${session.id}`} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={cn("p-2 rounded-full", isMale ? "bg-purple-500/10" : "bg-pink-500/10")}>
+                          <Video className={cn("h-4 w-4", isMale ? "text-purple-500" : "text-pink-500")} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium truncate">Video with {session.partner_name}</span>
+                            <span className={cn("font-semibold", isMale ? "text-purple-600" : "text-pink-600")}>
+                              {isMale ? "-" : "+"}₹{Number(session.total_earned).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>{formatDuration(Number(session.total_minutes))}</span>
+                            <span>₹{session.rate_per_minute}/min</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {chatSessions.length === 0 && videoCallSessions.length === 0 && walletTransactions.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>No transactions yet</p>
@@ -489,6 +585,75 @@ const TransactionHistoryScreen = () => {
                   <div className="text-center py-12 text-muted-foreground">
                     <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>No chat sessions yet</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Video Call Sessions */}
+          <TabsContent value="video" className="space-y-3">
+            <ScrollArea className="h-[calc(100vh-200px)]">
+              <div className="space-y-3 pr-4">
+                {videoCallSessions.map((session) => (
+                  <Card key={session.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "p-2 rounded-full",
+                          isMale ? "bg-purple-500/10" : "bg-pink-500/10"
+                        )}>
+                          <Video className={cn(
+                            "h-4 w-4",
+                            isMale ? "text-purple-500" : "text-pink-500"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">
+                                {session.partner_name}
+                              </span>
+                              {getStatusBadge(session.status)}
+                            </div>
+                            <span className={cn(
+                              "font-semibold whitespace-nowrap",
+                              isMale ? "text-purple-600" : "text-pink-600"
+                            )}>
+                              {isMale ? "-" : "+"}₹{Number(session.total_earned).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDuration(Number(session.total_minutes))}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <IndianRupee className="h-3 w-3" />
+                              {session.rate_per_minute}/min
+                            </span>
+                            {session.started_at && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(session.started_at), "MMM d, h:mm a")}
+                              </span>
+                            )}
+                          </div>
+                          {session.end_reason && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              {getEndReasonText(session.end_reason)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {videoCallSessions.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Video className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No video calls yet</p>
                   </div>
                 )}
               </div>
