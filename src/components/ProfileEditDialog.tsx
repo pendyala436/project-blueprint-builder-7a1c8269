@@ -155,6 +155,10 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
     primary_language: null,
   });
   
+  // Original profile data to track changes
+  const [originalProfile, setOriginalProfile] = useState<ProfileData | null>(null);
+  const [originalLanguage, setOriginalLanguage] = useState<UserLanguage | null>(null);
+  
   // User's selected language for matching
   const [userLanguage, setUserLanguage] = useState<UserLanguage | null>(null);
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -175,6 +179,32 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   
   // Available states based on selected country
   const [availableStates, setAvailableStates] = useState<State[]>([]);
+  
+  // Check if there are any changes
+  const hasChanges = (): boolean => {
+    if (!originalProfile) return false;
+    
+    // Check profile fields
+    const profileChanged = Object.keys(profile).some(key => {
+      const k = key as keyof ProfileData;
+      const current = profile[k];
+      const original = originalProfile[k];
+      
+      // Handle arrays
+      if (Array.isArray(current) && Array.isArray(original)) {
+        return JSON.stringify(current) !== JSON.stringify(original);
+      }
+      
+      return current !== original;
+    });
+    
+    // Check language change
+    const languageChanged = 
+      userLanguage?.language_code !== originalLanguage?.language_code ||
+      userLanguage?.language_name !== originalLanguage?.language_name;
+    
+    return profileChanged || languageChanged;
+  };
   // ==================== Effects ====================
 
   /**
@@ -232,15 +262,20 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
         .limit(1);
 
       if (languageData && languageData.length > 0) {
-        setUserLanguage({
+        const langData = {
           language_name: languageData[0].language_name,
           language_code: languageData[0].language_code
-        });
+        };
+        setUserLanguage(langData);
+        setOriginalLanguage(langData);
+      } else {
+        setUserLanguage(null);
+        setOriginalLanguage(null);
       }
 
       // Update state with fetched data
       if (data) {
-        setProfile({
+        const profileData: ProfileData = {
           full_name: data.full_name,
           phone: data.phone,
           gender: data.gender,
@@ -256,7 +291,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
           religion: data.religion,
           interests: data.interests,
           primary_language: data.primary_language,
-        });
+        };
+        setProfile(profileData);
+        setOriginalProfile(profileData);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -775,8 +812,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving || !hasPhotos}
-                title={!hasPhotos ? "At least one photo is required" : ""}
+                disabled={isSaving || !hasPhotos || !hasChanges()}
+                title={!hasPhotos ? "At least one photo is required" : !hasChanges() ? "No changes to save" : ""}
               >
                 {isSaving ? (
                   <>
