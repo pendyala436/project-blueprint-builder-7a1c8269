@@ -37,6 +37,8 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
+import IncomingCallModal from "@/components/IncomingCallModal";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -83,6 +85,7 @@ const WomenDashboardScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1114,6 +1117,19 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="female"
           currentUserLanguage={currentWomanLanguage || "English"}
+        />
+      )}
+
+      {/* Incoming Video Call Modal */}
+      {incomingCall && (
+        <IncomingCallModal
+          isOpen={!!incomingCall}
+          onClose={clearIncomingCall}
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
         />
       )}
     </div>
