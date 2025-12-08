@@ -28,8 +28,18 @@ const VideoCallButton = ({
   } | null>(null);
 
   const startVideoCall = async () => {
-    // Check wallet balance (video calls cost more)
-    const minBalance = 50; // 5 INR per minute * 10 minutes minimum
+    // Check wallet balance dynamically from pricing
+    // minBalance is fetched from app_settings or chat_pricing
+    const { data: settingsData } = await supabase
+      .from("app_settings")
+      .select("setting_value")
+      .eq("setting_key", "min_video_call_balance")
+      .maybeSingle();
+    
+    const minBalance = settingsData?.setting_value 
+      ? parseInt(String(settingsData.setting_value)) 
+      : 50;
+    
     if (walletBalance < minBalance) {
       toast({
         title: "Insufficient Balance",

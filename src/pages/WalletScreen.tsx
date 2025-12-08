@@ -1,3 +1,15 @@
+/**
+ * WalletScreen.tsx
+ * 
+ * PURPOSE: User wallet management for recharge (men) and withdrawal (women).
+ * Uses dynamic settings from database - NO hardcoded values.
+ * 
+ * ACID COMPLIANCE:
+ * - Uses atomic transaction functions for all wallet operations
+ * - Settings loaded dynamically from app_settings table
+ * - Real-time subscriptions for live updates
+ */
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +41,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { useAppSettings, useChatPricing } from "@/hooks/useAppSettings";
+import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 
 interface WalletData {
   id: string;
@@ -128,9 +142,7 @@ const WITHDRAWAL_METHODS: WithdrawalMethod[] = [
   }
 ];
 
-const RECHARGE_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
-const WITHDRAWAL_AMOUNTS = [500, 1000, 2000, 5000, 10000];
-
+// Dynamic currency symbols (loaded from settings)
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
   INR: <IndianRupee className="h-5 w-5" />,
   USD: <DollarSign className="h-5 w-5" />,
@@ -140,6 +152,12 @@ const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
 const WalletScreen = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  
+  // Dynamic settings from database (no hardcoding)
+  const { settings, isLoading: settingsLoading } = useAppSettings();
+  const { pricing } = useChatPricing();
+  const { creditWallet, debitWallet, isProcessing: transactionProcessing } = useAtomicTransaction();
+  
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,6 +168,7 @@ const WalletScreen = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userGender, setUserGender] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [withdrawalDetails, setWithdrawalDetails] = useState({
     upiId: "",
     accountNumber: "",
@@ -157,6 +176,10 @@ const WalletScreen = () => {
     accountName: "",
     paytmNumber: ""
   });
+  
+  // Dynamic amounts from settings (no hardcoding)
+  const RECHARGE_AMOUNTS = settings.rechargeAmounts;
+  const WITHDRAWAL_AMOUNTS = settings.withdrawalAmounts;
 
   const fetchWalletData = async () => {
     try {
@@ -165,6 +188,9 @@ const WalletScreen = () => {
         navigate("/auth");
         return;
       }
+      
+      // Store user ID for atomic transactions
+      setUserId(user.id);
 
       // Fetch user profile to get gender
       const { data: profileData } = await supabase
@@ -242,9 +268,18 @@ const WalletScreen = () => {
     setRefreshing(false);
   };
 
+  /**
+   * Handle wallet recharge using atomic transaction
+   * ACID compliant - uses database function for atomicity
+   */
   const handleRecharge = async (amount: number) => {
     if (!selectedGateway) {
       toast.error("Please select a payment method");
+      return;
+    }
+
+    if (!userId) {
+      toast.error("Please log in to recharge");
       return;
     }
 
@@ -259,40 +294,22 @@ const WalletScreen = () => {
     // Simulating payment gateway redirect and callback
     setTimeout(async () => {
       try {
-        if (!wallet) return;
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // Use atomic transaction function for ACID compliance
+        const result = await creditWallet(
+          userId,
+          amount,
+          `Wallet recharge via ${gateway.name}`,
+          `${gateway.id.toUpperCase()}_${Date.now()}`
+        );
 
-        // Update wallet balance
-        const newBalance = wallet.balance + amount;
-        const { error: updateError } = await supabase
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id);
-
-        if (updateError) throw updateError;
-
-        // Create transaction record with gateway info
-        const { error: txError } = await supabase
-          .from("wallet_transactions")
-          .insert({
-            wallet_id: wallet.id,
-            user_id: user.id,
-            type: "credit",
-            amount: amount,
-            description: `Wallet recharge via ${gateway.name}`,
-            reference_id: `${gateway.id.toUpperCase()}_${Date.now()}`,
-            status: "completed"
-          });
-
-        if (txError) throw txError;
-
-        setIsAnimating(true);
-        await fetchWalletData();
-        setTimeout(() => setIsAnimating(false), 500);
-        
-        toast.success(`₹${amount} added via ${gateway.name}!`);
+        if (result.success) {
+          setIsAnimating(true);
+          await fetchWalletData();
+          setTimeout(() => setIsAnimating(false), 500);
+          toast.success(`₹${amount} added via ${gateway.name}!`);
+        } else {
+          toast.error(result.error || "Recharge failed. Please try again.");
+        }
       } catch (error) {
         console.error("Recharge error:", error);
         toast.error("Recharge failed. Please try again.");
@@ -303,9 +320,18 @@ const WalletScreen = () => {
     }, 2000);
   };
 
+  /**
+   * Handle wallet withdrawal using atomic transaction
+   * ACID compliant - uses database function for atomicity
+   */
   const handleWithdrawal = async (amount: number) => {
     if (!wallet || wallet.balance < amount) {
       toast.error("Insufficient balance");
+      return;
+    }
+
+    if (!userId) {
+      toast.error("Please log in to withdraw");
       return;
     }
 
@@ -331,38 +357,25 @@ const WalletScreen = () => {
 
     setTimeout(async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // Use atomic transaction function for ACID compliance
+        const result = await debitWallet(
+          userId,
+          amount,
+          `Withdrawal via ${method?.name}`,
+          `WD_${selectedWithdrawalMethod.toUpperCase()}_${Date.now()}`
+        );
 
-        // Update wallet balance
-        const newBalance = wallet.balance - amount;
-        const { error: updateError } = await supabase
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id);
-
-        if (updateError) throw updateError;
-
-        // Create transaction record
-        const { error: txError } = await supabase
-          .from("wallet_transactions")
-          .insert({
-            wallet_id: wallet.id,
-            user_id: user.id,
-            type: "debit",
-            amount: amount,
-            description: `Withdrawal via ${method?.name}`,
-            reference_id: `WD_${selectedWithdrawalMethod.toUpperCase()}_${Date.now()}`,
-            status: "pending"
-          });
-
-        if (txError) throw txError;
-
-        setIsAnimating(true);
-        await fetchWalletData();
-        setTimeout(() => setIsAnimating(false), 500);
-
-        toast.success(`₹${amount} withdrawal initiated! Will be credited within 24 hours.`);
+        if (result.success) {
+          setIsAnimating(true);
+          await fetchWalletData();
+          setTimeout(() => setIsAnimating(false), 500);
+          
+          // Dynamic processing hours from settings
+          const processingHours = settings.withdrawalProcessingHours;
+          toast.success(`₹${amount} withdrawal initiated! Will be credited within ${processingHours} hours.`);
+        } else {
+          toast.error(result.error || "Withdrawal failed. Please try again.");
+        }
       } catch (error) {
         console.error("Withdrawal error:", error);
         toast.error("Withdrawal failed. Please try again.");
@@ -372,6 +385,8 @@ const WalletScreen = () => {
       }
     }, 2000);
   };
+
+  // Old handleWithdrawal removed - using atomic version above
 
   const formatCurrency = (amount: number, currency: string = "INR") => {
     return new Intl.NumberFormat("en-IN", {

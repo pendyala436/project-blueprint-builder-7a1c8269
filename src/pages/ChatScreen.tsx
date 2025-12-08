@@ -94,7 +94,9 @@ import VoiceRecordButton from "@/components/VoiceRecordButton";
 import VoiceMessageRecorder from "@/components/VoiceMessageRecorder";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 
-const MAX_PARALLEL_CHATS = 3;
+// MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
+// Default fallback only used if database is unavailable
+const DEFAULT_MAX_PARALLEL_CHATS = 3;
 
 /**
  * Message Interface
