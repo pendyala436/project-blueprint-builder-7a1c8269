@@ -90,6 +90,9 @@ import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 // Voice-to-text component
 import VoiceRecordButton from "@/components/VoiceRecordButton";
+// Voice message components
+import VoiceMessageRecorder from "@/components/VoiceMessageRecorder";
+import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 
 const MAX_PARALLEL_CHATS = 3;
 
@@ -1197,7 +1200,14 @@ const ChatScreen = () => {
   /**
    * Extract Attachment from Message
    */
-  const extractAttachment = (message: string): { text: string; attachmentUrl?: string } => {
+  const extractAttachment = (message: string): { text: string; attachmentUrl?: string; voiceUrl?: string } => {
+    // Check for voice message
+    const voiceMatch = message.match(/\[VOICE:(.*?)\]/);
+    if (voiceMatch) {
+      return { text: '', voiceUrl: voiceMatch[1] };
+    }
+    
+    // Check for regular attachment
     const attachmentMatch = message.match(/\[attachment:(.*?)\]/);
     if (attachmentMatch) {
       const text = message.replace(/\n?\[attachment:.*?\]/, "").trim();
@@ -1580,10 +1590,15 @@ const ChatScreen = () => {
                 // Show avatar only for first message in sequence from same sender
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
                 // Extract attachment from message
-                const { text: messageText, attachmentUrl } = extractAttachment(message.message);
+                const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 const displayText = !isMine && message.isTranslated && message.translatedMessage 
                   ? extractAttachment(message.translatedMessage).text 
                   : messageText;
+                
+                // Skip empty voice message placeholders (the actual voice URL comes in the next message)
+                if (message.message === '🎤 Voice message') {
+                  return null;
+                }
 
                 return (
                   <div
@@ -1613,6 +1628,14 @@ const ChatScreen = () => {
 
                       {/* Message bubble and translations */}
                       <div className={`space-y-1`}>
+                        {/* Voice message player */}
+                        {voiceUrl && (
+                          <VoiceMessagePlayer 
+                            audioUrl={voiceUrl} 
+                            isMine={isMine} 
+                          />
+                        )}
+                        
                         {/* Attachment preview */}
                         {attachmentUrl && (
                           <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
@@ -1638,7 +1661,7 @@ const ChatScreen = () => {
                         )}
                         
                         {/* Primary message bubble */}
-                        {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && (
+                        {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
                           <div
                             className={`px-4 py-2.5 rounded-2xl ${
                               isMine 
@@ -1823,7 +1846,15 @@ const ChatScreen = () => {
               </PopoverContent>
             </Popover>
             
-            {/* Voice record button */}
+            {/* Voice message recorder (up to 5 minutes) */}
+            <VoiceMessageRecorder
+              chatId={chatId.current}
+              currentUserId={currentUserId}
+              partnerId={chatPartner?.userId || ''}
+              disabled={isSending || !chatPartner}
+            />
+            
+            {/* Voice-to-text button (transcribes to text for translation) */}
             <VoiceRecordButton 
               onTranscription={(text) => setNewMessage(prev => prev ? `${prev} ${text}` : text)}
               disabled={isSending}
