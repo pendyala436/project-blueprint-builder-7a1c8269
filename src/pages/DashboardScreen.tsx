@@ -309,6 +309,15 @@ const DashboardScreen = () => {
         { event: '*', schema: 'public', table: 'video_call_sessions' },
         () => { loadActiveChatCount(); }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUserId}` },
+        () => { 
+          if (currentUserId) {
+            fetchNotifications(currentUserId);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
