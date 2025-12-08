@@ -559,6 +559,7 @@ serve(async (req) => {
 
       case "get_available_woman": {
         const requestedLanguage = preferred_language || "en";
+        const requestedLanguageLower = requestedLanguage.toLowerCase().trim();
 
         // Find language group for this language
         const { data: languageGroups } = await supabase
@@ -614,7 +615,51 @@ serve(async (req) => {
           availableWomen = data || [];
         }
 
+        // If still no real women, try sample_women as fallback
         if (availableWomen.length === 0) {
+          console.log("No real women available, checking sample_women...");
+          
+          // Try to find a sample woman with matching language first
+          let { data: sampleWomen } = await supabase
+            .from("sample_women")
+            .select("id, name, photo_url, language, country")
+            .eq("is_active", true)
+            .ilike("language", `%${requestedLanguageLower}%`)
+            .limit(5);
+
+          // If no language match, get any active sample woman
+          if (!sampleWomen || sampleWomen.length === 0) {
+            const { data: anySampleWomen } = await supabase
+              .from("sample_women")
+              .select("id, name, photo_url, language, country")
+              .eq("is_active", true)
+              .limit(5);
+            sampleWomen = anySampleWomen || [];
+          }
+
+          if (sampleWomen && sampleWomen.length > 0) {
+            // Pick a random sample woman
+            const randomIndex = Math.floor(Math.random() * sampleWomen.length);
+            const selectedSample = sampleWomen[randomIndex];
+            
+            console.log(`Matched with sample woman: ${selectedSample.name} (${selectedSample.id})`);
+            
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                woman_user_id: selectedSample.id,
+                profile: {
+                  full_name: selectedSample.name,
+                  photo_url: selectedSample.photo_url,
+                  primary_language: selectedSample.language
+                },
+                language_matched: selectedSample.language?.toLowerCase() === requestedLanguageLower,
+                is_sample_user: true
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           return new Response(
             JSON.stringify({ success: false, message: "No women available" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -644,6 +689,7 @@ serve(async (req) => {
       // Match men from NLLB-200 countries with available Indian women
       case "get_available_indian_woman": {
         const requestedLanguage = preferred_language || "en";
+        const requestedLanguageLower = requestedLanguage.toLowerCase().trim();
         const manCountryLower = (man_country || "").toLowerCase().trim();
 
         // Verify man is from an NLLB-200 supported country
@@ -673,70 +719,119 @@ serve(async (req) => {
           .or("gender.eq.female,gender.eq.Female")
           .eq("country", "India");
 
-        if (!onlineIndianWomen || onlineIndianWomen.length === 0) {
+        let selectedWomanResult = null;
+
+        if (onlineIndianWomen && onlineIndianWomen.length > 0) {
+          const indianWomanIds = onlineIndianWomen.map(w => w.user_id);
+
+          // Check which ones are online
+          const { data: onlineStatuses } = await supabase
+            .from("user_status")
+            .select("user_id, is_online")
+            .in("user_id", indianWomanIds)
+            .eq("is_online", true);
+
+          const onlineWomanIds = onlineStatuses?.map(s => s.user_id) || [];
+
+          if (onlineWomanIds.length > 0) {
+            // Get availability for online women, ordered by load
+            const { data: availableWomen } = await supabase
+              .from("women_availability")
+              .select("user_id, current_chat_count, max_concurrent_chats")
+              .in("user_id", onlineWomanIds)
+              .eq("is_available", true)
+              .order("current_chat_count", { ascending: true })
+              .order("last_assigned_at", { ascending: true, nullsFirst: true });
+
+            // Filter by capacity
+            const womenWithCapacity = availableWomen?.filter(w => 
+              w.current_chat_count < (w.max_concurrent_chats || 3)
+            ) || [];
+
+            if (womenWithCapacity.length > 0) {
+              // Select woman with lowest load (first in sorted list)
+              const selectedWoman = womenWithCapacity[0];
+
+              // Get woman's profile
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name, photo_url, primary_language, preferred_language")
+                .eq("user_id", selectedWoman.user_id)
+                .single();
+
+              console.log(`Matched international man (${man_country}) with Indian woman ${selectedWoman.user_id}, load: ${selectedWoman.current_chat_count}`);
+
+              selectedWomanResult = {
+                woman_user_id: selectedWoman.user_id,
+                profile,
+                current_load: selectedWoman.current_chat_count
+              };
+            }
+          }
+        }
+
+        // If no real Indian women available, try sample_women from India
+        if (!selectedWomanResult) {
+          console.log("No real Indian women available, checking sample_women from India...");
+          
+          // Try to find an Indian sample woman with matching language first
+          let { data: sampleWomen } = await supabase
+            .from("sample_women")
+            .select("id, name, photo_url, language, country")
+            .eq("is_active", true)
+            .eq("country", "India")
+            .ilike("language", `%${requestedLanguageLower}%`)
+            .limit(5);
+
+          // If no language match, get any active Indian sample woman
+          if (!sampleWomen || sampleWomen.length === 0) {
+            const { data: anyIndianSampleWomen } = await supabase
+              .from("sample_women")
+              .select("id, name, photo_url, language, country")
+              .eq("is_active", true)
+              .eq("country", "India")
+              .limit(5);
+            sampleWomen = anyIndianSampleWomen || [];
+          }
+
+          if (sampleWomen && sampleWomen.length > 0) {
+            // Pick a random sample woman
+            const randomIndex = Math.floor(Math.random() * sampleWomen.length);
+            const selectedSample = sampleWomen[randomIndex];
+            
+            console.log(`Matched with sample Indian woman: ${selectedSample.name} (${selectedSample.id})`);
+            
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                woman_user_id: selectedSample.id,
+                profile: {
+                  full_name: selectedSample.name,
+                  photo_url: selectedSample.photo_url,
+                  primary_language: selectedSample.language
+                },
+                current_load: 0,
+                nllb_translation_enabled: true,
+                man_country: man_country,
+                woman_country: "India",
+                is_sample_user: true
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           return new Response(
             JSON.stringify({ success: false, message: "No Indian women available" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const indianWomanIds = onlineIndianWomen.map(w => w.user_id);
-
-        // Check which ones are online
-        const { data: onlineStatuses } = await supabase
-          .from("user_status")
-          .select("user_id, is_online")
-          .in("user_id", indianWomanIds)
-          .eq("is_online", true);
-
-        const onlineWomanIds = onlineStatuses?.map(s => s.user_id) || [];
-
-        if (onlineWomanIds.length === 0) {
-          return new Response(
-            JSON.stringify({ success: false, message: "No Indian women online" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Get availability for online women, ordered by load
-        const { data: availableWomen } = await supabase
-          .from("women_availability")
-          .select("user_id, current_chat_count, max_concurrent_chats")
-          .in("user_id", onlineWomanIds)
-          .eq("is_available", true)
-          .order("current_chat_count", { ascending: true })
-          .order("last_assigned_at", { ascending: true, nullsFirst: true });
-
-        // Filter by capacity
-        const womenWithCapacity = availableWomen?.filter(w => 
-          w.current_chat_count < (w.max_concurrent_chats || 3)
-        ) || [];
-
-        if (womenWithCapacity.length === 0) {
-          return new Response(
-            JSON.stringify({ success: false, message: "All Indian women are at capacity" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Select woman with lowest load (first in sorted list)
-        const selectedWoman = womenWithCapacity[0];
-
-        // Get woman's profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, photo_url, primary_language, preferred_language")
-          .eq("user_id", selectedWoman.user_id)
-          .single();
-
-        console.log(`Matched international man (${man_country}) with Indian woman ${selectedWoman.user_id}, load: ${selectedWoman.current_chat_count}`);
-
         return new Response(
           JSON.stringify({ 
             success: true, 
-            woman_user_id: selectedWoman.user_id,
-            profile,
-            current_load: selectedWoman.current_chat_count,
+            woman_user_id: selectedWomanResult.woman_user_id,
+            profile: selectedWomanResult.profile,
+            current_load: selectedWomanResult.current_load,
             nllb_translation_enabled: true,
             man_country: man_country,
             woman_country: "India"
