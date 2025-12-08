@@ -416,6 +416,114 @@ export type Database = {
         }
         Relationships: []
       }
+      female_profiles: {
+        Row: {
+          account_status: string
+          age: number | null
+          ai_approved: boolean | null
+          ai_disapproval_reason: string | null
+          approval_status: string
+          avg_response_time_seconds: number | null
+          bio: string | null
+          body_type: string | null
+          country: string | null
+          created_at: string
+          date_of_birth: string | null
+          education_level: string | null
+          full_name: string | null
+          height_cm: number | null
+          id: string
+          interests: string[] | null
+          is_premium: boolean | null
+          is_verified: boolean | null
+          last_active_at: string | null
+          life_goals: string[] | null
+          marital_status: string | null
+          occupation: string | null
+          performance_score: number | null
+          phone: string | null
+          photo_url: string | null
+          preferred_language: string | null
+          primary_language: string | null
+          profile_completeness: number | null
+          religion: string | null
+          state: string | null
+          total_chats_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string
+          age?: number | null
+          ai_approved?: boolean | null
+          ai_disapproval_reason?: string | null
+          approval_status?: string
+          avg_response_time_seconds?: number | null
+          bio?: string | null
+          body_type?: string | null
+          country?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          education_level?: string | null
+          full_name?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          life_goals?: string[] | null
+          marital_status?: string | null
+          occupation?: string | null
+          performance_score?: number | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          state?: string | null
+          total_chats_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string
+          age?: number | null
+          ai_approved?: boolean | null
+          ai_disapproval_reason?: string | null
+          approval_status?: string
+          avg_response_time_seconds?: number | null
+          bio?: string | null
+          body_type?: string | null
+          country?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          education_level?: string | null
+          full_name?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          life_goals?: string[] | null
+          marital_status?: string | null
+          occupation?: string | null
+          performance_score?: number | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          state?: string | null
+          total_chats_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           created_at: string
@@ -586,6 +694,96 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string | null
           version?: string
+        }
+        Relationships: []
+      }
+      male_profiles: {
+        Row: {
+          account_status: string
+          age: number | null
+          bio: string | null
+          body_type: string | null
+          country: string | null
+          created_at: string
+          date_of_birth: string | null
+          education_level: string | null
+          full_name: string | null
+          height_cm: number | null
+          id: string
+          interests: string[] | null
+          is_premium: boolean | null
+          is_verified: boolean | null
+          last_active_at: string | null
+          life_goals: string[] | null
+          marital_status: string | null
+          occupation: string | null
+          phone: string | null
+          photo_url: string | null
+          preferred_language: string | null
+          primary_language: string | null
+          profile_completeness: number | null
+          religion: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string
+          age?: number | null
+          bio?: string | null
+          body_type?: string | null
+          country?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          education_level?: string | null
+          full_name?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          life_goals?: string[] | null
+          marital_status?: string | null
+          occupation?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string
+          age?: number | null
+          bio?: string | null
+          body_type?: string | null
+          country?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          education_level?: string | null
+          full_name?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[] | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          life_goals?: string[] | null
+          marital_status?: string | null
+          occupation?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          profile_completeness?: number | null
+          religion?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
