@@ -373,6 +373,91 @@ const DashboardScreen = () => {
     setStats(prev => ({ ...prev, onlineUsersCount: count || 0 }));
   };
 
+  // Handle starting chat with a woman
+  const handleStartChatWithWoman = async (womanUserId: string, womanName: string) => {
+    try {
+      // Check wallet balance first
+      if (walletBalance < 10) {
+        toast({
+          title: t('insufficientBalance', 'Insufficient Balance'),
+          description: t('pleaseRechargeToChat', 'Please recharge your wallet to start chatting'),
+          variant: "destructive",
+        });
+        setRechargeDialogOpen(true);
+        return;
+      }
+
+      // Check if already in active chat with this user
+      const { data: existingChat } = await supabase
+        .from("active_chat_sessions")
+        .select("id")
+        .eq("man_user_id", currentUserId)
+        .eq("woman_user_id", womanUserId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (existingChat) {
+        // Navigate to existing chat
+        navigate(`/chat/${womanUserId}`);
+        return;
+      }
+
+      // Check parallel chat limit
+      const { count: activeChats } = await supabase
+        .from("active_chat_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("man_user_id", currentUserId)
+        .eq("status", "active");
+
+      if ((activeChats || 0) >= 3) {
+        toast({
+          title: t('maxChatsReached', 'Max Chats Reached'),
+          description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get chat pricing rate
+      const { data: pricing } = await supabase
+        .from("chat_pricing")
+        .select("rate_per_minute")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const ratePerMinute = pricing?.rate_per_minute || 5;
+
+      // Create active chat session directly (men initiate, billing starts)
+      const chatId = `chat_${currentUserId}_${womanUserId}_${Date.now()}`;
+      const { error: sessionError } = await supabase
+        .from("active_chat_sessions")
+        .insert({
+          chat_id: chatId,
+          man_user_id: currentUserId,
+          woman_user_id: womanUserId,
+          status: "active",
+          rate_per_minute: ratePerMinute
+        });
+
+      if (sessionError) throw sessionError;
+
+      toast({
+        title: t('chatStarted', 'Chat Started'),
+        description: `${t('startingChatWith', 'Starting chat with')} ${womanName}`,
+      });
+
+      // Navigate to chat
+      navigate(`/chat/${womanUserId}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      toast({
+        title: t('error', 'Error'),
+        description: t('failedToStartChat', 'Failed to start chat'),
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchOnlineWomen = async (language: string) => {
     setLoadingOnlineWomen(true);
     try {
@@ -904,18 +989,31 @@ const DashboardScreen = () => {
                         {woman.primary_language}
                       </span>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profile/${woman.user_id}`);
-                      }}
-                    >
-                      <Eye className="w-3 h-3" />
-                      {t('viewProfile', 'View')}
-                    </Button>
+                    <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 gap-1 bg-emerald-500 hover:bg-emerald-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        }}
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        {t('chat', 'Chat')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${woman.user_id}`);
+                        }}
+                      >
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}

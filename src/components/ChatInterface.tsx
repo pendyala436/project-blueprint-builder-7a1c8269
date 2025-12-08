@@ -253,23 +253,34 @@ export const ChatInterface = ({
   const handleAcceptChat = async (request: ChatRequest) => {
     setIsLoading(true);
     try {
+      // Get chat pricing rate from admin settings
+      const { data: pricing } = await supabase
+        .from("chat_pricing")
+        .select("rate_per_minute, women_earning_rate")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const ratePerMinute = pricing?.rate_per_minute || 5;
+
       // Update match status
       await supabase
         .from("matches")
         .update({ status: "accepted" })
         .eq("id", request.id);
 
-      // Create active chat session
-      const chatId = `chat_${currentUserId}_${request.fromUserId}_${Date.now()}`;
-      await supabase
+      // Create active chat session with admin-set rate
+      const chatId = `chat_${request.fromUserId}_${currentUserId}_${Date.now()}`;
+      const { error: sessionError } = await supabase
         .from("active_chat_sessions")
         .insert({
           chat_id: chatId,
           man_user_id: request.fromUserId,
           woman_user_id: currentUserId,
           status: "active",
-          rate_per_minute: 5 // Default rate
+          rate_per_minute: ratePerMinute
         });
+
+      if (sessionError) throw sessionError;
 
       toast({
         title: t('chatAccepted', 'Chat Accepted'),

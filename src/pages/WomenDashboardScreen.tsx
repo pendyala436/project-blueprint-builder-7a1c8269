@@ -476,8 +476,23 @@ const WomenDashboardScreen = () => {
     navigate("/");
   };
 
-  const handleChatWithUser = (userId: string) => {
-    navigate(`/chat/${userId}`);
+  const handleChatWithUser = async (userId: string) => {
+    // Check if there's already an active session with this user
+    const { data: existingSession } = await supabase
+      .from("active_chat_sessions")
+      .select("id")
+      .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`)
+      .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (existingSession) {
+      // Navigate to existing chat
+      navigate(`/chat/${userId}`);
+    } else {
+      // Navigate to profile to see more info before accepting
+      navigate(`/profile/${userId}`);
+    }
   };
 
   const handleViewProfile = (userId: string) => {
@@ -562,12 +577,12 @@ const WomenDashboardScreen = () => {
           <div className="flex flex-col gap-2">
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); handleChatWithUser(user.userId); }}
+              onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.userId}`); }}
               className="bg-green-500 hover:bg-green-600 text-white"
-              title="Accept chat from this user"
+              title="Start chatting with this user"
             >
               <MessageCircle className="h-4 w-4 mr-1" />
-              Accept
+              {t('chat', 'Chat')}
             </Button>
           </div>
         </div>
