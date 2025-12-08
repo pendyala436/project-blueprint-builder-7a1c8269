@@ -48,7 +48,7 @@ import { RandomChatButton } from "@/components/RandomChatButton";
 import { ChatInterface } from "@/components/ChatInterface";
 
 import { useTranslation } from "@/contexts/TranslationContext";
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 
 interface Notification {
   id: string;
@@ -187,8 +187,10 @@ const DashboardScreen = () => {
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // NLLB-200 language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [onlineWomen, setOnlineWomen] = useState<OnlineWoman[]>([]);
+  const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
+  const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
+  const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
@@ -463,6 +465,11 @@ const DashboardScreen = () => {
     try {
       const userHasIndianLanguage = isIndianLanguage(language);
       const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
+      const nonIndianNLLBNames = NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
+      
+      // Check if user's language is a non-Indian NLLB-200 language
+      const isUserNonIndianNLLB = nonIndianNLLBNames.includes(language.toLowerCase());
+      setIsNonIndianNLLBUser(isUserNonIndianNLLB);
 
       // Get online user IDs
       const { data: onlineUsers } = await supabase
@@ -472,98 +479,83 @@ const DashboardScreen = () => {
 
       const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
 
-      const filterAndSortWomen = (women: OnlineWoman[], isOnlineFilter = false) => {
-        if (!women || women.length === 0) return [];
+      // Fetch women from all sources
+      let allWomen: OnlineWoman[] = [];
 
-        // If filtering online, only include online users
-        let filtered = isOnlineFilter && onlineUserIds.length > 0
-          ? women.filter(w => onlineUserIds.includes(w.user_id))
-          : women;
-
-        if (userHasIndianLanguage) {
-          // If man speaks Indian language, show same language women first, then other Indian women
-          const sameLanguageWomen = filtered.filter(w => 
-            w.primary_language?.toLowerCase() === language.toLowerCase()
-          );
-          const otherIndianWomen = filtered.filter(w => 
-            w.primary_language?.toLowerCase() !== language.toLowerCase() &&
-            indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
-          );
-          const restWomen = filtered.filter(w => 
-            w.primary_language?.toLowerCase() !== language.toLowerCase() &&
-            !indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
-          );
-          return [...sameLanguageWomen, ...otherIndianWomen, ...restWomen].slice(0, 10);
-        } else {
-          // If man speaks non-Indian language, show Indian women first (auto-translate via NLLB-200)
-          const indianWomen = filtered.filter(w => 
-            indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
-          );
-          const otherWomen = filtered.filter(w => 
-            !indianLanguageNames.includes(w.primary_language?.toLowerCase() || "")
-          );
-          return [...indianWomen, ...otherWomen].slice(0, 10);
-        }
-      };
-
-      // First try to get from female_profiles table
+      // First try female_profiles table
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
-        .limit(20);
+        .limit(50);
 
       if (femaleProfiles && femaleProfiles.length > 0) {
-        const sorted = filterAndSortWomen(femaleProfiles, true);
-        if (sorted.length > 0) {
-          setOnlineWomen(sorted);
-          return;
-        }
+        allWomen = [...femaleProfiles];
       }
 
-      // Fallback to profiles table for women
+      // Also try profiles table
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("gender", "Female")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
-        .limit(20);
+        .limit(50);
 
       if (profiles && profiles.length > 0) {
-        const sorted = filterAndSortWomen(profiles, true);
-        if (sorted.length > 0) {
-          setOnlineWomen(sorted);
-          return;
+        // Add only profiles not already in list
+        const existingUserIds = new Set(allWomen.map(w => w.user_id));
+        const newProfiles = profiles.filter(p => !existingUserIds.has(p.user_id));
+        allWomen = [...allWomen, ...newProfiles];
+      }
+
+      // Fallback to sample_women if no real women
+      if (allWomen.length === 0) {
+        const { data: sampleWomen } = await supabase
+          .from("sample_women")
+          .select("id, name, photo_url, age, country, language")
+          .eq("is_active", true)
+          .limit(50);
+
+        if (sampleWomen && sampleWomen.length > 0) {
+          allWomen = sampleWomen.map(sw => ({
+            id: sw.id,
+            user_id: sw.id,
+            full_name: sw.name,
+            photo_url: sw.photo_url,
+            age: sw.age,
+            country: sw.country,
+            primary_language: sw.language
+          }));
         }
       }
 
-      // Fallback to sample_women table if no real women found
-      const { data: sampleWomen } = await supabase
-        .from("sample_women")
-        .select("id, name, photo_url, age, country, language")
-        .eq("is_active", true)
-        .limit(20);
+      // Filter by online status if we have online user IDs
+      const onlineWomenList = onlineUserIds.length > 0 
+        ? allWomen.filter(w => onlineUserIds.includes(w.user_id))
+        : allWomen;
 
-      if (sampleWomen && sampleWomen.length > 0) {
-        // Map sample_women to OnlineWoman format
-        const mappedSampleWomen: OnlineWoman[] = sampleWomen.map(sw => ({
-          id: sw.id,
-          user_id: sw.id, // Use id as user_id for sample users
-          full_name: sw.name,
-          photo_url: sw.photo_url,
-          age: sw.age,
-          country: sw.country,
-          primary_language: sw.language
-        }));
-        setOnlineWomen(filterAndSortWomen(mappedSampleWomen, false));
-      } else {
-        setOnlineWomen([]);
-      }
+      // Split women into two categories:
+      // 1. Same language women
+      const sameLanguage = onlineWomenList.filter(w => 
+        w.primary_language?.toLowerCase() === language.toLowerCase()
+      );
+
+      // 2. Indian language women (for non-Indian NLLB users - auto-translate)
+      const indianWomen = onlineWomenList.filter(w => {
+        const womenLang = w.primary_language?.toLowerCase() || "";
+        // Must be Indian language and NOT same as user's language
+        return indianLanguageNames.includes(womenLang) && 
+               womenLang !== language.toLowerCase();
+      });
+
+      setSameLanguageWomen(sameLanguage.slice(0, 10));
+      setIndianTranslatedWomen(indianWomen.slice(0, 10));
     } catch (error) {
       console.error("Error fetching online women:", error);
-      setOnlineWomen([]);
+      setSameLanguageWomen([]);
+      setIndianTranslatedWomen([]);
     } finally {
       setLoadingOnlineWomen(false);
     }
@@ -928,17 +920,12 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Online Women Section */}
+        {/* Online Women Section - Two Columns */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-500" />
               {t('onlineWomen', 'Women Online')}
-              {onlineWomen.length > 0 && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({onlineWomen.filter(w => w.primary_language?.toLowerCase() === userLanguage.toLowerCase()).length} {t('speakYourLanguage', 'speak')} {userLanguage})
-                </span>
-              )}
             </h2>
             <Button
               variant="ghost"
@@ -956,76 +943,202 @@ const DashboardScreen = () => {
             <div className="flex items-center justify-center py-8">
               <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
-          ) : onlineWomen.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {onlineWomen.map((woman) => {
-                const isSameLanguage = woman.primary_language?.toLowerCase() === userLanguage.toLowerCase();
-                return (
-                  <Card
-                    key={woman.id}
-                    className={cn(
-                      "p-4 text-center hover:shadow-lg transition-all cursor-pointer group",
-                      isSameLanguage && "ring-2 ring-emerald-500/50 bg-emerald-500/5"
-                    )}
-                    onClick={() => navigate(`/profile/${woman.user_id}`)}
-                  >
-                    <div className="relative mx-auto mb-3">
-                      <Avatar className="w-16 h-16 mx-auto border-2 border-background shadow-md">
-                        <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                        <AvatarFallback className="bg-gradient-to-br from-rose-400 to-pink-500 text-white">
-                          {woman.full_name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
-                    </div>
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {woman.full_name || "Anonymous"}
-                    </p>
-                    {woman.age && (
-                      <p className="text-xs text-muted-foreground">{woman.age} yrs</p>
-                    )}
-                    {isSameLanguage && (
-                      <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
-                        {woman.primary_language}
-                      </span>
-                    )}
-                    <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="flex-1 gap-1 bg-emerald-500 hover:bg-emerald-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                        }}
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        {t('chat', 'Chat')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/profile/${woman.user_id}`);
-                        }}
-                      >
-                        <Eye className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
           ) : (
-            <Card className="p-8 text-center">
-              <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">{t('noWomenOnline', 'No women online right now')}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('checkBackSoon', 'Check back soon!')}
-              </p>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Same Language Women */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-border">
+                  <span className="text-sm font-medium text-emerald-600">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-600 rounded-full">
+                    {userLanguage}
+                  </span>
+                  <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
+                </div>
+                
+                {sameLanguageWomen.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {sameLanguageWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-emerald-500/50 bg-emerald-500/5"
+                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-rose-400 to-pink-500 text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
+                          {woman.primary_language}
+                        </span>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="flex-1 gap-1 bg-emerald-500 hover:bg-emerald-600 text-xs h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                            }}
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            {t('chat', 'Chat')}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-6 text-center">
+                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">{t('noSameLanguageWomen', 'No women speaking')} {userLanguage}</p>
+                  </Card>
+                )}
+              </div>
+
+              {/* Right Column: Indian Women with Auto-Translation (for non-Indian NLLB-200 users) */}
+              {isNonIndianNLLBUser && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <span className="text-sm font-medium text-blue-600">{t('indianWomen', 'Indian Women')}</span>
+                    <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-600 rounded-full flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      {t('autoTranslate', 'Auto-Translate')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
+                  </div>
+                  
+                  {indianTranslatedWomen.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {indianTranslatedWomen.map((woman) => (
+                        <Card
+                          key={woman.id}
+                          className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-blue-500/30 bg-blue-500/5"
+                          onClick={() => navigate(`/profile/${woman.user_id}`)}
+                        >
+                          <div className="relative mx-auto mb-2">
+                            <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                              <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-500 text-white text-sm">
+                                {woman.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                          </div>
+                          <p className="font-medium text-xs text-foreground truncate">
+                            {woman.full_name || "Anonymous"}
+                          </p>
+                          {woman.age && (
+                            <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                          )}
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            <span className="px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-600 rounded-full">
+                              {woman.primary_language}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">→</span>
+                            <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
+                              {userLanguage}
+                            </span>
+                          </div>
+                          <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="flex-1 gap-1 bg-blue-500 hover:bg-blue-600 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                              }}
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              {t('chat', 'Chat')}
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="p-6 text-center">
+                      <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">{t('noIndianWomenOnline', 'No Indian women online')}</p>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* For Indian language users, show other Indian women with same logic */}
+              {!isNonIndianNLLBUser && indianTranslatedWomen.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border">
+                    <span className="text-sm font-medium text-violet-600">{t('otherLanguages', 'Other Indian Languages')}</span>
+                    <span className="px-2 py-0.5 text-xs bg-violet-500/20 text-violet-600 rounded-full flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      {t('nllbTranslate', 'NLLB-200')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {indianTranslatedWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-violet-500/30 bg-violet-500/5"
+                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-violet-400 to-purple-500 text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-violet-500/20 text-violet-600 rounded-full">
+                            {woman.primary_language}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">↔</span>
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
+                            {userLanguage}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="flex-1 gap-1 bg-violet-500 hover:bg-violet-600 text-xs h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                            }}
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            {t('chat', 'Chat')}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
