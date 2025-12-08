@@ -8,9 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Shuffle, MessageCircle, UserCheck, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isIndianLanguage } from "@/data/nllb200Languages";
 
 interface RandomChatButtonProps {
   userGender: "male" | "female";
@@ -39,6 +41,8 @@ export const RandomChatButton = ({
     fullName: string;
     photoUrl: string | null;
     language: string;
+    isSameLanguage: boolean;
+    requiresTranslation: boolean;
   } | null>(null);
 
   const findRandomPartner = async () => {
@@ -76,12 +80,17 @@ export const RandomChatButton = ({
         if (error) throw error;
 
         if (data.success && data.woman_user_id) {
-          setSearchStatus("Found a match!");
+          const womanLanguage = data.profile?.primary_language || userLanguage;
+          const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
+          
+          setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
           setMatchedUser({
             userId: data.woman_user_id,
             fullName: data.profile?.full_name || "Anonymous",
             photoUrl: data.profile?.photo_url || null,
-            language: data.profile?.primary_language || userLanguage
+            language: womanLanguage,
+            isSameLanguage,
+            requiresTranslation: !isSameLanguage
           });
         } else {
           // Try general matching
@@ -96,12 +105,17 @@ export const RandomChatButton = ({
           if (generalError) throw generalError;
 
           if (generalData.success && generalData.woman_user_id) {
-            setSearchStatus("Found a match!");
+            const womanLanguage = generalData.profile?.primary_language || userLanguage;
+            const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
+            
+            setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
             setMatchedUser({
               userId: generalData.woman_user_id,
               fullName: generalData.profile?.full_name || "Anonymous",
               photoUrl: generalData.profile?.photo_url || null,
-              language: generalData.profile?.primary_language || userLanguage
+              language: womanLanguage,
+              isSameLanguage,
+              requiresTranslation: !isSameLanguage
             });
           } else {
             setSearchStatus("No partners available right now. Please try again later.");
@@ -171,13 +185,16 @@ export const RandomChatButton = ({
         // Pick a random man
         const randomMan = qualifiedMen[Math.floor(Math.random() * qualifiedMen.length)];
         const manLang = languageMap.get(randomMan.user_id) || randomMan.primary_language || "Unknown";
+        const isSameLanguage = manLang.toLowerCase() === userLanguage.toLowerCase();
 
-        setSearchStatus("Found a match!");
+        setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
         setMatchedUser({
           userId: randomMan.user_id,
           fullName: randomMan.full_name || "Anonymous",
           photoUrl: randomMan.photo_url || null,
-          language: manLang
+          language: manLang,
+          isSameLanguage,
+          requiresTranslation: !isSameLanguage
         });
       }
     } catch (error: any) {
@@ -319,9 +336,21 @@ export const RandomChatButton = ({
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold">{matchedUser.fullName}</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Speaks {matchedUser.language}
-                </p>
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    Speaks {matchedUser.language}
+                  </p>
+                  {matchedUser.requiresTranslation ? (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Languages className="h-3 w-3" />
+                      Auto-translate
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-700">
+                      Same language
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-3 justify-center">
                   <Button variant="outline" onClick={cancelSearch}>
                     Cancel
