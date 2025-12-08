@@ -56,6 +56,8 @@ interface ChatInterfaceProps {
   currentUserLanguage: string;
 }
 
+const MAX_PARALLEL_CHATS = 3;
+
 export const ChatInterface = ({ 
   userGender, 
   currentUserId, 
@@ -66,7 +68,7 @@ export const ChatInterface = ({
   const { t } = useTranslation();
   
   const [pendingRequests, setPendingRequests] = useState<ChatRequest[]>([]);
-  const [activePartner, setActivePartner] = useState<ActivePartner | null>(null);
+  const [activePartners, setActivePartners] = useState<ActivePartner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -127,56 +129,64 @@ export const ChatInterface = ({
 
   const loadChatData = async () => {
     try {
-      // Load active chat session
+      // Load all active chat sessions (up to MAX_PARALLEL_CHATS)
       const { data: activeSessions } = await supabase
         .from("active_chat_sessions")
         .select("*")
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .eq("status", "active")
-        .limit(1);
+        .limit(MAX_PARALLEL_CHATS);
 
       if (activeSessions && activeSessions.length > 0) {
-        const session = activeSessions[0];
-        const partnerId = session.man_user_id === currentUserId 
-          ? session.woman_user_id 
-          : session.man_user_id;
+        const partnerIds = activeSessions.map(session => 
+          session.man_user_id === currentUserId ? session.woman_user_id : session.man_user_id
+        );
 
-        // Get partner profile
-        const { data: partnerProfile } = await supabase
+        // Get partner profiles
+        const { data: partnerProfiles } = await supabase
           .from("profiles")
-          .select("full_name, photo_url, primary_language")
-          .eq("user_id", partnerId)
-          .maybeSingle();
+          .select("user_id, full_name, photo_url, primary_language")
+          .in("user_id", partnerIds);
 
-        // Check if blocked
-        const { data: blockData } = await supabase
+        // Check blocked users
+        const { data: blockedUsers } = await supabase
           .from("user_blocks")
-          .select("id")
+          .select("blocked_user_id")
           .eq("blocked_by", currentUserId)
-          .eq("blocked_user_id", partnerId)
-          .maybeSingle();
+          .in("blocked_user_id", partnerIds);
 
-        // Check if friend
-        const { data: friendData } = await supabase
+        // Check friends
+        const { data: friendships } = await supabase
           .from("user_friends")
-          .select("id, status")
+          .select("user_id, friend_id")
           .or(`user_id.eq.${currentUserId},friend_id.eq.${currentUserId}`)
-          .or(`user_id.eq.${partnerId},friend_id.eq.${partnerId}`)
-          .eq("status", "accepted")
-          .maybeSingle();
+          .eq("status", "accepted");
 
-        setActivePartner({
-          id: session.id,
-          chatId: session.chat_id,
-          userId: partnerId,
-          userName: partnerProfile?.full_name || "Anonymous",
-          userPhoto: partnerProfile?.photo_url,
-          userLanguage: partnerProfile?.primary_language || "Unknown",
-          isBlocked: !!blockData,
-          isFriend: !!friendData
+        const profileMap = new Map(partnerProfiles?.map(p => [p.user_id, p]) || []);
+        const blockedSet = new Set(blockedUsers?.map(b => b.blocked_user_id) || []);
+        const friendSet = new Set(
+          friendships?.flatMap(f => [f.user_id, f.friend_id]).filter(id => id !== currentUserId) || []
+        );
+
+        const partners: ActivePartner[] = activeSessions.map(session => {
+          const partnerId = session.man_user_id === currentUserId ? session.woman_user_id : session.man_user_id;
+          const profile = profileMap.get(partnerId);
+          
+          return {
+            id: session.id,
+            chatId: session.chat_id,
+            userId: partnerId,
+            userName: profile?.full_name || "Anonymous",
+            userPhoto: profile?.photo_url,
+            userLanguage: profile?.primary_language || "Unknown",
+            isBlocked: blockedSet.has(partnerId),
+            isFriend: friendSet.has(partnerId)
+          };
         });
+
+        setActivePartners(partners);
       } else {
-        setActivePartner(null);
+        setActivePartners([]);
       }
 
       // For women: load pending chat requests (from matches table with pending status)
@@ -253,6 +263,23 @@ export const ChatInterface = ({
   const handleAcceptChat = async (request: ChatRequest) => {
     setIsLoading(true);
     try {
+      // Check parallel chat limit for women (max 3)
+      const { count: activeChats } = await supabase
+        .from("active_chat_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("woman_user_id", currentUserId)
+        .eq("status", "active");
+
+      if ((activeChats || 0) >= MAX_PARALLEL_CHATS) {
+        toast({
+          title: t('maxChatsReached', 'Max Chats Reached'),
+          description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time. End a chat to accept a new one.'),
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Get chat pricing rate from admin settings
       const { data: pricing } = await supabase
         .from("chat_pricing")
@@ -322,9 +349,7 @@ export const ChatInterface = ({
     }
   };
 
-  const handleStopChat = async () => {
-    if (!activePartner) return;
-    
+  const handleStopChat = async (partner: ActivePartner) => {
     setIsLoading(true);
     try {
       await supabase
@@ -334,14 +359,14 @@ export const ChatInterface = ({
           ended_at: new Date().toISOString(),
           end_reason: "user_ended"
         })
-        .eq("id", activePartner.id);
+        .eq("id", partner.id);
 
       toast({
         title: t('chatEnded', 'Chat Ended'),
         description: t('chatSessionEnded', 'Chat session has ended'),
       });
 
-      setActivePartner(null);
+      setActivePartners(prev => prev.filter(p => p.id !== partner.id));
     } catch (error) {
       console.error("Error stopping chat:", error);
     } finally {
@@ -349,16 +374,14 @@ export const ChatInterface = ({
     }
   };
 
-  const handleBlock = async () => {
-    if (!activePartner) return;
-    
+  const handleBlock = async (partner: ActivePartner) => {
     setIsLoading(true);
     try {
       await supabase
         .from("user_blocks")
         .insert({
           blocked_by: currentUserId,
-          blocked_user_id: activePartner.userId,
+          blocked_user_id: partner.userId,
           block_type: "manual",
           reason: "User blocked"
         });
@@ -377,16 +400,14 @@ export const ChatInterface = ({
     }
   };
 
-  const handleUnblock = async () => {
-    if (!activePartner) return;
-    
+  const handleUnblock = async (partner: ActivePartner) => {
     setIsLoading(true);
     try {
       await supabase
         .from("user_blocks")
         .delete()
         .eq("blocked_by", currentUserId)
-        .eq("blocked_user_id", activePartner.userId);
+        .eq("blocked_user_id", partner.userId);
 
       toast({
         title: t('userUnblocked', 'User Unblocked'),
@@ -401,16 +422,14 @@ export const ChatInterface = ({
     }
   };
 
-  const handleAddFriend = async () => {
-    if (!activePartner) return;
-    
+  const handleAddFriend = async (partner: ActivePartner) => {
     setIsLoading(true);
     try {
       await supabase
         .from("user_friends")
         .insert({
           user_id: currentUserId,
-          friend_id: activePartner.userId,
+          friend_id: partner.userId,
           status: "accepted",
           created_by: currentUserId
         });
@@ -428,16 +447,14 @@ export const ChatInterface = ({
     }
   };
 
-  const handleRemoveFriend = async () => {
-    if (!activePartner) return;
-    
+  const handleRemoveFriend = async (partner: ActivePartner) => {
     setIsLoading(true);
     try {
       await supabase
         .from("user_friends")
         .delete()
         .or(`user_id.eq.${currentUserId},friend_id.eq.${currentUserId}`)
-        .or(`user_id.eq.${activePartner.userId},friend_id.eq.${activePartner.userId}`);
+        .or(`user_id.eq.${partner.userId},friend_id.eq.${partner.userId}`);
 
       toast({
         title: t('friendRemoved', 'Friend Removed'),
@@ -452,6 +469,8 @@ export const ChatInterface = ({
       setConfirmDialog({ open: false, action: "", targetUserId: "", targetUserName: "" });
     }
   };
+
+  const canStartMoreChats = activePartners.length < MAX_PARALLEL_CHATS;
 
   return (
     <div className="space-y-4">
@@ -510,125 +529,132 @@ export const ChatInterface = ({
         </Card>
       )}
 
-      {/* Active Chat Controls */}
-      {activePartner && (
+      {/* Active Chats Controls - Now supports multiple */}
+      {activePartners.length > 0 && (
         <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-primary" />
-              {t('activeChat', 'Active Chat')}
+              {t('activeChats', 'Active Chats')}
+              <Badge variant="secondary" className="ml-2">
+                {activePartners.length}/{MAX_PARALLEL_CHATS}
+              </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 border-2 border-primary/30">
-                  <AvatarImage src={activePartner.userPhoto || undefined} />
-                  <AvatarFallback className="bg-primary/20">
-                    {activePartner.userName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold text-foreground">{activePartner.userName}</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {activePartner.userLanguage}
-                    </Badge>
-                    {activePartner.isFriend && (
-                      <Badge variant="secondary" className="text-xs">
-                        {t('friend', 'Friend')}
-                      </Badge>
-                    )}
-                    {activePartner.isBlocked && (
-                      <Badge variant="destructive" className="text-xs">
-                        {t('blocked', 'Blocked')}
-                      </Badge>
-                    )}
+          <CardContent className="space-y-4">
+            {activePartners.map((partner) => (
+              <div key={partner.id} className="p-3 rounded-lg bg-background/50 border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border-2 border-primary/30">
+                      <AvatarImage src={partner.userPhoto || undefined} />
+                      <AvatarFallback className="bg-primary/20">
+                        {partner.userName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold text-foreground">{partner.userName}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {partner.userLanguage}
+                        </Badge>
+                        {partner.isFriend && (
+                          <Badge variant="secondary" className="text-xs">
+                            {t('friend', 'Friend')}
+                          </Badge>
+                        )}
+                        {partner.isBlocked && (
+                          <Badge variant="destructive" className="text-xs">
+                            {t('blocked', 'Blocked')}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate(`/chat/${partner.userId}`)}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    {t('openChat', 'Open Chat')}
+                  </Button>
+                </div>
+
+                {/* Chat Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleStopChat(partner)}
+                    disabled={isLoading}
+                  >
+                    <StopCircle className="h-4 w-4 mr-1" />
+                    {t('stopChat', 'Stop')}
+                  </Button>
+
+                  {partner.isBlocked ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnblock(partner)}
+                      disabled={isLoading}
+                    >
+                      <Shield className="h-4 w-4 mr-1" />
+                      {t('unblock', 'Unblock')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmDialog({
+                        open: true,
+                        action: "block",
+                        targetUserId: partner.userId,
+                        targetUserName: partner.userName
+                      })}
+                      disabled={isLoading}
+                    >
+                      <Ban className="h-4 w-4 mr-1" />
+                      {t('block', 'Block')}
+                    </Button>
+                  )}
+
+                  {partner.isFriend ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmDialog({
+                        open: true,
+                        action: "unfriend",
+                        targetUserId: partner.userId,
+                        targetUserName: partner.userName
+                      })}
+                      disabled={isLoading}
+                    >
+                      <UserMinus className="h-4 w-4 mr-1" />
+                      {t('unfriend', 'Unfriend')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddFriend(partner)}
+                      disabled={isLoading}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      {t('addFriend', 'Friend')}
+                    </Button>
+                  )}
                 </div>
               </div>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => navigate(`/chat/${activePartner.userId}`)}
-              >
-                <MessageCircle className="h-4 w-4 mr-1" />
-                {t('openChat', 'Open Chat')}
-              </Button>
-            </div>
-
-            {/* Chat Action Buttons */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleStopChat}
-                disabled={isLoading}
-              >
-                <StopCircle className="h-4 w-4 mr-1" />
-                {t('stopChat', 'Stop Chat')}
-              </Button>
-
-              {activePartner.isBlocked ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUnblock}
-                  disabled={isLoading}
-                >
-                  <Shield className="h-4 w-4 mr-1" />
-                  {t('unblock', 'Unblock')}
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setConfirmDialog({
-                    open: true,
-                    action: "block",
-                    targetUserId: activePartner.userId,
-                    targetUserName: activePartner.userName
-                  })}
-                  disabled={isLoading}
-                >
-                  <Ban className="h-4 w-4 mr-1" />
-                  {t('block', 'Block')}
-                </Button>
-              )}
-
-              {activePartner.isFriend ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setConfirmDialog({
-                    open: true,
-                    action: "unfriend",
-                    targetUserId: activePartner.userId,
-                    targetUserName: activePartner.userName
-                  })}
-                  disabled={isLoading}
-                >
-                  <UserMinus className="h-4 w-4 mr-1" />
-                  {t('unfriend', 'Unfriend')}
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddFriend}
-                  disabled={isLoading}
-                >
-                  <UserPlus className="h-4 w-4 mr-1" />
-                  {t('addFriend', 'Friend')}
-                </Button>
-              )}
-            </div>
+            ))}
           </CardContent>
         </Card>
       )}
 
-      {/* No Active Chat - Start Chat (for men) */}
-      {userGender === "male" && !activePartner && (
+      {/* Start More Chats - Show when under limit */}
+      {canStartMoreChats && (
         <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
@@ -637,17 +663,43 @@ export const ChatInterface = ({
                   <Phone className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">{t('startNewChat', 'Start New Chat')}</p>
-                  <p className="text-sm text-muted-foreground">{t('findWomenOnline', 'Find women online to chat with')}</p>
+                  <p className="font-medium text-foreground">
+                    {activePartners.length === 0 
+                      ? t('startNewChat', 'Start New Chat')
+                      : t('addAnotherChat', 'Add Another Chat')
+                    }
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('canHaveUpTo3Chats', `You can have up to ${MAX_PARALLEL_CHATS} chats at once`)}
+                  </p>
                 </div>
               </div>
               <Button
                 variant="gradient"
-                onClick={() => navigate("/online-users")}
+                onClick={() => navigate(userGender === "male" ? "/online-users" : "/match-discovery")}
               >
                 <MessageCircle className="h-4 w-4 mr-1" />
                 {t('findUsers', 'Find Users')}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* At Max Capacity Message */}
+      {!canStartMoreChats && (
+        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/20">
+                <MessageCircle className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">{t('maxChatsReached', 'Max Chats Reached')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('endChatToStartNew', 'End a chat to start a new one')}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -679,7 +731,16 @@ export const ChatInterface = ({
             </Button>
             <Button
               variant="destructive"
-              onClick={confirmDialog.action === "block" ? handleBlock : handleRemoveFriend}
+              onClick={() => {
+                const targetPartner = activePartners.find(p => p.userId === confirmDialog.targetUserId);
+                if (targetPartner) {
+                  if (confirmDialog.action === "block") {
+                    handleBlock(targetPartner);
+                  } else {
+                    handleRemoveFriend(targetPartner);
+                  }
+                }
+              }}
               disabled={isLoading}
             >
               {confirmDialog.action === "block" ? t('block', 'Block') : t('unfriend', 'Unfriend')}

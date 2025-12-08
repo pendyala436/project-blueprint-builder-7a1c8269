@@ -224,10 +224,11 @@ const ChatEarningsDisplay = ({
         </span>
       </div>
 
-      {/* Earning Rate */}
+      {/* Earning Rate - Per Chat */}
       <div className="flex items-center gap-1.5">
         <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
         <span className="font-medium text-emerald-600">₹{earningRate}/min</span>
+        <span className="text-[10px] text-muted-foreground">(this chat)</span>
       </div>
 
       {/* Session Duration */}
@@ -239,14 +240,14 @@ const ChatEarningsDisplay = ({
       {/* This Chat Earnings */}
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-        <span className="text-muted-foreground">Earning:</span>
+        <span className="text-muted-foreground">This chat:</span>
         <span className="font-medium text-emerald-600">₹{currentSessionEarnings.toFixed(2)}</span>
       </div>
 
       {/* Today's Total */}
       <div className="flex items-center gap-1.5 ml-auto">
         <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-        <span className="text-muted-foreground">Today:</span>
+        <span className="text-muted-foreground">All chats today:</span>
         <span className="font-bold text-emerald-600">₹{todayEarnings.toFixed(0)}</span>
       </div>
 
@@ -255,7 +256,7 @@ const ChatEarningsDisplay = ({
         "px-2 py-0.5 rounded-full text-xs font-medium",
         activeChats >= 3 ? "bg-amber-500/20 text-amber-700" : "bg-emerald-500/20 text-emerald-700"
       )}>
-        {activeChats}/3 chats
+        {activeChats}/3 active
       </div>
     </div>
   );

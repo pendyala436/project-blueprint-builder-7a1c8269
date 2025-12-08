@@ -338,10 +338,11 @@ const ChatBillingDisplay = ({
         "flex items-center gap-4 px-4 py-2 text-sm border-b",
         isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
       )}>
-        {/* Rate Display */}
+        {/* Rate Display - Per Chat */}
         <div className="flex items-center gap-1.5">
           <IndianRupee className="h-3.5 w-3.5 text-primary" />
           <span className="font-medium">{ratePerMinute}/min</span>
+          <span className="text-[10px] text-muted-foreground">(this chat)</span>
         </div>
 
         {/* Timer */}
@@ -350,9 +351,9 @@ const ChatBillingDisplay = ({
           <span className="font-mono">{formatTime(elapsedSeconds)}</span>
         </div>
 
-        {/* Estimated Cost */}
+        {/* Estimated Cost - This Chat */}
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">Cost:</span>
+          <span className="text-muted-foreground">This chat:</span>
           <span className="font-medium text-primary">₹{estimatedCost.toFixed(2)}</span>
         </div>
 

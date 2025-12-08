@@ -481,18 +481,35 @@ const WomenDashboardScreen = () => {
     const { data: existingSession } = await supabase
       .from("active_chat_sessions")
       .select("id")
-      .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`)
-      .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
+      .eq("man_user_id", userId)
+      .eq("woman_user_id", currentUserId)
       .eq("status", "active")
       .maybeSingle();
 
     if (existingSession) {
       // Navigate to existing chat
       navigate(`/chat/${userId}`);
-    } else {
-      // Navigate to profile to see more info before accepting
-      navigate(`/profile/${userId}`);
+      return;
     }
+
+    // Check parallel chat limit for women (max 3)
+    const { count: activeChats } = await supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("woman_user_id", currentUserId)
+      .eq("status", "active");
+
+    if ((activeChats || 0) >= MAX_PARALLEL_CHATS) {
+      toast({
+        title: t('maxChatsReached', 'Max Chats Reached'),
+        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time. End a chat to start a new one.'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Navigate to profile to see more info before accepting
+    navigate(`/profile/${userId}`);
   };
 
   const handleViewProfile = (userId: string) => {
