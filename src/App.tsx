@@ -23,6 +23,7 @@ import MatchDiscoveryScreen from "./pages/MatchDiscoveryScreen";
 import ProfileDetailScreen from "./pages/ProfileDetailScreen";
 import ChatScreen from "./pages/ChatScreen";
 import WalletScreen from "./pages/WalletScreen";
+import TransactionHistoryScreen from "./pages/TransactionHistoryScreen";
 import SettingsScreen from "./pages/SettingsScreen";
 import ShiftManagementScreen from "./pages/ShiftManagementScreen";
 import WomenDashboardScreen from "./pages/WomenDashboardScreen";
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
             <Route path="/chat/:oderId" element={<ChatScreen />} />
             <Route path="/wallet" element={<WalletScreen />} />
+            <Route path="/transaction-history" element={<TransactionHistoryScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
             <Route path="/shift-management" element={<ShiftManagementScreen />} />
             <Route path="/women-dashboard" element={<WomenDashboardScreen />} />
