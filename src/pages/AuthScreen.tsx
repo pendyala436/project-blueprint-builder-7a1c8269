@@ -71,6 +71,20 @@ const AuthScreen = () => {
 
       // Check if user has completed the tutorial
       if (authData.user) {
+        // First check if user is an admin
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", authData.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        if (adminRole) {
+          // Admin users go to admin dashboard only
+          navigate("/admin");
+          return;
+        }
+
         const { data: tutorialProgress } = await supabase
           .from("tutorial_progress")
           .select("completed")
