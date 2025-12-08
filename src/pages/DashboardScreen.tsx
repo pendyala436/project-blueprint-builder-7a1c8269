@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
+import { ChatInterface } from "@/components/ChatInterface";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -165,6 +166,7 @@ const DashboardScreen = () => {
   const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
@@ -273,6 +275,8 @@ const DashboardScreen = () => {
         navigate("/");
         return;
       }
+
+      setCurrentUserId(user.id);
 
       // Fetch user profile including country and gender
       const { data: profile } = await supabase
@@ -716,6 +720,17 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
+
+        {/* Chat Interface - Start/Stop Chat Controls */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.27s" }}>
+            <ChatInterface
+              userGender="male"
+              currentUserId={currentUserId}
+              currentUserLanguage={userLanguage}
+            />
+          </div>
+        )}
 
         {/* Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
