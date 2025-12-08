@@ -37,6 +37,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { ChatInterface } from "@/components/ChatInterface";
+import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -975,6 +976,14 @@ const WomenDashboardScreen = () => {
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
       />
+
+      {/* Parallel Mini Chat Windows */}
+      {currentUserId && (
+        <ParallelChatsContainer
+          currentUserId={currentUserId}
+          userGender="female"
+        />
+      )}
     </div>
   );
 };

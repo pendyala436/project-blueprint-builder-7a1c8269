@@ -46,6 +46,7 @@ const ChatBillingDisplay = ({
   const [isLowBalance, setIsLowBalance] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [billingStarted, setBillingStarted] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -282,6 +283,15 @@ const ChatBillingDisplay = ({
 
         if (error) throw error;
 
+        // Check if billing has started
+        if (data.billing_started === false) {
+          // No billing yet - waiting for first message
+          setBillingStarted(false);
+          return;
+        }
+
+        setBillingStarted(true);
+
         if (data.end_chat || data.remaining_balance <= 0) {
           // Chat ended due to insufficient balance - AUTO DISCONNECT
           await endChatDueToBalance(chatId);
@@ -336,36 +346,56 @@ const ChatBillingDisplay = ({
     <>
       <div className={cn(
         "flex items-center gap-4 px-4 py-2 text-sm border-b",
-        isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
+        !billingStarted ? "bg-muted/50 border-muted" : isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
       )}>
-        {/* Rate Display - Per Chat */}
-        <div className="flex items-center gap-1.5">
-          <IndianRupee className="h-3.5 w-3.5 text-primary" />
-          <span className="font-medium">{ratePerMinute}/min</span>
-          <span className="text-[10px] text-muted-foreground">(this chat)</span>
-        </div>
+        {!billingStarted ? (
+          <>
+            {/* Not billing yet */}
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="text-xs">Billing starts after first message</span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium">{ratePerMinute}/min</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5" />
+              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Rate Display - Per Chat */}
+            <div className="flex items-center gap-1.5">
+              <IndianRupee className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium">{ratePerMinute}/min</span>
+              <span className="text-[10px] text-muted-foreground">(this chat)</span>
+            </div>
 
-        {/* Timer */}
-        <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-mono">{formatTime(elapsedSeconds)}</span>
-        </div>
+            {/* Timer */}
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-mono">{formatTime(elapsedSeconds)}</span>
+            </div>
 
-        {/* Estimated Cost - This Chat */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">This chat:</span>
-          <span className="font-medium text-primary">₹{estimatedCost.toFixed(2)}</span>
-        </div>
+            {/* Estimated Cost - This Chat */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">This chat:</span>
+              <span className="font-medium text-primary">₹{estimatedCost.toFixed(2)}</span>
+            </div>
 
-        {/* Balance */}
-        <div className={cn(
-          "flex items-center gap-1.5 ml-auto",
-          isLowBalance && "text-destructive"
-        )}>
-          {isLowBalance && <AlertTriangle className="h-3.5 w-3.5" />}
-          <Wallet className="h-3.5 w-3.5" />
-          <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
-        </div>
+            {/* Balance */}
+            <div className={cn(
+              "flex items-center gap-1.5 ml-auto",
+              isLowBalance && "text-destructive"
+            )}>
+              {isLowBalance && <AlertTriangle className="h-3.5 w-3.5" />}
+              <Wallet className="h-3.5 w-3.5" />
+              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Recharge Dialog */}

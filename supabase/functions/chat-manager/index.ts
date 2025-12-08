@@ -982,6 +982,30 @@ serve(async (req) => {
           );
         }
 
+        // Check if billing should start - only after first message is sent
+        const { count: messageCount } = await supabase
+          .from("chat_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("chat_id", chat_id);
+
+        // No messages yet = no billing
+        if (!messageCount || messageCount === 0) {
+          // Just update activity timestamp, no billing
+          await supabase
+            .from("active_chat_sessions")
+            .update({ last_activity_at: new Date().toISOString() })
+            .eq("chat_id", chat_id);
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              billing_started: false,
+              message: "No messages yet, billing not started"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Get current pricing for women's earning rate
         const { data: pricing } = await supabase
           .from("chat_pricing")
@@ -1063,6 +1087,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: true, 
+            billing_started: true,
             minutes_elapsed: minutesElapsed,
             men_charged: menCharge,
             women_earned: womenEarnings,
