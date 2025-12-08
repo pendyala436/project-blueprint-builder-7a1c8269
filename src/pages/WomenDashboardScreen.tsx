@@ -561,9 +561,11 @@ const WomenDashboardScreen = () => {
             <Button 
               size="sm" 
               onClick={(e) => { e.stopPropagation(); handleChatWithUser(user.userId); }}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-green-500 hover:bg-green-600 text-white"
+              title="Accept chat from this user"
             >
-              <MessageCircle className="h-4 w-4" />
+              <MessageCircle className="h-4 w-4 mr-1" />
+              Accept
             </Button>
           </div>
         </div>
