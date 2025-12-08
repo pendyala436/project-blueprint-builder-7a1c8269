@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,13 +13,16 @@ import {
   Send,
   X,
   Maximize2,
-  Circle,
   Clock,
   IndianRupee,
   Loader2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Pause,
+  Play
 } from "lucide-react";
+
+const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 
 interface Message {
   id: string;
@@ -48,7 +51,6 @@ const MiniChatWindow = ({
   partnerId,
   partnerName,
   partnerPhoto,
-  partnerLanguage,
   isPartnerOnline,
   currentUserId,
   userGender,
@@ -64,18 +66,23 @@ const MiniChatWindow = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
+  const [billingPaused, setBillingPaused] = useState(false);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const inactivityRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load messages
+  // Load messages and subscribe
   useEffect(() => {
     loadMessages();
-    subscribeToMessages();
+    const unsubscribe = subscribeToMessages();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      unsubscribe?.();
     };
   }, [chatId]);
 
@@ -86,14 +93,45 @@ const MiniChatWindow = ({
     }
   }, [messages, isMinimized]);
 
-  // Check if billing has started (has messages from both users)
+  // Check if billing has started (user sent at least one message)
   useEffect(() => {
     const hasSentMessage = messages.some(m => m.senderId === currentUserId);
     if (hasSentMessage && !billingStarted) {
       setBillingStarted(true);
+      setLastActivityTime(Date.now());
       startBilling();
     }
   }, [messages, currentUserId, billingStarted]);
+
+  // Inactivity check - pause billing after 3 mins of no typing
+  useEffect(() => {
+    if (!billingStarted || billingPaused) return;
+
+    if (inactivityRef.current) {
+      clearTimeout(inactivityRef.current);
+    }
+
+    inactivityRef.current = setTimeout(() => {
+      setBillingPaused(true);
+      // Stop the timer and heartbeat
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      toast({
+        title: "Billing Paused",
+        description: "No activity for 3 minutes. Type to resume.",
+      });
+    }, INACTIVITY_TIMEOUT_MS);
+
+    return () => {
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+    };
+  }, [lastActivityTime, billingStarted, billingPaused]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -136,6 +174,14 @@ const MiniChatWindow = ({
             }];
           });
 
+          // Partner sent a message - update activity and resume billing if paused
+          if (newMsg.sender_id !== currentUserId) {
+            setLastActivityTime(Date.now());
+            if (billingPaused && billingStarted) {
+              resumeBilling();
+            }
+          }
+
           // Update unread count if minimized
           if (isMinimized && newMsg.sender_id !== currentUserId) {
             setUnreadCount(prev => prev + 1);
@@ -150,13 +196,14 @@ const MiniChatWindow = ({
   };
 
   const startBilling = () => {
-    // Start timer
+    // Start elapsed timer
     timerRef.current = setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
     }, 1000);
 
     // Start heartbeat for billing (every 60 seconds)
     heartbeatRef.current = setInterval(async () => {
+      if (billingPaused) return;
       try {
         await supabase.functions.invoke("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId }
@@ -167,12 +214,58 @@ const MiniChatWindow = ({
     }, 60000);
   };
 
+  const resumeBilling = () => {
+    setBillingPaused(false);
+    
+    // Restart timer if not already running
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    }
+
+    // Restart heartbeat if not already running
+    if (!heartbeatRef.current) {
+      heartbeatRef.current = setInterval(async () => {
+        if (billingPaused) return;
+        try {
+          await supabase.functions.invoke("chat-manager", {
+            body: { action: "heartbeat", chat_id: chatId }
+          });
+        } catch (error) {
+          console.error("Heartbeat error:", error);
+        }
+      }, 60000);
+    }
+
+    toast({
+      title: "Billing Resumed",
+      description: "Chat activity detected.",
+    });
+  };
+
+  const handleTyping = () => {
+    const now = Date.now();
+    setLastActivityTime(now);
+    
+    // Resume billing if paused
+    if (billingPaused && billingStarted) {
+      resumeBilling();
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
     const messageText = newMessage.trim();
     setNewMessage("");
     setIsSending(true);
+    setLastActivityTime(Date.now());
+
+    // Resume billing if paused
+    if (billingPaused && billingStarted) {
+      resumeBilling();
+    }
 
     try {
       const { error } = await supabase
@@ -217,7 +310,6 @@ const MiniChatWindow = ({
   };
 
   const handleClose = async () => {
-    // End the chat session
     try {
       await supabase
         .from("active_chat_sessions")
@@ -244,8 +336,8 @@ const MiniChatWindow = ({
   return (
     <Card className={cn(
       "flex flex-col shadow-xl border-2 transition-all duration-200",
-      isMinimized ? "w-64 h-14" : "w-80 h-96",
-      isPartnerOnline ? "border-primary/30" : "border-muted"
+      isMinimized ? "w-64 h-14" : "w-72 h-80",
+      billingPaused ? "border-warning/50" : isPartnerOnline ? "border-primary/30" : "border-muted"
     )}>
       {/* Header */}
       <div 
@@ -254,70 +346,77 @@ const MiniChatWindow = ({
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="relative">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-7 w-7">
               <AvatarImage src={partnerPhoto || undefined} />
               <AvatarFallback className="text-xs bg-primary/20">
                 {partnerName.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className={cn(
-              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-background",
+              "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background",
               isPartnerOnline ? "bg-green-500" : "bg-muted-foreground"
             )} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{partnerName}</p>
-            {billingStarted && userGender === "male" && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Clock className="h-2.5 w-2.5" />
-                <span>{formatTime(elapsedSeconds)}</span>
-                <span>•</span>
-                <IndianRupee className="h-2.5 w-2.5" />
-                <span>₹{estimatedCost.toFixed(1)}</span>
-              </div>
-            )}
-            {billingStarted && userGender === "female" && (
-              <div className="flex items-center gap-1 text-[10px] text-emerald-600">
-                <Clock className="h-2.5 w-2.5" />
-                <span>{formatTime(elapsedSeconds)}</span>
+            <p className="text-xs font-medium truncate">{partnerName}</p>
+            {billingStarted && (
+              <div className="flex items-center gap-1 text-[10px]">
+                {billingPaused ? (
+                  <span className="text-warning flex items-center gap-0.5">
+                    <Pause className="h-2 w-2" />
+                    Paused
+                  </span>
+                ) : (
+                  <>
+                    <Clock className="h-2 w-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">{formatTime(elapsedSeconds)}</span>
+                  </>
+                )}
+                {userGender === "male" && !billingPaused && (
+                  <>
+                    <span className="text-muted-foreground">•</span>
+                    <IndianRupee className="h-2 w-2 text-muted-foreground" />
+                    <span className="text-muted-foreground">₹{estimatedCost.toFixed(1)}</span>
+                  </>
+                )}
               </div>
             )}
             {!billingStarted && (
               <p className="text-[10px] text-muted-foreground">
-                Type to start billing
+                Type to start
               </p>
             )}
           </div>
           {unreadCount > 0 && isMinimized && (
-            <Badge className="h-5 min-w-[20px] text-[10px] px-1.5 bg-primary">
+            <Badge className="h-4 min-w-[16px] text-[9px] px-1 bg-primary">
               {unreadCount}
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={(e) => { e.stopPropagation(); openFullChat(); }}
           >
-            <Maximize2 className="h-3 w-3" />
+            <Maximize2 className="h-2.5 w-2.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
           >
-            {isMinimized ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {isMinimized ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-destructive/20 hover:text-destructive"
+            className="h-5 w-5 hover:bg-destructive/20 hover:text-destructive"
             onClick={(e) => { e.stopPropagation(); handleClose(); }}
           >
-            <X className="h-3 w-3" />
+            <X className="h-2.5 w-2.5" />
           </Button>
         </div>
       </div>
@@ -325,11 +424,17 @@ const MiniChatWindow = ({
       {/* Messages area (hidden when minimized) */}
       {!isMinimized && (
         <>
+          {billingPaused && (
+            <div className="px-2 py-1 bg-warning/10 text-warning text-[10px] text-center flex items-center justify-center gap-1">
+              <Pause className="h-2.5 w-2.5" />
+              Billing paused - Type to resume
+            </div>
+          )}
           <ScrollArea className="flex-1 p-2">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {messages.length === 0 && (
-                <p className="text-center text-xs text-muted-foreground py-4">
-                  Say hi to start chatting!
+                <p className="text-center text-[10px] text-muted-foreground py-4">
+                  Say hi to start!
                 </p>
               )}
               {messages.map((msg) => (
@@ -342,7 +447,7 @@ const MiniChatWindow = ({
                 >
                   <div
                     className={cn(
-                      "max-w-[80%] px-3 py-1.5 rounded-2xl text-xs",
+                      "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
                       msg.senderId === currentUserId
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-muted rounded-bl-sm"
@@ -357,19 +462,22 @@ const MiniChatWindow = ({
           </ScrollArea>
 
           {/* Input area */}
-          <div className="p-2 border-t">
+          <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
               <Input
-                placeholder="Type a message..."
+                placeholder="Type..."
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
                 onKeyDown={handleKeyPress}
-                className="h-8 text-xs"
+                className="h-7 text-[11px]"
                 disabled={isSending}
               />
               <Button
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7"
                 onClick={sendMessage}
                 disabled={!newMessage.trim() || isSending}
               >
