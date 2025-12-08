@@ -2304,6 +2304,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_user: { Args: { user_email: string }; Returns: boolean }
       process_chat_billing: {
         Args: { p_minutes: number; p_session_id: string }
         Returns: Json
@@ -2318,6 +2319,7 @@ export type Database = {
         }
         Returns: Json
       }
+      should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

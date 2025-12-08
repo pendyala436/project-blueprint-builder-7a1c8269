@@ -9,11 +9,17 @@
  * - Consistency: Database constraints are always maintained
  * - Isolation: Row-level locking prevents concurrent modification conflicts
  * - Durability: Committed transactions persist even after system failure
+ * 
+ * SUPER USERS:
+ * - Super users (email pattern: male/female/admin 1-15 @meow-meow.com) bypass balance requirements
+ * - Debit transactions return success without actually deducting
+ * - Database function also checks for super user status
  */
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSuperUser } from "@/hooks/useSuperUser";
 
 // Transaction result interface
 interface TransactionResult {
@@ -22,6 +28,7 @@ interface TransactionResult {
   previousBalance?: number;
   newBalance?: number;
   error?: string;
+  superUserBypass?: boolean;
 }
 
 // Chat billing result interface
@@ -31,15 +38,18 @@ interface BillingResult {
   earned?: number;
   sessionEnded?: boolean;
   error?: string;
+  superUser?: boolean;
 }
 
 export const useAtomicTransaction = () => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { shouldBypassBalance } = useSuperUser();
 
   /**
    * Process a wallet transaction atomically
    * Uses database function for ACID compliance
+   * Super users bypass debit transactions
    * 
    * @param userId - User's UUID
    * @param amount - Transaction amount
@@ -57,6 +67,20 @@ export const useAtomicTransaction = () => {
     setIsProcessing(true);
     
     try {
+      // Check if current user is a super user for debit bypass
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (type === "debit" && user?.email && shouldBypassBalance(user.email)) {
+        // Super users bypass debit transactions
+        setIsProcessing(false);
+        return {
+          success: true,
+          superUserBypass: true,
+          previousBalance: 0,
+          newBalance: 0,
+        };
+      }
+
       // Call the atomic database function
       const { data, error } = await supabase.rpc("process_wallet_transaction", {
         p_user_id: userId,
@@ -107,7 +131,7 @@ export const useAtomicTransaction = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast]);
+  }, [toast, shouldBypassBalance]);
 
   /**
    * Process chat billing atomically
@@ -147,6 +171,7 @@ export const useAtomicTransaction = () => {
         success: true,
         charged: result.charged,
         earned: result.earned,
+        superUser: result.super_user || false,
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Billing failed";
