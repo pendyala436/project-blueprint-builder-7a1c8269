@@ -207,10 +207,12 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       return normalizedCurrent !== normalizedOriginal;
     });
     
-    // Check language change
-    const languageChanged = 
-      (userLanguage?.language_code || null) !== (originalLanguage?.language_code || null) ||
-      (userLanguage?.language_name || null) !== (originalLanguage?.language_name || null);
+    // Check language change - explicit null checks
+    const currentLangCode = userLanguage?.language_code ?? '';
+    const originalLangCode = originalLanguage?.language_code ?? '';
+    const languageChanged = currentLangCode !== originalLangCode;
+    
+    console.log('hasChanges check:', { profileChanged, languageChanged, currentLangCode, originalLangCode, userLanguage, originalLanguage });
     
     return profileChanged || languageChanged;
   }, [profile, originalProfile, userLanguage, originalLanguage]);
@@ -632,6 +634,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               key={lang.code}
                               value={lang.name}
                               onSelect={() => {
+                                console.log('Selected language:', lang);
                                 setUserLanguage({
                                   language_name: lang.name,
                                   language_code: lang.code
@@ -639,6 +642,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                                 setLanguageOpen(false);
                                 setLanguageSearch("");
                               }}
+                              className="cursor-pointer"
                             >
                               <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1">{lang.name}</span>
@@ -657,6 +661,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               key={lang.code}
                               value={lang.name}
                               onSelect={() => {
+                                console.log('Selected language:', lang);
                                 setUserLanguage({
                                   language_name: lang.name,
                                   language_code: lang.code
@@ -664,6 +669,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                                 setLanguageOpen(false);
                                 setLanguageSearch("");
                               }}
+                              className="cursor-pointer"
                             >
                               <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1">{lang.name}</span>
