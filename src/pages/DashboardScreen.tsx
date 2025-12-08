@@ -45,7 +45,6 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
-import { ChatInterface } from "@/components/ChatInterface";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -1148,16 +1147,6 @@ const DashboardScreen = () => {
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
-        {/* Chat Interface - Start/Stop Chat Controls */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.27s" }}>
-            <ChatInterface
-              userGender="male"
-              currentUserId={currentUserId}
-              currentUserLanguage={userLanguage}
-            />
-          </div>
-        )}
 
         {/* Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
