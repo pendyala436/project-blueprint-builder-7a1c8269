@@ -28,11 +28,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone, Camera } from "lucide-react";
+import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone, Camera, Languages, Globe, Check, ChevronsUpDown } from "lucide-react";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
+import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 // ==================== Type Definitions ====================
 
 /**
@@ -53,6 +58,15 @@ interface ProfileData {
   marital_status: string | null;
   religion: string | null;
   interests: string[] | null;
+  primary_language: string | null;
+}
+
+/**
+ * User language data for matching
+ */
+interface UserLanguage {
+  language_name: string;
+  language_code: string;
 }
 
 /**
@@ -138,7 +152,13 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
     marital_status: null,
     religion: null,
     interests: null,
+    primary_language: null,
   });
+  
+  // User's selected language for matching
+  const [userLanguage, setUserLanguage] = useState<UserLanguage | null>(null);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [languageSearch, setLanguageSearch] = useState("");
   
   // User email from auth (protected field)
   const [userEmail, setUserEmail] = useState<string>("");
@@ -204,6 +224,20 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
 
       if (error) throw error;
 
+      // Fetch user's language for matching
+      const { data: languageData } = await supabase
+        .from("user_languages")
+        .select("language_name, language_code")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (languageData && languageData.length > 0) {
+        setUserLanguage({
+          language_name: languageData[0].language_name,
+          language_code: languageData[0].language_code
+        });
+      }
+
       // Update state with fetched data
       if (data) {
         setProfile({
@@ -221,6 +255,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
           marital_status: data.marital_status,
           religion: data.religion,
           interests: data.interests,
+          primary_language: data.primary_language,
         });
       }
     } catch (error) {
@@ -265,11 +300,30 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
           marital_status: profile.marital_status,
           religion: profile.religion,
           interests: profile.interests,
+          primary_language: userLanguage?.language_name || profile.primary_language,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
 
       if (error) throw error;
+
+      // Update user_languages table for matching
+      if (userLanguage) {
+        // Delete existing language entries for this user
+        await supabase
+          .from("user_languages")
+          .delete()
+          .eq("user_id", user.id);
+
+        // Insert new language
+        await supabase
+          .from("user_languages")
+          .insert({
+            user_id: user.id,
+            language_name: userLanguage.language_name,
+            language_code: userLanguage.language_code
+          });
+      }
 
       toast({
         title: "Profile Updated",
@@ -467,6 +521,111 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* ==================== Language Selection (for Matching) ==================== */}
+            <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Languages className="w-4 h-4 text-primary" />
+                My Language (for Chat Matching)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 200+ languages.
+              </p>
+              
+              <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={languageOpen}
+                    className="w-full justify-between bg-background"
+                  >
+                    {userLanguage ? (
+                      <span className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-primary" />
+                        {userLanguage.language_name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Select your language...</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
+                  <Command className="bg-popover">
+                    <CommandInput 
+                      placeholder="Search language..." 
+                      value={languageSearch}
+                      onValueChange={setLanguageSearch}
+                    />
+                    <CommandList className="max-h-60">
+                      <CommandEmpty>No language found.</CommandEmpty>
+                      
+                      {/* Indian Languages */}
+                      <CommandGroup heading="🇮🇳 Indian Languages">
+                        {INDIAN_NLLB200_LANGUAGES
+                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
+                          .map((lang) => (
+                            <CommandItem
+                              key={lang.code}
+                              value={lang.name}
+                              onSelect={() => {
+                                setUserLanguage({
+                                  language_name: lang.name,
+                                  language_code: lang.code
+                                });
+                                setLanguageOpen(false);
+                                setLanguageSearch("");
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
+                              <span className="flex-1">{lang.name}</span>
+                              <span className="text-xs text-muted-foreground">{lang.script}</span>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+
+                      {/* International Languages */}
+                      <CommandGroup heading="🌍 International Languages">
+                        {NON_INDIAN_NLLB200_LANGUAGES
+                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
+                          .slice(0, 30)
+                          .map((lang) => (
+                            <CommandItem
+                              key={lang.code}
+                              value={lang.name}
+                              onSelect={() => {
+                                setUserLanguage({
+                                  language_name: lang.name,
+                                  language_code: lang.code
+                                });
+                                setLanguageOpen(false);
+                                setLanguageSearch("");
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
+                              <span className="flex-1">{lang.name}</span>
+                              <span className="text-xs text-muted-foreground">{lang.script}</span>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {userLanguage && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <Globe className="w-3 h-3 mr-1" />
+                    Auto-translation enabled
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Connect with users in any language
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Occupation */}
