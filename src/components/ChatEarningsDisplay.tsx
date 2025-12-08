@@ -132,7 +132,7 @@ const ChatEarningsDisplay = ({
       const timeSinceActivity = Date.now() - lastActivityTime;
       
       if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-        console.log("Session ended due to inactivity (woman)");
+        // Session ended due to inactivity (woman)
         
         try {
           await supabase.functions.invoke("chat-manager", {

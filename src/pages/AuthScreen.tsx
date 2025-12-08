@@ -9,7 +9,6 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AuthLanguageSelector } from "@/components/AuthLanguageSelector";
 import { useI18n } from "@/hooks/useI18n";
 
 const AuthScreen = () => {

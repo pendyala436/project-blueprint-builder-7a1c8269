@@ -293,7 +293,7 @@ const MatchingScreen = () => {
       });
 
       if (error || !data?.success) {
-        console.log("Backend matching failed, falling back to local matching");
+        // Backend matching failed, falling back to local matching
         // Fallback to local matching if backend fails
         const availableWomen = matchableWomen.filter(w => 
           !w.isBusy && 
