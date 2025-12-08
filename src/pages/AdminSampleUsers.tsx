@@ -194,24 +194,27 @@ export default function AdminSampleUsers() {
     return country?.flag || "🌍";
   };
 
-  // Seed sample auth users (male1-15, female1-15, admin1-15)
-  const seedAuthUsers = async () => {
+  // Seed super auth users (male1-15, female1-15, admin1-15)
+  const seedSuperUsers = async () => {
     setSeeding(true);
     try {
-      const { data, error } = await supabase.functions.invoke("seed-sample-users");
+      const { data, error } = await supabase.functions.invoke("seed-super-users");
 
       if (error) throw error;
 
       if (data.success) {
+        const femaleCount = data.results?.females?.length || 0;
+        const maleCount = data.results?.males?.length || 0;
+        const adminCount = data.results?.admins?.length || 0;
         toast.success(
-          `Created ${data.summary?.created || data.results?.created || 0} users`
+          `Super users seeded: ${femaleCount} females, ${maleCount} males, ${adminCount} admins`
         );
         await fetchSampleUsers();
       } else {
         throw new Error(data.error || "Seeding failed");
       }
     } catch (error: any) {
-      toast.error("Failed to seed users: " + error.message);
+      toast.error("Failed to seed super users: " + error.message);
     } finally {
       setSeeding(false);
     }
@@ -299,50 +302,48 @@ export default function AdminSampleUsers() {
           </div>
         </div>
 
-        {/* Seed Auth Users Card */}
+        {/* Seed Super Users Card */}
         <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <UserPlus className="h-5 w-5 text-primary" />
-              Create Test Accounts
+              <Shield className="h-5 w-5 text-primary" />
+              Create Super Users (Always in System)
             </CardTitle>
             <CardDescription>
-              Creates 45 test users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
+              Creates 45 super users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
               <br />
-              Each user gets ₹10,000 wallet balance (no recharge required for chatting)
+              <strong>Unlimited wallet balance (₹999,999,999)</strong> - No recharge ever needed!
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4 items-center">
-              <Button onClick={seedAuthUsers} disabled={seeding} className="gap-2">
+              <Button onClick={seedSuperUsers} disabled={seeding} className="gap-2">
                 {seeding ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
-                    Creating Users...
+                    Creating Super Users...
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4" />
-                    Create Test Accounts
+                    <Shield className="h-4 w-4" />
+                    Create Super Users
                   </>
                 )}
               </Button>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-blue-500" /> male1-15
+                  <User className="h-3 w-3 text-blue-500" /> male1-15@meow-meow.com
                 </Badge>
                 <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-pink-500" /> female1-15
+                  <User className="h-3 w-3 text-pink-500" /> female1-15@meow-meow.com
                 </Badge>
                 <Badge variant="outline" className="gap-1">
-                  <Shield className="h-3 w-3 text-amber-500" /> admin1-15
+                  <Shield className="h-3 w-3 text-amber-500" /> admin1-15@meow-meow.com
                 </Badge>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Email format: <code className="bg-muted px-1 rounded">male1@meow-meow.com</code>, 
-              <code className="bg-muted px-1 rounded ml-1">female5@meow-meow.com</code>, 
-              <code className="bg-muted px-1 rounded ml-1">admin1@meow-meow.com</code>
+              <strong>Features:</strong> Unlimited balance, pre-approved, verified, can chat freely. Admins get full admin access.
             </p>
           </CardContent>
         </Card>
