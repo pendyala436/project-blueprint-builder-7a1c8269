@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import enResources from './locales/en.json';
 
 // Comprehensive list of world languages with native names and text direction
 // This supports 100+ languages covering all major world languages
@@ -83,7 +84,7 @@ export const supportedLocales = {
   ky: { name: 'Kyrgyz', nativeName: 'Кыргызча', dir: 'ltr' },
   tg: { name: 'Tajik', nativeName: 'Тоҷикӣ', dir: 'ltr' },
   tk: { name: 'Turkmen', nativeName: 'Türkmen', dir: 'ltr' },
-  hy: { name: 'Armenian', nativeName: 'Հայերdelays', dir: 'ltr' },
+  hy: { name: 'Armenian', nativeName: 'Հայdelays', dir: 'ltr' },
   ka: { name: 'Georgian', nativeName: 'ქართული', dir: 'ltr' },
   mn: { name: 'Mongolian', nativeName: 'Монгол', dir: 'ltr' },
 
@@ -146,20 +147,25 @@ const loadLocaleResources = async (locale: string): Promise<LocaleResources> => 
     // Dynamic import for code splitting - each locale is a separate chunk
     const resources = await import(`./locales/${locale}.json`);
     return resources.default;
-  } catch (error) {
-    console.warn(`Failed to load locale ${locale}, falling back to English`);
+  } catch {
+    // Fallback to English if locale fails to load
     const fallback = await import('./locales/en.json');
     return fallback.default;
   }
 };
 
-// Initialize i18next
+// Initialize i18next with resources bundled
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     fallbackLng: 'en',
     supportedLngs: Object.keys(supportedLocales),
+    
+    // Pre-load English resources to avoid "No backend" warning
+    resources: {
+      en: { common: enResources }
+    },
     
     // Detection options
     detection: {
@@ -169,7 +175,7 @@ i18n
     },
     
     // Namespace configuration
-    ns: ['common', 'auth', 'chat', 'settings', 'admin'],
+    ns: ['common'],
     defaultNS: 'common',
     
     // Interpolation settings
@@ -179,14 +185,17 @@ i18n
     
     // React-specific settings
     react: {
-      useSuspense: true,
+      useSuspense: false, // Disable suspense to prevent hydration issues
     },
     
-    // Load resources lazily
+    // Allow partial bundles for lazy loading
     partialBundledLanguages: true,
     
-    // Debug in development
-    debug: import.meta.env.DEV,
+    // Return null for missing keys to use fallback
+    returnNull: false,
+    
+    // Debug only in development
+    debug: false,
   });
 
 // Function to dynamically load and add locale resources
@@ -196,8 +205,5 @@ export const loadLocale = async (locale: string): Promise<void> => {
     i18n.addResourceBundle(locale, 'common', resources, true, true);
   }
 };
-
-// Preload English as default
-loadLocale('en');
 
 export default i18n;

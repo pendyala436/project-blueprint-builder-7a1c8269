@@ -240,8 +240,8 @@ const WomenDashboardScreen = () => {
         fetchTodayEarnings(user.id)
       ]);
 
-    } catch (error) {
-      console.error("Error loading dashboard:", error);
+    } catch {
+      // Error loading dashboard - silently handled
     } finally {
       setIsLoading(false);
     }
@@ -397,8 +397,8 @@ const WomenDashboardScreen = () => {
         nonRechargedMen: nonRecharged.length
       }));
 
-    } catch (error) {
-      console.error("Error fetching online men:", error);
+    } catch {
+      // Error fetching online men - silently handled
     }
   };
 
@@ -463,8 +463,8 @@ const WomenDashboardScreen = () => {
       }
 
       setIsOnline(online);
-    } catch (error) {
-      console.error("Error updating status:", error);
+    } catch {
+      // Error updating status - silently handled
     }
   };
 
