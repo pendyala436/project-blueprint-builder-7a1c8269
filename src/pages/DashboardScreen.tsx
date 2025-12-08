@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -191,6 +192,7 @@ const DashboardScreen = () => {
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
   const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
+  const [activeChatCount, setActiveChatCount] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
@@ -255,6 +257,7 @@ const DashboardScreen = () => {
   useEffect(() => {
     loadDashboardData();
     updateUserOnlineStatus(true);
+    loadActiveChatCount();
 
     // Cleanup: set offline when leaving
     return () => {
@@ -262,10 +265,10 @@ const DashboardScreen = () => {
     };
   }, []);
 
-  // Real-time subscription for online users
+  // Real-time subscription for online users and chat sessions
   useEffect(() => {
     const channel = supabase
-      .channel('online-users')
+      .channel('dashboard-updates')
       .on(
         'postgres_changes',
         {
@@ -277,12 +280,50 @@ const DashboardScreen = () => {
           fetchOnlineUsersCount();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_chat_sessions'
+        },
+        () => {
+          loadActiveChatCount();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUserId]);
+
+  const loadActiveChatCount = async () => {
+    if (!currentUserId) return;
+    
+    const { count } = await supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("man_user_id", currentUserId)
+      .eq("status", "active");
+    
+    setActiveChatCount(count || 0);
+  };
+
+  const getStatusText = () => {
+    if (activeChatCount === 0) return "Free";
+    if (activeChatCount >= 3) return "Busy(3)";
+    return `Busy(${activeChatCount})`;
+  };
+
+  const getStatusColor = () => {
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
+  };
+
+  const MAX_PARALLEL_CHATS = 3;
+  const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async () => {
     try {
@@ -797,11 +838,16 @@ const DashboardScreen = () => {
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
-                <span className="text-sm text-muted-foreground">
-                  {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                </span>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
+                  <span className="text-sm text-muted-foreground">
+                    {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
+                  </span>
+                </div>
+                <Badge className={cn("text-xs text-white", getStatusColor())}>
+                  {getStatusText()}
+                </Badge>
               </div>
               <h1 className="text-3xl font-bold text-foreground">
                 {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋

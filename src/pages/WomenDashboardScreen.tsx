@@ -85,6 +85,7 @@ const WomenDashboardScreen = () => {
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activeChatCount, setActiveChatCount] = useState(0);
   const [stats, setStats] = useState<DashboardStats>({
     totalOnlineMen: 0,
     rechargedMen: 0,
@@ -152,16 +153,17 @@ const WomenDashboardScreen = () => {
   useEffect(() => {
     loadDashboardData();
     updateUserOnlineStatus(true);
+    loadActiveChatCount();
 
     return () => {
       updateUserOnlineStatus(false);
     };
   }, []);
 
-  // Real-time subscription for online users
+  // Real-time subscription for online users and chat sessions
   useEffect(() => {
     const channel = supabase
-      .channel('online-men-updates')
+      .channel('women-dashboard-updates')
       .on(
         'postgres_changes',
         {
@@ -173,17 +175,55 @@ const WomenDashboardScreen = () => {
           fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_chat_sessions'
+        },
+        () => {
+          loadActiveChatCount();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUserId]);
 
   const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
   const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
   const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+
+  const loadActiveChatCount = async () => {
+    if (!currentUserId) return;
+    
+    const { count } = await supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("woman_user_id", currentUserId)
+      .eq("status", "active");
+    
+    setActiveChatCount(count || 0);
+  };
+
+  const getStatusText = () => {
+    if (activeChatCount === 0) return "Free";
+    if (activeChatCount >= 3) return "Busy(3)";
+    return `Busy(${activeChatCount})`;
+  };
+
+  const getStatusColor = () => {
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
+  };
+
+  const MAX_PARALLEL_CHATS = 3;
+  const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async () => {
     try {
@@ -512,6 +552,62 @@ const WomenDashboardScreen = () => {
     navigate(`/profile/${userId}`);
   };
 
+  const handleStartChatWithUser = async (userId: string) => {
+    if (!canStartNewChat) {
+      toast({
+        title: t('maxChatsReached', 'Max Chats Reached'),
+        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time. Close a chat to start a new one.'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if there's already an active session with this user
+    const { data: existingSession } = await supabase
+      .from("active_chat_sessions")
+      .select("id, chat_id")
+      .eq("man_user_id", userId)
+      .eq("woman_user_id", currentUserId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (existingSession) {
+      toast({
+        title: t('chatExists', 'Chat Already Active'),
+        description: t('youAlreadyHaveChat', 'You already have an active chat with this user.'),
+      });
+      return;
+    }
+
+    // Start a new chat session
+    try {
+      const response = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "start_chat",
+          man_user_id: userId,
+          woman_user_id: currentUserId
+        }
+      });
+
+      if (response.data?.success) {
+        loadActiveChatCount();
+        toast({
+          title: t('chatStarted', 'Chat Started'),
+          description: t('chatWindowOpened', 'A new chat window has been opened.'),
+        });
+      } else {
+        throw new Error(response.data?.message || "Failed to start chat");
+      }
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      toast({
+        title: t('error', 'Error'),
+        description: t('failedToStartChat', 'Failed to start chat. Please try again.'),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleViewProfile = (userId: string) => {
     navigate(`/profile/${userId}`);
   };
@@ -594,9 +690,10 @@ const WomenDashboardScreen = () => {
           <div className="flex flex-col gap-2">
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); navigate(`/chat/${user.userId}`); }}
+              onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
               className="bg-green-500 hover:bg-green-600 text-white"
-              title="Start chatting with this user"
+              disabled={!canStartNewChat}
+              title={canStartNewChat ? "Start chatting with this user" : "Max 3 chats reached"}
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               {t('chat', 'Chat')}
@@ -606,9 +703,6 @@ const WomenDashboardScreen = () => {
       </CardContent>
     </Card>
   );
-
-  // Max parallel sessions allowed
-  const MAX_PARALLEL_CHATS = 3;
 
   if (isLoading) {
     return (
@@ -679,11 +773,16 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
-                <span className="text-sm text-muted-foreground">
-                  {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                </span>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
+                  <span className="text-sm text-muted-foreground">
+                    {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
+                  </span>
+                </div>
+                <Badge className={cn("text-xs text-white", getStatusColor())}>
+                  {getStatusText()}
+                </Badge>
               </div>
               <h1 className="text-2xl font-bold text-foreground">
                 {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
