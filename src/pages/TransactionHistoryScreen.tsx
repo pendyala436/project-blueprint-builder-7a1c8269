@@ -91,6 +91,37 @@ const TransactionHistoryScreen = () => {
     loadData();
   }, []);
 
+  // Real-time subscription for transactions and sessions
+  useEffect(() => {
+    const channel = supabase
+      .channel('transaction-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallet_transactions' },
+        () => { loadData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'active_chat_sessions' },
+        () => { loadData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_call_sessions' },
+        () => { loadData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'women_earnings' },
+        () => { loadData(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

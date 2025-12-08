@@ -267,38 +267,64 @@ const DashboardScreen = () => {
     };
   }, []);
 
-  // Real-time subscription for online users and chat sessions
+  // Real-time subscription for online users, chat sessions, wallet, and women availability
   useEffect(() => {
     const channel = supabase
       .channel('dashboard-updates')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_status'
-        },
-        () => {
-          fetchOnlineUsersCount();
+        { event: '*', schema: 'public', table: 'user_status' },
+        () => { fetchOnlineUsersCount(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'active_chat_sessions' },
+        () => { loadActiveChatCount(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets' },
+        () => { loadWalletBalance(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'women_availability' },
+        () => { 
+          if (userLanguage) {
+            fetchOnlineWomen(userLanguage);
+          }
         }
       )
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'active_chat_sessions'
-        },
-        () => {
-          loadActiveChatCount();
+        { event: '*', schema: 'public', table: 'female_profiles' },
+        () => { 
+          if (userLanguage) {
+            fetchOnlineWomen(userLanguage);
+          }
         }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_call_sessions' },
+        () => { loadActiveChatCount(); }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
+  }, [currentUserId, userLanguage, userCountryName]);
+
+  const loadWalletBalance = async () => {
+    if (!currentUserId) return;
+    const { data } = await supabase
+      .from("wallets")
+      .select("balance")
+      .eq("user_id", currentUserId)
+      .maybeSingle();
+    if (data) setWalletBalance(data.balance || 0);
+  };
 
   const loadActiveChatCount = async () => {
     if (!currentUserId) return;
