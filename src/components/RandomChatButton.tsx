@@ -9,10 +9,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages } from "lucide-react";
+import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/nllb200Languages";
+
+// Super user email patterns - they bypass balance requirements
+const SUPER_USER_PATTERNS = {
+  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
+  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
+  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
+};
+
+const isSuperUserEmail = (email: string): boolean => {
+  if (!email) return false;
+  return (
+    SUPER_USER_PATTERNS.female.test(email) ||
+    SUPER_USER_PATTERNS.male.test(email) ||
+    SUPER_USER_PATTERNS.admin.test(email)
+  );
+};
 
 interface RandomChatButtonProps {
   userGender: "male" | "female";
@@ -166,16 +182,25 @@ export const RandomChatButton = ({
 
         const availableMen = sameLanguageMen.length > 0 ? sameLanguageMen : menProfiles;
 
-        // Check wallet balance for men (must have recharged)
+        // Check wallet balance for men (must have recharged) - but super users bypass
         const { data: wallets } = await supabase
           .from("wallets")
           .select("user_id, balance")
-          .in("user_id", availableMen.map(m => m.user_id))
-          .gt("balance", 0);
+          .in("user_id", availableMen.map(m => m.user_id));
 
-        const menWithBalance = wallets?.map(w => w.user_id) || [];
+        const menWithBalance = wallets?.filter(w => w.balance > 0).map(w => w.user_id) || [];
 
-        const qualifiedMen = availableMen.filter(m => menWithBalance.includes(m.user_id));
+        // Get emails to check for super users
+        const menEmails = new Map<string, string>();
+        // Note: We can't easily get emails client-side, so super users are identified by their unlimited balance
+        // Super users have balance of 999999999 (set by seed function)
+        const superUserBalance = 999999999;
+        const superUsers = wallets?.filter(w => w.balance >= superUserBalance).map(w => w.user_id) || [];
+
+        // Qualified men: either have balance > 0 or are super users
+        const qualifiedMen = availableMen.filter(m => 
+          menWithBalance.includes(m.user_id) || superUsers.includes(m.user_id)
+        );
 
         if (qualifiedMen.length === 0) {
           setSearchStatus("No available men with wallet balance. Please try again later.");
