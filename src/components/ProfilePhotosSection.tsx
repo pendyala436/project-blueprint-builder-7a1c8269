@@ -458,7 +458,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
             ) : (
               <>
                 <Camera className="w-8 h-8 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Add Selfie</span>
+                <span className="text-xs text-muted-foreground">Take Selfie</span>
               </>
             )}
           </Button>
