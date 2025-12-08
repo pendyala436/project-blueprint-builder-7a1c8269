@@ -1288,9 +1288,9 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-6 bg-gradient-to-r from-primary/10 via-rose-500/10 to-violet-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-6 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-rose-500 text-white">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-white">
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">
