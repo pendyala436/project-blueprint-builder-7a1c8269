@@ -88,6 +88,8 @@ import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
+// Voice-to-text component
+import VoiceRecordButton from "@/components/VoiceRecordButton";
 
 const MAX_PARALLEL_CHATS = 3;
 
@@ -1821,11 +1823,17 @@ const ChatScreen = () => {
               </PopoverContent>
             </Popover>
             
+            {/* Voice record button */}
+            <VoiceRecordButton 
+              onTranscription={(text) => setNewMessage(prev => prev ? `${prev} ${text}` : text)}
+              disabled={isSending}
+            />
+            
             {/* Text input field */}
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={selectedFile ? "Add a caption..." : "Type a message..."}
+              placeholder={selectedFile ? "Add a caption..." : "Type or hold mic..."}
               className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary"
               disabled={isSending}
             />
