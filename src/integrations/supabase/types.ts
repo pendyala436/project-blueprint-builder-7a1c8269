@@ -2305,7 +2305,29 @@ export type Database = {
         Returns: boolean
       }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
+      process_atomic_transfer: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_from_user_id: string
+          p_to_user_id: string
+        }
+        Returns: Json
+      }
       process_chat_billing: {
+        Args: { p_minutes: number; p_session_id: string }
+        Returns: Json
+      }
+      process_gift_transaction: {
+        Args: {
+          p_gift_id: string
+          p_message?: string
+          p_receiver_id: string
+          p_sender_id: string
+        }
+        Returns: Json
+      }
+      process_video_billing: {
         Args: { p_minutes: number; p_session_id: string }
         Returns: Json
       }
@@ -2315,6 +2337,15 @@ export type Database = {
           p_description?: string
           p_reference_id?: string
           p_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      process_withdrawal_request: {
+        Args: {
+          p_amount: number
+          p_payment_details?: Json
+          p_payment_method?: string
           p_user_id: string
         }
         Returns: Json
