@@ -28,6 +28,9 @@ interface Message {
   id: string;
   senderId: string;
   message: string;
+  translatedMessage?: string;
+  isTranslated?: boolean;
+  detectedLanguage?: string;
   createdAt: string;
 }
 
@@ -40,6 +43,7 @@ interface MiniChatWindowProps {
   partnerLanguage: string;
   isPartnerOnline: boolean;
   currentUserId: string;
+  currentUserLanguage: string;
   userGender: "male" | "female";
   ratePerMinute: number;
   onClose: () => void;
@@ -51,8 +55,10 @@ const MiniChatWindow = ({
   partnerId,
   partnerName,
   partnerPhoto,
+  partnerLanguage,
   isPartnerOnline,
   currentUserId,
+  currentUserLanguage,
   userGender,
   ratePerMinute,
   onClose
@@ -133,6 +139,42 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, billingPaused]);
 
+  // Auto-translate a message
+  const translateMessage = async (text: string, senderId: string): Promise<{
+    translatedMessage?: string;
+    isTranslated?: boolean;
+    detectedLanguage?: string;
+  }> => {
+    // Only translate messages from partner (not our own messages)
+    if (senderId === currentUserId) {
+      return {};
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message: text,
+          // sourceLanguage is auto-detected from text
+          targetLanguage: currentUserLanguage 
+        }
+      });
+
+      if (error) {
+        console.error("Translation error:", error);
+        return {};
+      }
+
+      return {
+        translatedMessage: data.translatedMessage,
+        isTranslated: data.isTranslated,
+        detectedLanguage: data.detectedLanguage
+      };
+    } catch (err) {
+      console.error("Failed to translate:", err);
+      return {};
+    }
+  };
+
   const loadMessages = async () => {
     const { data } = await supabase
       .from("chat_messages")
@@ -142,12 +184,22 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      setMessages(data.map(m => ({
-        id: m.id,
-        senderId: m.sender_id,
-        message: m.message,
-        createdAt: m.created_at
-      })));
+      // Translate messages from partner
+      const translatedMessages = await Promise.all(
+        data.map(async (m) => {
+          const translation = await translateMessage(m.message, m.sender_id);
+          return {
+            id: m.id,
+            senderId: m.sender_id,
+            message: m.message,
+            translatedMessage: translation.translatedMessage,
+            isTranslated: translation.isTranslated,
+            detectedLanguage: translation.detectedLanguage,
+            createdAt: m.created_at
+          };
+        })
+      );
+      setMessages(translatedMessages);
     }
   };
 
@@ -162,14 +214,21 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newMsg = payload.new;
+          
+          // Translate if from partner
+          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
+          
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
+              translatedMessage: translation.translatedMessage,
+              isTranslated: translation.isTranslated,
+              detectedLanguage: translation.detectedLanguage,
               createdAt: newMsg.created_at
             }];
           });
@@ -453,7 +512,20 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {msg.message}
+                    {/* Show translated message if available, otherwise original */}
+                    {msg.isTranslated && msg.translatedMessage ? (
+                      <div className="space-y-0.5">
+                        <p>{msg.translatedMessage}</p>
+                        <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                          {msg.message}
+                          {msg.detectedLanguage && (
+                            <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      msg.message
+                    )}
                   </div>
                 </div>
               ))}
