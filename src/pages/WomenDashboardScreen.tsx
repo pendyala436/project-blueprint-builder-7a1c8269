@@ -318,11 +318,10 @@ const WomenDashboardScreen = () => {
             const walletBalance = walletMap.get(profile.user_id) || 0;
             const hasRecharged = walletBalance > 0;
 
-            // Filter: Only show non-Indian men with NLLB-200 languages who have recharged
-            // OR same language men who have recharged
-            if (!hasRecharged) return; // Must have recharged
-            if (!isManNllbLanguage) return; // Must speak NLLB-200 language
-            if (isManIndian && !isSameLanguage) return; // Indian men only if same language
+            // Filter: Must speak NLLB-200 language
+            // Indian men only shown if same language as woman
+            if (!isManNllbLanguage) return;
+            if (isManIndian && !isSameLanguage) return;
 
             onlineMen.push({
               userId: profile.user_id,
