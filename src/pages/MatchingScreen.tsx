@@ -584,7 +584,7 @@ const MatchingScreen = () => {
               </p>
             </div>
             <Button 
-              variant="gradient" 
+              variant="aurora" 
               size="lg"
               onClick={handleQuickConnect}
               disabled={isConnecting || matchableWomen.length === 0}

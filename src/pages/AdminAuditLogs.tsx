@@ -214,7 +214,7 @@ const AdminAuditLogs = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+              <Button variant="auroraGhost" size="icon" onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
@@ -226,11 +226,11 @@ const AdminAuditLogs = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={loadLogs} className="gap-2">
+              <Button variant="auroraOutline" size="sm" onClick={loadLogs} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
-              <Button onClick={exportCSV} className="gap-2">
+              <Button variant="aurora" onClick={exportCSV} className="gap-2">
                 <Download className="h-4 w-4" />
                 Export CSV
               </Button>

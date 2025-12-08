@@ -123,7 +123,7 @@ const LanguageCountryScreen = () => {
         {/* CTA Button */}
         <div className="w-full max-w-md animate-slide-up" style={{ animationDelay: "200ms" }}>
           <Button
-            variant="hero"
+            variant="aurora"
             size="xl"
             className="w-full group"
             onClick={handleNext}

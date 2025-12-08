@@ -574,7 +574,7 @@ const AdminChatMonitoring = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
-                variant="ghost"
+                variant="auroraGhost"
                 size="icon"
                 onClick={() => navigate("/admin/analytics")}
               >
@@ -586,11 +586,11 @@ const AdminChatMonitoring = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setNotificationDialogOpen(true)} variant="outline" size="sm" className="gap-2">
+              <Button onClick={() => setNotificationDialogOpen(true)} variant="auroraOutline" size="sm" className="gap-2">
                 <Bell className="h-4 w-4" />
                 Broadcast
               </Button>
-              <Button onClick={() => { loadMessages(); loadActiveChats(); }} variant="outline" size="sm" className="gap-2">
+              <Button onClick={() => { loadMessages(); loadActiveChats(); }} variant="auroraOutline" size="sm" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>

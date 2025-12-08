@@ -134,7 +134,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
       <div className="p-4 border-t border-border">
         <Button
-          variant="ghost"
+          variant="auroraGhost"
           className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
           onClick={handleLogout}
         >
@@ -152,7 +152,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
         <div className="flex items-center justify-between px-4 py-3">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="auroraGhost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -166,7 +166,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
             <Badge variant="destructive" className="text-xs">ADMIN</Badge>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
+          <Button variant="auroraGhost" size="icon" onClick={handleLogout}>
             <LogOut className="h-5 w-5" />
           </Button>
         </div>

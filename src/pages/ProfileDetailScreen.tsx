@@ -272,7 +272,7 @@ const ProfileDetailScreen = () => {
         <Card className="p-8 text-center">
           <X className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-bold text-foreground mb-2">{t('profileNotFound', 'Profile Not Found')}</h2>
-          <Button variant="gradient" onClick={() => navigate(-1)}>
+          <Button variant="aurora" onClick={() => navigate(-1)}>
             {t('goBack', 'Go Back')}
           </Button>
         </Card>
@@ -416,7 +416,7 @@ const ProfileDetailScreen = () => {
         <div className="flex gap-4 animate-fade-in" style={{ animationDelay: "0.2s" }}>
           {/* Like Button */}
           <Button
-            variant={isLiked ? "secondary" : "gradient"}
+            variant={isLiked ? "secondary" : "aurora"}
             className="flex-1 h-14 text-lg gap-2"
             onClick={handleLike}
             disabled={isLiked}
@@ -427,7 +427,7 @@ const ProfileDetailScreen = () => {
 
           {/* Chat Button */}
           <Button
-            variant="outline"
+            variant="auroraOutline"
             className="flex-1 h-14 text-lg gap-2"
             onClick={handleChat}
           >

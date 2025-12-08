@@ -138,7 +138,7 @@ const ApprovalPendingScreen = () => {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between">
         <MeowLogo size="sm" />
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
+        <Button variant="auroraGhost" size="sm" onClick={handleLogout}>
           <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>
@@ -205,7 +205,7 @@ const ApprovalPendingScreen = () => {
                 </div>
 
                 <Button
-                  variant="outline"
+                  variant="auroraOutline"
                   className="w-full"
                   onClick={handleRefresh}
                   disabled={refreshing}

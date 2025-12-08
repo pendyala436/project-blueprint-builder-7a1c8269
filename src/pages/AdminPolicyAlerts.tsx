@@ -434,7 +434,7 @@ const AdminPolicyAlerts = () => {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+            <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -448,11 +448,11 @@ const AdminPolicyAlerts = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleScanMessages} disabled={scanning}>
+            <Button variant="auroraOutline" onClick={handleScanMessages} disabled={scanning}>
               <Scan className={cn("h-4 w-4 mr-2", scanning && "animate-spin")} />
               {scanning ? "Scanning..." : "Scan Messages"}
             </Button>
-            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={refreshing}>
+            <Button variant="auroraOutline" size="icon" onClick={handleRefresh} disabled={refreshing}>
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             </Button>
           </div>
