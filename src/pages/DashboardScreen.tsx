@@ -956,10 +956,10 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Matches */}
-          <Card className="p-5 bg-gradient-to-br from-rose-500/10 to-rose-500/5 border-rose-500/20 hover:shadow-lg transition-all">
+          <Card className="p-5 bg-gradient-aurora border-primary/30 hover:shadow-glow transition-all">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-rose-500/20">
-                <Heart className="w-6 h-6 text-rose-500" />
+              <div className="p-3 rounded-xl bg-primary/20">
+                <Heart className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.matchCount}</p>
@@ -969,10 +969,10 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Notifications */}
-          <Card className="p-5 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:shadow-lg transition-all col-span-2 md:col-span-1">
+          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-amber-500/20">
-                <Bell className="w-6 h-6 text-amber-500" />
+              <div className="p-3 rounded-xl bg-accent/20">
+                <Bell className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.unreadNotifications}</p>
