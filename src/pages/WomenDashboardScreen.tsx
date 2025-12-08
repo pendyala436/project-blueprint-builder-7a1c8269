@@ -63,6 +63,7 @@ interface OnlineMan {
   lastSeen: string;
   isSameLanguage: boolean;
   isNllbLanguage: boolean;
+  activeChatCount?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
 interface DashboardStats {
@@ -211,12 +212,19 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return "Free";
-    if (activeChatCount >= 3) return "Busy(3)";
-    return `Busy(${activeChatCount})`;
+    if (activeChatCount === 0) return t('free', 'Free');
+    if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
+    return t('busy', 'Busy') + `(${activeChatCount})`;
   };
 
   const getStatusColor = () => {
+    // Green = Free, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
+  };
+
+  const getStatusDotColor = () => {
     if (activeChatCount === 0) return "bg-green-500";
     if (activeChatCount >= 3) return "bg-red-500";
     return "bg-amber-500";
@@ -414,8 +422,29 @@ const WomenDashboardScreen = () => {
         });
       }
 
+      // Get active chat counts for all men
+      const menUserIds = onlineMen.map(m => m.userId);
+      const { data: chatCounts } = await supabase
+        .from("active_chat_sessions")
+        .select("man_user_id")
+        .in("man_user_id", menUserIds)
+        .eq("status", "active");
+
+      // Count chats per man
+      const chatCountMap = new Map<string, number>();
+      chatCounts?.forEach(chat => {
+        const count = chatCountMap.get(chat.man_user_id) || 0;
+        chatCountMap.set(chat.man_user_id, count + 1);
+      });
+
+      // Add chat count to each man
+      const menWithChatCount = onlineMen.map(m => ({
+        ...m,
+        activeChatCount: chatCountMap.get(m.userId) || 0
+      }));
+
       // Sort: same language first, then by wallet balance
-      const sortedMen = onlineMen.sort((a, b) => {
+      const sortedMen = menWithChatCount.sort((a, b) => {
         if (a.isSameLanguage !== b.isSameLanguage) {
           return a.isSameLanguage ? -1 : 1;
         }
@@ -630,8 +659,15 @@ const WomenDashboardScreen = () => {
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            {/* Online indicator */}
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+            {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
+            <div className={cn(
+              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
+              (user.activeChatCount || 0) === 0 ? "bg-green-500" :
+              (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+            )} title={
+              (user.activeChatCount || 0) === 0 ? "Free" :
+              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : `Busy (${user.activeChatCount}/3)`
+            } />
             {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
                 <Crown className="h-4 w-4 text-amber-500" />
@@ -690,13 +726,12 @@ const WomenDashboardScreen = () => {
           <div className="flex flex-col gap-2">
             <Button 
               size="sm" 
-              onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-              className="bg-green-500 hover:bg-green-600 text-white"
-              disabled={!canStartNewChat}
-              title={canStartNewChat ? "Start chatting with this user" : "Max 3 chats reached"}
+              variant="outline"
+              onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+              title={t('viewProfile', 'View Profile')}
             >
-              <MessageCircle className="h-4 w-4 mr-1" />
-              {t('chat', 'Chat')}
+              <User className="h-4 w-4 mr-1" />
+              {t('viewProfile', 'View')}
             </Button>
           </div>
         </div>
@@ -780,7 +815,11 @@ const WomenDashboardScreen = () => {
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-white", getStatusColor())}>
+                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
+                    activeChatCount === 0 ? "bg-green-300" : 
+                    activeChatCount >= 3 ? "bg-red-300" : "bg-amber-300"
+                  )} />
                   {getStatusText()}
                 </Badge>
               </div>
