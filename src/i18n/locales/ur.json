@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Meow",
+    "name": "Meow Meow",
     "tagline": "دنیا بھر کے لوگوں سے جڑیں"
   },
   "nav": {
@@ -38,7 +38,7 @@
     "passwordMismatch": "پاس ورڈ میل نہیں کھاتے"
   },
   "onboarding": {
-    "welcome": "Meow میں خوش آمدید",
+    "welcome": "Meow Meow میں خوش آمدید",
     "selectLanguage": "اپنی زبان منتخب کریں",
     "selectCountry": "اپنا ملک منتخب کریں",
     "basicInfo": "بنیادی معلومات",

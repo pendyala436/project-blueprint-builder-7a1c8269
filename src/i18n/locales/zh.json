@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Meow",
+    "name": "Meow Meow",
     "tagline": "与世界各地的人连接"
   },
   "nav": {
@@ -38,7 +38,7 @@
     "passwordMismatch": "密码不匹配"
   },
   "onboarding": {
-    "welcome": "欢迎来到 Meow",
+    "welcome": "欢迎来到 Meow Meow",
     "selectLanguage": "选择您的语言",
     "selectCountry": "选择您的国家",
     "basicInfo": "基本信息",
