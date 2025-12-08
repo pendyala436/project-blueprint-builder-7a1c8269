@@ -212,8 +212,6 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
     const originalLangCode = originalLanguage?.language_code ?? '';
     const languageChanged = currentLangCode !== originalLangCode;
     
-    console.log('hasChanges check:', { profileChanged, languageChanged, currentLangCode, originalLangCode, userLanguage, originalLanguage });
-    
     return profileChanged || languageChanged;
   }, [profile, originalProfile, userLanguage, originalLanguage]);
   // ==================== Effects ====================
@@ -634,7 +632,6 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               key={lang.code}
                               value={lang.name}
                               onSelect={() => {
-                                console.log('Selected language:', lang);
                                 setUserLanguage({
                                   language_name: lang.name,
                                   language_code: lang.code
@@ -661,7 +658,6 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               key={lang.code}
                               value={lang.name}
                               onSelect={() => {
-                                console.log('Selected language:', lang);
                                 setUserLanguage({
                                   language_name: lang.name,
                                   language_code: lang.code
@@ -842,8 +838,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving || !hasPhotos || !hasChanges}
-                title={!hasPhotos ? "At least one photo is required" : !hasChanges ? "No changes to save" : ""}
+                disabled={isSaving || !hasChanges}
+                title={!hasChanges ? "No changes to save" : ""}
               >
                 {isSaving ? (
                   <>
