@@ -55,7 +55,9 @@ import {
   Ban,          // Block icon
   Shield,       // Unblock icon
   Heart,        // Friend icon
-  AlertTriangle // Warning icon
+  AlertTriangle, // Warning icon
+  PhoneOff,     // Stop chat icon
+  LogOut        // Leave chat icon
 } from "lucide-react";
 import {
   Popover,
@@ -84,6 +86,8 @@ import { supabase } from "@/integrations/supabase/client";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
+// Activity status tracking hook
+import { useActivityStatus } from "@/hooks/useActivityStatus";
 
 const MAX_PARALLEL_CHATS = 3;
 
@@ -192,6 +196,8 @@ const ChatScreen = () => {
   const [isSessionActive, setIsSessionActive] = useState(true);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [partnerDisconnected, setPartnerDisconnected] = useState(false);
+  const [showStopChatDialog, setShowStopChatDialog] = useState(false);
+  const [isStoppingChat, setIsStoppingChat] = useState(false);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
   
@@ -209,6 +215,11 @@ const ChatScreen = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // ============= ACTIVITY STATUS TRACKING =============
+  
+  // Track user activity and update online status
+  const { setOnlineStatus } = useActivityStatus(currentUserId || null);
   
   // ============= AUTO-RECONNECT HANDLER =============
   
@@ -811,6 +822,63 @@ const ChatScreen = () => {
   };
 
   /**
+   * Stop/End Chat
+   * 
+   * Allows user (especially men) to manually stop the chat.
+   * This ends the billing session and closes the chat.
+   */
+  const handleStopChat = async () => {
+    if (!chatPartner || isStoppingChat) return;
+    setIsStoppingChat(true);
+    setShowStopChatDialog(false);
+
+    try {
+      // End the chat session via chat-manager
+      const { error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "end_chat",
+          chat_id: chatId.current,
+          end_reason: currentUserGender === "male" ? "man_closed" : "woman_closed"
+        }
+      });
+
+      if (error) throw error;
+
+      setIsSessionActive(false);
+      
+      toast({
+        title: "Chat Ended",
+        description: "You have ended this chat session."
+      });
+
+      // Navigate back to dashboard
+      navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard");
+      
+    } catch (error: any) {
+      console.error("Error stopping chat:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end chat session",
+        variant: "destructive"
+      });
+    } finally {
+      setIsStoppingChat(false);
+    }
+  };
+
+  /**
+   * Handle going offline manually
+   */
+  const handleGoOffline = async () => {
+    await setOnlineStatus(false);
+    toast({
+      title: "You're now offline",
+      description: "You won't receive new chat requests."
+    });
+    navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard");
+  };
+
+  /**
    * translateMessage Function
    * 
    * Calls the translate-message edge function to translate text.
@@ -1345,6 +1413,27 @@ const ChatScreen = () => {
                 <Circle className="w-4 h-4 mr-2" />
                 View Profile
               </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              
+              {/* Stop Chat - mainly for men */}
+              <DropdownMenuItem 
+                onClick={() => setShowStopChatDialog(true)}
+                disabled={isStoppingChat}
+                className="text-destructive focus:text-destructive"
+              >
+                <PhoneOff className="w-4 h-4 mr-2" />
+                Stop Chat
+              </DropdownMenuItem>
+              
+              {/* Go Offline */}
+              <DropdownMenuItem 
+                onClick={handleGoOffline}
+                className="text-amber-600 focus:text-amber-600"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Go Offline
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1371,6 +1460,40 @@ const ChatScreen = () => {
               className="bg-destructive hover:bg-destructive/90"
             >
               Block User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Stop Chat Confirmation Dialog */}
+      <AlertDialog open={showStopChatDialog} onOpenChange={setShowStopChatDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <PhoneOff className="w-5 h-5 text-destructive" />
+              Stop Chat?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will end the current chat session.
+              {currentUserGender === "male" && " Billing will stop and you'll be disconnected."}
+              {currentUserGender === "female" && " Earnings for this session will be saved."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleStopChat}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={isStoppingChat}
+            >
+              {isStoppingChat ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Stopping...
+                </>
+              ) : (
+                "Stop Chat"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
