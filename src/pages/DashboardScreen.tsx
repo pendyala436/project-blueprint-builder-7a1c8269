@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,8 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  Filter
+  Filter,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,16 @@ interface Notification {
   type: string;
   is_read: boolean;
   created_at: string;
+}
+
+interface OnlineWoman {
+  id: string;
+  user_id: string;
+  full_name: string;
+  photo_url: string | null;
+  age: number | null;
+  country: string | null;
+  primary_language: string | null;
 }
 
 interface DashboardStats {
@@ -174,6 +186,8 @@ const DashboardScreen = () => {
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // NLLB-200 language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [onlineWomen, setOnlineWomen] = useState<OnlineWoman[]>([]);
+  const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
@@ -339,6 +353,7 @@ const DashboardScreen = () => {
         fetchOnlineUsersCount(),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
+        fetchOnlineWomen(motherTongue),
       ]);
 
     } catch (error) {
@@ -355,6 +370,74 @@ const DashboardScreen = () => {
       .eq("is_online", true);
 
     setStats(prev => ({ ...prev, onlineUsersCount: count || 0 }));
+  };
+
+  const fetchOnlineWomen = async (language: string) => {
+    setLoadingOnlineWomen(true);
+    try {
+      // Get online user IDs
+      const { data: onlineUsers } = await supabase
+        .from("user_status")
+        .select("user_id")
+        .eq("is_online", true);
+
+      if (!onlineUsers || onlineUsers.length === 0) {
+        setOnlineWomen([]);
+        return;
+      }
+
+      const onlineUserIds = onlineUsers.map(u => u.user_id);
+
+      // First try to get from female_profiles table
+      const { data: femaleProfiles, error: femaleError } = await supabase
+        .from("female_profiles")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .in("user_id", onlineUserIds)
+        .eq("approval_status", "approved")
+        .eq("account_status", "active")
+        .limit(10);
+
+      if (femaleProfiles && femaleProfiles.length > 0) {
+        // Get user's language for filtering
+        const sameLanguageWomen = femaleProfiles.filter(w => 
+          w.primary_language?.toLowerCase() === language.toLowerCase()
+        );
+        const otherWomen = femaleProfiles.filter(w => 
+          w.primary_language?.toLowerCase() !== language.toLowerCase()
+        );
+        
+        // Show same language first, then others
+        setOnlineWomen([...sameLanguageWomen, ...otherWomen].slice(0, 10));
+      } else {
+        // Fallback to profiles table for women
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, user_id, full_name, photo_url, age, country, primary_language")
+          .in("user_id", onlineUserIds)
+          .eq("gender", "Female")
+          .eq("approval_status", "approved")
+          .eq("account_status", "active")
+          .limit(10);
+
+        if (profiles && profiles.length > 0) {
+          const sameLanguageWomen = profiles.filter(w => 
+            w.primary_language?.toLowerCase() === language.toLowerCase()
+          );
+          const otherWomen = profiles.filter(w => 
+            w.primary_language?.toLowerCase() !== language.toLowerCase()
+          );
+          
+          setOnlineWomen([...sameLanguageWomen, ...otherWomen].slice(0, 10));
+        } else {
+          setOnlineWomen([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching online women:", error);
+      setOnlineWomen([]);
+    } finally {
+      setLoadingOnlineWomen(false);
+    }
   };
 
   const fetchMatchCount = async (userId: string) => {
@@ -716,8 +799,96 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Active Chats Section */}
+        {/* Online Women Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-500" />
+              {t('onlineWomen', 'Women Online')}
+              {onlineWomen.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({onlineWomen.filter(w => w.primary_language?.toLowerCase() === userLanguage.toLowerCase()).length} {t('speakYourLanguage', 'speak')} {userLanguage})
+                </span>
+              )}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchOnlineWomen(userLanguage)}
+              disabled={loadingOnlineWomen}
+              className="gap-1"
+            >
+              <RefreshCw className={cn("w-4 h-4", loadingOnlineWomen && "animate-spin")} />
+              {t('refresh', 'Refresh')}
+            </Button>
+          </div>
+
+          {loadingOnlineWomen ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : onlineWomen.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {onlineWomen.map((woman) => {
+                const isSameLanguage = woman.primary_language?.toLowerCase() === userLanguage.toLowerCase();
+                return (
+                  <Card
+                    key={woman.id}
+                    className={cn(
+                      "p-4 text-center hover:shadow-lg transition-all cursor-pointer group",
+                      isSameLanguage && "ring-2 ring-emerald-500/50 bg-emerald-500/5"
+                    )}
+                    onClick={() => navigate(`/profile/${woman.user_id}`)}
+                  >
+                    <div className="relative mx-auto mb-3">
+                      <Avatar className="w-16 h-16 mx-auto border-2 border-background shadow-md">
+                        <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                        <AvatarFallback className="bg-gradient-to-br from-rose-400 to-pink-500 text-white">
+                          {woman.full_name?.charAt(0) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
+                    </div>
+                    <p className="font-medium text-sm text-foreground truncate">
+                      {woman.full_name || "Anonymous"}
+                    </p>
+                    {woman.age && (
+                      <p className="text-xs text-muted-foreground">{woman.age} yrs</p>
+                    )}
+                    {isSameLanguage && (
+                      <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
+                        {woman.primary_language}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/profile/${woman.user_id}`);
+                      }}
+                    >
+                      <Eye className="w-3 h-3" />
+                      {t('viewProfile', 'View')}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">{t('noWomenOnline', 'No women online right now')}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('checkBackSoon', 'Check back soon!')}
+              </p>
+            </Card>
+          )}
+        </div>
+
+        {/* Active Chats Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
