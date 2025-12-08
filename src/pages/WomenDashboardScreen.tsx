@@ -36,7 +36,6 @@ import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGE
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
-import { ChatInterface } from "@/components/ChatInterface";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -785,16 +784,6 @@ const WomenDashboardScreen = () => {
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
-        {/* Chat Interface - Accept/Reject Controls */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
-            <ChatInterface
-              userGender="female"
-              currentUserId={currentUserId}
-              currentUserLanguage={currentWomanLanguage}
-            />
-          </div>
-        )}
 
         {/* Online Men Tabs */}
         <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
