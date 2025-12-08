@@ -592,16 +592,17 @@ const TermsAgreementScreen = () => {
           {/* Submit Button */}
           <div className="flex gap-3">
             <Button
-              variant="outline"
+              variant="auroraOutline"
               onClick={() => navigate("/language-preferences")}
               className="flex-1 h-12"
             >
               Back
             </Button>
             <Button
+              variant="aurora"
               onClick={handleSubmit}
               disabled={isLoading || !allRequiredAgreed}
-              className="flex-1 h-12 text-base font-medium bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 h-12 text-base font-medium"
             >
               {isLoading ? (
                 <>

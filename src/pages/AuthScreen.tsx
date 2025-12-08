@@ -248,7 +248,7 @@ const AuthScreen = () => {
 
             {/* Register Link */}
             <Button
-              variant="auroraOutline"
+              variant="aurora"
               size="lg"
               className="w-full"
               onClick={() => navigate("/register")}

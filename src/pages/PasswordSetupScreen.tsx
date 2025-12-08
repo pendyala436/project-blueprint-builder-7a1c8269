@@ -275,7 +275,7 @@ const PasswordSetupScreen = () => {
 
           {/* Submit Button */}
           <Button
-            variant="hero"
+            variant="aurora"
             size="xl"
             onClick={handleSubmit}
             disabled={isSubmitting || !password || !confirmPassword}
