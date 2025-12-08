@@ -885,18 +885,29 @@ serve(async (req) => {
           .eq("user_id", man_user_id)
           .eq("status", "waiting");
 
-        // Check man's wallet balance
-        const { data: wallet } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("user_id", man_user_id)
+        // Check if man_user_id is a sample user (from sample_men table)
+        const { data: sampleMan } = await supabase
+          .from("sample_men")
+          .select("id")
+          .eq("id", man_user_id)
           .maybeSingle();
 
-        if (!wallet || wallet.balance <= 0) {
-          return new Response(
-            JSON.stringify({ success: false, message: "Insufficient balance" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        const isSampleMan = !!sampleMan;
+
+        // Only check wallet balance for real users (not sample users)
+        if (!isSampleMan) {
+          const { data: wallet } = await supabase
+            .from("wallets")
+            .select("balance")
+            .eq("user_id", man_user_id)
+            .maybeSingle();
+
+          if (!wallet || wallet.balance <= 0) {
+            return new Response(
+              JSON.stringify({ success: false, message: "Insufficient balance" }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
 
         // Get current pricing
