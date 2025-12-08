@@ -36,7 +36,7 @@ import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGE
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
-import { LanguageSelector } from "@/components/LanguageSelector";
+
 import { useTranslation } from "@/contexts/TranslationContext";
 
 interface Notification {
@@ -664,37 +664,6 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
-        {/* Language Selection Card - Women can select any NLLB-200 language */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          <Card className="p-4 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 border-indigo-500/20">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-indigo-500/20">
-                <Languages className="w-5 h-5 text-indigo-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground mb-1">{t('yourLanguage', 'Your Language')}</p>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {t('selectLanguageDescription', 'Select any language you speak. Men speaking this language will be matched to you. Auto-translation enabled for all')} {ALL_NLLB200_LANGUAGES.length} {t('nllbLanguages', 'NLLB-200 languages')}.
-                </p>
-                <LanguageSelector
-                  selectedLanguage={currentWomanLanguage}
-                  selectedLanguageCode={currentWomanLanguageCode}
-                  onLanguageChange={(lang, code) => {
-                    setCurrentWomanLanguage(lang);
-                    setCurrentWomanLanguageCode(code);
-                    // Update app UI language
-                    setLanguage(lang);
-                    // Re-fetch online men with new language
-                    fetchOnlineMen(undefined, lang, currentWomanCountry);
-                  }}
-                  showAllLanguages={true}
-                  label=""
-                  description=""
-                />
-              </div>
-            </div>
-          </Card>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>

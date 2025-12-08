@@ -36,15 +36,14 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  Filter,
-  Languages
+  Filter
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
-import { LanguageSelector } from "@/components/LanguageSelector";
+
 import { useTranslation } from "@/contexts/TranslationContext";
 
 interface Notification {
@@ -611,32 +610,6 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Language Selection Card */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          <Card className="p-5 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-blue-500/20">
-                <Languages className="w-6 h-6 text-blue-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground mb-1">{t('appLanguage', 'Your Language')}</p>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {t('languageDescription', "You'll be connected with women who speak")} {userLanguage}. {t('autoTranslateMessages', 'Messages are auto-translated.')}
-                </p>
-                <LanguageSelector
-                  selectedLanguage={userLanguage}
-                  selectedLanguageCode={userLanguageCode}
-                  onLanguageChange={(lang, code) => {
-                    setUserLanguage(lang);
-                    setUserLanguageCode(code);
-                  }}
-                  showAllLanguages={false}
-                  label=""
-                />
-              </div>
-            </div>
-          </Card>
-        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
