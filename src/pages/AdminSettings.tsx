@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { 
-  ArrowLeft, 
   Save, 
   Settings, 
   Shield, 
@@ -23,6 +22,8 @@ import {
   Palette,
   Users
 } from "lucide-react";
+import AdminNav from "@/components/AdminNav";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 interface AdminSetting {
   id: string;
@@ -260,52 +261,42 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-primary" />
-                  Admin Settings
-                </h1>
-                <p className="text-sm text-muted-foreground">Configure global app settings and policies</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" onClick={loadSettings}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button 
-                onClick={saveSettings} 
-                disabled={saving || Object.keys(modifiedSettings).length === 0}
-                className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
-              >
-                {saving ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : saveSuccess ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save Changes"}
-                {Object.keys(modifiedSettings).length > 0 && !saveSuccess && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-foreground/20 rounded">
-                    {Object.keys(modifiedSettings).length}
-                  </span>
-                )}
-              </Button>
-            </div>
+    <AdminNav>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Settings className="h-6 w-6 text-primary" />
+              Admin Settings
+            </h1>
+            <p className="text-muted-foreground">Configure global app settings and policies</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="icon" onClick={loadSettings}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button 
+              onClick={saveSettings} 
+              disabled={saving || Object.keys(modifiedSettings).length === 0}
+              className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+            >
+              {saving ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : saveSuccess ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save Changes"}
+              {Object.keys(modifiedSettings).length > 0 && !saveSuccess && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-foreground/20 rounded">
+                  {Object.keys(modifiedSettings).length}
+                </span>
+              )}
+            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-3 lg:grid-cols-6 mb-6 bg-muted/50">
             {categories.map(category => {
@@ -440,7 +431,7 @@ const AdminSettings = () => {
           </Card>
         )}
       </div>
-    </div>
+    </AdminNav>
   );
 };
 

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import MeowLogo from "@/components/MeowLogo";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import AdminNav from "@/components/AdminNav";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import {
   Users,
   MessageSquare,
@@ -22,7 +22,6 @@ import {
   Database,
   AlertTriangle,
   Languages,
-  LogOut,
   ChevronRight,
   TrendingUp,
   UserCheck,
@@ -41,9 +40,7 @@ interface DashboardStats {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [adminEmail, setAdminEmail] = useState("");
+  const { isLoading, isAdmin, adminEmail } = useAdminAccess();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     onlineUsers: 0,
@@ -180,47 +177,10 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
-    checkAdminAccess();
-  }, []);
-
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate("/");
-        return;
-      }
-
-      setAdminEmail(user.email || "");
-
-      // Check if user has admin role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!roleData) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have admin privileges",
-          variant: "destructive"
-        });
-        navigate("/dashboard");
-        return;
-      }
-
-      // Load stats
-      await loadStats();
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      navigate("/");
-    } finally {
-      setIsLoading(false);
+    if (isAdmin) {
+      loadStats();
     }
-  };
+  }, [isAdmin]);
 
   const loadStats = async () => {
     try {
@@ -278,11 +238,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -295,33 +250,14 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <MeowLogo size="sm" />
-            <Badge variant="destructive" className="font-semibold">
-              <Shield className="w-3 h-3 mr-1" />
-              ADMIN
-            </Badge>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{adminEmail}</span>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+    <AdminNav>
+      <div className="space-y-8">
         {/* Welcome Section */}
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage and monitor the Meow Meow platform</p>
+          <p className="text-muted-foreground mt-1">
+            Manage and monitor the Meow Meow platform • {adminEmail}
+          </p>
         </div>
 
         {/* Quick Stats */}
@@ -379,7 +315,7 @@ const AdminDashboard = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4">Admin Modules</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {adminModules.map((module, index) => (
+            {adminModules.map((module) => (
               <Card
                 key={module.path}
                 className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/30"
@@ -442,8 +378,8 @@ const AdminDashboard = () => {
             </div>
           </Card>
         )}
-      </main>
-    </div>
+      </div>
+    </AdminNav>
   );
 };
 
