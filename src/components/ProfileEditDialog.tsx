@@ -7,7 +7,7 @@
  * @module components/ProfileEditDialog
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -180,8 +180,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   // Available states based on selected country
   const [availableStates, setAvailableStates] = useState<State[]>([]);
   
-  // Check if there are any changes
-  const hasChanges = (): boolean => {
+  // Check if there are any changes - use useMemo for reactivity
+  const hasChanges = useMemo(() => {
     if (!originalProfile) return false;
     
     // Check profile fields
@@ -213,7 +213,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       (userLanguage?.language_name || null) !== (originalLanguage?.language_name || null);
     
     return profileChanged || languageChanged;
-  };
+  }, [profile, originalProfile, userLanguage, originalLanguage]);
   // ==================== Effects ====================
 
   /**
@@ -836,8 +836,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving || !hasPhotos || !hasChanges()}
-                title={!hasPhotos ? "At least one photo is required" : !hasChanges() ? "No changes to save" : ""}
+                disabled={isSaving || !hasPhotos || !hasChanges}
+                title={!hasPhotos ? "At least one photo is required" : !hasChanges ? "No changes to save" : ""}
               >
                 {isSaving ? (
                   <>
