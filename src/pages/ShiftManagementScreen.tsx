@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow, differenceInMinutes, differenceInHours, addDays, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 
 interface Shift {
   id: string;
@@ -114,28 +115,6 @@ const ShiftManagementScreen = () => {
   });
 
   const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-  useEffect(() => {
-    fetchAllData();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (activeShift) {
-      updateElapsedTime();
-      timerRef.current = setInterval(updateElapsedTime, 1000);
-      animateEarnings(activeShift.earnings + activeShift.bonus_earnings);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setElapsedTime("00:00:00");
-      setElapsedMinutes(0);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [activeShift]);
 
   const updateElapsedTime = () => {
     if (!activeShift) return;
@@ -235,6 +214,34 @@ const ShiftManagementScreen = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAllData();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // Real-time subscriptions for shift data
+  useMultipleRealtimeSubscriptions(
+    ["shifts", "scheduled_shifts", "absence_records", "women_shift_assignments"],
+    fetchAllData
+  );
+
+  useEffect(() => {
+    if (activeShift) {
+      updateElapsedTime();
+      timerRef.current = setInterval(updateElapsedTime, 1000);
+      animateEarnings(activeShift.earnings + activeShift.bonus_earnings);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setElapsedTime("00:00:00");
+      setElapsedMinutes(0);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [activeShift]);
 
   const startShift = async () => {
     setStartingShift(true);

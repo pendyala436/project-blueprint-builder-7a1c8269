@@ -74,6 +74,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 
 interface UserProfile {
   id: string;
@@ -152,18 +153,6 @@ const AdminUserManagement = () => {
   });
   
   const [runningAI, setRunningAI] = useState(false);
-
-  useEffect(() => {
-    checkAdminAccess();
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-      loadLanguageGroups();
-      loadStats();
-    }
-  }, [isAdmin, currentPage, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
   const checkAdminAccess = async () => {
     try {
@@ -321,6 +310,31 @@ const AdminUserManagement = () => {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    checkAdminAccess();
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsers();
+      loadLanguageGroups();
+      loadStats();
+    }
+  }, [isAdmin, currentPage, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
+
+  // Real-time subscriptions for user data
+  useMultipleRealtimeSubscriptions(
+    ["profiles", "user_roles", "language_groups"],
+    () => {
+      if (isAdmin) {
+        fetchUsers();
+        loadLanguageGroups();
+        loadStats();
+      }
+    },
+    isAdmin
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);

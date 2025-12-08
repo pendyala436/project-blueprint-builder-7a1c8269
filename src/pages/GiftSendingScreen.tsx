@@ -19,6 +19,7 @@ import {
   X,
   Heart
 } from "lucide-react";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface GiftItem {
   id: string;
@@ -49,10 +50,6 @@ const GiftSendingScreen = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
-
-  useEffect(() => {
-    loadData();
-  }, [receiverId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -98,6 +95,21 @@ const GiftSendingScreen = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, [receiverId]);
+
+  // Real-time subscriptions
+  useRealtimeSubscription({
+    table: "gifts",
+    onUpdate: loadData
+  });
+
+  useRealtimeSubscription({
+    table: "wallets",
+    onUpdate: loadData
+  });
 
   const handleGiftSelect = (gift: GiftItem) => {
     setSelectedGift(gift);

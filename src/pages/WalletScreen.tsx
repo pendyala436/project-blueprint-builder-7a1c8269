@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface WalletData {
   id: string;
@@ -157,10 +158,6 @@ const WalletScreen = () => {
     paytmNumber: ""
   });
 
-  useEffect(() => {
-    fetchWalletData();
-  }, []);
-
   const fetchWalletData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -221,6 +218,21 @@ const WalletScreen = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchWalletData();
+  }, []);
+
+  // Real-time subscriptions for wallet updates
+  useRealtimeSubscription({
+    table: "wallets",
+    onUpdate: fetchWalletData
+  });
+
+  useRealtimeSubscription({
+    table: "wallet_transactions",
+    onUpdate: fetchWalletData
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);

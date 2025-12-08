@@ -35,6 +35,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface PayoutMethod {
   id: string;
@@ -114,10 +115,6 @@ const WomenWalletScreen = () => {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -181,6 +178,25 @@ const WomenWalletScreen = () => {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Real-time subscriptions
+  useRealtimeSubscription({
+    table: "women_earnings",
+    onUpdate: loadData
+  });
+
+  useRealtimeSubscription({
+    table: "withdrawal_requests",
+    onUpdate: loadData
+  });
+
+  useRealtimeSubscription({
+    table: "chat_pricing",
+    onUpdate: loadData
+  });
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
     

@@ -18,6 +18,7 @@ import {
   Video
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface ChatPricing {
   id: string;
@@ -46,10 +47,6 @@ const AdminChatPricing = () => {
     video_women_earning_rate: "",
     min_withdrawal_balance: ""
   });
-
-  useEffect(() => {
-    loadPricing();
-  }, []);
 
   const loadPricing = async () => {
     try {
@@ -91,6 +88,16 @@ const AdminChatPricing = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadPricing();
+  }, []);
+
+  // Real-time subscription for pricing updates
+  useRealtimeSubscription({
+    table: "chat_pricing",
+    onUpdate: loadPricing
+  });
 
   const handleSave = async () => {
     const ratePerMinute = parseFloat(formData.rate_per_minute);
