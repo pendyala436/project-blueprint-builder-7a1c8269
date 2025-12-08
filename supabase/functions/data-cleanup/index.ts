@@ -10,14 +10,55 @@ const corsHeaders = {
  * 
  * PURPOSE: Implements data retention policy for the platform
  * 
- * DELETION SCHEDULE:
- * - Chat content & media: Deleted every 15 minutes (messages older than 15 min)
- * - Chat history: Deleted after 7 days
- * - Transactions: Preserved for 7 years (deleted after 7 years)
+ * DELETION SCHEDULE (configurable via admin_settings):
+ * - Chat content & media: Deleted every X minutes (default: 15 min)
+ * - Chat history: Deleted after X days (default: 7 days)
+ * - Transactions: Preserved for X years (default: 7 years)
  * - User profiles: Maintained while active (no auto-deletion)
  * 
  * This function should be called by a cron job or scheduler every 15 minutes
  */
+
+// Default retention periods (will be overridden by admin_settings)
+let CONTENT_DELETION_MINUTES = 15;
+let CHAT_HISTORY_RETENTION_DAYS = 7;
+let TRANSACTION_RETENTION_YEARS = 7;
+
+// Helper to load admin settings
+async function loadRetentionSettings(supabase: any): Promise<void> {
+  try {
+    const { data: settings } = await supabase
+      .from("admin_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", [
+        "content_deletion_minutes",
+        "chat_history_retention_days",
+        "transaction_retention_years"
+      ]);
+
+    if (settings) {
+      for (const setting of settings) {
+        const value = parseInt(setting.setting_value, 10);
+        if (isNaN(value)) continue;
+
+        switch (setting.setting_key) {
+          case "content_deletion_minutes":
+            CONTENT_DELETION_MINUTES = value;
+            break;
+          case "chat_history_retention_days":
+            CHAT_HISTORY_RETENTION_DAYS = value;
+            break;
+          case "transaction_retention_years":
+            TRANSACTION_RETENTION_YEARS = value;
+            break;
+        }
+      }
+    }
+    console.log(`[CLEANUP CONFIG] content=${CONTENT_DELETION_MINUTES}min, history=${CHAT_HISTORY_RETENTION_DAYS}days, transactions=${TRANSACTION_RETENTION_YEARS}years`);
+  } catch (error) {
+    console.error("[CLEANUP CONFIG] Error loading settings, using defaults:", error);
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -31,27 +72,35 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Load dynamic retention settings
+    await loadRetentionSettings(supabase);
+
     const now = new Date();
     const results = {
       chatContentDeleted: 0,
       chatHistoryDeleted: 0,
       transactionsDeleted: 0,
       chatSessionsClosed: 0,
+      settings: {
+        content_deletion_minutes: CONTENT_DELETION_MINUTES,
+        chat_history_retention_days: CHAT_HISTORY_RETENTION_DAYS,
+        transaction_retention_years: TRANSACTION_RETENTION_YEARS,
+      },
       errors: [] as string[],
     };
 
     console.log(`[Data Cleanup] Starting cleanup at ${now.toISOString()}`);
 
-    // ============= 1. DELETE CHAT CONTENT OLDER THAN 15 MINUTES =============
+    // ============= 1. DELETE CHAT CONTENT OLDER THAN X MINUTES =============
     // This removes message content but preserves metadata for billing purposes
     try {
-      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      const contentCutoff = new Date(now.getTime() - CONTENT_DELETION_MINUTES * 60 * 1000);
       
       // First, get count of messages to be affected
       const { count: messageCount } = await supabase
         .from('chat_messages')
         .select('*', { count: 'exact', head: true })
-        .lt('created_at', fifteenMinutesAgo.toISOString())
+        .lt('created_at', contentCutoff.toISOString())
         .not('message', 'eq', '[Content deleted per retention policy]');
 
       if (messageCount && messageCount > 0) {
@@ -62,7 +111,7 @@ Deno.serve(async (req) => {
             message: '[Content deleted per retention policy]',
             translated_message: null,
           })
-          .lt('created_at', fifteenMinutesAgo.toISOString())
+          .lt('created_at', contentCutoff.toISOString())
           .not('message', 'eq', '[Content deleted per retention policy]');
 
         if (messageError) {
@@ -70,7 +119,7 @@ Deno.serve(async (req) => {
           results.errors.push(`Chat content: ${messageError.message}`);
         } else {
           results.chatContentDeleted = messageCount;
-          console.log(`[Data Cleanup] Cleared content from ${messageCount} messages`);
+          console.log(`[Data Cleanup] Cleared content from ${messageCount} messages (older than ${CONTENT_DELETION_MINUTES} min)`);
         }
       } else {
         console.log('[Data Cleanup] No chat content to clear');
@@ -80,35 +129,35 @@ Deno.serve(async (req) => {
       results.errors.push(`Chat content exception: ${error.message}`);
     }
 
-    // ============= 2. DELETE CHAT HISTORY OLDER THAN 7 DAYS =============
+    // ============= 2. DELETE CHAT HISTORY OLDER THAN X DAYS =============
     try {
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const historyCutoff = new Date(now.getTime() - CHAT_HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000);
       
       // Get count first
       const { count: oldMessagesCount } = await supabase
         .from('chat_messages')
         .select('*', { count: 'exact', head: true })
-        .lt('created_at', sevenDaysAgo.toISOString());
+        .lt('created_at', historyCutoff.toISOString());
 
       if (oldMessagesCount && oldMessagesCount > 0) {
         // Delete old messages completely
         const { error: deleteMessagesError } = await supabase
           .from('chat_messages')
           .delete()
-          .lt('created_at', sevenDaysAgo.toISOString());
+          .lt('created_at', historyCutoff.toISOString());
 
         if (deleteMessagesError) {
           console.error('[Data Cleanup] Error deleting old chat history:', deleteMessagesError);
           results.errors.push(`Chat history: ${deleteMessagesError.message}`);
         } else {
           results.chatHistoryDeleted = oldMessagesCount;
-          console.log(`[Data Cleanup] Deleted ${oldMessagesCount} messages older than 7 days`);
+          console.log(`[Data Cleanup] Deleted ${oldMessagesCount} messages older than ${CHAT_HISTORY_RETENTION_DAYS} days`);
         }
       } else {
         console.log('[Data Cleanup] No old chat history to delete');
       }
 
-      // Also close any stale chat sessions older than 7 days
+      // Also close any stale chat sessions older than retention period
       const { data: staleSessions, error: staleSessionsError } = await supabase
         .from('active_chat_sessions')
         .update({
@@ -116,7 +165,7 @@ Deno.serve(async (req) => {
           end_reason: 'auto_cleanup',
           ended_at: now.toISOString(),
         })
-        .lt('created_at', sevenDaysAgo.toISOString())
+        .lt('created_at', historyCutoff.toISOString())
         .eq('status', 'active')
         .select('id');
 
@@ -132,29 +181,29 @@ Deno.serve(async (req) => {
       results.errors.push(`Chat history exception: ${error.message}`);
     }
 
-    // ============= 3. DELETE TRANSACTIONS OLDER THAN 7 YEARS =============
+    // ============= 3. DELETE TRANSACTIONS OLDER THAN X YEARS =============
     try {
-      const sevenYearsAgo = new Date(now.getTime() - 7 * 365 * 24 * 60 * 60 * 1000);
+      const transactionCutoff = new Date(now.getTime() - TRANSACTION_RETENTION_YEARS * 365 * 24 * 60 * 60 * 1000);
       
       // Get count first
       const { count: oldTransactionsCount } = await supabase
         .from('wallet_transactions')
         .select('*', { count: 'exact', head: true })
-        .lt('created_at', sevenYearsAgo.toISOString());
+        .lt('created_at', transactionCutoff.toISOString());
 
       if (oldTransactionsCount && oldTransactionsCount > 0) {
         // Delete old transactions
         const { error: deleteTransactionsError } = await supabase
           .from('wallet_transactions')
           .delete()
-          .lt('created_at', sevenYearsAgo.toISOString());
+          .lt('created_at', transactionCutoff.toISOString());
 
         if (deleteTransactionsError) {
           console.error('[Data Cleanup] Error deleting old transactions:', deleteTransactionsError);
           results.errors.push(`Transactions: ${deleteTransactionsError.message}`);
         } else {
           results.transactionsDeleted = oldTransactionsCount;
-          console.log(`[Data Cleanup] Deleted ${oldTransactionsCount} transactions older than 7 years`);
+          console.log(`[Data Cleanup] Deleted ${oldTransactionsCount} transactions older than ${TRANSACTION_RETENTION_YEARS} years`);
         }
       } else {
         console.log('[Data Cleanup] No old transactions to delete');
@@ -164,7 +213,7 @@ Deno.serve(async (req) => {
       const { error: deleteEarningsError } = await supabase
         .from('shift_earnings')
         .delete()
-        .lt('created_at', sevenYearsAgo.toISOString());
+        .lt('created_at', transactionCutoff.toISOString());
 
       if (deleteEarningsError) {
         console.error('[Data Cleanup] Error deleting old shift earnings:', deleteEarningsError);
@@ -175,7 +224,7 @@ Deno.serve(async (req) => {
       const { error: deleteWomenEarningsError } = await supabase
         .from('women_earnings')
         .delete()
-        .lt('created_at', sevenYearsAgo.toISOString());
+        .lt('created_at', transactionCutoff.toISOString());
 
       if (deleteWomenEarningsError) {
         console.error('[Data Cleanup] Error deleting old women earnings:', deleteWomenEarningsError);
@@ -238,7 +287,7 @@ Deno.serve(async (req) => {
           action: 'data_cleanup',
           action_type: 'delete',
           resource_type: 'system',
-          details: `Automated data cleanup: ${results.chatContentDeleted} messages cleared, ${results.chatHistoryDeleted} old messages deleted, ${results.transactionsDeleted} old transactions deleted, ${results.chatSessionsClosed} stale sessions closed`,
+          details: `Automated data cleanup: ${results.chatContentDeleted} messages cleared (${CONTENT_DELETION_MINUTES}min), ${results.chatHistoryDeleted} old messages deleted (${CHAT_HISTORY_RETENTION_DAYS}d), ${results.transactionsDeleted} old transactions deleted (${TRANSACTION_RETENTION_YEARS}y), ${results.chatSessionsClosed} stale sessions closed`,
           status: results.errors.length === 0 ? 'success' : 'partial',
         });
     } catch (auditError) {
