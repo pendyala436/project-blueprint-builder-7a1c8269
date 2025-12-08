@@ -1362,7 +1362,7 @@ const ChatScreen = () => {
                 </div>
               )}
               
-              {/* Friend/Unfriend */}
+              {/* Friend/Unfriend - Available for both genders */}
               {isFriend ? (
                 <DropdownMenuItem 
                   onClick={handleRemoveFriend}
@@ -1384,7 +1384,7 @@ const ChatScreen = () => {
               
               <DropdownMenuSeparator />
               
-              {/* Block/Unblock */}
+              {/* Block/Unblock - Available for both genders */}
               {isBlocked ? (
                 <DropdownMenuItem 
                   onClick={handleUnblockUser}
@@ -1406,7 +1406,7 @@ const ChatScreen = () => {
               
               <DropdownMenuSeparator />
               
-              {/* View Profile */}
+              {/* View Profile - Available for both genders */}
               <DropdownMenuItem 
                 onClick={() => chatPartner && navigate(`/profile/${chatPartner.userId}`)}
               >
@@ -1414,19 +1414,24 @@ const ChatScreen = () => {
                 View Profile
               </DropdownMenuItem>
               
+              {/* Stop Chat - Only for MEN (men control chat start/stop) */}
+              {currentUserGender === "male" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setShowStopChatDialog(true)}
+                    disabled={isStoppingChat}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <PhoneOff className="w-4 h-4 mr-2" />
+                    Stop Chat
+                  </DropdownMenuItem>
+                </>
+              )}
+              
               <DropdownMenuSeparator />
               
-              {/* Stop Chat - mainly for men */}
-              <DropdownMenuItem 
-                onClick={() => setShowStopChatDialog(true)}
-                disabled={isStoppingChat}
-                className="text-destructive focus:text-destructive"
-              >
-                <PhoneOff className="w-4 h-4 mr-2" />
-                Stop Chat
-              </DropdownMenuItem>
-              
-              {/* Go Offline */}
+              {/* Go Offline - Available for both genders */}
               <DropdownMenuItem 
                 onClick={handleGoOffline}
                 className="text-amber-600 focus:text-amber-600"
@@ -1465,39 +1470,39 @@ const ChatScreen = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Stop Chat Confirmation Dialog */}
-      <AlertDialog open={showStopChatDialog} onOpenChange={setShowStopChatDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <PhoneOff className="w-5 h-5 text-destructive" />
-              Stop Chat?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will end the current chat session.
-              {currentUserGender === "male" && " Billing will stop and you'll be disconnected."}
-              {currentUserGender === "female" && " Earnings for this session will be saved."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleStopChat}
-              className="bg-destructive hover:bg-destructive/90"
-              disabled={isStoppingChat}
-            >
-              {isStoppingChat ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Stopping...
-                </>
-              ) : (
-                "Stop Chat"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Stop Chat Confirmation Dialog - Only for men */}
+      {currentUserGender === "male" && (
+        <AlertDialog open={showStopChatDialog} onOpenChange={setShowStopChatDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <PhoneOff className="w-5 h-5 text-destructive" />
+                Stop Chat?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will end the current chat session. Billing will stop and you'll be disconnected from this conversation.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleStopChat}
+                className="bg-destructive hover:bg-destructive/90"
+                disabled={isStoppingChat}
+              >
+                {isStoppingChat ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Stopping...
+                  </>
+                ) : (
+                  "Stop Chat"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {/* Blocked by partner warning */}
       {isBlockedByPartner && (
