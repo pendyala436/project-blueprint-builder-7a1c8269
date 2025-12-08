@@ -37,8 +37,10 @@ const isIndianLanguage = (lang: string): boolean => {
   return INDIAN_LANGUAGES.some(l => lowerLang.includes(l) || l.includes(lowerLang));
 };
 
+const MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
+
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "find_match" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "find_match" | "auto_reconnect" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity" | "get_active_chats";
   man_user_id?: string;
   woman_user_id?: string;
   user_id?: string;
@@ -46,6 +48,7 @@ interface ChatRequest {
   end_reason?: string;
   preferred_language?: string;
   man_country?: string;
+  exclude_user_ids?: string[]; // Users to exclude from matching
 }
 
 serve(async (req) => {
@@ -58,7 +61,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country }: ChatRequest = await req.json();
+    const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = await req.json();
 
     console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, user_id, chat_id, preferred_language, man_country });
 
@@ -994,6 +997,221 @@ serve(async (req) => {
             success: true, 
             new_chat_id: newChatId,
             new_woman_user_id: newWomanId
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ============= AUTO-RECONNECT =============
+      // When woman closes/disconnects, auto-connect man to another online woman
+      case "auto_reconnect": {
+        const manId = man_user_id || user_id;
+        const excludeIds: string[] = exclude_user_ids || [];
+        
+        if (!manId) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing man user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        console.log(`[AUTO-RECONNECT] Man ${manId} requesting reconnection, excluding: ${excludeIds.join(", ")}`);
+
+        // Check man's current active chat count
+        const { count: currentChats } = await supabase
+          .from("active_chat_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("man_user_id", manId)
+          .eq("status", "active");
+
+        if ((currentChats || 0) >= MAX_PARALLEL_CHATS) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Already at maximum parallel chats",
+              current_chats: currentChats
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get man's language preference
+        const { data: manProfile } = await supabase
+          .from("profiles")
+          .select("primary_language, preferred_language")
+          .eq("user_id", manId)
+          .maybeSingle();
+
+        const { data: manLanguages } = await supabase
+          .from("user_languages")
+          .select("language_name")
+          .eq("user_id", manId)
+          .limit(1);
+
+        const manLanguage = manLanguages?.[0]?.language_name || 
+                           manProfile?.primary_language || 
+                           manProfile?.preferred_language || 
+                           "english";
+
+        const manHasIndianLanguage = isIndianLanguage(manLanguage);
+
+        // Get all currently connected woman IDs to exclude
+        const { data: activeConnections } = await supabase
+          .from("active_chat_sessions")
+          .select("woman_user_id")
+          .eq("man_user_id", manId)
+          .eq("status", "active");
+
+        const connectedWomanIds = activeConnections?.map((c: any) => c.woman_user_id) || [];
+        const allExcludeIds = [...new Set([...excludeIds, ...connectedWomanIds])];
+
+        // Find online women
+        const { data: onlineStatuses } = await supabase
+          .from("user_status")
+          .select("user_id")
+          .eq("is_online", true);
+
+        const onlineUserIds = onlineStatuses?.map((s: any) => s.user_id) || [];
+
+        // Get available women with capacity
+        const { data: availableWomen } = await supabase
+          .from("women_availability")
+          .select("user_id, current_chat_count, max_concurrent_chats")
+          .in("user_id", onlineUserIds)
+          .eq("is_available", true)
+          .order("current_chat_count", { ascending: true })
+          .order("last_assigned_at", { ascending: true, nullsFirst: true });
+
+        // Filter women with capacity and not excluded
+        let eligibleWomen = (availableWomen || []).filter((w: any) => {
+          const hasCapacity = w.current_chat_count < (w.max_concurrent_chats || 3);
+          const notExcluded = !allExcludeIds.includes(w.user_id);
+          return hasCapacity && notExcluded;
+        });
+
+        // Get profiles and languages for eligible women
+        if (eligibleWomen.length === 0) {
+          console.log(`[AUTO-RECONNECT] No women available for man ${manId}`);
+          return new Response(
+            JSON.stringify({ success: false, message: "No women available for reconnection" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const eligibleIds = eligibleWomen.map((w: any) => w.user_id);
+        
+        const { data: womenProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language, country")
+          .in("user_id", eligibleIds);
+
+        const { data: womenLanguages } = await supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", eligibleIds);
+
+        const languageMap = new Map<string, string>();
+        (womenLanguages || []).forEach((l: any) => {
+          if (!languageMap.has(l.user_id)) {
+            languageMap.set(l.user_id, l.language_name);
+          }
+        });
+
+        // Apply language matching rules
+        let matchedWomen: any[] = [];
+        
+        for (const woman of eligibleWomen) {
+          const profile = womenProfiles?.find((p: any) => p.user_id === woman.user_id);
+          const womanLanguage = languageMap.get(woman.user_id) || profile?.primary_language || "english";
+          const womanHasIndianLanguage = isIndianLanguage(womanLanguage);
+
+          // Non-Indian men can ONLY see Indian women
+          if (!manHasIndianLanguage && !womanHasIndianLanguage) {
+            continue;
+          }
+
+          matchedWomen.push({
+            ...woman,
+            profile,
+            language: womanLanguage,
+            isSameLanguage: womanLanguage.toLowerCase() === manLanguage.toLowerCase()
+          });
+        }
+
+        if (matchedWomen.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, message: "No matching women available" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Sort: same language first, then by load
+        matchedWomen.sort((a, b) => {
+          if (a.isSameLanguage !== b.isSameLanguage) return a.isSameLanguage ? -1 : 1;
+          return a.current_chat_count - b.current_chat_count;
+        });
+
+        const selectedWoman = matchedWomen[0];
+
+        console.log(`[AUTO-RECONNECT] Selected woman ${selectedWoman.user_id} for man ${manId}, load: ${selectedWoman.current_chat_count}`);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            woman_user_id: selectedWoman.user_id,
+            profile: selectedWoman.profile,
+            same_language: selectedWoman.isSameLanguage,
+            current_load: selectedWoman.current_chat_count,
+            available_count: matchedWomen.length
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ============= GET ACTIVE CHATS =============
+      // Get all active chat sessions for a user
+      case "get_active_chats": {
+        const targetUserId = user_id || man_user_id || woman_user_id;
+        
+        if (!targetUserId) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Missing user ID" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+
+        // Get chats where user is man
+        const { data: manChats } = await supabase
+          .from("active_chat_sessions")
+          .select(`
+            *,
+            woman_profile:profiles!active_chat_sessions_woman_user_id_fkey(user_id, full_name, photo_url)
+          `)
+          .eq("man_user_id", targetUserId)
+          .eq("status", "active");
+
+        // Get chats where user is woman
+        const { data: womanChats } = await supabase
+          .from("active_chat_sessions")
+          .select(`
+            *,
+            man_profile:profiles!active_chat_sessions_man_user_id_fkey(user_id, full_name, photo_url)
+          `)
+          .eq("woman_user_id", targetUserId)
+          .eq("status", "active");
+
+        const allChats = [
+          ...(manChats || []).map((c: any) => ({ ...c, role: "man", partner: c.woman_profile })),
+          ...(womanChats || []).map((c: any) => ({ ...c, role: "woman", partner: c.man_profile }))
+        ];
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            active_chats: allChats,
+            count: allChats.length,
+            max_allowed: MAX_PARALLEL_CHATS,
+            can_add_more: allChats.length < MAX_PARALLEL_CHATS
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
