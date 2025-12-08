@@ -186,6 +186,8 @@ serve(async (req) => {
   try {
     const { message, sourceLanguage, targetLanguage } = await req.json();
 
+    console.log(`[NLLB-200] Translation request: source="${sourceLanguage}", target="${targetLanguage}"`);
+
     if (!message || !targetLanguage) {
       return new Response(
         JSON.stringify({ error: "Message and target language are required" }),
@@ -230,26 +232,35 @@ serve(async (req) => {
       sourceNLLBCode = getNLLBCode(sourceLanguage) || "eng_Latn";
       detectedLanguage = sourceLanguage;
     } else {
-      // Auto-detect from text
+      // Auto-detect from text script patterns
       const detected = detectLanguageFromText(message);
       sourceNLLBCode = detected.nllbCode;
       detectedLanguage = detected.language;
+      console.log(`[NLLB-200] Auto-detected language from text: ${detectedLanguage} (${sourceNLLBCode})`);
     }
 
-    // Skip translation if source and target are the same
-    if (sourceNLLBCode === targetNLLBCode) {
-      console.log(`Same language (${detectedLanguage}), skipping translation`);
+    // ============= SAME LANGUAGE CHECK =============
+    // IF Source language == Target language THEN No translation required
+    const sourceLower = (sourceLanguage || detectedLanguage).toLowerCase().trim();
+    const targetLower = targetLanguage.toLowerCase().trim();
+    
+    if (sourceNLLBCode === targetNLLBCode || sourceLower === targetLower) {
+      console.log(`[NLLB-200] ✓ Same language detected (${detectedLanguage} == ${targetLanguage}), NO TRANSLATION needed`);
       return new Response(
         JSON.stringify({
           translatedMessage: message,
           isTranslated: false,
           detectedLanguage,
           sourceLanguageCode: sourceNLLBCode,
-          targetLanguageCode: targetNLLBCode
+          targetLanguageCode: targetNLLBCode,
+          reason: "same_language"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    // ============= DIFFERENT LANGUAGES - TRANSLATE =============
+    console.log(`[NLLB-200] ✓ Different languages (${detectedLanguage} != ${targetLanguage}), TRANSLATION enabled`);
 
     console.log(`Translating from ${detectedLanguage} (${sourceNLLBCode}) to ${targetLanguage} (${targetNLLBCode}): "${message.substring(0, 50)}..."`);
 
