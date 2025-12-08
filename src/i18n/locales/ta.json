@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Meow",
+    "name": "Meow Meow",
     "tagline": "உலகம் முழுவதும் மக்களுடன் இணைக்கவும்"
   },
   "nav": {
@@ -38,7 +38,7 @@
     "passwordMismatch": "கடவுச்சொற்கள் பொருந்தவில்லை"
   },
   "onboarding": {
-    "welcome": "Meow-க்கு வரவேற்கிறோம்",
+    "welcome": "Meow Meow-க்கு வரவேற்கிறோம்",
     "selectLanguage": "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்",
     "selectCountry": "உங்கள் நாட்டைத் தேர்ந்தெடுக்கவும்",
     "basicInfo": "அடிப்படை தகவல்",

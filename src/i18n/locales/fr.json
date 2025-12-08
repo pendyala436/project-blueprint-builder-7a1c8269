@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Meow",
+    "name": "Meow Meow",
     "tagline": "Connectez-vous avec des gens du monde entier"
   },
   "nav": {
@@ -38,7 +38,7 @@
     "passwordMismatch": "Les mots de passe ne correspondent pas"
   },
   "onboarding": {
-    "welcome": "Bienvenue sur Meow",
+    "welcome": "Bienvenue sur Meow Meow",
     "selectLanguage": "Sélectionnez votre langue",
     "selectCountry": "Sélectionnez votre pays",
     "basicInfo": "Informations de base",
