@@ -263,13 +263,12 @@ const WomenDashboardScreen = () => {
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      // Also fetch sample users who are online males
+      // Fetch sample men from separate table
       const { data: sampleUsers } = await supabase
-        .from("sample_users")
+        .from("sample_men")
         .select("*")
         .eq("is_online", true)
-        .eq("is_active", true)
-        .or("gender.eq.male,gender.eq.Male");
+        .eq("is_active", true);
 
       const onlineMen: OnlineMan[] = [];
 

@@ -1,7 +1,8 @@
 /**
  * AdminSampleUsers.tsx
  * Admin screen for managing sample/demo users by country and language.
- * Allows enabling/disabling 3 male and 3 female sample users per region.
+ * Uses separate sample_men and sample_women tables.
+ * Allows enabling/disabling users per region.
  */
 
 import { useState, useEffect } from "react";
@@ -21,7 +22,7 @@ import { languages } from "@/data/languages";
 interface SampleUser {
   id: string;
   name: string;
-  gender: string;
+  gender: 'male' | 'female';
   country: string;
   language: string;
   age: number;
@@ -46,26 +47,39 @@ interface GroupedUsers {
 export default function AdminSampleUsers() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [sampleUsers, setSampleUsers] = useState<SampleUser[]>([]);
+  const [sampleMen, setSampleMen] = useState<SampleUser[]>([]);
+  const [sampleWomen, setSampleWomen] = useState<SampleUser[]>([]);
   const [groupedUsers, setGroupedUsers] = useState<GroupedUsers[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
 
-  // Fetch all sample users from database
+  // Fetch all sample users from both tables
   const fetchSampleUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("sample_users")
-        .select("*")
-        .order("country", { ascending: true })
-        .order("language", { ascending: true })
-        .order("gender", { ascending: true });
+      // Fetch from both tables in parallel
+      const [menResult, womenResult] = await Promise.all([
+        supabase
+          .from("sample_men")
+          .select("*")
+          .order("country", { ascending: true })
+          .order("language", { ascending: true }),
+        supabase
+          .from("sample_women")
+          .select("*")
+          .order("country", { ascending: true })
+          .order("language", { ascending: true })
+      ]);
 
-      if (error) throw error;
+      if (menResult.error) throw menResult.error;
+      if (womenResult.error) throw womenResult.error;
 
-      setSampleUsers(data || []);
-      groupUsersByRegion(data || []);
+      const men = (menResult.data || []).map(m => ({ ...m, gender: 'male' as const }));
+      const women = (womenResult.data || []).map(w => ({ ...w, gender: 'female' as const }));
+
+      setSampleMen(men);
+      setSampleWomen(women);
+      groupUsersByRegion(men, women);
     } catch (error: any) {
       toast.error("Failed to load sample users: " + error.message);
     } finally {
@@ -74,15 +88,16 @@ export default function AdminSampleUsers() {
   };
 
   // Group users by country and language
-  const groupUsersByRegion = (users: SampleUser[]) => {
+  const groupUsersByRegion = (men: SampleUser[], women: SampleUser[]) => {
     const groups: Map<string, GroupedUsers> = new Map();
+    const allUsers = [...men, ...women];
 
-    users.forEach((user) => {
+    allUsers.forEach((user) => {
       const key = `${user.country}-${user.language}`;
       
       if (!groups.has(key)) {
-        const countryData = countries.find((c) => c.code === user.country);
-        const languageData = languages.find((l) => l.code === user.language);
+        const countryData = countries.find((c) => c.name === user.country || c.code === user.country);
+        const languageData = languages.find((l) => l.name === user.language || l.code === user.language);
         
         groups.set(key, {
           country: user.country,
@@ -105,8 +120,8 @@ export default function AdminSampleUsers() {
 
     // Calculate allActive status for each group
     groups.forEach((group) => {
-      const allUsers = [...group.males, ...group.females];
-      group.allActive = allUsers.length > 0 && allUsers.every((u) => u.is_active);
+      const allUsersInGroup = [...group.males, ...group.females];
+      group.allActive = allUsersInGroup.length > 0 && allUsersInGroup.every((u) => u.is_active);
     });
 
     setGroupedUsers(Array.from(groups.values()));
@@ -118,15 +133,26 @@ export default function AdminSampleUsers() {
     setUpdating(groupKey);
 
     const newStatus = !group.allActive;
-    const allUserIds = [...group.males, ...group.females].map((u) => u.id);
+    const maleIds = group.males.map((u) => u.id);
+    const femaleIds = group.females.map((u) => u.id);
 
     try {
-      const { error } = await supabase
-        .from("sample_users")
-        .update({ is_active: newStatus })
-        .in("id", allUserIds);
-
-      if (error) throw error;
+      // Update both tables in parallel
+      if (maleIds.length > 0) {
+        const { error } = await supabase
+          .from("sample_men")
+          .update({ is_active: newStatus })
+          .in("id", maleIds);
+        if (error) throw error;
+      }
+      
+      if (femaleIds.length > 0) {
+        const { error } = await supabase
+          .from("sample_women")
+          .update({ is_active: newStatus })
+          .in("id", femaleIds);
+        if (error) throw error;
+      }
 
       toast.success(
         `${group.countryName} (${group.languageName}) sample users ${newStatus ? "enabled" : "disabled"}`
@@ -145,8 +171,9 @@ export default function AdminSampleUsers() {
     setUpdating(user.id);
 
     try {
+      const tableName = user.gender === 'male' ? 'sample_men' : 'sample_women';
       const { error } = await supabase
-        .from("sample_users")
+        .from(tableName)
         .update({ is_active: !user.is_active })
         .eq("id", user.id);
 
@@ -162,8 +189,8 @@ export default function AdminSampleUsers() {
   };
 
   // Get country flag emoji
-  const getCountryFlag = (countryCode: string): string => {
-    const country = countries.find((c) => c.code === countryCode);
+  const getCountryFlag = (countryName: string): string => {
+    const country = countries.find((c) => c.name === countryName || c.code === countryName);
     return country?.flag || "🌍";
   };
 
@@ -177,11 +204,9 @@ export default function AdminSampleUsers() {
 
       if (data.success) {
         toast.success(
-          `Created ${data.summary.created} users, skipped ${data.summary.skipped} existing`
+          `Created ${data.summary?.created || data.results?.created || 0} users`
         );
-        if (data.results.errors.length > 0) {
-          console.error("Seeding errors:", data.results.errors);
-        }
+        await fetchSampleUsers();
       } else {
         throw new Error(data.error || "Seeding failed");
       }
@@ -192,9 +217,33 @@ export default function AdminSampleUsers() {
     }
   };
 
+  // Toggle all users globally
+  const toggleAllUsers = async (enable: boolean) => {
+    setUpdating("all");
+    try {
+      const [menResult, womenResult] = await Promise.all([
+        supabase.from("sample_men").update({ is_active: enable }).neq("id", ""),
+        supabase.from("sample_women").update({ is_active: enable }).neq("id", "")
+      ]);
+
+      if (menResult.error) throw menResult.error;
+      if (womenResult.error) throw womenResult.error;
+
+      toast.success(`All sample users ${enable ? "enabled" : "disabled"}`);
+      await fetchSampleUsers();
+    } catch (error: any) {
+      toast.error("Failed to update: " + error.message);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   useEffect(() => {
     fetchSampleUsers();
   }, []);
+
+  const totalUsers = sampleMen.length + sampleWomen.length;
+  const activeUsers = [...sampleMen, ...sampleWomen].filter(u => u.is_active).length;
 
   // Loading skeleton
   if (loading) {
@@ -224,11 +273,25 @@ export default function AdminSampleUsers() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Sample Users</h1>
               <p className="text-muted-foreground">
-                Manage demo profiles by country and language
+                Manage demo profiles by country and language (separate tables)
               </p>
             </div>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => toggleAllUsers(false)}
+              disabled={updating === "all"}
+            >
+              Disable All
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => toggleAllUsers(true)}
+              disabled={updating === "all"}
+            >
+              Enable All
+            </Button>
             <Button variant="outline" onClick={fetchSampleUsers}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -291,7 +354,7 @@ export default function AdminSampleUsers() {
               <div className="flex items-center gap-3">
                 <Users className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">{sampleUsers.length}</p>
+                  <p className="text-2xl font-bold">{totalUsers}</p>
                   <p className="text-sm text-muted-foreground">Total Sample Users</p>
                 </div>
               </div>
@@ -302,9 +365,7 @@ export default function AdminSampleUsers() {
               <div className="flex items-center gap-3">
                 <User className="h-8 w-8 text-blue-500" />
                 <div>
-                  <p className="text-2xl font-bold">
-                    {sampleUsers.filter((u) => u.gender === "male").length}
-                  </p>
+                  <p className="text-2xl font-bold">{sampleMen.length}</p>
                   <p className="text-sm text-muted-foreground">Male Profiles</p>
                 </div>
               </div>
@@ -315,9 +376,7 @@ export default function AdminSampleUsers() {
               <div className="flex items-center gap-3">
                 <User className="h-8 w-8 text-pink-500" />
                 <div>
-                  <p className="text-2xl font-bold">
-                    {sampleUsers.filter((u) => u.gender === "female").length}
-                  </p>
+                  <p className="text-2xl font-bold">{sampleWomen.length}</p>
                   <p className="text-sm text-muted-foreground">Female Profiles</p>
                 </div>
               </div>
@@ -328,9 +387,7 @@ export default function AdminSampleUsers() {
               <div className="flex items-center gap-3">
                 <Globe className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-2xl font-bold">
-                    {sampleUsers.filter((u) => u.is_active).length}
-                  </p>
+                  <p className="text-2xl font-bold">{activeUsers}</p>
                   <p className="text-sm text-muted-foreground">Active Users</p>
                 </div>
               </div>
