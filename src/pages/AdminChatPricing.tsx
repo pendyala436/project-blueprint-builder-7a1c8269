@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  ArrowLeft, 
   IndianRupee, 
   Clock, 
   Wallet,
@@ -19,6 +18,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import AdminNav from "@/components/AdminNav";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 interface ChatPricing {
   id: string;
@@ -236,20 +237,13 @@ const AdminChatPricing = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold">Chat Pricing Configuration</h1>
-            <p className="text-sm text-muted-foreground">Manage charging, earnings and withdrawal settings</p>
-          </div>
+    <AdminNav>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Chat Pricing Configuration</h1>
+          <p className="text-muted-foreground">Manage charging, earnings and withdrawal settings</p>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
         {/* Section 1: Chat Pricing Rates */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -604,8 +598,8 @@ const AdminChatPricing = () => {
           </CardContent>
         </Card>
 
-      </main>
-    </div>
+      </div>
+    </AdminNav>
   );
 };
 
