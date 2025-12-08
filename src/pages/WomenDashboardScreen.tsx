@@ -819,7 +819,7 @@ const WomenDashboardScreen = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Welcome Section with Filter */}
+        {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -853,8 +853,7 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
-
-        {/* Stats Cards */}
+        {/* Section 2: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
             <div className="flex items-center gap-3">
@@ -908,7 +907,7 @@ const WomenDashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Random Chat Button */}
+        {/* Section 3: Primary Action - Random Chat */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
           <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
             <div className="flex items-center justify-between">
@@ -932,14 +931,32 @@ const WomenDashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Active Chats Section */}
+        {/* Section 4: Active Chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
+        {/* Section 5: Quick Actions */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                onClick={action.action}
+                className="group p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+              >
+                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                  {action.icon}
+                </div>
+                <p className="text-sm font-medium text-foreground">{action.label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Online Men Tabs */}
-        <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        {/* Section 6: Online Men Tabs */}
+        <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.22s" }}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recharged" className="flex items-center gap-2">
               <Crown className="h-4 w-4" />
@@ -1019,27 +1036,8 @@ const WomenDashboardScreen = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Quick Actions */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className="group p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-              >
-                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                  {action.icon}
-                </div>
-                <p className="text-sm font-medium text-foreground">{action.label}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Notifications */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+        {/* Section 7: Recent Notifications */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
             <button className="text-sm text-primary hover:underline flex items-center gap-1">
@@ -1092,8 +1090,8 @@ const WomenDashboardScreen = () => {
           )}
         </div>
 
-        {/* Shift CTA Card */}
-        <Card className="p-4 bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        {/* Section 8: Shift CTA Card */}
+        <Card className="p-4 bg-gradient-to-r from-primary/10 to-rose-500/10 border-primary/20 animate-fade-in" style={{ animationDelay: "0.32s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
