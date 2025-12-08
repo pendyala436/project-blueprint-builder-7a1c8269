@@ -190,14 +190,6 @@ const AuthScreen = () => {
               )}
             </div>
 
-            {/* Language Selector - Below Password */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">
-                {t('settings.language')}
-              </Label>
-              <AuthLanguageSelector />
-            </div>
-
             {/* Forgot Password Link */}
             <div className="text-right">
               <button
