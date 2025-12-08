@@ -6,7 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
+// Default values (will be overridden by admin_settings)
+let PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
+let INACTIVITY_TIMEOUT_SECONDS = 180; // 3 minutes inactivity timeout
+let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
+let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
+let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
 // NLLB-200 supported countries list (countries with NLLB language support)
 const NLLB200_COUNTRIES = [
@@ -22,8 +27,6 @@ const NLLB200_COUNTRIES = [
   "pakistan", "bangladesh", "nepal", "sri lanka"
 ];
 
-const INACTIVITY_TIMEOUT_SECONDS = 180; // 3 minutes inactivity timeout
-
 // Indian NLLB-200 languages
 const INDIAN_LANGUAGES = [
   "hindi", "bengali", "marathi", "telugu", "tamil", "gujarati", "urdu", 
@@ -37,10 +40,52 @@ const isIndianLanguage = (lang: string): boolean => {
   return INDIAN_LANGUAGES.some(l => lowerLang.includes(l) || l.includes(lowerLang));
 };
 
-const MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
+// Helper to load admin settings
+async function loadAdminSettings(supabase: any): Promise<void> {
+  try {
+    const { data: settings } = await supabase
+      .from("admin_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", [
+        "auto_disconnect_timer",
+        "max_parallel_connections",
+        "reconnect_attempts",
+        "heartbeat_interval",
+        "priority_wait_threshold"
+      ]);
+
+    if (settings) {
+      for (const setting of settings) {
+        const value = parseInt(setting.setting_value, 10);
+        if (isNaN(value)) continue;
+
+        switch (setting.setting_key) {
+          case "auto_disconnect_timer":
+            INACTIVITY_TIMEOUT_SECONDS = value;
+            break;
+          case "max_parallel_connections":
+            MAX_PARALLEL_CHATS = value;
+            break;
+          case "reconnect_attempts":
+            RECONNECT_ATTEMPTS = value;
+            break;
+          case "heartbeat_interval":
+            HEARTBEAT_INTERVAL_SECONDS = value;
+            break;
+          case "priority_wait_threshold":
+            PRIORITY_WAIT_THRESHOLD_SECONDS = value;
+            break;
+        }
+      }
+    }
+    console.log(`[CONFIG] Loaded settings: inactivity=${INACTIVITY_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
+  } catch (error) {
+    console.error("[CONFIG] Error loading admin settings, using defaults:", error);
+  }
+}
 
 interface ChatRequest {
-  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "find_match" | "auto_reconnect" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity" | "get_active_chats";
+  action: "start_chat" | "end_chat" | "heartbeat" | "transfer_chat" | "get_available_woman" | "get_available_indian_woman" | "find_match" | "auto_reconnect" | "join_queue" | "leave_queue" | "check_queue_status" | "update_status" | "check_inactivity" | "get_active_chats" | "get_settings";
   man_user_id?: string;
   woman_user_id?: string;
   user_id?: string;
@@ -60,6 +105,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Load dynamic settings from admin_settings
+    await loadAdminSettings(supabase);
 
     const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = await req.json();
 
@@ -1212,6 +1260,24 @@ serve(async (req) => {
             count: allChats.length,
             max_allowed: MAX_PARALLEL_CHATS,
             can_add_more: allChats.length < MAX_PARALLEL_CHATS
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ============= GET CURRENT SETTINGS =============
+      // Returns current configurable settings for frontend use
+      case "get_settings": {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            settings: {
+              inactivity_timeout_seconds: INACTIVITY_TIMEOUT_SECONDS,
+              max_parallel_chats: MAX_PARALLEL_CHATS,
+              reconnect_attempts: RECONNECT_ATTEMPTS,
+              heartbeat_interval_seconds: HEARTBEAT_INTERVAL_SECONDS,
+              priority_wait_threshold_seconds: PRIORITY_WAIT_THRESHOLD_SECONDS
+            }
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
