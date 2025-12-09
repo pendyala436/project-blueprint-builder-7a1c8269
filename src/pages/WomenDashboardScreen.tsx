@@ -214,18 +214,32 @@ const WomenDashboardScreen = () => {
           }
         }
       )
-      // Listen for language changes in user_languages table for this woman
+      // Listen for language changes in user_languages table (INSERT events - no filter for new records)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
+        { event: 'INSERT', schema: 'public', table: 'user_languages' },
+        async (payload) => {
+          const record = payload.new as { user_id?: string; language_name?: string; language_code?: string };
+          // Only process if this is our user's language change
+          if (record?.user_id === currentUserId && record?.language_name) {
+            console.log("[WomenDashboard] user_languages INSERT:", record.language_name);
+            setCurrentWomanLanguage(record.language_name);
+            setCurrentWomanLanguageCode(record.language_code || "eng_Latn");
+            fetchOnlineMen(undefined, record.language_name, currentWomanCountry);
+          }
+        }
+      )
+      // Listen for language updates in user_languages table
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
         async (payload) => {
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
           const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
-          console.log("[WomenDashboard] user_languages changed:", newLanguage);
+          console.log("[WomenDashboard] user_languages UPDATE:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
             setCurrentWomanLanguageCode(newCode);
-            // Fetch men with new language
             fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
           }
         }
@@ -240,7 +254,6 @@ const WomenDashboardScreen = () => {
           console.log("[WomenDashboard] female_profiles language changed:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
-            // Fetch men with new language
             fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
           }
         }
