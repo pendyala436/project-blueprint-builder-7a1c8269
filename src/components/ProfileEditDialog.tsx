@@ -429,31 +429,26 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
 
       // Also update user_languages table to trigger real-time subscription for dashboard refresh
       if (userLanguage && userLanguage.language_name) {
-        // Check if language entry exists
-        const { data: existingLang } = await supabase
+        console.log("[ProfileEditDialog] Updating user_languages to:", userLanguage.language_name, userLanguage.language_code);
+        
+        // Delete existing and insert new to ensure proper realtime trigger
+        await supabase
           .from("user_languages")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (existingLang) {
-          // Update existing language
-          await supabase
-            .from("user_languages")
-            .update({
-              language_name: userLanguage.language_name,
-              language_code: userLanguage.language_code
-            })
-            .eq("user_id", user.id);
+          .delete()
+          .eq("user_id", user.id);
+        
+        const { error: langInsertError } = await supabase
+          .from("user_languages")
+          .insert({
+            user_id: user.id,
+            language_name: userLanguage.language_name,
+            language_code: userLanguage.language_code
+          });
+        
+        if (langInsertError) {
+          console.error("[ProfileEditDialog] Error updating user_languages:", langInsertError);
         } else {
-          // Insert new language entry
-          await supabase
-            .from("user_languages")
-            .insert({
-              user_id: user.id,
-              language_name: userLanguage.language_name,
-              language_code: userLanguage.language_code
-            });
+          console.log("[ProfileEditDialog] Successfully updated user_languages");
         }
 
         // Update original language to reflect saved state
