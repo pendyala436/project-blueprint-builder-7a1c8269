@@ -333,8 +333,36 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
     e.target.value = ''; // Reset input
   };
 
+  // Check if camera is available
+  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check if we're in an iframe (preview environment) where camera may be blocked
+    const isInIframe = window.self !== window.top;
+    
+    // Check if mediaDevices is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraAvailable(false);
+      return;
+    }
+
+    // In iframe environments, camera is often blocked - default to upload
+    if (isInIframe) {
+      setCameraAvailable(false);
+      return;
+    }
+
+    setCameraAvailable(true);
+  }, []);
+
   // Camera functions for live selfie
   const startCamera = async () => {
+    // If camera not available, go directly to file upload
+    if (cameraAvailable === false) {
+      selfieInputRef.current?.click();
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
@@ -347,10 +375,10 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
       setShowCamera(true);
     } catch (error) {
       console.error("Camera access error:", error);
+      setCameraAvailable(false);
       toast({
-        title: "Camera Error",
-        description: "Could not access camera. Please allow camera permissions or use file upload.",
-        variant: "destructive",
+        title: "Camera not available",
+        description: "Using file upload instead. Select a clear selfie photo.",
       });
       // Fallback to file input
       selfieInputRef.current?.click();
@@ -524,50 +552,28 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="h-24 w-24 rounded-xl border-dashed flex flex-col gap-2"
-                onClick={startCamera}
-                disabled={uploadingType !== null || isVerifying}
-              >
-                {uploadingType === 'selfie' || isVerifying ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-[10px] text-muted-foreground">
-                      {isVerifying ? "Verifying..." : "Uploading..."}
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <Camera className="w-6 h-6 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground">Camera</span>
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="h-24 w-24 rounded-xl border-dashed flex flex-col gap-2"
-                onClick={() => selfieInputRef.current?.click()}
-                disabled={uploadingType !== null || isVerifying}
-              >
-                {uploadingType === 'selfie' || isVerifying ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-[10px] text-muted-foreground">
-                      {isVerifying ? "Verifying..." : "Uploading..."}
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-6 h-6 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground">Upload</span>
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              className="h-32 w-32 rounded-xl border-dashed flex flex-col gap-2"
+              onClick={() => selfieInputRef.current?.click()}
+              disabled={uploadingType !== null || isVerifying}
+            >
+              {uploadingType === 'selfie' || isVerifying ? (
+                <div className="flex flex-col items-center gap-1">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-xs text-muted-foreground">
+                    {isVerifying ? "Verifying..." : "Uploading..."}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Camera className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Take Selfie</span>
+                </>
+              )}
+            </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Take a selfie or upload a photo for AI verification
+              Upload a clear selfie for AI verification
             </p>
           </div>
         )}
