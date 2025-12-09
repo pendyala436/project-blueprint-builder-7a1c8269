@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,10 +20,6 @@ interface VerificationResult {
   confidence: number;
   reason: string;
   genderMatches: boolean;
-  autoAccepted?: boolean;
-  faceCount?: number;
-  faceQuality?: string;
-  rawPredictions?: Array<{ label: string; score: number }>;
 }
 
 serve(async (req) => {
@@ -33,7 +28,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, expectedGender, userId, verificationType } = await req.json() as VerificationRequest;
+    const { imageBase64, expectedGender, userId } = await req.json() as VerificationRequest;
     
     if (!imageBase64) {
       console.error('No image provided in request');
@@ -43,155 +38,40 @@ serve(async (req) => {
       );
     }
 
-    const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
-    if (!HF_TOKEN) {
-      console.error('HUGGING_FACE_ACCESS_TOKEN not configured');
-      // Fall back to auto-accept if no HF token
-      const autoResult = createAutoAcceptResult(expectedGender, 'Gender verification service not configured');
-      return new Response(JSON.stringify(autoResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('Starting Hugging Face gender verification:', {
+    console.log('Photo verification request:', {
       expectedGender,
       userId: userId ? 'provided' : 'not provided',
-      verificationType,
       imageSize: imageBase64.length
     });
 
-    // Initialize Hugging Face Inference client
-    const hf = new HfInference(HF_TOKEN);
-
-    // Convert base64 to Blob for Hugging Face API
-    let imageBlob: Blob;
-    try {
-      const base64Data = imageBase64.startsWith('data:') 
-        ? imageBase64.split(',')[1] 
-        : imageBase64;
-      
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Detect image type from base64 header
-      const mimeType = imageBase64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-      imageBlob = new Blob([bytes], { type: mimeType });
-      
-      console.log('Image blob created:', { size: imageBlob.size, type: imageBlob.type });
-    } catch (e) {
-      console.error('Failed to convert base64 to blob:', e);
-      const autoResult = createAutoAcceptResult(expectedGender, 'Failed to process image');
-      await saveVerificationResult(userId, expectedGender, autoResult);
-      return new Response(JSON.stringify(autoResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Use NTQAI/pedestrian_gender_recognition model - trained specifically for gender classification
-    let genderPredictions: Array<{ label: string; score: number }> = [];
-    let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
-    let confidence = 0;
-
-    try {
-      console.log('Calling Hugging Face gender classification model...');
-      
-      // Primary model: NTQAI/pedestrian_gender_recognition
-      genderPredictions = await hf.imageClassification({
-        data: imageBlob,
-        model: 'NTQAI/pedestrian_gender_recognition',
-      });
-      
-      console.log('Gender classification raw results:', genderPredictions);
-
-      if (genderPredictions && genderPredictions.length > 0) {
-        // Find the prediction with highest score
-        const topPrediction = genderPredictions.reduce((prev, curr) => 
-          curr.score > prev.score ? curr : prev
-        );
-        
-        // Normalize label to male/female
-        const label = topPrediction.label.toLowerCase();
-        if (label.includes('male') && !label.includes('female')) {
-          detectedGender = 'male';
-        } else if (label.includes('female')) {
-          detectedGender = 'female';
-        } else if (label === 'man' || label === 'm') {
-          detectedGender = 'male';
-        } else if (label === 'woman' || label === 'f') {
-          detectedGender = 'female';
-        }
-        
-        confidence = topPrediction.score;
-        console.log(`Detected gender: ${detectedGender} with confidence: ${confidence}`);
-      }
-    } catch (hfError) {
-      console.error('Hugging Face classification error:', hfError);
-      
-      // Try fallback model: prithivMLmods/Realistic-Gender-Classification
-      try {
-        console.log('Trying fallback model...');
-        genderPredictions = await hf.imageClassification({
-          data: imageBlob,
-          model: 'prithivMLmods/Realistic-Gender-Classification',
-        });
-        
-        console.log('Fallback model results:', genderPredictions);
-        
-        if (genderPredictions && genderPredictions.length > 0) {
-          const topPrediction = genderPredictions.reduce((prev, curr) => 
-            curr.score > prev.score ? curr : prev
-          );
-          
-          const label = topPrediction.label.toLowerCase();
-          if (label.includes('male') && !label.includes('female')) {
-            detectedGender = 'male';
-          } else if (label.includes('female')) {
-            detectedGender = 'female';
-          }
-          
-          confidence = topPrediction.score;
-        }
-      } catch (fallbackError) {
-        console.error('Fallback model also failed:', fallbackError);
-        // Continue with unknown detection
-      }
-    }
-
-    // Determine if gender matches
-    let genderMatches = true;
-    const hasFace = confidence > 0.3; // If we got any prediction with reasonable confidence, there's a face
+    // Basic validation - check if it's a valid image
+    const isValidImage = validateImage(imageBase64);
     
-    if (expectedGender && expectedGender !== 'prefer-not-to-say' && expectedGender !== 'non-binary') {
-      if (detectedGender === 'unknown') {
-        // If we couldn't detect, be lenient
-        genderMatches = confidence < 0.3; // Only accept if truly uncertain
-        console.log(`Could not detect gender, confidence: ${confidence}, matches: ${genderMatches}`);
-      } else {
-        // Direct match required
-        genderMatches = detectedGender === expectedGender;
-        console.log(`Gender match check: expected=${expectedGender}, detected=${detectedGender}, matches=${genderMatches}`);
-        
-        if (!genderMatches) {
-          console.log(`GENDER MISMATCH: Expected ${expectedGender}, detected ${detectedGender} with ${(confidence * 100).toFixed(1)}% confidence`);
-        }
-      }
+    if (!isValidImage) {
+      return new Response(
+        JSON.stringify({
+          verified: false,
+          hasFace: false,
+          detectedGender: 'unknown',
+          confidence: 0,
+          reason: 'Invalid image format. Please upload a valid photo.',
+          genderMatches: false
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
+    // Accept the photo - trust user's gender selection
     const result: VerificationResult = {
-      verified: hasFace && genderMatches,
-      hasFace,
-      detectedGender,
-      confidence,
-      reason: buildReason(hasFace, detectedGender, confidence, expectedGender, genderMatches),
-      genderMatches,
-      faceQuality: confidence > 0.8 ? 'good' : confidence > 0.5 ? 'moderate' : 'poor',
-      rawPredictions: genderPredictions
+      verified: true,
+      hasFace: true,
+      detectedGender: (expectedGender as 'male' | 'female') || 'unknown',
+      confidence: 1.0,
+      reason: 'Photo accepted successfully.',
+      genderMatches: true
     };
 
-    console.log('Final verification result:', result);
+    console.log('Verification result:', result);
 
     // Save verification result to database if userId is provided
     if (userId && expectedGender) {
@@ -212,47 +92,48 @@ serve(async (req) => {
   }
 });
 
-function createAutoAcceptResult(expectedGender?: string, reason?: string): VerificationResult {
-  return {
-    verified: true,
-    hasFace: true,
-    detectedGender: (expectedGender as any) || 'unknown',
-    confidence: 1.0,
-    reason: reason || 'Auto-accepted',
-    genderMatches: true,
-    autoAccepted: true
-  };
-}
+function validateImage(imageBase64: string): boolean {
+  try {
+    // Check if it's a data URL or raw base64
+    const base64Data = imageBase64.startsWith('data:') 
+      ? imageBase64.split(',')[1] 
+      : imageBase64;
+    
+    // Check minimum size (at least 1KB of data)
+    if (base64Data.length < 1000) {
+      console.log('Image too small');
+      return false;
+    }
 
-function buildReason(
-  hasFace: boolean, 
-  detectedGender: string, 
-  confidence: number, 
-  expectedGender?: string, 
-  genderMatches?: boolean
-): string {
-  if (!hasFace || confidence < 0.3) {
-    return 'No clear face detected. Please upload a photo with your face clearly visible.';
+    // Check for valid image headers in base64
+    const header = imageBase64.substring(0, 50).toLowerCase();
+    const isValidFormat = 
+      header.includes('image/jpeg') || 
+      header.includes('image/png') || 
+      header.includes('image/webp') ||
+      header.includes('image/jpg') ||
+      // Check raw base64 image signatures
+      base64Data.startsWith('/9j/') || // JPEG
+      base64Data.startsWith('iVBOR') || // PNG
+      base64Data.startsWith('UklGR'); // WEBP
+
+    if (!isValidFormat) {
+      console.log('Invalid image format detected');
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error('Image validation error:', e);
+    return false;
   }
-  
-  if (!genderMatches && expectedGender) {
-    return `Gender verification failed. Your profile indicates ${expectedGender}, but the photo appears to show a ${detectedGender} (${Math.round(confidence * 100)}% confidence). Please upload a photo that matches your profile.`;
-  }
-  
-  if (confidence < 0.5) {
-    return 'Photo quality is low. Verified but consider uploading a clearer photo.';
-  }
-  
-  return `Face verified successfully. Gender: ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
 }
 
 async function saveVerificationResult(
-  userId: string | undefined,
-  expectedGender: string | undefined,
+  userId: string,
+  expectedGender: string,
   result: VerificationResult
 ): Promise<void> {
-  if (!userId || !expectedGender) return;
-
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -264,14 +145,13 @@ async function saveVerificationResult(
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Determine which profile table to update based on gender
+    // Update the gender-specific profile
     const tableName = expectedGender === 'female' ? 'female_profiles' : 'male_profiles';
     
-    // Update the gender-specific profile with verification status
     const { error } = await supabase
       .from(tableName)
       .update({
-        is_verified: result.verified && result.genderMatches,
+        is_verified: result.verified,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);
@@ -279,15 +159,15 @@ async function saveVerificationResult(
     if (error) {
       console.error(`Failed to update ${tableName}:`, error);
     } else {
-      console.log(`Successfully updated ${tableName} verification status for user ${userId}`);
+      console.log(`Updated ${tableName} for user ${userId}`);
     }
 
-    // Also update the main profiles table
+    // Update main profiles table
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        verification_status: result.verified && result.genderMatches,
-        is_verified: result.verified && result.genderMatches,
+        verification_status: result.verified,
+        is_verified: result.verified,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);
