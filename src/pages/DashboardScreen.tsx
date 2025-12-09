@@ -342,10 +342,12 @@ const DashboardScreen = () => {
         async (payload) => {
           // Language changed - update state and refresh women list
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
-          if (newLanguage && newLanguage !== userLanguage) {
+          console.log("[Dashboard] user_languages changed:", newLanguage);
+          if (newLanguage) {
             setUserLanguage(newLanguage);
             const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
             setUserLanguageCode(newCode);
+            // Directly call with new language to avoid stale closure
             fetchOnlineWomen(newLanguage);
           }
         }
@@ -357,8 +359,10 @@ const DashboardScreen = () => {
         async (payload) => {
           const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
           const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
-          if (newLanguage && newLanguage !== userLanguage) {
+          console.log("[Dashboard] male_profiles language changed:", newLanguage);
+          if (newLanguage) {
             setUserLanguage(newLanguage);
+            // Directly call with new language to avoid stale closure
             fetchOnlineWomen(newLanguage);
           }
         }
@@ -650,6 +654,7 @@ const DashboardScreen = () => {
   };
 
   const fetchOnlineWomen = async (language: string) => {
+    console.log("[Dashboard] fetchOnlineWomen called with language:", language);
     setLoadingOnlineWomen(true);
     try {
       const userHasIndianLanguage = isIndianLanguage(language);
@@ -789,6 +794,8 @@ const DashboardScreen = () => {
         })
         .sort(sortByAvailability);
 
+      console.log("[Dashboard] Same language women found:", sameLanguage.length, "for language:", language);
+      console.log("[Dashboard] Other NLLB women found:", otherNLLBWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
       setIndianTranslatedWomen(otherNLLBWomen.slice(0, 15));
     } catch (error) {
