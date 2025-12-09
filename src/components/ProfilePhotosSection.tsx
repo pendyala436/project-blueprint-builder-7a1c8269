@@ -523,31 +523,54 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
             </div>
           </div>
         ) : (
-          <Button
-            variant="outline"
-            className="w-32 h-32 rounded-xl border-dashed flex flex-col gap-2"
-            onClick={startCamera}
-            disabled={uploadingType !== null || isVerifying}
-          >
-            {uploadingType === 'selfie' || isVerifying ? (
-              <div className="flex flex-col items-center gap-1">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span className="text-xs text-muted-foreground">
-                  {isVerifying ? "Verifying..." : "Uploading..."}
-                </span>
-              </div>
-            ) : (
-              <>
-                <Camera className="w-8 h-8 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Take Selfie</span>
-              </>
-            )}
-          </Button>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="h-24 w-24 rounded-xl border-dashed flex flex-col gap-2"
+                onClick={startCamera}
+                disabled={uploadingType !== null || isVerifying}
+              >
+                {uploadingType === 'selfie' || isVerifying ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-[10px] text-muted-foreground">
+                      {isVerifying ? "Verifying..." : "Uploading..."}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <Camera className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Camera</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-24 w-24 rounded-xl border-dashed flex flex-col gap-2"
+                onClick={() => selfieInputRef.current?.click()}
+                disabled={uploadingType !== null || isVerifying}
+              >
+                {uploadingType === 'selfie' || isVerifying ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-[10px] text-muted-foreground">
+                      {isVerifying ? "Verifying..." : "Uploading..."}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Upload</span>
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Take a selfie or upload a photo for AI verification
+            </p>
+          </div>
         )}
-
-        <p className="text-xs text-muted-foreground">
-          Your selfie will be captured live from camera for AI verification
-        </p>
       </div>
 
       {/* Additional Photos Section */}
