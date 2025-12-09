@@ -24,6 +24,7 @@ interface UserPhoto {
 
 interface ProfilePhotosSectionProps {
   userId: string;
+  expectedGender?: 'male' | 'female';
   onPhotosChange?: (hasPhotos: boolean) => void;
   onGenderVerified?: (gender: string) => void;
 }
@@ -31,7 +32,7 @@ interface ProfilePhotosSectionProps {
 const MAX_ADDITIONAL_PHOTOS = 5;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: ProfilePhotosSectionProps) => {
+const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGenderVerified }: ProfilePhotosSectionProps) => {
   const { toast } = useToast();
   const { verifyFace, isVerifying: isFaceVerifying } = useFaceVerification();
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
@@ -128,8 +129,8 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
         });
         const imageBase64 = await base64Promise;
 
-        // Use in-browser face verification (no external API)
-        const verifyData = await verifyFace(imageBase64);
+        // Use in-browser face verification with expected gender
+        const verifyData = await verifyFace(imageBase64, expectedGender);
 
         if (!verifyData.hasFace) {
           toast({
@@ -141,23 +142,25 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
           return;
         }
 
-        // Normalize gender to lowercase for consistency
-        const gender = verifyData.detectedGender?.toLowerCase() || 'unknown';
+        // Check for gender mismatch if expected gender was provided
+        if (expectedGender && verifyData.genderMatches === false) {
+          toast({
+            title: "Gender mismatch",
+            description: `This profile requires a ${expectedGender} selfie. Detected: ${verifyData.detectedGender}`,
+            variant: "destructive",
+          });
+          setVerificationStatus('failed');
+          setUploadingType(null);
+          return;
+        }
+
+        // Use expected gender if provided and detection was uncertain
+        const gender = expectedGender || (verifyData.detectedGender?.toLowerCase() as 'male' | 'female') || 'unknown';
         setDetectedGender(gender);
         setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
 
-        // Update main profile with detected gender and verification status
-        await supabase
-          .from("profiles")
-          .update({ 
-            gender: gender,
-            verification_status: verifyData.verified 
-          })
-          .eq("user_id", userId);
-
-        // Also create/update gender-specific profile
-        if (gender === 'male') {
-          // Check if male profile exists
+        // Update only the specific gender profile (not the main profiles table for gender)
+        if (expectedGender === 'male') {
           const { data: existingMale } = await supabase
             .from("male_profiles")
             .select("id")
@@ -169,13 +172,8 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
               .from("male_profiles")
               .update({ is_verified: verifyData.verified })
               .eq("user_id", userId);
-          } else {
-            await supabase
-              .from("male_profiles")
-              .insert({ user_id: userId, is_verified: verifyData.verified });
           }
-        } else if (gender === 'female') {
-          // Check if female profile exists
+        } else if (expectedGender === 'female') {
           const { data: existingFemale } = await supabase
             .from("female_profiles")
             .select("id")
@@ -187,10 +185,6 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
               .from("female_profiles")
               .update({ is_verified: verifyData.verified })
               .eq("user_id", userId);
-          } else {
-            await supabase
-              .from("female_profiles")
-              .insert({ user_id: userId, is_verified: verifyData.verified });
           }
         }
 
@@ -198,7 +192,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
 
         toast({
           title: verifyData.verified ? "Verification successful" : "Verification complete",
-          description: `Gender detected: ${gender}${verifyData.verified ? " ✓" : ""}`,
+          description: `Gender verified: ${gender}${verifyData.verified ? " ✓" : ""}`,
         });
       }
 
