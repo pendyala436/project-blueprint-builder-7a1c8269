@@ -171,6 +171,8 @@ const WomenDashboardScreen = () => {
 
   // Real-time subscription for online users, chat sessions, video calls, and earnings
   useEffect(() => {
+    if (!currentUserId) return;
+    
     const channel = supabase
       .channel('women-dashboard-updates')
       .on(
@@ -209,6 +211,37 @@ const WomenDashboardScreen = () => {
         () => { 
           if (currentUserId) {
             fetchNotifications(currentUserId);
+          }
+        }
+      )
+      // Listen for language changes in user_languages table for this woman
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
+        async (payload) => {
+          const newLanguage = (payload.new as { language_name?: string })?.language_name;
+          const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
+          console.log("[WomenDashboard] user_languages changed:", newLanguage);
+          if (newLanguage) {
+            setCurrentWomanLanguage(newLanguage);
+            setCurrentWomanLanguageCode(newCode);
+            // Fetch men with new language
+            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
+          }
+        }
+      )
+      // Listen for language changes in female_profiles table
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'female_profiles', filter: `user_id=eq.${currentUserId}` },
+        async (payload) => {
+          const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
+          const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
+          console.log("[WomenDashboard] female_profiles language changed:", newLanguage);
+          if (newLanguage) {
+            setCurrentWomanLanguage(newLanguage);
+            // Fetch men with new language
+            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
           }
         }
       )
