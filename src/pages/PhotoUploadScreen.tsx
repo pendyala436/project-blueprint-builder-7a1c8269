@@ -205,6 +205,13 @@ const PhotoUploadScreen = () => {
         });
         data = result.data;
         error = result.error;
+        
+        // Check if the response contains an error (402, credits exhausted, etc.)
+        if (data?.error) {
+          console.log("Edge function returned error in data:", data.error);
+          autoAccept();
+          return;
+        }
       } catch (invokeError: any) {
         // Edge function invoke failed - auto accept
         console.log("Invoke error, auto-accepting:", invokeError);
@@ -212,23 +219,9 @@ const PhotoUploadScreen = () => {
         return;
       }
 
-      // Check for credits/service errors from edge function response body
-      if (data?.error) {
-        const errorText = String(data.error).toLowerCase();
-        if (errorText.includes("credits") || errorText.includes("402") || errorText.includes("exhausted") || errorText.includes("unavailable") || errorText.includes("ai service")) {
-          autoAccept();
-          return;
-        }
-      }
-
-      // Handle edge function invoke errors
+      // Handle any edge function errors - auto-accept to not block registration
       if (error) {
-        const errorMsg = String(error.message || error).toLowerCase();
-        if (errorMsg.includes("402") || errorMsg.includes("credits") || errorMsg.includes("exhausted")) {
-          autoAccept();
-          return;
-        }
-        // For any other error, also auto-accept to not block registration
+        console.log("Edge function error:", error);
         autoAccept();
         return;
       }
