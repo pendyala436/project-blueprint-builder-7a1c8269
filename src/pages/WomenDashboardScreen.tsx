@@ -346,21 +346,16 @@ const WomenDashboardScreen = () => {
       if (onlineStatuses && onlineStatuses.length > 0) {
         const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-        // Fetch profiles of online users who are male - only with photos (case-insensitive)
+        // Fetch male profiles from male_profiles table - only with photos
         const { data: maleProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
+          .from("male_profiles")
+          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
           .in("user_id", onlineUserIds)
           .not("photo_url", "is", null)
           .neq("photo_url", "");
 
-        // Filter to male profiles (case-insensitive)
-        const filteredMaleProfiles = maleProfiles?.filter(p => 
-          p.gender?.toLowerCase() === 'male'
-        ) || [];
-
-        if (filteredMaleProfiles.length > 0) {
-          const maleUserIds = filteredMaleProfiles.map(p => p.user_id);
+        if (maleProfiles && maleProfiles.length > 0) {
+          const maleUserIds = maleProfiles.map(p => p.user_id);
 
           // Fetch wallet balances
           const { data: wallets } = await supabase
@@ -378,8 +373,8 @@ const WomenDashboardScreen = () => {
           const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
           const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-          // Process real male profiles
-          filteredMaleProfiles.forEach(profile => {
+          // Process male profiles
+          maleProfiles.forEach(profile => {
             const manLanguage = languageMap.get(profile.user_id) || 
                                profile.primary_language || 
                                profile.preferred_language || 

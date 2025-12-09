@@ -146,7 +146,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
         setDetectedGender(gender);
         setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
 
-        // Update profile with detected gender and verification status
+        // Update main profile with detected gender and verification status
         await supabase
           .from("profiles")
           .update({ 
@@ -154,6 +154,45 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
             verification_status: verifyData.verified 
           })
           .eq("user_id", userId);
+
+        // Also create/update gender-specific profile
+        if (gender === 'male') {
+          // Check if male profile exists
+          const { data: existingMale } = await supabase
+            .from("male_profiles")
+            .select("id")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (existingMale) {
+            await supabase
+              .from("male_profiles")
+              .update({ is_verified: verifyData.verified })
+              .eq("user_id", userId);
+          } else {
+            await supabase
+              .from("male_profiles")
+              .insert({ user_id: userId, is_verified: verifyData.verified });
+          }
+        } else if (gender === 'female') {
+          // Check if female profile exists
+          const { data: existingFemale } = await supabase
+            .from("female_profiles")
+            .select("id")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          if (existingFemale) {
+            await supabase
+              .from("female_profiles")
+              .update({ is_verified: verifyData.verified })
+              .eq("user_id", userId);
+          } else {
+            await supabase
+              .from("female_profiles")
+              .insert({ user_id: userId, is_verified: verifyData.verified });
+          }
+        }
 
         onGenderVerified?.(gender);
 

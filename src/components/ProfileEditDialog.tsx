@@ -331,30 +331,73 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Update profile - excluding protected field (email only)
+      const genderLower = profile.gender?.toLowerCase();
+      const genderSpecificData = {
+        full_name: profile.full_name,
+        phone: profile.phone,
+        date_of_birth: profile.date_of_birth,
+        country: profile.country,
+        state: profile.state,
+        bio: profile.bio,
+        occupation: profile.occupation,
+        education_level: profile.education_level,
+        height_cm: profile.height_cm,
+        body_type: profile.body_type,
+        marital_status: profile.marital_status,
+        religion: profile.religion,
+        interests: profile.interests,
+        primary_language: userLanguage?.language_name || profile.primary_language,
+        preferred_language: userLanguage?.language_name || profile.primary_language,
+      };
+
+      // Update main profiles table
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: profile.full_name,
-          phone: profile.phone,
+          ...genderSpecificData,
           gender: profile.gender,
-          date_of_birth: profile.date_of_birth,
-          country: profile.country,
-          state: profile.state,
-          bio: profile.bio,
-          occupation: profile.occupation,
-          education_level: profile.education_level,
-          height_cm: profile.height_cm,
-          body_type: profile.body_type,
-          marital_status: profile.marital_status,
-          religion: profile.religion,
-          interests: profile.interests,
-          primary_language: userLanguage?.language_name || profile.primary_language,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
 
       if (error) throw error;
+
+      // Also update gender-specific profile table
+      if (genderLower === 'male') {
+        const { data: existingMale } = await supabase
+          .from("male_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (existingMale) {
+          await supabase
+            .from("male_profiles")
+            .update({ ...genderSpecificData, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+        } else {
+          await supabase
+            .from("male_profiles")
+            .insert({ user_id: user.id, ...genderSpecificData });
+        }
+      } else if (genderLower === 'female') {
+        const { data: existingFemale } = await supabase
+          .from("female_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (existingFemale) {
+          await supabase
+            .from("female_profiles")
+            .update({ ...genderSpecificData, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+        } else {
+          await supabase
+            .from("female_profiles")
+            .insert({ user_id: user.id, ...genderSpecificData });
+        }
+      }
 
       // Update user_languages table for matching
       if (userLanguage && userLanguage.language_code && userLanguage.language_name) {
