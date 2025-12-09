@@ -303,10 +303,23 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
             .update({ is_primary: true })
             .eq("id", nextPhoto.id);
           
-          await supabase
-            .from("profiles")
-            .update({ photo_url: nextPhoto.photo_url })
-            .eq("user_id", userId);
+          // Update the appropriate profile table based on expectedGender
+          if (expectedGender === 'male') {
+            await supabase
+              .from("male_profiles")
+              .update({ photo_url: nextPhoto.photo_url })
+              .eq("user_id", userId);
+          } else if (expectedGender === 'female') {
+            await supabase
+              .from("female_profiles")
+              .update({ photo_url: nextPhoto.photo_url })
+              .eq("user_id", userId);
+          } else {
+            await supabase
+              .from("profiles")
+              .update({ photo_url: nextPhoto.photo_url })
+              .eq("user_id", userId);
+          }
         }
       }
 
@@ -314,6 +327,9 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         title: "Photo deleted",
         description: "Photo removed from your profile",
       });
+      
+      // Reload to update state
+      await loadPhotos();
     } catch (error) {
       toast({
         title: "Delete failed",
@@ -337,11 +353,23 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         .update({ is_primary: true })
         .eq("id", photo.id);
 
-      // Update profile photo_url
-      await supabase
-        .from("profiles")
-        .update({ photo_url: photo.photo_url })
-        .eq("user_id", userId);
+      // Update the appropriate profile table based on expectedGender
+      if (expectedGender === 'male') {
+        await supabase
+          .from("male_profiles")
+          .update({ photo_url: photo.photo_url })
+          .eq("user_id", userId);
+      } else if (expectedGender === 'female') {
+        await supabase
+          .from("female_profiles")
+          .update({ photo_url: photo.photo_url })
+          .eq("user_id", userId);
+      } else {
+        await supabase
+          .from("profiles")
+          .update({ photo_url: photo.photo_url })
+          .eq("user_id", userId);
+      }
 
       await loadPhotos();
 
