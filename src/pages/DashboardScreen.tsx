@@ -335,19 +335,32 @@ const DashboardScreen = () => {
           }
         }
       )
-      // Listen for user's language changes in user_languages table
+      // Listen for user's language changes in user_languages table (INSERT events - no filter for new records)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
+        { event: 'INSERT', schema: 'public', table: 'user_languages' },
         async (payload) => {
-          // Language changed - update state and refresh women list
+          const record = payload.new as { user_id?: string; language_name?: string; language_code?: string };
+          // Only process if this is our user's language change
+          if (record?.user_id === currentUserId && record?.language_name) {
+            console.log("[Dashboard] user_languages INSERT:", record.language_name);
+            setUserLanguage(record.language_name);
+            setUserLanguageCode(record.language_code || "eng_Latn");
+            fetchOnlineWomen(record.language_name);
+          }
+        }
+      )
+      // Listen for user's language updates in user_languages table
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
+        async (payload) => {
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
-          console.log("[Dashboard] user_languages changed:", newLanguage);
+          const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
+          console.log("[Dashboard] user_languages UPDATE:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
-            const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
             setUserLanguageCode(newCode);
-            // Directly call with new language to avoid stale closure
             fetchOnlineWomen(newLanguage);
           }
         }
@@ -362,7 +375,6 @@ const DashboardScreen = () => {
           console.log("[Dashboard] male_profiles language changed:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
-            // Directly call with new language to avoid stale closure
             fetchOnlineWomen(newLanguage);
           }
         }
