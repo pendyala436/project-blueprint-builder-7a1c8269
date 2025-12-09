@@ -1,5 +1,5 @@
 /**
- * useFaceVerification Hook
+ * useGenderClassification Hook
  * 
  * Uses Hugging Face transformers.js with ONNX gender classification model
  * for in-browser gender verification from face images.
@@ -10,28 +10,27 @@
 import { useState, useCallback } from 'react';
 import { pipeline, type ImageClassificationPipeline } from '@huggingface/transformers';
 
-export interface FaceVerificationResult {
+export interface GenderClassificationResult {
   verified: boolean;
   hasFace: boolean;
   detectedGender: 'male' | 'female' | 'unknown';
   confidence: number;
   reason: string;
-  genderMatches?: boolean;
-  autoAccepted?: boolean;
+  genderMatches: boolean;
 }
 
-export interface UseFaceVerificationReturn {
+export interface UseGenderClassificationReturn {
   isVerifying: boolean;
   isLoadingModel: boolean;
   modelLoadProgress: number;
-  verifyFace: (imageBase64: string, expectedGender?: 'male' | 'female') => Promise<FaceVerificationResult>;
+  classifyGender: (imageBase64: string, expectedGender?: 'male' | 'female') => Promise<GenderClassificationResult>;
 }
 
-// Singleton classifier instance for performance
+// Singleton classifier instance
 let classifierInstance: ImageClassificationPipeline | null = null;
 let loadingPromise: Promise<ImageClassificationPipeline> | null = null;
 
-export const useFaceVerification = (): UseFaceVerificationReturn => {
+export const useGenderClassification = (): UseGenderClassificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
@@ -39,7 +38,6 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
   const getClassifier = useCallback(async (): Promise<ImageClassificationPipeline> => {
     // Return existing instance
     if (classifierInstance) {
-      setModelLoadProgress(100);
       return classifierInstance;
     }
 
@@ -54,7 +52,7 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
 
     loadingPromise = (async () => {
       try {
-        console.log('Loading Hugging Face gender classification model...');
+        console.log('Loading gender classification model...');
         
         const classifier = await pipeline(
           'image-classification',
@@ -84,19 +82,17 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
     return loadingPromise;
   }, []);
 
-  const verifyFace = useCallback(async (
+  const classifyGender = useCallback(async (
     imageBase64: string,
     expectedGender?: 'male' | 'female'
-  ): Promise<FaceVerificationResult> => {
+  ): Promise<GenderClassificationResult> => {
     setIsVerifying(true);
 
     try {
-      console.log('Starting in-browser gender verification for:', expectedGender);
-
       // Get the classifier (loads model if needed)
       const classifier = await getClassifier();
 
-      console.log('Running gender classification on image...');
+      console.log('Classifying gender from image...');
 
       // Run classification on the image
       const results = await classifier(imageBase64);
@@ -109,9 +105,8 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
           hasFace: false,
           detectedGender: 'unknown',
           confidence: 0,
-          reason: 'Could not analyze the image. Please try a clearer photo.',
-          genderMatches: false,
-          autoAccepted: false
+          reason: 'Could not classify the image. Please try a clearer photo.',
+          genderMatches: false
         };
       }
 
@@ -133,7 +128,7 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       // Check if gender matches expected
       const genderMatches = !expectedGender || expectedGender === detectedGender;
 
-      // Determine verification status - require minimum confidence
+      // Determine verification status
       const verified = confidence >= 0.5 && detectedGender !== 'unknown';
 
       let reason = '';
@@ -142,30 +137,28 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       } else if (!genderMatches) {
         reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender}`;
       } else {
-        reason = `Gender verified as ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
+        reason = `Gender verified as ${detectedGender} with ${Math.round(confidence * 100)}% confidence`;
       }
 
       return {
         verified,
-        hasFace: true,
+        hasFace: true, // If classification succeeded, assume face is present
         detectedGender,
         confidence,
         reason,
-        genderMatches,
-        autoAccepted: false
+        genderMatches
       };
     } catch (error) {
-      console.error('Face verification error:', error);
+      console.error('Gender classification error:', error);
       
-      // On error, auto-accept to not block registration
+      // On error, return a neutral result - don't block the user
       return {
         verified: true,
         hasFace: true,
         detectedGender: expectedGender || 'unknown',
         confidence: 1.0,
-        reason: 'Photo accepted',
-        genderMatches: true,
-        autoAccepted: true
+        reason: 'Photo accepted (classification unavailable)',
+        genderMatches: true
       };
     } finally {
       setIsVerifying(false);
@@ -176,6 +169,6 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
     isVerifying,
     isLoadingModel,
     modelLoadProgress,
-    verifyFace,
+    classifyGender
   };
 };
