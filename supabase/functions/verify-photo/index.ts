@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,17 +62,23 @@ serve(async (req) => {
       );
     }
 
-    // Accept the photo - trust user's gender selection
-    const result: VerificationResult = {
-      verified: true,
-      hasFace: true,
-      detectedGender: (expectedGender as 'male' | 'female') || 'unknown',
-      confidence: 1.0,
-      reason: 'Photo accepted successfully.',
-      genderMatches: true
-    };
+    // Try to use Hugging Face for gender classification
+    const hfToken = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    let result: VerificationResult;
 
-    console.log('Verification result:', result);
+    if (hfToken) {
+      try {
+        result = await classifyWithHuggingFace(imageBase64, expectedGender, hfToken);
+        console.log('Hugging Face classification result:', result);
+      } catch (hfError) {
+        console.error('Hugging Face classification failed:', hfError);
+        // Fall back to accepting the photo
+        result = createAcceptedResult(expectedGender);
+      }
+    } else {
+      console.log('No Hugging Face token, accepting photo');
+      result = createAcceptedResult(expectedGender);
+    }
 
     // Save verification result to database if userId is provided
     if (userId && expectedGender) {
@@ -91,6 +98,94 @@ serve(async (req) => {
     );
   }
 });
+
+async function classifyWithHuggingFace(
+  imageBase64: string,
+  expectedGender: string | undefined,
+  hfToken: string
+): Promise<VerificationResult> {
+  const hf = new HfInference(hfToken);
+
+  // Extract just the base64 data if it includes the data URL prefix
+  const base64Data = imageBase64.includes(',') 
+    ? imageBase64.split(',')[1] 
+    : imageBase64;
+
+  // Convert base64 to ArrayBuffer for Hugging Face
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const arrayBuffer = bytes.buffer as ArrayBuffer;
+
+  // Use image classification model
+  const results = await hf.imageClassification({
+    model: 'rizvandwiki/gender-classification',
+    data: arrayBuffer,
+  });
+
+  console.log('HF classification results:', results);
+
+  if (!results || results.length === 0) {
+    return {
+      verified: false,
+      hasFace: false,
+      detectedGender: 'unknown',
+      confidence: 0,
+      reason: 'Could not classify the image',
+      genderMatches: false
+    };
+  }
+
+  // Get the top result
+  const topResult = results[0];
+  const label = topResult.label.toLowerCase();
+  const confidence = topResult.score;
+
+  // Map label to gender
+  let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
+  if (label.includes('male') && !label.includes('female')) {
+    detectedGender = 'male';
+  } else if (label.includes('female') || label.includes('woman')) {
+    detectedGender = 'female';
+  } else if (label.includes('man')) {
+    detectedGender = 'male';
+  }
+
+  // Check gender match
+  const genderMatches = !expectedGender || expectedGender === detectedGender;
+  const verified = confidence >= 0.5 && detectedGender !== 'unknown';
+
+  let reason = '';
+  if (!verified) {
+    reason = 'Could not verify gender. Please try a clearer photo.';
+  } else if (!genderMatches) {
+    reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender}`;
+  } else {
+    reason = `Gender verified as ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
+  }
+
+  return {
+    verified,
+    hasFace: true,
+    detectedGender,
+    confidence,
+    reason,
+    genderMatches
+  };
+}
+
+function createAcceptedResult(expectedGender: string | undefined): VerificationResult {
+  return {
+    verified: true,
+    hasFace: true,
+    detectedGender: (expectedGender as 'male' | 'female') || 'unknown',
+    confidence: 1.0,
+    reason: 'Photo accepted successfully.',
+    genderMatches: true
+  };
+}
 
 function validateImage(imageBase64: string): boolean {
   try {
