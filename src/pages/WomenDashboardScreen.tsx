@@ -264,21 +264,28 @@ const WomenDashboardScreen = () => {
 
       setCurrentUserId(user.id);
 
-      // Fetch user profile including country and approval status
-      const { data: profile } = await supabase
+      // First check gender and approval from main profiles table for redirection
+      const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("full_name, gender, country, primary_language, preferred_language, approval_status")
+        .select("gender, approval_status")
         .eq("user_id", user.id)
         .maybeSingle();
 
       // Check if female user needs approval (case-insensitive check)
-      if (profile?.gender?.toLowerCase() === "female" && profile?.approval_status !== "approved") {
+      if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
         navigate("/approval-pending");
         return;
       }
 
-      if (profile?.full_name) {
-        setUserName(profile.full_name.split(" ")[0]);
+      // Fetch user profile from female_profiles table
+      const { data: femaleProfile } = await supabase
+        .from("female_profiles")
+        .select("full_name, country, primary_language, preferred_language")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (femaleProfile?.full_name) {
+        setUserName(femaleProfile.full_name.split(" ")[0]);
       }
 
       // Get woman's mother tongue
@@ -289,20 +296,20 @@ const WomenDashboardScreen = () => {
         .limit(1);
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
-                           profile?.primary_language || 
-                           profile?.preferred_language || 
+                           femaleProfile?.primary_language || 
+                           femaleProfile?.preferred_language || 
                            "English";
       const womanLanguageCode = womanLanguages?.[0]?.language_code || "eng_Latn";
       setCurrentWomanLanguage(womanLanguage);
       setCurrentWomanLanguageCode(womanLanguageCode);
-      setCurrentWomanCountry(profile?.country || "");
+      setCurrentWomanCountry(femaleProfile?.country || "");
       
       // Set all supported NLLB languages for women
       setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
       await Promise.all([
-        fetchOnlineMen(user.id, womanLanguage, profile?.country || ""),
+        fetchOnlineMen(user.id, womanLanguage, femaleProfile?.country || ""),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
         fetchTodayEarnings(user.id)
@@ -1123,6 +1130,7 @@ const WomenDashboardScreen = () => {
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
+        profileType="female"
       />
 
       {/* Parallel Mini Chat Windows */}

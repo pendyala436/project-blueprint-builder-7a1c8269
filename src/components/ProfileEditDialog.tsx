@@ -76,6 +76,8 @@ interface ProfileEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProfileUpdated?: () => void;
+  /** Specify which profile table to use - 'male' or 'female'. If not provided, uses main profiles table */
+  profileType?: 'male' | 'female';
 }
 
 // ==================== Constants ====================
@@ -133,7 +135,7 @@ const RELIGIONS = [
 
 // ==================== Component ====================
 
-const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEditDialogProps) => {
+const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }: ProfileEditDialogProps) => {
   const { toast } = useToast();
   
   // State for profile data
@@ -257,14 +259,35 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       setCurrentUserId(user.id);
       setUserEmail(user.email || "");
 
-      // Fetch profile data from database
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      let data: any = null;
 
-      if (error) throw error;
+      // Fetch profile data from the appropriate table based on profileType
+      if (profileType === 'male') {
+        const { data: maleData, error } = await supabase
+          .from("male_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (error) throw error;
+        data = maleData;
+      } else if (profileType === 'female') {
+        const { data: femaleData, error } = await supabase
+          .from("female_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (error) throw error;
+        data = femaleData;
+      } else {
+        // Fallback to main profiles table
+        const { data: profileData, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (error) throw error;
+        data = profileData;
+      }
 
       // Fetch user's language for matching
       const { data: languageData } = await supabase
@@ -290,7 +313,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
         const profileData: ProfileData = {
           full_name: data.full_name,
           phone: data.phone,
-          gender: data.gender,
+          gender: profileType || data.gender,
           date_of_birth: data.date_of_birth,
           country: data.country,
           state: data.state,
@@ -331,8 +354,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const genderLower = profile.gender?.toLowerCase();
-      const genderSpecificData = {
+      const profileData = {
         full_name: profile.full_name,
         phone: profile.phone,
         date_of_birth: profile.date_of_birth,
@@ -348,22 +370,11 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
         interests: profile.interests,
         primary_language: userLanguage?.language_name || profile.primary_language,
         preferred_language: userLanguage?.language_name || profile.primary_language,
+        updated_at: new Date().toISOString(),
       };
 
-      // Update main profiles table
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          ...genderSpecificData,
-          gender: profile.gender,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      // Also update gender-specific profile table
-      if (genderLower === 'male') {
+      // Save to the appropriate table based on profileType
+      if (profileType === 'male') {
         const { data: existingMale } = await supabase
           .from("male_profiles")
           .select("id")
@@ -371,16 +382,18 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
           .maybeSingle();
 
         if (existingMale) {
-          await supabase
+          const { error } = await supabase
             .from("male_profiles")
-            .update({ ...genderSpecificData, updated_at: new Date().toISOString() })
+            .update(profileData)
             .eq("user_id", user.id);
+          if (error) throw error;
         } else {
-          await supabase
+          const { error } = await supabase
             .from("male_profiles")
-            .insert({ user_id: user.id, ...genderSpecificData });
+            .insert({ user_id: user.id, ...profileData });
+          if (error) throw error;
         }
-      } else if (genderLower === 'female') {
+      } else if (profileType === 'female') {
         const { data: existingFemale } = await supabase
           .from("female_profiles")
           .select("id")
@@ -388,15 +401,27 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
           .maybeSingle();
 
         if (existingFemale) {
-          await supabase
+          const { error } = await supabase
             .from("female_profiles")
-            .update({ ...genderSpecificData, updated_at: new Date().toISOString() })
+            .update(profileData)
             .eq("user_id", user.id);
+          if (error) throw error;
         } else {
-          await supabase
+          const { error } = await supabase
             .from("female_profiles")
-            .insert({ user_id: user.id, ...genderSpecificData });
+            .insert({ user_id: user.id, ...profileData });
+          if (error) throw error;
         }
+      } else {
+        // Fallback: update main profiles table
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            ...profileData,
+            gender: profile.gender,
+          })
+          .eq("user_id", user.id);
+        if (error) throw error;
       }
 
       // Update user_languages table for matching
