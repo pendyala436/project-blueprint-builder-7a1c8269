@@ -591,28 +591,37 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-32 w-32 rounded-xl border-dashed flex flex-col gap-2"
-              onClick={() => selfieInputRef.current?.click()}
-              disabled={uploadingType !== null || isVerifying}
-            >
-              {uploadingType === 'selfie' || isVerifying ? (
-                <div className="flex flex-col items-center gap-1">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span className="text-xs text-muted-foreground">
-                    {isVerifying ? "Verifying..." : "Uploading..."}
-                  </span>
-                </div>
-              ) : (
-                <>
+            {uploadingType === 'selfie' || isVerifying ? (
+              <div className="h-32 w-32 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-xs text-muted-foreground">
+                  {isVerifying ? "Verifying..." : "Uploading..."}
+                </span>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="h-32 w-28 rounded-xl border-dashed flex flex-col gap-2"
+                  onClick={startCamera}
+                  disabled={uploadingType !== null || isVerifying}
+                >
                   <Camera className="w-8 h-8 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Take Selfie</span>
-                </>
-              )}
-            </Button>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-32 w-28 rounded-xl border-dashed flex flex-col gap-2"
+                  onClick={() => selfieInputRef.current?.click()}
+                  disabled={uploadingType !== null || isVerifying}
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Upload Photo</span>
+                </Button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground text-center">
-              Upload a clear selfie for AI verification
+              Take or upload a clear selfie for AI verification
             </p>
           </div>
         )}
