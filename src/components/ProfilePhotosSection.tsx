@@ -41,7 +41,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed' | null>(null);
   const [detectedGender, setDetectedGender] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const selfieInputRef = useRef<HTMLInputElement>(null);
+  
   const additionalInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -358,10 +358,10 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'selfie' | 'additional') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      uploadPhoto(file, type);
+      uploadPhoto(file, 'additional');
     }
     e.target.value = ''; // Reset input
   };
@@ -390,9 +390,13 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
 
   // Camera functions for live selfie
   const startCamera = async () => {
-    // If camera not available, go directly to file upload
+    // If camera not available, show error
     if (cameraAvailable === false) {
-      selfieInputRef.current?.click();
+      toast({
+        title: "Camera required",
+        description: "Selfie must be taken using camera for verification. Please enable camera access.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -411,10 +415,9 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
       setCameraAvailable(false);
       toast({
         title: "Camera not available",
-        description: "Using file upload instead. Select a clear selfie photo.",
+        description: "Please enable camera access in your browser settings to take a selfie.",
+        variant: "destructive",
       });
-      // Fallback to file input
-      selfieInputRef.current?.click();
     }
   };
 
@@ -510,13 +513,6 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           )}
         </div>
         
-        <input
-          ref={selfieInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleFileChange(e, 'selfie')}
-        />
 
         {selfiePhoto ? (
           <div className="relative w-32 h-32 rounded-xl overflow-hidden border-2 border-primary">
@@ -530,7 +526,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
                 size="icon"
                 variant="secondary"
                 className="w-8 h-8"
-                onClick={() => selfieInputRef.current?.click()}
+                onClick={startCamera}
                 disabled={uploadingType !== null}
               >
                 <Camera className="w-4 h-4" />
@@ -593,29 +589,18 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
                 </span>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="h-32 w-28 rounded-xl border-dashed flex flex-col gap-2"
-                  onClick={startCamera}
-                  disabled={uploadingType !== null || isVerifying}
-                >
-                  <Camera className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Take Selfie</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-32 w-28 rounded-xl border-dashed flex flex-col gap-2"
-                  onClick={() => selfieInputRef.current?.click()}
-                  disabled={uploadingType !== null || isVerifying}
-                >
-                  <Upload className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Upload Photo</span>
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                className="h-32 w-32 rounded-xl border-dashed flex flex-col gap-2"
+                onClick={startCamera}
+                disabled={uploadingType !== null || isVerifying}
+              >
+                <Camera className="w-8 h-8 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Take Selfie</span>
+              </Button>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              Take or upload a clear selfie for AI verification
+              Use camera to take a live selfie for AI verification
             </p>
           </div>
         )}
@@ -634,7 +619,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => handleFileChange(e, 'additional')}
+          onChange={handleFileChange}
         />
 
         <div className="flex flex-wrap gap-3">
