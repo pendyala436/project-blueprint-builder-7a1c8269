@@ -282,8 +282,10 @@ const DashboardScreen = () => {
     };
   }, []);
 
-  // Real-time subscription for online users, chat sessions, wallet, and women availability
+  // Real-time subscription for online users, chat sessions, wallet, women availability, and language changes
   useEffect(() => {
+    if (!currentUserId) return;
+
     const channel = supabase
       .channel('dashboard-updates')
       .on(
@@ -330,6 +332,34 @@ const DashboardScreen = () => {
         () => { 
           if (currentUserId) {
             fetchNotifications(currentUserId);
+          }
+        }
+      )
+      // Listen for user's language changes in user_languages table
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_languages', filter: `user_id=eq.${currentUserId}` },
+        async (payload) => {
+          // Language changed - update state and refresh women list
+          const newLanguage = (payload.new as { language_name?: string })?.language_name;
+          if (newLanguage && newLanguage !== userLanguage) {
+            setUserLanguage(newLanguage);
+            const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
+            setUserLanguageCode(newCode);
+            fetchOnlineWomen(newLanguage);
+          }
+        }
+      )
+      // Listen for profile language changes in male_profiles table
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'male_profiles', filter: `user_id=eq.${currentUserId}` },
+        async (payload) => {
+          const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
+          const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
+          if (newLanguage && newLanguage !== userLanguage) {
+            setUserLanguage(newLanguage);
+            fetchOnlineWomen(newLanguage);
           }
         }
       )
