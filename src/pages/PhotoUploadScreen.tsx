@@ -170,25 +170,41 @@ const PhotoUploadScreen = () => {
 
     setVerificationState("verifying");
 
-    try {
-      const { data, error } = await supabase.functions.invoke("verify-photo", {
-        body: {
-          imageBase64: selfiePreview,
-          expectedGender: localStorage.getItem("userGender") || null
-        }
+    // Helper to auto-accept photo
+    const autoAccept = () => {
+      setVerificationState("verified");
+      setVerificationResult({ reason: "Photo accepted" });
+      toast({
+        title: "Photo accepted",
+        description: "Your photo has been saved",
       });
+    };
 
-      // Check for credits/service errors first (from edge function response body)
+    try {
+      let data: any = null;
+      let error: any = null;
+
+      try {
+        const result = await supabase.functions.invoke("verify-photo", {
+          body: {
+            imageBase64: selfiePreview,
+            expectedGender: localStorage.getItem("userGender") || null
+          }
+        });
+        data = result.data;
+        error = result.error;
+      } catch (invokeError: any) {
+        // Edge function invoke failed - auto accept
+        console.log("Invoke error, auto-accepting:", invokeError);
+        autoAccept();
+        return;
+      }
+
+      // Check for credits/service errors from edge function response body
       if (data?.error) {
         const errorText = String(data.error).toLowerCase();
-        if (errorText.includes("credits") || errorText.includes("402") || errorText.includes("exhausted") || errorText.includes("unavailable")) {
-          // Auto-verify when AI credits exhausted
-          setVerificationState("verified");
-          setVerificationResult({ reason: "Photo accepted" });
-          toast({
-            title: "Photo accepted",
-            description: "Your photo has been saved",
-          });
+        if (errorText.includes("credits") || errorText.includes("402") || errorText.includes("exhausted") || errorText.includes("unavailable") || errorText.includes("ai service")) {
+          autoAccept();
           return;
         }
       }
@@ -197,29 +213,17 @@ const PhotoUploadScreen = () => {
       if (error) {
         const errorMsg = String(error.message || error).toLowerCase();
         if (errorMsg.includes("402") || errorMsg.includes("credits") || errorMsg.includes("exhausted")) {
-          setVerificationState("verified");
-          setVerificationResult({ reason: "Photo accepted" });
-          toast({
-            title: "Photo accepted",
-            description: "Your photo has been saved",
-          });
+          autoAccept();
           return;
         }
-        if (errorMsg.includes("429") || errorMsg.includes("rate")) {
-          throw new Error("Too many requests. Please wait a moment and try again.");
-        }
-        throw error;
+        // For any other error, also auto-accept to not block registration
+        autoAccept();
+        return;
       }
 
       // Normal verification response
-      if (!data) {
-        // No data returned, auto-accept
-        setVerificationState("verified");
-        setVerificationResult({ reason: "Photo accepted" });
-        toast({
-          title: "Photo accepted",
-          description: "Your photo has been saved",
-        });
+      if (!data || data.verified === undefined) {
+        autoAccept();
         return;
       }
 
@@ -242,12 +246,7 @@ const PhotoUploadScreen = () => {
     } catch (error: any) {
       console.error("Verification error:", error);
       // On any error, auto-accept to prevent blocking registration
-      setVerificationState("verified");
-      setVerificationResult({ reason: "Photo accepted" });
-      toast({
-        title: "Photo accepted",
-        description: "Your photo has been saved",
-      });
+      autoAccept();
     }
   };
 
