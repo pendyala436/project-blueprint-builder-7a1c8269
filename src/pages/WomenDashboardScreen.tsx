@@ -868,7 +868,88 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
-        {/* Section 2: Key Stats */}
+        {/* Section 2: Online Men Tabs (Moved to top) */}
+        <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="recharged" className="flex items-center gap-2">
+              <Crown className="h-4 w-4" />
+              {t('premium', 'Premium')} ({stats.rechargedMen})
+            </TabsTrigger>
+            <TabsTrigger value="non-recharged" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              {t('regularUsers', 'Regular')} ({stats.nonRechargedMen})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Recharged Men - Sorted by same language first, then balance */}
+          <TabsContent value="recharged" className="space-y-3 mt-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-sm text-muted-foreground">
+                {t('sameLanguageFirst', 'Same language first, then by wallet balance')}
+              </p>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs">
+                  <Languages className="h-3 w-3 mr-1" />
+                  {currentWomanLanguage}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  <Crown className="h-3 w-3 mr-1" />
+                  {t('priority', 'Priority')}
+                </Badge>
+              </div>
+            </div>
+
+            {rechargedMen.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Wallet className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">{t('noPremiumMenOnline', 'No premium men online')}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t('checkBackLaterForWalletUsers', 'Check back later for users with wallet balance')}
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {rechargedMen.map((user, index) => (
+                  <div 
+                    key={user.userId}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <UserCard user={user} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Non-Recharged Men */}
+          <TabsContent value="non-recharged" className="space-y-3 mt-4">
+            <p className="text-sm text-muted-foreground">
+              {t('usersWithoutBalance', 'Users without wallet balance')}
+            </p>
+
+            {nonRechargedMen.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {nonRechargedMen.map((user, index) => (
+                  <div 
+                    key={user.userId}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <UserCard user={user} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
@@ -969,87 +1050,6 @@ const WomenDashboardScreen = () => {
             ))}
           </div>
         </div>
-
-        {/* Section 6: Online Men Tabs */}
-        <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.22s" }}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="recharged" className="flex items-center gap-2">
-              <Crown className="h-4 w-4" />
-              {t('premium', 'Premium')} ({stats.rechargedMen})
-            </TabsTrigger>
-            <TabsTrigger value="non-recharged" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              {t('regularUsers', 'Regular')} ({stats.nonRechargedMen})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Recharged Men - Sorted by same language first, then balance */}
-          <TabsContent value="recharged" className="space-y-3 mt-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-sm text-muted-foreground">
-                {t('sameLanguageFirst', 'Same language first, then by wallet balance')}
-              </p>
-              <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs">
-                  <Languages className="h-3 w-3 mr-1" />
-                  {currentWomanLanguage}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Crown className="h-3 w-3 mr-1" />
-                  {t('priority', 'Priority')}
-                </Badge>
-              </div>
-            </div>
-
-            {rechargedMen.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Wallet className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">{t('noPremiumMenOnline', 'No premium men online')}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {t('checkBackLaterForWalletUsers', 'Check back later for users with wallet balance')}
-                </p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {rechargedMen.map((user, index) => (
-                  <div 
-                    key={user.userId}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <UserCard user={user} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Non-Recharged Men */}
-          <TabsContent value="non-recharged" className="space-y-3 mt-4">
-            <p className="text-sm text-muted-foreground">
-              {t('usersWithoutBalance', 'Users without wallet balance')}
-            </p>
-
-            {nonRechargedMen.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {nonRechargedMen.map((user, index) => (
-                  <div 
-                    key={user.userId}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <UserCard user={user} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
 
         {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
