@@ -51,6 +51,8 @@ import VideoCallButton from "@/components/VideoCallButton";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { useChatPricing } from "@/hooks/useChatPricing";
+import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 
 interface Notification {
   id: string;
@@ -70,6 +72,8 @@ interface OnlineWoman {
   country: string | null;
   primary_language: string | null;
   active_chat_count?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
+  is_available?: boolean;
+  max_chats?: number;
 }
 
 interface DashboardStats {
@@ -195,6 +199,7 @@ const DashboardScreen = () => {
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
   const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
   const [activeChatCount, setActiveChatCount] = useState(0);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
@@ -232,6 +237,16 @@ const DashboardScreen = () => {
     hasPhoto: false,
     hasBio: false,
   });
+
+  // Chat pricing from admin settings
+  const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
+  
+  // Auto-reconnect functionality
+  const { 
+    isReconnecting, 
+    findNextAvailableWoman, 
+    initiateReconnect 
+  } = useAutoReconnect(currentUserId, userLanguage);
 
   // Get currency info based on user's country
   const getCurrencyInfo = () => {
@@ -467,17 +482,22 @@ const DashboardScreen = () => {
     setStats(prev => ({ ...prev, onlineUsersCount: count || 0 }));
   };
 
-  // Handle starting chat with a woman
+  // Handle starting chat with a woman - with auto-reconnect if woman is busy
   const handleStartChatWithWoman = async (womanUserId: string, womanName: string) => {
+    if (isConnecting) return;
+    setIsConnecting(true);
+
     try {
-      // Check wallet balance first
-      if (walletBalance < 10) {
+      // Check wallet balance using admin-configured pricing
+      const minBalance = pricing.ratePerMinute * 2; // Need at least 2 minutes worth
+      if (!hasSufficientBalance(walletBalance, 2)) {
         toast({
           title: t('insufficientBalance', 'Insufficient Balance'),
-          description: t('pleaseRechargeToChat', 'Please recharge your wallet to start chatting'),
+          description: t('pleaseRechargeToChat', `Please recharge at least ${formatPrice(minBalance)} to start chatting`),
           variant: "destructive",
         });
         setRechargeDialogOpen(true);
+        setIsConnecting(false);
         return;
       }
 
@@ -491,8 +511,8 @@ const DashboardScreen = () => {
         .maybeSingle();
 
       if (existingChat) {
-        // Navigate to existing chat
         navigate(`/chat/${womanUserId}`);
+        setIsConnecting(false);
         return;
       }
 
@@ -509,19 +529,49 @@ const DashboardScreen = () => {
           description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
           variant: "destructive",
         });
+        setIsConnecting(false);
         return;
       }
 
-      // Get chat pricing rate
-      const { data: pricing } = await supabase
-        .from("chat_pricing")
-        .select("rate_per_minute")
-        .eq("is_active", true)
+      // Check if selected woman is available (not busy)
+      const { data: womanAvailability } = await supabase
+        .from("women_availability")
+        .select("current_chat_count, max_concurrent_chats, is_available")
+        .eq("user_id", womanUserId)
         .maybeSingle();
 
-      const ratePerMinute = pricing?.rate_per_minute || 5;
+      const maxChats = womanAvailability?.max_concurrent_chats || 3;
+      const currentChats = womanAvailability?.current_chat_count || 0;
+      const isAvailable = womanAvailability?.is_available !== false;
 
-      // Create active chat session directly (men initiate, billing starts)
+      // If woman is busy, auto-reconnect to another available woman
+      if (!isAvailable || currentChats >= maxChats) {
+        toast({
+          title: t('userBusy', 'User Busy'),
+          description: t('findingAnotherUser', 'Finding another available user...'),
+        });
+
+        // Use auto-reconnect to find next available woman
+        const nextWoman = await initiateReconnect(womanUserId);
+        
+        if (nextWoman) {
+          // Recursively try with the new woman
+          await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+        } else {
+          toast({
+            title: t('noOneAvailable', 'No One Available'),
+            description: t('tryAgainLater', 'All users are busy. Please try again later.'),
+            variant: "destructive",
+          });
+        }
+        setIsConnecting(false);
+        return;
+      }
+
+      // Use admin-configured rate per minute
+      const ratePerMinute = pricing.ratePerMinute;
+
+      // Create active chat session
       const chatId = `chat_${currentUserId}_${womanUserId}_${Date.now()}`;
       const { error: sessionError } = await supabase
         .from("active_chat_sessions")
@@ -535,20 +585,37 @@ const DashboardScreen = () => {
 
       if (sessionError) throw sessionError;
 
+      // Update woman's chat count
+      await supabase
+        .from("women_availability")
+        .update({ 
+          current_chat_count: currentChats + 1,
+          last_assigned_at: new Date().toISOString()
+        })
+        .eq("user_id", womanUserId);
+
       toast({
         title: t('chatStarted', 'Chat Started'),
-        description: `${t('startingChatWith', 'Starting chat with')} ${womanName}`,
+        description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(ratePerMinute)}/min)`,
       });
 
-      // Navigate to chat
       navigate(`/chat/${womanUserId}`);
     } catch (error) {
       console.error("Error starting chat:", error);
-      toast({
-        title: t('error', 'Error'),
-        description: t('failedToStartChat', 'Failed to start chat'),
-        variant: "destructive",
-      });
+      
+      // On error, try to auto-reconnect to another woman
+      const nextWoman = await initiateReconnect(womanUserId);
+      if (nextWoman) {
+        await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+      } else {
+        toast({
+          title: t('error', 'Error'),
+          description: t('failedToStartChat', 'Failed to start chat'),
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -631,35 +698,130 @@ const DashboardScreen = () => {
         chatCountMap.set(chat.woman_user_id, count + 1);
       });
 
-      // Add chat count to each woman
-      const womenWithChatCount = onlineWomenList.map(w => ({
-        ...w,
-        active_chat_count: chatCountMap.get(w.user_id) || 0
-      }));
+      // Add chat count to each woman and get availability
+      const { data: availabilityData } = await supabase
+        .from("women_availability")
+        .select("user_id, is_available, current_chat_count, max_concurrent_chats")
+        .in("user_id", womenUserIds);
+
+      const availabilityMap = new Map(
+        availabilityData?.map(a => [a.user_id, a]) || []
+      );
+
+      const womenWithChatCount = onlineWomenList.map(w => {
+        const avail = availabilityMap.get(w.user_id);
+        const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
+        return {
+          ...w,
+          active_chat_count: chatCount,
+          is_available: avail?.is_available !== false,
+          max_chats: avail?.max_concurrent_chats || 3
+        };
+      });
+
+      // Sort women: Free (0 chats) first, then by chat count ascending
+      const sortByAvailability = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
+        // First: available vs not available
+        if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
+        // Second: not at max capacity
+        const aAtMax = a.active_chat_count >= a.max_chats;
+        const bAtMax = b.active_chat_count >= b.max_chats;
+        if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
+        // Third: by chat count (lower first = more available)
+        return a.active_chat_count - b.active_chat_count;
+      };
 
       // Split women into two categories:
-      // 1. Same language women
-      const sameLanguage = womenWithChatCount.filter(w => 
-        w.primary_language?.toLowerCase() === language.toLowerCase()
-      );
+      // 1. Same language women (sorted by availability)
+      const sameLanguage = womenWithChatCount
+        .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
+        .sort(sortByAvailability);
 
       // 2. All other NLLB-200 language women (for auto-translate) - NOT same as user's language
       const allNLLBNames = ALL_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
-      const otherNLLBWomen = womenWithChatCount.filter(w => {
-        const womenLang = w.primary_language?.toLowerCase() || "";
-        // Must be NLLB-200 supported language and NOT same as user's language
-        return allNLLBNames.includes(womenLang) && 
-               womenLang !== language.toLowerCase();
-      });
+      
+      // For non-Indian language users, only show Indian women
+      const userHasNonIndianLanguage = !userHasIndianLanguage;
+      
+      const otherNLLBWomen = womenWithChatCount
+        .filter(w => {
+          const womenLang = w.primary_language?.toLowerCase() || "";
+          // Must be NLLB-200 supported language and NOT same as user's language
+          const isNLLB = allNLLBNames.includes(womenLang);
+          const isDifferentLang = womenLang !== language.toLowerCase();
+          
+          // If user has non-Indian language, only show Indian women
+          if (userHasNonIndianLanguage) {
+            return isNLLB && isDifferentLang && indianLanguageNames.includes(womenLang);
+          }
+          
+          return isNLLB && isDifferentLang;
+        })
+        .sort(sortByAvailability);
 
       setSameLanguageWomen(sameLanguage.slice(0, 10));
-      setIndianTranslatedWomen(otherNLLBWomen.slice(0, 15)); // Show more women with auto-translate
+      setIndianTranslatedWomen(otherNLLBWomen.slice(0, 15));
     } catch (error) {
       console.error("Error fetching online women:", error);
       setSameLanguageWomen([]);
       setIndianTranslatedWomen([]);
     } finally {
       setLoadingOnlineWomen(false);
+    }
+  };
+
+  // Quick connect: Automatically find and connect to the best available woman
+  const handleQuickConnect = async () => {
+    if (isConnecting || isReconnecting) return;
+    
+    // Check balance first
+    if (!hasSufficientBalance(walletBalance, 2)) {
+      toast({
+        title: t('insufficientBalance', 'Insufficient Balance'),
+        description: t('pleaseRechargeToChat', 'Please recharge your wallet to start chatting'),
+        variant: "destructive",
+      });
+      setRechargeDialogOpen(true);
+      return;
+    }
+
+    // Check chat limit
+    if (activeChatCount >= 3) {
+      toast({
+        title: t('maxChatsReached', 'Max Chats Reached'),
+        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsConnecting(true);
+    toast({
+      title: t('searchingForMatch', 'Searching...'),
+      description: t('findingBestMatch', 'Finding the best available match for you'),
+    });
+
+    try {
+      const bestMatch = await findNextAvailableWoman();
+      
+      if (bestMatch) {
+        await handleStartChatWithWoman(bestMatch.userId, bestMatch.fullName);
+      } else {
+        toast({
+          title: t('noOneAvailable', 'No One Available'),
+          description: t('tryAgainLater', 'All users are busy. Please try again later.'),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Quick connect error:", error);
+      toast({
+        title: t('error', 'Error'),
+        description: t('failedToConnect', 'Failed to connect'),
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
     }
   };
 
