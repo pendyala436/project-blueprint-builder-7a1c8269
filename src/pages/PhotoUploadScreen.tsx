@@ -182,7 +182,14 @@ const PhotoUploadScreen = () => {
       if (error) {
         const errorMsg = error.message || "";
         if (errorMsg.includes("402") || errorMsg.includes("credits")) {
-          throw new Error("AI service temporarily unavailable. Please try again later.");
+          // Auto-verify when AI credits exhausted
+          setVerificationState("verified");
+          setVerificationResult({ reason: "Verification skipped (service temporarily unavailable)" });
+          toast({
+            title: "Photo accepted",
+            description: "Verification service unavailable, photo accepted",
+          });
+          return;
         }
         if (errorMsg.includes("429") || errorMsg.includes("rate")) {
           throw new Error("Too many requests. Please wait a moment and try again.");
@@ -192,6 +199,15 @@ const PhotoUploadScreen = () => {
 
       // Check if response contains an error object
       if (data?.error) {
+        if (data.error.includes("credits") || data.error.includes("402")) {
+          setVerificationState("verified");
+          setVerificationResult({ reason: "Verification skipped (service temporarily unavailable)" });
+          toast({
+            title: "Photo accepted",
+            description: "Verification service unavailable, photo accepted",
+          });
+          return;
+        }
         throw new Error(data.error);
       }
 
