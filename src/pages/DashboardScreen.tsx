@@ -567,7 +567,7 @@ const DashboardScreen = () => {
       // Fetch women from all sources
       let allWomen: OnlineWoman[] = [];
 
-      // First try female_profiles table - only users with photos
+      // Fetch from female_profiles table - only users with photos
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
@@ -579,24 +579,6 @@ const DashboardScreen = () => {
 
       if (femaleProfiles && femaleProfiles.length > 0) {
         allWomen = [...femaleProfiles];
-      }
-
-      // Also try profiles table - only users with photos
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, user_id, full_name, photo_url, age, country, primary_language")
-        .eq("gender", "Female")
-        .eq("approval_status", "approved")
-        .eq("account_status", "active")
-        .not("photo_url", "is", null)
-        .neq("photo_url", "")
-        .limit(50);
-
-      if (profiles && profiles.length > 0) {
-        // Add only profiles not already in list
-        const existingUserIds = new Set(allWomen.map(w => w.user_id));
-        const newProfiles = profiles.filter(p => !existingUserIds.has(p.user_id));
-        allWomen = [...allWomen, ...newProfiles];
       }
 
       // Fallback to sample_women if no real women - only with photos
