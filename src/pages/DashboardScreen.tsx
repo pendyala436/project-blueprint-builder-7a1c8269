@@ -312,15 +312,13 @@ const DashboardScreen = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'female_profiles' },
-        () => { 
-          if (userLanguage) {
-            fetchOnlineWomen(userLanguage);
-          }
-        }
-      )
+      // Note: We don't listen to all female_profiles changes as that would cause
+      // cross-dashboard interference. The women list is refreshed when:
+      // 1. user_status changes (online/offline)
+      // 2. women_availability changes (availability status)
+      // 3. THIS man's language changes (user_languages or male_profiles)
+      // Women changing their language affects their visibility to men based on
+      // the man's language filter - which is recalculated on user_status changes
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'video_call_sessions' },
