@@ -929,7 +929,180 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Section 2: Key Stats */}
+        {/* Section 2: Online Women - Two Columns (Moved to top) */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-500" />
+              {t('onlineWomen', 'Women Online')}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchOnlineWomen(userLanguage)}
+              disabled={loadingOnlineWomen}
+              className="gap-1"
+            >
+              <RefreshCw className={cn("w-4 h-4", loadingOnlineWomen && "animate-spin")} />
+              {t('refresh', 'Refresh')}
+            </Button>
+          </div>
+
+          {loadingOnlineWomen ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Same Language Women */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-border">
+                  <span className="text-sm font-medium text-emerald-600">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-600 rounded-full">
+                    {userLanguage}
+                  </span>
+                  <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
+                </div>
+                
+                {sameLanguageWomen.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {sameLanguageWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-emerald-500/50 bg-emerald-500/5"
+                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-rose-400 to-pink-500 text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
+                            (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+                          )} />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
+                          {woman.primary_language}
+                        </span>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="aurora"
+                            size="sm"
+                            className={cn(
+                              "flex-1 gap-1 text-xs h-7",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                            )}
+                            disabled={(woman.active_chat_count || 0) >= 3}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                            }}
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-6 text-center">
+                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">{t('noSameLanguageWomen', 'No women speaking')} {userLanguage}</p>
+                  </Card>
+                )}
+              </div>
+
+              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-border">
+                  <span className="text-sm font-medium text-blue-600">{t('otherLanguages', 'Other Languages')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-600 rounded-full flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {t('autoTranslate', 'Auto-Translate')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
+                </div>
+                
+                {indianTranslatedWomen.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                    {indianTranslatedWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-blue-500/30 bg-blue-500/5"
+                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-500 text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
+                            (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+                          )} />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-600 rounded-full">
+                            {woman.primary_language}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">→</span>
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
+                            {userLanguage}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="aurora"
+                            size="sm"
+                            className={cn(
+                              "flex-1 gap-1 text-xs h-7",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                            )}
+                            disabled={(woman.active_chat_count || 0) >= 3}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                            }}
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-6 text-center">
+                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">{t('noTranslateWomen', 'No women with auto-translate available')}</p>
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
           <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
@@ -1041,186 +1214,7 @@ const DashboardScreen = () => {
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
-        {/* Section 6: Online Women - Two Columns */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-500" />
-              {t('onlineWomen', 'Women Online')}
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchOnlineWomen(userLanguage)}
-              disabled={loadingOnlineWomen}
-              className="gap-1"
-            >
-              <RefreshCw className={cn("w-4 h-4", loadingOnlineWomen && "animate-spin")} />
-              {t('refresh', 'Refresh')}
-            </Button>
-          </div>
 
-          {loadingOnlineWomen ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Same Language Women */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-emerald-600">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-600 rounded-full">
-                    {userLanguage}
-                  </span>
-                  <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
-                </div>
-                
-                {sameLanguageWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {sameLanguageWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-emerald-500/50 bg-emerald-500/5"
-                        onClick={() => navigate(`/profile/${woman.user_id}`)}
-                      >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-rose-400 to-pink-500 text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
-                          )} title={
-                            (woman.active_chat_count || 0) === 0 ? "Free" :
-                            (woman.active_chat_count || 0) >= 3 ? "Busy (3/3)" : `Busy (${woman.active_chat_count}/3)`
-                          } />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-emerald-500/20 text-emerald-600 rounded-full">
-                          {woman.primary_language}
-                        </span>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="aurora"
-                            size="sm"
-                            className={cn(
-                              "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={(woman.active_chat_count || 0) >= 3}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                            }}
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="p-6 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">{t('noSameLanguageWomen', 'No women speaking')} {userLanguage}</p>
-                  </Card>
-                )}
-              </div>
-
-              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-blue-600">{t('otherLanguages', 'Other Languages')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-600 rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {t('autoTranslate', 'Auto-Translate')}
-                  </span>
-                  <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
-                </div>
-                
-                {indianTranslatedWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
-                    {indianTranslatedWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-blue-500/30 bg-blue-500/5"
-                        onClick={() => navigate(`/profile/${woman.user_id}`)}
-                      >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-indigo-500 text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-green-500" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
-                          )} title={
-                            (woman.active_chat_count || 0) === 0 ? "Free" :
-                            (woman.active_chat_count || 0) >= 3 ? "Busy (3/3)" : `Busy (${woman.active_chat_count}/3)`
-                          } />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-600 rounded-full">
-                            {woman.primary_language}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground">→</span>
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
-                            {userLanguage}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="aurora"
-                            size="sm"
-                            className={cn(
-                              "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={(woman.active_chat_count || 0) >= 3}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                            }}
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="p-6 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">{t('noOtherWomenOnline', 'No other women online')}</p>
-                  </Card>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
