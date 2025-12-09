@@ -170,10 +170,22 @@ const PhotoUploadScreen = () => {
 
     setVerificationState("verifying");
 
-    // Helper to auto-accept photo
-    const autoAccept = () => {
+    // Helper to auto-accept photo (keeps existing gender)
+    const autoAccept = (detectedGender?: string) => {
+      // Update gender if detected
+      if (detectedGender && (detectedGender === 'male' || detectedGender === 'female')) {
+        const currentGender = localStorage.getItem("userGender");
+        if (currentGender !== detectedGender) {
+          localStorage.setItem("userGender", detectedGender);
+          toast({
+            title: "Gender updated",
+            description: `Based on your photo, gender set to ${detectedGender}`,
+          });
+        }
+      }
+      
       setVerificationState("verified");
-      setVerificationResult({ reason: "Photo accepted" });
+      setVerificationResult({ reason: "Photo accepted", detectedGender });
       toast({
         title: "Photo accepted",
         description: "Your photo has been saved",
@@ -225,6 +237,18 @@ const PhotoUploadScreen = () => {
       if (!data || data.verified === undefined) {
         autoAccept();
         return;
+      }
+
+      // Update gender based on AI detection
+      if (data.detectedGender && (data.detectedGender === 'male' || data.detectedGender === 'female')) {
+        const currentGender = localStorage.getItem("userGender");
+        if (currentGender !== data.detectedGender) {
+          localStorage.setItem("userGender", data.detectedGender);
+          toast({
+            title: "Gender detected",
+            description: `AI detected gender as ${data.detectedGender}`,
+          });
+        }
       }
 
       setVerificationResult(data);
