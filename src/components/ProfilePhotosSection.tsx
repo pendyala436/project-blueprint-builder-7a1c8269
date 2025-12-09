@@ -37,7 +37,6 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState<'selfie' | 'additional' | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'pending' | 'verified' | 'failed' | null>(null);
   const [detectedGender, setDetectedGender] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -46,6 +45,9 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // Combined verifying state
+  const isVerifying = isFaceVerifying;
 
   // Load existing photos and check verification status
   useEffect(() => {
@@ -118,8 +120,6 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
     try {
       // For selfie, first verify gender using in-browser AI
       if (type === 'selfie') {
-        setIsVerifying(true);
-        
         // Convert file to base64 for verification
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve) => {
@@ -130,8 +130,6 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
 
         // Use in-browser face verification (no external API)
         const verifyData = await verifyFace(imageBase64);
-
-        setIsVerifying(false);
 
         if (!verifyData.hasFace) {
           toast({
@@ -232,7 +230,6 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
       });
     } finally {
       setUploadingType(null);
-      setIsVerifying(false);
     }
   };
 

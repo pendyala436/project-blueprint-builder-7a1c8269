@@ -173,6 +173,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   // Has at least one photo
   const [hasPhotos, setHasPhotos] = useState(true);
   
+  // Track if photos were changed (photos save automatically, but we track for UI feedback)
+  const [photosChanged, setPhotosChanged] = useState(false);
+  
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -462,7 +465,10 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 </div>
                 <ProfilePhotosSection 
                   userId={currentUserId}
-                  onPhotosChange={setHasPhotos}
+                  onPhotosChange={(hasAnyPhotos) => {
+                    setHasPhotos(hasAnyPhotos);
+                    setPhotosChanged(true);
+                  }}
                 />
               </div>
             )}
@@ -880,14 +886,16 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isSaving || !hasChanges}
-                title={!hasChanges ? "No changes to save" : ""}
+                disabled={isSaving || (!hasChanges && !photosChanged)}
+                title={!hasChanges && !photosChanged ? "No changes to save" : ""}
               >
                 {isSaving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Saving...
                   </>
+                ) : photosChanged && !hasChanges ? (
+                  "Close"
                 ) : (
                   "Save Changes"
                 )}
