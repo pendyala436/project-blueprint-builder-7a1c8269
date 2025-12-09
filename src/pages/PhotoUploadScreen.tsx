@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useFaceVerification } from "@/hooks/useFaceVerification";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
 type VerificationState = "idle" | "verifying" | "verified" | "failed";
@@ -18,6 +18,9 @@ const PhotoUploadScreen = () => {
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // In-browser face verification hook
+  const { isVerifying, isLoadingModel, modelLoadProgress, verifyFace } = useFaceVerification();
   
   // Selfie state (first photo with AI verification)
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
@@ -170,83 +173,25 @@ const PhotoUploadScreen = () => {
 
     setVerificationState("verifying");
 
-    // Helper to auto-accept photo (keeps existing gender)
-    const autoAccept = (detectedGender?: string) => {
-      // Update gender if detected
-      if (detectedGender && (detectedGender === 'male' || detectedGender === 'female')) {
-        const currentGender = localStorage.getItem("userGender");
-        if (currentGender !== detectedGender) {
-          localStorage.setItem("userGender", detectedGender);
-          toast({
-            title: "Gender updated",
-            description: `Based on your photo, gender set to ${detectedGender}`,
-          });
-        }
-      }
-      
-      setVerificationState("verified");
-      setVerificationResult({ reason: "Photo accepted", detectedGender });
-      toast({
-        title: "Photo accepted",
-        description: "Your photo has been saved",
-      });
-    };
-
     try {
-      let data: any = null;
-      let error: any = null;
-
-      try {
-        const result = await supabase.functions.invoke("verify-photo", {
-          body: {
-            imageBase64: selfiePreview,
-            expectedGender: localStorage.getItem("userGender") || null
-          }
-        });
-        data = result.data;
-        error = result.error;
-        
-        // Check if the response contains an error (402, credits exhausted, etc.)
-        if (data?.error) {
-          console.log("Edge function returned error in data:", data.error);
-          autoAccept();
-          return;
-        }
-      } catch (invokeError: any) {
-        // Edge function invoke failed - auto accept
-        console.log("Invoke error, auto-accepting:", invokeError);
-        autoAccept();
-        return;
-      }
-
-      // Handle any edge function errors - auto-accept to not block registration
-      if (error) {
-        console.log("Edge function error:", error);
-        autoAccept();
-        return;
-      }
-
-      // Normal verification response
-      if (!data || data.verified === undefined) {
-        autoAccept();
-        return;
-      }
-
+      // Use in-browser AI verification (no external API calls)
+      const result = await verifyFace(selfiePreview);
+      
       // Update gender based on AI detection
-      if (data.detectedGender && (data.detectedGender === 'male' || data.detectedGender === 'female')) {
+      if (result.detectedGender && (result.detectedGender === 'male' || result.detectedGender === 'female')) {
         const currentGender = localStorage.getItem("userGender");
-        if (currentGender !== data.detectedGender) {
-          localStorage.setItem("userGender", data.detectedGender);
+        if (currentGender !== result.detectedGender) {
+          localStorage.setItem("userGender", result.detectedGender);
           toast({
             title: "Gender detected",
-            description: `AI detected gender as ${data.detectedGender}`,
+            description: `AI detected gender as ${result.detectedGender}`,
           });
         }
       }
 
-      setVerificationResult(data);
+      setVerificationResult(result);
       
-      if (data.verified) {
+      if (result.verified) {
         setVerificationState("verified");
         toast({
           title: "Selfie verified!",
@@ -256,14 +201,19 @@ const PhotoUploadScreen = () => {
         setVerificationState("failed");
         toast({
           title: "Verification issue",
-          description: data.reason || "Please try taking a clearer selfie",
+          description: result.reason || "Please try taking a clearer selfie",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      // On any error, auto-accept to prevent blocking registration
-      autoAccept();
+      // On any error, still accept the photo
+      setVerificationState("verified");
+      setVerificationResult({ reason: "Photo accepted" });
+      toast({
+        title: "Photo accepted",
+        description: "Your photo has been saved",
+      });
     }
   };
 
