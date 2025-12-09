@@ -427,9 +427,35 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
         if (error) throw error;
       }
 
-      // Language is now stored directly in the profile tables (primary_language/preferred_language)
-      // No need to update user_languages table - each profile has its own language
+      // Also update user_languages table to trigger real-time subscription for dashboard refresh
       if (userLanguage && userLanguage.language_name) {
+        // Check if language entry exists
+        const { data: existingLang } = await supabase
+          .from("user_languages")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (existingLang) {
+          // Update existing language
+          await supabase
+            .from("user_languages")
+            .update({
+              language_name: userLanguage.language_name,
+              language_code: userLanguage.language_code
+            })
+            .eq("user_id", user.id);
+        } else {
+          // Insert new language entry
+          await supabase
+            .from("user_languages")
+            .insert({
+              user_id: user.id,
+              language_name: userLanguage.language_name,
+              language_code: userLanguage.language_code
+            });
+        }
+
         // Update original language to reflect saved state
         setOriginalLanguage({
           language_name: userLanguage.language_name,
