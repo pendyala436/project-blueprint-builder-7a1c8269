@@ -402,8 +402,8 @@ const DashboardScreen = () => {
       setUserLanguage(motherTongue);
       setUserLanguageCode(languageCode);
 
-      // Redirect women to their dashboard
-      if (profile?.gender === "Female") {
+      // Redirect women to their dashboard (case-insensitive check)
+      if (profile?.gender?.toLowerCase() === "female") {
         navigate("/women-dashboard");
         return;
       }

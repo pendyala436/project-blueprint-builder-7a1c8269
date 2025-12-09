@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useFaceVerification } from "@/hooks/useFaceVerification";
 import { Camera, Upload, X, Loader2, ImagePlus, Star, ShieldCheck, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: ProfilePhotosSectionProps) => {
   const { toast } = useToast();
+  const { verifyFace, isVerifying: isFaceVerifying } = useFaceVerification();
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState<'selfie' | 'additional' | null>(null);
@@ -114,7 +116,7 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
     setUploadingType(type);
 
     try {
-      // For selfie, first verify gender
+      // For selfie, first verify gender using in-browser AI
       if (type === 'selfie') {
         setIsVerifying(true);
         
@@ -126,22 +128,10 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
         });
         const imageBase64 = await base64Promise;
 
-        // Call verify-photo function
-        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-photo', {
-          body: { imageBase64 }
-        });
+        // Use in-browser face verification (no external API)
+        const verifyData = await verifyFace(imageBase64);
 
         setIsVerifying(false);
-
-        if (verifyError || !verifyData) {
-          toast({
-            title: "Verification failed",
-            description: "Could not verify the photo. Please try again.",
-            variant: "destructive",
-          });
-          setUploadingType(null);
-          return;
-        }
 
         if (!verifyData.hasFace) {
           toast({
@@ -153,8 +143,8 @@ const ProfilePhotosSection = ({ userId, onPhotosChange, onGenderVerified }: Prof
           return;
         }
 
-        // Update detected gender
-        const gender = verifyData.detectedGender;
+        // Normalize gender to lowercase for consistency
+        const gender = verifyData.detectedGender?.toLowerCase() || 'unknown';
         setDetectedGender(gender);
         setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
 

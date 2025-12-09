@@ -271,8 +271,8 @@ const WomenDashboardScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Check if female user needs approval
-      if (profile?.gender === "female" && profile?.approval_status !== "approved") {
+      // Check if female user needs approval (case-insensitive check)
+      if (profile?.gender?.toLowerCase() === "female" && profile?.approval_status !== "approved") {
         navigate("/approval-pending");
         return;
       }
@@ -346,17 +346,21 @@ const WomenDashboardScreen = () => {
       if (onlineStatuses && onlineStatuses.length > 0) {
         const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-        // Fetch profiles of online users who are male - only with photos
+        // Fetch profiles of online users who are male - only with photos (case-insensitive)
         const { data: maleProfiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, gender, age")
           .in("user_id", onlineUserIds)
-          .or("gender.eq.male,gender.eq.Male")
           .not("photo_url", "is", null)
           .neq("photo_url", "");
 
-        if (maleProfiles && maleProfiles.length > 0) {
-          const maleUserIds = maleProfiles.map(p => p.user_id);
+        // Filter to male profiles (case-insensitive)
+        const filteredMaleProfiles = maleProfiles?.filter(p => 
+          p.gender?.toLowerCase() === 'male'
+        ) || [];
+
+        if (filteredMaleProfiles.length > 0) {
+          const maleUserIds = filteredMaleProfiles.map(p => p.user_id);
 
           // Fetch wallet balances
           const { data: wallets } = await supabase
@@ -375,7 +379,7 @@ const WomenDashboardScreen = () => {
           const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
           // Process real male profiles
-          maleProfiles.forEach(profile => {
+          filteredMaleProfiles.forEach(profile => {
             const manLanguage = languageMap.get(profile.user_id) || 
                                profile.primary_language || 
                                profile.preferred_language || 
