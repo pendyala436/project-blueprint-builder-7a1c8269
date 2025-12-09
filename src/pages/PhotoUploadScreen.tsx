@@ -178,7 +178,22 @@ const PhotoUploadScreen = () => {
         }
       });
 
-      if (error) throw error;
+      // Handle edge function errors (including 402, 429)
+      if (error) {
+        const errorMsg = error.message || "";
+        if (errorMsg.includes("402") || errorMsg.includes("credits")) {
+          throw new Error("AI service temporarily unavailable. Please try again later.");
+        }
+        if (errorMsg.includes("429") || errorMsg.includes("rate")) {
+          throw new Error("Too many requests. Please wait a moment and try again.");
+        }
+        throw error;
+      }
+
+      // Check if response contains an error object
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       setVerificationResult(data);
       
