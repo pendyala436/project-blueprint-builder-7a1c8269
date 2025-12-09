@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone, Camera, Languages, Globe, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Phone, Camera, Languages, Globe, Check, ChevronsUpDown, KeyRound } from "lucide-react";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
@@ -825,6 +825,48 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
               <p className="text-xs text-muted-foreground text-right">
                 {(profile.bio?.length || 0)}/500 characters
               </p>
+            </div>
+
+            {/* ==================== Password Reset Section ==================== */}
+            <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <Label className="text-sm font-medium">Reset Password</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Send a password reset link to your email
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!userEmail) return;
+                    try {
+                      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+                        redirectTo: `${window.location.origin}/password-reset`,
+                      });
+                      if (error) throw error;
+                      toast({
+                        title: "Reset Email Sent",
+                        description: "Check your email for the password reset link",
+                      });
+                    } catch (error) {
+                      console.error("Error sending reset email:", error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to send reset email. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Reset
+                </Button>
+              </div>
             </div>
 
             {/* ==================== Action Buttons ==================== */}
