@@ -289,20 +289,23 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
         data = profileData;
       }
 
-      // Fetch user's language for matching
-      const { data: languageData } = await supabase
-        .from("user_languages")
-        .select("language_name, language_code")
-        .eq("user_id", user.id)
-        .limit(1);
-
-      if (languageData && languageData.length > 0) {
-        const langData = {
-          language_name: languageData[0].language_name,
-          language_code: languageData[0].language_code
-        };
-        setUserLanguage(langData);
-        setOriginalLanguage(langData);
+      // Get language from the profile data itself (stored in primary_language/preferred_language)
+      // Each profile type has its own language stored independently
+      if (data && data.primary_language) {
+        // Find the language in our list to get the code
+        const foundLang = ALL_NLLB200_LANGUAGES.find(l => l.name === data.primary_language);
+        if (foundLang) {
+          const langData = {
+            language_name: foundLang.name,
+            language_code: foundLang.code
+          };
+          setUserLanguage(langData);
+          setOriginalLanguage(langData);
+        } else {
+          // Language name exists but not in our list - use it anyway
+          setUserLanguage({ language_name: data.primary_language, language_code: data.primary_language });
+          setOriginalLanguage({ language_name: data.primary_language, language_code: data.primary_language });
+        }
       } else {
         setUserLanguage(null);
         setOriginalLanguage(null);
@@ -424,32 +427,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
         if (error) throw error;
       }
 
-      // Update user_languages table for matching
-      if (userLanguage && userLanguage.language_code && userLanguage.language_name) {
-        // Delete existing language entries for this user
-        const { error: deleteError } = await supabase
-          .from("user_languages")
-          .delete()
-          .eq("user_id", user.id);
-
-        if (deleteError) {
-          console.error("Error deleting language:", deleteError);
-        }
-
-        // Insert new language
-        const { error: insertError } = await supabase
-          .from("user_languages")
-          .insert({
-            user_id: user.id,
-            language_name: userLanguage.language_name,
-            language_code: userLanguage.language_code
-          });
-
-        if (insertError) {
-          console.error("Error inserting language:", insertError);
-          throw insertError;
-        }
-
+      // Language is now stored directly in the profile tables (primary_language/preferred_language)
+      // No need to update user_languages table - each profile has its own language
+      if (userLanguage && userLanguage.language_name) {
         // Update original language to reflect saved state
         setOriginalLanguage({
           language_name: userLanguage.language_name,
