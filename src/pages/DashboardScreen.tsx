@@ -380,10 +380,23 @@ const DashboardScreen = () => {
 
       setCurrentUserId(user.id);
 
-      // Fetch user profile including country and gender
-      const { data: profile } = await supabase
+      // First check gender from main profiles table for redirection
+      const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("full_name, country, gender, primary_language, preferred_language")
+        .select("gender")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Redirect women to their dashboard (case-insensitive check)
+      if (mainProfile?.gender?.toLowerCase() === "female") {
+        navigate("/women-dashboard");
+        return;
+      }
+
+      // Fetch user profile from male_profiles table
+      const { data: maleProfile } = await supabase
+        .from("male_profiles")
+        .select("full_name, country, primary_language, preferred_language")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -395,24 +408,18 @@ const DashboardScreen = () => {
         .limit(1);
 
       const motherTongue = userLanguages?.[0]?.language_name || 
-                          profile?.primary_language || 
-                          profile?.preferred_language || 
+                          maleProfile?.primary_language || 
+                          maleProfile?.preferred_language || 
                           "English";
       const languageCode = userLanguages?.[0]?.language_code || "eng_Latn";
       setUserLanguage(motherTongue);
       setUserLanguageCode(languageCode);
 
-      // Redirect women to their dashboard (case-insensitive check)
-      if (profile?.gender?.toLowerCase() === "female") {
-        navigate("/women-dashboard");
-        return;
+      if (maleProfile?.full_name) {
+        setUserName(maleProfile.full_name.split(" ")[0]);
       }
-
-      if (profile?.full_name) {
-        setUserName(profile.full_name.split(" ")[0]);
-      }
-      if (profile?.country) {
-        setUserCountryName(profile.country); // Store full country name for NLLB feature
+      if (maleProfile?.country) {
+        setUserCountryName(maleProfile.country); // Store full country name for NLLB feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -422,7 +429,7 @@ const DashboardScreen = () => {
           "Kuwait": "KW", "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP",
           "Sri Lanka": "LK"
         };
-        setUserCountry(countryCodeMap[profile.country] || "IN");
+        setUserCountry(countryCodeMap[maleProfile.country] || "IN");
       }
 
       // Fetch wallet balance
@@ -1433,6 +1440,7 @@ const DashboardScreen = () => {
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
+        profileType="male"
       />
 
       {/* Parallel Mini Chat Windows */}
