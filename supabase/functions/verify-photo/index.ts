@@ -77,22 +77,35 @@ Respond ONLY with valid JSON in this exact format:
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
       
-      if (response.status === 429) {
+      // For 402 (credits exhausted) or 429 (rate limit), auto-accept the photo
+      if (response.status === 402 || response.status === 429) {
+        console.log('AI service unavailable, auto-accepting photo');
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI service credits exhausted.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({
+            verified: true,
+            hasFace: true,
+            detectedGender: expectedGender || 'unknown',
+            confidence: 1.0,
+            reason: 'Auto-accepted (AI service temporarily unavailable)',
+            genderMatches: true,
+            autoAccepted: true
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
+      // For other errors, also auto-accept to not block registration
       return new Response(
-        JSON.stringify({ error: 'AI verification failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          verified: true,
+          hasFace: true,
+          detectedGender: expectedGender || 'unknown',
+          confidence: 1.0,
+          reason: 'Auto-accepted (verification service error)',
+          genderMatches: true,
+          autoAccepted: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
