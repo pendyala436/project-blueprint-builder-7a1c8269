@@ -57,33 +57,52 @@ serve(async (req) => {
       imageSize: imageBase64.length
     });
 
-    // Enhanced AI prompt for accurate gender classification
-    const systemPrompt = `You are an advanced face verification and gender classification AI system. Your task is to analyze profile photos with high accuracy.
+    // Enhanced AI prompt for STRICT and UNBIASED gender classification
+    const systemPrompt = `You are an advanced face verification and gender classification AI system. Your task is to ACCURATELY detect the biological/physical gender presentation in photos WITHOUT any bias.
+
+CRITICAL: DO NOT let the "expected gender" influence your analysis. You MUST detect what you actually see in the photo, not what the user claims to be.
 
 ANALYSIS STEPS:
-1. FACE DETECTION: First, detect if there is a clear human face in the image
-   - Check for presence of facial features (eyes, nose, mouth)
-   - Assess if the face is clearly visible and not obscured
+1. FACE DETECTION: 
+   - Detect if there is a clear human face in the image
+   - Check for presence of facial features (eyes, nose, mouth, chin)
    - Count the number of faces detected
 
-2. FACE QUALITY ASSESSMENT:
-   - Evaluate lighting quality (good, moderate, poor)
-   - Check if face is centered and properly framed
-   - Assess image clarity/resolution
+2. GENDER CLASSIFICATION (UNBIASED - ignore expected gender):
+   Analyze these physical characteristics to determine gender:
+   
+   MALE INDICATORS:
+   - Broader, more angular jaw
+   - More prominent brow ridge
+   - Larger nose relative to face
+   - Adam's apple visible (if neck shown)
+   - Facial hair or stubble shadow
+   - Wider face structure
+   - More angular cheekbones
+   
+   FEMALE INDICATORS:
+   - Softer, rounder jaw
+   - Less prominent brow ridge
+   - Smaller nose relative to face
+   - Smoother neck area
+   - Fuller lips relative to face
+   - Narrower face structure
+   - Higher cheekbones with softer angles
 
-3. GENDER CLASSIFICATION:
-   - Analyze facial structure and features
-   - Consider multiple indicators: jawline, brow ridge, facial proportions
-   - Classify as: male, female, or non-binary/ambiguous
-   - Provide confidence score (0.0 to 1.0)
+3. CONFIDENCE SCORING:
+   - High confidence (0.8-1.0): Clear gender indicators present
+   - Medium confidence (0.6-0.8): Some indicators present
+   - Low confidence (0.4-0.6): Ambiguous features
+   - Very low (below 0.4): Cannot determine
 
-IMPORTANT RULES:
-- Be accurate but not overly strict - this is for user verification
-- If uncertain, lean towards the expected gender if face is clearly visible
-- Consider that makeup, hairstyles, and lighting can affect appearance
-- Flag photos that appear to be: cartoons, celebrities, AI-generated, or stock photos
+RULES:
+- BE HONEST AND ACCURATE - this is for fraud prevention
+- DO NOT assume the expected gender is correct
+- If you see a male face, report "male" even if expected is "female"
+- Makeup does NOT change biological gender classification
+- Report exactly what physical features indicate
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {
   "hasFace": true/false,
   "faceCount": number,
@@ -91,17 +110,19 @@ Respond ONLY with valid JSON in this exact format:
   "detectedGender": "male" | "female" | "non-binary",
   "confidence": 0.0-1.0,
   "isRealPhoto": true/false,
-  "reason": "brief explanation of the analysis"
+  "genderIndicators": ["list", "of", "observed", "indicators"],
+  "reason": "brief explanation with specific features observed"
 }`;
 
-    const userPrompt = `Analyze this profile photo for face verification and gender classification.
-${expectedGender ? `The user has indicated their gender as: ${expectedGender}` : 'No expected gender specified.'}
+    const userPrompt = `Analyze this profile photo for STRICT gender verification.
 
-Please verify:
-1. Is there a clear, real human face visible?
-2. What is the detected gender based on facial features?
-3. How confident are you in the gender classification?
-4. Is this a genuine selfie/photo (not AI-generated, cartoon, or stock photo)?`;
+IMPORTANT: The user claims to be ${expectedGender || 'unspecified'}, but you MUST verify this independently. Do NOT trust their claim - analyze the actual facial features.
+
+Detect:
+1. Is there a clear human face?
+2. Based on PHYSICAL FACIAL FEATURES, is this person male or female?
+3. List the specific indicators you observed (jaw shape, brow, etc.)
+4. If the detected gender does NOT match "${expectedGender}", explicitly state this mismatch.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -179,18 +200,19 @@ Please verify:
     // Build verification result
     const isVerified = aiResult.hasFace && aiResult.confidence >= 0.5 && aiResult.isRealPhoto !== false;
     
-    // Gender matching logic - be lenient for non-binary/ambiguous cases
+    // STRICT Gender matching logic - no leniency for mismatches
     let genderMatches = true;
-    if (expectedGender) {
+    if (expectedGender && expectedGender !== 'prefer-not-to-say' && expectedGender !== 'non-binary') {
+      // Direct match required for male/female profiles
       if (aiResult.detectedGender === expectedGender) {
         genderMatches = true;
-      } else if (aiResult.detectedGender === 'non-binary' && aiResult.confidence < 0.7) {
-        // If AI is uncertain, accept the expected gender
-        genderMatches = true;
-      } else if (expectedGender === 'prefer-not-to-say' || expectedGender === 'non-binary') {
+      } else if (aiResult.detectedGender === 'non-binary' && aiResult.confidence < 0.5) {
+        // Only accept non-binary if AI confidence is very low (truly uncertain)
         genderMatches = true;
       } else {
+        // MISMATCH: detected gender does not match expected
         genderMatches = false;
+        console.log(`GENDER MISMATCH DETECTED: Expected ${expectedGender}, Got ${aiResult.detectedGender} (confidence: ${aiResult.confidence})`);
       }
     }
 
