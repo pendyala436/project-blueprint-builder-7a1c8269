@@ -291,7 +291,13 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_status' },
-        () => { fetchOnlineUsersCount(); }
+        () => { 
+          fetchOnlineUsersCount(); 
+          // Refresh women list when any user's online status changes
+          if (userLanguage) {
+            fetchOnlineWomen(userLanguage);
+          }
+        }
       )
       .on(
         'postgres_changes',
