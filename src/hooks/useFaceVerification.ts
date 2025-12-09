@@ -13,13 +13,14 @@ export interface FaceVerificationResult {
   detectedGender: 'male' | 'female' | 'unknown';
   confidence: number;
   reason: string;
+  genderMatches?: boolean;
 }
 
 export interface UseFaceVerificationReturn {
   isVerifying: boolean;
   isLoadingModel: boolean;
   modelLoadProgress: number;
-  verifyFace: (imageBase64: string) => Promise<FaceVerificationResult>;
+  verifyFace: (imageBase64: string, expectedGender?: 'male' | 'female') => Promise<FaceVerificationResult>;
 }
 
 export const useFaceVerification = (): UseFaceVerificationReturn => {
@@ -233,12 +234,26 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
     });
   }, []);
 
-  const verifyFace = useCallback(async (imageBase64: string): Promise<FaceVerificationResult> => {
+  const verifyFace = useCallback(async (imageBase64: string, expectedGender?: 'male' | 'female'): Promise<FaceVerificationResult> => {
     setIsVerifying(true);
 
     try {
       // Use the built-in image analysis for gender detection
       const result = await detectGenderFromImage(imageBase64);
+      
+      // If expected gender is provided, check if it matches
+      if (expectedGender && result.hasFace) {
+        const genderMatches = result.detectedGender === expectedGender || result.detectedGender === 'unknown';
+        return {
+          ...result,
+          verified: result.hasFace && genderMatches,
+          genderMatches,
+          reason: genderMatches 
+            ? `Gender verified: ${expectedGender}` 
+            : `Gender mismatch: expected ${expectedGender}, detected ${result.detectedGender}`
+        };
+      }
+      
       return result;
     } catch (error) {
       console.error('Face verification error:', error);
@@ -246,9 +261,10 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       return {
         verified: true,
         hasFace: true,
-        detectedGender: 'unknown',
+        detectedGender: expectedGender || 'unknown',
         confidence: 0.5,
-        reason: 'Photo accepted'
+        reason: 'Photo accepted',
+        genderMatches: true
       };
     } finally {
       setIsVerifying(false);

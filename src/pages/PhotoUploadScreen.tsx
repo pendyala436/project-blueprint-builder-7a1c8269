@@ -174,28 +174,30 @@ const PhotoUploadScreen = () => {
     setVerificationState("verifying");
 
     try {
-      // Use in-browser AI verification (no external API calls)
-      const result = await verifyFace(selfiePreview);
+      // Get the expected gender from registration data
+      const expectedGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
       
-      // Update gender based on AI detection
-      if (result.detectedGender && (result.detectedGender === 'male' || result.detectedGender === 'female')) {
-        const currentGender = localStorage.getItem("userGender");
-        if (currentGender !== result.detectedGender) {
-          localStorage.setItem("userGender", result.detectedGender);
-          toast({
-            title: "Gender detected",
-            description: `AI detected gender as ${result.detectedGender}`,
-          });
-        }
-      }
-
+      // Use in-browser AI verification with expected gender check
+      const result = await verifyFace(selfiePreview, expectedGender || undefined);
+      
       setVerificationResult(result);
+      
+      // If expected gender was provided and there's a mismatch, fail verification
+      if (expectedGender && result.genderMatches === false) {
+        setVerificationState("failed");
+        toast({
+          title: "Gender mismatch",
+          description: `This profile requires a ${expectedGender} selfie. Detected: ${result.detectedGender}`,
+          variant: "destructive",
+        });
+        return;
+      }
       
       if (result.verified) {
         setVerificationState("verified");
         toast({
           title: "Selfie verified!",
-          description: "Your identity has been successfully verified",
+          description: `Gender verified as ${expectedGender || result.detectedGender}`,
         });
       } else {
         setVerificationState("failed");

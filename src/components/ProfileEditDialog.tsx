@@ -513,6 +513,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
                 </div>
                 <ProfilePhotosSection 
                   userId={currentUserId}
+                  expectedGender={profileType}
                   onPhotosChange={(hasAnyPhotos) => {
                     setHasPhotos(hasAnyPhotos);
                     setPhotosChanged(true);
