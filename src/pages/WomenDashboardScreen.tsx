@@ -200,11 +200,12 @@ const WomenDashboardScreen = () => {
         { event: '*', schema: 'public', table: 'wallets' },
         () => { loadDashboardData(); }
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'male_profiles' },
-        () => { fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry); }
-      )
+      // Note: We don't listen to all male_profiles changes as that would cause
+      // cross-dashboard interference. The men list is refreshed when:
+      // 1. user_status changes (online/offline)
+      // 2. THIS woman's language changes (user_languages or female_profiles)
+      // Men changing their language affects their visibility to women based on
+      // the woman's language filter - which is recalculated on user_status changes
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUserId}` },
