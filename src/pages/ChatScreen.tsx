@@ -93,6 +93,7 @@ import VoiceRecordButton from "@/components/VoiceRecordButton";
 // Voice message components
 import VoiceMessageRecorder from "@/components/VoiceMessageRecorder";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
+import GiftSendButton from "@/components/GiftSendButton";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -1910,6 +1911,16 @@ const ChatScreen = () => {
                 </div>
               </PopoverContent>
             </Popover>
+            
+            {/* Gift button - only show for men */}
+            {currentUserGender === "male" && chatPartner && (
+              <GiftSendButton
+                senderId={currentUserId}
+                receiverId={chatPartner.userId}
+                receiverName={chatPartner.fullName}
+                disabled={isSending}
+              />
+            )}
             
             {/* Voice message recorder (up to 5 minutes) */}
             <VoiceMessageRecorder
