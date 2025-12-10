@@ -184,6 +184,17 @@ const AdminAnalyticsDashboard = () => {
       // Calculate conversion rate (matches / users)
       const conversionRate = totalUsers ? ((totalMatches || 0) / totalUsers) * 100 : 0;
 
+      // Calculate average session time from active chat sessions
+      const { data: sessionData } = await supabase
+        .from("active_chat_sessions")
+        .select("total_minutes")
+        .gte("created_at", startDate.toISOString());
+
+      const totalSessionMinutes = sessionData?.reduce((sum, s) => sum + Number(s.total_minutes), 0) || 0;
+      const avgSessionTime = sessionData && sessionData.length > 0 
+        ? Math.round(totalSessionMinutes / sessionData.length) 
+        : 0;
+
       setAnalytics({
         totalUsers: totalUsers || 0,
         activeUsers: activeUsers || 0,
@@ -191,7 +202,7 @@ const AdminAnalyticsDashboard = () => {
         totalRevenue: adminProfit,
         newUsersToday: newUsersToday || 0,
         messagesCount: messagesCount || 0,
-        avgSessionTime: 24,
+        avgSessionTime,
         conversionRate,
       });
 
@@ -425,32 +436,24 @@ const AdminAnalyticsDashboard = () => {
             title="Total Users"
             value={analytics.totalUsers.toLocaleString()}
             icon={Users}
-            trend="up"
-            trendValue="+12% from last week"
             color="primary"
           />
           <StatCard
             title="Active Users"
             value={analytics.activeUsers.toLocaleString()}
             icon={UserCheck}
-            trend="up"
-            trendValue="+8% from yesterday"
             color="success"
           />
           <StatCard
             title="Total Matches"
             value={analytics.totalMatches.toLocaleString()}
             icon={Heart}
-            trend="up"
-            trendValue="+15% this week"
             color="danger"
           />
           <StatCard
-            title="Total Revenue"
+            title="Admin Profit"
             value={`₹${analytics.totalRevenue.toLocaleString()}`}
             icon={IndianRupee}
-            trend="up"
-            trendValue="+23% this month"
             color="warning"
           />
           <StatCard
@@ -467,7 +470,7 @@ const AdminAnalyticsDashboard = () => {
           />
           <StatCard
             title="Avg Session"
-            value={`${analytics.avgSessionTime}m`}
+            value={analytics.avgSessionTime > 0 ? `${analytics.avgSessionTime}m` : "0m"}
             icon={Activity}
             color="warning"
           />
@@ -475,8 +478,6 @@ const AdminAnalyticsDashboard = () => {
             title="Conversion Rate"
             value={`${analytics.conversionRate.toFixed(1)}%`}
             icon={TrendingUp}
-            trend={analytics.conversionRate > 5 ? "up" : "down"}
-            trendValue={analytics.conversionRate > 5 ? "Good" : "Needs improvement"}
             color={analytics.conversionRate > 5 ? "success" : "danger"}
           />
         </div>
