@@ -21,7 +21,8 @@ import {
   Video,
   Users,
   Save,
-  RefreshCw
+  RefreshCw,
+  Home
 } from "lucide-react";
 
 interface LanguageLimit {
@@ -246,9 +247,16 @@ const AdminLanguageLimits = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/admin/analytics")}
+                onClick={() => navigate(-1)}
               >
                 <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin")}
+              >
+                <Home className="h-5 w-5" />
               </Button>
               <div className="flex items-center gap-2">
                 <Users className="h-6 w-6 text-primary" />

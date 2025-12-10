@@ -31,6 +31,7 @@ import {
   EyeOff,
   Bell,
   Shield,
+  Home,
 } from "lucide-react";
 import {
   LineChart,
@@ -439,6 +440,14 @@ const AdminAnalyticsDashboard = () => {
               className="rounded-full"
             >
               <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/admin")}
+              className="rounded-full"
+            >
+              <Home className="h-5 w-5" />
             </Button>
             <div>
               <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">

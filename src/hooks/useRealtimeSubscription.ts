@@ -15,6 +15,7 @@ type TableName =
   | "wallets"
   | "wallet_transactions"
   | "women_earnings"
+  | "shift_earnings"
   | "user_status"
   | "women_availability"
   | "language_limits"
@@ -49,7 +50,8 @@ type TableName =
   | "processing_logs"
   | "app_settings"
   | "shift_earnings"
-  | "chat_wait_queue";
+  | "chat_wait_queue"
+  | "platform_metrics";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;
