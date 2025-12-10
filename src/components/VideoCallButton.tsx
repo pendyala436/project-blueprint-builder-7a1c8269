@@ -45,7 +45,7 @@ const VideoCallButton = ({
       
       const minBalance = settingsData?.setting_value 
         ? parseInt(String(settingsData.setting_value)) 
-        : 50;
+        : 16;
       
       if (walletBalance < minBalance) {
         toast({
