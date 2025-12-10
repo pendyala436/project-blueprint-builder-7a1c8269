@@ -36,16 +36,8 @@ const VideoCallButton = ({
     const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
     
     if (!isSuperUser) {
-      // Check wallet balance dynamically from pricing
-      const { data: settingsData } = await supabase
-        .from("app_settings")
-        .select("setting_value")
-        .eq("setting_key", "min_video_call_balance")
-        .maybeSingle();
-      
-      const minBalance = settingsData?.setting_value 
-        ? parseInt(String(settingsData.setting_value)) 
-        : 16;
+      // Minimum balance required to start video call
+      const minBalance = 16;
       
       if (walletBalance < minBalance) {
         toast({
