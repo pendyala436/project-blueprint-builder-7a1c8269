@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -82,11 +83,7 @@ const AdminFinanceDashboard = () => {
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
   const [transactionTypes, setTransactionTypes] = useState<{ name: string; value: number }[]>([]);
 
-  useEffect(() => {
-    loadFinanceData();
-  }, [dateRange]);
-
-  const loadFinanceData = async () => {
+  const loadFinanceData = useCallback(async () => {
     setLoading(true);
     try {
       const days = parseInt(dateRange);
@@ -181,7 +178,18 @@ const AdminFinanceDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, toast]);
+
+  // Real-time subscriptions for finance data
+  useMultipleRealtimeSubscriptions(
+    ["wallet_transactions", "gift_transactions", "wallets", "women_earnings", "withdrawal_requests"],
+    loadFinanceData,
+    true
+  );
+
+  useEffect(() => {
+    loadFinanceData();
+  }, [loadFinanceData]);
 
   const exportCSV = () => {
     // Combine all transactions for export

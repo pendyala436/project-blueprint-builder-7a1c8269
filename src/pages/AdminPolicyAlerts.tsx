@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -114,13 +115,6 @@ const AdminPolicyAlerts = () => {
     checkAdminAccess();
   }, []);
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadAlerts();
-      loadStats();
-    }
-  }, [isAdmin, statusFilter, severityFilter, violationTypeFilter]);
-
   const checkAdminAccess = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -149,7 +143,7 @@ const AdminPolicyAlerts = () => {
     }
   };
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const { data: allAlerts } = await supabase
         .from("policy_violation_alerts")
@@ -167,9 +161,9 @@ const AdminPolicyAlerts = () => {
     } catch (error) {
       console.error("Error loading stats:", error);
     }
-  };
+  }, []);
 
-  const loadAlerts = async () => {
+  const loadAlerts = useCallback(async () => {
     try {
       let query = supabase
         .from("policy_violation_alerts")
@@ -213,9 +207,24 @@ const AdminPolicyAlerts = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [statusFilter, severityFilter, violationTypeFilter]);
 
-  const handleRefresh = () => {
+  // Real-time subscription for policy alerts
+  useRealtimeSubscription({
+    table: "policy_violation_alerts",
+    onUpdate: () => {
+      loadAlerts();
+      loadStats();
+    },
+    enabled: isAdmin
+  });
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadAlerts();
+      loadStats();
+    }
+  }, [isAdmin, loadAlerts, loadStats]);
     setRefreshing(true);
     loadAlerts();
     loadStats();

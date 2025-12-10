@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,11 +56,7 @@ const AdminLanguageGroups = () => {
   const [formIsActive, setFormIsActive] = useState(true);
   const [formPriority, setFormPriority] = useState(0);
 
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("language_groups")
@@ -78,7 +75,17 @@ const AdminLanguageGroups = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  // Real-time subscription for language groups
+  useRealtimeSubscription({
+    table: "language_groups",
+    onUpdate: loadGroups
+  });
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const getLanguageName = (code: string) => {
     const lang = languages.find((l) => l.code === code);
