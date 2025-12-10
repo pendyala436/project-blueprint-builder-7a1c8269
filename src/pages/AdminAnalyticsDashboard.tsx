@@ -133,15 +133,21 @@ const AdminAnalyticsDashboard = () => {
         .from("matches")
         .select("*", { count: "exact", head: true });
 
-      // Fetch men's wallet recharges (credits added to wallet)
+      // Fetch men's wallet recharges (credits added to wallet) - exclude test credits
       const { data: menRechargesData } = await supabase
         .from("wallet_transactions")
-        .select("amount, created_at")
+        .select("amount, created_at, description")
         .eq("type", "credit")
         .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      const totalMenRecharges = menRechargesData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      // Filter out test/seed data - only count real recharges
+      const realRecharges = menRechargesData?.filter(tx => 
+        !tx.description?.toLowerCase().includes('test') && 
+        !tx.description?.toLowerCase().includes('free credits') &&
+        !tx.description?.toLowerCase().includes('seed')
+      ) || [];
+      const totalMenRecharges = realRecharges.reduce((sum, tx) => sum + Number(tx.amount), 0);
 
       // Fetch men's spending (debits - what they spent on chats/calls/gifts per minute)
       const { data: menSpentData } = await supabase

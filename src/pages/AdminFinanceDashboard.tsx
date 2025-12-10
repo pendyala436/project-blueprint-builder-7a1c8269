@@ -127,9 +127,14 @@ const AdminFinanceDashboard = () => {
         revenueByDay[date] = { revenue: 0, transactions: 0 };
       }
 
-      // Add wallet transaction credits as revenue
+      // Add wallet transaction credits as revenue (exclude test/seed data)
       walletTxns?.forEach((txn) => {
         if (txn.type === "credit" && txn.status === "completed") {
+          // Skip test/seed data
+          const desc = (txn.description || '').toLowerCase();
+          if (desc.includes('test') || desc.includes('free credits') || desc.includes('seed')) {
+            return;
+          }
           const date = format(new Date(txn.created_at), "yyyy-MM-dd");
           if (revenueByDay[date]) {
             revenueByDay[date].revenue += Number(txn.amount);
