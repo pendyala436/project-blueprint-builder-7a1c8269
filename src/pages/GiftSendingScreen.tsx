@@ -1,3 +1,14 @@
+/**
+ * GiftSendingScreen.tsx
+ * 
+ * PURPOSE: Send virtual gifts to users using ACID-compliant transactions.
+ * Uses atomic database functions for guaranteed consistency.
+ * 
+ * ACID COMPLIANCE:
+ * - Uses process_gift_transaction database function for atomicity
+ * - Real-time subscriptions for live balance updates
+ */
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +31,7 @@ import {
   Heart
 } from "lucide-react";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 
 interface GiftItem {
   id: string;
@@ -39,6 +51,10 @@ interface ReceiverProfile {
 const GiftSendingScreen = () => {
   const navigate = useNavigate();
   const { receiverId } = useParams<{ receiverId: string }>();
+  
+  // ACID-compliant transaction hook
+  const { sendGift, isProcessing: transactionProcessing } = useAtomicTransaction();
+  
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
@@ -50,6 +66,7 @@ const GiftSendingScreen = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -64,9 +81,10 @@ const GiftSendingScreen = () => {
       if (giftsError) throw giftsError;
       setGifts(giftsData || []);
 
-      // Load wallet balance
+      // Load wallet balance and store user ID
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setCurrentUserId(user.id);
         const { data: wallet } = await supabase
           .from("wallets")
           .select("balance")
@@ -130,65 +148,49 @@ const GiftSendingScreen = () => {
     setShowConfirmDialog(true);
   };
 
+  /**
+   * confirmSendGift - ACID-compliant gift sending
+   * Uses atomic database function to ensure all-or-nothing transaction
+   */
   const confirmSendGift = async () => {
-    if (!selectedGift || !receiverId) return;
+    if (!selectedGift || !receiverId || !currentUserId) {
+      toast({
+        title: "Error",
+        description: "Missing required information",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSending(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      // Use atomic transaction function for ACID compliance
+      const result = await sendGift(
+        currentUserId,
+        receiverId,
+        selectedGift.id,
+        giftMessage || undefined
+      );
 
-      // Get wallet
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("id, balance")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!wallet || wallet.balance < selectedGift.price) {
-        throw new Error("Insufficient balance");
+      if (result.success) {
+        setShowConfirmDialog(false);
+        setShowSuccessDialog(true);
+        // Balance will be updated via real-time subscription
+        await loadData(); // Refresh to get updated balance
+        setGiftMessage("");
+        
+        toast({
+          title: "Gift Sent! 🎁",
+          description: `${selectedGift.emoji} ${selectedGift.name} sent successfully!`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to send gift");
       }
-
-      // Deduct from wallet
-      await supabase
-        .from("wallets")
-        .update({ balance: wallet.balance - selectedGift.price })
-        .eq("id", wallet.id);
-
-      // Record wallet transaction
-      await supabase
-        .from("wallet_transactions")
-        .insert({
-          wallet_id: wallet.id,
-          user_id: user.id,
-          type: "debit",
-          amount: selectedGift.price,
-          description: `Sent gift: ${selectedGift.name}`,
-          status: "completed"
-        });
-
-      // Record gift transaction
-      await supabase
-        .from("gift_transactions")
-        .insert({
-          gift_id: selectedGift.id,
-          sender_id: user.id,
-          receiver_id: receiverId,
-          price_paid: selectedGift.price,
-          currency: selectedGift.currency,
-          message: giftMessage || null,
-          status: "completed"
-        });
-
-      setShowConfirmDialog(false);
-      setShowSuccessDialog(true);
-      setWalletBalance(wallet.balance - selectedGift.price);
-      setGiftMessage("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending gift:", error);
       toast({
         title: "Error",
-        description: "Failed to send gift. Please try again.",
+        description: error.message || "Failed to send gift. Please try again.",
         variant: "destructive",
       });
     } finally {
