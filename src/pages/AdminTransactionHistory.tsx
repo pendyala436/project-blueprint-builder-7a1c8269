@@ -113,6 +113,8 @@ interface WomenEarning {
   earning_type: string;
   description: string | null;
   created_at: string;
+  shift_id?: string;
+  chat_id?: string;
   user_name?: string;
 }
 
@@ -182,7 +184,7 @@ const AdminTransactionHistory = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => loadAllData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => loadAllData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_earnings' }, () => loadAllData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shift_earnings' }, () => loadAllData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => loadAllData())
       .subscribe();
 
@@ -230,7 +232,7 @@ const AdminTransactionHistory = () => {
           .order("created_at", { ascending: false })
           .limit(500),
         supabase
-          .from("women_earnings")
+          .from("shift_earnings")
           .select("*")
           .gte("created_at", startDate)
           .order("created_at", { ascending: false })

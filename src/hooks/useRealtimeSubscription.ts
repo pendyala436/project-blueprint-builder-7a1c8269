@@ -28,6 +28,7 @@ type TableName =
   | "absence_records"
   | "women_shift_assignments"
   | "user_settings"
+  | "women_earnings"
   | "matches"
   | "user_languages"
   | "withdrawal_requests"
