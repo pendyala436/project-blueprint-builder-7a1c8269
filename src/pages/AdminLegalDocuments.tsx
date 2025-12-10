@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useProductionMode } from "@/hooks/useProductionMode";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
@@ -28,7 +29,8 @@ import {
   Calendar,
   Loader2,
   File,
-  FileCheck
+  FileCheck,
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -75,6 +77,7 @@ const AdminLegalDocuments = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isProduction } = useProductionMode();
   
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -415,15 +418,22 @@ const AdminLegalDocuments = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSeedDocuments}
-                disabled={seeding}
-              >
-                <FileCheck className={`w-4 h-4 mr-2 ${seeding ? 'animate-pulse' : ''}`} />
-                {seeding ? 'Seeding...' : 'Seed Defaults'}
-              </Button>
+              {/* Seed Defaults - Only in Dev Mode */}
+              {!isProduction && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSeedDocuments}
+                  disabled={seeding}
+                  className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                >
+                  <FileCheck className={`w-4 h-4 mr-2 ${seeding ? 'animate-pulse' : ''}`} />
+                  {seeding ? 'Seeding...' : 'Seed Defaults'}
+                  <Badge variant="outline" className="ml-2 text-xs text-amber-500 border-amber-500">
+                    Dev
+                  </Badge>
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

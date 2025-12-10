@@ -3,17 +3,21 @@
  * Admin screen for managing sample/demo users by country and language.
  * Uses separate sample_men and sample_women tables.
  * Allows enabling/disabling users per region.
+ * 
+ * NOTE: This page is for development/staging only.
+ * In production mode, seed functions are disabled.
  */
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useProductionMode } from "@/hooks/useProductionMode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Users, Globe, Languages, User, RefreshCw, UserPlus, Shield } from "lucide-react";
+import { ArrowLeft, Users, Globe, Languages, User, RefreshCw, UserPlus, Shield, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { countries } from "@/data/countries";
 import { languages } from "@/data/languages";
@@ -46,6 +50,7 @@ interface GroupedUsers {
 
 export default function AdminSampleUsers() {
   const navigate = useNavigate();
+  const { isProduction, loading: prodLoading } = useProductionMode();
   const [loading, setLoading] = useState(true);
   const [sampleMen, setSampleMen] = useState<SampleUser[]>([]);
   const [sampleWomen, setSampleWomen] = useState<SampleUser[]>([]);
@@ -302,51 +307,72 @@ export default function AdminSampleUsers() {
           </div>
         </div>
 
-        {/* Seed Super Users Card */}
-        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="h-5 w-5 text-primary" />
-              Create Super Users (Always in System)
-            </CardTitle>
-            <CardDescription>
-              Creates 45 super users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
-              <br />
-              <strong>Unlimited wallet balance (₹999,999,999)</strong> - No recharge ever needed!
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4 items-center">
-              <Button onClick={seedSuperUsers} disabled={seeding} className="gap-2">
-                {seeding ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Creating Super Users...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4" />
-                    Create Super Users
-                  </>
-                )}
-              </Button>
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-blue-500" /> male1-15@meow-meow.com
+        {/* Production Mode Warning */}
+        {isProduction && (
+          <Card className="border-amber-500 bg-amber-500/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+                Production Mode Active
+              </CardTitle>
+              <CardDescription>
+                Seed and mock data functions are disabled in production. Only real user data is displayed and used.
+                To enable development features, set <code className="bg-muted px-1 rounded">production_mode</code> to <code className="bg-muted px-1 rounded">false</code> in app_settings.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+
+        {/* Seed Super Users Card - Only in Dev Mode */}
+        {!isProduction && (
+          <Card className="border-dashed border-2 border-amber-500/50 bg-amber-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Shield className="h-5 w-5 text-amber-500" />
+                Create Super Users (Development Only)
+                <Badge variant="outline" className="ml-2 text-amber-500 border-amber-500">
+                  Dev Mode
                 </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <User className="h-3 w-3 text-pink-500" /> female1-15@meow-meow.com
-                </Badge>
-                <Badge variant="outline" className="gap-1">
-                  <Shield className="h-3 w-3 text-amber-500" /> admin1-15@meow-meow.com
-                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Creates 45 super users with password <code className="bg-muted px-1 rounded">Chinn@2589</code>
+                <br />
+                <strong>Unlimited wallet balance (₹999,999,999)</strong> - No recharge ever needed!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4 items-center">
+                <Button onClick={seedSuperUsers} disabled={seeding} variant="outline" className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-500/10">
+                  {seeding ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Creating Super Users...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4" />
+                      Create Super Users
+                    </>
+                  )}
+                </Button>
+                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                  <Badge variant="outline" className="gap-1">
+                    <User className="h-3 w-3 text-blue-500" /> male1-15@meow-meow.com
+                  </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <User className="h-3 w-3 text-pink-500" /> female1-15@meow-meow.com
+                  </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <Shield className="h-3 w-3 text-amber-500" /> admin1-15@meow-meow.com
+                  </Badge>
+                </div>
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              <strong>Features:</strong> Unlimited balance, pre-approved, verified, can chat freely. Admins get full admin access.
-            </p>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-muted-foreground mt-3">
+                <strong>Features:</strong> Unlimited balance, pre-approved, verified, can chat freely. Admins get full admin access.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">

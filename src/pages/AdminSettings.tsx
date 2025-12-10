@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { useProductionMode } from "@/hooks/useProductionMode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { 
   Save, 
   Settings, 
@@ -21,7 +23,8 @@ import {
   Check,
   RefreshCw,
   Palette,
-  Users
+  Users,
+  AlertTriangle
 } from "lucide-react";
 import AdminNav from "@/components/AdminNav";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
@@ -76,6 +79,7 @@ const LANGUAGE_OPTIONS = [
 
 const AdminSettings = () => {
   const navigate = useNavigate();
+  const { isProduction } = useProductionMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<AdminSetting[]>([]);
@@ -368,25 +372,33 @@ const AdminSettings = () => {
           ))}
         </Tabs>
 
-        {/* Quick Links Section - Admin Management Tools */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              User Management Tools
-            </CardTitle>
-            <CardDescription>Quick access to user and data management features</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button onClick={() => navigate('/admin/sample-users')} variant="outline" className="w-full justify-start gap-2">
-              <Users className="h-4 w-4" />
-              Sample Users Management
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Quick Links Section - Admin Management Tools - Only in Dev Mode */}
+        {!isProduction && (
+          <>
+            <Card className="mt-6 border-amber-500/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-amber-500" />
+                  Development Tools
+                  <Badge variant="outline" className="ml-2 text-amber-500 border-amber-500">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Dev Only
+                  </Badge>
+                </CardTitle>
+                <CardDescription>These tools are only available in development/staging mode</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button onClick={() => navigate('/admin/sample-users')} variant="outline" className="w-full justify-start gap-2">
+                  <Users className="h-4 w-4" />
+                  Sample Users Management
+                </Button>
+              </CardContent>
+            </Card>
 
-        {/* Mock Users Management */}
-        <MockUsersCard />
+            {/* Mock Users Management */}
+            <MockUsersCard />
+          </>
+        )}
 
         {/* Theme Preview - Only show in General tab */}
         {activeTab === "general" && (
