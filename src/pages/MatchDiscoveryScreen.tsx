@@ -52,6 +52,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MatchFiltersPanel, DEFAULT_FILTERS, type MatchFilters } from "@/components/MatchFiltersPanel";
 // Badge component for displaying tags
 import { Badge } from "@/components/ui/badge";
+// Match score calculator
+import { calculateMatchScore } from "@/lib/matchScoreCalculator";
 
 /**
  * MatchUser Interface
@@ -169,10 +171,10 @@ const MatchDiscoveryScreen = () => {
 
       // ============= FETCH CURRENT USER DATA =============
       
-      // Get current user's profile (gender, country, preferred language)
+      // Get current user's profile with all fields needed for match calculation
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("gender, country, preferred_language")
+        .select("user_id, gender, country, state, preferred_language, interests, education_level, occupation, religion, marital_status, smoking_habit, drinking_habit, dietary_preference, fitness_level, pet_preference, zodiac_sign, age, bio, photo_url")
         .eq("user_id", user.id)
         .maybeSingle(); // Returns null instead of error if not found
 
@@ -202,7 +204,7 @@ const MatchDiscoveryScreen = () => {
       let profilesQuery = supabase
         .from("profiles")
         .select(`
-          user_id, full_name, photo_url, country, preferred_language,
+          user_id, full_name, photo_url, country, state, preferred_language, interests,
           age, height_cm, body_type, education_level, occupation, religion,
           marital_status, has_children, smoking_habit, drinking_habit,
           dietary_preference, fitness_level, pet_preference, travel_frequency,
@@ -418,17 +420,33 @@ const MatchDiscoveryScreen = () => {
 
             // ============= MATCH SCORE CALCULATION =============
             
-            // Start with base score of 50%
-            let matchScore = 50;
-            
-            // Primary scoring: common languages (max 40 points)
-            // Each common language adds 15 points, capped at 40
-            matchScore += Math.min(commonLanguages.length * 15, 40);
-            
-            // Same country bonus (10 points)
-            if (profile.country === currentProfile?.country) {
-              matchScore += 10;
-            }
+            // Use the centralized match score calculator
+            const scoreResult = calculateMatchScore(
+              currentProfile || { user_id: user.id },
+              {
+                user_id: profile.user_id,
+                country: profile.country,
+                preferred_language: profile.preferred_language,
+                interests: profile.interests as string[] | undefined,
+                education_level: profile.education_level,
+                occupation: profile.occupation,
+                religion: profile.religion,
+                marital_status: profile.marital_status,
+                smoking_habit: profile.smoking_habit,
+                drinking_habit: profile.drinking_habit,
+                dietary_preference: profile.dietary_preference,
+                fitness_level: profile.fitness_level,
+                pet_preference: profile.pet_preference,
+                zodiac_sign: profile.zodiac_sign,
+                age: profile.age,
+                bio: profile.bio,
+                photo_url: profile.photo_url,
+              },
+              userLanguages,
+              theirLanguages
+            );
+
+            const matchScore = scoreResult.totalScore;
 
             // Return formatted MatchUser object
             return {

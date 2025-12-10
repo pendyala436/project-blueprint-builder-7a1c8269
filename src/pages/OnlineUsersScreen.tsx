@@ -23,6 +23,7 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { getQuickMatchScore } from "@/lib/matchScoreCalculator";
 
 interface OnlineUser {
   userId: string;
@@ -195,14 +196,17 @@ const OnlineUsersScreen = () => {
       return;
     }
 
-      // Create match - score based on profile completeness
+      // Calculate match score based on profile compatibility
+      const matchScore = await getQuickMatchScore(supabase, currentUser.id, user.userId);
+
+      // Create match with calculated score
       await supabase
         .from("matches")
         .insert({
           user_id: currentUser.id,
           matched_user_id: user.userId,
           status: "pending",
-          match_score: 80, // Default score for manual likes
+          match_score: matchScore,
         });
 
       toast({
