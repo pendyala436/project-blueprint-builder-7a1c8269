@@ -39,11 +39,28 @@ const VideoCallButton = ({
       // Minimum balance required to start video call
       const minBalance = 16;
       
-      if (walletBalance < minBalance) {
+      if (walletBalance === 0) {
         toast({
-          title: "Insufficient Balance",
-          description: `You need at least ₹${minBalance} to start a video call. Please recharge your wallet.`,
+          title: "Recharge Required",
+          description: "Your wallet balance is ₹0. Please recharge to start video calls.",
           variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
+              Recharge Now
+            </Button>
+          )
+        });
+        return;
+      } else if (walletBalance < minBalance) {
+        toast({
+          title: "Low Balance Warning",
+          description: `You need at least ₹${minBalance} to start a video call. Current balance: ₹${walletBalance}`,
+          variant: "destructive",
+          action: (
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
+              Recharge
+            </Button>
+          )
         });
         return;
       }
