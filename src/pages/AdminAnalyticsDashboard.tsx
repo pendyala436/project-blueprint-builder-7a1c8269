@@ -114,7 +114,7 @@ const AdminAnalyticsDashboard = () => {
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      const days = parseInt(dateRange);
+      const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
       const startDate = subDays(new Date(), days);
 
       // Fetch total users
@@ -451,6 +451,7 @@ const AdminAnalyticsDashboard = () => {
                 <SelectValue placeholder="Select range" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="14">Last 14 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
