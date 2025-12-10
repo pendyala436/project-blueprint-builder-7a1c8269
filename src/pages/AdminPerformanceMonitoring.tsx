@@ -34,6 +34,7 @@ import {
   Legend
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { toast } from "sonner";
 
 interface SystemMetric {
   id: string;
@@ -41,10 +42,10 @@ interface SystemMetric {
   memory_usage: number;
   active_connections: number;
   response_time: number;
-  disk_usage: number;
-  network_in: number;
-  network_out: number;
-  error_rate: number;
+  disk_usage: number | null;
+  network_in: number | null;
+  network_out: number | null;
+  error_rate: number | null;
   recorded_at: string;
 }
 
@@ -79,117 +80,105 @@ const AdminPerformanceMonitoring = () => {
   useEffect(() => {
     loadData();
     
-    // Simulate live updates
+    // Set up live updates - refetch from database every 10 seconds
     const interval = setInterval(() => {
       if (isLive) {
-        generateMockMetrics();
+        loadData(true); // silent refresh
       }
-    }, 3000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [timeRange, isLive]);
 
-  const generateMockMetrics = () => {
-    const newMetric: SystemMetric = {
-      id: crypto.randomUUID(),
-      cpu_usage: Math.random() * 40 + 30,
-      memory_usage: Math.random() * 30 + 50,
-      active_connections: Math.floor(Math.random() * 500 + 100),
-      response_time: Math.random() * 100 + 50,
-      disk_usage: Math.random() * 20 + 60,
-      network_in: Math.random() * 100,
-      network_out: Math.random() * 80,
-      error_rate: Math.random() * 2,
-      recorded_at: new Date().toISOString(),
-    };
-
-    setCurrentMetrics(newMetric);
-    setMetrics(prev => {
-      const updated = [...prev, newMetric].slice(-20);
-      return updated;
-    });
-
-    // Generate alerts if thresholds exceeded
-    if (newMetric.cpu_usage > 80) {
-      const alert: SystemAlert = {
-        id: crypto.randomUUID(),
-        alert_type: 'critical',
-        metric_name: 'CPU Usage',
-        threshold_value: 80,
-        current_value: newMetric.cpu_usage,
-        message: `CPU usage exceeded 80% (current: ${newMetric.cpu_usage.toFixed(1)}%)`,
-        is_resolved: false,
-        resolved_at: null,
-        created_at: new Date().toISOString(),
-      };
-      setAlerts(prev => [alert, ...prev].slice(0, 10));
+  const getTimeRangeMinutes = () => {
+    switch (timeRange) {
+      case "15m": return 15;
+      case "1h": return 60;
+      case "6h": return 360;
+      case "24h": return 1440;
+      default: return 60;
     }
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      // Generate initial mock data
-      const mockMetrics: SystemMetric[] = [];
-      const now = new Date();
+      const minutes = getTimeRangeMinutes();
+      const startTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+
+      // Fetch real metrics from database
+      const { data: metricsData, error: metricsError } = await supabase
+        .from("system_metrics")
+        .select("*")
+        .gte("recorded_at", startTime)
+        .order("recorded_at", { ascending: true })
+        .limit(100);
+
+      if (metricsError) throw metricsError;
+
+      // Fetch real alerts from database
+      const { data: alertsData, error: alertsError } = await supabase
+        .from("system_alerts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (alertsError) throw alertsError;
+
+      const fetchedMetrics = metricsData || [];
+      setMetrics(fetchedMetrics);
       
-      for (let i = 19; i >= 0; i--) {
-        mockMetrics.push({
-          id: crypto.randomUUID(),
-          cpu_usage: Math.random() * 40 + 30,
-          memory_usage: Math.random() * 30 + 50,
-          active_connections: Math.floor(Math.random() * 500 + 100),
-          response_time: Math.random() * 100 + 50,
-          disk_usage: Math.random() * 20 + 60,
-          network_in: Math.random() * 100,
-          network_out: Math.random() * 80,
-          error_rate: Math.random() * 2,
-          recorded_at: new Date(now.getTime() - i * 60000).toISOString(),
+      // Set current metrics to the latest one
+      if (fetchedMetrics.length > 0) {
+        setCurrentMetrics(fetchedMetrics[fetchedMetrics.length - 1]);
+      } else {
+        // No data - show zeros
+        setCurrentMetrics({
+          id: '',
+          cpu_usage: 0,
+          memory_usage: 0,
+          active_connections: 0,
+          response_time: 0,
+          disk_usage: 0,
+          network_in: 0,
+          network_out: 0,
+          error_rate: 0,
+          recorded_at: new Date().toISOString(),
         });
       }
 
-      setMetrics(mockMetrics);
-      setCurrentMetrics(mockMetrics[mockMetrics.length - 1]);
-
-      // Mock alerts
-      const mockAlerts: SystemAlert[] = [
-        {
-          id: '1',
-          alert_type: 'warning',
-          metric_name: 'Memory Usage',
-          threshold_value: 75,
-          current_value: 78,
-          message: 'Memory usage approaching critical threshold',
-          is_resolved: false,
-          resolved_at: null,
-          created_at: new Date(now.getTime() - 5 * 60000).toISOString(),
-        },
-        {
-          id: '2',
-          alert_type: 'info',
-          metric_name: 'Active Connections',
-          threshold_value: 400,
-          current_value: 420,
-          message: 'Connection count higher than usual',
-          is_resolved: true,
-          resolved_at: new Date(now.getTime() - 2 * 60000).toISOString(),
-          created_at: new Date(now.getTime() - 30 * 60000).toISOString(),
-        },
-      ];
-      setAlerts(mockAlerts);
-    } catch (error) {
+      setAlerts(alertsData || []);
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      if (!silent) {
+        toast.error("Failed to load metrics: " + error.message);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const resolveAlert = async (alertId: string) => {
-    setAlerts(prev => prev.map(a => 
-      a.id === alertId 
-        ? { ...a, is_resolved: true, resolved_at: new Date().toISOString() }
-        : a
-    ));
+    try {
+      const { error } = await supabase
+        .from("system_alerts")
+        .update({ 
+          is_resolved: true, 
+          resolved_at: new Date().toISOString() 
+        })
+        .eq("id", alertId);
+
+      if (error) throw error;
+
+      setAlerts(prev => prev.map(a => 
+        a.id === alertId 
+          ? { ...a, is_resolved: true, resolved_at: new Date().toISOString() }
+          : a
+      ));
+      toast.success("Alert resolved");
+    } catch (error: any) {
+      toast.error("Failed to resolve alert: " + error.message);
+    }
   };
 
   const getGaugeColor = (value: number, thresholds: { warning: number; critical: number }) => {
@@ -279,12 +268,12 @@ const AdminPerformanceMonitoring = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="auroraGhost" size="icon" onClick={() => navigate('/dashboard')}>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Performance Monitoring</h1>
-                <p className="text-sm text-muted-foreground">Real-time server & app metrics</p>
+                <p className="text-sm text-muted-foreground">Real-time server & app metrics from database</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -308,7 +297,7 @@ const AdminPerformanceMonitoring = () => {
                   <SelectItem value="24h">Last 24h</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={loadData}>
+              <Button variant="outline" size="icon" onClick={() => loadData()}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
@@ -324,8 +313,19 @@ const AdminPerformanceMonitoring = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            Live updates enabled
+            Live updates enabled (refreshes every 10s)
           </div>
+        )}
+
+        {/* No Data Message */}
+        {metrics.length === 0 && (
+          <Card className="p-8 text-center">
+            <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Metrics Data</h3>
+            <p className="text-muted-foreground">
+              No system metrics have been recorded yet. Metrics will appear here once the system starts logging performance data.
+            </p>
+          </Card>
         )}
 
         {/* Gauge Cards */}
@@ -361,112 +361,114 @@ const AdminPerformanceMonitoring = () => {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* CPU & Memory Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                CPU & Memory Usage
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={formatChartData()}>
-                    <defs>
-                      <linearGradient id="cpuGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="memoryGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="time" className="text-xs" />
-                    <YAxis domain={[0, 100]} className="text-xs" />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="cpu"
-                      stroke="hsl(var(--chart-1))"
-                      fill="url(#cpuGradient)"
-                      strokeWidth={2}
-                      animationDuration={500}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="memory"
-                      stroke="hsl(var(--chart-2))"
-                      fill="url(#memoryGradient)"
-                      strokeWidth={2}
-                      animationDuration={500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
+        {metrics.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* CPU & Memory Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  CPU & Memory Usage
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={formatChartData()}>
+                      <defs>
+                        <linearGradient id="cpuGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="memoryGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="time" className="text-xs" />
+                      <YAxis domain={[0, 100]} className="text-xs" />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="cpu"
+                        stroke="hsl(var(--chart-1))"
+                        fill="url(#cpuGradient)"
+                        strokeWidth={2}
+                        animationDuration={500}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="memory"
+                        stroke="hsl(var(--chart-2))"
+                        fill="url(#memoryGradient)"
+                        strokeWidth={2}
+                        animationDuration={500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
 
-          {/* Response Time Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                Response Time (ms)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={formatChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="time" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Line
-                      type="monotone"
-                      dataKey="responseTime"
-                      stroke="hsl(var(--chart-4))"
-                      strokeWidth={2}
-                      dot={false}
-                      animationDuration={500}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Response Time Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Response Time (ms)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={formatChartData()}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="time" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="responseTime"
+                        stroke="hsl(var(--chart-4))"
+                        strokeWidth={2}
+                        dot={false}
+                        animationDuration={500}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Additional Metrics Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Disk Usage</div>
             <div className="text-2xl font-bold text-foreground mt-1">
-              {currentMetrics?.disk_usage?.toFixed(1) || 0}%
+              {(currentMetrics?.disk_usage || 0).toFixed(1)}%
             </div>
             <Progress value={currentMetrics?.disk_usage || 0} className="mt-2 h-1.5" />
           </Card>
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Network In</div>
             <div className="text-2xl font-bold text-foreground mt-1">
-              {currentMetrics?.network_in?.toFixed(1) || 0} MB/s
+              {(currentMetrics?.network_in || 0).toFixed(1)} MB/s
             </div>
           </Card>
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Network Out</div>
             <div className="text-2xl font-bold text-foreground mt-1">
-              {currentMetrics?.network_out?.toFixed(1) || 0} MB/s
+              {(currentMetrics?.network_out || 0).toFixed(1)} MB/s
             </div>
           </Card>
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Error Rate</div>
             <div className={`text-2xl font-bold mt-1 ${(currentMetrics?.error_rate || 0) > 1 ? 'text-destructive' : 'text-emerald-500'}`}>
-              {currentMetrics?.error_rate?.toFixed(2) || 0}%
+              {(currentMetrics?.error_rate || 0).toFixed(2)}%
             </div>
           </Card>
         </div>
@@ -485,52 +487,52 @@ const AdminPerformanceMonitoring = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[250px]">
+            <ScrollArea className="h-[200px]">
               {alerts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-10 w-10 mx-auto mb-2 text-emerald-500" />
-                  <p>No alerts at this time</p>
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                  <p>No alerts - All systems operational</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {alerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className={`p-4 rounded-lg border transition-all ${
-                        alert.is_resolved 
-                          ? 'bg-muted/50 border-muted opacity-60' 
-                          : alert.alert_type === 'critical' 
-                            ? 'bg-destructive/10 border-destructive/30' 
-                            : 'bg-amber-500/10 border-amber-500/30'
+                      className={`p-3 rounded-lg border ${
+                        alert.is_resolved
+                          ? 'bg-muted/50 border-muted'
+                          : alert.alert_type === 'critical'
+                          ? 'bg-destructive/10 border-destructive/30'
+                          : 'bg-amber-500/10 border-amber-500/30'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2">
                           {alert.is_resolved ? (
-                            <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5" />
+                            <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5" />
                           ) : alert.alert_type === 'critical' ? (
-                            <XCircle className="h-5 w-5 text-destructive mt-0.5" />
+                            <XCircle className="h-4 w-4 text-destructive mt-0.5" />
                           ) : (
-                            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
                           )}
                           <div>
-                            <div className="font-medium text-foreground">{alert.metric_name}</div>
-                            <div className="text-sm text-muted-foreground">{alert.message}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <p className="text-sm font-medium">{alert.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
                               {new Date(alert.created_at).toLocaleString()}
                               {alert.is_resolved && alert.resolved_at && (
-                                <span className="ml-2">
-                                  • Resolved at {new Date(alert.resolved_at).toLocaleTimeString()}
+                                <span className="ml-2 text-emerald-500">
+                                  • Resolved {new Date(alert.resolved_at).toLocaleString()}
                                 </span>
                               )}
-                            </div>
+                            </p>
                           </div>
                         </div>
                         {!alert.is_resolved && (
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => resolveAlert(alert.id)}
+                            className="shrink-0"
                           >
                             Resolve
                           </Button>

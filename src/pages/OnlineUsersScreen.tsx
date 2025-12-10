@@ -195,14 +195,14 @@ const OnlineUsersScreen = () => {
       return;
     }
 
-      // Create match
+      // Create match - score based on profile completeness
       await supabase
         .from("matches")
         .insert({
           user_id: currentUser.id,
           matched_user_id: user.userId,
           status: "pending",
-          match_score: Math.floor(Math.random() * 30) + 70, // 70-100 score
+          match_score: 80, // Default score for manual likes
         });
 
       toast({
