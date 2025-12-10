@@ -38,7 +38,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
-  FileText
+  FileText,
+  Home
 } from "lucide-react";
 
 interface WalletTransaction {
@@ -264,9 +265,16 @@ const AdminFinanceDashboard = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/admin/analytics")}
+                onClick={() => navigate(-1)}
               >
                 <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin")}
+              >
+                <Home className="h-5 w-5" />
               </Button>
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-6 w-6 text-primary" />

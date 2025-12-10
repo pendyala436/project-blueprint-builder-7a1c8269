@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Download, Users, TrendingUp, TrendingDown, Globe, Languages, IndianRupee, Calendar, BarChart3, DollarSign, Clock, Timer } from "lucide-react";
+import { ArrowLeft, Download, Users, TrendingUp, TrendingDown, Globe, Languages, IndianRupee, Calendar, BarChart3, DollarSign, Clock, Timer, RefreshCw, Home } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { toast } from "sonner";
 import { countries } from "@/data/countries";
 import { languages } from "@/data/languages";
+import { cn } from "@/lib/utils";
 import {
   AreaChart,
   Area,
@@ -102,6 +104,7 @@ const ALL_LANGUAGES = languages.map(l => l.name);
 const AdminFinanceReports = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("all");
@@ -122,11 +125,37 @@ const AdminFinanceReports = () => {
     totalWomen: 0,
   });
 
-  useEffect(() => {
+  const loadAllData = useCallback(() => {
     loadReportData();
     loadTrendData();
     loadQueueStats();
   }, [selectedMonth, selectedCountry, selectedLanguage]);
+
+  // Real-time subscriptions for finance-related tables
+  useMultipleRealtimeSubscriptions(
+    [
+      "wallet_transactions",
+      "women_earnings",
+      "gift_transactions",
+      "active_chat_sessions",
+      "video_call_sessions",
+      "chat_wait_queue",
+      "withdrawal_requests",
+      "profiles"
+    ],
+    loadAllData,
+    true
+  );
+
+  useEffect(() => {
+    loadAllData();
+  }, [selectedMonth, selectedCountry, selectedLanguage]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadAllData();
+    setRefreshing(false);
+  };
 
   const loadQueueStats = async () => {
     try {
@@ -557,17 +586,33 @@ const AdminFinanceReports = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4">
+      {/* Header with Navigation */}
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/finance")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+              <Home className="h-5 w-5" />
+            </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Finance Reports</h1>
-              <p className="text-muted-foreground">Monthly spending & earnings analysis</p>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <BarChart3 className="h-6 w-6 text-primary" />
+                Finance Reports
+              </h1>
+              <p className="text-muted-foreground text-sm">Monthly spending & earnings analysis - Real-time data</p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            </Button>
           </div>
         </div>
       </header>

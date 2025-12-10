@@ -33,7 +33,8 @@ import {
   Users,
   Globe,
   EyeOff,
-  Languages
+  Languages,
+  Home
 } from "lucide-react";
 
 interface ChatMessage {
@@ -575,11 +576,18 @@ const AdminChatMonitoring = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
-                variant="auroraGhost"
+                variant="ghost"
                 size="icon"
-                onClick={() => navigate("/admin/analytics")}
+                onClick={() => navigate(-1)}
               >
                 <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin")}
+              >
+                <Home className="h-5 w-5" />
               </Button>
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-6 w-6 text-primary" />

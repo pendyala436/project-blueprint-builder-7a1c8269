@@ -24,7 +24,8 @@ import {
   GripVertical,
   X,
   Check,
-  Filter
+  Filter,
+  Home
 } from "lucide-react";
 
 interface LanguageGroup {
