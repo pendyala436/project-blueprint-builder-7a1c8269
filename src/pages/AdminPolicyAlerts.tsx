@@ -225,6 +225,8 @@ const AdminPolicyAlerts = () => {
       loadStats();
     }
   }, [isAdmin, loadAlerts, loadStats]);
+
+  const handleRefresh = () => {
     setRefreshing(true);
     loadAlerts();
     loadStats();
