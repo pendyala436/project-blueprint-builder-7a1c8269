@@ -77,14 +77,34 @@ export const RandomChatButton = ({
       // Super users (matching email pattern) bypass balance check entirely
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
       
-      if (!isSuperUser && walletBalance < minBalance) {
-        toast({
-          title: "Insufficient Balance",
-          description: `You need at least ₹${minBalance} to start a chat. Please recharge your wallet.`,
-          variant: "destructive"
-        });
-        onInsufficientBalance?.();
-        return;
+      if (!isSuperUser) {
+        if (walletBalance === 0) {
+          toast({
+            title: "Recharge Required",
+            description: "Your wallet balance is ₹0. Please recharge to start chatting.",
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
+                Recharge Now
+              </Button>
+            )
+          });
+          onInsufficientBalance?.();
+          return;
+        } else if (walletBalance < minBalance) {
+          toast({
+            title: "Low Balance Warning",
+            description: `You need at least ₹${minBalance} to start a chat. Current balance: ₹${walletBalance}`,
+            variant: "destructive",
+            action: (
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
+                Recharge
+              </Button>
+            )
+          });
+          onInsufficientBalance?.();
+          return;
+        }
       }
     }
 
