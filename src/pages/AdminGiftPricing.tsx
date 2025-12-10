@@ -94,6 +94,15 @@ const AdminGiftPricing = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedGift, setSelectedGift] = useState<GiftItem | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  
+  // Real-time transaction stats
+  const [transactionStats, setTransactionStats] = useState({
+    totalGiftsSent: 0,
+    totalRevenue: 0,
+    avgGiftValue: 0,
+    premiumGiftsSent: 0,
+  });
+  
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
@@ -112,6 +121,7 @@ const AdminGiftPricing = () => {
   useEffect(() => {
     if (isAdmin) {
       fetchGifts();
+      fetchTransactionStats();
     }
   }, [isAdmin]);
 
@@ -162,6 +172,33 @@ const AdminGiftPricing = () => {
     }
   }, []);
 
+  // Fetch real-time transaction stats from gift_transactions
+  const fetchTransactionStats = useCallback(async () => {
+    try {
+      const { data: transactions, error } = await supabase
+        .from("gift_transactions")
+        .select("price_paid, status")
+        .eq("status", "completed");
+
+      if (error) throw error;
+
+      const completedTransactions = transactions || [];
+      const totalGiftsSent = completedTransactions.length;
+      const totalRevenue = completedTransactions.reduce((sum, t) => sum + Number(t.price_paid), 0);
+      const avgGiftValue = totalGiftsSent > 0 ? Math.round(totalRevenue / totalGiftsSent) : 0;
+      const premiumGiftsSent = completedTransactions.filter(t => Number(t.price_paid) >= 300).length;
+
+      setTransactionStats({
+        totalGiftsSent,
+        totalRevenue,
+        avgGiftValue,
+        premiumGiftsSent,
+      });
+    } catch (error) {
+      console.error("Error fetching transaction stats:", error);
+    }
+  }, []);
+
   // Real-time subscription for gifts
   useRealtimeSubscription({
     table: "gifts",
@@ -169,9 +206,17 @@ const AdminGiftPricing = () => {
     enabled: isAdmin
   });
 
+  // Real-time subscription for gift transactions
+  useRealtimeSubscription({
+    table: "gift_transactions",
+    onUpdate: fetchTransactionStats,
+    enabled: isAdmin
+  });
+
   const handleRefresh = () => {
     setRefreshing(true);
     fetchGifts();
+    fetchTransactionStats();
   };
 
   const handleAddGift = () => {
@@ -432,7 +477,7 @@ const AdminGiftPricing = () => {
       </div>
 
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-        {/* Stats */}
+        {/* Transaction Stats - Real-time from gift_transactions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
             <CardContent className="p-4">
@@ -441,8 +486,8 @@ const AdminGiftPricing = () => {
                   <Gift className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Gifts</p>
-                  <p className="text-2xl font-bold">{gifts.length}</p>
+                  <p className="text-sm text-muted-foreground">Gifts Sent</p>
+                  <p className="text-2xl font-bold">{transactionStats.totalGiftsSent}</p>
                 </div>
               </div>
             </CardContent>
@@ -451,12 +496,12 @@ const AdminGiftPricing = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-emerald-500/20">
-                  <Check className="h-5 w-5 text-emerald-500" />
+                  <DollarSign className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-sm text-muted-foreground">Total Earned</p>
                   <p className="text-2xl font-bold text-emerald-500">
-                    {gifts.filter(g => g.is_active).length}
+                    ₹{transactionStats.totalRevenue.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -469,9 +514,9 @@ const AdminGiftPricing = () => {
                   <DollarSign className="h-5 w-5 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Avg Price</p>
+                  <p className="text-sm text-muted-foreground">Avg Gift Value</p>
                   <p className="text-2xl font-bold text-amber-500">
-                    ₹{Math.round(gifts.reduce((acc, g) => acc + g.price, 0) / gifts.length || 0)}
+                    ₹{transactionStats.avgGiftValue.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -484,9 +529,9 @@ const AdminGiftPricing = () => {
                   <Sparkles className="h-5 w-5 text-rose-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Premium</p>
+                  <p className="text-sm text-muted-foreground">Premium Gifts</p>
                   <p className="text-2xl font-bold text-rose-500">
-                    {gifts.filter(g => g.price >= 300).length}
+                    {transactionStats.premiumGiftsSent}
                   </p>
                 </div>
               </div>
