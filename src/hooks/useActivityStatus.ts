@@ -8,7 +8,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
+const INACTIVITY_TIMEOUT = 600000; // 10 minutes in ms - sets user offline and logs out
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 export const useActivityStatus = (userId: string | null) => {
@@ -89,13 +89,15 @@ export const useActivityStatus = (userId: string | null) => {
       }
     }, HEARTBEAT_INTERVAL);
 
-    // Inactivity check - set offline if no activity
-    inactivityCheckRef.current = setInterval(() => {
+    // Inactivity check - set offline and logout after 10 minutes
+    inactivityCheckRef.current = setInterval(async () => {
       const timeSinceActivity = Date.now() - lastActivityRef.current;
       
       if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-        // User is inactive, set them offline
-        setOnlineStatus(false);
+        // User is inactive for 10 minutes, set them offline and logout
+        await setOnlineStatus(false);
+        await supabase.auth.signOut();
+        window.location.href = '/auth';
       }
     }, 10000); // Check every 10 seconds
 
