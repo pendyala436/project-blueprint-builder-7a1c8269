@@ -902,9 +902,27 @@ serve(async (req) => {
             .eq("user_id", man_user_id)
             .maybeSingle();
 
-          if (!wallet || wallet.balance <= 0) {
+          // Get current pricing to calculate minimum balance requirement
+          const { data: pricingData } = await supabase
+            .from("chat_pricing")
+            .select("rate_per_minute")
+            .eq("is_active", true)
+            .maybeSingle();
+          
+          const ratePerMin = pricingData?.rate_per_minute || 5.00;
+          const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
+          
+          // Super users (balance >= 999999999) bypass balance check
+          const isSuperUser = wallet && wallet.balance >= SUPER_USER_BALANCE;
+
+          if (!isSuperUser && (!wallet || wallet.balance < minRequiredBalance)) {
             return new Response(
-              JSON.stringify({ success: false, message: "Insufficient balance" }),
+              JSON.stringify({ 
+                success: false, 
+                message: `Insufficient balance. Need at least ₹${minRequiredBalance} to start chat.`,
+                min_balance_required: minRequiredBalance,
+                current_balance: wallet?.balance || 0
+              }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
@@ -1043,11 +1061,58 @@ serve(async (req) => {
           .eq("user_id", session.man_user_id)
           .maybeSingle();
 
-        if (!wallet || wallet.balance < menCharge) {
-          // End chat due to insufficient balance
+        // Check if super user by balance - they don't get charged
+        const isSuperUser = wallet && wallet.balance >= SUPER_USER_BALANCE;
+        
+        if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
+          // End chat due to insufficient balance - auto-disconnect
           await endChatSession(supabase, chat_id, "insufficient_balance", session);
+          console.log(`[HEARTBEAT] Auto-disconnecting chat ${chat_id} due to insufficient balance. Required: ${menCharge}, Available: ${wallet?.balance || 0}`);
           return new Response(
-            JSON.stringify({ success: false, message: "Insufficient balance", end_chat: true }),
+            JSON.stringify({ 
+              success: false, 
+              message: "Insufficient balance - chat ended", 
+              end_chat: true,
+              balance_required: menCharge,
+              balance_available: wallet?.balance || 0
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Super users don't get charged but women still earn
+        if (isSuperUser) {
+          // Just update activity and credit woman without charging man
+          const womenEarnings = minutesElapsed * womenEarningRate;
+          
+          await supabase
+            .from("women_earnings")
+            .insert({
+              user_id: session.woman_user_id,
+              chat_session_id: session.id,
+              amount: womenEarnings,
+              earning_type: "chat",
+              description: `Chat earnings (super user) - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
+            });
+
+          await supabase
+            .from("active_chat_sessions")
+            .update({
+              last_activity_at: now.toISOString(),
+              total_minutes: newTotalMinutes,
+              total_earned: session.total_earned + womenEarnings
+            })
+            .eq("chat_id", chat_id);
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              billing_started: true,
+              super_user: true,
+              minutes_elapsed: minutesElapsed,
+              women_earned: womenEarnings,
+              message: "Super user - no charge applied"
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }

@@ -1382,8 +1382,10 @@ const DashboardScreen = () => {
                   userGender="male"
                   userLanguage={userLanguage}
                   userCountry={userCountryName}
+                  walletBalance={walletBalance}
                   variant="aurora"
                   size="lg"
+                  onInsufficientBalance={() => setRechargeDialogOpen(true)}
                 />
                 <VideoCallButton
                   currentUserId={currentUserId}
