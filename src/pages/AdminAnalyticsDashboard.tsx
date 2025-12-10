@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,11 +106,7 @@ const AdminAnalyticsDashboard = () => {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [genderDistribution, setGenderDistribution] = useState<GenderDistribution[]>([]);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [dateRange]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const days = parseInt(dateRange);
       const startDate = subDays(new Date(), days);
@@ -275,7 +272,29 @@ const AdminAnalyticsDashboard = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [dateRange]);
+
+  // Real-time subscriptions for all analytics-related tables
+  useMultipleRealtimeSubscriptions(
+    [
+      "profiles",
+      "user_status",
+      "matches",
+      "wallet_transactions",
+      "women_earnings",
+      "chat_messages",
+      "active_chat_sessions",
+      "video_call_sessions",
+      "gift_transactions",
+      "withdrawal_requests"
+    ],
+    fetchAnalytics,
+    true
+  );
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   const handleRefresh = () => {
     setRefreshing(true);
