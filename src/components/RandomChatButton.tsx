@@ -8,8 +8,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield } from "lucide-react";
+import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/nllb200Languages";
@@ -55,6 +65,8 @@ export const RandomChatButton = ({
   const { toast } = useToast();
   const [isSearching, setIsSearching] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [rechargeMessage, setRechargeMessage] = useState("");
   const [searchStatus, setSearchStatus] = useState<string>("");
   const [matchedUser, setMatchedUser] = useState<{
     userId: string;
@@ -78,30 +90,14 @@ export const RandomChatButton = ({
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
       
       if (!isSuperUser) {
-        if (walletBalance === 0) {
-          toast({
-            title: "Recharge Required",
-            description: "Your wallet balance is ₹0. Please recharge to start chatting.",
-            variant: "destructive",
-            action: (
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
-                Recharge Now
-              </Button>
-            )
-          });
+        if (walletBalance <= 0) {
+          setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
+          setShowRechargeDialog(true);
           onInsufficientBalance?.();
           return;
         } else if (walletBalance < minBalance) {
-          toast({
-            title: "Low Balance Warning",
-            description: `You need at least ₹${minBalance} to start a chat. Current balance: ₹${walletBalance}`,
-            variant: "destructive",
-            action: (
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
-                Recharge
-              </Button>
-            )
-          });
+          setRechargeMessage(`You need at least ₹${minBalance} to start a chat. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+          setShowRechargeDialog(true);
           onInsufficientBalance?.();
           return;
         }
@@ -436,6 +432,26 @@ export const RandomChatButton = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-destructive" />
+              Recharge Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {rechargeMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/wallet')}>
+              Recharge Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
