@@ -34,18 +34,22 @@ interface RandomChatButtonProps {
   userGender: "male" | "female";
   userLanguage: string;
   userCountry: string;
+  walletBalance?: number;
   variant?: "default" | "gradient" | "hero" | "aurora" | "auroraOutline" | "auroraGhost";
   size?: "default" | "lg" | "sm";
   className?: string;
+  onInsufficientBalance?: () => void;
 }
 
 export const RandomChatButton = ({
   userGender,
   userLanguage,
   userCountry,
+  walletBalance = 0,
   variant = "aurora",
   size = "lg",
-  className = ""
+  className = "",
+  onInsufficientBalance
 }: RandomChatButtonProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,6 +66,24 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
+    // Check wallet balance for men - need at least ₹10 (about 2 minutes of chat)
+    if (userGender === "male") {
+      const minBalance = 10; // Minimum balance required to start chat
+      
+      // Check if super user by balance (super users have 999999999 balance)
+      const isSuperUser = walletBalance >= 999999999;
+      
+      if (!isSuperUser && walletBalance < minBalance) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You need at least ₹${minBalance} to start a chat. Please recharge your wallet.`,
+          variant: "destructive"
+        });
+        onInsufficientBalance?.();
+        return;
+      }
+    }
+
     setIsSearching(true);
     setSearchDialogOpen(true);
     setSearchStatus("Looking for available partners...");
