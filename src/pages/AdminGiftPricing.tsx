@@ -331,6 +331,37 @@ const AdminGiftPricing = () => {
     }
   };
 
+  const handleEnableAllWithRandomPrices = async () => {
+    try {
+      // Enable all gifts with random prices between 50 and 500
+      const updates = gifts.map(gift => ({
+        id: gift.id,
+        is_active: true,
+        price: Math.floor(Math.random() * 450) + 50,
+        updated_at: new Date().toISOString(),
+      }));
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("gifts")
+          .update({ 
+            is_active: update.is_active, 
+            price: update.price,
+            updated_at: update.updated_at 
+          })
+          .eq("id", update.id);
+
+        if (error) throw error;
+      }
+
+      toast.success(`All ${gifts.length} gifts enabled with random prices`);
+      fetchGifts();
+    } catch (error) {
+      console.error("Error enabling gifts:", error);
+      toast.error("Failed to enable all gifts");
+    }
+  };
+
   const getCurrencySymbol = (code: string) => {
     return CURRENCY_OPTIONS.find(c => c.code === code)?.symbol || "₹";
   };
@@ -375,7 +406,15 @@ const AdminGiftPricing = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              variant="outline" 
+              onClick={handleEnableAllWithRandomPrices} 
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Enable All (Random Prices)
+            </Button>
             <Button variant="gradient" onClick={handleAddGift} className="gap-2">
               <Plus className="h-4 w-4" />
               Add Gift
