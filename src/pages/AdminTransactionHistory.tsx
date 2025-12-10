@@ -321,29 +321,40 @@ const AdminTransactionHistory = () => {
       setVideoCallSessions(enrichedVideoCalls);
       setGiftTransactions(enrichedGifts);
       setWomenEarnings(enrichedEarnings);
+      setWalletTransactions(enrichedWalletTxns);
+      setChatSessions(enrichedChatSessions);
+      setVideoCallSessions(enrichedVideoCalls);
+      setGiftTransactions(enrichedGifts);
+      setWomenEarnings(enrichedEarnings);
       setWithdrawalRequests(enrichedWithdrawals);
 
-      // Calculate stats from real data
-      const totalCredits = enrichedWalletTxns
-        .filter(t => t.type === "credit" && t.status === "completed")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+      // Calculate stats from REAL database data only - no defaults or fallbacks
+      const creditTxns = enrichedWalletTxns.filter(t => t.type === "credit" && t.status === "completed");
+      const debitTxns = enrichedWalletTxns.filter(t => t.type === "debit" && t.status === "completed");
       
-      const totalDebits = enrichedWalletTxns
-        .filter(t => t.type === "debit" && t.status === "completed")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalCredits = creditTxns.length > 0 
+        ? creditTxns.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+        : 0;
+      
+      const totalDebits = debitTxns.length > 0
+        ? debitTxns.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+        : 0;
 
-      const totalEarningsPaid = enrichedEarnings
-        .reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalEarningsPaid = enrichedEarnings.length > 0
+        ? enrichedEarnings.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+        : 0;
 
-      const completedWithdrawals = enrichedWithdrawals
-        .filter(w => w.status === "completed")
-        .reduce((sum, w) => sum + Number(w.amount), 0);
+      const completedWithdrawalsList = enrichedWithdrawals.filter(w => w.status === "completed");
+      const completedWithdrawals = completedWithdrawalsList.length > 0
+        ? completedWithdrawalsList.reduce((sum, w) => sum + (Number(w.amount) || 0), 0)
+        : 0;
 
       // Calculate men stats (debits = spending)
       const menTxns = enrichedWalletTxns.filter(t => t.user_gender?.toLowerCase() === "male");
-      const menSpent = menTxns
-        .filter(t => t.type === "debit" && t.status === "completed")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const menDebitTxns = menTxns.filter(t => t.type === "debit" && t.status === "completed");
+      const menSpent = menDebitTxns.length > 0
+        ? menDebitTxns.reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+        : 0;
       
       setMenStats({
         transactions: menTxns.length,
@@ -359,15 +370,25 @@ const AdminTransactionHistory = () => {
         withdrawals: completedWithdrawals
       });
 
+      // Set all stats - only from real data
       setStats({
         totalRevenue: totalCredits,
-        totalEarningsPaid,
+        totalEarningsPaid: totalEarningsPaid,
         totalWithdrawals: completedWithdrawals,
-        platformProfit: totalCredits - totalEarningsPaid - completedWithdrawals,
+        platformProfit: Math.max(0, totalCredits - totalEarningsPaid - completedWithdrawals),
         totalTransactions: enrichedWalletTxns.length,
         totalChatSessions: enrichedChatSessions.length,
         totalVideoCalls: enrichedVideoCalls.length,
         totalGiftsSent: enrichedGifts.length
+      });
+      
+      console.log("Admin Transaction Stats (real data):", {
+        creditTransactions: creditTxns.length,
+        debitTransactions: debitTxns.length,
+        totalCredits,
+        totalDebits,
+        totalEarningsPaid,
+        completedWithdrawals
       });
 
     } catch (error) {
