@@ -66,9 +66,9 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
-    // Check wallet balance for men - need at least ₹10 (about 2 minutes of chat)
+    // Check wallet balance for men - need at least ₹8 to start chat
     if (userGender === "male") {
-      const minBalance = 10; // Minimum balance required to start chat
+      const minBalance = 8; // Minimum balance required to start chat
       
       // Get current user email to check if super user
       const { data: { user } } = await supabase.auth.getUser();
