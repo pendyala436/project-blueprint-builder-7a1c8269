@@ -75,7 +75,7 @@ const AdminFinanceDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("7");
+  const [dateRange, setDateRange] = useState("all");
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
   const [totalWallets, setTotalWallets] = useState(0);
@@ -86,10 +86,9 @@ const AdminFinanceDashboard = () => {
   const loadFinanceData = useCallback(async () => {
     setLoading(true);
     try {
-      const days = parseInt(dateRange);
+      const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
       const startDate = startOfDay(subDays(new Date(), days)).toISOString();
       const endDate = endOfDay(new Date()).toISOString();
-
       // Load wallet transactions
       const { data: walletTxns, error: walletError } = await supabase
         .from("wallet_transactions")
@@ -275,7 +274,8 @@ const AdminFinanceDashboard = () => {
                   <Calendar className="h-4 w-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+              <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="7">Last 7 days</SelectItem>
                   <SelectItem value="14">Last 14 days</SelectItem>
                   <SelectItem value="30">Last 30 days</SelectItem>
