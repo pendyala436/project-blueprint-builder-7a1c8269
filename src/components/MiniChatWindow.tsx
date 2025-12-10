@@ -17,12 +17,10 @@ import {
   IndianRupee,
   Loader2,
   ChevronDown,
-  ChevronUp,
-  Pause,
-  Play
+  ChevronUp
 } from "lucide-react";
 
-const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+const INACTIVITY_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes - auto disconnect
 
 interface Message {
   id: string;
@@ -72,7 +70,6 @@ const MiniChatWindow = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
-  const [billingPaused, setBillingPaused] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,16 +106,15 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Inactivity check - pause billing after 3 mins of no typing
+  // Inactivity check - auto disconnect after 2 mins of no activity
   useEffect(() => {
-    if (!billingStarted || billingPaused) return;
+    if (!billingStarted) return;
 
     if (inactivityRef.current) {
       clearTimeout(inactivityRef.current);
     }
 
-    inactivityRef.current = setTimeout(() => {
-      setBillingPaused(true);
+    inactivityRef.current = setTimeout(async () => {
       // Stop the timer and heartbeat
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -128,16 +124,33 @@ const MiniChatWindow = ({
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
+      
       toast({
-        title: "Billing Paused",
-        description: "No activity for 3 minutes. Type to resume.",
+        title: "Chat Disconnected",
+        description: "No activity for 2 minutes. Chat ended automatically.",
       });
+      
+      // Auto-close the chat session
+      try {
+        await supabase
+          .from("active_chat_sessions")
+          .update({
+            status: "ended",
+            ended_at: new Date().toISOString(),
+            end_reason: "inactivity_timeout"
+          })
+          .eq("id", sessionId);
+      } catch (error) {
+        console.error("Error auto-closing chat:", error);
+      }
+      
+      onClose();
     }, INACTIVITY_TIMEOUT_MS);
 
     return () => {
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
-  }, [lastActivityTime, billingStarted, billingPaused]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message
   const translateMessage = async (text: string, senderId: string): Promise<{
@@ -233,12 +246,9 @@ const MiniChatWindow = ({
             }];
           });
 
-          // Partner sent a message - update activity and resume billing if paused
+          // Partner sent a message - update activity time
           if (newMsg.sender_id !== currentUserId) {
             setLastActivityTime(Date.now());
-            if (billingPaused && billingStarted) {
-              resumeBilling();
-            }
           }
 
           // Update unread count if minimized
@@ -262,7 +272,6 @@ const MiniChatWindow = ({
 
     // Start heartbeat for billing (every 60 seconds)
     heartbeatRef.current = setInterval(async () => {
-      if (billingPaused) return;
       try {
         await supabase.functions.invoke("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId }
@@ -273,44 +282,8 @@ const MiniChatWindow = ({
     }, 60000);
   };
 
-  const resumeBilling = () => {
-    setBillingPaused(false);
-    
-    // Restart timer if not already running
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-      }, 1000);
-    }
-
-    // Restart heartbeat if not already running
-    if (!heartbeatRef.current) {
-      heartbeatRef.current = setInterval(async () => {
-        if (billingPaused) return;
-        try {
-          await supabase.functions.invoke("chat-manager", {
-            body: { action: "heartbeat", chat_id: chatId }
-          });
-        } catch (error) {
-          console.error("Heartbeat error:", error);
-        }
-      }, 60000);
-    }
-
-    toast({
-      title: "Billing Resumed",
-      description: "Chat activity detected.",
-    });
-  };
-
   const handleTyping = () => {
-    const now = Date.now();
-    setLastActivityTime(now);
-    
-    // Resume billing if paused
-    if (billingPaused && billingStarted) {
-      resumeBilling();
-    }
+    setLastActivityTime(Date.now());
   };
 
   const sendMessage = async () => {
@@ -320,11 +293,6 @@ const MiniChatWindow = ({
     setNewMessage("");
     setIsSending(true);
     setLastActivityTime(Date.now());
-
-    // Resume billing if paused
-    if (billingPaused && billingStarted) {
-      resumeBilling();
-    }
 
     try {
       const { error } = await supabase
@@ -396,7 +364,7 @@ const MiniChatWindow = ({
     <Card className={cn(
       "flex flex-col shadow-xl border-2 transition-all duration-200",
       isMinimized ? "w-64 h-14" : "w-72 h-80",
-      billingPaused ? "border-warning/50" : isPartnerOnline ? "border-primary/30" : "border-muted"
+      isPartnerOnline ? "border-primary/30" : "border-muted"
     )}>
       {/* Header */}
       <div 
@@ -420,18 +388,9 @@ const MiniChatWindow = ({
             <p className="text-xs font-medium truncate">{partnerName}</p>
             {billingStarted && (
               <div className="flex items-center gap-1 text-[10px]">
-                {billingPaused ? (
-                  <span className="text-warning flex items-center gap-0.5">
-                    <Pause className="h-2 w-2" />
-                    Paused
-                  </span>
-                ) : (
-                  <>
-                    <Clock className="h-2 w-2 text-muted-foreground" />
-                    <span className="text-muted-foreground">{formatTime(elapsedSeconds)}</span>
-                  </>
-                )}
-                {userGender === "male" && !billingPaused && (
+                <Clock className="h-2 w-2 text-muted-foreground" />
+                <span className="text-muted-foreground">{formatTime(elapsedSeconds)}</span>
+                {userGender === "male" && (
                   <>
                     <span className="text-muted-foreground">•</span>
                     <IndianRupee className="h-2 w-2 text-muted-foreground" />
@@ -483,12 +442,6 @@ const MiniChatWindow = ({
       {/* Messages area (hidden when minimized) */}
       {!isMinimized && (
         <>
-          {billingPaused && (
-            <div className="px-2 py-1 bg-warning/10 text-warning text-[10px] text-center flex items-center justify-center gap-1">
-              <Pause className="h-2.5 w-2.5" />
-              Billing paused - Type to resume
-            </div>
-          )}
           <ScrollArea className="flex-1 p-2">
             <div className="space-y-1.5">
               {messages.length === 0 && (
