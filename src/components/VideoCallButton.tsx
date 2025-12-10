@@ -1,9 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Video, Loader2 } from "lucide-react";
+import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import VideoCallModal from "./VideoCallModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface VideoCallButtonProps {
   currentUserId: string;
@@ -19,7 +30,10 @@ const VideoCallButton = ({
   onBalanceChange 
 }: VideoCallButtonProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSearching, setIsSearching] = useState(false);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [rechargeMessage, setRechargeMessage] = useState("");
   const [callSession, setCallSession] = useState<{
     callId: string;
     womanUserId: string;
@@ -39,29 +53,13 @@ const VideoCallButton = ({
       // Minimum balance required to start video call
       const minBalance = 16;
       
-      if (walletBalance === 0) {
-        toast({
-          title: "Recharge Required",
-          description: "Your wallet balance is ₹0. Please recharge to start video calls.",
-          variant: "destructive",
-          action: (
-            <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
-              Recharge Now
-            </Button>
-          )
-        });
+      if (walletBalance <= 0) {
+        setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start video calls.");
+        setShowRechargeDialog(true);
         return;
       } else if (walletBalance < minBalance) {
-        toast({
-          title: "Low Balance Warning",
-          description: `You need at least ₹${minBalance} to start a video call. Current balance: ₹${walletBalance}`,
-          variant: "destructive",
-          action: (
-            <Button variant="outline" size="sm" onClick={() => window.location.href = '/wallet'}>
-              Recharge
-            </Button>
-          )
-        });
+        setRechargeMessage(`You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setShowRechargeDialog(true);
         return;
       }
     }
@@ -176,6 +174,26 @@ const VideoCallButton = ({
           currentUserId={currentUserId}
         />
       )}
+
+      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-destructive" />
+              Recharge Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {rechargeMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/wallet')}>
+              Recharge Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
