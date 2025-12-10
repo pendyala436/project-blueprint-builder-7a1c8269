@@ -1026,6 +1026,84 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_metrics: {
+        Row: {
+          active_chats: number
+          active_users: number
+          admin_profit: number
+          completed_withdrawals: number
+          created_at: string
+          female_users: number
+          gift_revenue: number
+          id: string
+          male_users: number
+          men_recharges: number
+          men_spent: number
+          metric_date: string
+          new_users: number
+          pending_withdrawals: number
+          total_chats: number
+          total_matches: number
+          total_messages: number
+          total_users: number
+          total_video_calls: number
+          updated_at: string
+          video_call_minutes: number
+          video_call_revenue: number
+          women_earnings: number
+        }
+        Insert: {
+          active_chats?: number
+          active_users?: number
+          admin_profit?: number
+          completed_withdrawals?: number
+          created_at?: string
+          female_users?: number
+          gift_revenue?: number
+          id?: string
+          male_users?: number
+          men_recharges?: number
+          men_spent?: number
+          metric_date?: string
+          new_users?: number
+          pending_withdrawals?: number
+          total_chats?: number
+          total_matches?: number
+          total_messages?: number
+          total_users?: number
+          total_video_calls?: number
+          updated_at?: string
+          video_call_minutes?: number
+          video_call_revenue?: number
+          women_earnings?: number
+        }
+        Update: {
+          active_chats?: number
+          active_users?: number
+          admin_profit?: number
+          completed_withdrawals?: number
+          created_at?: string
+          female_users?: number
+          gift_revenue?: number
+          id?: string
+          male_users?: number
+          men_recharges?: number
+          men_spent?: number
+          metric_date?: string
+          new_users?: number
+          pending_withdrawals?: number
+          total_chats?: number
+          total_matches?: number
+          total_messages?: number
+          total_users?: number
+          total_video_calls?: number
+          updated_at?: string
+          video_call_minutes?: number
+          video_call_revenue?: number
+          women_earnings?: number
+        }
+        Relationships: []
+      }
       policy_violation_alerts: {
         Row: {
           action_taken: string | null
@@ -2351,6 +2429,7 @@ export type Database = {
         Returns: Json
       }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
+      update_daily_platform_metrics: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
