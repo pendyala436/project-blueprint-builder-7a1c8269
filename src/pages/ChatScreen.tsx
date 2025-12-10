@@ -541,82 +541,34 @@ const ChatScreen = () => {
         .eq("user_id", partnerId)
         .maybeSingle();
 
-      // If not found in profiles, check sample_women table (for demo users)
-      let sampleWomanData = null;
-      if (!partnerProfile) {
-        const { data: sampleWoman } = await supabase
-          .from("sample_women")
-          .select("id, name, photo_url, language")
-          .eq("id", partnerId)
-          .maybeSingle();
-        
-        if (sampleWoman) {
-          sampleWomanData = sampleWoman;
-        }
-      }
-
-      // If still not found, check sample_men table
-      let sampleManData = null;
-      if (!partnerProfile && !sampleWomanData) {
-        const { data: sampleMan } = await supabase
-          .from("sample_men")
-          .select("id, name, photo_url, language")
-          .eq("id", partnerId)
-          .maybeSingle();
-        
-        if (sampleMan) {
-          sampleManData = sampleMan;
-        }
-      }
-
-      // Fetch partner's online status (only for real users)
+      // Note: Only real authenticated users from database - no sample/mock data fallbacks
+      
+      // Fetch partner's online status
       const { data: partnerStatus } = await supabase
         .from("user_status")
         .select("is_online")
         .eq("user_id", partnerId)
         .maybeSingle();
 
-      // Fetch partner's mother tongue (only for real users)
+      // Fetch partner's mother tongue
       const { data: partnerLanguages } = await supabase
         .from("user_languages")
         .select("language_name")
         .eq("user_id", partnerId)
         .limit(1);
 
-      // Determine partner info from available sources
-      let partnerMotherTongue = "English";
-      let partnerName = "Anonymous";
-      let partnerAvatar = "";
-      let partnerUserId = partnerId;
-      let isPartnerOnline = false;
-
+      // Determine partner info from profile
       if (partnerProfile) {
-        partnerMotherTongue = partnerLanguages?.[0]?.language_name || 
+        const partnerMotherTongue = partnerLanguages?.[0]?.language_name || 
                               partnerProfile.primary_language ||
                               partnerProfile.preferred_language || 
                               "English";
-        partnerName = partnerProfile.full_name || "Anonymous";
-        partnerAvatar = partnerProfile.photo_url || "";
-        partnerUserId = partnerProfile.user_id;
-        isPartnerOnline = partnerStatus?.is_online || false;
-      } else if (sampleWomanData) {
-        partnerMotherTongue = sampleWomanData.language || "English";
-        partnerName = sampleWomanData.name;
-        partnerAvatar = sampleWomanData.photo_url || "";
-        partnerUserId = sampleWomanData.id;
-        isPartnerOnline = true; // Sample users are always "online"
-      } else if (sampleManData) {
-        partnerMotherTongue = sampleManData.language || "English";
-        partnerName = sampleManData.name;
-        partnerAvatar = sampleManData.photo_url || "";
-        partnerUserId = sampleManData.id;
-        isPartnerOnline = true; // Sample users are always "online"
-      }
+        const partnerName = partnerProfile.full_name || "Anonymous";
+        const partnerAvatar = partnerProfile.photo_url || "";
+        const isPartnerOnline = partnerStatus?.is_online || false;
 
-      // Set chat partner state if any profile was found
-      if (partnerProfile || sampleWomanData || sampleManData) {
         setChatPartner({
-          userId: partnerUserId,
+          userId: partnerProfile.user_id,
           fullName: partnerName,
           avatar: partnerAvatar,
           isOnline: isPartnerOnline,

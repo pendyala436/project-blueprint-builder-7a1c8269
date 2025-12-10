@@ -385,15 +385,7 @@ const WomenDashboardScreen = () => {
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      // Fetch sample men from separate table - only with photos
-      const { data: sampleUsers } = await supabase
-        .from("sample_men")
-        .select("*")
-        .eq("is_online", true)
-        .eq("is_active", true)
-        .not("photo_url", "is", null)
-        .neq("photo_url", "");
-
+      // Only use real authenticated users from database - no sample/mock data
       const onlineMen: OnlineMan[] = [];
 
       // Process real users
@@ -466,38 +458,7 @@ const WomenDashboardScreen = () => {
         }
       }
 
-      // Process sample users (treat as having recharged with mock balance)
-      if (sampleUsers && sampleUsers.length > 0) {
-        sampleUsers.forEach(sample => {
-          const manLanguage = sample.language || "Unknown";
-          const manCountry = sample.country?.toLowerCase() || "";
-          const isManIndian = manCountry === "india";
-          
-          const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
-          const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
-          
-          // Filter: Only show non-Indian men with NLLB-200 languages
-          // OR same language men
-          if (!isManNllbLanguage) return;
-          if (isManIndian && !isSameLanguage) return;
-
-          onlineMen.push({
-            userId: sample.id,
-            fullName: sample.name || "Anonymous",
-            age: sample.age,
-            photoUrl: sample.photo_url,
-            country: sample.country,
-            state: null,
-            motherTongue: manLanguage,
-            preferredLanguage: null,
-            walletBalance: 500, // Mock balance for sample users
-            hasRecharged: true, // Sample users are treated as recharged
-            lastSeen: sample.updated_at || new Date().toISOString(),
-            isSameLanguage,
-            isNllbLanguage: isManNllbLanguage,
-          });
-        });
-      }
+      // Note: Only real authenticated users are shown - no sample/mock data
 
       // Get active chat counts for all men
       const menUserIds = onlineMen.map(m => m.userId);
