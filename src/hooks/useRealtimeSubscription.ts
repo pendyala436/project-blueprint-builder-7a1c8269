@@ -40,7 +40,15 @@ type TableName =
   | "admin_settings"
   | "legal_documents"
   | "user_roles"
-  | "attendance";
+  | "attendance"
+  | "user_friends"
+  | "user_blocks"
+  | "user_warnings"
+  | "user_photos"
+  | "processing_logs"
+  | "app_settings"
+  | "shift_earnings"
+  | "chat_wait_queue";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;

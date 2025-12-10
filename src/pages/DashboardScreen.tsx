@@ -53,6 +53,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
+import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 
 interface Notification {
   id: string;
@@ -184,6 +185,7 @@ const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, translateDynamicBatch, currentLanguage } = useTranslation();
+  const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
@@ -974,57 +976,31 @@ const DashboardScreen = () => {
       description: `Opening ${gateway?.name} for ${formatLocalCurrency(amountINR)}...`,
     });
 
-    // Simulate payment processing
+    // Use atomic transaction for ACID compliance
     setTimeout(async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Get or create wallet
-        let { data: wallet } = await supabase
-          .from("wallets")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Use atomic transaction function
+        const result = await creditWallet(
+          user.id,
+          amountINR,
+          `Recharge via ${gateway?.name} (${formatLocalCurrency(amountINR)})`,
+          `${selectedGateway.toUpperCase()}_${Date.now()}`
+        );
 
-        if (!wallet) {
-          const { data: newWallet } = await supabase
-            .from("wallets")
-            .insert({ user_id: user.id })
-            .select()
-            .single();
-          wallet = newWallet;
-        }
-
-        if (!wallet) return;
-
-        // Update wallet balance (store in INR)
-        const newBalance = (wallet.balance || 0) + amountINR;
-        await supabase
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id);
-
-        // Create transaction record
-        await supabase
-          .from("wallet_transactions")
-          .insert({
-            wallet_id: wallet.id,
-            user_id: user.id,
-            type: "credit",
-            amount: amountINR,
-            description: `Recharge via ${gateway?.name} (${formatLocalCurrency(amountINR)})`,
-            reference_id: `${selectedGateway.toUpperCase()}_${Date.now()}`,
-            status: "completed"
+        if (result.success) {
+          setWalletBalance(result.newBalance || walletBalance + amountINR);
+          setRechargeDialogOpen(false);
+          
+          toast({
+            title: "Recharge Successful!",
+            description: `${formatLocalCurrency(amountINR)} added to your wallet`,
           });
-
-        setWalletBalance(newBalance);
-        setRechargeDialogOpen(false);
-        
-        toast({
-          title: "Recharge Successful!",
-          description: `${formatLocalCurrency(amountINR)} added to your wallet`,
-        });
+        } else {
+          throw new Error(result.error || "Recharge failed");
+        }
       } catch (error) {
         console.error("Recharge error:", error);
         toast({
