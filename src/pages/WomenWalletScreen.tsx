@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 
 interface PayoutMethod {
   id: string;
@@ -103,6 +104,7 @@ const WomenWalletScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, translateDynamicBatch, currentLanguage } = useTranslation();
+  const { requestWithdrawal, isProcessing: transactionProcessing } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
@@ -114,6 +116,7 @@ const WomenWalletScreen = () => {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -122,6 +125,7 @@ const WomenWalletScreen = () => {
         navigate("/");
         return;
       }
+      setCurrentUserId(user.id);
 
       // Fetch pricing config
       const { data: pricing } = await supabase
@@ -238,19 +242,26 @@ const WomenWalletScreen = () => {
 
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from("withdrawal_requests")
-        .insert({
-          user_id: user.id,
-          amount: amount,
-          payment_method: paymentMethod,
-          status: "pending"
+      if (!currentUserId) {
+        toast({
+          title: t('error', 'Error'),
+          description: t('notLoggedIn', 'Not logged in'),
+          variant: "destructive"
         });
+        return;
+      }
 
-      if (error) throw error;
+      // Use ACID-compliant atomic transaction for withdrawal
+      const result = await requestWithdrawal(currentUserId, amount, paymentMethod);
+      
+      if (!result.success) {
+        toast({
+          title: t('error', 'Error'),
+          description: result.error || t('failedToSubmitWithdrawal', 'Failed to submit withdrawal request'),
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: t('requestSubmitted', 'Request Submitted'),

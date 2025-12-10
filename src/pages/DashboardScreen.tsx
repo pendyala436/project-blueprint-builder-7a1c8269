@@ -717,28 +717,7 @@ const DashboardScreen = () => {
         allWomen = [...femaleProfiles];
       }
 
-      // Fallback to sample_women if no real women - only with photos
-      if (allWomen.length === 0) {
-        const { data: sampleWomen } = await supabase
-          .from("sample_women")
-          .select("id, name, photo_url, age, country, language")
-          .eq("is_active", true)
-          .not("photo_url", "is", null)
-          .neq("photo_url", "")
-          .limit(50);
-
-        if (sampleWomen && sampleWomen.length > 0) {
-          allWomen = sampleWomen.map(sw => ({
-            id: sw.id,
-            user_id: sw.id,
-            full_name: sw.name,
-            photo_url: sw.photo_url,
-            age: sw.age,
-            country: sw.country,
-            primary_language: sw.language
-          }));
-        }
-      }
+      // Note: Only real authenticated users from database are shown - no sample/mock data fallback
 
       // Filter by online status if we have online user IDs
       const onlineWomenList = onlineUserIds.length > 0 
