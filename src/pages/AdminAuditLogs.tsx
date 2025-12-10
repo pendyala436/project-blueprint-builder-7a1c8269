@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,11 +94,7 @@ const AdminAuditLogs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  useEffect(() => {
-    loadLogs();
-  }, []);
-
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -118,7 +115,17 @@ const AdminAuditLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  // Real-time subscription for audit logs
+  useRealtimeSubscription({
+    table: "audit_logs",
+    onUpdate: loadLogs
+  });
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {

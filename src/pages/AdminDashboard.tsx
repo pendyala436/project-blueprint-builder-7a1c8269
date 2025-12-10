@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import {
   Users,
   MessageSquare,
@@ -176,13 +177,7 @@ const AdminDashboard = () => {
     }
   ];
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadStats();
-    }
-  }, [isAdmin]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       // Get total users
       const { count: totalUsers } = await supabase
@@ -236,7 +231,20 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error("Error loading stats:", error);
     }
-  };
+  }, []);
+
+  // Real-time subscriptions for dashboard stats
+  useMultipleRealtimeSubscriptions(
+    ["profiles", "user_status", "active_chat_sessions", "policy_violation_alerts", "wallet_transactions"],
+    loadStats,
+    isAdmin
+  );
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadStats();
+    }
+  }, [isAdmin, loadStats]);
 
   if (isLoading) {
     return (

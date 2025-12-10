@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,7 +144,7 @@ const AdminGiftPricing = () => {
     }
   };
 
-  const fetchGifts = async () => {
+  const fetchGifts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("gifts")
@@ -159,7 +160,14 @@ const AdminGiftPricing = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  // Real-time subscription for gifts
+  useRealtimeSubscription({
+    table: "gifts",
+    onUpdate: fetchGifts,
+    enabled: isAdmin
+  });
 
   const handleRefresh = () => {
     setRefreshing(true);

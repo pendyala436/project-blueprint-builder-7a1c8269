@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,11 +83,7 @@ const AdminSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -107,7 +104,17 @@ const AdminSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  // Real-time subscription for settings
+  useRealtimeSubscription({
+    table: "admin_settings",
+    onUpdate: loadSettings
+  });
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const handleSettingChange = (settingKey: string, value: string) => {
     setModifiedSettings(prev => ({
