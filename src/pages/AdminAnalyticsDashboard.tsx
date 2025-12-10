@@ -130,14 +130,27 @@ const AdminAnalyticsDashboard = () => {
         .from("matches")
         .select("*", { count: "exact", head: true });
 
-      // Fetch total revenue from wallet transactions
-      const { data: revenueData } = await supabase
+      // Calculate admin profit: Total charged to men - Total paid to women
+      // Fetch total debits from men (what they paid for chats/calls/gifts)
+      const { data: menDebits } = await supabase
         .from("wallet_transactions")
-        .select("amount")
-        .eq("type", "credit")
-        .eq("status", "completed");
+        .select("amount, created_at")
+        .eq("type", "debit")
+        .eq("status", "completed")
+        .gte("created_at", startDate.toISOString());
 
-      const totalRevenue = revenueData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const totalMenPaid = menDebits?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+      // Fetch total earnings paid to women
+      const { data: womenEarnings } = await supabase
+        .from("women_earnings")
+        .select("amount, created_at")
+        .gte("created_at", startDate.toISOString());
+
+      const totalWomenEarned = womenEarnings?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+      // Admin profit = Men's payments - Women's earnings
+      const adminProfit = totalMenPaid - totalWomenEarned;
 
       // Fetch new users today
       const today = new Date();
@@ -175,32 +188,71 @@ const AdminAnalyticsDashboard = () => {
         totalUsers: totalUsers || 0,
         activeUsers: activeUsers || 0,
         totalMatches: totalMatches || 0,
-        totalRevenue,
+        totalRevenue: adminProfit,
         newUsersToday: newUsersToday || 0,
         messagesCount: messagesCount || 0,
-        avgSessionTime: 24, // Placeholder
+        avgSessionTime: 24,
         conversionRate,
       });
 
-      // Generate chart data for the selected period
+      // Generate chart data based on real daily data
       const chartDataPoints: ChartData[] = [];
+      
+      // Fetch daily user registrations
+      const { data: dailyUsers } = await supabase
+        .from("profiles")
+        .select("created_at")
+        .gte("created_at", startDate.toISOString());
+
+      // Fetch daily matches
+      const { data: dailyMatches } = await supabase
+        .from("matches")
+        .select("created_at")
+        .gte("created_at", startDate.toISOString());
+
+      // Fetch daily messages
+      const { data: dailyMessages } = await supabase
+        .from("chat_messages")
+        .select("created_at")
+        .gte("created_at", startDate.toISOString());
+
       for (let i = days - 1; i >= 0; i--) {
         const date = subDays(new Date(), i);
         const dateStr = format(date, "MMM dd");
+        const dayStart = startOfDay(date).toISOString();
+        const dayEnd = endOfDay(date).toISOString();
 
-        // Simulated data points with realistic variations
-        const baseUsers = Math.floor((totalUsers || 10) / days);
-        const baseMatches = Math.floor((totalMatches || 5) / days);
-        const baseRevenue = Math.floor(totalRevenue / days);
-        const baseMessages = Math.floor((messagesCount || 20) / days);
+        // Count actual data for each day
+        const usersOnDay = dailyUsers?.filter(u => 
+          u.created_at >= dayStart && u.created_at <= dayEnd
+        ).length || 0;
+
+        const matchesOnDay = dailyMatches?.filter(m => 
+          m.created_at >= dayStart && m.created_at <= dayEnd
+        ).length || 0;
+
+        const messagesOnDay = dailyMessages?.filter(m => 
+          m.created_at >= dayStart && m.created_at <= dayEnd
+        ).length || 0;
+
+        // Calculate daily admin profit from real transactions
+        const dailyMenPaid = menDebits?.filter(tx => 
+          tx.created_at >= dayStart && tx.created_at <= dayEnd
+        ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+        const dailyWomenEarned = womenEarnings?.filter(tx => 
+          tx.created_at >= dayStart && tx.created_at <= dayEnd
+        ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+        const dailyProfit = dailyMenPaid - dailyWomenEarned;
 
         chartDataPoints.push({
           date: dateStr,
-          users: baseUsers + Math.floor(Math.random() * 5),
-          activeUsers: Math.floor(baseUsers * 0.3) + Math.floor(Math.random() * 3),
-          matches: baseMatches + Math.floor(Math.random() * 3),
-          revenue: baseRevenue + Math.floor(Math.random() * 500),
-          messages: baseMessages + Math.floor(Math.random() * 10),
+          users: usersOnDay,
+          activeUsers: Math.min(usersOnDay, activeUsers || 0),
+          matches: matchesOnDay,
+          revenue: dailyProfit,
+          messages: messagesOnDay,
         });
       }
       setChartData(chartDataPoints);
