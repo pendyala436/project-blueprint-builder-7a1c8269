@@ -131,6 +131,9 @@
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
+    /* Prevent rubber-banding on iOS */
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
@@ -143,12 +146,25 @@
     user-select: none;
     /* Smooth scrolling */
     -webkit-overflow-scrolling: touch;
+    /* Full height for native apps */
+    height: 100%;
+    overflow: auto;
+    /* Prevent iOS zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  #root {
+    height: 100%;
+    overflow: auto;
   }
 
   /* Allow text selection in inputs and textareas */
   input, textarea {
     -webkit-user-select: text;
     user-select: text;
+    /* Prevent zoom on iOS when focusing inputs */
+    font-size: 16px !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -163,6 +179,28 @@
   /* Disable tap highlight on mobile */
   * {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS-specific styles */
+  .ios-notch {
+    /* Extra padding for notch area */
+  }
+
+  /* Android-specific styles */
+  .android-layout {
+    /* Android-specific adjustments */
+  }
+
+  /* Touch-friendly styles */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Native app container */
+  .native-container {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: 100dvh;
   }
 }
 
