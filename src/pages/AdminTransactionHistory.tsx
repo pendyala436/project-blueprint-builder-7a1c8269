@@ -146,6 +146,7 @@ const AdminTransactionHistory = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [dateRange, setDateRange] = useState("7");
   const [searchQuery, setSearchQuery] = useState("");
+  const [userFilter, setUserFilter] = useState<"all" | "men" | "women">("all");
   
   // Data states
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
@@ -164,6 +165,8 @@ const AdminTransactionHistory = () => {
     totalVideoCalls: 0,
     totalGiftsSent: 0
   });
+  const [menStats, setMenStats] = useState({ transactions: 0, spent: 0, giftsSent: 0 });
+  const [womenStats, setWomenStats] = useState({ transactions: 0, earned: 0, withdrawals: 0 });
 
   useEffect(() => {
     if (!adminLoading && isAdmin) {
@@ -334,6 +337,26 @@ const AdminTransactionHistory = () => {
         .filter(w => w.status === "completed")
         .reduce((sum, w) => sum + Number(w.amount), 0);
 
+      // Calculate men stats (debits = spending)
+      const menTxns = enrichedWalletTxns.filter(t => t.user_gender?.toLowerCase() === "male");
+      const menSpent = menTxns
+        .filter(t => t.type === "debit" && t.status === "completed")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      
+      setMenStats({
+        transactions: menTxns.length,
+        spent: menSpent,
+        giftsSent: enrichedGifts.length
+      });
+
+      // Calculate women stats (earnings)
+      const womenTxns = enrichedWalletTxns.filter(t => t.user_gender?.toLowerCase() === "female");
+      setWomenStats({
+        transactions: womenTxns.length,
+        earned: totalEarningsPaid,
+        withdrawals: completedWithdrawals
+      });
+
       setStats({
         totalRevenue: totalCredits,
         totalEarningsPaid,
@@ -385,18 +408,34 @@ const AdminTransactionHistory = () => {
     return `${hours}h ${mins}m`;
   };
 
-  const filterBySearch = <T extends { user_name?: string; man_name?: string; woman_name?: string; sender_name?: string; receiver_name?: string }>(
+  const filterBySearch = <T extends { user_name?: string; man_name?: string; woman_name?: string; sender_name?: string; receiver_name?: string; user_gender?: string }>(
     items: T[]
   ): T[] => {
-    if (!searchQuery) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter(item => 
-      item.user_name?.toLowerCase().includes(query) ||
-      item.man_name?.toLowerCase().includes(query) ||
-      item.woman_name?.toLowerCase().includes(query) ||
-      item.sender_name?.toLowerCase().includes(query) ||
-      item.receiver_name?.toLowerCase().includes(query)
-    );
+    let filtered = items;
+    
+    // Filter by user group
+    if (userFilter !== "all") {
+      filtered = filtered.filter(item => {
+        const gender = (item as any).user_gender?.toLowerCase();
+        if (userFilter === "men") return gender === "male";
+        if (userFilter === "women") return gender === "female";
+        return true;
+      });
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.user_name?.toLowerCase().includes(query) ||
+        item.man_name?.toLowerCase().includes(query) ||
+        item.woman_name?.toLowerCase().includes(query) ||
+        item.sender_name?.toLowerCase().includes(query) ||
+        item.receiver_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
   };
 
   if (adminLoading || loading) {
@@ -446,6 +485,16 @@ const AdminTransactionHistory = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <Select value={userFilter} onValueChange={(v) => setUserFilter(v as "all" | "men" | "women")}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="User Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="men">Men Only</SelectItem>
+                  <SelectItem value="women">Women Only</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Date Range" />
@@ -539,11 +588,59 @@ const AdminTransactionHistory = () => {
             </Card>
           </div>
 
+          {/* Men & Women Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="h-4 w-4 text-blue-600" />
+                  Men Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Transactions</p>
+                  <p className="text-lg font-bold">{menStats.transactions}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Spent</p>
+                  <p className="text-lg font-bold text-destructive">₹{menStats.spent.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Gifts Sent</p>
+                  <p className="text-lg font-bold">{menStats.giftsSent}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-pink-500/30 bg-pink-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="h-4 w-4 text-pink-600" />
+                  Women Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Transactions</p>
+                  <p className="text-lg font-bold">{womenStats.transactions}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Earned</p>
+                  <p className="text-lg font-bold text-green-600">₹{womenStats.earned.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Withdrawals</p>
+                  <p className="text-lg font-bold">₹{womenStats.withdrawals.toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by user name..."
+              placeholder="Search by user name, transaction ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
