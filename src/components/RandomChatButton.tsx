@@ -70,8 +70,12 @@ export const RandomChatButton = ({
     if (userGender === "male") {
       const minBalance = 10; // Minimum balance required to start chat
       
-      // Check if super user by balance (super users have 999999999 balance)
-      const isSuperUser = walletBalance >= 999999999;
+      // Get current user email to check if super user
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || '';
+      
+      // Super users (matching email pattern) bypass balance check entirely
+      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
       
       if (!isSuperUser && walletBalance < minBalance) {
         toast({
