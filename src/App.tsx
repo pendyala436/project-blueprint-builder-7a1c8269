@@ -50,6 +50,7 @@ import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
 import AdminLanguageLimits from "./pages/AdminLanguageLimits";
 import PasswordResetScreen from "./pages/PasswordResetScreen";
+import AdminTransactionHistory from "./pages/AdminTransactionHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -108,6 +109,7 @@ const App = () => (
             <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
             <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
             <Route path="/admin/language-limits" element={<AdminLanguageLimits />} />
+            <Route path="/admin/transactions" element={<AdminTransactionHistory />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
