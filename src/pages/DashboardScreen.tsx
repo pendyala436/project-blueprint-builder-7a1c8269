@@ -538,17 +538,26 @@ const DashboardScreen = () => {
     setIsConnecting(true);
 
     try {
-      // Check wallet balance using admin-configured pricing
-      const minBalance = pricing.ratePerMinute * 2; // Need at least 2 minutes worth
-      if (!hasSufficientBalance(walletBalance, 2)) {
-        toast({
-          title: t('insufficientBalance', 'Insufficient Balance'),
-          description: t('pleaseRechargeToChat', `Please recharge at least ${formatPrice(minBalance)} to start chatting`),
-          variant: "destructive",
-        });
-        setRechargeDialogOpen(true);
-        setIsConnecting(false);
-        return;
+      // Get current user email to check if super user
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || '';
+      
+      // Super users (matching email pattern) bypass balance check entirely
+      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
+      
+      // Check wallet balance using admin-configured pricing (skip for super users)
+      if (!isSuperUser) {
+        const minBalance = pricing.ratePerMinute * 2; // Need at least 2 minutes worth
+        if (!hasSufficientBalance(walletBalance, 2)) {
+          toast({
+            title: t('insufficientBalance', 'Insufficient Balance'),
+            description: t('pleaseRechargeToChat', `Please recharge at least ${formatPrice(minBalance)} to start chatting`),
+            variant: "destructive",
+          });
+          setRechargeDialogOpen(true);
+          setIsConnecting(false);
+          return;
+        }
       }
 
       // Check if already in active chat with this user

@@ -13,10 +13,7 @@ let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
 let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
-// Super user balance threshold (set by seed-super-users)
-const SUPER_USER_BALANCE = 999999999;
-
-// Super user email patterns
+// Super user email patterns - they bypass ALL balance requirements
 const SUPER_USER_PATTERNS = {
   female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
   male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
@@ -32,9 +29,18 @@ const isSuperUserEmail = (email: string): boolean => {
   );
 };
 
-// Check if user is a super user by balance (since we can't easily get email in all contexts)
-const isSuperUserByBalance = (balance: number): boolean => {
-  return balance >= SUPER_USER_BALANCE;
+// Helper function to check if a user is a super user by their user_id
+const checkIsSuperUser = async (supabase: any, userId: string): Promise<boolean> => {
+  try {
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+    if (authUser?.user?.email) {
+      return isSuperUserEmail(authUser.user.email);
+    }
+    return false;
+  } catch (error) {
+    console.error("Error checking super user status:", error);
+    return false;
+  }
 };
 
 // NLLB-200 supported countries list (countries with NLLB language support)
@@ -894,37 +900,41 @@ serve(async (req) => {
 
         const isSampleMan = !!sampleMan;
 
-        // Only check wallet balance for real users (not sample users)
+        // Only check wallet balance for real users (not sample users and not super users)
         if (!isSampleMan) {
-          const { data: wallet } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("user_id", man_user_id)
-            .maybeSingle();
-
-          // Get current pricing to calculate minimum balance requirement
-          const { data: pricingData } = await supabase
-            .from("chat_pricing")
-            .select("rate_per_minute")
-            .eq("is_active", true)
-            .maybeSingle();
+          // Check if user is a super user by email - they bypass ALL balance requirements
+          const isSuperUser = await checkIsSuperUser(supabase, man_user_id);
           
-          const ratePerMin = pricingData?.rate_per_minute || 5.00;
-          const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
-          
-          // Super users (balance >= 999999999) bypass balance check
-          const isSuperUser = wallet && wallet.balance >= SUPER_USER_BALANCE;
+          if (!isSuperUser) {
+            const { data: wallet } = await supabase
+              .from("wallets")
+              .select("balance")
+              .eq("user_id", man_user_id)
+              .maybeSingle();
 
-          if (!isSuperUser && (!wallet || wallet.balance < minRequiredBalance)) {
-            return new Response(
-              JSON.stringify({ 
-                success: false, 
-                message: `Insufficient balance. Need at least ₹${minRequiredBalance} to start chat.`,
-                min_balance_required: minRequiredBalance,
-                current_balance: wallet?.balance || 0
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+            // Get current pricing to calculate minimum balance requirement
+            const { data: pricingData } = await supabase
+              .from("chat_pricing")
+              .select("rate_per_minute")
+              .eq("is_active", true)
+              .maybeSingle();
+            
+            const ratePerMin = pricingData?.rate_per_minute || 5.00;
+            const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
+
+            if (!wallet || wallet.balance < minRequiredBalance) {
+              return new Response(
+                JSON.stringify({ 
+                  success: false, 
+                  message: `Insufficient balance. Need at least ₹${minRequiredBalance} to start chat.`,
+                  min_balance_required: minRequiredBalance,
+                  current_balance: wallet?.balance || 0
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          } else {
+            console.log(`[START_CHAT] Super user ${man_user_id} - bypassing balance check`);
           }
         }
 
@@ -1054,15 +1064,15 @@ serve(async (req) => {
         const newTotalMinutes = session.total_minutes + minutesElapsed;
         const newTotalEarned = session.total_earned + menCharge;
 
-        // Check man's wallet balance
+        // Check if man is a super user by email - they don't get charged
+        const isSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
+
+        // Check man's wallet balance (only for non-super users)
         const { data: wallet } = await supabase
           .from("wallets")
           .select("balance, id")
           .eq("user_id", session.man_user_id)
           .maybeSingle();
-
-        // Check if super user by balance - they don't get charged
-        const isSuperUser = wallet && wallet.balance >= SUPER_USER_BALANCE;
         
         if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
           // End chat due to insufficient balance - auto-disconnect
@@ -1104,6 +1114,8 @@ serve(async (req) => {
             })
             .eq("chat_id", chat_id);
 
+          console.log(`[HEARTBEAT] Super user ${session.man_user_id} - no charge, women earned: ${womenEarnings.toFixed(2)}`);
+          
           return new Response(
             JSON.stringify({
               success: true,
@@ -1117,10 +1129,19 @@ serve(async (req) => {
           );
         }
 
+        // At this point, wallet must exist (checked above for non-super users)
+        if (!wallet) {
+          return new Response(
+            JSON.stringify({ success: false, message: "Wallet not found" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Deduct from man's wallet (what men are charged)
+        const newBalance = wallet.balance - menCharge;
         await supabase
           .from("wallets")
-          .update({ balance: wallet.balance - menCharge })
+          .update({ balance: newBalance })
           .eq("id", wallet.id);
 
         // Record transaction (what men paid)
@@ -1167,7 +1188,7 @@ serve(async (req) => {
             minutes_elapsed: minutesElapsed,
             men_charged: menCharge,
             women_earned: womenEarnings,
-            remaining_balance: wallet.balance - menCharge
+            remaining_balance: newBalance
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

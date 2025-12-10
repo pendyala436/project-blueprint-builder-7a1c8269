@@ -28,25 +28,33 @@ const VideoCallButton = ({
   } | null>(null);
 
   const startVideoCall = async () => {
-    // Check wallet balance dynamically from pricing
-    // minBalance is fetched from app_settings or chat_pricing
-    const { data: settingsData } = await supabase
-      .from("app_settings")
-      .select("setting_value")
-      .eq("setting_key", "min_video_call_balance")
-      .maybeSingle();
+    // Get current user email to check if super user
+    const { data: { user } } = await supabase.auth.getUser();
+    const userEmail = user?.email || '';
     
-    const minBalance = settingsData?.setting_value 
-      ? parseInt(String(settingsData.setting_value)) 
-      : 50;
+    // Super users (matching email pattern) bypass balance check entirely
+    const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
     
-    if (walletBalance < minBalance) {
-      toast({
-        title: "Insufficient Balance",
-        description: `You need at least ₹${minBalance} to start a video call. Please recharge your wallet.`,
-        variant: "destructive",
-      });
-      return;
+    if (!isSuperUser) {
+      // Check wallet balance dynamically from pricing
+      const { data: settingsData } = await supabase
+        .from("app_settings")
+        .select("setting_value")
+        .eq("setting_key", "min_video_call_balance")
+        .maybeSingle();
+      
+      const minBalance = settingsData?.setting_value 
+        ? parseInt(String(settingsData.setting_value)) 
+        : 50;
+      
+      if (walletBalance < minBalance) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You need at least ₹${minBalance} to start a video call. Please recharge your wallet.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSearching(true);
