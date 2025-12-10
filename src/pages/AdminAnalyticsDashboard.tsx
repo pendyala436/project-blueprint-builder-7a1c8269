@@ -57,6 +57,8 @@ interface AnalyticsData {
   activeUsers: number;
   totalMatches: number;
   totalRevenue: number;
+  menRecharges: number;
+  womenEarnings: number;
   newUsersToday: number;
   messagesCount: number;
   avgSessionTime: number;
@@ -98,6 +100,8 @@ const AdminAnalyticsDashboard = () => {
     activeUsers: 0,
     totalMatches: 0,
     totalRevenue: 0,
+    menRecharges: 0,
+    womenEarnings: 0,
     newUsersToday: 0,
     messagesCount: 0,
     avgSessionTime: 0,
@@ -127,27 +131,27 @@ const AdminAnalyticsDashboard = () => {
         .from("matches")
         .select("*", { count: "exact", head: true });
 
-      // Calculate admin profit: Total charged to men - Total paid to women
-      // Fetch total debits from men (what they paid for chats/calls/gifts)
-      const { data: menDebits } = await supabase
+      // Calculate admin profit: Men's recharges (wallet credits) - Women's earnings
+      // Fetch total recharges from men (wallet credits = money added to wallet)
+      const { data: menRecharges } = await supabase
         .from("wallet_transactions")
         .select("amount, created_at")
-        .eq("type", "debit")
+        .eq("type", "credit")
         .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      const totalMenPaid = menDebits?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const totalMenRecharges = menRecharges?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
       // Fetch total earnings paid to women
-      const { data: womenEarnings } = await supabase
+      const { data: womenEarningsData } = await supabase
         .from("women_earnings")
         .select("amount, created_at")
         .gte("created_at", startDate.toISOString());
 
-      const totalWomenEarned = womenEarnings?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const totalWomenEarned = womenEarningsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-      // Admin profit = Men's payments - Women's earnings
-      const adminProfit = totalMenPaid - totalWomenEarned;
+      // Admin profit = Men's recharges - Women's earnings
+      const adminProfit = totalMenRecharges - totalWomenEarned;
 
       // Fetch new users today
       const today = new Date();
@@ -197,6 +201,8 @@ const AdminAnalyticsDashboard = () => {
         activeUsers: activeUsers || 0,
         totalMatches: totalMatches || 0,
         totalRevenue: adminProfit,
+        menRecharges: totalMenRecharges,
+        womenEarnings: totalWomenEarned,
         newUsersToday: newUsersToday || 0,
         messagesCount: messagesCount || 0,
         avgSessionTime,
@@ -244,15 +250,15 @@ const AdminAnalyticsDashboard = () => {
         ).length || 0;
 
         // Calculate daily admin profit from real transactions
-        const dailyMenPaid = menDebits?.filter(tx => 
+        const dailyMenRecharges = menRecharges?.filter(tx => 
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-        const dailyWomenEarned = womenEarnings?.filter(tx => 
+        const dailyWomenEarned = womenEarningsData?.filter(tx => 
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-        const dailyProfit = dailyMenPaid - dailyWomenEarned;
+        const dailyProfit = dailyMenRecharges - dailyWomenEarned;
 
         chartDataPoints.push({
           date: dateStr,
@@ -452,6 +458,24 @@ const AdminAnalyticsDashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
+            title="Men Recharges"
+            value={`₹${analytics.menRecharges.toLocaleString()}`}
+            icon={IndianRupee}
+            color="success"
+          />
+          <StatCard
+            title="Women Earnings"
+            value={`₹${analytics.womenEarnings.toLocaleString()}`}
+            icon={IndianRupee}
+            color="danger"
+          />
+          <StatCard
+            title="Admin Profit"
+            value={`₹${analytics.totalRevenue.toLocaleString()}`}
+            icon={TrendingUp}
+            color={analytics.totalRevenue > 0 ? "success" : "danger"}
+          />
+          <StatCard
             title="Total Users"
             value={analytics.totalUsers.toLocaleString()}
             icon={Users}
@@ -470,27 +494,9 @@ const AdminAnalyticsDashboard = () => {
             color="danger"
           />
           <StatCard
-            title="Admin Profit"
-            value={`₹${analytics.totalRevenue.toLocaleString()}`}
-            icon={IndianRupee}
-            color="warning"
-          />
-          <StatCard
-            title="New Users Today"
-            value={analytics.newUsersToday}
-            icon={Activity}
-            color="primary"
-          />
-          <StatCard
             title="Messages Sent"
             value={analytics.messagesCount.toLocaleString()}
             icon={MessageSquare}
-            color="success"
-          />
-          <StatCard
-            title="Avg Session"
-            value={analytics.avgSessionTime > 0 ? `${analytics.avgSessionTime}m` : "0m"}
-            icon={Activity}
             color="warning"
           />
           <StatCard
