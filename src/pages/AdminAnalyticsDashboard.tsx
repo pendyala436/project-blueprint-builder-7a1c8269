@@ -56,8 +56,9 @@ interface AnalyticsData {
   totalUsers: number;
   activeUsers: number;
   totalMatches: number;
-  totalRevenue: number;
+  adminProfit: number;
   menRecharges: number;
+  menSpent: number;
   womenEarnings: number;
   newUsersToday: number;
   messagesCount: number;
@@ -99,8 +100,9 @@ const AdminAnalyticsDashboard = () => {
     totalUsers: 0,
     activeUsers: 0,
     totalMatches: 0,
-    totalRevenue: 0,
+    adminProfit: 0,
     menRecharges: 0,
+    menSpent: 0,
     womenEarnings: 0,
     newUsersToday: 0,
     messagesCount: 0,
@@ -131,18 +133,27 @@ const AdminAnalyticsDashboard = () => {
         .from("matches")
         .select("*", { count: "exact", head: true });
 
-      // Calculate admin profit: Men's recharges (wallet credits) - Women's earnings
-      // Fetch total recharges from men (wallet credits = money added to wallet)
-      const { data: menRecharges } = await supabase
+      // Fetch men's wallet recharges (credits added to wallet)
+      const { data: menRechargesData } = await supabase
         .from("wallet_transactions")
         .select("amount, created_at")
         .eq("type", "credit")
         .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      const totalMenRecharges = menRecharges?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const totalMenRecharges = menRechargesData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-      // Fetch total earnings paid to women
+      // Fetch men's spending (debits - what they spent on chats/calls/gifts per minute)
+      const { data: menSpentData } = await supabase
+        .from("wallet_transactions")
+        .select("amount, created_at")
+        .eq("type", "debit")
+        .eq("status", "completed")
+        .gte("created_at", startDate.toISOString());
+
+      const totalMenSpent = menSpentData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+      // Fetch total earnings paid to women (based on per minute rate set by admin)
       const { data: womenEarningsData } = await supabase
         .from("women_earnings")
         .select("amount, created_at")
@@ -150,8 +161,9 @@ const AdminAnalyticsDashboard = () => {
 
       const totalWomenEarned = womenEarningsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-      // Admin profit = Men's recharges - Women's earnings
-      const adminProfit = totalMenRecharges - totalWomenEarned;
+      // Admin profit = What men spent - What women earned
+      // This is the margin between the rate men pay per minute and women earn per minute
+      const adminProfit = totalMenSpent - totalWomenEarned;
 
       // Fetch new users today
       const today = new Date();
@@ -200,8 +212,9 @@ const AdminAnalyticsDashboard = () => {
         totalUsers: totalUsers || 0,
         activeUsers: activeUsers || 0,
         totalMatches: totalMatches || 0,
-        totalRevenue: adminProfit,
+        adminProfit: adminProfit,
         menRecharges: totalMenRecharges,
+        menSpent: totalMenSpent,
         womenEarnings: totalWomenEarned,
         newUsersToday: newUsersToday || 0,
         messagesCount: messagesCount || 0,
@@ -249,8 +262,12 @@ const AdminAnalyticsDashboard = () => {
           m.created_at >= dayStart && m.created_at <= dayEnd
         ).length || 0;
 
-        // Calculate daily admin profit from real transactions
-        const dailyMenRecharges = menRecharges?.filter(tx => 
+        // Calculate daily financial data from real transactions
+        const dailyMenRecharges = menRechargesData?.filter(tx => 
+          tx.created_at >= dayStart && tx.created_at <= dayEnd
+        ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+        const dailyMenSpent = menSpentData?.filter(tx => 
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
@@ -258,7 +275,7 @@ const AdminAnalyticsDashboard = () => {
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-        const dailyProfit = dailyMenRecharges - dailyWomenEarned;
+        const dailyProfit = dailyMenSpent - dailyWomenEarned;
 
         chartDataPoints.push({
           date: dateStr,
@@ -310,11 +327,13 @@ const AdminAnalyticsDashboard = () => {
   const handleExport = () => {
     const csvData = [
       ["Metric", "Value"],
+      ["Men Recharges", analytics.menRecharges],
+      ["Men Spent", analytics.menSpent],
+      ["Women Earnings", analytics.womenEarnings],
+      ["Admin Profit", analytics.adminProfit],
       ["Total Users", analytics.totalUsers],
       ["Active Users", analytics.activeUsers],
       ["Total Matches", analytics.totalMatches],
-      ["Total Revenue", analytics.totalRevenue],
-      ["New Users Today", analytics.newUsersToday],
       ["Messages Count", analytics.messagesCount],
       ["Conversion Rate", `${analytics.conversionRate.toFixed(2)}%`],
     ];
@@ -464,6 +483,12 @@ const AdminAnalyticsDashboard = () => {
             color="success"
           />
           <StatCard
+            title="Men Spent"
+            value={`₹${analytics.menSpent.toLocaleString()}`}
+            icon={IndianRupee}
+            color="warning"
+          />
+          <StatCard
             title="Women Earnings"
             value={`₹${analytics.womenEarnings.toLocaleString()}`}
             icon={IndianRupee}
@@ -471,9 +496,9 @@ const AdminAnalyticsDashboard = () => {
           />
           <StatCard
             title="Admin Profit"
-            value={`₹${analytics.totalRevenue.toLocaleString()}`}
+            value={`₹${analytics.adminProfit.toLocaleString()}`}
             icon={TrendingUp}
-            color={analytics.totalRevenue > 0 ? "success" : "danger"}
+            color={analytics.adminProfit > 0 ? "success" : "danger"}
           />
           <StatCard
             title="Total Users"
