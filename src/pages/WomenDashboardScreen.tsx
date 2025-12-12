@@ -39,6 +39,7 @@ import { RandomChatButton } from "@/components/RandomChatButton";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -1038,6 +1039,16 @@ const WomenDashboardScreen = () => {
         {/* Section 4: Active Chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <ActiveChatsSection maxDisplay={5} />
+        </div>
+
+        {/* Private Groups Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.16s" }}>
+          <PrivateGroupsSection
+            currentUserId={currentUserId}
+            userName={userName || 'User'}
+            userPhoto={currentUserPhoto}
+          />
+          />
         </div>
 
         {/* Section 5: Quick Actions */}
