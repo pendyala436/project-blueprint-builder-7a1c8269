@@ -61,7 +61,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Language Limits", path: "/admin/language-limits", icon: <Languages className="h-4 w-4" /> },
     { title: "Moderation", path: "/admin/moderation", icon: <Shield className="h-4 w-4" /> },
     { title: "Policy Alerts", path: "/admin/policy-alerts", icon: <AlertTriangle className="h-4 w-4" />, badge: policyAlerts },
-    { title: "Sample Users", path: "/admin/sample-users", icon: <UserCheck className="h-4 w-4" /> },
+    
     { title: "Performance", path: "/admin/performance", icon: <Activity className="h-4 w-4" /> },
     { title: "Legal Documents", path: "/admin/legal-documents", icon: <FileText className="h-4 w-4" /> },
     { title: "Backups", path: "/admin/backups", icon: <Database className="h-4 w-4" /> },

@@ -44,7 +44,7 @@ import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
 import AdminSettings from "./pages/AdminSettings";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminModerationScreen from "./pages/AdminModerationScreen";
-import AdminSampleUsers from "./pages/AdminSampleUsers";
+
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
@@ -106,7 +106,7 @@ const App = () => (
             <Route path="/send-gift/:receiverId" element={<GiftSendingScreen />} />
             <Route path="/shift-compliance" element={<ShiftComplianceScreen />} />
             <Route path="/admin/moderation" element={<AdminModerationScreen />} />
-            <Route path="/admin/sample-users" element={<AdminSampleUsers />} />
+            
             <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
             <Route path="/admin/language-limits" element={<AdminLanguageLimits />} />
             <Route path="/admin/transactions" element={<AdminTransactionHistory />} />

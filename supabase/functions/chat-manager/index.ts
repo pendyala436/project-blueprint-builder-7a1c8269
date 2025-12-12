@@ -621,53 +621,11 @@ serve(async (req) => {
           availableWomen = data || [];
         }
 
-        // If still no real women, try sample_women as fallback
+        // No sample/mock data fallback - only use real authenticated users
         if (availableWomen.length === 0) {
-          console.log("No real women available, checking sample_women...");
-          
-          // Try to find a sample woman with matching language first
-          let { data: sampleWomen } = await supabase
-            .from("sample_women")
-            .select("id, name, photo_url, language, country")
-            .eq("is_active", true)
-            .ilike("language", `%${requestedLanguageLower}%`)
-            .limit(5);
-
-          // If no language match, get any active sample woman
-          if (!sampleWomen || sampleWomen.length === 0) {
-            const { data: anySampleWomen } = await supabase
-              .from("sample_women")
-              .select("id, name, photo_url, language, country")
-              .eq("is_active", true)
-              .limit(5);
-            sampleWomen = anySampleWomen || [];
-          }
-
-          if (sampleWomen && sampleWomen.length > 0) {
-            // Pick a random sample woman
-            const randomIndex = Math.floor(Math.random() * sampleWomen.length);
-            const selectedSample = sampleWomen[randomIndex];
-            
-            console.log(`Matched with sample woman: ${selectedSample.name} (${selectedSample.id})`);
-            
-            return new Response(
-              JSON.stringify({ 
-                success: true, 
-                woman_user_id: selectedSample.id,
-                profile: {
-                  full_name: selectedSample.name,
-                  photo_url: selectedSample.photo_url,
-                  primary_language: selectedSample.language
-                },
-                language_matched: selectedSample.language?.toLowerCase() === requestedLanguageLower,
-                is_sample_user: true
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
+          console.log("No real women available for chat");
           return new Response(
-            JSON.stringify({ success: false, message: "No women available" }),
+            JSON.stringify({ success: false, message: "No women available at the moment. Please try again later." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -776,58 +734,11 @@ serve(async (req) => {
           }
         }
 
-        // If no real Indian women available, try sample_women from India
+        // No sample/mock data fallback - only use real authenticated users
         if (!selectedWomanResult) {
-          console.log("No real Indian women available, checking sample_women from India...");
-          
-          // Try to find an Indian sample woman with matching language first
-          let { data: sampleWomen } = await supabase
-            .from("sample_women")
-            .select("id, name, photo_url, language, country")
-            .eq("is_active", true)
-            .eq("country", "India")
-            .ilike("language", `%${requestedLanguageLower}%`)
-            .limit(5);
-
-          // If no language match, get any active Indian sample woman
-          if (!sampleWomen || sampleWomen.length === 0) {
-            const { data: anyIndianSampleWomen } = await supabase
-              .from("sample_women")
-              .select("id, name, photo_url, language, country")
-              .eq("is_active", true)
-              .eq("country", "India")
-              .limit(5);
-            sampleWomen = anyIndianSampleWomen || [];
-          }
-
-          if (sampleWomen && sampleWomen.length > 0) {
-            // Pick a random sample woman
-            const randomIndex = Math.floor(Math.random() * sampleWomen.length);
-            const selectedSample = sampleWomen[randomIndex];
-            
-            console.log(`Matched with sample Indian woman: ${selectedSample.name} (${selectedSample.id})`);
-            
-            return new Response(
-              JSON.stringify({ 
-                success: true, 
-                woman_user_id: selectedSample.id,
-                profile: {
-                  full_name: selectedSample.name,
-                  photo_url: selectedSample.photo_url,
-                  primary_language: selectedSample.language
-                },
-                current_load: 0,
-                nllb_translation_enabled: true,
-                man_country: man_country,
-                woman_country: "India",
-                is_sample_user: true
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
+          console.log("No real Indian women available for NLLB chat");
           return new Response(
-            JSON.stringify({ success: false, message: "No Indian women available" }),
+            JSON.stringify({ success: false, message: "No Indian women available at the moment. Please try again later." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -891,51 +802,40 @@ serve(async (req) => {
           .eq("user_id", man_user_id)
           .eq("status", "waiting");
 
-        // Check if man_user_id is a sample user (from sample_men table)
-        const { data: sampleMan } = await supabase
-          .from("sample_men")
-          .select("id")
-          .eq("id", man_user_id)
-          .maybeSingle();
+        // Only check wallet balance for real users (not super users)
+        // Check if user is a super user by email - they bypass ALL balance requirements
+        const isSuperUser = await checkIsSuperUser(supabase, man_user_id);
+        
+        if (!isSuperUser) {
+          const { data: wallet } = await supabase
+            .from("wallets")
+            .select("balance")
+            .eq("user_id", man_user_id)
+            .maybeSingle();
 
-        const isSampleMan = !!sampleMan;
-
-        // Only check wallet balance for real users (not sample users and not super users)
-        if (!isSampleMan) {
-          // Check if user is a super user by email - they bypass ALL balance requirements
-          const isSuperUser = await checkIsSuperUser(supabase, man_user_id);
+          // Get current pricing to calculate minimum balance requirement
+          const { data: pricingData } = await supabase
+            .from("chat_pricing")
+            .select("rate_per_minute")
+            .eq("is_active", true)
+            .maybeSingle();
           
-          if (!isSuperUser) {
-            const { data: wallet } = await supabase
-              .from("wallets")
-              .select("balance")
-              .eq("user_id", man_user_id)
-              .maybeSingle();
+          const ratePerMin = pricingData?.rate_per_minute || 5.00;
+          const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
 
-            // Get current pricing to calculate minimum balance requirement
-            const { data: pricingData } = await supabase
-              .from("chat_pricing")
-              .select("rate_per_minute")
-              .eq("is_active", true)
-              .maybeSingle();
-            
-            const ratePerMin = pricingData?.rate_per_minute || 5.00;
-            const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
-
-            if (!wallet || wallet.balance < minRequiredBalance) {
-              return new Response(
-                JSON.stringify({ 
-                  success: false, 
-                  message: `Insufficient balance. Need at least ₹${minRequiredBalance} to start chat.`,
-                  min_balance_required: minRequiredBalance,
-                  current_balance: wallet?.balance || 0
-                }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-          } else {
-            console.log(`[START_CHAT] Super user ${man_user_id} - bypassing balance check`);
+          if (!wallet || wallet.balance < minRequiredBalance) {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                message: `Insufficient balance. Need at least ₹${minRequiredBalance} to start chat.`,
+                min_balance_required: minRequiredBalance,
+                current_balance: wallet?.balance || 0
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
+        } else {
+          console.log(`[START_CHAT] Super user ${man_user_id} - bypassing balance check`);
         }
 
         // Get current pricing

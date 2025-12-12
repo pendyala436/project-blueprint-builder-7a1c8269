@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
-import { useProductionMode } from "@/hooks/useProductionMode";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,7 @@ import {
   BarChart3,
   Check,
   RefreshCw,
-  Palette,
-  Users,
-  AlertTriangle
+  Palette
 } from "lucide-react";
 import AdminNav from "@/components/AdminNav";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
@@ -79,7 +77,6 @@ const LANGUAGE_OPTIONS = [
 
 const AdminSettings = () => {
   const navigate = useNavigate();
-  const { isProduction } = useProductionMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<AdminSetting[]>([]);
@@ -372,33 +369,7 @@ const AdminSettings = () => {
           ))}
         </Tabs>
 
-        {/* Quick Links Section - Admin Management Tools - Only in Dev Mode */}
-        {!isProduction && (
-          <>
-            <Card className="mt-6 border-amber-500/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-amber-500" />
-                  Development Tools
-                  <Badge variant="outline" className="ml-2 text-amber-500 border-amber-500">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Dev Only
-                  </Badge>
-                </CardTitle>
-                <CardDescription>These tools are only available in development/staging mode</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button onClick={() => navigate('/admin/sample-users')} variant="outline" className="w-full justify-start gap-2">
-                  <Users className="h-4 w-4" />
-                  Sample Users Management
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Mock Users Management */}
-            <MockUsersCard />
-          </>
-        )}
+        {/* Development Tools section removed - only real users supported */}
 
         {/* Theme Preview - Only show in General tab */}
         {activeTab === "general" && (
@@ -454,124 +425,6 @@ const AdminSettings = () => {
   );
 };
 
-// Mock Users Card Component
-const MockUsersCard = () => {
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<{
-    enabled: boolean;
-    count: number;
-    languageCount: number;
-    expectedCount: number;
-  } | null>(null);
-
-  useEffect(() => {
-    checkStatus();
-  }, []);
-
-  const checkStatus = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("seed-sample-users", {
-        body: { action: "status" },
-      });
-
-      if (error) throw error;
-      setStatus(data);
-    } catch (error) {
-      console.error("Error checking mock users status:", error);
-    }
-  };
-
-  const toggleMockUsers = async () => {
-    setLoading(true);
-    try {
-      const action = status?.enabled ? "clear" : "seed";
-      
-      toast({
-        title: action === "seed" ? "Creating Mock Users" : "Removing Mock Users",
-        description: action === "seed" 
-          ? "Creating 3 men and 3 women per language. This may take a moment..."
-          : "Removing all mock users...",
-      });
-
-      const { data, error } = await supabase.functions.invoke("seed-sample-users", {
-        body: { action },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: data.message,
-      });
-
-      await checkStatus();
-    } catch (error: any) {
-      console.error("Error toggling mock users:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to toggle mock users",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          Mock Users for Testing
-        </CardTitle>
-        <CardDescription>
-          Enable mock users to test the platform with 3 men and 3 women per NLLB-200 language
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
-          <div className="space-y-1">
-            <p className="font-medium">Mock Users</p>
-            <p className="text-sm text-muted-foreground">
-              {status?.enabled 
-                ? `${status.count} mock users active (${status.languageCount} languages)`
-                : "No mock users currently active"}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={status?.enabled || false}
-              onCheckedChange={toggleMockUsers}
-              disabled={loading}
-            />
-            {loading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
-          </div>
-        </div>
-        
-        {status?.enabled && (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold text-foreground">{status.count}</p>
-              <p className="text-xs text-muted-foreground">Total Users</p>
-            </div>
-            <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold text-foreground">{status.languageCount}</p>
-              <p className="text-xs text-muted-foreground">Languages</p>
-            </div>
-            <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-2xl font-bold text-foreground">6</p>
-              <p className="text-xs text-muted-foreground">Per Language</p>
-            </div>
-          </div>
-        )}
-
-        <p className="text-xs text-muted-foreground">
-          Note: Mock users are stored in the sample_users table and are separate from real auth users.
-          Disable once testing is complete.
-        </p>
-      </CardContent>
-    </Card>
-  );
-};
+// Mock Users Card Component removed - only real authenticated users are supported
 
 export default AdminSettings;
