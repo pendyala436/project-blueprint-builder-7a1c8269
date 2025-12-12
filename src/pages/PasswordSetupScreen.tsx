@@ -8,6 +8,8 @@ import ProgressIndicator from "@/components/ProgressIndicator";
 import MeowLogo from "@/components/MeowLogo";
 import { Eye, EyeOff, Lock, Check, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { differenceInYears } from "date-fns";
 
 const PasswordSetupScreen = () => {
   const navigate = useNavigate();
@@ -103,14 +105,98 @@ const PasswordSetupScreen = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call for password setup
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Get stored registration data
+      const email = localStorage.getItem("userEmail");
+      const gender = localStorage.getItem("userGender");
+      const phone = localStorage.getItem("userPhone");
+      const selectedLanguage = sessionStorage.getItem("selectedLanguage");
+      const selectedCountry = sessionStorage.getItem("selectedCountry");
 
-    toast.success("Password set successfully! 🎉");
-    setIsSubmitting(false);
-    
-    // Navigate to photo upload screen
-    navigate("/photo-upload");
+      if (!email) {
+        toast.error("Registration data missing. Please start again.");
+        navigate("/register");
+        return;
+      }
+
+      // Create Supabase auth user with emailRedirectTo
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: localStorage.getItem("userName") || "",
+            gender: gender,
+            phone: phone,
+          }
+        }
+      });
+
+      if (authError) {
+        // Handle specific error cases
+        if (authError.message.includes("already registered")) {
+          toast.error("This email is already registered. Please sign in instead.");
+          navigate("/");
+          return;
+        }
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error("Failed to create account");
+      }
+
+      // Create profile for the new user
+      const dobString = localStorage.getItem("userDob");
+      const dob = dobString ? new Date(dobString) : null;
+      const age = dob ? differenceInYears(new Date(), dob) : null;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: authData.user.id,
+          full_name: localStorage.getItem("userName") || null,
+          gender: gender || null,
+          phone: phone || null,
+          date_of_birth: dobString || null,
+          age: age,
+          primary_language: selectedLanguage || null,
+          country: selectedCountry || null,
+          account_status: "active",
+          approval_status: gender === "female" ? "pending" : "approved",
+        });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // Don't fail completely if profile creation fails - it can be retried
+      }
+
+      // Create wallet for the user
+      const { error: walletError } = await supabase
+        .from("wallets")
+        .insert({
+          user_id: authData.user.id,
+          balance: 0,
+          currency: "INR",
+        });
+
+      if (walletError) {
+        console.error("Wallet creation error:", walletError);
+      }
+
+      toast.success("Account created successfully! 🎉");
+      
+      // Navigate to photo upload screen
+      navigate("/photo-upload");
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      toast.error(error.message || "Failed to create account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getStrengthPercentage = () => {
