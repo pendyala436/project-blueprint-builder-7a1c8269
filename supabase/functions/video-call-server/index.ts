@@ -1,15 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+/**
+ * Video Call Server using SRS (Simple Realtime Server)
+ * 
+ * PRIVACY & STORAGE POLICY:
+ * - NO video/audio content is stored or recorded
+ * - All streams are ephemeral (real-time transmission only)
+ * - Session metadata is automatically deleted after 5 minutes
+ * - SRS is configured without DVR/recording capabilities
+ */
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 // SRS Server Configuration (localhost for development)
+// Note: SRS should be started with recording DISABLED (no --dvr flag)
 const SRS_CONFIG = {
   apiUrl: Deno.env.get('SRS_API_URL') || 'http://localhost:1985',
   rtcUrl: Deno.env.get('SRS_RTC_URL') || 'http://localhost:1985/rtc/v1',
+  noRecording: true, // Ensure SRS is configured without recording
 };
 
 interface VideoCallRequest {
