@@ -661,6 +661,82 @@ export type Database = {
         }
         Relationships: []
       }
+      group_memberships: {
+        Row: {
+          created_at: string
+          gift_amount_paid: number
+          group_id: string
+          has_access: boolean
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gift_amount_paid?: number
+          group_id: string
+          has_access?: boolean
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gift_amount_paid?: number
+          group_id?: string
+          has_access?: boolean
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_memberships_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_messages: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_translated: boolean | null
+          message: string
+          sender_id: string
+          translated_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_translated?: boolean | null
+          message: string
+          sender_id: string
+          translated_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_translated?: boolean | null
+          message?: string
+          sender_id?: string
+          translated_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       language_groups: {
         Row: {
           created_at: string
@@ -1158,6 +1234,51 @@ export type Database = {
           updated_at?: string
           user_id?: string
           violation_type?: string
+        }
+        Relationships: []
+      }
+      private_groups: {
+        Row: {
+          access_type: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_live: boolean
+          min_gift_amount: number
+          name: string
+          owner_id: string
+          participant_count: number
+          stream_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_live?: boolean
+          min_gift_amount?: number
+          name: string
+          owner_id: string
+          participant_count?: number
+          stream_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_live?: boolean
+          min_gift_amount?: number
+          name?: string
+          owner_id?: string
+          participant_count?: number
+          stream_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2403,6 +2524,10 @@ export type Database = {
           p_receiver_id: string
           p_sender_id: string
         }
+        Returns: Json
+      }
+      process_group_gift: {
+        Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
       }
       process_video_billing: {

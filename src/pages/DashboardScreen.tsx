@@ -48,6 +48,7 @@ import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 import VideoCallButton from "@/components/VideoCallButton";
+import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
@@ -1396,6 +1397,16 @@ const DashboardScreen = () => {
         </div>
 
 
+
+        {/* Private Rooms Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <AvailableGroupsSection
+            currentUserId={currentUserId}
+            userName={userName || 'User'}
+            userPhoto={currentUserPhoto}
+          />
+          />
+        </div>
 
         {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
