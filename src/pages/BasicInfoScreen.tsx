@@ -179,6 +179,10 @@ const BasicInfoScreen = () => {
     localStorage.setItem("userEmail", email);
     localStorage.setItem("userGender", gender);
     localStorage.setItem("userPhone", phone);
+    localStorage.setItem("userName", fullName);
+    if (dob) {
+      localStorage.setItem("userDob", dob.toISOString());
+    }
     
     // Navigate to password setup screen
     navigate("/password-setup");
