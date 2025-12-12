@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.seed-super-users]
 verify_jwt = false
+
+[functions.video-call-server]
+verify_jwt = false
+
+[functions.video-cleanup]
+verify_jwt = false

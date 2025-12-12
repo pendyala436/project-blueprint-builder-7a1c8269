@@ -2,11 +2,19 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// SRS Server Configuration (localhost for development)
+/**
+ * SRS (Simple Realtime Server) Configuration
+ * 
+ * IMPORTANT: No video/audio content is stored or recorded.
+ * - All streams are ephemeral (real-time only)
+ * - Session metadata is auto-deleted after 5 minutes
+ * - SRS is configured without recording (DVR disabled)
+ */
 const SRS_CONFIG = {
   serverUrl: 'http://localhost:1985', // SRS API server
   rtcUrl: 'webrtc://localhost/live',   // WebRTC publish/play URL
-  hlsUrl: 'http://localhost:8080/live', // HLS playback URL
+  hlsUrl: 'http://localhost:8080/live', // HLS playback URL (live only, no recording)
+  noRecording: true, // Flag indicating no content is stored
 };
 
 interface SRSCallState {
