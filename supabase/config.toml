@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.video-cleanup]
 verify_jwt = false
+
+[functions.group-cleanup]
+verify_jwt = false

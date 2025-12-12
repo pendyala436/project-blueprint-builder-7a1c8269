@@ -2496,6 +2496,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_group_messages: { Args: never; Returns: undefined }
+      cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
