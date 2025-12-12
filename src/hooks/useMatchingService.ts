@@ -8,21 +8,7 @@ import {
   ALL_NLLB200_LANGUAGES 
 } from '@/data/nllb200Languages';
 
-// Super user email patterns for bypass
-const SUPER_USER_PATTERNS = {
-  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
-  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
-  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
-};
-
-const isSuperUserEmail = (email: string): boolean => {
-  if (!email) return false;
-  return (
-    SUPER_USER_PATTERNS.female.test(email) ||
-    SUPER_USER_PATTERNS.male.test(email) ||
-    SUPER_USER_PATTERNS.admin.test(email)
-  );
-};
+// Super user balance bypass is handled at the database level via RPC functions
 
 export interface MatchableUser {
   userId: string;
@@ -237,6 +223,7 @@ export const useMatchingService = () => {
   /**
    * Fetch available men for female dashboard
    * Shows men who have recharged wallet and speak NLLB-200 supported language
+   * Uses only real authenticated users from database - no sample/mock data
    */
   const fetchMatchableMen = useCallback(async (config: MatchingConfig): Promise<MatchingResult> => {
     setIsLoading(true);
@@ -248,62 +235,64 @@ export const useMatchingService = () => {
       const nllbLanguageNames = new Set(
         ALL_NLLB200_LANGUAGES.map(l => l.name.toLowerCase())
       );
-      const indianLanguageNames = new Set(
-        INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase())
-      );
 
-      // Fetch online men
+      // Fetch online men from user_status
       const { data: onlineStatuses } = await supabase
         .from("user_status")
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      // Fetch sample men from separate table
-      const { data: sampleUsers } = await supabase
-        .from("sample_men")
-        .select("*")
-        .eq("is_online", true)
-        .eq("is_active", true);
-
       const matchableMen: MatchableUser[] = [];
 
-      // Process real users
+      // Process only real authenticated users
       if (onlineStatuses && onlineStatuses.length > 0) {
         const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-        // Fetch male profiles
+        // Fetch male profiles with photos
         const { data: maleProfiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, photo_url, country, primary_language, preferred_language, age")
           .in("user_id", onlineUserIds)
-          .or("gender.eq.male,gender.eq.Male");
+          .or("gender.eq.male,gender.eq.Male")
+          .not("photo_url", "is", null)
+          .neq("photo_url", "");
 
         if (maleProfiles && maleProfiles.length > 0) {
           const maleUserIds = maleProfiles.map(p => p.user_id);
 
-          // Fetch wallets and languages
-          const [walletsData, languagesData] = await Promise.all([
+          // Fetch wallets, languages, and active chat counts in parallel
+          const [walletsData, languagesData, chatCountsData] = await Promise.all([
             supabase.from("wallets").select("user_id, balance").in("user_id", maleUserIds),
-            supabase.from("user_languages").select("user_id, language_name, language_code").in("user_id", maleUserIds)
+            supabase.from("user_languages").select("user_id, language_name, language_code").in("user_id", maleUserIds),
+            supabase.from("active_chat_sessions").select("man_user_id").in("man_user_id", maleUserIds).eq("status", "active")
           ]);
 
           const walletMap = new Map(walletsData.data?.map(w => [w.user_id, Number(w.balance)]) || []);
           const languageMap = new Map(languagesData.data?.map(l => [l.user_id, { name: l.language_name, code: l.language_code }]) || []);
+          
+          // Count active chats per man
+          const chatCountMap = new Map<string, number>();
+          chatCountsData.data?.forEach(chat => {
+            const count = chatCountMap.get(chat.man_user_id) || 0;
+            chatCountMap.set(chat.man_user_id, count + 1);
+          });
 
           for (const profile of maleProfiles) {
             const langData = languageMap.get(profile.user_id);
             const manLanguage = langData?.name || profile.primary_language || profile.preferred_language || "Unknown";
             const languageCode = langData?.code || getNLLB200Code(manLanguage);
             const walletBalance = walletMap.get(profile.user_id) || 0;
+            const currentChatCount = chatCountMap.get(profile.user_id) || 0;
 
-            // Get user email to check if super user
-            const { data: authUser } = await supabase.auth.admin?.getUserById?.(profile.user_id) || {};
-            const userEmail = authUser?.user?.email || "";
-            const isSuperUser = isSuperUserEmail(userEmail);
-
-            // Super users bypass balance check, regular users must have recharged
-            if (!isSuperUser && walletBalance <= 0) continue;
+            // Skip users without NLLB-200 supported language
             if (!nllbLanguageNames.has(manLanguage.toLowerCase())) continue;
+
+            // Skip users without wallet balance (unless super user - handled on connection)
+            // Regular users must have recharged
+            if (walletBalance <= 0) continue;
+
+            // Skip users who are already at max chats (3)
+            if (currentChatCount >= 3) continue;
 
             // For Indian men, only show if same language
             const manCountry = profile.country?.toLowerCase() || "";
@@ -321,10 +310,10 @@ export const useMatchingService = () => {
               languageCode,
               country: profile.country,
               isOnline: true,
-              isBusy: false,
-              currentChatCount: 0,
+              isBusy: currentChatCount >= 3,
+              currentChatCount,
               walletBalance,
-              hasRecharged: true,
+              hasRecharged: walletBalance > 0,
               isSameLanguage,
               isNllbSupported: nllbLanguageNames.has(manLanguage.toLowerCase()),
               requiresTranslation: requiresTranslation(userLanguage, manLanguage),
@@ -333,43 +322,23 @@ export const useMatchingService = () => {
         }
       }
 
-      // Process sample users
-      if (sampleUsers && sampleUsers.length > 0) {
-        for (const sample of sampleUsers) {
-          const manLanguage = sample.language || "Unknown";
-          const manCountry = sample.country?.toLowerCase() || "";
-          const isManIndian = manCountry === "india";
-          const isSameLanguage = manLanguage.toLowerCase() === userLanguage.toLowerCase();
+      // Note: Only real authenticated users are shown - no sample/mock data
 
-          if (!nllbLanguageNames.has(manLanguage.toLowerCase())) continue;
-          if (isManIndian && !isSameLanguage) continue;
-
-          matchableMen.push({
-            userId: sample.id,
-            fullName: sample.name || "Anonymous",
-            age: sample.age,
-            photoUrl: sample.photo_url,
-            motherTongue: manLanguage,
-            languageCode: getNLLB200Code(manLanguage),
-            country: sample.country,
-            isOnline: true,
-            isBusy: false,
-            currentChatCount: 0,
-            walletBalance: 500, // Mock balance
-            hasRecharged: true,
-            isSameLanguage,
-            isNllbSupported: true,
-            requiresTranslation: requiresTranslation(userLanguage, manLanguage),
-          });
-        }
-      }
-
-      // Sort: same language first, then by wallet balance
+      // Sort: same language first, then by wallet balance (higher first), then by availability
       const sameLanguageUsers = matchableMen.filter(m => m.isSameLanguage);
       const translatedUsers = matchableMen.filter(m => !m.isSameLanguage);
 
-      sameLanguageUsers.sort((a, b) => b.walletBalance - a.walletBalance);
-      translatedUsers.sort((a, b) => b.walletBalance - a.walletBalance);
+      const sortByPriority = (a: MatchableUser, b: MatchableUser) => {
+        // First by availability (fewer chats = more available)
+        if (a.currentChatCount !== b.currentChatCount) {
+          return a.currentChatCount - b.currentChatCount;
+        }
+        // Then by wallet balance (higher first - more serious users)
+        return b.walletBalance - a.walletBalance;
+      };
+
+      sameLanguageUsers.sort(sortByPriority);
+      translatedUsers.sort(sortByPriority);
 
       return {
         sameLanguageUsers,
