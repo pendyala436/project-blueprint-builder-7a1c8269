@@ -110,6 +110,7 @@ const PasswordSetupScreen = () => {
       const email = localStorage.getItem("userEmail");
       const gender = localStorage.getItem("userGender");
       const phone = localStorage.getItem("userPhone");
+      const userName = localStorage.getItem("userName");
       const selectedLanguage = sessionStorage.getItem("selectedLanguage");
       const selectedCountry = sessionStorage.getItem("selectedCountry");
 
@@ -118,6 +119,9 @@ const PasswordSetupScreen = () => {
         navigate("/register");
         return;
       }
+
+      // Sign out any existing session first to avoid RLS conflicts
+      await supabase.auth.signOut();
 
       // Create Supabase auth user with emailRedirectTo
       const redirectUrl = `${window.location.origin}/`;
@@ -128,7 +132,7 @@ const PasswordSetupScreen = () => {
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: localStorage.getItem("userName") || "",
+            full_name: userName || "",
             gender: gender,
             phone: phone,
           }
@@ -149,6 +153,11 @@ const PasswordSetupScreen = () => {
         throw new Error("Failed to create account");
       }
 
+      // If session exists, set it as active (this happens when email confirmation is disabled)
+      if (authData.session) {
+        await supabase.auth.setSession(authData.session);
+      }
+
       // Create profile for the new user
       const dobString = localStorage.getItem("userDob");
       const dob = dobString ? new Date(dobString) : null;
@@ -158,7 +167,7 @@ const PasswordSetupScreen = () => {
         .from("profiles")
         .insert({
           user_id: authData.user.id,
-          full_name: localStorage.getItem("userName") || null,
+          full_name: userName || null,
           gender: gender || null,
           phone: phone || null,
           date_of_birth: dobString || null,
@@ -171,7 +180,7 @@ const PasswordSetupScreen = () => {
 
       if (profileError) {
         console.error("Profile creation error:", profileError);
-        // Don't fail completely if profile creation fails - it can be retried
+        // Profile might fail if email confirmation is required - handle in later steps
       }
 
       // Create wallet for the user
@@ -185,6 +194,13 @@ const PasswordSetupScreen = () => {
 
       if (walletError) {
         console.error("Wallet creation error:", walletError);
+      }
+
+      // Check if email confirmation is required
+      if (!authData.session) {
+        toast.success("Account created! Please check your email to confirm your registration.");
+        navigate("/");
+        return;
       }
 
       toast.success("Account created successfully! 🎉");
