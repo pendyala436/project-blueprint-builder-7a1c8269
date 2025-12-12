@@ -1403,8 +1403,7 @@ const DashboardScreen = () => {
           <AvailableGroupsSection
             currentUserId={currentUserId}
             userName={userName || 'User'}
-            userPhoto={currentUserPhoto}
-          />
+            userPhoto={null}
           />
         </div>
 
