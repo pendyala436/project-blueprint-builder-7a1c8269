@@ -2498,6 +2498,14 @@ export type Database = {
     Functions: {
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
+      get_current_chat_rate: {
+        Args: never
+        Returns: {
+          chat_rate: number
+          currency: string
+          video_rate: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
