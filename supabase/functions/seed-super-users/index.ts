@@ -16,6 +16,36 @@ interface ErrorItem {
   error: string
 }
 
+// Helper to verify admin JWT
+async function verifyAdminAuth(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { isValid: false, error: 'Missing or invalid Authorization header' };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  // Verify the JWT and get user
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return { isValid: false, error: 'Invalid or expired token' };
+  }
+
+  // Check if user has admin role
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  if (!roleData) {
+    return { isValid: false, error: 'Unauthorized: Admin role required' };
+  }
+
+  return { isValid: true, userId: user.id };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -28,6 +58,21 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
+
+    // SECURITY: Verify caller is an authenticated admin
+    const authResult = await verifyAdminAuth(req, supabase);
+    if (!authResult.isValid) {
+      console.log(`[SECURITY] Unauthorized access attempt to seed-super-users: ${authResult.error}`);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: authResult.error 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`[AUDIT] Admin ${authResult.userId} initiated seed-super-users`);
 
     const password = 'Chinn@2589'
     const results: { females: ResultItem[], males: ResultItem[], admins: ResultItem[], errors: ErrorItem[] } = { 
