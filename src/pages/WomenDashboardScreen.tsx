@@ -299,13 +299,13 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return t('free', 'Free');
+    if (activeChatCount === 0) return t('available', 'Available');
     if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
     return t('busy', 'Busy') + `(${activeChatCount})`;
   };
 
   const getStatusColor = () => {
-    // Green = Free, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
+    // Green = Available, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
     if (activeChatCount === 0) return "bg-green-500";
     if (activeChatCount >= 3) return "bg-red-500";
     return "bg-amber-500";
@@ -715,13 +715,13 @@ const WomenDashboardScreen = () => {
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            {/* Status indicator: Green=Free, Yellow=1-2 chats, Red=Full */}
+            {/* Status indicator: Green=Available, Yellow=1-2 chats, Red=Full */}
             <div className={cn(
               "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
               (user.activeChatCount || 0) === 0 ? "bg-green-500" :
               (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
             )} title={
-              (user.activeChatCount || 0) === 0 ? "Free" :
+              (user.activeChatCount || 0) === 0 ? "Available" :
               (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : `Busy (${user.activeChatCount}/3)`
             } />
             {user.walletBalance > 1000 && (

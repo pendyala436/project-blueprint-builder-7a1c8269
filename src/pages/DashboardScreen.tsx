@@ -436,13 +436,13 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return t('free', 'Free');
+    if (activeChatCount === 0) return t('available', 'Available');
     if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
     return t('busy', 'Busy') + `(${activeChatCount})`;
   };
 
   const getStatusColor = () => {
-    // Green = Free, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
+    // Green = Available, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
     if (activeChatCount === 0) return "bg-green-500";
     if (activeChatCount >= 3) return "bg-red-500";
     return "bg-amber-500";
