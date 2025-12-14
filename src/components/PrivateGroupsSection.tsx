@@ -99,17 +99,34 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
 
     try {
-      const { error } = await supabase
+      const { data: newGroup, error } = await supabase
         .from('private_groups')
         .insert({
           owner_id: currentUserId,
           name: groupName.trim(),
           description: groupDescription.trim() || null,
           min_gift_amount: minGiftAmount,
-          access_type: getAccessType()
-        });
+          access_type: getAccessType(),
+          participant_count: 1 // Owner is automatically a member
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Automatically add owner as a member
+      const { error: membershipError } = await supabase
+        .from('group_memberships')
+        .insert({
+          group_id: newGroup.id,
+          user_id: currentUserId,
+          has_access: true,
+          gift_amount_paid: 0
+        });
+
+      if (membershipError) {
+        console.error('Failed to add owner membership:', membershipError);
+      }
 
       toast.success('Private group created successfully!');
       setShowCreateDialog(false);
