@@ -1,6 +1,14 @@
 # Meow Meow Desktop App Build Guide
 
-This guide explains how to build native desktop applications for Windows, Linux, and macOS.
+Build native desktop applications for **Windows**, **Linux**, and **macOS**.
+
+## Supported Platforms
+
+| Platform | Output Formats |
+|----------|---------------|
+| Windows  | `.exe` installer, Portable `.exe` |
+| Linux    | `.AppImage`, `.deb`, `.rpm` |
+| macOS    | `.dmg` (requires Mac to build) |
 
 ## Prerequisites
 
@@ -36,6 +44,7 @@ Add these scripts to your `package.json`:
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win",
     "electron:build:linux": "npm run build && electron-builder --linux",
+    "electron:build:mac": "npm run build && electron-builder --mac",
     "electron:build:mac": "npm run build && electron-builder --mac"
   }
 }
@@ -75,7 +84,16 @@ Output files:
 npm run electron:build:mac
 ```
 
-> **Note:** Building for macOS requires a Mac computer.
+Output files:
+- `Meow Meow-x.x.x-mac-x64.dmg` (Intel Macs)
+- `Meow Meow-x.x.x-mac-arm64.dmg` (Apple Silicon M1/M2/M3)
+
+> **Note:** Building for macOS requires a Mac computer with Xcode installed.
+
+#### Build All Platforms at Once
+```bash
+npm run electron:build
+```
 
 ## Features
 
