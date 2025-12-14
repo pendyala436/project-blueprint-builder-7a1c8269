@@ -13,7 +13,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { I18nProvider } from "@/components/I18nProvider";
 import SecurityProvider from "@/components/SecurityProvider";
 import AuthScreen from "./pages/AuthScreen";
@@ -88,7 +88,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <PWAInstallPrompt />
-        <BrowserRouter>
+        <MemoryRouter initialEntries={["/"]}>
           <Routes>
             <Route path="/" element={<AuthScreen />} />
             <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
@@ -142,7 +142,7 @@ const App = () => (
             {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+        </MemoryRouter>
         </TooltipProvider>
       </SecurityProvider>
     </I18nProvider>
