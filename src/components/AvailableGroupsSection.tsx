@@ -151,9 +151,40 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   };
 
   const handleUnlockGroup = async (group: PrivateGroup) => {
+    // If free group, grant access directly without gift
+    if (group.min_gift_amount === 0) {
+      await handleFreeJoin(group);
+      return;
+    }
     setSelectedGroup(group);
     await fetchGifts(group.min_gift_amount);
     setShowGiftDialog(true);
+  };
+
+  const handleFreeJoin = async (group: PrivateGroup) => {
+    try {
+      const { error } = await supabase
+        .from('group_memberships')
+        .upsert({
+          group_id: group.id,
+          user_id: currentUserId,
+          has_access: true,
+          gift_amount_paid: 0
+        }, { onConflict: 'group_id,user_id' });
+
+      if (error) throw error;
+
+      // Update participant count
+      await supabase
+        .from('private_groups')
+        .update({ participant_count: group.participant_count + 1 })
+        .eq('id', group.id);
+
+      toast.success(`You joined ${group.name}!`);
+      fetchMyMemberships();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to join group');
+    }
   };
 
   const handleSendGift = async (gift: GiftItem) => {
@@ -245,9 +276,23 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant={unlocked ? 'default' : 'secondary'} className="gap-1">
-                      {unlocked ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                      {unlocked ? 'Unlocked' : `₹${group.min_gift_amount}+`}
+                    <Badge variant={unlocked ? 'default' : group.min_gift_amount === 0 ? 'default' : 'secondary'} className="gap-1">
+                      {unlocked ? (
+                        <>
+                          <Unlock className="h-3 w-3" />
+                          Unlocked
+                        </>
+                      ) : group.min_gift_amount === 0 ? (
+                        <>
+                          <Unlock className="h-3 w-3" />
+                          Free Entry
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="h-3 w-3" />
+                          ₹{group.min_gift_amount}+
+                        </>
+                      )}
                     </Badge>
                     <Badge variant="outline" className="gap-1">
                       <Users className="h-3 w-3" />
@@ -286,8 +331,17 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       className="w-full gap-2" 
                       onClick={() => handleUnlockGroup(group)}
                     >
-                      <Gift className="h-4 w-4" />
-                      Send Gift to Unlock
+                      {group.min_gift_amount === 0 ? (
+                        <>
+                          <Users className="h-4 w-4" />
+                          Join Free
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="h-4 w-4" />
+                          Send Gift to Unlock
+                        </>
+                      )}
                     </Button>
                   )}
                 </CardContent>
