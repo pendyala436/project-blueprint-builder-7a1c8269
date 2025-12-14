@@ -42,8 +42,8 @@ import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
-
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 
 interface Notification {
   id: string;
@@ -85,7 +85,6 @@ const WomenDashboardScreen = () => {
   const { toast } = useToast();
   const { t, translateDynamicBatch, currentLanguage, setLanguage, isLoading: isTranslating } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
@@ -171,6 +170,24 @@ const WomenDashboardScreen = () => {
   const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
   const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+
+  // Activity-based online/offline status (10 min inactivity = offline)
+  const { 
+    isOnline, 
+    isManuallyOffline,
+    toggleOnlineStatus 
+  } = useActivityBasedStatus({
+    userId: currentUserId,
+    inactivityTimeout: 10 * 60 * 1000, // 10 minutes
+    onStatusChange: (online) => {
+      if (!online) {
+        toast({
+          title: t('autoOffline', 'Gone Offline'),
+          description: t('inactivityMessage', 'You went offline due to inactivity'),
+        });
+      }
+    }
+  });
 
   // Real-time subscription for online users, chat sessions, video calls, and earnings
   useEffect(() => {
@@ -569,8 +586,6 @@ const WomenDashboardScreen = () => {
             last_seen: new Date().toISOString(),
           });
       }
-
-      setIsOnline(online);
     } catch {
       // Error updating status - silently handled
     }
@@ -854,8 +869,7 @@ const WomenDashboardScreen = () => {
                   <Switch
                     checked={isOnline}
                     onCheckedChange={(checked) => {
-                      setIsOnline(checked);
-                      updateUserOnlineStatus(checked);
+                      toggleOnlineStatus(checked);
                       toast({
                         title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
