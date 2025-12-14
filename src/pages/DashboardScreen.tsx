@@ -481,6 +481,18 @@ const DashboardScreen = () => {
         return;
       }
 
+      // Also check female_profiles in case user registered as female but no main profile
+      const { data: femaleProfile } = await supabase
+        .from("female_profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (femaleProfile) {
+        navigate("/women-dashboard");
+        return;
+      }
+
       // Fetch user profile from male_profiles table
       const { data: maleProfile } = await supabase
         .from("male_profiles")

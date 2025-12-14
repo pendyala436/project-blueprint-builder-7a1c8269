@@ -105,7 +105,19 @@ const AuthScreen = () => {
           .eq("user_id", authData.user.id)
           .maybeSingle();
 
-        if (profile?.gender === "female") {
+        if (profile?.gender?.toLowerCase() === "female") {
+          navigate("/women-dashboard");
+          return;
+        }
+
+        // Also check female_profiles table as fallback
+        const { data: femaleProfile } = await supabase
+          .from("female_profiles")
+          .select("user_id")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (femaleProfile) {
           navigate("/women-dashboard");
         } else {
           navigate("/dashboard");
