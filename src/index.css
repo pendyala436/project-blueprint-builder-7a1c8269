@@ -204,11 +204,17 @@
   }
 }
 
+/* ========================================
+   RESPONSIVE DEVICE UTILITIES
+   ======================================== */
+
 @layer utilities {
+  /* Font utilities */
   .font-display {
     font-family: 'Quicksand', system-ui, sans-serif;
   }
 
+  /* Gradient utilities */
   .gradient-primary {
     background: var(--gradient-primary);
   }
@@ -221,6 +227,7 @@
     background: var(--gradient-aurora);
   }
 
+  /* Shadow utilities */
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
@@ -233,12 +240,161 @@
     box-shadow: var(--shadow-glow);
   }
 
-  /* Aurora glow effect for buttons and elements - GPU accelerated */
+  /* Aurora glow effect */
   .aurora-glow {
     box-shadow: 0 0 16px hsl(var(--primary) / 0.35);
     will-change: opacity;
   }
 
+  /* ========================================
+     DEVICE-SPECIFIC UTILITIES
+     ======================================== */
+  
+  /* Touch-friendly button sizes */
+  .btn-touch {
+    @apply min-h-[44px] min-w-[44px] px-4 py-3;
+  }
+
+  /* Safe area padding */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Responsive container */
+  .container-responsive {
+    @apply w-full mx-auto px-4;
+    max-width: min(100% - 2rem, 1400px);
+  }
+
+  /* Responsive text */
+  .text-responsive {
+    font-size: clamp(1rem, 2.5vw + 0.5rem, 1.25rem);
+    line-height: 1.6;
+  }
+
+  .heading-responsive {
+    font-size: clamp(1.5rem, 5vw + 0.5rem, 3rem);
+    line-height: 1.2;
+  }
+
+  /* Responsive grid */
+  .grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 1rem;
+  }
+
+  /* Responsive flex */
+  .flex-responsive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  /* Hide on specific devices */
+  .hide-mobile {
+    @apply hidden md:block;
+  }
+
+  .hide-desktop {
+    @apply block md:hidden;
+  }
+
+  .hide-tablet {
+    @apply block md:hidden lg:block;
+  }
+
+  /* Show on specific devices */
+  .show-mobile-only {
+    @apply block sm:hidden;
+  }
+
+  .show-tablet-only {
+    @apply hidden md:block lg:hidden;
+  }
+
+  .show-desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Responsive spacing */
+  .space-responsive {
+    @apply space-y-4 md:space-y-6 lg:space-y-8;
+  }
+
+  .gap-responsive {
+    @apply gap-3 sm:gap-4 md:gap-6 lg:gap-8;
+  }
+
+  .p-responsive {
+    @apply p-3 sm:p-4 md:p-6 lg:p-8;
+  }
+
+  .px-responsive {
+    @apply px-4 sm:px-6 md:px-8 lg:px-12;
+  }
+
+  .py-responsive {
+    @apply py-4 sm:py-6 md:py-8 lg:py-12;
+  }
+
+  /* Touch device optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-larger {
+      @apply text-lg p-4;
+    }
+    
+    .touch-scroll {
+      -webkit-overflow-scrolling: touch;
+      overflow-y: auto;
+    }
+  }
+
+  /* Mouse/desktop optimizations */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-effects {
+      @apply transition-all duration-200 hover:scale-[1.02];
+    }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-safe-animate {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* High contrast mode */
+  @media (prefers-contrast: high) {
+    .contrast-adaptive {
+      @apply border-2 border-foreground;
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    .print-only {
+      display: block !important;
+    }
+  }
+
+  /* Animations */
   .animate-slide-up {
     animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
