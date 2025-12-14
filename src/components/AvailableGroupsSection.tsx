@@ -285,7 +285,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant={unlocked ? 'default' : group.min_gift_amount === 0 ? 'default' : 'secondary'} className="gap-1">
+                    <Badge variant={unlocked ? 'default' : 'secondary'} className="gap-1">
                       {unlocked ? (
                         <>
                           <Unlock className="h-3 w-3" />
@@ -294,7 +294,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       ) : group.min_gift_amount === 0 ? (
                         <>
                           <Unlock className="h-3 w-3" />
-                          Free Entry
+                          Open
                         </>
                       ) : (
                         <>
@@ -343,7 +343,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       {group.min_gift_amount === 0 ? (
                         <>
                           <Users className="h-4 w-4" />
-                          Join Free
+                          Join
                         </>
                       ) : (
                         <>
