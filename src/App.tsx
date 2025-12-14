@@ -52,6 +52,8 @@ import AdminLanguageLimits from "./pages/AdminLanguageLimits";
 import PasswordResetScreen from "./pages/PasswordResetScreen";
 import AdminTransactionHistory from "./pages/AdminTransactionHistory";
 import NotFound from "./pages/NotFound";
+import InstallApp from "./pages/InstallApp";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PWAInstallPrompt />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AuthScreen />} />
@@ -110,6 +113,7 @@ const App = () => (
             <Route path="/admin/policy-alerts" element={<AdminPolicyAlerts />} />
             <Route path="/admin/language-limits" element={<AdminLanguageLimits />} />
             <Route path="/admin/transactions" element={<AdminTransactionHistory />} />
+            <Route path="/install" element={<InstallApp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
