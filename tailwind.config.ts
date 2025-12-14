@@ -24,47 +24,127 @@ export default {
       },
     },
     screens: {
-      // Mobile first breakpoints
-      "xs": "320px",      // Small phones
-      "sm": "480px",      // Large phones
-      "md": "768px",      // Tablets / iPads
-      "lg": "1024px",     // Laptops / Small desktops
-      "xl": "1280px",     // Desktops
-      "2xl": "1536px",    // Large desktops
-      "3xl": "1920px",    // Ultra-wide / 4K
+      // ========================================
+      // MOBILE DEVICES
+      // ========================================
+      // Small phones (iPhone SE, older Android)
+      "xs": "320px",
+      // Standard phones (iPhone 14/15, Galaxy S series)
+      "sm": "375px",
+      // Large phones / Phablets (iPhone Pro Max, Galaxy Note)
+      "phablet": "428px",
       
-      // Device-specific breakpoints
-      "mobile": { "max": "767px" },           // All mobile devices
-      "tablet": { "min": "768px", "max": "1023px" },  // Tablets only
-      "laptop": { "min": "1024px", "max": "1279px" }, // Laptops only
-      "desktop": { "min": "1280px" },         // Desktop and above
+      // ========================================
+      // TABLETS
+      // ========================================
+      // Small tablets (iPad Mini, Kindle Fire)
+      "md": "768px",
+      // Standard tablets (iPad, Galaxy Tab)
+      "tablet": "834px",
+      // Large tablets (iPad Pro 12.9")
+      "tablet-lg": "1024px",
       
-      // Orientation
+      // ========================================
+      // LAPTOPS & DESKTOPS
+      // ========================================
+      // Small laptops / Chromebooks
+      "lg": "1024px",
+      // Standard laptops (MacBook Air/Pro 13")
+      "laptop": "1280px",
+      // Desktop monitors
+      "xl": "1280px",
+      // Large desktops
+      "2xl": "1536px",
+      // Ultra-wide / 4K
+      "3xl": "1920px",
+      // 5K / Large displays
+      "4xl": "2560px",
+      
+      // ========================================
+      // DEVICE-SPECIFIC BREAKPOINTS
+      // ========================================
+      // Mobile-only (phones)
+      "mobile": { "max": "767px" },
+      // Tablet-only
+      "tablet-only": { "min": "768px", "max": "1023px" },
+      // Laptop-only
+      "laptop-only": { "min": "1024px", "max": "1279px" },
+      // Desktop and above
+      "desktop": { "min": "1280px" },
+      
+      // ========================================
+      // FOLDABLE DEVICES
+      // ========================================
+      // Samsung Galaxy Fold (closed)
+      "fold-closed": { "raw": "(max-width: 280px)" },
+      // Samsung Galaxy Fold (open)
+      "fold-open": { "raw": "(min-width: 717px) and (max-width: 884px)" },
+      
+      // ========================================
+      // ORIENTATION
+      // ========================================
       "portrait": { "raw": "(orientation: portrait)" },
       "landscape": { "raw": "(orientation: landscape)" },
       
-      // Touch devices
+      // ========================================
+      // INPUT METHODS
+      // ========================================
+      // Touch devices (phones, tablets)
       "touch": { "raw": "(hover: none) and (pointer: coarse)" },
+      // Stylus devices (drawing tablets)
       "stylus": { "raw": "(hover: none) and (pointer: fine)" },
+      // Mouse/trackpad devices (laptops, desktops)
       "mouse": { "raw": "(hover: hover) and (pointer: fine)" },
+      // Keyboard navigation
+      "keyboard": { "raw": "(hover: hover)" },
       
-      // High DPI screens
+      // ========================================
+      // DISPLAY QUALITY
+      // ========================================
+      // Standard displays
+      "standard-dpi": { "raw": "(max-resolution: 1dppx)" },
+      // Retina / High-DPI displays
       "retina": { "raw": "(-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi)" },
+      // Super Retina / 3x displays
+      "retina-3x": { "raw": "(-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi)" },
       
-      // Reduced motion preference
+      // ========================================
+      // USER PREFERENCES
+      // ========================================
       "motion-safe": { "raw": "(prefers-reduced-motion: no-preference)" },
       "motion-reduce": { "raw": "(prefers-reduced-motion: reduce)" },
-      
-      // Dark mode preference
       "dark-mode": { "raw": "(prefers-color-scheme: dark)" },
       "light-mode": { "raw": "(prefers-color-scheme: light)" },
+      "high-contrast": { "raw": "(prefers-contrast: high)" },
       
-      // Print
+      // ========================================
+      // SPECIAL SCREENS
+      // ========================================
+      // Short screens (landscape phones)
+      "short": { "raw": "(max-height: 500px)" },
+      // Tall screens
+      "tall": { "raw": "(min-height: 900px)" },
+      // Wide screens (ultra-wide monitors)
+      "wide": { "raw": "(min-aspect-ratio: 21/9)" },
+      // Square-ish screens
+      "square": { "raw": "(min-aspect-ratio: 3/4) and (max-aspect-ratio: 4/3)" },
+      
+      // ========================================
+      // TV & LARGE SCREENS
+      // ========================================
+      "tv": { "raw": "(min-width: 1920px) and (min-height: 1080px)" },
+      "tv-4k": { "raw": "(min-width: 3840px)" },
+      
+      // ========================================
+      // CHROMEBOOK / HYBRID
+      // ========================================
+      "chromebook": { "raw": "(min-width: 1024px) and (hover: hover) and (pointer: fine), (min-width: 1024px) and (hover: none) and (pointer: coarse)" },
+      
+      // ========================================
+      // PRINT
+      // ========================================
       "print": { "raw": "print" },
-      
-      // Specific device heights (for safe areas)
-      "short": { "raw": "(max-height: 700px)" },
-      "tall": { "raw": "(min-height: 800px)" },
+      "screen": { "raw": "screen" },
     },
     extend: {
       fontFamily: {
