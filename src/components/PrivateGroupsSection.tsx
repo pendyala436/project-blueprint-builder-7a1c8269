@@ -336,7 +336,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="gap-1">
                     <Gift className="h-3 w-3" />
-                    {group.min_gift_amount === 0 ? 'Open' : `Min ₹${group.min_gift_amount}`}
+                    {group.min_gift_amount === 0 ? 'Free (No Gift Required)' : `Min ₹${group.min_gift_amount} to Join`}
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
