@@ -208,17 +208,9 @@ const AdminUserManagement = () => {
   const runAIApproval = async () => {
     setRunningAI(true);
     try {
-      const response = await fetch(
-        "https://tvneohngeracipjajzos.supabase.co/functions/v1/ai-women-approval",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmVvaG5nZXJhY2lwamFqem9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5ODgxNDEsImV4cCI6MjA4MDU2NDE0MX0.3YgATF-HMODDQe5iJbpiUuL2SlycM5Z5XmAdKbnjg_A`,
-          },
-        }
-      );
-      const data = await response.json();
+      const { data, error } = await supabase.functions.invoke('ai-women-approval', {});
+      
+      if (error) throw error;
       
       if (data.success) {
         toast.success(`AI Approval completed: ${data.results.approved} approved, ${data.results.disapproved} disapproved, ${data.results.rotatedOut} rotated out`);

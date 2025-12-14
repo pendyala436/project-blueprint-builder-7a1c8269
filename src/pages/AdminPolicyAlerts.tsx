@@ -235,19 +235,11 @@ const AdminPolicyAlerts = () => {
   const handleScanMessages = async () => {
     setScanning(true);
     try {
-      const response = await fetch(
-        "https://tvneohngeracipjajzos.supabase.co/functions/v1/content-moderation",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmVvaG5nZXJhY2lwamFqem9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5ODgxNDEsImV4cCI6MjA4MDU2NDE0MX0.3YgATF-HMODDQe5iJbpiUuL2SlycM5Z5XmAdKbnjg_A`,
-          },
-          body: JSON.stringify({ action: "scan_recent_messages" }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('content-moderation', {
+        body: { action: "scan_recent_messages" },
+      });
 
-      const data = await response.json();
+      if (error) throw error;
       if (data.success) {
         toast.success(`Scan complete: ${data.flagged} violations found in ${data.scanned} messages`);
         loadAlerts();

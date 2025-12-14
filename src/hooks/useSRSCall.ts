@@ -9,12 +9,13 @@ import { useToast } from '@/hooks/use-toast';
  * - All streams are ephemeral (real-time only)
  * - Session metadata is auto-deleted after 5 minutes
  * - SRS is configured without recording (DVR disabled)
+ * 
+ * Configuration is handled via edge functions - no external URLs needed in client code.
+ * The video-call-server edge function manages all SRS communication.
  */
 const SRS_CONFIG = {
-  serverUrl: 'http://localhost:1985', // SRS API server
-  rtcUrl: 'webrtc://localhost/live',   // WebRTC publish/play URL
-  hlsUrl: 'http://localhost:8080/live', // HLS playback URL (live only, no recording)
   noRecording: true, // Flag indicating no content is stored
+  // All SRS URLs are handled server-side via edge functions
 };
 
 interface SRSCallState {
@@ -411,10 +412,14 @@ export const useSRSCall = ({
     }
   }, [callId, createSRSPlayer, toast]);
 
-  // Get HLS URL for large-scale streaming
-  const getHLSUrl = useCallback(() => {
+  // Get HLS URL for large-scale streaming (handled server-side)
+  const getHLSUrl = useCallback(async () => {
     if (state.streamId) {
-      return `${SRS_CONFIG.hlsUrl}/${state.streamId}.m3u8`;
+      // Request HLS URL from edge function to avoid hardcoded server URLs
+      const { data } = await supabase.functions.invoke('video-call-server', {
+        body: { action: 'get_hls_url', streamName: state.streamId }
+      });
+      return data?.hlsUrl || null;
     }
     return null;
   }, [state.streamId]);
