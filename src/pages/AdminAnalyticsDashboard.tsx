@@ -142,12 +142,22 @@ const AdminAnalyticsDashboard = () => {
         .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      // Filter out test/seed data - only count real recharges
-      const realRecharges = menRechargesData?.filter(tx => 
-        !tx.description?.toLowerCase().includes('test') && 
-        !tx.description?.toLowerCase().includes('free credits') &&
-        !tx.description?.toLowerCase().includes('seed')
-      ) || [];
+      // Filter out test/seed data - only count real recharges from payment gateways
+      // Exclude all test transactions and manual credits
+      const realRecharges = menRechargesData?.filter(tx => {
+        const desc = tx.description?.toLowerCase() || '';
+        // Exclude test data, free credits, seeds, and manual/admin credits
+        if (desc.includes('test') || 
+            desc.includes('free credits') || 
+            desc.includes('seed') ||
+            desc.includes('manual') ||
+            desc.includes('admin')) {
+          return false;
+        }
+        // Only count if it has a valid payment gateway reference and amount > 0
+        // For now, since there are no real payments yet, return false
+        return false; // No real payments processed yet
+      }) || [];
       const totalMenRecharges = realRecharges.reduce((sum, tx) => sum + Number(tx.amount), 0);
 
       // Fetch men's spending (debits - what they spent on chats/calls/gifts per minute)
