@@ -25,7 +25,6 @@ import {
   Languages,
   ChevronRight,
   TrendingUp,
-  UserCheck,
   MessageCircle
 } from "lucide-react";
 
@@ -125,13 +124,6 @@ const AdminDashboard = () => {
       path: "/admin/policy-alerts",
       color: "from-orange-500 to-orange-600",
       badge: stats.policyAlerts > 0 ? `${stats.policyAlerts} alerts` : undefined
-    },
-    {
-      title: "Sample Users",
-      description: "Manage sample/demo users",
-      icon: <UserCheck className="h-6 w-6" />,
-      path: "/admin/sample-users",
-      color: "from-violet-500 to-violet-600"
     },
     {
       title: "Performance",
