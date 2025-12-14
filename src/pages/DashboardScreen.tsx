@@ -39,8 +39,10 @@ import {
   CheckCircle2,
   RefreshCw,
   Filter,
-  Eye
+  Eye,
+  Power
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
@@ -1081,7 +1083,19 @@ const DashboardScreen = () => {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <Circle className={`w-3 h-3 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted text-muted"}`} />
+                  <Switch
+                    checked={isOnline}
+                    onCheckedChange={(checked) => {
+                      setIsOnline(checked);
+                      updateUserOnlineStatus(checked);
+                      toast({
+                        title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
+                        description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
+                      });
+                    }}
+                    className="data-[state=checked]:bg-emerald-500"
+                  />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-emerald-500" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
