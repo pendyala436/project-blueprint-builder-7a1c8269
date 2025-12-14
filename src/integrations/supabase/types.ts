@@ -2506,6 +2506,38 @@ export type Database = {
           video_rate: number
         }[]
       }
+      get_matched_female_profile: {
+        Args: { target_user_id: string }
+        Returns: {
+          age: number
+          approval_status: string
+          bio: string
+          country: string
+          full_name: string
+          id: string
+          interests: string[]
+          is_verified: boolean
+          occupation: string
+          photo_url: string
+          state: string
+        }[]
+      }
+      get_matched_profile: {
+        Args: { target_user_id: string }
+        Returns: {
+          age: number
+          bio: string
+          country: string
+          full_name: string
+          gender: string
+          id: string
+          interests: string[]
+          is_verified: boolean
+          occupation: string
+          photo_url: string
+          state: string
+        }[]
+      }
       get_safe_profile: {
         Args: { target_user_id: string }
         Returns: {
