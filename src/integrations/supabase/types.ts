@@ -2506,6 +2506,21 @@ export type Database = {
           video_rate: number
         }[]
       }
+      get_safe_profile: {
+        Args: { target_user_id: string }
+        Returns: {
+          age: number
+          bio: string
+          country: string
+          full_name: string
+          gender: string
+          id: string
+          interests: string[]
+          occupation: string
+          photo_url: string
+          state: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
