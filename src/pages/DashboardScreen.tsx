@@ -57,6 +57,7 @@ import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGE
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
+import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 
 interface Notification {
   id: string;
@@ -190,7 +191,6 @@ const DashboardScreen = () => {
   const { t, translateDynamicBatch, currentLanguage } = useTranslation();
   const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userCountry, setUserCountry] = useState("IN");
@@ -252,6 +252,24 @@ const DashboardScreen = () => {
     findNextAvailableWoman, 
     initiateReconnect 
   } = useAutoReconnect(currentUserId, userLanguage);
+
+  // Activity-based online/offline status (10 min inactivity = offline)
+  const { 
+    isOnline, 
+    isManuallyOffline,
+    toggleOnlineStatus 
+  } = useActivityBasedStatus({
+    userId: currentUserId,
+    inactivityTimeout: 10 * 60 * 1000, // 10 minutes
+    onStatusChange: (online) => {
+      if (!online) {
+        toast({
+          title: t('autoOffline', 'Gone Offline'),
+          description: t('inactivityMessage', 'You went offline due to inactivity'),
+        });
+      }
+    }
+  });
 
   // Get currency info based on user's country
   const getCurrencyInfo = () => {
@@ -931,8 +949,6 @@ const DashboardScreen = () => {
             last_seen: new Date().toISOString(),
           });
       }
-
-      setIsOnline(online);
     } catch (error) {
       console.error("Error updating status:", error);
     }
@@ -1086,8 +1102,7 @@ const DashboardScreen = () => {
                   <Switch
                     checked={isOnline}
                     onCheckedChange={(checked) => {
-                      setIsOnline(checked);
-                      updateUserOnlineStatus(checked);
+                      toggleOnlineStatus(checked);
                       toast({
                         title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
