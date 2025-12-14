@@ -1481,7 +1481,7 @@ const DashboardScreen = () => {
               <Button 
                 variant="aurora" 
                 className="mt-4"
-                onClick={() => navigate("/find-match")}
+                onClick={() => navigate("/match-discovery")}
               >
                 <Search className="w-4 h-4 mr-2" />
                 {t('startExploring', 'Start Exploring')}
