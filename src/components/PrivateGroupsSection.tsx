@@ -8,10 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift } from 'lucide-react';
 import { GroupChatWindow } from './GroupChatWindow';
 import { GroupVideoCall } from './GroupVideoCall';
+
+// Fixed gift amounts available in the app
+const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
 
 interface PrivateGroup {
   id: string;
@@ -235,12 +239,18 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               </div>
               <div className="space-y-2">
                 <Label>Minimum Gift Amount (₹)</Label>
-                <Input 
-                  type="number"
-                  value={minGiftAmount}
-                  onChange={(e) => setMinGiftAmount(Number(e.target.value))}
-                  min={0}
-                />
+                <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select amount" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GIFT_AMOUNTS.map((amount) => (
+                      <SelectItem key={amount} value={String(amount)}>
+                        {amount === 0 ? 'Free (Open)' : `₹${amount}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
                   Every gift sent is split: 50% to you, 50% to admin.
                 </p>
@@ -382,12 +392,18 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Minimum Gift Amount (₹)</Label>
-              <Input 
-                type="number"
-                value={minGiftAmount}
-                onChange={(e) => setMinGiftAmount(Number(e.target.value))}
-                min={0}
-              />
+              <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select amount" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GIFT_AMOUNTS.map((amount) => (
+                    <SelectItem key={amount} value={String(amount)}>
+                      {amount === 0 ? 'Free (Open)' : `₹${amount}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
                 Men must send gift of this amount to join
               </p>
