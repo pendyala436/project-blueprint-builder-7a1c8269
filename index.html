@@ -2,28 +2,57 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    
+    <!-- Browser Compatibility -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="renderer" content="webkit" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    
+    <!-- App Info -->
     <title>MEOW MEOW - Find Your Purrfect Match</title>
     <meta name="description" content="MEOW MEOW is a global dating app connecting people through meaningful chat-only conversations. Find your perfect match worldwide." />
     <meta name="author" content="MEOW MEOW" />
     <meta name="keywords" content="dating app, global dating, chat dating, find love, online dating, international dating" />
 
-    <!-- Mobile App Meta Tags -->
+    <!-- Mobile App Meta Tags - iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Meow Meow" />
+    
+    <!-- Mobile App Meta Tags - Android/Chrome -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#8B5CF6" />
+    <meta name="application-name" content="Meow Meow" />
+    
+    <!-- Mobile App Meta Tags - Windows -->
+    <meta name="msapplication-TileColor" content="#0a0d14" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- Theme Colors - All Browsers -->
+    <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="format-detection" content="telephone=no" />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Favicon - All Browsers -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     
     <!-- iOS Icons -->
     <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
     <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
+    
+    <!-- Safari Pinned Tab -->
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#0a0d14" />
     
     <!-- iOS Splash Screens - iPhone -->
     <link rel="apple-touch-startup-image" href="/splash/splash-screen.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
@@ -42,11 +71,14 @@
     <link rel="apple-touch-startup-image" href="/splash/splash-screen.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)" />
     <link rel="apple-touch-startup-image" href="/splash/splash-screen.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" />
 
+    <!-- Open Graph -->
     <meta property="og:title" content="MEOW MEOW - Find Your Purrfect Match" />
     <meta property="og:description" content="Global dating app connecting people through meaningful conversations." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:site_name" content="Meow Meow" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@meowmeowapp" />
     <meta name="twitter:image" content="/icons/icon-512x512.png" />
@@ -59,10 +91,42 @@
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
       }
+      
+      /* Prevent FOUC (Flash of Unstyled Content) */
+      html { visibility: visible; opacity: 1; }
+      
+      /* Cross-browser smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Cross-browser text rendering */
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      
+      /* Hide scrollbar but keep functionality - Cross-browser */
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
     </style>
   </head>
 
   <body>
+    <!-- No JavaScript fallback -->
+    <noscript>
+      <div style="padding: 20px; text-align: center; background: #0a0d14; color: white; min-height: 100vh;">
+        <h1>Meow Meow</h1>
+        <p>Please enable JavaScript to use this app.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
