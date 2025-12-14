@@ -67,36 +67,19 @@ const LocationSetupScreen = () => {
         setLatitude(lat);
         setLongitude(lng);
         
-        // Reverse geocoding to get country and state
-        try {
-          const response = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
-          );
-          const data = await response.json();
-          
-          if (data.countryCode) {
-            setCountry(data.countryCode);
-          }
-          if (data.principalSubdivision) {
-            setState(data.principalSubdivision);
-          }
-          
-          setLocationDetected(true);
-          
-          // Trigger pin drop animation
-          setTimeout(() => {
-            setPinDropped(true);
-          }, 500);
-          
-          toast({
-            title: "Location detected",
-            description: `${data.city || data.locality || ''}, ${data.principalSubdivision || ''}, ${data.countryName || ''}`,
-          });
-        } catch (error) {
-          console.error("Reverse geocoding failed:", error);
-          setLocationDetected(true);
-          setTimeout(() => setPinDropped(true), 500);
-        }
+        // Location coordinates captured - user will select country/state manually
+        // This avoids dependency on external geocoding APIs
+        setLocationDetected(true);
+        
+        // Trigger pin drop animation
+        setTimeout(() => {
+          setPinDropped(true);
+        }, 500);
+        
+        toast({
+          title: "Location detected",
+          description: "Please select your country and state below.",
+        });
         
         setIsDetecting(false);
       },
