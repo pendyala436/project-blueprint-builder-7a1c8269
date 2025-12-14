@@ -126,6 +126,23 @@ interface ChatRequest {
   exclude_user_ids?: string[]; // Users to exclude from matching
 }
 
+// Helper to verify authenticated user and extract user ID from JWT
+async function verifyAuthAndGetUser(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { isValid: false, error: 'Missing or invalid Authorization header' };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return { isValid: false, error: 'Invalid or expired token' };
+  }
+
+  return { isValid: true, userId: user.id };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -136,12 +153,44 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // SECURITY: Verify caller is authenticated
+    const authResult = await verifyAuthAndGetUser(req, supabase);
+    if (!authResult.isValid) {
+      console.log(`[SECURITY] Unauthorized access to chat-manager: ${authResult.error}`);
+      return new Response(
+        JSON.stringify({ success: false, error: authResult.error }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authenticatedUserId = authResult.userId;
+
     // Load dynamic settings from admin_settings
     await loadAdminSettings(supabase);
 
     const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = await req.json();
 
-    console.log(`Chat manager action: ${action}`, { man_user_id, woman_user_id, user_id, chat_id, preferred_language, man_country });
+    // SECURITY: Verify the user_id in request matches authenticated user (prevent impersonation)
+    const requestedUserId = user_id || man_user_id || woman_user_id;
+    if (requestedUserId && requestedUserId !== authenticatedUserId) {
+      // Check if authenticated user is admin (admins can act on behalf of others)
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authenticatedUserId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      if (!roleData) {
+        console.log(`[SECURITY] User ${authenticatedUserId} attempted to act as ${requestedUserId}`);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Cannot perform actions for other users' }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    console.log(`[AUDIT] User ${authenticatedUserId} called chat-manager action: ${action}`, { man_user_id, woman_user_id, user_id, chat_id, preferred_language, man_country });
 
     // Helper function to update user status based on their chat sessions
     const updateUserStatus = async (userId: string) => {

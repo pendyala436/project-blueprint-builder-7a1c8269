@@ -76,6 +76,31 @@ function moderateContent(content: string): ModerationResult {
   };
 }
 
+// Helper to verify authenticated user
+async function verifyAuth(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string; isAdmin?: boolean }> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { isValid: false, error: 'Missing or invalid Authorization header' };
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return { isValid: false, error: 'Invalid or expired token' };
+  }
+
+  // Check if user has admin role
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'admin')
+    .maybeSingle();
+
+  return { isValid: true, userId: user.id, isAdmin: !!roleData };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -86,7 +111,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // SECURITY: Verify caller is authenticated
+    const authResult = await verifyAuth(req, supabase);
+    if (!authResult.isValid) {
+      console.log(`[SECURITY] Unauthorized access to content-moderation: ${authResult.error}`);
+      return new Response(
+        JSON.stringify({ success: false, error: authResult.error }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { action, messageId, chatId, content, userId } = await req.json();
+    
+    // For batch scan, require admin role
+    if (action === "scan_recent_messages" && !authResult.isAdmin) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Admin role required for batch scan" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[AUDIT] User ${authResult.userId} called content-moderation action: ${action}`);
 
     if (action === "moderate_message") {
       // Moderate a single message
