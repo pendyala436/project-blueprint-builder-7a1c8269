@@ -1,28 +1,53 @@
 /**
  * useDeviceDetect.ts
  * 
- * Comprehensive device detection hook for all platforms
- * Detects: device type, OS, browser, capabilities, and preferences
+ * Comprehensive device detection hook for ALL platforms
+ * Supports: Mobile, Tablets, Laptops, Desktops, Chromebooks, Foldables, TVs
  */
 
 import { useState, useEffect, useMemo } from 'react';
 
 export interface DeviceInfo {
-  // Device type
+  // Device category
+  deviceCategory: 'mobile' | 'phablet' | 'tablet' | 'laptop' | 'desktop' | 'tv' | 'unknown';
+  
+  // Device types
   isMobile: boolean;
+  isPhablet: boolean;
   isTablet: boolean;
-  isDesktop: boolean;
   isLaptop: boolean;
+  isDesktop: boolean;
+  isTV: boolean;
+  isFoldable: boolean;
+  isFoldOpen: boolean;
+  isChromebook: boolean;
   
   // Operating System
-  os: 'ios' | 'android' | 'windows' | 'macos' | 'linux' | 'chromeos' | 'unknown';
+  os: 'ios' | 'android' | 'windows' | 'macos' | 'linux' | 'chromeos' | 'tvos' | 'unknown';
   osVersion: string;
+  isIOS: boolean;
+  isAndroid: boolean;
+  isWindows: boolean;
+  isMacOS: boolean;
+  isLinux: boolean;
+  isChromeOS: boolean;
   
   // Browser
-  browser: 'chrome' | 'safari' | 'firefox' | 'edge' | 'opera' | 'samsung' | 'brave' | 'unknown';
+  browser: 'chrome' | 'safari' | 'firefox' | 'edge' | 'opera' | 'samsung' | 'brave' | 'vivaldi' | 'unknown';
   browserVersion: string;
   
-  // Capabilities
+  // Specific devices
+  isIPhone: boolean;
+  isIPad: boolean;
+  isAndroidPhone: boolean;
+  isAndroidTablet: boolean;
+  isMac: boolean;
+  isSamsungGalaxy: boolean;
+  isSamsungFold: boolean;
+  isPixel: boolean;
+  isKindleFire: boolean;
+  
+  // Input capabilities
   isTouch: boolean;
   isStylus: boolean;
   isMouse: boolean;
@@ -36,6 +61,7 @@ export interface DeviceInfo {
   
   // Display
   isRetina: boolean;
+  isRetina3x: boolean;
   isLandscape: boolean;
   isPortrait: boolean;
   screenWidth: number;
@@ -50,16 +76,6 @@ export interface DeviceInfo {
   // Network
   isOnline: boolean;
   connectionType: string;
-  
-  // Specific device detection
-  isIPhone: boolean;
-  isIPad: boolean;
-  isAndroidPhone: boolean;
-  isAndroidTablet: boolean;
-  isMac: boolean;
-  isWindows: boolean;
-  isLinux: boolean;
-  isChromeOS: boolean;
 }
 
 export function useDeviceDetect(): DeviceInfo {
@@ -106,16 +122,39 @@ export function useDeviceDetect(): DeviceInfo {
     const isChromeOS = /cros/.test(ua);
 
     // Device type detection
-    const isIPhone = isIOS && !/ipad/.test(ua) && navigator.maxTouchPoints <= 1;
+    const isIPhone = isIOS && !/ipad/.test(ua) && navigator.maxTouchPoints <= 5;
     const isIPad = isIOS && (/ipad/.test(ua) || (platform === 'macintel' && navigator.maxTouchPoints > 1));
     const isAndroidTablet = isAndroid && !/mobile/.test(ua);
     const isAndroidPhone = isAndroid && /mobile/.test(ua);
+    
+    // Samsung detection
+    const isSamsungGalaxy = /samsung|sm-g|sm-a|sm-n/.test(ua);
+    const isSamsungFold = /sm-f/.test(ua);
+    
+    // Google Pixel detection
+    const isPixel = /pixel/.test(ua);
+    
+    // Amazon Kindle detection
+    const isKindleFire = /kindle|kf/.test(ua);
+    
+    // TV detection
+    const isTV = /tv|smarttv|googletv|appletv|webos|tizen/.test(ua) || screenWidth >= 1920 && screenHeight >= 1080;
+    
+    // Foldable detection
+    const isFoldable = isSamsungFold || screenWidth <= 300;
+    const isFoldOpen = isFoldable && screenWidth > 500;
 
     // Screen size based detection
-    const isMobile = screenWidth < 768;
+    const isPhablet = screenWidth >= 428 && screenWidth < 768;
+    const isMobile = screenWidth < 428;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
-    const isLaptop = screenWidth >= 1024 && screenWidth < 1440;
-    const isDesktop = screenWidth >= 1440;
+    const isLaptop = screenWidth >= 1024 && screenWidth < 1280;
+    const isDesktop = screenWidth >= 1280;
+    const isChromebook = isChromeOS && screenWidth >= 1024;
+    
+    // Device category
+    const deviceCategory = isTV ? 'tv' : isDesktop ? 'desktop' : isLaptop ? 'laptop' : 
+                          isTablet ? 'tablet' : isPhablet ? 'phablet' : isMobile ? 'mobile' : 'unknown';
 
     // Browser detection
     const isChrome = /chrome/.test(ua) && !/edge|edg|opr|opera|brave/.test(ua);
@@ -168,22 +207,47 @@ export function useDeviceDetect(): DeviceInfo {
     const connectionType = connection?.effectiveType || 'unknown';
 
     return {
-      // Device type
+      // Device category
+      deviceCategory,
+      
+      // Device types
       isMobile,
+      isPhablet,
       isTablet,
-      isDesktop,
       isLaptop,
-
+      isDesktop,
+      isTV,
+      isFoldable,
+      isFoldOpen,
+      isChromebook,
+      
       // OS
       os: isIOS ? 'ios' : isAndroid ? 'android' : isWindows ? 'windows' : 
           isMacOS ? 'macos' : isLinux ? 'linux' : isChromeOS ? 'chromeos' : 'unknown',
       osVersion: getOSVersion(),
+      isIOS,
+      isAndroid,
+      isWindows,
+      isMacOS,
+      isLinux,
+      isChromeOS,
 
       // Browser
       browser: isChrome ? 'chrome' : isSafari ? 'safari' : isFirefox ? 'firefox' :
                isEdge ? 'edge' : isOpera ? 'opera' : isSamsung ? 'samsung' : 
                isBrave ? 'brave' : 'unknown',
       browserVersion: getBrowserVersion(),
+
+      // Specific devices
+      isIPhone,
+      isIPad,
+      isAndroidPhone,
+      isAndroidTablet,
+      isMac: isMacOS,
+      isSamsungGalaxy,
+      isSamsungFold,
+      isPixel,
+      isKindleFire,
 
       // Capabilities
       isTouch,
@@ -199,6 +263,7 @@ export function useDeviceDetect(): DeviceInfo {
 
       // Display
       isRetina,
+      isRetina3x: pixelRatio >= 3,
       isLandscape,
       isPortrait: !isLandscape,
       screenWidth,
@@ -213,16 +278,6 @@ export function useDeviceDetect(): DeviceInfo {
       // Network
       isOnline,
       connectionType,
-
-      // Specific devices
-      isIPhone,
-      isIPad,
-      isAndroidPhone,
-      isAndroidTablet,
-      isMac: isMacOS,
-      isWindows,
-      isLinux,
-      isChromeOS,
     };
   }, [screenWidth, screenHeight, isOnline, isLandscape]);
 
@@ -231,14 +286,35 @@ export function useDeviceDetect(): DeviceInfo {
 
 function getDefaultDeviceInfo(): DeviceInfo {
   return {
+    deviceCategory: 'desktop',
     isMobile: false,
+    isPhablet: false,
     isTablet: false,
-    isDesktop: true,
     isLaptop: false,
+    isDesktop: true,
+    isTV: false,
+    isFoldable: false,
+    isFoldOpen: false,
+    isChromebook: false,
     os: 'unknown',
     osVersion: '',
+    isIOS: false,
+    isAndroid: false,
+    isWindows: false,
+    isMacOS: false,
+    isLinux: false,
+    isChromeOS: false,
     browser: 'unknown',
     browserVersion: '',
+    isIPhone: false,
+    isIPad: false,
+    isAndroidPhone: false,
+    isAndroidTablet: false,
+    isMac: false,
+    isSamsungGalaxy: false,
+    isSamsungFold: false,
+    isPixel: false,
+    isKindleFire: false,
     isTouch: false,
     isStylus: false,
     isMouse: true,
@@ -248,6 +324,7 @@ function getDefaultDeviceInfo(): DeviceInfo {
     isStandalone: false,
     isNativeApp: false,
     isRetina: false,
+    isRetina3x: false,
     isLandscape: true,
     isPortrait: false,
     screenWidth: 1024,
@@ -258,14 +335,6 @@ function getDefaultDeviceInfo(): DeviceInfo {
     prefersHighContrast: false,
     isOnline: true,
     connectionType: 'unknown',
-    isIPhone: false,
-    isIPad: false,
-    isAndroidPhone: false,
-    isAndroidTablet: false,
-    isMac: false,
-    isWindows: false,
-    isLinux: false,
-    isChromeOS: false,
   };
 }
 
