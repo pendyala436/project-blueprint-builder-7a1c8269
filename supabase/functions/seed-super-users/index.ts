@@ -16,6 +16,18 @@ interface ErrorItem {
   error: string
 }
 
+// Generate a secure random password
+function generateSecurePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+  let password = '';
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  for (let i = 0; i < 16; i++) {
+    password += chars[array[i] % chars.length];
+  }
+  return password;
+}
+
 // Helper to verify admin JWT
 async function verifyAdminAuth(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
   const authHeader = req.headers.get('authorization');
@@ -74,12 +86,16 @@ Deno.serve(async (req) => {
 
     console.log(`[AUDIT] Admin ${authResult.userId} initiated seed-super-users`);
 
-    const password = 'Chinn@2589'
-    const results: { females: ResultItem[], males: ResultItem[], admins: ResultItem[], errors: ErrorItem[] } = { 
+    // SECURITY: Use environment variable for password, fallback to random generation
+    const password = Deno.env.get('SUPER_USER_TEST_PASSWORD') || generateSecurePassword();
+    console.log(`[SECURITY] Using ${Deno.env.get('SUPER_USER_TEST_PASSWORD') ? 'configured' : 'generated'} password for test accounts`);
+    
+    const results: { females: ResultItem[], males: ResultItem[], admins: ResultItem[], errors: ErrorItem[], passwordNote?: string } = { 
       females: [], 
       males: [], 
       admins: [], 
-      errors: [] 
+      errors: [],
+      passwordNote: Deno.env.get('SUPER_USER_TEST_PASSWORD') ? undefined : 'Generated random password - check logs for value'
     }
 
     // Create female super users (1-15)

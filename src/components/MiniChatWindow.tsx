@@ -286,10 +286,29 @@ const MiniChatWindow = ({
     setLastActivityTime(Date.now());
   };
 
+  // Security: Maximum message length to prevent abuse
+  const MAX_MESSAGE_LENGTH = 2000;
+
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
     const messageText = newMessage.trim();
+    
+    // SECURITY: Validate message length to prevent database abuse
+    if (messageText.length > MAX_MESSAGE_LENGTH) {
+      toast({
+        title: "Message too long",
+        description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // SECURITY: Basic content validation - reject empty or only whitespace
+    if (messageText.length === 0) {
+      return;
+    }
+
     setNewMessage("");
     setIsSending(true);
     setLastActivityTime(Date.now());

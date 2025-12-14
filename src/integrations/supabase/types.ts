@@ -980,6 +980,33 @@ export type Database = {
         }
         Relationships: []
       }
+      message_rate_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_count: number | null
+          updated_at: string | null
+          user_id: string
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_count?: number | null
+          updated_at?: string | null
+          user_id: string
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       moderation_reports: {
         Row: {
           action_reason: string | null
@@ -2496,6 +2523,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_message_rate_limit: {
+        Args: {
+          max_messages?: number
+          p_user_id: string
+          window_minutes?: number
+        }
+        Returns: boolean
+      }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       get_current_chat_rate: {
