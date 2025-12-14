@@ -242,9 +242,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   min={0}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {minGiftAmount === 0 
-                    ? 'Free entry - anyone can join without sending a gift.'
-                    : 'Every gift sent is split: 50% to you, 50% to admin.'}
+                  Every gift sent is split: 50% to you, 50% to admin.
                 </p>
               </div>
               <div className="space-y-3">
@@ -321,9 +319,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   <p className="text-sm text-muted-foreground">{group.description}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={group.min_gift_amount === 0 ? "default" : "secondary"} className="gap-1">
+                  <Badge variant="secondary" className="gap-1">
                     <Gift className="h-3 w-3" />
-                    {group.min_gift_amount === 0 ? 'Free Entry' : `Min ₹${group.min_gift_amount}`}
+                    {group.min_gift_amount === 0 ? 'Open' : `Min ₹${group.min_gift_amount}`}
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
@@ -391,7 +389,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 min={0}
               />
               <p className="text-xs text-muted-foreground">
-                {minGiftAmount === 0 ? 'Free entry for all men' : 'Men must send gift of this amount to join'}
+                Men must send gift of this amount to join
               </p>
             </div>
             <div className="space-y-3">
