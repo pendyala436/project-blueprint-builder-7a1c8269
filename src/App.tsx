@@ -1,9 +1,21 @@
+/**
+ * Main Application Component
+ * 
+ * Root component that sets up:
+ * - React Query for data fetching
+ * - Internationalization (i18n)
+ * - UI providers (tooltips, toasts)
+ * - Security provider for screen capture protection
+ * - Routing configuration
+ */
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { I18nProvider } from "@/components/I18nProvider";
+import SecurityProvider from "@/components/SecurityProvider";
 import AuthScreen from "./pages/AuthScreen";
 import ForgotPasswordScreen from "./pages/ForgotPasswordScreen";
 import LanguageCountryScreen from "./pages/LanguageCountryScreen";
@@ -44,7 +56,6 @@ import AdminPerformanceMonitoring from "./pages/AdminPerformanceMonitoring";
 import AdminSettings from "./pages/AdminSettings";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminModerationScreen from "./pages/AdminModerationScreen";
-
 import GiftSendingScreen from "./pages/GiftSendingScreen";
 import ShiftComplianceScreen from "./pages/ShiftComplianceScreen";
 import AdminPolicyAlerts from "./pages/AdminPolicyAlerts";
@@ -55,15 +66,28 @@ import NotFound from "./pages/NotFound";
 import InstallApp from "./pages/InstallApp";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
-const queryClient = new QueryClient();
+// Create React Query client with default options
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <I18nProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <PWAInstallPrompt />
+      <SecurityProvider
+        enableDevToolsDetection={true}
+        enableKeyboardBlocking={true}
+        enableConsoleProtection={false} // Keep false for debugging
+      >
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PWAInstallPrompt />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AuthScreen />} />
@@ -115,10 +139,12 @@ const App = () => (
             <Route path="/admin/transactions" element={<AdminTransactionHistory />} />
             <Route path="/install" element={<InstallApp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
+        </TooltipProvider>
+      </SecurityProvider>
     </I18nProvider>
   </QueryClientProvider>
 );
