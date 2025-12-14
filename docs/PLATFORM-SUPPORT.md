@@ -1,14 +1,18 @@
-# Meow Meow - Platform & Browser Support
+# Meow Meow - Complete Platform & Device Support
+
+## Supported Devices
+
+| Device Type | Screen Size | Examples |
+|-------------|-------------|----------|
+| **Small Phones** | 320px - 479px | iPhone SE, older Android phones |
+| **Large Phones** | 480px - 767px | iPhone 15, Samsung Galaxy S24 |
+| **Tablets** | 768px - 1023px | iPad, iPad Mini, Android tablets |
+| **Laptops** | 1024px - 1279px | MacBook Air, most Windows laptops |
+| **Desktops** | 1280px - 1535px | iMac, desktop monitors |
+| **Large Desktops** | 1536px - 1919px | Ultrawide monitors |
+| **4K/Ultra-wide** | 1920px+ | 4K monitors, ultra-wide displays |
 
 ## Supported Platforms
-
-### Mobile
-| Platform | Method | Install From |
-|----------|--------|--------------|
-| **iOS** (iPhone/iPad) | PWA + Capacitor | Safari → Share → Add to Home Screen |
-| **Android** | PWA + Capacitor | Chrome → Menu → Install App |
-
-### Desktop
 | Platform | Method | Install From |
 |----------|--------|--------------|
 | **Windows** | PWA + Electron | Chrome/Edge → Install icon in address bar |

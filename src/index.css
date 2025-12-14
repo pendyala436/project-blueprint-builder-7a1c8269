@@ -619,3 +619,198 @@
     animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 }
+
+/* ========================================
+   ACCESSIBILITY UTILITIES
+   ======================================== */
+
+@layer utilities {
+  /* Screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Focus visible styles */
+  .focus-visible-ring {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Skip to main content link */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:p-4 focus:bg-primary focus:text-primary-foreground focus:rounded-lg;
+  }
+
+  /* High contrast text */
+  .high-contrast {
+    @apply text-foreground font-medium;
+  }
+
+  /* Keyboard navigation highlight */
+  .keyboard-focus:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2 outline-none;
+  }
+}
+
+/* ========================================
+   PERFORMANCE OPTIMIZATIONS
+   ======================================== */
+
+@layer utilities {
+  /* GPU acceleration */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  /* Lazy loading placeholder */
+  .lazy-placeholder {
+    @apply bg-muted animate-pulse;
+  }
+
+  /* Optimized images */
+  .img-optimized {
+    @apply object-cover;
+    image-rendering: -webkit-optimize-contrast;
+  }
+
+  /* Smooth transitions with reduced motion support */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .transition-smooth {
+      transition: none;
+    }
+  }
+}
+
+/* ========================================
+   SCROLLBAR CUSTOMIZATION
+   ======================================== */
+
+@layer utilities {
+  /* Custom scrollbar - visible on desktop */
+  @media (hover: hover) and (pointer: fine) {
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      @apply bg-muted rounded-full;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      @apply bg-muted-foreground/30 rounded-full;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      @apply bg-muted-foreground/50;
+    }
+  }
+
+  /* Thin scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+  }
+
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ========================================
+   DARK/LIGHT MODE TRANSITIONS
+   ======================================== */
+
+@layer base {
+  html {
+    color-scheme: dark light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
+  /* Smooth theme transition */
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+  }
+}
+
+/* ========================================
+   NATIVE APP SPECIFIC STYLES
+   ======================================== */
+
+@layer utilities {
+  /* iOS specific */
+  .ios-bounce {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ios-no-bounce {
+    overscroll-behavior: none;
+  }
+
+  /* Android specific */
+  .android-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Native status bar area */
+  .status-bar-padding {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+
+  /* Native navigation bar area */
+  .nav-bar-padding {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Full height accounting for safe areas */
+  .full-height-safe {
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  /* Dynamic viewport height */
+  .h-dvh {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .min-h-dvh {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .max-h-dvh {
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+}
