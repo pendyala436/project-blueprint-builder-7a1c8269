@@ -17,6 +17,11 @@ import { GroupVideoCall } from './GroupVideoCall';
 // Fixed gift amounts available in the app
 const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
 
+const getAmountLabel = (amount: number) => {
+  if (amount === 0) return 'Free (Private Call - No Gift Required)';
+  return `₹${amount}`;
+};
+
 interface PrivateGroup {
   id: string;
   name: string;
@@ -246,7 +251,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   <SelectContent>
                     {GIFT_AMOUNTS.map((amount) => (
                       <SelectItem key={amount} value={String(amount)}>
-                        {amount === 0 ? 'Free (Open)' : `₹${amount}`}
+                        {getAmountLabel(amount)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -399,7 +404,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 <SelectContent>
                   {GIFT_AMOUNTS.map((amount) => (
                     <SelectItem key={amount} value={String(amount)}>
-                      {amount === 0 ? 'Free (Open)' : `₹${amount}`}
+                      {getAmountLabel(amount)}
                     </SelectItem>
                   ))}
                 </SelectContent>
