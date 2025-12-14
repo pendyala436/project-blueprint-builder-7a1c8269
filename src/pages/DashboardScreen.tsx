@@ -1490,14 +1490,6 @@ const DashboardScreen = () => {
               <p className="text-sm text-muted-foreground mt-1">
                 {t('startExploringToGetMatches', 'Start exploring to get matches and notifications!')}
               </p>
-              <Button 
-                variant="aurora" 
-                className="mt-4"
-                onClick={() => navigate("/match-discovery")}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                {t('startExploring', 'Start Exploring')}
-              </Button>
             </Card>
           )}
         </div>
