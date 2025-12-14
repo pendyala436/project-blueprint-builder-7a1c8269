@@ -2541,6 +2541,14 @@ export type Database = {
           video_rate: number
         }[]
       }
+      get_group_owner_profile: {
+        Args: { owner_user_id: string }
+        Returns: {
+          full_name: string
+          photo_url: string
+          user_id: string
+        }[]
+      }
       get_matched_female_profile: {
         Args: { target_user_id: string }
         Returns: {

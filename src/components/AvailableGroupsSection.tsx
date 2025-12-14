@@ -84,15 +84,24 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       if (error) throw error;
 
-      // Fetch owner profiles
+      // Fetch owner profiles using secure function
       if (data && data.length > 0) {
         const ownerIds = [...new Set(data.map(g => g.owner_id))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, photo_url')
-          .in('user_id', ownerIds);
-
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        
+        // Use secure function to get group owner profiles
+        const profilePromises = ownerIds.map(async (ownerId) => {
+          const { data: profileData } = await supabase.rpc('get_group_owner_profile', {
+            owner_user_id: ownerId
+          });
+          return profileData?.[0] || null;
+        });
+        
+        const profileResults = await Promise.all(profilePromises);
+        const profileMap = new Map(
+          profileResults
+            .filter(p => p !== null)
+            .map(p => [p.user_id, p])
+        );
         
         const enrichedGroups = data.map(group => ({
           ...group,
