@@ -722,7 +722,7 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 backdrop-blur-sm">
             <Circle className={`w-2 h-2 ${woman.isBusy ? "fill-amber-500 text-amber-500" : "fill-emerald-500 text-emerald-500"} animate-pulse`} />
             <span className="text-xs font-medium text-foreground">
-              {woman.isBusy ? "Busy" : "Free"}
+              {woman.isBusy ? "Busy" : "Available"}
             </span>
           </div>
           {isPriority && (
