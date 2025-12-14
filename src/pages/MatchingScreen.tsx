@@ -116,21 +116,31 @@ const MatchingScreen = () => {
 
       setCurrentUserId(user.id);
 
-      // Get current user's profile and mother tongue
+      // Get current user's profile and mother tongue - check both tables
       const { data: currentProfile } = await supabase
         .from("profiles")
         .select("gender, primary_language, preferred_language")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const userGender = currentProfile?.gender?.toLowerCase();
-      if (userGender !== "male") {
+      // Also check male_profiles if no main profile exists
+      const { data: maleProfile } = await supabase
+        .from("male_profiles")
+        .select("primary_language, preferred_language")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // If user has a male_profiles record, they're male
+      // If user has a profile with gender, use that
+      const isMaleUser = maleProfile !== null || currentProfile?.gender?.toLowerCase() === "male";
+      
+      if (!isMaleUser) {
         toast({
           title: "Access Denied",
           description: "This feature is only available for male users",
           variant: "destructive",
         });
-        navigate("/dashboard");
+        navigate("/women-dashboard");
         return;
       }
 
@@ -142,6 +152,8 @@ const MatchingScreen = () => {
         .limit(1);
 
       const motherTongue = userLanguages?.[0]?.language_name || 
+                          maleProfile?.primary_language ||
+                          maleProfile?.preferred_language ||
                           currentProfile?.primary_language || 
                           currentProfile?.preferred_language || 
                           "English";

@@ -178,6 +178,13 @@ const MatchDiscoveryScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle(); // Returns null instead of error if not found
 
+      // Also check male_profiles if no main profile exists
+      const { data: maleProfile } = await supabase
+        .from("male_profiles")
+        .select("country, primary_language, preferred_language")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       // Get all languages the current user speaks
       const { data: currentUserLanguages } = await supabase
         .from("user_languages")
@@ -187,16 +194,17 @@ const MatchDiscoveryScreen = () => {
       // Extract language names into simple array
       const userLanguages = currentUserLanguages?.map(l => l.language_name) || [];
       
-      // Store current user's gender and country for display purposes
-      const userGender = currentProfile?.gender || "";
+      // Determine user gender - check male_profiles first, then profiles table
+      const userGender = maleProfile ? "Male" : (currentProfile?.gender || "");
       setCurrentUserGender(userGender);
-      setCurrentUserCountry(currentProfile?.country || "");
+      setCurrentUserCountry(maleProfile?.country || currentProfile?.country || "");
 
       // ============= DETERMINE MATCHING GENDER =============
       
       // For heterosexual matching: Males see Females, Females see Males
       const oppositeGender = userGender === "Male" ? "Female" : 
                             userGender === "Female" ? "Male" : "";
+
 
       // ============= BUILD DATABASE QUERY =============
       
