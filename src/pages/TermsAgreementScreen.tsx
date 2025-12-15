@@ -523,15 +523,18 @@ const TermsAgreementScreen = () => {
       if (consentError) throw consentError;
 
       // Get remaining registration data from localStorage
-      const dateOfBirth = localStorage.getItem("userDateOfBirth") || "";
+      const dateOfBirth = localStorage.getItem("userDob") || localStorage.getItem("userDateOfBirth") || "";
       const country = localStorage.getItem("userCountry") || "";
       const state = localStorage.getItem("userState") || "";
       const city = localStorage.getItem("userCity") || "";
       const latitude = localStorage.getItem("userLatitude");
       const longitude = localStorage.getItem("userLongitude");
-      const primaryLanguage = localStorage.getItem("userPrimaryLanguage") || "";
+      const primaryLanguage = sessionStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
       const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
       const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
+      
+      // Get personal details from PersonalDetailsScreen
+      const personalDetails = JSON.parse(localStorage.getItem("userPersonalDetails") || "{}");
 
       // Calculate age from DOB
       let age: number | null = null;
@@ -568,11 +571,12 @@ const TermsAgreementScreen = () => {
         }
       }
 
-      // Update profile with all registration data
+      // Build complete profile data including personal details
       const profileData: any = {
         user_id: user.id,
         full_name: fullName,
         gender: gender.toLowerCase(),
+        phone: phone,
         date_of_birth: dateOfBirth || null,
         age: age,
         country: country,
@@ -582,16 +586,72 @@ const TermsAgreementScreen = () => {
         longitude: longitude ? parseFloat(longitude) : null,
         primary_language: primaryLanguage,
         photo_url: photoUrl,
+        // Personal details from PersonalDetailsScreen
+        bio: personalDetails.bio || null,
+        height_cm: personalDetails.height_cm || null,
+        occupation: personalDetails.occupation || null,
+        body_type: personalDetails.body_type || null,
+        education_level: personalDetails.education_level || null,
+        marital_status: personalDetails.marital_status || null,
+        religion: personalDetails.religion || null,
+        smoking_habit: personalDetails.smoking_habit || null,
+        drinking_habit: personalDetails.drinking_habit || null,
+        dietary_preference: personalDetails.dietary_preference || null,
+        fitness_level: personalDetails.fitness_level || null,
+        has_children: personalDetails.has_children || null,
+        pet_preference: personalDetails.pet_preference || null,
+        travel_frequency: personalDetails.travel_frequency || null,
+        personality_type: personalDetails.personality_type || null,
+        zodiac_sign: personalDetails.zodiac_sign || null,
+        interests: personalDetails.interests || [],
+        life_goals: personalDetails.life_goals || [],
         account_status: "active",
         approval_status: gender.toLowerCase() === "female" ? "pending" : "approved",
         updated_at: new Date().toISOString(),
       };
 
+      // Save to profiles table
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert(profileData, { onConflict: "user_id" });
 
       if (profileError) throw profileError;
+
+      // Also save to gender-specific table (male_profiles or female_profiles)
+      const genderProfileData: any = {
+        user_id: user.id,
+        full_name: fullName,
+        phone: phone,
+        date_of_birth: dateOfBirth || null,
+        age: age,
+        country: country,
+        state: state,
+        photo_url: photoUrl,
+        primary_language: primaryLanguage,
+        preferred_language: primaryLanguage,
+        bio: personalDetails.bio || null,
+        height_cm: personalDetails.height_cm || null,
+        occupation: personalDetails.occupation || null,
+        body_type: personalDetails.body_type || null,
+        education_level: personalDetails.education_level || null,
+        marital_status: personalDetails.marital_status || null,
+        religion: personalDetails.religion || null,
+        interests: personalDetails.interests || [],
+        life_goals: personalDetails.life_goals || [],
+        account_status: "active",
+        updated_at: new Date().toISOString(),
+      };
+
+      if (gender.toLowerCase() === "female") {
+        genderProfileData.approval_status = "pending";
+        await supabase
+          .from("female_profiles")
+          .upsert(genderProfileData, { onConflict: "user_id" });
+      } else {
+        await supabase
+          .from("male_profiles")
+          .upsert(genderProfileData, { onConflict: "user_id" });
+      }
 
       // Save selfie as primary photo in user_photos
       if (photoUrl) {
@@ -642,13 +702,14 @@ const TermsAgreementScreen = () => {
         currency: "INR",
       }, { onConflict: "user_id" });
 
-      // Clear localStorage registration data
+      // Clear localStorage and sessionStorage registration data
       localStorage.removeItem("pendingPhotoData");
       localStorage.removeItem("pendingAdditionalPhotos");
       localStorage.removeItem("userName");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("userPhone");
       localStorage.removeItem("userGender");
+      localStorage.removeItem("userDob");
       localStorage.removeItem("userDateOfBirth");
       localStorage.removeItem("userCountry");
       localStorage.removeItem("userState");
@@ -657,6 +718,9 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userLongitude");
       localStorage.removeItem("userPrimaryLanguage");
       localStorage.removeItem("userPassword");
+      localStorage.removeItem("userPersonalDetails");
+      sessionStorage.removeItem("selectedLanguage");
+      sessionStorage.removeItem("selectedCountry");
 
       toast({
         title: "Registration Complete!",
