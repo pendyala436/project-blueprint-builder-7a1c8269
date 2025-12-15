@@ -93,7 +93,7 @@ const ForgotPasswordScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen flex flex-col relative bg-background">
       <AuroraBackground />
       
       {/* Header */}
