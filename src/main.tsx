@@ -1,5 +1,10 @@
 import { createRoot } from "react-dom/client";
 
+// Load polyfills for older browsers
+import("./lib/polyfills").then(({ default: loadPolyfills }) => {
+  loadPolyfills();
+});
+
 // Inline critical CSS and render immediately
 const root = createRoot(document.getElementById("root")!);
 
