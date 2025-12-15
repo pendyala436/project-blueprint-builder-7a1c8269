@@ -199,17 +199,17 @@ const BasicInfoScreen = () => {
   defaultMonth.setFullYear(defaultMonth.getFullYear() - 18);
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
       <AuroraBackground />
       
       {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            variant="auroraGhost"
+            variant="ghost"
             size="icon"
             onClick={handleBack}
-            className="shrink-0"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -220,21 +220,22 @@ const BasicInfoScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-6 pb-8 relative z-10">
-        {/* Logo & Title */}
-        <div className="text-center mb-8 animate-fade-in">
-          <MeowLogo size="md" className="mx-auto mb-4" />
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2 drop-shadow-sm">
-            {t('tellUsAboutYou', 'Tell us about you')}
-          </h1>
-          <p className="text-muted-foreground text-base max-w-xs mx-auto">
-            {t('helpUsPersonalize', 'Help us personalize your experience')}
-          </p>
-        </div>
+      <main className="flex-1 overflow-y-auto px-6 pb-8 relative z-10">
+        <div className="max-w-lg mx-auto">
+          {/* Logo & Title */}
+          <div className="text-center mb-8 animate-fade-in">
+            <MeowLogo size="sm" className="mx-auto mb-4" />
+            <h1 className="font-display text-2xl font-bold text-foreground mb-2 drop-shadow-sm">
+              {t('tellUsAboutYou', 'Tell us about you')}
+            </h1>
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+              {t('helpUsPersonalize', 'Help us personalize your experience')}
+            </p>
+          </div>
 
-        {/* Form Card */}
-        <div className="w-full max-w-md bg-card/70 backdrop-blur-xl rounded-3xl p-6 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] border border-primary/20 animate-slide-up">
-          <div className="space-y-6">
+          {/* Form Card */}
+          <div className="bg-card/70 backdrop-blur-xl rounded-3xl p-6 border border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+            <div className="space-y-6">
             {/* Email */}
             <div 
               className={cn(
@@ -459,29 +460,27 @@ const BasicInfoScreen = () => {
                 </p>
               )}
             </div>
+            
+            {/* CTA Button inside Form Card */}
+            <div className="mt-6">
+              <Button
+                variant="aurora"
+                size="xl"
+                className="w-full group"
+                onClick={handleNext}
+                disabled={!isComplete}
+              >
+                Continue
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+              
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Your information is securely stored and never shared
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Spacer */}
-        <div className="flex-1 min-h-8" />
-
-        {/* CTA Button */}
-        <div className="w-full max-w-md animate-slide-up" style={{ animationDelay: "200ms" }}>
-          <Button
-            variant="aurora"
-            size="xl"
-            className="w-full group"
-            onClick={handleNext}
-            disabled={!isComplete}
-          >
-            Continue
-            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          </Button>
-          
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Your information is securely stored and never shared
-          </p>
-        </div>
+      </div>
       </main>
 
       {/* Decorative Elements */}
