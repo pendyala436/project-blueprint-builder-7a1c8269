@@ -74,7 +74,7 @@ class BasicInfoScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.push(AppRoutes.passwordSetup),
+                onPressed: () => context.push(AppRoutes.photoUpload),
                 child: const Text('Continue'),
               ),
             ),
@@ -109,8 +109,8 @@ class PasswordSetupScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.push(AppRoutes.photoUpload),
-                child: const Text('Continue'),
+                onPressed: () => context.push(AppRoutes.termsAgreement),
+                child: const Text('Continue to Terms'),
               ),
             ),
           ],
@@ -172,19 +172,47 @@ class LocationSetupScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Detect location button
+            OutlinedButton.icon(
+              onPressed: () {
+                // TODO: Implement geolocation with OpenStreetMap Nominatim
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Detecting location...')),
+                );
+              },
+              icon: const Icon(Icons.my_location),
+              label: const Text('Detect My Location'),
+            ),
+            const SizedBox(height: 24),
             const DropdownButtonFormField<String>(
-              decoration: InputDecoration(labelText: 'State'),
+              decoration: InputDecoration(labelText: 'Country'),
+              items: [
+                DropdownMenuItem(value: 'IN', child: Text('India')),
+                DropdownMenuItem(value: 'US', child: Text('United States')),
+              ],
+              onChanged: null,
+            ),
+            const SizedBox(height: 16),
+            const DropdownButtonFormField<String>(
+              decoration: InputDecoration(labelText: 'State / Province'),
               items: [
                 DropdownMenuItem(value: 'MH', child: Text('Maharashtra')),
                 DropdownMenuItem(value: 'DL', child: Text('Delhi')),
               ],
               onChanged: null,
             ),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Village / Town / City',
+                hintText: 'Enter your village, town, or city',
+              ),
+            ),
             const Spacer(),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.push(AppRoutes.languagePreferences),
+                onPressed: () => context.push(AppRoutes.passwordSetup),
                 child: const Text('Continue'),
               ),
             ),
