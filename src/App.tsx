@@ -6,6 +6,7 @@
  * - Internationalization (i18n)
  * - UI providers (tooltips, toasts)
  * - Security provider for screen capture protection
+ * - Error boundary for graceful error handling
  * - Routing configuration
  */
 
@@ -16,6 +17,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { I18nProvider } from "@/components/I18nProvider";
 import SecurityProvider from "@/components/SecurityProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import AuthScreen from "./pages/AuthScreen";
 import ForgotPasswordScreen from "./pages/ForgotPasswordScreen";
 import LanguageCountryScreen from "./pages/LanguageCountryScreen";
@@ -77,17 +79,18 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <I18nProvider>
-      <SecurityProvider
-        enableDevToolsDetection={true}
-        enableKeyboardBlocking={true}
-        enableConsoleProtection={false} // Keep false for debugging
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PWAInstallPrompt />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider>
+        <SecurityProvider
+          enableDevToolsDetection={true}
+          enableKeyboardBlocking={true}
+          enableConsoleProtection={false} // Keep false for debugging
+        >
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PWAInstallPrompt />
         <MemoryRouter initialEntries={["/"]}>
           <Routes>
             <Route path="/" element={<AuthScreen />} />
@@ -143,10 +146,11 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MemoryRouter>
-        </TooltipProvider>
-      </SecurityProvider>
-    </I18nProvider>
-  </QueryClientProvider>
+          </TooltipProvider>
+        </SecurityProvider>
+      </I18nProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
