@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,89 @@ import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { preloadUserContext } from "@/hooks/useOptimizedAuth";
+
+// Memoized form inputs for better performance
+const EmailInput = memo(({ 
+  value, 
+  onChange, 
+  error, 
+  placeholder 
+}: { 
+  value: string; 
+  onChange: (v: string) => void; 
+  error?: string; 
+  placeholder: string;
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor="email" className="text-sm font-semibold">
+      {placeholder}
+    </Label>
+    <div className="relative">
+      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <Input
+        id="email"
+        type="email"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "h-12 pl-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
+          error ? "border-destructive" : "border-input focus:border-primary"
+        )}
+      />
+    </div>
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+));
+
+EmailInput.displayName = 'EmailInput';
+
+const PasswordInput = memo(({ 
+  value, 
+  onChange, 
+  error, 
+  placeholder,
+  showPassword,
+  onToggleShow 
+}: { 
+  value: string; 
+  onChange: (v: string) => void; 
+  error?: string; 
+  placeholder: string;
+  showPassword: boolean;
+  onToggleShow: () => void;
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor="password" className="text-sm font-semibold">
+      {placeholder}
+    </Label>
+    <div className="relative">
+      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <Input
+        id="password"
+        type={showPassword ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "h-12 pl-10 pr-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
+          error ? "border-destructive" : "border-input focus:border-primary"
+        )}
+      />
+      <button
+        type="button"
+        onClick={onToggleShow}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+      </button>
+    </div>
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+));
+
+PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
@@ -21,12 +104,12 @@ const AuthScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const validateEmail = (email: string) => {
+  const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  };
+  }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
@@ -50,10 +133,13 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      // Start auth request
+      const authPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      const { data: authData, error } = await authPromise;
 
       if (error) {
         toast({
@@ -65,65 +151,35 @@ const AuthScreen = () => {
         return;
       }
 
+      if (!authData.user) {
+        navigate("/welcome-tutorial");
+        return;
+      }
+
+      // Show success immediately
       toast({
         title: t('dashboard.welcome'),
         description: t('auth.login'),
       });
 
-      // Check if user has completed the tutorial
-      if (authData.user) {
-        // First check if user is an admin
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", authData.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
+      // Fetch all user context in parallel (single optimized call)
+      const context = await preloadUserContext(authData.user.id);
 
-        if (adminRole) {
-          // Admin users go to admin dashboard only
-          navigate("/admin");
-          return;
-        }
-
-        const { data: tutorialProgress } = await supabase
-          .from("tutorial_progress")
-          .select("completed")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        // First-time user or tutorial not completed - show welcome tutorial
-        if (!tutorialProgress || !tutorialProgress.completed) {
-          navigate("/welcome-tutorial");
-          return;
-        }
-
-        // Returning user - go to appropriate dashboard based on gender
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("gender")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        if (profile?.gender?.toLowerCase() === "female") {
-          navigate("/women-dashboard");
-          return;
-        }
-
-        // Also check female_profiles table as fallback
-        const { data: femaleProfile } = await supabase
-          .from("female_profiles")
-          .select("user_id")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        if (femaleProfile) {
-          navigate("/women-dashboard");
+      // Navigate based on context
+      if (context.isAdmin) {
+        navigate("/admin");
+      } else if (!context.tutorialCompleted) {
+        navigate("/welcome-tutorial");
+      } else if (context.isFemale) {
+        // Check approval status for female users
+        const approvalStatus = context.femaleProfile?.approval_status || context.profile?.approval_status;
+        if (approvalStatus === 'pending') {
+          navigate("/approval-pending");
         } else {
-          navigate("/dashboard");
+          navigate("/women-dashboard");
         }
       } else {
-        navigate("/welcome-tutorial");
+        navigate("/dashboard");
       }
     } catch (error: any) {
       toast({
@@ -134,7 +190,21 @@ const AuthScreen = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [email, password, navigate, t, validateEmail]);
+
+  const handleEmailChange = useCallback((value: string) => {
+    setEmail(value);
+    setErrors(prev => ({ ...prev, email: undefined }));
+  }, []);
+
+  const handlePasswordChange = useCallback((value: string) => {
+    setPassword(value);
+    setErrors(prev => ({ ...prev, password: undefined }));
+  }, []);
+
+  const toggleShowPassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -157,66 +227,21 @@ const AuthScreen = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
         <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
           <div className="space-y-6">
-            {/* Email Input */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">
-                {t('auth.email')}
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('auth.email')}
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setErrors((prev) => ({ ...prev, email: undefined }));
-                  }}
-                  className={cn(
-                    "h-12 pl-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
-                    errors.email ? "border-destructive" : "border-input focus:border-primary"
-                  )}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email}</p>
-              )}
-            </div>
+            <EmailInput 
+              value={email}
+              onChange={handleEmailChange}
+              error={errors.email}
+              placeholder={t('auth.email')}
+            />
 
-            {/* Password Input */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold">
-                {t('auth.password')}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder={t('auth.password')}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setErrors((prev) => ({ ...prev, password: undefined }));
-                  }}
-                  className={cn(
-                    "h-12 pl-10 pr-10 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
-                    errors.password ? "border-destructive" : "border-input focus:border-primary"
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
-              )}
-            </div>
+            <PasswordInput
+              value={password}
+              onChange={handlePasswordChange}
+              error={errors.password}
+              placeholder={t('auth.password')}
+              showPassword={showPassword}
+              onToggleShow={toggleShowPassword}
+            />
 
             {/* Forgot Password Link */}
             <div className="text-right">
@@ -274,4 +299,4 @@ const AuthScreen = () => {
   );
 };
 
-export default AuthScreen;
+export default memo(AuthScreen);

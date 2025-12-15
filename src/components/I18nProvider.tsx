@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, memo } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { i18n, supportedLocales } from '@/i18n';
 
@@ -6,18 +6,16 @@ interface I18nProviderProps {
   children: React.ReactNode;
 }
 
-// Loading fallback component
-const I18nLoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background">
-    <div className="animate-pulse text-muted-foreground">Loading...</div>
-  </div>
-);
+// Minimal loading fallback - just render nothing to avoid flash
+const I18nLoadingFallback = memo(() => null);
+I18nLoadingFallback.displayName = 'I18nLoadingFallback';
 
 /**
- * I18n Provider component that wraps the app with i18next context
- * Handles initial locale detection and document direction setup
+ * Optimized I18n Provider
+ * - Minimal loading state
+ * - Memoized for performance
  */
-export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
+export const I18nProvider: React.FC<I18nProviderProps> = memo(({ children }) => {
   useEffect(() => {
     // Set document direction based on current language
     const currentLang = i18n.language as keyof typeof supportedLocales;
@@ -48,6 +46,8 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
       </Suspense>
     </I18nextProvider>
   );
-};
+});
+
+I18nProvider.displayName = 'I18nProvider';
 
 export default I18nProvider;
