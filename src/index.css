@@ -814,3 +814,527 @@
     max-height: 100dvh;
   }
 }
+
+/* ========================================
+   CROSS-BROWSER COMPATIBILITY
+   ======================================== */
+
+@layer base {
+  /* Normalize box-sizing across all browsers */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+  }
+
+  /* Firefox-specific focus styles */
+  ::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+  }
+
+  /* IE/Edge input placeholder styling */
+  ::-ms-input-placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  /* Webkit input placeholder styling */
+  ::-webkit-input-placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  /* Firefox placeholder styling */
+  ::-moz-placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  /* Standard placeholder styling */
+  ::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+
+  /* IE/Edge clear button */
+  ::-ms-clear {
+    display: none;
+  }
+
+  /* Webkit search cancel button */
+  ::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Firefox number input spinners */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Webkit number input spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  /* Safari date input fixes */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Legacy browser font smoothing */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* IE/Edge flexbox fixes */
+  .flex-fix {
+    flex-shrink: 0;
+  }
+
+  /* Safari flexbox gap fallback */
+  @supports not (gap: 1rem) {
+    .flex-gap > * + * {
+      margin-left: 1rem;
+    }
+    .flex-gap-y > * + * {
+      margin-top: 1rem;
+    }
+  }
+
+  /* Firefox button padding fix */
+  button::-moz-focus-inner {
+    padding: 0;
+    border: 0;
+  }
+
+  /* Safari button appearance fix */
+  button,
+  [type="button"],
+  [type="reset"],
+  [type="submit"] {
+    -webkit-appearance: button;
+    appearance: button;
+  }
+
+  /* IE/Edge select arrow hiding */
+  select::-ms-expand {
+    display: none;
+  }
+
+  /* Webkit autofill styling */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    -webkit-box-shadow: 0 0 0px 1000px hsl(var(--input)) inset;
+    box-shadow: 0 0 0px 1000px hsl(var(--input)) inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  /* Cross-browser flexbox utilities */
+  .flex-compat {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+  }
+
+  .flex-center-compat {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -webkit-align-items: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -webkit-justify-content: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+  }
+
+  /* Cross-browser grid utilities */
+  .grid-compat {
+    display: -ms-grid;
+    display: grid;
+  }
+
+  /* Cross-browser transform utilities */
+  .transform-compat {
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  /* Cross-browser transition utilities */
+  .transition-compat {
+    -webkit-transition: all 0.3s ease;
+    -moz-transition: all 0.3s ease;
+    -o-transition: all 0.3s ease;
+    transition: all 0.3s ease;
+  }
+
+  /* Cross-browser animation utilities */
+  .animate-compat {
+    -webkit-animation-fill-mode: both;
+    -moz-animation-fill-mode: both;
+    -o-animation-fill-mode: both;
+    animation-fill-mode: both;
+  }
+
+  /* Cross-browser opacity utilities */
+  .opacity-compat {
+    -webkit-opacity: 1;
+    -moz-opacity: 1;
+    opacity: 1;
+    filter: alpha(opacity=100);
+  }
+
+  /* Cross-browser border-radius utilities */
+  .rounded-compat {
+    -webkit-border-radius: var(--radius);
+    -moz-border-radius: var(--radius);
+    border-radius: var(--radius);
+  }
+
+  /* Cross-browser box-shadow utilities */
+  .shadow-compat {
+    -webkit-box-shadow: var(--shadow-soft);
+    -moz-box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Cross-browser background utilities */
+  .bg-cover-compat {
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+  }
+
+  /* Cross-browser backdrop blur */
+  .backdrop-blur-compat {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  @supports not (backdrop-filter: blur(8px)) {
+    .backdrop-blur-compat {
+      background-color: hsl(var(--background) / 0.95);
+    }
+  }
+
+  /* Cross-browser sticky positioning */
+  .sticky-compat {
+    position: -webkit-sticky;
+    position: sticky;
+  }
+
+  /* Cross-browser appearance reset */
+  .appearance-none-compat {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  /* Cross-browser user-select */
+  .select-none-compat {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  .select-text-compat {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Cross-browser pointer-events */
+  .pointer-events-none-compat {
+    pointer-events: none;
+  }
+
+  /* Cross-browser object-fit */
+  .object-cover-compat {
+    -o-object-fit: cover;
+    object-fit: cover;
+  }
+
+  .object-contain-compat {
+    -o-object-fit: contain;
+    object-fit: contain;
+  }
+
+  /* Cross-browser text overflow */
+  .truncate-compat {
+    overflow: hidden;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Cross-browser line clamp */
+  .line-clamp-2-compat {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3-compat {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Cross-browser aspect ratio fallback */
+  .aspect-video-compat {
+    aspect-ratio: 16 / 9;
+  }
+
+  @supports not (aspect-ratio: 16 / 9) {
+    .aspect-video-compat {
+      position: relative;
+      padding-bottom: 56.25%;
+    }
+    .aspect-video-compat > * {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .aspect-square-compat {
+    aspect-ratio: 1 / 1;
+  }
+
+  @supports not (aspect-ratio: 1 / 1) {
+    .aspect-square-compat {
+      position: relative;
+      padding-bottom: 100%;
+    }
+    .aspect-square-compat > * {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  /* Cross-browser gap fallback for flexbox */
+  .gap-compat {
+    gap: 1rem;
+  }
+
+  @supports not (gap: 1rem) {
+    .gap-compat {
+      margin: -0.5rem;
+    }
+    .gap-compat > * {
+      margin: 0.5rem;
+    }
+  }
+
+  /* Cross-browser min/max content */
+  .w-max-compat {
+    width: -webkit-max-content;
+    width: -moz-max-content;
+    width: max-content;
+  }
+
+  .w-min-compat {
+    width: -webkit-min-content;
+    width: -moz-min-content;
+    width: min-content;
+  }
+
+  /* Cross-browser fit-content */
+  .w-fit-compat {
+    width: -webkit-fit-content;
+    width: -moz-fit-content;
+    width: fit-content;
+  }
+}
+
+/* ========================================
+   BROWSER-SPECIFIC FIXES
+   ======================================== */
+
+/* Safari-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Fix 100vh issue on Safari iOS */
+  .h-screen-safari {
+    height: -webkit-fill-available;
+  }
+  
+  /* Fix flexbox issues */
+  .safari-flex-fix {
+    flex-basis: auto;
+  }
+}
+
+/* Firefox-specific fixes */
+@-moz-document url-prefix() {
+  /* Firefox scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  
+  /* Firefox button fix */
+  button {
+    line-height: normal;
+  }
+}
+
+/* IE11 and Edge Legacy fixes */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+  /* IE11 flexbox fixes */
+  .ie-flex-fix {
+    flex: 1 0 auto;
+  }
+  
+  /* IE11 grid fallback */
+  .ie-grid-fallback {
+    display: block;
+  }
+}
+
+/* Edge Legacy fixes */
+@supports (-ms-ime-align: auto) {
+  .edge-fix {
+    font-feature-settings: normal;
+  }
+}
+
+/* Samsung Internet Browser fixes */
+@supports (-webkit-overflow-scrolling: touch) {
+  .samsung-fix {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ========================================
+   LEGACY BROWSER FALLBACKS
+   ======================================== */
+
+/* CSS Custom Properties fallback for very old browsers */
+@supports not (--custom: property) {
+  :root {
+    /* Fallback colors for browsers without CSS custom properties */
+  }
+  
+  body {
+    background-color: #f5f7fa;
+    color: #1a1f2e;
+  }
+  
+  .dark body {
+    background-color: #0f1419;
+    color: #e5f0f5;
+  }
+}
+
+/* Grid fallback for older browsers */
+@supports not (display: grid) {
+  .grid-fallback {
+    display: block;
+  }
+  
+  .grid-fallback > * {
+    display: inline-block;
+    vertical-align: top;
+  }
+}
+
+/* Flexbox fallback for very old browsers */
+@supports not (display: flex) {
+  .flex-fallback {
+    display: block;
+  }
+  
+  .flex-fallback::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  
+  .flex-fallback > * {
+    float: left;
+  }
+}
+
+/* ========================================
+   PROGRESSIVE ENHANCEMENT
+   ======================================== */
+
+/* Container queries (progressive enhancement) */
+@supports (container-type: inline-size) {
+  .container-query {
+    container-type: inline-size;
+  }
+  
+  @container (min-width: 400px) {
+    .container-sm\:flex-row {
+      flex-direction: row;
+    }
+  }
+  
+  @container (min-width: 600px) {
+    .container-md\:grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+/* Subgrid (progressive enhancement) */
+@supports (grid-template-columns: subgrid) {
+  .subgrid-compat {
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+}
+
+/* CSS nesting (progressive enhancement) */
+@supports (selector(&)) {
+  .nesting-compat {
+    & > * {
+      margin: 0;
+    }
+  }
+}
+
+/* Color-mix (progressive enhancement) */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .color-mix-compat {
+    --hover-color: color-mix(in srgb, hsl(var(--primary)) 90%, black);
+  }
+}
