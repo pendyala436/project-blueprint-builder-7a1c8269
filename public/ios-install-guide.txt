@@ -1,0 +1,76 @@
+=====================================
+iOS APP INSTALLATION GUIDE
+Meow Meow - Dating & Chat
+=====================================
+
+How to Install This App on Your iPhone or iPad
+----------------------------------------------
+
+Since this is a Progressive Web App (PWA), you can install it 
+directly from Safari browser. Follow these simple steps:
+
+
+STEP 1: Open Safari Browser
+---------------------------
+• Make sure you're using Safari (the default browser on iOS)
+• Other browsers like Chrome on iOS don't support PWA installation
+
+
+STEP 2: Navigate to the App
+---------------------------
+• Go to the app website in Safari
+• Make sure the page is fully loaded
+
+
+STEP 3: Tap the Share Button
+----------------------------
+• Look for the Share icon at the bottom of the screen
+• It looks like a square with an arrow pointing up (⬆️)
+• Tap on this Share button
+
+
+STEP 4: Find "Add to Home Screen"
+---------------------------------
+• Scroll down in the share menu
+• Look for "Add to Home Screen" option
+• It has a plus (+) icon next to it
+• Tap on "Add to Home Screen"
+
+
+STEP 5: Name Your App
+--------------------
+• You can keep the default name or change it
+• Tap "Add" in the top right corner
+
+
+STEP 6: Done!
+------------
+• The app icon will appear on your home screen
+• Tap the icon anytime to open the app
+• It will open in full-screen mode like a native app
+
+
+BENEFITS OF INSTALLING:
+-----------------------
+✓ Quick access from home screen
+✓ Works offline
+✓ Faster loading
+✓ Full-screen experience (no browser bars)
+✓ Push notifications support
+
+
+TROUBLESHOOTING:
+---------------
+• If you don't see "Add to Home Screen", make sure you're using Safari
+• Chrome, Firefox, and other browsers on iOS don't support this feature
+• Make sure your iOS is updated to the latest version
+
+
+Need Help?
+----------
+Contact our support team if you have any issues with installation.
+
+
+=====================================
+© Meow Meow - Dating & Chat
+=====================================

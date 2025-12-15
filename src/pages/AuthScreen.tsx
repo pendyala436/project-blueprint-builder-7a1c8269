@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Lazy load non-critical components
@@ -312,6 +312,16 @@ const AuthScreen = () => {
             </Button>
           </div>
         </Card>
+
+        {/* iOS Install Guide Download */}
+        <a 
+          href="/ios-install-guide.txt" 
+          download="iOS-App-Installation-Guide.txt"
+          className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Download className="h-4 w-4" />
+          <span>Download iOS Installation Guide</span>
+        </a>
       </main>
     </div>
   );
