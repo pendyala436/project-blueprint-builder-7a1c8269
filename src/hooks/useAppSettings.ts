@@ -167,59 +167,7 @@ export const useAppSettings = () => {
   };
 };
 
-/**
- * Singleton hook for chat pricing
- * Fetches dynamic pricing from chat_pricing table
- */
-export const useChatPricing = () => {
-  const [pricing, setPricing] = useState({
-    ratePerMinute: 5,
-    womenEarningRate: 2,
-    videoRatePerMinute: 10,
-    videoWomenEarningRate: 5,
-    minWithdrawalBalance: 10000,
-    currency: "INR",
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchPricing = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from("chat_pricing")
-        .select("*")
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setPricing({
-          ratePerMinute: data.rate_per_minute || 5,
-          womenEarningRate: data.women_earning_rate || 2,
-          videoRatePerMinute: data.video_rate_per_minute || 10,
-          videoWomenEarningRate: data.video_women_earning_rate || 5,
-          minWithdrawalBalance: data.min_withdrawal_balance || 10000,
-          currency: data.currency || "INR",
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching chat pricing:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPricing();
-  }, [fetchPricing]);
-
-  // Real-time subscription
-  useRealtimeSubscription({
-    table: "chat_pricing",
-    onUpdate: fetchPricing,
-  });
-
-  return { pricing, isLoading, refetch: fetchPricing };
-};
-
 export default useAppSettings;
+
+// Note: useChatPricing is now in its own file: src/hooks/useChatPricing.ts
+// Import it from there: import { useChatPricing } from '@/hooks/useChatPricing';

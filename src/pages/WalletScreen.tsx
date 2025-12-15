@@ -41,7 +41,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
-import { useAppSettings, useChatPricing } from "@/hooks/useAppSettings";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 
 interface WalletData {
