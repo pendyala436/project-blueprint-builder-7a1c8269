@@ -273,7 +273,7 @@ const AIProcessingScreen = () => {
       {/* Header */}
       <header className="p-6 flex justify-between items-center">
         <MeowLogo />
-        <ProgressIndicator currentStep={9} totalSteps={10} />
+        <ProgressIndicator currentStep={10} totalSteps={10} />
       </header>
 
       {/* Main Content */}

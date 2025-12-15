@@ -214,7 +214,7 @@ const BasicInfoScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={2} totalSteps={10} />
+            <ProgressIndicator currentStep={3} totalSteps={10} />
           </div>
         </div>
       </header>
