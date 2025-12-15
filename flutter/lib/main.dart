@@ -6,10 +6,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
-import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'shared/providers/locale_provider.dart';
+import 'shared/providers/theme_provider.dart';
 import 'core/l10n/app_localizations.dart';
 
 void main() async {
@@ -63,13 +63,19 @@ class MeowMeowApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final locale = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final currentTheme = ref.watch(currentThemeProvider);
+
+    // Build light and dark themes from the selected theme
+    final lightTheme = currentTheme.toThemeData(Brightness.light);
+    final darkTheme = currentTheme.toThemeData(Brightness.dark);
 
     return MaterialApp.router(
       title: 'Meow Meow',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [

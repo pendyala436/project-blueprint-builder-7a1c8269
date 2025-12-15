@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/providers/locale_provider.dart';
+import '../../../../shared/providers/theme_provider.dart';
 import '../../../../shared/widgets/common_widgets.dart';
+import '../widgets/theme_selector_widget.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -19,11 +20,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationVibration = true;
   bool _showOnlineStatus = true;
   bool _autoTranslate = true;
-  String _theme = 'system';
 
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -32,7 +33,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           // Account Section
-          _buildSectionHeader('Account'),
+          _buildSectionHeader('Account', colorScheme),
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text('Edit Profile'),
@@ -53,7 +54,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
 
           // Notifications Section
-          _buildSectionHeader('Notifications'),
+          _buildSectionHeader('Notifications', colorScheme),
           SwitchListTile(
             secondary: const Icon(Icons.volume_up),
             title: const Text('Notification Sound'),
@@ -68,7 +69,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
 
           // Privacy Section
-          _buildSectionHeader('Privacy'),
+          _buildSectionHeader('Privacy', colorScheme),
           SwitchListTile(
             secondary: const Icon(Icons.visibility),
             title: const Text('Show Online Status'),
@@ -78,7 +79,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
 
           // Language Section
-          _buildSectionHeader('Language & Translation'),
+          _buildSectionHeader('Language & Translation', colorScheme),
           ListTile(
             leading: const Icon(Icons.language),
             title: const Text('App Language'),
@@ -94,18 +95,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (value) => setState(() => _autoTranslate = value),
           ),
 
-          // Appearance Section
-          _buildSectionHeader('Appearance'),
-          ListTile(
-            leading: const Icon(Icons.palette),
-            title: const Text('Theme'),
-            subtitle: Text(_theme.toUpperCase()),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showThemeDialog(),
+          // Appearance Section - Now uses ThemeSelectorWidget with 20 themes
+          _buildSectionHeader('Appearance', colorScheme),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ThemeSelectorWidget(),
           ),
 
           // Support Section
-          _buildSectionHeader('Support'),
+          _buildSectionHeader('Support', colorScheme),
           ListTile(
             leading: const Icon(Icons.help),
             title: const Text('Help Center'),
@@ -132,15 +130,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
 
           // Danger Zone
-          _buildSectionHeader('Account Actions'),
+          _buildSectionHeader('Account Actions', colorScheme),
           ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.warning),
+            leading: Icon(Icons.logout, color: colorScheme.tertiary),
             title: const Text('Sign Out'),
             onTap: () => _showSignOutDialog(),
           ),
           ListTile(
-            leading: const Icon(Icons.delete_forever, color: AppColors.destructive),
-            title: const Text('Delete Account', style: TextStyle(color: AppColors.destructive)),
+            leading: Icon(Icons.delete_forever, color: colorScheme.error),
+            title: Text('Delete Account', style: TextStyle(color: colorScheme.error)),
             onTap: () => _showDeleteAccountDialog(),
           ),
 
@@ -150,13 +148,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppColors.primary,
+              color: colorScheme.primary,
             ),
       ),
     );
@@ -193,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 return ListTile(
                   title: Text(name),
-                  trailing: isSelected ? const Icon(Icons.check, color: AppColors.primary) : null,
+                  trailing: isSelected ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
                   onTap: () {
                     ref.read(localeProvider.notifier).setLocaleByCode(code);
                     Navigator.pop(context);
@@ -207,50 +205,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showThemeDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Select Theme'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('System'),
-                value: 'system',
-                groupValue: _theme,
-                onChanged: (value) {
-                  setState(() => _theme = value!);
-                  Navigator.pop(context);
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Light'),
-                value: 'light',
-                groupValue: _theme,
-                onChanged: (value) {
-                  setState(() => _theme = value!);
-                  Navigator.pop(context);
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Dark'),
-                value: 'dark',
-                groupValue: _theme,
-                onChanged: (value) {
-                  setState(() => _theme = value!);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showSignOutDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) {
@@ -268,7 +224,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await ref.read(authServiceProvider).signOut();
                 if (mounted) context.go(AppRoutes.auth);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.destructive),
+              style: ElevatedButton.styleFrom(backgroundColor: colorScheme.error),
               child: const Text('Sign Out'),
             ),
           ],
@@ -278,6 +234,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) {
@@ -298,7 +255,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SnackBar(content: Text('Please contact support to delete your account')),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.destructive),
+              style: ElevatedButton.styleFrom(backgroundColor: colorScheme.error),
               child: const Text('Delete'),
             ),
           ],
