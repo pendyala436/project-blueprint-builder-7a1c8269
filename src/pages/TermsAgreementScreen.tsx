@@ -580,11 +580,11 @@ const TermsAgreementScreen = () => {
 
       toast({
         title: "Terms Accepted!",
-        description: "Proceeding to AI verification...",
+        description: "Now let's set up your password.",
       });
 
-      // Navigate to AI processing for gender verification
-      navigate("/ai-processing");
+      // Navigate to password setup (final step)
+      navigate("/password-setup");
     } catch (error) {
       console.error("Error saving registration:", error);
       toast({
