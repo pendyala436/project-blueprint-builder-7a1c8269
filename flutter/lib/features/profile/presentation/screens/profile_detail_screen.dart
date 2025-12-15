@@ -19,7 +19,7 @@ class ProfileDetailScreen extends ConsumerStatefulWidget {
 
 class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   UserModel? _profile;
-  List<String> _languages = [];
+  List<UserLanguageModel> _languages = [];
   List<Map<String, dynamic>> _photos = [];
   bool _isLoading = true;
 
@@ -32,6 +32,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   Future<void> _loadProfile() async {
     final profileService = ref.read(profileServiceProvider);
     
+    // All data fetched from profiles table (single source of truth)
     final profile = await profileService.getProfile(widget.userId);
     final languages = await profileService.getUserLanguages(widget.userId);
     final photos = await profileService.getUserPhotos(widget.userId);
@@ -91,7 +92,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name and Verification
+                  // Name, Age and Verification
                   Row(
                     children: [
                       Expanded(
@@ -120,14 +121,32 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Location
-                  if (_profile!.state != null || _profile!.country != null)
+                  // Location (Country, State, City)
+                  if (_profile!.city != null || _profile!.state != null || _profile!.country != null)
                     Row(
                       children: [
                         const Icon(Icons.location_on, size: 16, color: AppColors.mutedForeground),
                         const SizedBox(width: 4),
                         Text(
-                          [_profile!.state, _profile!.country].where((s) => s != null).join(', '),
+                          [_profile!.city, _profile!.state, _profile!.country]
+                              .where((s) => s != null && s.isNotEmpty)
+                              .join(', '),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.mutedForeground,
+                              ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 8),
+
+                  // Primary Language
+                  if (_profile!.primaryLanguage != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.language, size: 16, color: AppColors.mutedForeground),
+                        const SizedBox(width: 4),
+                        Text(
+                          _profile!.primaryLanguage!,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
@@ -143,6 +162,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () {
                             // Start chat
+                            context.push('/chat/${widget.userId}');
                           },
                           icon: const Icon(Icons.chat),
                           label: const Text('Message'),
@@ -174,6 +194,14 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                   _buildInfoGrid(),
                   const SizedBox(height: 24),
 
+                  // Lifestyle Section
+                  if (_hasLifestyleInfo()) ...[
+                    Text('Lifestyle', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    _buildLifestyleGrid(),
+                    const SizedBox(height: 24),
+                  ],
+
                   // Languages
                   if (_languages.isNotEmpty) ...[
                     Text('Languages', style: Theme.of(context).textTheme.titleMedium),
@@ -183,7 +211,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                       runSpacing: 8,
                       children: _languages.map((lang) {
                         return Chip(
-                          label: Text(lang),
+                          label: Text(lang.languageName),
                           backgroundColor: AppColors.secondary,
                         );
                       }).toList(),
@@ -207,6 +235,23 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+
+                  // Life Goals
+                  if (_profile!.lifeGoals.isNotEmpty) ...[
+                    Text('Life Goals', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _profile!.lifeGoals.map((goal) {
+                        return Chip(
+                          label: Text(goal),
+                          backgroundColor: AppColors.success.withOpacity(0.1),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ],
               ),
             ),
@@ -214,6 +259,17 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         ],
       ),
     );
+  }
+
+  bool _hasLifestyleInfo() {
+    return _profile!.smokingHabit != null ||
+        _profile!.drinkingHabit != null ||
+        _profile!.dietaryPreference != null ||
+        _profile!.fitnessLevel != null ||
+        _profile!.petPreference != null ||
+        _profile!.travelFrequency != null ||
+        _profile!.personalityType != null ||
+        _profile!.zodiacSign != null;
   }
 
   Widget _buildPhotoGallery() {
@@ -260,6 +316,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         {'icon': Icons.favorite, 'label': 'Status', 'value': _profile!.maritalStatus},
       if (_profile!.bodyType != null)
         {'icon': Icons.accessibility, 'label': 'Body Type', 'value': _profile!.bodyType},
+      if (_profile!.country != null)
+        {'icon': Icons.flag, 'label': 'Country', 'value': _profile!.country},
     ];
 
     if (items.isEmpty) {
@@ -281,6 +339,70 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         return Row(
           children: [
             Icon(item['icon'] as IconData, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    item['label'] as String,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  Text(
+                    item['value'] as String,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLifestyleGrid() {
+    final items = <Map<String, dynamic>>[
+      if (_profile!.smokingHabit != null)
+        {'icon': Icons.smoking_rooms, 'label': 'Smoking', 'value': _profile!.smokingHabit},
+      if (_profile!.drinkingHabit != null)
+        {'icon': Icons.local_bar, 'label': 'Drinking', 'value': _profile!.drinkingHabit},
+      if (_profile!.dietaryPreference != null)
+        {'icon': Icons.restaurant, 'label': 'Diet', 'value': _profile!.dietaryPreference},
+      if (_profile!.fitnessLevel != null)
+        {'icon': Icons.fitness_center, 'label': 'Fitness', 'value': _profile!.fitnessLevel},
+      if (_profile!.petPreference != null)
+        {'icon': Icons.pets, 'label': 'Pets', 'value': _profile!.petPreference},
+      if (_profile!.travelFrequency != null)
+        {'icon': Icons.flight, 'label': 'Travel', 'value': _profile!.travelFrequency},
+      if (_profile!.personalityType != null)
+        {'icon': Icons.psychology, 'label': 'Personality', 'value': _profile!.personalityType},
+      if (_profile!.zodiacSign != null)
+        {'icon': Icons.stars, 'label': 'Zodiac', 'value': _profile!.zodiacSign},
+    ];
+
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Row(
+          children: [
+            Icon(item['icon'] as IconData, size: 20, color: AppColors.success),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

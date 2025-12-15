@@ -7,6 +7,7 @@ import '../../../../core/services/profile_service.dart';
 import '../../../../core/services/chat_service.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/common_widgets.dart';
+import '../../../../shared/models/user_model.dart';
 
 class WomenDashboardScreen extends ConsumerStatefulWidget {
   const WomenDashboardScreen({super.key});
@@ -50,6 +51,8 @@ class _WomenHomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(currentUserProfileProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('🐱 Dashboard'),
@@ -64,29 +67,80 @@ class _WomenHomeTab extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Error loading profile')),
+        data: (profile) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome Card with profile data
+              _buildWelcomeCard(context, profile),
+              const SizedBox(height: 16),
+
+              // Status Card
+              _buildStatusCard(context),
+              const SizedBox(height: 24),
+              
+              // Quick Stats
+              _buildQuickStats(context),
+              const SizedBox(height: 24),
+              
+              // Active Chats Section
+              Text('Active Chats', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              const _ActiveChatsPreview(),
+              const SizedBox(height: 24),
+              
+              // Shift Schedule
+              Text('Today\'s Shift', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              _buildShiftCard(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard(BuildContext context, UserModel? profile) {
+    final firstName = profile?.fullName?.split(' ').first ?? 'User';
+    final country = profile?.country ?? '';
+    final language = profile?.primaryLanguage ?? profile?.preferredLanguage ?? 'English';
+
+    return Card(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Status Card
-            _buildStatusCard(context),
-            const SizedBox(height: 24),
-            
-            // Quick Stats
-            _buildQuickStats(context),
-            const SizedBox(height: 24),
-            
-            // Active Chats Section
-            Text('Active Chats', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            const _ActiveChatsPreview(),
-            const SizedBox(height: 24),
-            
-            // Shift Schedule
-            Text('Today\'s Shift', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            _buildShiftCard(context),
+            AppAvatar(
+              imageUrl: profile?.photoUrl,
+              name: profile?.fullName,
+              radius: 28,
+              isOnline: true,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome back, $firstName! 👋',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (country.isNotEmpty || language.isNotEmpty)
+                    Text(
+                      [country, language].where((s) => s.isNotEmpty).join(' • '),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (profile?.isVerified ?? false)
+              const Icon(Icons.verified, color: AppColors.info, size: 20),
           ],
         ),
       ),
@@ -354,59 +408,167 @@ class _WomenProfileTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(currentUserProfileProvider);
     final authService = ref.watch(authServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: ListView(
-        children: [
-          // Profile header
-          Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const AppAvatar(name: 'User', radius: 48),
-                const SizedBox(height: 16),
-                Text('Your Name', style: Theme.of(context).textTheme.titleLarge),
-                const Text('Premium Member'),
-              ],
-            ),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Edit Profile'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.schedule),
-            title: const Text('Shift Management'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.shiftManagement),
-          ),
-          ListTile(
-            leading: const Icon(Icons.assessment),
-            title: const Text('Performance'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.shiftCompliance),
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.settings),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.destructive),
-            title: const Text('Sign Out', style: TextStyle(color: AppColors.destructive)),
-            onTap: () async {
-              await authService.signOut();
-              if (context.mounted) context.go(AppRoutes.auth);
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              // Open profile edit screen
             },
           ),
         ],
+      ),
+      body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Error loading profile')),
+        data: (profile) => ListView(
+          children: [
+            // Profile header
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  AppAvatar(
+                    imageUrl: profile?.photoUrl,
+                    name: profile?.fullName,
+                    radius: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        profile?.fullName ?? 'Your Name',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      if (profile?.isVerified ?? false)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.verified, color: AppColors.info, size: 20),
+                        ),
+                    ],
+                  ),
+                  if (profile?.age != null)
+                    Text(
+                      '${profile!.age} years old',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  if (profile?.country != null || profile?.state != null)
+                    Text(
+                      [profile?.state, profile?.country]
+                          .where((s) => s != null && s.isNotEmpty)
+                          .join(', '),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  const SizedBox(height: 8),
+                  if (profile?.primaryLanguage != null)
+                    Chip(
+                      label: Text(profile!.primaryLanguage!),
+                      avatar: const Icon(Icons.language, size: 16),
+                    ),
+                  if (profile?.approvalStatus == 'approved')
+                    Chip(
+                      label: const Text('Approved'),
+                      backgroundColor: AppColors.success.withOpacity(0.1),
+                      avatar: const Icon(Icons.check_circle, size: 16, color: AppColors.success),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(),
+
+            // Profile Details
+            if (profile?.bio != null)
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('About'),
+                subtitle: Text(profile!.bio!),
+              ),
+            if (profile?.occupation != null)
+              ListTile(
+                leading: const Icon(Icons.work_outline),
+                title: const Text('Occupation'),
+                subtitle: Text(profile!.occupation!),
+              ),
+            if (profile?.educationLevel != null)
+              ListTile(
+                leading: const Icon(Icons.school_outlined),
+                title: const Text('Education'),
+                subtitle: Text(profile!.educationLevel!),
+              ),
+            if (profile?.religion != null)
+              ListTile(
+                leading: const Icon(Icons.church_outlined),
+                title: const Text('Religion'),
+                subtitle: Text(profile!.religion!),
+              ),
+            if (profile?.maritalStatus != null)
+              ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('Marital Status'),
+                subtitle: Text(profile!.maritalStatus!),
+              ),
+            
+            const Divider(),
+
+            // Performance Stats (for women)
+            if (profile?.performanceScore != null)
+              ListTile(
+                leading: const Icon(Icons.star_outline, color: AppColors.warning),
+                title: const Text('Performance Score'),
+                subtitle: Text('${profile!.performanceScore}%'),
+              ),
+            if (profile?.totalChatsCount != null)
+              ListTile(
+                leading: const Icon(Icons.chat_outlined),
+                title: const Text('Total Chats'),
+                subtitle: Text('${profile!.totalChatsCount}'),
+              ),
+
+            const Divider(),
+
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Profile'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                // Navigate to edit profile
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: const Text('Shift Management'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.shiftManagement),
+            ),
+            ListTile(
+              leading: const Icon(Icons.assessment),
+              title: const Text('Performance'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.shiftCompliance),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.settings),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.destructive),
+              title: const Text('Sign Out', style: TextStyle(color: AppColors.destructive)),
+              onTap: () async {
+                await authService.signOut();
+                if (context.mounted) context.go(AppRoutes.auth);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
