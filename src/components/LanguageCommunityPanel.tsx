@@ -103,6 +103,19 @@ export const LanguageCommunityPanel = ({
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Officer nominations
+  const [officerNominations, setOfficerNominations] = useState<{
+    id: string;
+    nomineeId: string;
+    nomineeName: string;
+    nomineePhoto: string | null;
+    approvals: number;
+    rejections: number;
+    hasVoted: boolean;
+    userVote: string | null;
+  }[]>([]);
+  const [hasNominated, setHasNominated] = useState(false);
+  
   // Election creation dialog
   const [showCreateElectionDialog, setShowCreateElectionDialog] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
@@ -249,9 +262,51 @@ export const LanguageCommunityPanel = ({
         // Sort by seniority (most senior first = longest time on app)
         membersList.sort((a, b) => b.seniority - a.seniority);
 
-        // Auto-assign election officer if none exists
+        // Load officer nominations first
+        const { data: nominationsData } = await supabase
+          .from("officer_nominations")
+          .select("*")
+          .eq("language_code", motherTongue)
+          .eq("status", "pending");
+
+        // Check if user has already nominated
+        const userNomination = nominationsData?.find(n => n.nominee_id === currentUserId);
+        setHasNominated(!!userNomination);
+
+        // Load nomination votes
+        let nominationsWithVotes: typeof officerNominations = [];
+        if (nominationsData && nominationsData.length > 0) {
+          const nomineeIds = nominationsData.map(n => n.nominee_id);
+          const { data: nomineeProfiles } = await supabase
+            .from("female_profiles")
+            .select("user_id, full_name, photo_url")
+            .in("user_id", nomineeIds);
+          
+          const { data: userVotes } = await supabase
+            .from("officer_nomination_votes")
+            .select("nomination_id, vote_type")
+            .eq("voter_id", currentUserId)
+            .in("nomination_id", nominationsData.map(n => n.id));
+
+          const profileMap = new Map(nomineeProfiles?.map(p => [p.user_id, p]) || []);
+          const voteMap = new Map(userVotes?.map(v => [v.nomination_id, v.vote_type]) || []);
+
+          nominationsWithVotes = nominationsData.map(n => ({
+            id: n.id,
+            nomineeId: n.nominee_id,
+            nomineeName: profileMap.get(n.nominee_id)?.full_name || "Unknown",
+            nomineePhoto: profileMap.get(n.nominee_id)?.photo_url || null,
+            approvals: n.approvals_count,
+            rejections: n.rejections_count,
+            hasVoted: voteMap.has(n.id),
+            userVote: voteMap.get(n.id) || null
+          }));
+        }
+        setOfficerNominations(nominationsWithVotes);
+
+        // Auto-assign election officer only if none exists AND no pending nominations
         // Election Officer = the member with the longest time on the app (most seniority)
-        if (!officerId && membersList.length > 0) {
+        if (!officerId && membersList.length > 0 && nominationsData?.length === 0) {
           console.log("[LanguageCommunity] Auto-assigning election officer:", membersList[0].fullName);
           const mostSeniorMember = membersList[0];
           await autoAssignElectionOfficer(mostSeniorMember.userId);
@@ -363,6 +418,124 @@ export const LanguageCommunityPanel = ({
     }
   };
 
+  // Self-nominate as officer
+  const nominateSelfAsOfficer = async () => {
+    if (electionOfficer) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('officerExists', 'There is already an active election officer'),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (hasNominated) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('alreadyNominated', 'You have already nominated yourself'),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("officer_nominations")
+        .insert({
+          language_code: motherTongue,
+          nominee_id: currentUserId,
+          nominated_by: currentUserId,
+          status: "pending"
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: t('nominationSubmitted', 'Nomination Submitted'),
+        description: t('nominationPending', 'Your nomination is now open for community approval')
+      });
+
+      setHasNominated(true);
+      loadCommunityData();
+    } catch (error: any) {
+      toast({
+        title: t('error', 'Error'),
+        description: error.message || t('nominationFailed', 'Failed to submit nomination'),
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Vote on officer nomination
+  const voteOnNomination = async (nominationId: string, approve: boolean) => {
+    try {
+      const { error: voteError } = await supabase
+        .from("officer_nomination_votes")
+        .insert({
+          nomination_id: nominationId,
+          voter_id: currentUserId,
+          vote_type: approve ? "approve" : "reject"
+        });
+
+      if (voteError) throw voteError;
+
+      // Update nomination counts
+      const nomination = officerNominations.find(n => n.id === nominationId);
+      if (nomination) {
+        await supabase
+          .from("officer_nominations")
+          .update({
+            approvals_count: nomination.approvals + (approve ? 1 : 0),
+            rejections_count: nomination.rejections + (approve ? 0 : 1)
+          })
+          .eq("id", nominationId);
+      }
+
+      toast({
+        title: approve ? t('approved', 'Approved') : t('rejected', 'Rejected'),
+        description: `You have ${approve ? 'approved' : 'rejected'} this nomination`
+      });
+
+      loadCommunityData();
+    } catch (error: any) {
+      toast({
+        title: t('error', 'Error'),
+        description: error.message || t('voteFailed', 'Failed to vote'),
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Confirm officer from nomination
+  const confirmOfficerFromNomination = async (nominationId: string, nomineeId: string) => {
+    try {
+      // Create officer via app_settings
+      await autoAssignElectionOfficer(nomineeId);
+
+      // Mark nomination as approved
+      await supabase
+        .from("officer_nominations")
+        .update({ 
+          status: "approved",
+          resolved_at: new Date().toISOString()
+        })
+        .eq("id", nominationId);
+
+      toast({
+        title: t('officerConfirmed', 'Officer Confirmed!'),
+        description: t('newOfficerAssigned', 'New election officer has been assigned')
+      });
+
+      loadCommunityData();
+    } catch (error: any) {
+      toast({
+        title: t('error', 'Error'),
+        description: error.message || t('confirmFailed', 'Failed to confirm officer'),
+        variant: "destructive"
+      });
+    }
+  };
+
   const subscribeToUpdates = () => {
     const channel = supabase
       .channel(`language-community-${motherTongue}`)
@@ -370,6 +543,16 @@ export const LanguageCommunityPanel = ({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'group_messages' },
         () => loadMessages()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'officer_nominations' },
+        () => loadCommunityData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'officer_nomination_votes' },
+        () => loadCommunityData()
       )
       .on(
         'postgres_changes',
@@ -1045,10 +1228,141 @@ export const LanguageCommunityPanel = ({
                             </div>
                           </div>
                         ) : (
-                          <p className="text-xs text-muted-foreground">{t('assigningOfficer', 'Assigning officer...')}</p>
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              {officerNominations.length > 0 
+                                ? `${officerNominations.length} ${t('nominationsPending', 'nomination(s) pending')}`
+                                : t('noOfficerYet', 'No officer yet')}
+                            </p>
+                            {!hasNominated && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full"
+                                onClick={nominateSelfAsOfficer}
+                              >
+                                <UserPlus className="w-3 h-3 mr-1" />
+                                {t('nominateYourself', 'Nominate Yourself')}
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
+
+                    {/* Officer Nominations Section */}
+                    {!electionOfficer && officerNominations.length > 0 && (
+                      <Card className="border-purple-500/30 bg-purple-500/5">
+                        <CardHeader className="pb-2 pt-3 px-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Gavel className="w-4 h-4 text-purple-500" />
+                            {t('commissionerNominations', 'Commissioner Nominations')}
+                            <Badge variant="outline" className="ml-auto text-xs">
+                              {officerNominations.length} {t('pending', 'pending')}
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 px-3 pb-3">
+                          <p className="text-xs text-muted-foreground">
+                            {t('voteToApprove', 'Vote to approve a commissioner. Majority approval confirms the officer.')}
+                          </p>
+                          {officerNominations.map((nomination) => {
+                            const totalVotes = nomination.approvals + nomination.rejections;
+                            const approvalRate = totalVotes > 0 
+                              ? Math.round((nomination.approvals / totalVotes) * 100) 
+                              : 0;
+                            const hasEnoughApproval = nomination.approvals > members.length / 2;
+
+                            return (
+                              <div key={nomination.id} className="p-3 rounded-lg border bg-card space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={nomination.nomineePhoto || ""} />
+                                      <AvatarFallback>{nomination.nomineeName?.[0]}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <span className="text-sm font-medium block">{nomination.nomineeName}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {nomination.approvals} {t('approvals', 'approvals')}, {nomination.rejections} {t('rejections', 'rejections')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {hasEnoughApproval && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-purple-500 hover:bg-purple-600"
+                                      onClick={() => confirmOfficerFromNomination(nomination.id, nomination.nomineeId)}
+                                    >
+                                      {t('confirm', 'Confirm')}
+                                    </Button>
+                                  )}
+                                </div>
+
+                                {/* Approval bar */}
+                                <div className="space-y-1">
+                                  <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                                    <div 
+                                      className="h-full bg-green-500 transition-all"
+                                      style={{ width: `${approvalRate}%` }}
+                                    />
+                                    <div 
+                                      className="h-full bg-red-500 transition-all"
+                                      style={{ width: `${100 - approvalRate}%` }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>{approvalRate}% {t('approval', 'approval')}</span>
+                                    <span>{totalVotes}/{members.length} {t('voted', 'voted')}</span>
+                                  </div>
+                                </div>
+
+                                {/* Vote buttons */}
+                                {!nomination.hasVoted && nomination.nomineeId !== currentUserId && (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-green-600 border-green-500/30 hover:bg-green-500/10"
+                                      onClick={() => voteOnNomination(nomination.id, true)}
+                                    >
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      {t('approve', 'Approve')}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-red-600 border-red-500/30 hover:bg-red-500/10"
+                                      onClick={() => voteOnNomination(nomination.id, false)}
+                                    >
+                                      <X className="w-3 h-3 mr-1" />
+                                      {t('reject', 'Reject')}
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {nomination.hasVoted && (
+                                  <Badge variant="outline" className={cn(
+                                    "w-full justify-center",
+                                    nomination.userVote === "approve" 
+                                      ? "bg-green-500/10 text-green-600 border-green-500/30"
+                                      : "bg-red-500/10 text-red-600 border-red-500/30"
+                                  )}>
+                                    {t('youVoted', 'You')} {nomination.userVote === "approve" ? t('approved', 'approved') : t('rejected', 'rejected')} {t('thisNomination', 'this nomination')}
+                                  </Badge>
+                                )}
+
+                                {nomination.nomineeId === currentUserId && (
+                                  <Badge variant="outline" className="w-full justify-center bg-purple-500/10 text-purple-600 border-purple-500/30">
+                                    {t('yourNomination', 'This is your nomination')}
+                                  </Badge>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Election Controls (for election officer only) */}
                     {isElectionOfficer && (
