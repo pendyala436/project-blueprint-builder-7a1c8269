@@ -394,11 +394,11 @@ export const RandomChatButton = ({
                       className="w-20 h-20 rounded-full object-cover border-4 border-primary/20"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-rose-500 flex items-center justify-center text-white text-2xl font-bold">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-2xl font-bold">
                       {matchedUser.fullName.charAt(0)}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-online rounded-full border-2 border-background flex items-center justify-center">
                     <UserCheck className="h-3 w-3 text-white" />
                   </div>
                 </div>
@@ -413,7 +413,7 @@ export const RandomChatButton = ({
                       Auto-translate
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-700">
+                    <Badge variant="successOutline" className="text-xs">
                       Same language
                     </Badge>
                   )}

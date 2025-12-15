@@ -385,9 +385,9 @@ const AdminAnalyticsDashboard = () => {
       <div className={cn(
         "absolute top-0 right-0 w-20 h-20 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2",
         color === "primary" && "bg-primary",
-        color === "success" && "bg-green-500",
-        color === "warning" && "bg-yellow-500",
-        color === "danger" && "bg-red-500",
+        color === "success" && "bg-success",
+        color === "warning" && "bg-warning",
+        color === "danger" && "bg-destructive",
       )} />
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
@@ -397,7 +397,7 @@ const AdminAnalyticsDashboard = () => {
             {trend && trendValue && (
               <div className={cn(
                 "flex items-center gap-1 mt-2 text-sm",
-                trend === "up" ? "text-green-500" : "text-red-500"
+                trend === "up" ? "text-success" : "text-destructive"
               )}>
                 {trend === "up" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 <span>{trendValue}</span>
@@ -407,9 +407,9 @@ const AdminAnalyticsDashboard = () => {
           <div className={cn(
             "p-3 rounded-lg",
             color === "primary" && "bg-primary/10 text-primary",
-            color === "success" && "bg-green-500/10 text-green-500",
-            color === "warning" && "bg-yellow-500/10 text-yellow-500",
-            color === "danger" && "bg-red-500/10 text-red-500",
+            color === "success" && "bg-success/10 text-success",
+            color === "warning" && "bg-warning/10 text-warning",
+            color === "danger" && "bg-destructive/10 text-destructive",
           )}>
             <Icon className="h-6 w-6" />
           </div>
@@ -502,13 +502,13 @@ const AdminAnalyticsDashboard = () => {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* System Status Banner */}
         {analytics.menRecharges === 0 && (
-          <Card className="border-amber-500/50 bg-amber-500/5">
+          <Card className="border-warning/50 bg-warning/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-amber-500/20">
-                <Activity className="h-5 w-5 text-amber-500" />
+              <div className="p-2 rounded-full bg-warning/20">
+                <Activity className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="font-medium text-amber-600 dark:text-amber-400">System Not Live</p>
+                <p className="font-medium text-warning">System Not Live</p>
                 <p className="text-sm text-muted-foreground">
                   Payment gateways not connected. All stats show real-time data only - no test/mock data included.
                 </p>
@@ -830,7 +830,7 @@ const AdminAnalyticsDashboard = () => {
                 className="h-auto p-4 flex flex-col items-center gap-2"
                 onClick={() => navigate("/admin/finance-reports")}
               >
-                <IndianRupee className="h-6 w-6 text-green-500" />
+                <IndianRupee className="h-6 w-6 text-success" />
                 <span className="text-sm font-medium">Finance</span>
                 <span className="text-xs text-muted-foreground">Revenue reports</span>
               </Button>

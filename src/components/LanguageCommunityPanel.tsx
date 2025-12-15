@@ -921,8 +921,8 @@ export const LanguageCommunityPanel = ({
   const MemberCard = ({ member, showVoteButton = true }: { member: CommunityMember; showVoteButton?: boolean }) => (
     <div className={cn(
       "flex items-center gap-3 p-3 rounded-lg border transition-colors",
-      member.isLeader ? "bg-amber-500/10 border-amber-500/30" :
-      member.isElectionOfficer ? "bg-purple-500/10 border-purple-500/30" :
+      member.isLeader ? "bg-warning/10 border-warning/30" :
+      member.isElectionOfficer ? "bg-secondary/10 border-secondary/30" :
       member.isCandidate ? "bg-primary/10 border-primary/30" :
       "bg-card border-border hover:bg-accent/50"
     )}>
@@ -932,19 +932,19 @@ export const LanguageCommunityPanel = ({
           <AvatarFallback>{member.fullName[0]}</AvatarFallback>
         </Avatar>
         {member.isOnline && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-online rounded-full border-2 border-background" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium truncate">{member.fullName}</span>
           {member.isLeader && (
-            <Badge variant="outline" className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-xs">
+            <Badge variant="warningOutline" className="text-xs">
               <Crown className="w-3 h-3 mr-1" /> {t('leader', 'Leader')}
             </Badge>
           )}
           {member.isElectionOfficer && (
-            <Badge variant="outline" className="bg-purple-500/20 text-purple-600 border-purple-500/30 text-xs">
+            <Badge variant="outline" className="bg-secondary/20 text-secondary-foreground border-secondary/30 text-xs">
               <Gavel className="w-3 h-3 mr-1" /> {t('officer', 'Officer')}
             </Badge>
           )}
@@ -997,7 +997,7 @@ export const LanguageCommunityPanel = ({
         <p className="text-xs text-muted-foreground">{member.seniority} {t('daysSeniority', 'days seniority')}</p>
       </div>
       {member.isOnline && (
-        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
+        <Badge variant="online" className="text-xs">
           {t('online', 'Online')}
         </Badge>
       )}
@@ -1024,7 +1024,7 @@ export const LanguageCommunityPanel = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {currentLeader && (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                    <Badge variant="warningOutline">
                       <Crown className="w-3 h-3 mr-1" />
                       {currentLeader.fullName.split(" ")[0]}
                     </Badge>
