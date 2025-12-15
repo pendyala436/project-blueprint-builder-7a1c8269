@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +28,24 @@ import {
   UserPlus,
   Play,
   Square,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  TrendingUp,
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { cn } from "@/lib/utils";
-import { Election, Candidate, ElectionOfficer, CommunityLeader, VoterRegistration } from "@/hooks/useElectionSystem";
+import { 
+  Election, 
+  Candidate, 
+  ElectionOfficer, 
+  CommunityLeader, 
+  VoterRegistration,
+  MemberWithSeniority
+} from "@/hooks/useElectionSystem";
 
 interface ElectionPanelProps {
   currentUserId: string;
@@ -43,14 +58,20 @@ interface ElectionPanelProps {
   isRegisteredVoter: boolean;
   isOfficer: boolean;
   currentYear: number;
-  members: Array<{ userId: string; fullName: string; photoUrl: string | null; seniority: number }>;
-  onCreateElection: () => Promise<boolean>;
+  members: MemberWithSeniority[];
+  liveVoteCounts: Record<string, number>;
+  totalVotesCast: number;
+  votingProgress: { voted: number; total: number; percentage: number };
+  onCreateElection: (scheduledAt?: string) => Promise<boolean>;
+  onScheduleElection: (scheduledAt: string) => Promise<boolean>;
   onAddCandidate: (userId: string) => Promise<boolean>;
   onRegisterAllVoters: (userIds: string[]) => Promise<boolean>;
+  onRegisterPresentVoters: (members: MemberWithSeniority[]) => Promise<boolean>;
   onStartElection: () => Promise<boolean>;
   onCastVote: (candidateId: string) => Promise<boolean>;
   onEndElection: () => Promise<{ success: boolean; isTie: boolean; tiedCandidates?: Candidate[] }>;
   onFinalizeElection: (winnerId: string) => Promise<{ success: boolean; isTie: boolean }>;
+  onReassignOfficer: (members: MemberWithSeniority[]) => Promise<boolean>;
 }
 
 export const ElectionPanel = ({
@@ -65,28 +86,60 @@ export const ElectionPanel = ({
   isOfficer,
   currentYear,
   members,
+  liveVoteCounts,
+  totalVotesCast,
+  votingProgress,
   onCreateElection,
+  onScheduleElection,
   onAddCandidate,
   onRegisterAllVoters,
+  onRegisterPresentVoters,
   onStartElection,
   onCastVote,
   onEndElection,
-  onFinalizeElection
+  onFinalizeElection,
+  onReassignOfficer
 }: ElectionPanelProps) => {
   const { t } = useTranslation();
   const [showAddCandidatesDialog, setShowAddCandidatesDialog] = useState(false);
   const [showTiebreakerDialog, setShowTiebreakerDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
   const [tiedCandidates, setTiedCandidates] = useState<Candidate[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState("");
 
   const registeredVoterIds = voterRegistry.map(v => v.user_id);
   const candidateUserIds = candidates.map(c => c.user_id);
   const eligibleForCandidate = members.filter(m => !candidateUserIds.includes(m.userId));
+  const onlineMembers = members.filter(m => m.isOnline);
+
+  // Sort candidates by vote count for display
+  const sortedCandidates = [...candidates].sort((a, b) => 
+    (liveVoteCounts[b.id] || b.vote_count) - (liveVoteCounts[a.id] || a.vote_count)
+  );
+
+  const maxVotes = sortedCandidates.length > 0 
+    ? Math.max(...sortedCandidates.map(c => liveVoteCounts[c.id] || c.vote_count), 1) 
+    : 1;
 
   const handleCreateElection = async () => {
     setIsProcessing(true);
     await onCreateElection();
+    setIsProcessing(false);
+  };
+
+  const handleScheduleElection = async () => {
+    if (!scheduledDateTime) return;
+    setIsProcessing(true);
+    const success = currentElection 
+      ? await onScheduleElection(scheduledDateTime)
+      : await onCreateElection(scheduledDateTime);
+    if (success) {
+      setShowScheduleDialog(false);
+      setScheduledDateTime("");
+    }
     setIsProcessing(false);
   };
 
@@ -106,6 +159,12 @@ export const ElectionPanel = ({
       .filter(m => !registeredVoterIds.includes(m.userId))
       .map(m => m.userId);
     await onRegisterAllVoters(unregisteredIds);
+    setIsProcessing(false);
+  };
+
+  const handleRegisterPresentVoters = async () => {
+    setIsProcessing(true);
+    await onRegisterPresentVoters(members);
     setIsProcessing(false);
   };
 
@@ -133,6 +192,12 @@ export const ElectionPanel = ({
     setIsProcessing(false);
   };
 
+  const handleReassignOfficer = async () => {
+    setIsProcessing(true);
+    await onReassignOfficer(members);
+    setIsProcessing(false);
+  };
+
   const toggleCandidateSelection = (userId: string) => {
     setSelectedCandidates(prev => 
       prev.includes(userId) 
@@ -143,9 +208,9 @@ export const ElectionPanel = ({
 
   return (
     <div className="space-y-4">
-      {/* Election Status */}
+      {/* Election Status Header */}
       <div className={cn(
-        "p-4 rounded-lg border",
+        "p-4 rounded-lg border relative overflow-hidden",
         currentElection?.status === "active" 
           ? "bg-green-500/10 border-green-500/30" 
           : currentElection?.status === "pending"
@@ -154,6 +219,17 @@ export const ElectionPanel = ({
               ? "bg-blue-500/10 border-blue-500/30"
               : "bg-muted border-border"
       )}>
+        {/* Live indicator for active elections */}
+        {currentElection?.status === "active" && (
+          <div className="absolute top-2 right-2 flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="text-xs font-medium text-green-600">LIVE</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-2">
           {currentElection?.status === "active" ? (
             <CheckCircle className="w-5 h-5 text-green-500" />
@@ -174,6 +250,7 @@ export const ElectionPanel = ({
                   : t('noElection', `No Election for ${currentYear}`)}
           </span>
         </div>
+        
         <p className="text-sm text-muted-foreground">
           {currentElection?.status === "active" 
             ? t('castYourVote', 'Cast your vote for the next community leader')
@@ -183,6 +260,14 @@ export const ElectionPanel = ({
                 ? t('electionFinished', 'This election has been completed')
                 : t('waitForElection', 'The Election Commissioner will create a new election')}
         </p>
+
+        {/* Scheduled time display */}
+        {currentElection?.scheduled_at && currentElection.status === "pending" && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-amber-600">
+            <Calendar className="w-4 h-4" />
+            <span>Scheduled: {new Date(currentElection.scheduled_at).toLocaleString()}</span>
+          </div>
+        )}
         
         {/* Voting status badges */}
         <div className="flex flex-wrap gap-2 mt-3">
@@ -210,6 +295,81 @@ export const ElectionPanel = ({
         </div>
       </div>
 
+      {/* Live Results Dashboard (Active Elections) */}
+      {currentElection?.status === "active" && (
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-green-500" />
+              {t('liveResults', 'Live Results')}
+              <Badge variant="outline" className="ml-auto bg-green-500/20 text-green-600 border-green-500/30">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                {totalVotesCast} votes
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Voting progress */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Voting Progress</span>
+                <span>{votingProgress.voted}/{votingProgress.total} ({votingProgress.percentage}%)</span>
+              </div>
+              <Progress value={votingProgress.percentage} className="h-2" />
+            </div>
+
+            {/* Live vote bars */}
+            <div className="space-y-2">
+              {sortedCandidates.map((candidate, index) => {
+                const voteCount = liveVoteCounts[candidate.id] || candidate.vote_count;
+                const percentage = maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
+                const isLeading = index === 0 && voteCount > 0;
+                
+                return (
+                  <div key={candidate.id} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={candidate.photo_url || ""} />
+                          <AvatarFallback className="text-xs">{candidate.full_name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{candidate.full_name}</span>
+                        {isLeading && (
+                          <Badge className="bg-amber-500 text-white text-xs py-0">
+                            Leading
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold">{voteCount}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          isLeading ? "bg-amber-500" : "bg-primary/60"
+                        )}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Vote button for registered voters */}
+            {!hasVoted && isRegisteredVoter && (
+              <Button 
+                className="w-full mt-2" 
+                onClick={() => setShowResultsDialog(true)}
+              >
+                <Vote className="w-4 h-4 mr-2" />
+                Cast Your Vote
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Leadership */}
       <div className="grid grid-cols-2 gap-3">
         <div className="p-3 rounded-lg border bg-card">
@@ -233,7 +393,7 @@ export const ElectionPanel = ({
         <div className="p-3 rounded-lg border bg-card">
           <div className="flex items-center gap-2 mb-2">
             <Gavel className="w-4 h-4 text-purple-500" />
-            <span className="text-xs font-medium">{t('electionCommissioner', 'Election Commissioner')}</span>
+            <span className="text-xs font-medium">{t('electionCommissioner', 'Commissioner')}</span>
           </div>
           {electionOfficer ? (
             <div className="flex items-center gap-2">
@@ -241,10 +401,12 @@ export const ElectionPanel = ({
                 <AvatarImage src={electionOfficer.photo_url || ""} />
                 <AvatarFallback>{electionOfficer.full_name?.[0]}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1 min-w-0">
                 <span className="text-sm truncate block">{electionOfficer.full_name}</span>
                 {electionOfficer.auto_assigned && (
-                  <span className="text-xs text-muted-foreground">{t('autoAssigned', 'Auto-assigned')}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {electionOfficer.seniority_days} days seniority
+                  </span>
                 )}
               </div>
             </div>
@@ -254,8 +416,20 @@ export const ElectionPanel = ({
         </div>
       </div>
 
-      {/* Candidates List */}
-      {candidates.length > 0 && (
+      {/* Online Members Count */}
+      <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border">
+        <div className="flex items-center gap-2 text-sm">
+          <Wifi className="w-4 h-4 text-green-500" />
+          <span>{onlineMembers.length} members online</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="w-4 h-4" />
+          <span>{members.length} total</span>
+        </div>
+      </div>
+
+      {/* Candidates List (Non-active elections) */}
+      {candidates.length > 0 && currentElection?.status !== "active" && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold flex items-center gap-2">
             <Trophy className="w-4 h-4 text-primary" />
@@ -284,22 +458,13 @@ export const ElectionPanel = ({
                             </Badge>
                           )}
                         </div>
-                        {currentElection?.status !== "pending" && (
+                        {currentElection?.status === "completed" && (
                           <span className="text-xs text-muted-foreground">
                             {candidate.vote_count} {t('votes', 'votes')}
                           </span>
                         )}
                       </div>
                     </div>
-                    {currentElection?.status === "active" && !hasVoted && isRegisteredVoter && candidate.user_id !== currentUserId && (
-                      <Button
-                        size="sm"
-                        onClick={() => onCastVote(candidate.id)}
-                      >
-                        <Vote className="w-4 h-4 mr-1" />
-                        {t('vote', 'Vote')}
-                      </Button>
-                    )}
                   </div>
                 </Card>
               ))}
@@ -317,14 +482,25 @@ export const ElectionPanel = ({
           </h4>
           
           {!currentElection && (
-            <Button 
-              className="w-full" 
-              onClick={handleCreateElection}
-              disabled={isProcessing}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('createElection', `Create ${currentYear} Election`)}
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                className="w-full" 
+                onClick={handleCreateElection}
+                disabled={isProcessing}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {t('createElection', `Create ${currentYear} Election`)}
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full" 
+                onClick={() => setShowScheduleDialog(true)}
+                disabled={isProcessing}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                {t('scheduleElection', 'Schedule Election')}
+              </Button>
+            </div>
           )}
 
           {currentElection?.status === "pending" && (
@@ -342,13 +518,35 @@ export const ElectionPanel = ({
                 <Button 
                   variant="outline" 
                   className="flex-1"
+                  onClick={() => setShowScheduleDialog(true)}
+                  disabled={isProcessing}
+                >
+                  <Calendar className="w-4 h-4 mr-1" />
+                  {t('schedule', 'Schedule')}
+                </Button>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
                   onClick={handleRegisterAllVoters}
                   disabled={isProcessing || voterRegistry.length === members.length}
                 >
                   <Users className="w-4 h-4 mr-1" />
-                  {t('registerVoters', 'Register All')}
+                  All ({members.length})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={handleRegisterPresentVoters}
+                  disabled={isProcessing || onlineMembers.length === 0}
+                >
+                  <Wifi className="w-4 h-4 mr-1" />
+                  Online ({onlineMembers.length})
                 </Button>
               </div>
+
               <Button 
                 className="w-full" 
                 onClick={handleStartElection}
@@ -357,6 +555,7 @@ export const ElectionPanel = ({
                 <Play className="w-4 h-4 mr-2" />
                 {t('startElection', 'Start Election')}
               </Button>
+              
               {candidates.length < 2 && (
                 <p className="text-xs text-amber-600 text-center">
                   {t('needTwoCandidates', 'Need at least 2 candidates to start')}
@@ -373,11 +572,64 @@ export const ElectionPanel = ({
               disabled={isProcessing}
             >
               <Square className="w-4 h-4 mr-2" />
-              {t('endElection', 'End Election & Count Votes')}
+              {t('endElection', 'End Election & Announce Results')}
+            </Button>
+          )}
+
+          {/* Reassign officer option */}
+          {!currentElection && (
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs"
+              onClick={handleReassignOfficer}
+              disabled={isProcessing}
+            >
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Reassign Commissioner (Most Senior)
             </Button>
           )}
         </div>
       )}
+
+      {/* Schedule Election Dialog */}
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              Schedule Election
+            </DialogTitle>
+            <DialogDescription>
+              Set the date and time when voting will begin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="scheduledDate">Election Date & Time</Label>
+              <Input
+                id="scheduledDate"
+                type="datetime-local"
+                value={scheduledDateTime}
+                onChange={(e) => setScheduledDateTime(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleScheduleElection} 
+              disabled={!scheduledDateTime || isProcessing}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Candidates Dialog */}
       <Dialog open={showAddCandidatesDialog} onOpenChange={setShowAddCandidatesDialog}>
@@ -410,7 +662,14 @@ export const ElectionPanel = ({
                     <AvatarFallback>{member.fullName[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <span className="font-medium text-sm">{member.fullName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{member.fullName}</span>
+                      {member.isOnline ? (
+                        <Wifi className="w-3 h-3 text-green-500" />
+                      ) : (
+                        <WifiOff className="w-3 h-3 text-muted-foreground" />
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">{member.seniority} days seniority</p>
                   </div>
                 </div>
@@ -428,6 +687,53 @@ export const ElectionPanel = ({
               {t('addSelected', `Add ${selectedCandidates.length} Candidates`)}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Voting Dialog */}
+      <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Vote className="w-5 h-5 text-primary" />
+              Cast Your Vote
+            </DialogTitle>
+            <DialogDescription>
+              Select one candidate to vote for. You can only vote once.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-64">
+            <div className="space-y-2">
+              {sortedCandidates.map(candidate => (
+                <Card 
+                  key={candidate.id}
+                  className="p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={async () => {
+                    const success = await onCastVote(candidate.id);
+                    if (success) {
+                      setShowResultsDialog(false);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={candidate.photo_url || ""} />
+                      <AvatarFallback>{candidate.full_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <span className="font-medium">{candidate.full_name}</span>
+                      {candidate.platform_statement && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {candidate.platform_statement}
+                        </p>
+                      )}
+                    </div>
+                    <Vote className="w-5 h-5 text-primary" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
@@ -455,10 +761,13 @@ export const ElectionPanel = ({
                     <AvatarImage src={candidate.photo_url || ""} />
                     <AvatarFallback>{candidate.full_name?.[0]}</AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="flex-1">
                     <span className="font-medium">{candidate.full_name}</span>
-                    <p className="text-sm text-muted-foreground">{candidate.vote_count} votes</p>
+                    <p className="text-xs text-muted-foreground">
+                      {candidate.vote_count} votes
+                    </p>
                   </div>
+                  <Gavel className="w-5 h-5 text-purple-500" />
                 </div>
               </Card>
             ))}

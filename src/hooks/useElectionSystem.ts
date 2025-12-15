@@ -59,6 +59,16 @@ export interface ElectionOfficer {
   auto_assigned: boolean;
   full_name?: string;
   photo_url?: string;
+  seniority_days?: number;
+}
+
+export interface MemberWithSeniority {
+  userId: string;
+  fullName: string;
+  photoUrl: string | null;
+  seniority: number;
+  createdAt: string;
+  isOnline: boolean;
 }
 
 export const useElectionSystem = (
@@ -74,10 +84,20 @@ export const useElectionSystem = (
   const [hasVoted, setHasVoted] = useState(false);
   const [isRegisteredVoter, setIsRegisteredVoter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [liveVoteCounts, setLiveVoteCounts] = useState<Record<string, number>>({});
+  const [totalVotesCast, setTotalVotesCast] = useState(0);
 
   const currentYear = new Date().getFullYear();
   const isOfficer = electionOfficer?.user_id === currentUserId;
   const isLeader = currentLeader?.user_id === currentUserId;
+
+  // Calculate seniority in days from created_at
+  const calculateSeniority = (createdAt: string): number => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   // Load all election data
   const loadElectionData = useCallback(async () => {
@@ -135,14 +155,15 @@ export const useElectionSystem = (
       if (officerData) {
         const { data: officerProfile } = await supabase
           .from("profiles")
-          .select("full_name, photo_url")
+          .select("full_name, photo_url, created_at")
           .eq("user_id", officerData.user_id)
           .maybeSingle();
 
         setElectionOfficer({
           ...officerData,
           full_name: officerProfile?.full_name || "Unknown",
-          photo_url: officerProfile?.photo_url
+          photo_url: officerProfile?.photo_url,
+          seniority_days: officerProfile?.created_at ? calculateSeniority(officerProfile.created_at) : 0
         });
       } else {
         setElectionOfficer(null);
@@ -166,11 +187,21 @@ export const useElectionSystem = (
 
           const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-          setCandidates(candidatesData.map(c => ({
+          const mappedCandidates = candidatesData.map(c => ({
             ...c,
             full_name: profileMap.get(c.user_id)?.full_name || "Unknown",
             photo_url: profileMap.get(c.user_id)?.photo_url
-          })));
+          }));
+          
+          setCandidates(mappedCandidates);
+          
+          // Set live vote counts
+          const counts: Record<string, number> = {};
+          mappedCandidates.forEach(c => {
+            counts[c.id] = c.vote_count;
+          });
+          setLiveVoteCounts(counts);
+          setTotalVotesCast(mappedCandidates.reduce((sum, c) => sum + c.vote_count, 0));
         }
 
         // Load voter registry
@@ -211,6 +242,8 @@ export const useElectionSystem = (
         setVoterRegistry([]);
         setHasVoted(false);
         setIsRegisteredVoter(false);
+        setLiveVoteCounts({});
+        setTotalVotesCast(0);
       }
     } catch (error) {
       console.error("[ElectionSystem] Error loading data:", error);
@@ -223,26 +256,83 @@ export const useElectionSystem = (
     loadElectionData();
   }, [loadElectionData]);
 
+  // Set up real-time subscription for live vote updates
+  useEffect(() => {
+    if (!currentElection || currentElection.status !== "active") return;
+
+    const channel = supabase
+      .channel('election-votes-live')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'election_votes',
+          filter: `election_id=eq.${currentElection.id}`
+        },
+        (payload) => {
+          console.log("[ElectionSystem] New vote received:", payload);
+          // Reload to get updated counts
+          loadElectionData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'election_candidates',
+          filter: `election_id=eq.${currentElection.id}`
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setLiveVoteCounts(prev => ({
+            ...prev,
+            [updated.id]: updated.vote_count
+          }));
+          setTotalVotesCast(prev => {
+            const oldCount = liveVoteCounts[updated.id] || 0;
+            return prev - oldCount + updated.vote_count;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentElection?.id, currentElection?.status]);
+
   // Auto-assign election officer to most senior member
-  const autoAssignOfficer = async (members: Array<{ userId: string; seniority: number }>) => {
+  const autoAssignOfficer = async (members: MemberWithSeniority[]) => {
     if (electionOfficer || members.length === 0) return;
 
-    // Sort by seniority (most senior first)
+    // Sort by seniority (most senior first = highest seniority days)
     const sortedMembers = [...members].sort((a, b) => b.seniority - a.seniority);
-    const mostSenior = sortedMembers[0];
+    
+    // First try to find most senior member who is currently online
+    const onlineMembers = sortedMembers.filter(m => m.isOnline);
+    const selectedMember = onlineMembers.length > 0 ? onlineMembers[0] : sortedMembers[0];
+
+    if (!selectedMember) return;
 
     try {
       const { error } = await supabase
         .from("election_officers")
         .upsert({
           language_code: languageCode,
-          user_id: mostSenior.userId,
+          user_id: selectedMember.userId,
           is_active: true,
           auto_assigned: true
         }, { onConflict: "language_code,user_id" });
 
       if (!error) {
-        console.log("[ElectionSystem] Auto-assigned officer:", mostSenior.userId);
+        console.log("[ElectionSystem] Auto-assigned officer:", selectedMember.userId, 
+          `(${selectedMember.seniority} days seniority, online: ${selectedMember.isOnline})`);
+        toast({
+          title: "Election Commissioner Assigned",
+          description: `${selectedMember.fullName} has been assigned as commissioner (${selectedMember.seniority} days seniority)`
+        });
         loadElectionData();
       }
     } catch (error) {
@@ -250,7 +340,54 @@ export const useElectionSystem = (
     }
   };
 
-  // Create a new election
+  // Reassign officer to most senior available member
+  const reassignOfficer = async (members: MemberWithSeniority[]) => {
+    if (members.length === 0) return false;
+
+    // Sort by seniority (most senior first)
+    const sortedMembers = [...members].sort((a, b) => b.seniority - a.seniority);
+    
+    // Prefer online members, then fall back to most senior
+    const onlineMembers = sortedMembers.filter(m => m.isOnline);
+    const selectedMember = onlineMembers.length > 0 ? onlineMembers[0] : sortedMembers[0];
+
+    if (!selectedMember) return false;
+
+    try {
+      // Deactivate current officer
+      if (electionOfficer) {
+        await supabase
+          .from("election_officers")
+          .update({ is_active: false })
+          .eq("id", electionOfficer.id);
+      }
+
+      // Assign new officer
+      const { error } = await supabase
+        .from("election_officers")
+        .upsert({
+          language_code: languageCode,
+          user_id: selectedMember.userId,
+          is_active: true,
+          auto_assigned: true
+        }, { onConflict: "language_code,user_id" });
+
+      if (!error) {
+        toast({
+          title: "New Commissioner Assigned",
+          description: `${selectedMember.fullName} is now the Election Commissioner`
+        });
+        loadElectionData();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("[ElectionSystem] Error reassigning officer:", error);
+      return false;
+    }
+  };
+
+  // Create a new election with optional scheduling
   const createElection = async (scheduledAt?: string): Promise<boolean> => {
     if (!isOfficer) {
       toast({
@@ -276,9 +413,13 @@ export const useElectionSystem = (
 
       if (error) throw error;
 
+      const scheduledMessage = scheduledAt 
+        ? ` scheduled for ${new Date(scheduledAt).toLocaleString()}`
+        : "";
+
       toast({
         title: "Election Created",
-        description: `Election for ${currentYear} has been created`
+        description: `Election for ${currentYear} has been created${scheduledMessage}`
       });
 
       setCurrentElection(data ? {
@@ -290,6 +431,35 @@ export const useElectionSystem = (
       toast({
         title: "Error",
         description: error.message || "Failed to create election",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // Schedule an existing election
+  const scheduleElection = async (scheduledAt: string): Promise<boolean> => {
+    if (!isOfficer || !currentElection) return false;
+
+    try {
+      const { error } = await supabase
+        .from("community_elections")
+        .update({ scheduled_at: scheduledAt })
+        .eq("id", currentElection.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Election Scheduled",
+        description: `Voting will begin on ${new Date(scheduledAt).toLocaleString()}`
+      });
+
+      loadElectionData();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to schedule election",
         variant: "destructive"
       });
       return false;
@@ -397,6 +567,23 @@ export const useElectionSystem = (
     }
   };
 
+  // Register only online members as voters
+  const registerPresentVoters = async (members: MemberWithSeniority[]): Promise<boolean> => {
+    if (!isOfficer || !currentElection) return false;
+
+    const onlineMembers = members.filter(m => m.isOnline);
+    if (onlineMembers.length === 0) {
+      toast({
+        title: "No Online Members",
+        description: "No members are currently online to register",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return registerAllVoters(onlineMembers.map(m => m.userId));
+  };
+
   // Start election
   const startElection = async (): Promise<boolean> => {
     if (!isOfficer || !currentElection) return false;
@@ -431,8 +618,8 @@ export const useElectionSystem = (
       if (error) throw error;
 
       toast({
-        title: "Election Started",
-        description: "Voting is now open!"
+        title: "Election Started!",
+        description: "Voting is now open. Results will update in real-time!"
       });
 
       loadElectionData();
@@ -489,8 +676,8 @@ export const useElectionSystem = (
       if (error) throw error;
 
       toast({
-        title: "Vote Cast",
-        description: "Your vote has been recorded"
+        title: "Vote Cast!",
+        description: "Your vote has been recorded and counted"
       });
 
       setHasVoted(true);
@@ -620,7 +807,7 @@ export const useElectionSystem = (
         });
 
       toast({
-        title: "Election Completed",
+        title: "🎉 Election Completed!",
         description: "A new community leader has been elected!"
       });
 
@@ -665,6 +852,17 @@ export const useElectionSystem = (
     }
   };
 
+  // Get voting progress
+  const getVotingProgress = (): { voted: number; total: number; percentage: number } => {
+    const total = voterRegistry.length;
+    const voted = totalVotesCast;
+    return {
+      voted,
+      total,
+      percentage: total > 0 ? Math.round((voted / total) * 100) : 0
+    };
+  };
+
   return {
     // State
     currentElection,
@@ -678,20 +876,27 @@ export const useElectionSystem = (
     isOfficer,
     isLeader,
     currentYear,
+    liveVoteCounts,
+    totalVotesCast,
     
     // Actions
     loadElectionData,
     autoAssignOfficer,
+    reassignOfficer,
     createElection,
+    scheduleElection,
     addCandidate,
     removeCandidate,
     registerVoter,
     registerAllVoters,
+    registerPresentVoters,
     startElection,
     castVote,
     castTiebreakerVote,
     endElection,
-    finalizeElection
+    finalizeElection,
+    getVotingProgress,
+    calculateSeniority
   };
 };
 
