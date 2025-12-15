@@ -3,6 +3,7 @@
  * 
  * Handles all wallet and transaction-related API calls.
  * All financial operations use database functions for ACID compliance.
+ * Synced with Flutter wallet_service.dart
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -23,8 +24,33 @@ export interface WalletTransaction {
   type: 'credit' | 'debit';
   amount: number;
   description: string | null;
+  reference_id?: string | null;
   status: string;
   created_at: string;
+}
+
+export interface WomenEarning {
+  id: string;
+  user_id: string;
+  amount: number;
+  earning_type: 'chat' | 'video_call' | 'gift';
+  chat_session_id?: string | null;
+  description?: string | null;
+  created_at: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  user_id: string;
+  amount: number;
+  payment_method?: string | null;
+  payment_details?: unknown;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  processed_by?: string | null;
+  processed_at?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface TransactionResult {
@@ -153,4 +179,102 @@ export async function getGifts() {
     .order('sort_order', { ascending: true });
 
   return data || [];
+}
+
+/**
+ * Get women's earnings (synced with Flutter)
+ */
+export async function getWomenEarnings(
+  userId: string,
+  limit = 50
+): Promise<WomenEarning[]> {
+  const { data } = await supabase
+    .from('women_earnings')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  return (data || []).map(earning => ({
+    ...earning,
+    earning_type: earning.earning_type as 'chat' | 'video_call' | 'gift',
+  }));
+}
+
+/**
+ * Request withdrawal (uses database function for ACID compliance)
+ */
+export async function requestWithdrawal(
+  userId: string,
+  amount: number,
+  paymentMethod?: string,
+  paymentDetails?: Record<string, string | number | boolean | null>
+): Promise<TransactionResult> {
+  const { data, error } = await supabase.rpc('process_withdrawal_request', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_payment_method: paymentMethod || null,
+    p_payment_details: paymentDetails as unknown as null,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const result = data as unknown as {
+    success: boolean;
+    withdrawal_id?: string;
+    previous_balance?: number;
+    new_balance?: number;
+    error?: string;
+  };
+
+  return {
+    success: result.success,
+    transaction_id: result.withdrawal_id,
+    previous_balance: result.previous_balance,
+    new_balance: result.new_balance,
+    error: result.error,
+  };
+}
+
+/**
+ * Get withdrawal requests for a user
+ */
+export async function getWithdrawalRequests(
+  userId: string,
+  limit = 20
+) {
+  const { data } = await supabase
+    .from('withdrawal_requests')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  return data || [];
+}
+
+/**
+ * Subscribe to wallet changes (real-time updates)
+ */
+export function subscribeToWallet(
+  userId: string,
+  onUpdate: (wallet: Wallet) => void
+) {
+  return supabase
+    .channel(`wallet:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'wallets',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        onUpdate(payload.new as Wallet);
+      }
+    )
+    .subscribe();
 }

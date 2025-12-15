@@ -170,3 +170,88 @@ export async function getUserPhotos(userId: string) {
 
   return data || [];
 }
+
+/**
+ * Add user photo (synced with Flutter)
+ */
+export async function addUserPhoto(
+  userId: string,
+  photoUrl: string,
+  isPrimary = false
+): Promise<boolean> {
+  try {
+    // Get current max order
+    const existing = await getUserPhotos(userId);
+    const maxOrder = existing.length > 0
+      ? Math.max(...existing.map((p: { display_order?: number }) => p.display_order || 0))
+      : 0;
+
+    const { error } = await supabase.from('user_photos').insert({
+      user_id: userId,
+      photo_url: photoUrl,
+      is_primary: isPrimary,
+      display_order: maxOrder + 1,
+      photo_type: 'profile',
+    });
+
+    if (error) return false;
+
+    // If primary, update profile photo_url
+    if (isPrimary) {
+      await updateProfile(userId, { photo_url: photoUrl });
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Delete user photo (synced with Flutter)
+ */
+export async function deleteUserPhoto(photoId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('user_photos')
+    .delete()
+    .eq('id', photoId);
+
+  return !error;
+}
+
+/**
+ * Get wallet balance (synced with Flutter)
+ */
+export async function getWalletBalance(userId: string): Promise<number> {
+  const { data } = await supabase
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', userId)
+    .maybeSingle();
+  
+  return (data?.balance as number) || 0;
+}
+
+/**
+ * Subscribe to profile changes (real-time)
+ */
+export function subscribeToProfile(
+  userId: string,
+  onUpdate: (profile: Profile) => void
+) {
+  return supabase
+    .channel(`profile:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        onUpdate(payload.new as Profile);
+      }
+    )
+    .subscribe();
+}
