@@ -19,6 +19,7 @@ const I18nProvider = lazy(() => import("@/components/I18nProvider").then(m => ({
 const ErrorBoundary = lazy(() => import("@/components/ErrorBoundary"));
 const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 
 // Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
@@ -141,6 +142,7 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
                         <Toaster />
                         <Sonner />
                         <PWAInstallPrompt />
+                        <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
                       </Suspense>
                       {children}
                     </TooltipProvider>
