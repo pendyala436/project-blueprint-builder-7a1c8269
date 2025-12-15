@@ -6,9 +6,8 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Lock, Eye, EyeOff, Check, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
@@ -48,63 +47,20 @@ const PasswordSetupScreen = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    // Store password temporarily for account creation after terms agreement
+    localStorage.setItem("userPassword", password);
 
-    try {
-      // Get email from localStorage (saved during basic-info step)
-      const email = localStorage.getItem("userEmail");
-      
-      if (!email) {
-        toast({
-          title: "Registration error",
-          description: "Email not found. Please restart registration.",
-          variant: "destructive",
-        });
-        navigate("/register");
-        return;
-      }
+    toast({
+      title: "Password saved",
+      description: "Please review and accept the terms to complete registration.",
+    });
 
-      // Create user account with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            full_name: localStorage.getItem("userName") || "",
-            gender: localStorage.getItem("userGender") || "",
-            phone: localStorage.getItem("userPhone") || "",
-          }
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // Store password temporarily for any follow-up auth needs
-      localStorage.setItem("userPassword", password);
-
-      toast({
-        title: "Account created! 🎉",
-        description: "Your account has been set up successfully.",
-      });
-
-      // Navigate to AI processing for gender verification
-      navigate("/ai-processing");
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Navigate to terms agreement
+    navigate("/terms-agreement");
   };
 
   const handleBack = () => {
-    navigate("/terms-agreement");
+    navigate("/location-setup");
   };
 
   return (
@@ -127,7 +83,7 @@ const PasswordSetupScreen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={8} totalSteps={8} />
+            <ProgressIndicator currentStep={7} totalSteps={9} />
           </div>
         </div>
       </header>
@@ -253,17 +209,10 @@ const PasswordSetupScreen = () => {
             {/* Submit Button */}
             <Button
               onClick={handleSubmit}
-              disabled={!isValid || isSubmitting}
+              disabled={!isValid}
               className="w-full h-12 rounded-xl font-semibold text-base gap-2"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                "Create Account"
-              )}
+              Continue to Terms
             </Button>
           </div>
         </Card>
