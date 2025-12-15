@@ -51,7 +51,6 @@ import { RandomChatButton } from "@/components/RandomChatButton";
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 import VideoCallButton from "@/components/VideoCallButton";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
-import { SettingsPanel } from "@/components/SettingsPanel";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
@@ -1090,12 +1089,7 @@ const DashboardScreen = () => {
             {/* Settings */}
             <button 
               className="p-2 rounded-full hover:bg-muted transition-colors"
-              onClick={() => {
-                const settingsSection = document.getElementById('settings-section');
-                if (settingsSection) {
-                  settingsSection.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
+              onClick={() => navigate('/settings')}
             >
               <Settings className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -1456,17 +1450,8 @@ const DashboardScreen = () => {
           />
         </div>
 
-        {/* Section 7: Settings */}
-        <div id="settings-section" className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-primary" />
-            {t('settings', 'Settings')}
-          </h2>
-          <SettingsPanel compact />
-        </div>
-
-        {/* Section 8: Recent Notifications */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.32s" }}>
+        {/* Section 7: Recent Notifications */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
             <button className="text-sm text-primary hover:underline flex items-center gap-1">
