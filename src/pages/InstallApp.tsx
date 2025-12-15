@@ -2,6 +2,7 @@
  * InstallApp.tsx
  * 
  * PURPOSE: Dedicated page for installing the PWA with instructions for all platforms
+ * Includes device-specific instructions for iOS/Android mobile and tablet
  */
 
 import { usePWA } from '@/hooks/usePWA';
@@ -18,15 +19,29 @@ import {
   ArrowLeft,
   Bell,
   WifiOff,
-  Zap
+  Zap,
+  Tablet,
+  Monitor
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout, MobileContent, MobileHeader } from '@/components/MobileLayout';
+import MeowLogo from '@/components/MeowLogo';
+import { Badge } from '@/components/ui/badge';
 
 export default function InstallApp() {
   const navigate = useNavigate();
   const { isInstallable, isInstalled, isIOS, isAndroid, install, isPushSupported, requestPushPermission } = usePWA();
   const { isNative } = useNativeApp();
+
+  // Detect device type
+  const isTablet = typeof window !== 'undefined' && 
+    (window.innerWidth >= 768 && window.innerWidth < 1024) ||
+    /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+  
+  const isMobile = typeof window !== 'undefined' && 
+    window.innerWidth < 768 || /iPhone|Android.*Mobile/i.test(navigator.userAgent);
+
+  const deviceType = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
 
   const handleInstall = async () => {
     await install();
@@ -74,15 +89,21 @@ export default function InstallApp() {
           </div>
         </MobileHeader>
         <MobileContent className="p-4 space-y-4">
-          <Card className="border-green-500/20 bg-green-500/10">
-            <CardContent className="flex items-center gap-4 p-6">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <div>
-                <h2 className="text-xl font-bold">App Installed!</h2>
+          <Card className="border-primary/30 bg-primary/10">
+            <CardContent className="flex flex-col items-center gap-4 p-6">
+              <MeowLogo size="lg" />
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-primary">App Installed!</h2>
                 <p className="text-muted-foreground">
-                  Meow Meow is installed on your device
+                  Meow Meow is installed on your {deviceType}
                 </p>
               </div>
+              <Badge variant="secondary" className="capitalize">
+                {deviceType === 'mobile' && <Smartphone className="h-3 w-3 mr-1" />}
+                {deviceType === 'tablet' && <Tablet className="h-3 w-3 mr-1" />}
+                {deviceType === 'desktop' && <Monitor className="h-3 w-3 mr-1" />}
+                {deviceType}
+              </Badge>
             </CardContent>
           </Card>
 
@@ -90,7 +111,7 @@ export default function InstallApp() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-5 w-5 text-primary" />
                   Enable Notifications
                 </CardTitle>
                 <CardDescription>
@@ -140,21 +161,27 @@ export default function InstallApp() {
         </div>
       </MobileHeader>
       <MobileContent className="p-4 space-y-4">
-        {/* Hero Section */}
+        {/* Hero Section with Logo */}
         <div className="text-center py-6">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-            <Smartphone className="h-10 w-10 text-primary" />
+          <div className="mx-auto mb-4">
+            <MeowLogo size="lg" />
           </div>
-          <h1 className="text-2xl font-bold mb-2">Install Meow Meow</h1>
+          <h1 className="text-2xl font-bold mb-2 font-display">Install Meow Meow</h1>
           <p className="text-muted-foreground">
-            Get the full app experience on your device
+            Get the full app experience on your {deviceType}
           </p>
+          <Badge variant="outline" className="mt-2 capitalize">
+            {deviceType === 'mobile' && <Smartphone className="h-3 w-3 mr-1" />}
+            {deviceType === 'tablet' && <Tablet className="h-3 w-3 mr-1" />}
+            {deviceType === 'desktop' && <Monitor className="h-3 w-3 mr-1" />}
+            {isIOS ? 'iOS' : isAndroid ? 'Android' : 'Desktop'} {deviceType}
+          </Badge>
         </div>
 
         {/* Features */}
-        <Card>
+        <Card className="border-primary/20">
           <CardHeader>
-            <CardTitle>Why Install?</CardTitle>
+            <CardTitle className="text-primary">Why Install?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
@@ -190,22 +217,22 @@ export default function InstallApp() {
 
         {/* Install Button for Android/Desktop */}
         {isInstallable && !isIOS && (
-          <Button size="lg" className="w-full" onClick={handleInstall}>
+          <Button size="lg" className="w-full gradient-primary" onClick={handleInstall}>
             <Download className="mr-2 h-5 w-5" />
             Install Now
           </Button>
         )}
 
-        {/* iOS Instructions */}
-        {isIOS && (
-          <Card>
+        {/* iOS Instructions - iPhone */}
+        {isIOS && !isTablet && (
+          <Card className="border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Install on iPhone/iPad
+                <Smartphone className="h-5 w-5 text-primary" />
+                Install on iPhone
               </CardTitle>
               <CardDescription>
-                Follow these steps to add to your home screen
+                Follow these steps in Safari browser
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -217,7 +244,7 @@ export default function InstallApp() {
                   <p className="font-medium">Tap the Share button</p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                     <Share className="h-4 w-4" />
-                    <span>In Safari's toolbar at the bottom</span>
+                    <span>At the bottom of Safari</span>
                   </div>
                 </div>
               </div>
@@ -226,10 +253,10 @@ export default function InstallApp() {
                   2
                 </div>
                 <div>
-                  <p className="font-medium">Scroll down and tap "Add to Home Screen"</p>
+                  <p className="font-medium">Scroll and tap "Add to Home Screen"</p>
                   <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                     <PlusSquare className="h-4 w-4" />
-                    <span>Look for this icon</span>
+                    <span>Look for this icon in the menu</span>
                   </div>
                 </div>
               </div>
@@ -238,9 +265,9 @@ export default function InstallApp() {
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Tap "Add"</p>
+                  <p className="font-medium">Tap "Add" in the top right</p>
                   <p className="text-sm text-muted-foreground">
-                    The app will appear on your home screen
+                    Meow Meow icon will appear on your home screen
                   </p>
                 </div>
               </div>
@@ -248,16 +275,68 @@ export default function InstallApp() {
           </Card>
         )}
 
-        {/* Android Chrome Instructions (fallback) */}
-        {isAndroid && !isInstallable && (
-          <Card>
+        {/* iOS Instructions - iPad */}
+        {isIOS && isTablet && (
+          <Card className="border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Chrome className="h-5 w-5" />
-                Install on Android
+                <Tablet className="h-5 w-5 text-primary" />
+                Install on iPad
               </CardTitle>
               <CardDescription>
-                Follow these steps in Chrome
+                Follow these steps in Safari browser
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  1
+                </div>
+                <div>
+                  <p className="font-medium">Tap the Share button</p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Share className="h-4 w-4" />
+                    <span>In Safari's address bar (top right)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  2
+                </div>
+                <div>
+                  <p className="font-medium">Tap "Add to Home Screen"</p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <PlusSquare className="h-4 w-4" />
+                    <span>In the share menu dropdown</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  3
+                </div>
+                <div>
+                  <p className="font-medium">Tap "Add" to confirm</p>
+                  <p className="text-sm text-muted-foreground">
+                    Meow Meow will appear on your iPad home screen
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Android Instructions - Phone */}
+        {isAndroid && !isInstallable && !isTablet && (
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-primary" />
+                Install on Android Phone
+              </CardTitle>
+              <CardDescription>
+                Follow these steps in Chrome browser
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -267,9 +346,10 @@ export default function InstallApp() {
                 </div>
                 <div>
                   <p className="font-medium">Tap the menu button</p>
-                  <p className="text-sm text-muted-foreground">
-                    Three dots in the top right corner
-                  </p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Chrome className="h-4 w-4" />
+                    <span>Three dots (⋮) in the top right corner</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -277,9 +357,9 @@ export default function InstallApp() {
                   2
                 </div>
                 <div>
-                  <p className="font-medium">Tap "Add to Home screen"</p>
+                  <p className="font-medium">Tap "Install app" or "Add to Home screen"</p>
                   <p className="text-sm text-muted-foreground">
-                    Or "Install app" if available
+                    The option may vary based on your browser
                   </p>
                 </div>
               </div>
@@ -288,15 +368,125 @@ export default function InstallApp() {
                   3
                 </div>
                 <div>
-                  <p className="font-medium">Confirm installation</p>
+                  <p className="font-medium">Tap "Install" to confirm</p>
                   <p className="text-sm text-muted-foreground">
-                    Tap "Add" or "Install"
+                    Meow Meow will be added to your app drawer
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Android Instructions - Tablet */}
+        {isAndroid && !isInstallable && isTablet && (
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tablet className="h-5 w-5 text-primary" />
+                Install on Android Tablet
+              </CardTitle>
+              <CardDescription>
+                Follow these steps in Chrome browser
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  1
+                </div>
+                <div>
+                  <p className="font-medium">Tap the menu button</p>
+                  <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Chrome className="h-4 w-4" />
+                    <span>Three dots (⋮) in Chrome toolbar</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  2
+                </div>
+                <div>
+                  <p className="font-medium">Select "Install app" or "Add to Home screen"</p>
+                  <p className="text-sm text-muted-foreground">
+                    Usually found near the top of the menu
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  3
+                </div>
+                <div>
+                  <p className="font-medium">Confirm by tapping "Install"</p>
+                  <p className="text-sm text-muted-foreground">
+                    Meow Meow will appear on your tablet home screen
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Desktop Instructions */}
+        {!isIOS && !isAndroid && !isInstallable && (
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-primary" />
+                Install on Desktop
+              </CardTitle>
+              <CardDescription>
+                Follow these steps in Chrome, Edge, or Brave
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  1
+                </div>
+                <div>
+                  <p className="font-medium">Look for the install icon</p>
+                  <p className="text-sm text-muted-foreground">
+                    In the address bar (right side) or menu
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  2
+                </div>
+                <div>
+                  <p className="font-medium">Click "Install" or "Install Meow Meow"</p>
+                  <p className="text-sm text-muted-foreground">
+                    A prompt will appear asking to confirm
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  3
+                </div>
+                <div>
+                  <p className="font-medium">Launch from your applications</p>
+                  <p className="text-sm text-muted-foreground">
+                    Meow Meow will open as a standalone app
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Note about browser requirements */}
+        <p className="text-xs text-center text-muted-foreground px-4">
+          {isIOS 
+            ? "Make sure you're using Safari browser for best installation experience on iOS devices."
+            : isAndroid
+            ? "Use Chrome, Edge, or Samsung Internet for best results on Android devices."
+            : "Use Chrome, Edge, or Brave browser for the best installation experience."}
+        </p>
       </MobileContent>
     </MobileLayout>
   );
