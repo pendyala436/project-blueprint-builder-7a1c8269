@@ -455,23 +455,23 @@ class _LanguageCommunityPanelState extends ConsumerState<LanguageCommunityPanel>
       final electionData = await service.getElectionData(widget.motherTongue);
       final hasVoted = await service.hasVoted(widget.motherTongue);
 
-      // Auto-assign officer if none exists
-      if (!members.any((m) => m.isElectionOfficer)) {
-        final onlineMembers = members.where((m) => m.isOnline).toList();
-        if (onlineMembers.isNotEmpty) {
-          await service.autoAssignElectionOfficer(
-            widget.motherTongue,
-            onlineMembers.first.userId,
-          );
-          // Reload to get updated officer
-          final updatedMembers = await service.loadMembers(widget.motherTongue);
-          setState(() {
-            _members = updatedMembers;
-            _electionData = electionData;
-            _hasVoted = hasVoted;
-          });
-          return;
-        }
+      // Auto-assign election officer if none exists
+      // Election Officer = the member with the longest time on the app (most seniority)
+      if (!members.any((m) => m.isElectionOfficer) && members.isNotEmpty) {
+        // Members are already sorted by seniority (most senior first)
+        final mostSeniorMember = members.first;
+        await service.autoAssignElectionOfficer(
+          widget.motherTongue,
+          mostSeniorMember.userId,
+        );
+        // Reload to get updated officer
+        final updatedMembers = await service.loadMembers(widget.motherTongue);
+        setState(() {
+          _members = updatedMembers;
+          _electionData = electionData;
+          _hasVoted = hasVoted;
+        });
+        return;
       }
 
       setState(() {

@@ -195,32 +195,15 @@ export const LanguageCommunityPanel = ({
           seniority: calculateSeniority(joinDates.get(p.user_id) || p.created_at)
         }));
 
-        // Sort by seniority (most senior first)
+        // Sort by seniority (most senior first = longest time on app)
         membersList.sort((a, b) => b.seniority - a.seniority);
 
         // Auto-assign election officer if none exists
-        // 1st, 2nd, or 3rd most senior ONLINE person becomes officer
-        if (!officerId) {
-          const onlineMembers = membersList.filter(m => m.isOnline);
-          const seniorOnline = onlineMembers.slice(0, 3); // Top 3 senior online members
-          
-          if (seniorOnline.length > 0) {
-            // Pick the first available (most senior online)
-            const autoOfficer = seniorOnline[0];
-            await autoAssignElectionOfficer(autoOfficer.userId);
-          }
-        } else {
-          // Check if current officer is still available (online)
-          const currentOfficer = membersList.find(m => m.userId === officerId);
-          if (currentOfficer && !currentOfficer.isOnline) {
-            // Officer went offline, reassign to next senior available
-            const onlineMembers = membersList.filter(m => m.isOnline && m.userId !== officerId);
-            const seniorOnline = onlineMembers.slice(0, 3);
-            
-            if (seniorOnline.length > 0) {
-              await autoAssignElectionOfficer(seniorOnline[0].userId);
-            }
-          }
+        // Election Officer = the member with the longest time on the app (most seniority)
+        if (!officerId && membersList.length > 0) {
+          // The most senior member becomes the Election Officer (Commissioner)
+          const mostSeniorMember = membersList[0]; // Already sorted by seniority
+          await autoAssignElectionOfficer(mostSeniorMember.userId);
         }
 
         // Re-sort: leader first, then election officer, then by seniority
