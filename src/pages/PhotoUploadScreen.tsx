@@ -245,7 +245,7 @@ const PhotoUploadScreen = () => {
       description: "Your photos have been saved",
     });
     
-    navigate("/terms-agreement");
+    navigate("/location-setup");
   };
 
   const handleBack = () => {
