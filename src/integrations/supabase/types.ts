@@ -1421,6 +1421,74 @@ export type Database = {
         }
         Relationships: []
       }
+      officer_nomination_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          nomination_id: string
+          vote_type: string
+          voter_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nomination_id: string
+          vote_type: string
+          voter_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nomination_id?: string
+          vote_type?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officer_nomination_votes_nomination_id_fkey"
+            columns: ["nomination_id"]
+            isOneToOne: false
+            referencedRelation: "officer_nominations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      officer_nominations: {
+        Row: {
+          approvals_count: number | null
+          created_at: string | null
+          id: string
+          language_code: string
+          nominated_by: string
+          nominee_id: string
+          rejections_count: number | null
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          approvals_count?: number | null
+          created_at?: string | null
+          id?: string
+          language_code: string
+          nominated_by: string
+          nominee_id: string
+          rejections_count?: number | null
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          approvals_count?: number | null
+          created_at?: string | null
+          id?: string
+          language_code?: string
+          nominated_by?: string
+          nominee_id?: string
+          rejections_count?: number | null
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       password_reset_tokens: {
         Row: {
           created_at: string

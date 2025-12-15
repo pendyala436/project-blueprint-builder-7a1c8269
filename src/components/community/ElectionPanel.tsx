@@ -44,7 +44,8 @@ import {
   ElectionOfficer, 
   CommunityLeader, 
   VoterRegistration,
-  MemberWithSeniority
+  MemberWithSeniority,
+  OfficerNomination
 } from "@/hooks/useElectionSystem";
 
 interface ElectionPanelProps {
@@ -54,9 +55,11 @@ interface ElectionPanelProps {
   voterRegistry: VoterRegistration[];
   currentLeader: CommunityLeader | null;
   electionOfficer: ElectionOfficer | null;
+  officerNominations: OfficerNomination[];
   hasVoted: boolean;
   isRegisteredVoter: boolean;
   isOfficer: boolean;
+  hasNominated: boolean;
   currentYear: number;
   members: MemberWithSeniority[];
   liveVoteCounts: Record<string, number>;
@@ -72,6 +75,9 @@ interface ElectionPanelProps {
   onEndElection: () => Promise<{ success: boolean; isTie: boolean; tiedCandidates?: Candidate[] }>;
   onFinalizeElection: (winnerId: string) => Promise<{ success: boolean; isTie: boolean }>;
   onReassignOfficer: (members: MemberWithSeniority[]) => Promise<boolean>;
+  onNominateSelf: () => Promise<boolean>;
+  onVoteOnNomination: (nominationId: string, approve: boolean) => Promise<boolean>;
+  onConfirmOfficer: (nomination: OfficerNomination) => Promise<boolean>;
 }
 
 export const ElectionPanel = ({
@@ -81,9 +87,11 @@ export const ElectionPanel = ({
   voterRegistry,
   currentLeader,
   electionOfficer,
+  officerNominations,
   hasVoted,
   isRegisteredVoter,
   isOfficer,
+  hasNominated,
   currentYear,
   members,
   liveVoteCounts,
@@ -98,7 +106,10 @@ export const ElectionPanel = ({
   onCastVote,
   onEndElection,
   onFinalizeElection,
-  onReassignOfficer
+  onReassignOfficer,
+  onNominateSelf,
+  onVoteOnNomination,
+  onConfirmOfficer
 }: ElectionPanelProps) => {
   const { t } = useTranslation();
   const [showAddCandidatesDialog, setShowAddCandidatesDialog] = useState(false);
@@ -403,18 +414,168 @@ export const ElectionPanel = ({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <span className="text-sm truncate block">{electionOfficer.full_name}</span>
-                {electionOfficer.auto_assigned && (
-                  <span className="text-xs text-muted-foreground">
-                    {electionOfficer.seniority_days} days seniority
-                  </span>
-                )}
+                <span className="text-xs text-muted-foreground">
+                  {electionOfficer.auto_assigned ? "Auto-assigned" : "Elected"}
+                </span>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">{t('assigningOfficer', 'Assigning officer...')}</p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {officerNominations.length > 0 
+                  ? `${officerNominations.length} nomination(s) pending`
+                  : "No commissioner yet"}
+              </p>
+              {!hasNominated && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={async () => {
+                    setIsProcessing(true);
+                    await onNominateSelf();
+                    setIsProcessing(false);
+                  }}
+                  disabled={isProcessing}
+                >
+                  <UserPlus className="w-3 h-3 mr-1" />
+                  Nominate Yourself
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>
+
+      {/* Officer Nominations (when no officer) */}
+      {!electionOfficer && officerNominations.length > 0 && (
+        <Card className="border-purple-500/30 bg-purple-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Gavel className="w-4 h-4 text-purple-500" />
+              Commissioner Nominations
+              <Badge variant="outline" className="ml-auto">
+                {officerNominations.length} pending
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Vote to approve a commissioner. The first nominee with majority approval will be confirmed.
+            </p>
+            {officerNominations.map((nomination) => {
+              const totalVotes = nomination.approvals_count + nomination.rejections_count;
+              const approvalRate = totalVotes > 0 
+                ? Math.round((nomination.approvals_count / totalVotes) * 100) 
+                : 0;
+              const needsMoreVotes = totalVotes < Math.ceil(members.length / 2);
+              const hasEnoughApproval = nomination.approvals_count > members.length / 2;
+
+              return (
+                <div key={nomination.id} className="p-3 rounded-lg border bg-card space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={nomination.nominee_photo || ""} />
+                        <AvatarFallback>{nomination.nominee_name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <span className="text-sm font-medium block">{nomination.nominee_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {nomination.approvals_count} approvals, {nomination.rejections_count} rejections
+                        </span>
+                      </div>
+                    </div>
+                    {hasEnoughApproval && (
+                      <Button
+                        size="sm"
+                        className="bg-purple-500 hover:bg-purple-600"
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          await onConfirmOfficer(nomination);
+                          setIsProcessing(false);
+                        }}
+                        disabled={isProcessing}
+                      >
+                        Confirm
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Approval bar */}
+                  <div className="space-y-1">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                      <div 
+                        className="h-full bg-green-500 transition-all"
+                        style={{ width: `${approvalRate}%` }}
+                      />
+                      <div 
+                        className="h-full bg-red-500 transition-all"
+                        style={{ width: `${100 - approvalRate}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{approvalRate}% approval</span>
+                      <span>{totalVotes}/{members.length} voted</span>
+                    </div>
+                  </div>
+
+                  {/* Vote buttons */}
+                  {!nomination.has_user_voted && nomination.nominee_id !== currentUserId && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-green-600 border-green-500/30 hover:bg-green-500/10"
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          await onVoteOnNomination(nomination.id, true);
+                          setIsProcessing(false);
+                        }}
+                        disabled={isProcessing}
+                      >
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-red-600 border-red-500/30 hover:bg-red-500/10"
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          await onVoteOnNomination(nomination.id, false);
+                          setIsProcessing(false);
+                        }}
+                        disabled={isProcessing}
+                      >
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+
+                  {nomination.has_user_voted && (
+                    <Badge variant="outline" className={cn(
+                      "w-full justify-center",
+                      nomination.user_vote_type === "approve" 
+                        ? "bg-green-500/10 text-green-600 border-green-500/30"
+                        : "bg-red-500/10 text-red-600 border-red-500/30"
+                    )}>
+                      You {nomination.user_vote_type === "approve" ? "approved" : "rejected"} this nomination
+                    </Badge>
+                  )}
+
+                  {nomination.nominee_id === currentUserId && (
+                    <Badge variant="outline" className="w-full justify-center bg-purple-500/10 text-purple-600 border-purple-500/30">
+                      This is your nomination
+                    </Badge>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Online Members Count */}
       <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border">
