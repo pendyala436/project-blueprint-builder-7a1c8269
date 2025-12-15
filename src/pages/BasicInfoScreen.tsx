@@ -184,8 +184,8 @@ const BasicInfoScreen = () => {
       localStorage.setItem("userDob", dob.toISOString());
     }
     
-    // Navigate to password setup screen
-    navigate("/password-setup");
+    // Navigate to personal details screen
+    navigate("/personal-details");
   };
 
   const handleBack = () => {
@@ -214,7 +214,7 @@ const BasicInfoScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={2} totalSteps={9} />
+            <ProgressIndicator currentStep={2} totalSteps={10} />
           </div>
         </div>
       </header>

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import { toast } from "@/hooks/use-toast";
-import { useFaceVerification } from "@/hooks/useFaceVerification";
+import { useGenderClassification } from "@/hooks/useGenderClassification";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
 type VerificationState = "idle" | "verifying" | "verified" | "failed";
@@ -19,8 +19,8 @@ const PhotoUploadScreen = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // In-browser face verification hook
-  const { isVerifying, isLoadingModel, modelLoadProgress, verifyFace } = useFaceVerification();
+  // In-browser gender classification hook (Hugging Face)
+  const { isVerifying, isLoadingModel, modelLoadProgress, classifyGender } = useGenderClassification();
   
   // Selfie state (first photo with AI verification)
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
@@ -177,8 +177,8 @@ const PhotoUploadScreen = () => {
       // Get the expected gender from registration data
       const expectedGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
       
-      // Use in-browser AI verification with expected gender check
-      const result = await verifyFace(selfiePreview, expectedGender || undefined);
+      // Use in-browser AI gender classification with Hugging Face
+      const result = await classifyGender(selfiePreview, expectedGender || undefined);
       
       setVerificationResult(result);
       
@@ -196,8 +196,8 @@ const PhotoUploadScreen = () => {
       if (result.verified) {
         setVerificationState("verified");
         toast({
-          title: "Selfie verified!",
-          description: `Gender verified as ${expectedGender || result.detectedGender}`,
+          title: "Selfie verified! ✨",
+          description: `Gender verified as ${expectedGender || result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`,
         });
       } else {
         setVerificationState("failed");
@@ -268,7 +268,7 @@ const PhotoUploadScreen = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <ProgressIndicator currentStep={4} totalSteps={9} />
+        <ProgressIndicator currentStep={5} totalSteps={10} />
         <div className="w-10" />
       </div>
 

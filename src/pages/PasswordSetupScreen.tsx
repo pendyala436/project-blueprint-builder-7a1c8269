@@ -158,10 +158,14 @@ const PasswordSetupScreen = () => {
         await supabase.auth.setSession(authData.session);
       }
 
-      // Create profile for the new user
+      // Create profile for the new user with all personal details
       const dobString = localStorage.getItem("userDob");
       const dob = dobString ? new Date(dobString) : null;
       const age = dob ? differenceInYears(new Date(), dob) : null;
+      
+      // Get personal details from localStorage
+      const personalDetailsStr = localStorage.getItem("userPersonalDetails");
+      const personalDetails = personalDetailsStr ? JSON.parse(personalDetailsStr) : {};
 
       const { error: profileError } = await supabase
         .from("profiles")
@@ -176,6 +180,24 @@ const PasswordSetupScreen = () => {
           country: selectedCountry || null,
           account_status: "active",
           approval_status: gender === "female" ? "pending" : "approved",
+          bio: personalDetails.bio || null,
+          height_cm: personalDetails.height_cm || null,
+          occupation: personalDetails.occupation || null,
+          body_type: personalDetails.body_type || null,
+          education_level: personalDetails.education_level || null,
+          marital_status: personalDetails.marital_status || null,
+          religion: personalDetails.religion || null,
+          smoking_habit: personalDetails.smoking_habit || null,
+          drinking_habit: personalDetails.drinking_habit || null,
+          dietary_preference: personalDetails.dietary_preference || null,
+          fitness_level: personalDetails.fitness_level || null,
+          has_children: personalDetails.has_children ?? null,
+          pet_preference: personalDetails.pet_preference || null,
+          travel_frequency: personalDetails.travel_frequency || null,
+          personality_type: personalDetails.personality_type || null,
+          zodiac_sign: personalDetails.zodiac_sign || null,
+          interests: personalDetails.interests?.length > 0 ? personalDetails.interests : null,
+          life_goals: personalDetails.life_goals?.length > 0 ? personalDetails.life_goals : null,
         });
 
       if (profileError) {
@@ -224,7 +246,7 @@ const PasswordSetupScreen = () => {
       {/* Header */}
       <header className="p-6 flex items-center justify-between">
         <MeowLogo size="sm" />
-        <ProgressIndicator currentStep={3} totalSteps={9} />
+        <ProgressIndicator currentStep={4} totalSteps={10} />
       </header>
 
       {/* Main Content */}
