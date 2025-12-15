@@ -334,7 +334,7 @@ const WomenDashboardScreen = () => {
       // First check gender and approval from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, approval_status")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -347,15 +347,17 @@ const WomenDashboardScreen = () => {
       // Fetch user profile from female_profiles table
       const { data: femaleProfile } = await supabase
         .from("female_profiles")
-        .select("full_name, country, primary_language, preferred_language")
+        .select("full_name, country, primary_language, preferred_language, date_of_birth")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (femaleProfile?.full_name) {
-        setUserName(femaleProfile.full_name.split(" ")[0]);
+      // Use name from main profiles table first (registration data), then fall back to female_profiles
+      const fullName = mainProfile?.full_name || femaleProfile?.full_name;
+      if (fullName) {
+        setUserName(fullName.split(" ")[0]);
       }
 
-      // Get woman's mother tongue
+      // Get woman's mother tongue - use main profiles table first (registration data)
       const { data: womanLanguages } = await supabase
         .from("user_languages")
         .select("language_name, language_code")
@@ -363,13 +365,18 @@ const WomenDashboardScreen = () => {
         .limit(1);
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
+                           mainProfile?.primary_language ||
+                           mainProfile?.preferred_language ||
                            femaleProfile?.primary_language || 
                            femaleProfile?.preferred_language || 
                            "English";
       const womanLanguageCode = womanLanguages?.[0]?.language_code || "eng_Latn";
       setCurrentWomanLanguage(womanLanguage);
       setCurrentWomanLanguageCode(womanLanguageCode);
-      setCurrentWomanCountry(femaleProfile?.country || "");
+      
+      // Use country from main profiles table first (registration data)
+      const userCountryValue = mainProfile?.country || femaleProfile?.country || "";
+      setCurrentWomanCountry(userCountryValue);
       
       // Set all supported NLLB languages for women
       setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));

@@ -471,7 +471,7 @@ const DashboardScreen = () => {
       // First check gender from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -496,7 +496,7 @@ const DashboardScreen = () => {
       // Fetch user profile from male_profiles table
       const { data: maleProfile } = await supabase
         .from("male_profiles")
-        .select("full_name, country, primary_language, preferred_language")
+        .select("full_name, country, primary_language, preferred_language, date_of_birth")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -507,7 +507,10 @@ const DashboardScreen = () => {
         .eq("user_id", user.id)
         .limit(1);
 
+      // Use main profiles table first (registration data), then fall back to male_profiles
       const motherTongue = userLanguages?.[0]?.language_name || 
+                          mainProfile?.primary_language ||
+                          mainProfile?.preferred_language ||
                           maleProfile?.primary_language || 
                           maleProfile?.preferred_language || 
                           "English";
@@ -515,11 +518,16 @@ const DashboardScreen = () => {
       setUserLanguage(motherTongue);
       setUserLanguageCode(languageCode);
 
-      if (maleProfile?.full_name) {
-        setUserName(maleProfile.full_name.split(" ")[0]);
+      // Use name from main profiles table first (registration data), then fall back to male_profiles
+      const fullName = mainProfile?.full_name || maleProfile?.full_name;
+      if (fullName) {
+        setUserName(fullName.split(" ")[0]);
       }
-      if (maleProfile?.country) {
-        setUserCountryName(maleProfile.country); // Store full country name for NLLB feature
+      
+      // Use country from main profiles table first (registration data), then fall back to male_profiles
+      const userCountryValue = mainProfile?.country || maleProfile?.country;
+      if (userCountryValue) {
+        setUserCountryName(userCountryValue); // Store full country name for NLLB feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -529,7 +537,7 @@ const DashboardScreen = () => {
           "Kuwait": "KW", "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP",
           "Sri Lanka": "LK"
         };
-        setUserCountry(countryCodeMap[maleProfile.country] || "IN");
+        setUserCountry(countryCodeMap[userCountryValue] || "IN");
       }
 
       // Fetch wallet balance
