@@ -62,6 +62,23 @@ export interface ElectionOfficer {
   seniority_days?: number;
 }
 
+export interface OfficerNomination {
+  id: string;
+  language_code: string;
+  nominee_id: string;
+  nominated_by: string;
+  status: string;
+  approvals_count: number;
+  rejections_count: number;
+  created_at: string;
+  resolved_at: string | null;
+  // Joined data
+  nominee_name?: string;
+  nominee_photo?: string;
+  has_user_voted?: boolean;
+  user_vote_type?: string;
+}
+
 export interface MemberWithSeniority {
   userId: string;
   fullName: string;
@@ -81,6 +98,7 @@ export const useElectionSystem = (
   const [voterRegistry, setVoterRegistry] = useState<VoterRegistration[]>([]);
   const [currentLeader, setCurrentLeader] = useState<CommunityLeader | null>(null);
   const [electionOfficer, setElectionOfficer] = useState<ElectionOfficer | null>(null);
+  const [officerNominations, setOfficerNominations] = useState<OfficerNomination[]>([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [isRegisteredVoter, setIsRegisteredVoter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +107,7 @@ export const useElectionSystem = (
 
   const currentYear = new Date().getFullYear();
   const isOfficer = electionOfficer?.user_id === currentUserId;
+  const hasNominated = officerNominations.some(n => n.nominee_id === currentUserId && n.status === 'pending');
   const isLeader = currentLeader?.user_id === currentUserId;
 
   // Calculate seniority in days from created_at
@@ -167,6 +186,42 @@ export const useElectionSystem = (
         });
       } else {
         setElectionOfficer(null);
+      }
+
+      // Load pending officer nominations
+      const { data: nominationsData } = await supabase
+        .from("officer_nominations")
+        .select("*")
+        .eq("language_code", languageCode)
+        .eq("status", "pending");
+
+      if (nominationsData && nominationsData.length > 0) {
+        const nomineeIds = nominationsData.map(n => n.nominee_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url")
+          .in("user_id", nomineeIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+        // Get user's votes on nominations
+        const { data: userVotes } = await supabase
+          .from("officer_nomination_votes")
+          .select("nomination_id, vote_type")
+          .eq("voter_id", currentUserId)
+          .in("nomination_id", nominationsData.map(n => n.id));
+
+        const voteMap = new Map(userVotes?.map(v => [v.nomination_id, v.vote_type]) || []);
+
+        setOfficerNominations(nominationsData.map(n => ({
+          ...n,
+          nominee_name: profileMap.get(n.nominee_id)?.full_name || "Unknown",
+          nominee_photo: profileMap.get(n.nominee_id)?.photo_url,
+          has_user_voted: voteMap.has(n.id),
+          user_vote_type: voteMap.get(n.id)
+        })));
+      } else {
+        setOfficerNominations([]);
       }
 
       // Load candidates if election exists
@@ -303,9 +358,152 @@ export const useElectionSystem = (
     };
   }, [currentElection?.id, currentElection?.status]);
 
-  // Auto-assign election officer to most senior member
+  // Self-nominate as election officer
+  const nominateSelfAsOfficer = async (): Promise<boolean> => {
+    if (electionOfficer) {
+      toast({
+        title: "Officer Exists",
+        description: "There is already an active election commissioner",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (hasNominated) {
+      toast({
+        title: "Already Nominated",
+        description: "You have already nominated yourself",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("officer_nominations")
+        .insert({
+          language_code: languageCode,
+          nominee_id: currentUserId,
+          nominated_by: currentUserId,
+          status: "pending"
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Nomination Submitted",
+        description: "Your nomination is now open for community approval"
+      });
+
+      loadElectionData();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit nomination",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // Vote on officer nomination
+  const voteOnOfficerNomination = async (nominationId: string, approve: boolean): Promise<boolean> => {
+    try {
+      // Insert the vote
+      const { error: voteError } = await supabase
+        .from("officer_nomination_votes")
+        .insert({
+          nomination_id: nominationId,
+          voter_id: currentUserId,
+          vote_type: approve ? "approve" : "reject"
+        });
+
+      if (voteError) throw voteError;
+
+      // Update nomination counts
+      const nomination = officerNominations.find(n => n.id === nominationId);
+      if (nomination) {
+        const newApprovals = nomination.approvals_count + (approve ? 1 : 0);
+        const newRejections = nomination.rejections_count + (approve ? 0 : 1);
+
+        await supabase
+          .from("officer_nominations")
+          .update({
+            approvals_count: newApprovals,
+            rejections_count: newRejections
+          })
+          .eq("id", nominationId);
+      }
+
+      toast({
+        title: approve ? "Approved" : "Rejected",
+        description: `You have ${approve ? "approved" : "rejected"} this nomination`
+      });
+
+      loadElectionData();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to vote",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // Confirm officer from approved nomination (when enough approvals)
+  const confirmOfficerFromNomination = async (nomination: OfficerNomination): Promise<boolean> => {
+    try {
+      // Deactivate any existing officer
+      await supabase
+        .from("election_officers")
+        .update({ is_active: false })
+        .eq("language_code", languageCode)
+        .eq("is_active", true);
+
+      // Create new officer
+      const { error } = await supabase
+        .from("election_officers")
+        .insert({
+          language_code: languageCode,
+          user_id: nomination.nominee_id,
+          is_active: true,
+          auto_assigned: false
+        });
+
+      if (error) throw error;
+
+      // Mark nomination as approved
+      await supabase
+        .from("officer_nominations")
+        .update({ 
+          status: "approved",
+          resolved_at: new Date().toISOString()
+        })
+        .eq("id", nomination.id);
+
+      toast({
+        title: "Officer Confirmed!",
+        description: `${nomination.nominee_name} is now the Election Commissioner`
+      });
+
+      loadElectionData();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to confirm officer",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // Auto-assign election officer to most senior member (fallback when no nominations)
   const autoAssignOfficer = async (members: MemberWithSeniority[]) => {
-    if (electionOfficer || members.length === 0) return;
+    if (electionOfficer || members.length === 0 || officerNominations.length > 0) return;
 
     // Sort by seniority (most senior first = highest seniority days)
     const sortedMembers = [...members].sort((a, b) => b.seniority - a.seniority);
@@ -330,8 +528,8 @@ export const useElectionSystem = (
         console.log("[ElectionSystem] Auto-assigned officer:", selectedMember.userId, 
           `(${selectedMember.seniority} days seniority, online: ${selectedMember.isOnline})`);
         toast({
-          title: "Election Commissioner Assigned",
-          description: `${selectedMember.fullName} has been assigned as commissioner (${selectedMember.seniority} days seniority)`
+          title: "Election Commissioner Auto-Assigned",
+          description: `${selectedMember.fullName} assigned as commissioner (most senior member)`
         });
         loadElectionData();
       }
@@ -870,11 +1068,13 @@ export const useElectionSystem = (
     voterRegistry,
     currentLeader,
     electionOfficer,
+    officerNominations,
     hasVoted,
     isRegisteredVoter,
     isLoading,
     isOfficer,
     isLeader,
+    hasNominated,
     currentYear,
     liveVoteCounts,
     totalVotesCast,
@@ -883,6 +1083,9 @@ export const useElectionSystem = (
     loadElectionData,
     autoAssignOfficer,
     reassignOfficer,
+    nominateSelfAsOfficer,
+    voteOnOfficerNomination,
+    confirmOfficerFromNomination,
     createElection,
     scheduleElection,
     addCandidate,
