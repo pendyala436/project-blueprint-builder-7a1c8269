@@ -424,15 +424,57 @@ const TermsAgreementScreen = () => {
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get registration data from localStorage
+      const email = localStorage.getItem("userEmail") || "";
+      const password = localStorage.getItem("userPassword") || "";
+      const fullName = localStorage.getItem("userName") || "";
+      const gender = localStorage.getItem("userGender") || "";
+      const phone = localStorage.getItem("userPhone") || "";
+
+      if (!email || !password) {
+        toast({
+          title: "Registration incomplete",
+          description: "Please complete all registration steps.",
+          variant: "destructive",
+        });
+        navigate("/register");
+        return;
+      }
+
+      // Create user account with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: fullName,
+            gender: gender,
+            phone: phone,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error("Auth error:", authError);
+        toast({
+          title: "Registration failed",
+          description: authError.message || "Failed to create account. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const user = authData.user;
 
       if (!user) {
         toast({
-          title: "Not authenticated",
-          description: "Please sign in to continue.",
+          title: "Registration failed",
+          description: "Failed to create account. Please try again.",
           variant: "destructive",
         });
-        navigate("/");
+        setIsLoading(false);
         return;
       }
 
@@ -452,9 +494,7 @@ const TermsAgreementScreen = () => {
 
       if (consentError) throw consentError;
 
-      // Get registration data from localStorage
-      const fullName = localStorage.getItem("userName") || "";
-      const gender = localStorage.getItem("userGender") || "";
+      // Get remaining registration data from localStorage
       const dateOfBirth = localStorage.getItem("userDateOfBirth") || "";
       const country = localStorage.getItem("userCountry") || "";
       const state = localStorage.getItem("userState") || "";
@@ -578,6 +618,8 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("pendingPhotoData");
       localStorage.removeItem("pendingAdditionalPhotos");
       localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userPhone");
       localStorage.removeItem("userGender");
       localStorage.removeItem("userDateOfBirth");
       localStorage.removeItem("userCountry");
