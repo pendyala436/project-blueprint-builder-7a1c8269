@@ -366,16 +366,16 @@ const DashboardScreen = () => {
   };
 
   const getStatusColor = () => {
-    // Green = Available, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
-    if (activeChatCount === 0) return "bg-green-500";
-    if (activeChatCount >= 3) return "bg-red-500";
-    return "bg-amber-500";
+    // Uses semantic colors: online (green), busy (amber), destructive (red)
+    if (activeChatCount === 0) return "bg-online";
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-busy";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-green-500";
-    if (activeChatCount >= 3) return "bg-red-500";
-    return "bg-amber-500";
+    if (activeChatCount === 0) return "bg-online";
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-busy";
   };
 
   const MAX_PARALLEL_CHATS = 3;

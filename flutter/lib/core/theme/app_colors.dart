@@ -93,7 +93,7 @@ class AppColors {
 
   // ============= Semantic Colors =============
   
-  /// Success color
+  /// Success color - follows theme's accent
   static const Color success = Color(0xFF22C55E);
   static const Color successForeground = Color(0xFFFFFFFF);
   
@@ -101,13 +101,13 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color warningForeground = Color(0xFFFFFFFF);
   
-  /// Info color
-  static const Color info = Color(0xFF3B82F6);
+  /// Info color - follows theme's primary
+  static const Color info = Color(0xFF1BA39C);
   static const Color infoForeground = Color(0xFFFFFFFF);
 
   // ============= Status Colors =============
   
-  /// Online status
+  /// Online status - uses accent/success
   static const Color online = Color(0xFF22C55E);
   
   /// Offline status
@@ -117,7 +117,7 @@ class AppColors {
   static const Color away = Color(0xFFF59E0B);
   
   /// Busy status
-  static const Color busy = Color(0xFFEF4444);
+  static const Color busy = Color(0xFFF59E0B);
 
   // ============= Gender Colors =============
   
@@ -129,9 +129,9 @@ class AppColors {
 
   // ============= Gradients =============
   
-  /// Primary Aurora gradient
+  /// Primary Aurora gradient - uses theme primary colors
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF1BA39C), Color(0xFF22C55E)], // Teal to Green
+    colors: [Color(0xFF1BA39C), Color(0xFF22C55E)], // Primary to Accent
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -160,4 +160,14 @@ class AppColors {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
+  
+  // ============= Theme-aware color getters =============
+  // These return the appropriate color based on brightness
+  
+  static Color getSuccess(Brightness brightness) => success;
+  static Color getWarning(Brightness brightness) => warning;
+  static Color getInfo(Brightness brightness) => brightness == Brightness.dark ? primaryDark : primary;
+  static Color getOnline(Brightness brightness) => online;
+  static Color getOffline(Brightness brightness) => offline;
+  static Color getBusy(Brightness brightness) => busy;
 }

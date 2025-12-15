@@ -287,13 +287,13 @@ const WomenWalletScreen = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600"><Clock className="h-3 w-3 mr-1" /> {t('pending', 'Pending')}</Badge>;
+        return <Badge variant="warningOutline"><Clock className="h-3 w-3 mr-1" /> {t('pending', 'Pending')}</Badge>;
       case "approved":
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('approved', 'Approved')}</Badge>;
+        return <Badge variant="infoOutline"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('approved', 'Approved')}</Badge>;
       case "completed":
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('completed', 'Completed')}</Badge>;
+        return <Badge variant="successOutline"><CheckCircle2 className="h-3 w-3 mr-1" /> {t('completed', 'Completed')}</Badge>;
       case "rejected":
-        return <Badge variant="outline" className="bg-red-500/10 text-red-600"><XCircle className="h-3 w-3 mr-1" /> {t('rejected', 'Rejected')}</Badge>;
+        return <Badge variant="destructiveOutline"><XCircle className="h-3 w-3 mr-1" /> {t('rejected', 'Rejected')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -344,10 +344,10 @@ const WomenWalletScreen = () => {
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
         {/* Section 1: Balance Overview Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <Card className="p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-green-500/20">
-                <Wallet className="w-5 h-5 text-green-500" />
+              <div className="p-2 rounded-xl bg-success/20">
+                <Wallet className="w-5 h-5 text-success" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('availableBalance', 'Available Balance')}</p>
@@ -371,14 +371,14 @@ const WomenWalletScreen = () => {
 
         {/* Section 2: Pending Withdrawals Info */}
         {pendingWithdrawals > 0 && (
-          <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+          <Card className="p-4 bg-gradient-to-br from-warning/10 to-warning/5 border-warning/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-amber-500/20">
-                <Clock className="w-5 h-5 text-amber-500" />
+              <div className="p-2 rounded-xl bg-warning/20">
+                <Clock className="w-5 h-5 text-warning" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">{t('pendingWithdrawals', 'Pending Withdrawals')}</p>
-                <p className="text-xl font-bold text-amber-600">₹{pendingWithdrawals.toLocaleString()}</p>
+                <p className="text-xl font-bold text-warning">₹{pendingWithdrawals.toLocaleString()}</p>
               </div>
             </div>
           </Card>
@@ -406,9 +406,9 @@ const WomenWalletScreen = () => {
             </Button>
           </div>
           {!canWithdraw && (
-            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
-              <p className="text-sm text-amber-600">
+            <div className="mt-3 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
+              <p className="text-sm text-warning">
                 {t('youNeedMore', 'You need')} ₹{(minWithdrawal - availableBalance).toLocaleString()} {t('more', 'more')} {t('withdraw', 'to withdraw')}
               </p>
             </div>
