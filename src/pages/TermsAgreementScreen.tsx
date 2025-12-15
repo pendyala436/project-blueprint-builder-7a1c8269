@@ -579,16 +579,12 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userPrimaryLanguage");
 
       toast({
-        title: "Registration Complete!",
-        description: "Your account has been created successfully.",
+        title: "Terms Accepted!",
+        description: "Proceeding to AI verification...",
       });
 
-      // Navigate based on gender
-      if (gender.toLowerCase() === "female") {
-        navigate("/approval-pending");
-      } else {
-        navigate("/dashboard");
-      }
+      // Navigate to AI processing for gender verification
+      navigate("/ai-processing");
     } catch (error) {
       console.error("Error saving registration:", error);
       toast({
@@ -616,7 +612,7 @@ const TermsAgreementScreen = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/photo-upload")}
+            onClick={() => navigate("/language-preferences")}
             className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -746,7 +742,7 @@ const TermsAgreementScreen = () => {
           <div className="flex gap-3">
             <Button
               variant="auroraOutline"
-              onClick={() => navigate("/photo-upload")}
+              onClick={() => navigate("/language-preferences")}
               className="flex-1 h-12"
             >
               Back

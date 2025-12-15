@@ -1,411 +1,477 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import MeowLogo from "@/components/MeowLogo";
-import ProgressIndicator from "@/components/ProgressIndicator";
+import AuroraBackground from "@/components/AuroraBackground";
 import { useToast } from "@/hooks/use-toast";
+import { useGenderClassification } from "@/hooks/useGenderClassification";
 import { 
-  Cpu, 
+  Camera, 
   CheckCircle2, 
   XCircle, 
   Loader2, 
-  Camera, 
-  User, 
-  Calendar, 
-  Languages,
-  AlertTriangle
+  Sparkles,
+  AlertTriangle,
+  User,
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-interface ProcessingStep {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  status: "pending" | "processing" | "completed" | "failed";
-  message?: string;
-}
 
 const AIProcessingScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Camera and capture state
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  
+  // Verification state
+  const [verificationStatus, setVerificationStatus] = useState<"idle" | "verifying" | "success" | "failed">("idle");
+  const [verificationResult, setVerificationResult] = useState<any>(null);
   const [progress, setProgress] = useState(0);
-  const [isCancelled, setIsCancelled] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [hasErrors, setHasErrors] = useState(false);
-  const [processingLogId, setProcessingLogId] = useState<string | null>(null);
+  
+  // Gender classification hook
+  const { isVerifying, isLoadingModel, modelLoadProgress, classifyGender } = useGenderClassification();
+  
+  // Get registered gender from localStorage
+  const registeredGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
 
-  const [steps, setSteps] = useState<ProcessingStep[]>([
-    { id: "photo", label: "Photo Verification", icon: <Camera className="w-5 h-5" />, status: "pending" },
-    { id: "gender", label: "Gender Verification", icon: <User className="w-5 h-5" />, status: "pending" },
-    { id: "age", label: "Age Verification", icon: <Calendar className="w-5 h-5" />, status: "pending" },
-    { id: "language", label: "Language Detection", icon: <Languages className="w-5 h-5" />, status: "pending" },
-  ]);
-
-  const updateStepStatus = useCallback((stepId: string, status: ProcessingStep["status"], message?: string) => {
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, status, message } : step
-    ));
-  }, []);
-
-  const simulateProcessing = useCallback(async () => {
+  // Start camera
+  const startCamera = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Not authenticated",
-          description: "Please sign in to continue.",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
-
-      // Create processing log entry
-      const { data: logData, error: logError } = await supabase
-        .from("processing_logs")
-        .insert({
-          user_id: user.id,
-          processing_status: "processing",
-          current_step: "photo",
-          progress_percent: 0,
-        })
-        .select()
-        .single();
-
-      if (logError) throw logError;
-      setProcessingLogId(logData.id);
-
-      // Get user profile for verification
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const errors: string[] = [];
-
-      // Step 1: Photo Verification (0-25%)
-      if (!isCancelled) {
-        updateStepStatus("photo", "processing");
-        await updateLog(logData.id, "photo", 10);
-        setProgress(10);
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        if (profile?.photo_url) {
-          updateStepStatus("photo", "completed", "Photo verified successfully");
-          await updateLog(logData.id, "photo", 25, { photo_verified: true });
-        } else {
-          updateStepStatus("photo", "failed", "No photo uploaded");
-          errors.push("Photo verification failed: No photo uploaded");
-        }
-        setProgress(25);
-      }
-
-      // Step 2: Gender Verification (25-50%)
-      if (!isCancelled) {
-        updateStepStatus("gender", "processing");
-        await updateLog(logData.id, "gender", 35);
-        setProgress(35);
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        if (profile?.gender) {
-          updateStepStatus("gender", "completed", `Gender: ${profile.gender}`);
-          await updateLog(logData.id, "gender", 50, { gender_verified: true });
-        } else {
-          updateStepStatus("gender", "failed", "Gender not specified");
-          errors.push("Gender verification skipped: Not specified");
-        }
-        setProgress(50);
-      }
-
-      // Step 3: Age Verification (50-75%)
-      if (!isCancelled) {
-        updateStepStatus("age", "processing");
-        await updateLog(logData.id, "age", 60);
-        setProgress(60);
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        if (profile?.date_of_birth) {
-          const birthDate = new Date(profile.date_of_birth);
-          const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-          
-          if (age >= 18) {
-            updateStepStatus("age", "completed", `Age verified: ${age} years old`);
-            await updateLog(logData.id, "age", 75, { age_verified: true });
-          } else {
-            updateStepStatus("age", "failed", "Must be 18 or older");
-            errors.push("Age verification failed: User is under 18");
-          }
-        } else {
-          updateStepStatus("age", "failed", "Date of birth not provided");
-          errors.push("Age verification skipped: Date of birth not provided");
-        }
-        setProgress(75);
-      }
-
-      // Step 4: Language Detection (75-100%)
-      if (!isCancelled) {
-        updateStepStatus("language", "processing");
-        await updateLog(logData.id, "language", 85);
-        setProgress(85);
-        
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        if (profile?.preferred_language) {
-          updateStepStatus("language", "completed", `Language: ${profile.preferred_language}`);
-          await updateLog(logData.id, "language", 100, { language_detected: true });
-        } else {
-          updateStepStatus("language", "completed", "Default: English");
-          await updateLog(logData.id, "language", 100, { language_detected: true });
-        }
-        setProgress(100);
-      }
-
-      // Complete processing
-      if (!isCancelled) {
-        const hasFailures = errors.length > 0;
-        setHasErrors(hasFailures);
-        
-        await supabase
-          .from("processing_logs")
-          .update({
-            processing_status: hasFailures ? "completed_with_errors" : "completed",
-            completed_at: new Date().toISOString(),
-            errors: errors,
-          })
-          .eq("id", logData.id);
-
-        setIsComplete(true);
-
-        if (!hasFailures) {
-          toast({
-            title: "Verification Complete!",
-            description: "All checks passed successfully.",
-          });
-        } else {
-          toast({
-            title: "Verification Complete",
-            description: `Completed with ${errors.length} warning(s).`,
-            variant: "destructive",
-          });
-        }
-      }
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: 640, height: 480 }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
     } catch (error) {
-      console.error("Processing error:", error);
       toast({
-        title: "Processing Error",
-        description: "An error occurred during verification. Please try again.",
+        title: "Camera access required",
+        description: "Please allow camera access for gender verification",
         variant: "destructive",
       });
     }
-  }, [isCancelled, navigate, toast, updateStepStatus]);
-
-  const updateLog = async (logId: string, step: string, progressPercent: number, updates?: object) => {
-    await supabase
-      .from("processing_logs")
-      .update({
-        current_step: step,
-        progress_percent: progressPercent,
-        ...updates,
-      })
-      .eq("id", logId);
   };
 
+  // Set video source when stream is ready
   useEffect(() => {
-    simulateProcessing();
-  }, []);
-
-  const handleCancel = async () => {
-    setIsCancelled(true);
-    
-    if (processingLogId) {
-      await supabase
-        .from("processing_logs")
-        .update({
-          processing_status: "cancelled",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", processingLogId);
+    if (stream && videoRef.current && showCamera) {
+      videoRef.current.srcObject = stream;
     }
+  }, [stream, showCamera]);
 
-    toast({
-      title: "Processing Cancelled",
-      description: "You can restart the verification later.",
-    });
+  // Stop camera
+  const stopCamera = useCallback(() => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  }, [stream]);
 
-    navigate("/terms-agreement");
+  // Capture photo with countdown
+  const captureWithCountdown = () => {
+    setCountdown(3);
   };
 
+  // Countdown effect
+  useEffect(() => {
+    if (countdown === null) return;
+    
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Capture the photo
+      capturePhoto();
+      setCountdown(null);
+    }
+  }, [countdown]);
+
+  // Capture photo from video
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        // Mirror the image (selfie mode)
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0);
+        
+        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+        setSelfiePreview(imageData);
+        stopCamera();
+        
+        // Start verification
+        verifyGender(imageData);
+      }
+    }
+  };
+
+  // Verify gender using Hugging Face model
+  const verifyGender = async (imageData: string) => {
+    setVerificationStatus("verifying");
+    setProgress(10);
+
+    try {
+      // Update progress during model loading
+      const progressInterval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 5, 80));
+      }, 500);
+
+      // Get expected gender from registration
+      const expectedGender = registeredGender || undefined;
+      
+      // Classify gender using Hugging Face
+      const result = await classifyGender(imageData, expectedGender);
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      setVerificationResult(result);
+
+      // Save verification result to Supabase
+      await saveVerificationResult(result);
+
+      if (result.verified && result.genderMatches) {
+        setVerificationStatus("success");
+        toast({
+          title: "Verification Successful! ✓",
+          description: `Gender verified as ${result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`,
+        });
+      } else if (!result.genderMatches) {
+        setVerificationStatus("failed");
+        toast({
+          title: "Gender Mismatch",
+          description: `Expected ${expectedGender}, but detected ${result.detectedGender}. Please try again.`,
+          variant: "destructive",
+        });
+      } else {
+        setVerificationStatus("failed");
+        toast({
+          title: "Verification Failed",
+          description: result.reason || "Please try again with better lighting",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setProgress(100);
+      setVerificationStatus("failed");
+      toast({
+        title: "Verification Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save verification result to Supabase
+  const saveVerificationResult = async (result: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        await supabase
+          .from("processing_logs")
+          .insert({
+            user_id: user.id,
+            processing_status: result.verified && result.genderMatches ? "completed" : "failed",
+            gender_verified: result.verified && result.genderMatches,
+            completed_at: new Date().toISOString(),
+            errors: result.verified && result.genderMatches ? null : [result.reason],
+          });
+      }
+    } catch (error) {
+      console.error("Error saving verification result:", error);
+    }
+  };
+
+  // Retry verification
+  const retryVerification = () => {
+    setSelfiePreview(null);
+    setVerificationStatus("idle");
+    setVerificationResult(null);
+    setProgress(0);
+    startCamera();
+  };
+
+  // Continue to next screen
   const handleContinue = () => {
     navigate("/welcome-tutorial");
   };
 
-  const handleRetry = () => {
-    setProgress(0);
-    setIsCancelled(false);
-    setIsComplete(false);
-    setHasErrors(false);
-    setSteps(steps.map(step => ({ ...step, status: "pending", message: undefined })));
-    simulateProcessing();
+  // Skip verification (with warning)
+  const handleSkip = () => {
+    toast({
+      title: "Verification Skipped",
+      description: "Some features may be limited without verification.",
+    });
+    navigate("/welcome-tutorial");
   };
 
-  const getStatusIcon = (status: ProcessingStep["status"]) => {
-    switch (status) {
-      case "pending":
-        return <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />;
-      case "processing":
-        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
-      case "completed":
-        return <CheckCircle2 className="w-5 h-5 text-green-500 animate-scale-in" />;
-      case "failed":
-        return <XCircle className="w-5 h-5 text-destructive animate-scale-in" />;
-    }
-  };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-background">
+      <AuroraBackground />
+
       {/* Header */}
-      <header className="p-6 flex justify-between items-center">
-        <MeowLogo />
-        {/* AI Processing - Post Registration */}
+      <header className="px-6 pt-8 pb-4 relative z-10">
+        <div className="flex justify-center">
+          <MeowLogo size="md" />
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-6">
-        <Card className="w-full max-w-lg p-8 space-y-8 bg-card/80 backdrop-blur-sm border-border/50 shadow-xl">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-              <Cpu className="w-8 h-8 text-primary" />
+      <main className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <Card className="w-full max-w-md p-6 bg-card/80 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+          <div className="text-center space-y-4">
+            {/* Icon */}
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mx-auto">
+              {verificationStatus === "success" ? (
+                <CheckCircle2 className="w-8 h-8 text-accent" />
+              ) : verificationStatus === "failed" ? (
+                <XCircle className="w-8 h-8 text-destructive" />
+              ) : (
+                <User className="w-8 h-8 text-primary" />
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {isComplete ? (hasErrors ? "Verification Complete" : "All Set!") : "AI Processing"}
-            </h1>
-            <p className="text-muted-foreground">
-              {isComplete 
-                ? (hasErrors ? "Completed with some warnings" : "Your profile has been verified")
-                : "Verifying your profile information"
-              }
-            </p>
-          </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium text-foreground">{progress}%</span>
+            {/* Title */}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground font-display">
+                {verificationStatus === "success" 
+                  ? "Verification Complete!" 
+                  : verificationStatus === "failed"
+                  ? "Verification Failed"
+                  : "Gender Verification"
+                }
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                {verificationStatus === "idle" 
+                  ? "Take a selfie to verify your identity"
+                  : verificationStatus === "verifying"
+                  ? "Analyzing your selfie..."
+                  : verificationStatus === "success"
+                  ? "Your identity has been verified"
+                  : "Please try again with a clearer photo"
+                }
+              </p>
             </div>
-            <Progress 
-              value={progress} 
-              className="h-3 transition-all duration-500"
-            />
-          </div>
 
-          {/* Processing Steps */}
-          <div className="space-y-3">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
-                  step.status === "processing" 
-                    ? "border-primary bg-primary/5 shadow-sm" 
-                    : step.status === "completed"
-                    ? "border-green-500/30 bg-green-500/5"
-                    : step.status === "failed"
-                    ? "border-destructive/30 bg-destructive/5"
-                    : "border-border"
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className={`p-2 rounded-lg ${
-                  step.status === "processing" ? "bg-primary/10 text-primary" :
-                  step.status === "completed" ? "bg-green-500/10 text-green-500" :
-                  step.status === "failed" ? "bg-destructive/10 text-destructive" :
-                  "bg-muted text-muted-foreground"
-                }`}>
-                  {step.icon}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-foreground">{step.label}</div>
-                  {step.message && (
-                    <div className={`text-sm ${
-                      step.status === "failed" ? "text-destructive" : "text-muted-foreground"
-                    }`}>
-                      {step.message}
+            {/* Registered Gender Info */}
+            {registeredGender && verificationStatus === "idle" && (
+              <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
+                <p className="text-sm text-muted-foreground">
+                  Registered as: <span className="font-semibold text-primary capitalize">{registeredGender}</span>
+                </p>
+              </div>
+            )}
+
+            {/* Camera / Selfie Preview */}
+            <div className="relative aspect-square max-w-[280px] mx-auto rounded-2xl overflow-hidden border-2 border-primary/20">
+              {showCamera ? (
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover scale-x-[-1]"
+                  />
+                  {/* Face guide overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-32 h-40 border-2 border-dashed border-primary/50 rounded-full" />
+                  </div>
+                  {/* Countdown overlay */}
+                  {countdown !== null && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                      <span className="text-6xl font-bold text-primary animate-pulse">{countdown}</span>
                     </div>
                   )}
+                </>
+              ) : selfiePreview ? (
+                <>
+                  <img 
+                    src={selfiePreview} 
+                    alt="Selfie" 
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Verification overlay */}
+                  {verificationStatus === "verifying" && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 gap-3">
+                      <div className="relative">
+                        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                        <Sparkles className="w-5 h-5 text-primary absolute -top-1 -right-1 animate-pulse" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">AI Verifying...</p>
+                    </div>
+                  )}
+                  {/* Success badge */}
+                  {verificationStatus === "success" && (
+                    <div className="absolute top-3 right-3 bg-accent text-accent-foreground rounded-full p-2 animate-in zoom-in duration-300">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                  )}
+                  {/* Failed badge */}
+                  {verificationStatus === "failed" && (
+                    <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground rounded-full p-2 animate-in zoom-in duration-300">
+                      <XCircle className="w-5 h-5" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-3">
+                  <Camera className="w-12 h-12 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Camera preview</p>
                 </div>
-                {getStatusIcon(step.status)}
-              </div>
-            ))}
-          </div>
-
-          {/* Warning Banner */}
-          {isComplete && hasErrors && (
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 animate-fade-in">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-600 dark:text-amber-400">
-                  Some verifications need attention
-                </p>
-                <p className="text-muted-foreground mt-1">
-                  You can continue, but some features may be limited.
-                </p>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            {!isComplete ? (
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                className="flex-1 h-12"
-                disabled={isCancelled}
-              >
-                {isCancelled ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Cancelling...
-                  </>
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Progress bar (during verification) */}
+            {verificationStatus === "verifying" && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {isLoadingModel ? "Loading AI model..." : "Analyzing..."}
+                  </span>
+                  <span className="font-medium text-foreground">{progress}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+            )}
+
+            {/* Model loading indicator */}
+            {isLoadingModel && (
+              <div className="p-3 bg-primary/5 rounded-xl border border-primary/20">
+                <p className="text-xs text-muted-foreground">
+                  Loading AI model: {modelLoadProgress}%
+                </p>
+              </div>
+            )}
+
+            {/* Verification Result */}
+            {verificationResult && verificationStatus !== "verifying" && (
+              <div className={`p-3 rounded-xl text-sm ${
+                verificationStatus === "success"
+                  ? "bg-accent/10 text-accent border border-accent/20"
+                  : "bg-destructive/10 text-destructive border border-destructive/20"
+              }`}>
+                {verificationStatus === "success" ? (
+                  <p>
+                    ✓ Verified as <span className="font-semibold capitalize">{verificationResult.detectedGender}</span>
+                    {" "}({Math.round(verificationResult.confidence * 100)}% confidence)
+                  </p>
                 ) : (
-                  "Cancel"
+                  <p>{verificationResult.reason}</p>
                 )}
-              </Button>
-            ) : (
-              <>
-                {hasErrors && (
-                  <Button
-                    variant="outline"
-                    onClick={handleRetry}
-                    className="flex-1 h-12"
-                  >
-                    Retry
-                  </Button>
-                )}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3 pt-2">
+              {verificationStatus === "idle" && !showCamera && (
                 <Button
-                  onClick={handleContinue}
-                  className="flex-1 h-12 text-base font-medium"
                   variant="aurora"
+                  size="xl"
+                  className="w-full gap-2"
+                  onClick={startCamera}
+                >
+                  <Camera className="w-5 h-5" />
+                  Start Camera
+                </Button>
+              )}
+
+              {showCamera && countdown === null && (
+                <Button
+                  variant="aurora"
+                  size="xl"
+                  className="w-full gap-2"
+                  onClick={captureWithCountdown}
+                >
+                  <Camera className="w-5 h-5" />
+                  Take Selfie
+                </Button>
+              )}
+
+              {verificationStatus === "success" && (
+                <Button
+                  variant="aurora"
+                  size="xl"
+                  className="w-full"
+                  onClick={handleContinue}
                 >
                   Continue
                 </Button>
-              </>
-            )}
-          </div>
+              )}
 
-          {/* Footer Note */}
-          {!isComplete && (
-            <p className="text-xs text-center text-muted-foreground animate-pulse">
-              Please wait while we verify your information...
+              {verificationStatus === "failed" && (
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={retryVerification}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Retry
+                  </Button>
+                  <Button
+                    variant="aurora"
+                    className="flex-1"
+                    onClick={handleContinue}
+                  >
+                    Continue Anyway
+                  </Button>
+                </div>
+              )}
+
+              {/* Skip option */}
+              {verificationStatus === "idle" && (
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground text-sm"
+                  onClick={handleSkip}
+                >
+                  Skip for now
+                </Button>
+              )}
+
+              {/* Cancel camera */}
+              {showCamera && (
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground"
+                  onClick={stopCamera}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+
+            {/* Security note */}
+            <p className="text-xs text-muted-foreground pt-2">
+              🔒 Your selfie is processed locally using AI and is not stored
             </p>
-          )}
+          </div>
         </Card>
       </main>
     </div>
