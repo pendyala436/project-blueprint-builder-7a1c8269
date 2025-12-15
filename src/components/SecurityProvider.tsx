@@ -46,8 +46,10 @@ const SecurityProvider: React.FC<SecurityProviderProps> = memo(({
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!enableKeyboardBlocking) return;
 
-    // Quick check for common blocked keys first
-    const key = e.key.toLowerCase();
+    // Quick check for common blocked keys first - guard against undefined key
+    const key = e.key?.toLowerCase?.() || '';
+    if (!key) return;
+    
     const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
     // Block DevTools shortcuts

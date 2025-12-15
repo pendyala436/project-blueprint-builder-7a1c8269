@@ -19,9 +19,23 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 // Eager load critical path
 import AuthScreen from "./pages/AuthScreen";
 
-// Lazy load non-critical components
+// Lazy load non-critical components with preload hints
 const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+
+// Preload critical routes after initial render
+const preloadCriticalRoutes = () => {
+  // Preload dashboard routes in background after 1 second
+  setTimeout(() => {
+    import("./pages/DashboardScreen");
+    import("./pages/WomenDashboardScreen");
+  }, 1000);
+};
+
+// Start preloading after initial paint
+if (typeof window !== 'undefined') {
+  requestIdleCallback?.(() => preloadCriticalRoutes()) || setTimeout(preloadCriticalRoutes, 2000);
+}
 
 // Lazy load all routes
 const ForgotPasswordScreen = lazy(() => import("./pages/ForgotPasswordScreen"));
@@ -72,15 +86,22 @@ const AdminTransactionHistory = lazy(() => import("./pages/AdminTransactionHisto
 const NotFound = lazy(() => import("./pages/NotFound"));
 const InstallApp = lazy(() => import("./pages/InstallApp"));
 
-// Optimized React Query client
+// Optimized React Query client - singleton outside component
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      staleTime: 10 * 60 * 1000, // 10 minutes - longer cache
+      gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
       retry: 1,
-      refetchOnWindowFocus: false, // Reduce unnecessary refetches
+      retryDelay: 1000,
+      refetchOnWindowFocus: false,
       refetchOnMount: false,
+      refetchOnReconnect: false,
+      networkMode: 'offlineFirst', // Use cache first
+    },
+    mutations: {
+      retry: 1,
+      networkMode: 'offlineFirst',
     },
   },
 });
