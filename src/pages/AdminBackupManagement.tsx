@@ -137,21 +137,21 @@ const AdminBackupManagement = () => {
     switch (status) {
       case "completed":
         return (
-          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+          <Badge variant="success">
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Completed
           </Badge>
         );
       case "in_progress":
         return (
-          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+          <Badge variant="warning">
             <Loader2 className="w-3 h-3 mr-1 animate-spin" />
             In Progress
           </Badge>
         );
       case "failed":
         return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+          <Badge variant="destructive">
             <XCircle className="w-3 h-3 mr-1" />
             Failed
           </Badge>

@@ -262,10 +262,10 @@ const AdminDashboard = () => {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <Card className="p-4 bg-gradient-to-br from-info/10 to-info/5 border-info/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-500/20">
-                <Users className="w-5 h-5 text-blue-500" />
+              <div className="p-2 rounded-xl bg-info/20">
+                <Users className="w-5 h-5 text-info" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.totalUsers}</p>
@@ -274,10 +274,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <Card className="p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-green-500/20">
-                <TrendingUp className="w-5 h-5 text-green-500" />
+              <div className="p-2 rounded-xl bg-success/20">
+                <TrendingUp className="w-5 h-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.onlineUsers}</p>
@@ -286,10 +286,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
+          <Card className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-purple-500/20">
-                <MessageCircle className="w-5 h-5 text-purple-500" />
+              <div className="p-2 rounded-xl bg-secondary/20">
+                <MessageCircle className="w-5 h-5 text-secondary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.activeChats}</p>
@@ -298,10 +298,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
+          <Card className="p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/20">
-                <DollarSign className="w-5 h-5 text-emerald-500" />
+              <div className="p-2 rounded-xl bg-success/20">
+                <DollarSign className="w-5 h-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">₹{stats.todayEarnings}</p>
@@ -351,10 +351,10 @@ const AdminDashboard = () => {
 
         {/* Alerts Section */}
         {(stats.pendingApprovals > 0 || stats.policyAlerts > 0) && (
-          <Card className="p-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/20 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+          <Card className="p-6 bg-gradient-to-r from-warning/10 to-warning/10 border-warning/20 animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/20">
-                <Bell className="w-6 h-6 text-amber-500" />
+              <div className="p-3 rounded-xl bg-warning/20">
+                <Bell className="w-6 h-6 text-warning" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground">Pending Actions Required</h3>

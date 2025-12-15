@@ -234,20 +234,20 @@ export const ElectionPanel = ({
         {currentElection?.status === "active" && (
           <div className="absolute top-2 right-2 flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-online opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-online"></span>
             </span>
-            <span className="text-xs font-medium text-green-600">LIVE</span>
+            <span className="text-xs font-medium text-online">LIVE</span>
           </div>
         )}
 
         <div className="flex items-center gap-2 mb-2">
           {currentElection?.status === "active" ? (
-            <CheckCircle className="w-5 h-5 text-green-500" />
+            <CheckCircle className="w-5 h-5 text-success" />
           ) : currentElection?.status === "pending" ? (
-            <Clock className="w-5 h-5 text-amber-500" />
+            <Clock className="w-5 h-5 text-warning" />
           ) : currentElection?.status === "completed" ? (
-            <Trophy className="w-5 h-5 text-blue-500" />
+            <Trophy className="w-5 h-5 text-info" />
           ) : (
             <Vote className="w-5 h-5 text-muted-foreground" />
           )}
@@ -274,7 +274,7 @@ export const ElectionPanel = ({
 
         {/* Scheduled time display */}
         {currentElection?.scheduled_at && currentElection.status === "pending" && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-amber-600">
+          <div className="mt-2 flex items-center gap-2 text-sm text-warning">
             <Calendar className="w-4 h-4" />
             <span>Scheduled: {new Date(currentElection.scheduled_at).toLocaleString()}</span>
           </div>
@@ -285,7 +285,7 @@ export const ElectionPanel = ({
           {currentElection?.status === "active" && (
             <>
               {isRegisteredVoter ? (
-                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                <Badge variant="successOutline">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   {t('registeredVoter', 'Registered Voter')}
                 </Badge>

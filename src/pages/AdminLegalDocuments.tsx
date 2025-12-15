@@ -426,11 +426,11 @@ const AdminLegalDocuments = () => {
                   size="sm"
                   onClick={handleSeedDocuments}
                   disabled={seeding}
-                  className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                  className="border-warning/50 text-warning hover:bg-warning/10"
                 >
                   <FileCheck className={`w-4 h-4 mr-2 ${seeding ? 'animate-pulse' : ''}`} />
                   {seeding ? 'Seeding...' : 'Seed Defaults'}
-                  <Badge variant="outline" className="ml-2 text-xs text-amber-500 border-amber-500">
+                  <Badge variant="warningOutline" className="ml-2 text-xs">
                     Dev
                   </Badge>
                 </Button>
@@ -479,10 +479,10 @@ const AdminLegalDocuments = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Active Documents</p>
-                  <p className="text-2xl font-bold text-emerald-400">{stats.active}</p>
+                  <p className="text-2xl font-bold text-success">{stats.active}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-success" />
                 </div>
               </div>
             </CardContent>
@@ -495,8 +495,8 @@ const AdminLegalDocuments = () => {
                   <p className="text-sm text-muted-foreground">Document Types</p>
                   <p className="text-2xl font-bold text-foreground">{stats.types}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <File className="w-6 h-6 text-blue-400" />
+                <div className="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center">
+                  <File className="w-6 h-6 text-info" />
                 </div>
               </div>
             </CardContent>
@@ -564,9 +564,9 @@ const AdminLegalDocuments = () => {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4 flex-1 min-w-0">
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          doc.is_active ? "bg-emerald-500/10" : "bg-muted"
+                          doc.is_active ? "bg-success/10" : "bg-muted"
                         }`}>
-                          <FileCheck className={`w-6 h-6 ${doc.is_active ? "text-emerald-400" : "text-muted-foreground"}`} />
+                          <FileCheck className={`w-6 h-6 ${doc.is_active ? "text-success" : "text-muted-foreground"}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -576,7 +576,7 @@ const AdminLegalDocuments = () => {
                             </Badge>
                             <Badge className={`text-xs ${
                               doc.is_active 
-                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                                ? "bg-success/20 text-success border-success/30" 
                                 : "bg-muted text-muted-foreground"
                             }`}>
                               {doc.is_active ? "Active" : "Inactive"}
@@ -629,7 +629,7 @@ const AdminLegalDocuments = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(doc)}
-                          className="text-muted-foreground hover:text-red-400"
+                          className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

@@ -134,25 +134,25 @@ const WomenDashboardScreen = () => {
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: t('messages', 'Messages'), 
-      color: "from-blue-500 to-blue-400",
+      color: "from-primary to-primary/80",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Withdraw'), 
-      color: "from-green-500 to-emerald-400",
+      color: "from-success to-success/80",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-rose-500 to-pink-400",
+      color: "from-accent to-accent/80",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-violet-500 to-purple-400",
+      color: "from-secondary to-secondary/80",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -704,7 +704,7 @@ const WomenDashboardScreen = () => {
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
         user.isSameLanguage && "ring-2 ring-primary/50",
-        user.walletBalance > 1000 && "border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent"
+        user.walletBalance > 1000 && "border-warning/30 bg-gradient-to-br from-warning/5 to-transparent"
       )}
       onClick={() => handleViewProfile(user.userId)}
     >
@@ -713,7 +713,7 @@ const WomenDashboardScreen = () => {
           <div className="relative">
             <Avatar className="h-14 w-14 border-2 border-background shadow-md">
               <AvatarImage src={user.photoUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-rose-500 text-white text-lg">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
