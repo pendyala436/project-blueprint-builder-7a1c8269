@@ -45,6 +45,7 @@ const PhotoUploadScreen = lazy(() => import(/* webpackChunkName: "register" */ "
 const LocationSetupScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/LocationSetupScreen"));
 const LanguagePreferencesScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/LanguagePreferencesScreen"));
 const TermsAgreementScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/TermsAgreementScreen"));
+const PasswordSetupScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/PasswordSetupScreen"));
 const AIProcessingScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/AIProcessingScreen"));
 const WelcomeTutorialScreen = lazy(() => import(/* webpackChunkName: "onboard" */ "./pages/WelcomeTutorialScreen"));
 const RegistrationCompleteScreen = lazy(() => import(/* webpackChunkName: "onboard" */ "./pages/RegistrationCompleteScreen"));
@@ -170,6 +171,7 @@ const App = () => (
         <Route path="/location-setup" element={<LazyRoute component={LocationSetupScreen} />} />
         <Route path="/language-preferences" element={<LazyRoute component={LanguagePreferencesScreen} />} />
         <Route path="/terms-agreement" element={<LazyRoute component={TermsAgreementScreen} />} />
+        <Route path="/password-setup" element={<LazyRoute component={PasswordSetupScreen} />} />
         <Route path="/ai-processing" element={<LazyRoute component={AIProcessingScreen} />} />
         <Route path="/welcome-tutorial" element={<LazyRoute component={WelcomeTutorialScreen} />} />
         <Route path="/registration-complete" element={<LazyRoute component={RegistrationCompleteScreen} />} />
