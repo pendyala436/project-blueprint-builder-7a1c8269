@@ -489,6 +489,23 @@ const TermsAgreementScreen = () => {
         return;
       }
 
+      // Sign in the user immediately after signup to get a session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (signInError) {
+        console.error("Sign in error:", signInError);
+        toast({
+          title: "Login failed",
+          description: "Account created but couldn't sign in. Please try logging in manually.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
       // Save all consent data
       const { error: consentError } = await supabase
         .from("user_consent")
