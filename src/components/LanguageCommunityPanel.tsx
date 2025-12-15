@@ -1264,16 +1264,17 @@ export const LanguageCommunityPanel = ({
                         </CardHeader>
                         <CardContent className="space-y-3 px-3 pb-3">
                           <p className="text-xs text-muted-foreground">
-                            {t('voteToApprove', 'Vote to approve a commissioner. Approval from all members confirms the officer.')}
+                            {t('voteToApprove', 'Vote to approve a commissioner. 5 approvals or 1/4 of members confirms the officer.')}
                           </p>
                           {officerNominations.map((nomination) => {
                             const totalVotes = nomination.approvals + nomination.rejections;
                             const approvalRate = totalVotes > 0 
                               ? Math.round((nomination.approvals / totalVotes) * 100) 
                               : 0;
-                            // Require approval from all members (excluding the nominee)
+                            // Require 5 approvals or 1/4 of eligible voters (whichever is less)
                             const eligibleVoters = members.filter(m => m.userId !== nomination.nomineeId).length;
-                            const hasEnoughApproval = nomination.approvals >= eligibleVoters && eligibleVoters > 0 && nomination.rejections === 0;
+                            const requiredApprovals = Math.min(5, Math.ceil(eligibleVoters / 4));
+                            const hasEnoughApproval = nomination.approvals >= requiredApprovals;
 
                             return (
                               <div key={nomination.id} className="p-3 rounded-lg border bg-card space-y-2">
@@ -1314,8 +1315,8 @@ export const LanguageCommunityPanel = ({
                                     />
                                   </div>
                                   <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>{nomination.approvals}/{eligibleVoters} {t('approvals', 'approvals')} {t('needed', 'needed')}</span>
-                                    <span>{totalVotes}/{eligibleVoters} {t('voted', 'voted')}</span>
+                                    <span>{nomination.approvals}/{requiredApprovals} {t('approvalsNeeded', 'approvals needed')}</span>
+                                    <span>{totalVotes} {t('voted', 'voted')}</span>
                                   </div>
                                 </div>
 
