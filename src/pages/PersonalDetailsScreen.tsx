@@ -197,10 +197,10 @@ const PersonalDetailsScreen = () => {
 
     toast({
       title: "Details saved! ✨",
-      description: "Let's set up your password next.",
+      description: "Let's upload your photos next.",
     });
 
-    navigate("/password-setup");
+    navigate("/photo-upload");
   };
 
   const handleBack = () => {
