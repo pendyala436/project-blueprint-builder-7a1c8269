@@ -542,6 +542,95 @@ export type Database = {
         }
         Relationships: []
       }
+      community_elections: {
+        Row: {
+          created_at: string
+          election_officer_id: string
+          election_results: Json | null
+          election_year: number
+          ended_at: string | null
+          id: string
+          language_code: string
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          total_votes: number | null
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          election_officer_id: string
+          election_results?: Json | null
+          election_year: number
+          ended_at?: string | null
+          id?: string
+          language_code: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_votes?: number | null
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          election_officer_id?: string
+          election_results?: Json | null
+          election_year?: number
+          ended_at?: string | null
+          id?: string
+          language_code?: string
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          total_votes?: number | null
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
+      community_leaders: {
+        Row: {
+          created_at: string
+          election_id: string | null
+          id: string
+          language_code: string
+          status: string
+          term_end: string
+          term_start: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          language_code: string
+          status?: string
+          term_end: string
+          term_start?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          language_code?: string
+          status?: string
+          term_end?: string
+          term_start?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_leaders_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "community_elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_shift_schedules: {
         Row: {
           created_at: string
@@ -583,6 +672,116 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      election_candidates: {
+        Row: {
+          created_at: string
+          election_id: string
+          id: string
+          nominated_at: string
+          nomination_status: string
+          platform_statement: string | null
+          user_id: string
+          vote_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          election_id: string
+          id?: string
+          nominated_at?: string
+          nomination_status?: string
+          platform_statement?: string | null
+          user_id: string
+          vote_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          election_id?: string
+          id?: string
+          nominated_at?: string
+          nomination_status?: string
+          platform_statement?: string | null
+          user_id?: string
+          vote_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_candidates_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "community_elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      election_officers: {
+        Row: {
+          assigned_at: string
+          auto_assigned: boolean | null
+          id: string
+          is_active: boolean | null
+          language_code: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          auto_assigned?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          language_code: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          auto_assigned?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          language_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      election_votes: {
+        Row: {
+          candidate_id: string
+          election_id: string
+          id: string
+          is_tiebreaker: boolean | null
+          voted_at: string
+          voter_id: string
+        }
+        Insert: {
+          candidate_id: string
+          election_id: string
+          id?: string
+          is_tiebreaker?: boolean | null
+          voted_at?: string
+          voter_id: string
+        }
+        Update: {
+          candidate_id?: string
+          election_id?: string
+          id?: string
+          is_tiebreaker?: boolean | null
+          voted_at?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_votes_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "election_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "election_votes_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "community_elections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       female_profiles: {
         Row: {
@@ -2405,6 +2604,41 @@ export type Database = {
           woman_user_id?: string
         }
         Relationships: []
+      }
+      voter_registry: {
+        Row: {
+          election_id: string
+          id: string
+          is_eligible: boolean | null
+          registered_at: string
+          registered_by: string
+          user_id: string
+        }
+        Insert: {
+          election_id: string
+          id?: string
+          is_eligible?: boolean | null
+          registered_at?: string
+          registered_by: string
+          user_id: string
+        }
+        Update: {
+          election_id?: string
+          id?: string
+          is_eligible?: boolean | null
+          registered_at?: string
+          registered_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voter_registry_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "community_elections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallet_transactions: {
         Row: {
