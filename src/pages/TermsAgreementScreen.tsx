@@ -28,6 +28,9 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { countries } from "@/data/countries";
+import { getStatesForCountry } from "@/data/states";
+import { languages } from "@/data/languages";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
@@ -524,14 +527,30 @@ const TermsAgreementScreen = () => {
 
       // Get remaining registration data from localStorage
       const dateOfBirth = localStorage.getItem("userDob") || localStorage.getItem("userDateOfBirth") || "";
-      const country = localStorage.getItem("userCountry") || "";
-      const state = localStorage.getItem("userState") || "";
+      const countryCode = localStorage.getItem("userCountry") || "";
+      const stateCode = localStorage.getItem("userState") || "";
       const city = localStorage.getItem("userCity") || "";
       const latitude = localStorage.getItem("userLatitude");
       const longitude = localStorage.getItem("userLongitude");
-      const primaryLanguage = sessionStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
+      const languageCode = sessionStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
       const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
       const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
+
+      // Convert country code to full name
+      const countryData = countries.find(c => c.code === countryCode);
+      const countryName = countryData?.name || countryCode;
+
+      // Convert state code to full name
+      let stateName = stateCode;
+      if (countryCode && stateCode) {
+        const statesForCountry = getStatesForCountry(countryCode);
+        const stateData = statesForCountry.find(s => s.code === stateCode);
+        stateName = stateData?.name || stateCode;
+      }
+
+      // Convert language code to full name
+      const languageData = languages.find(l => l.code === languageCode);
+      const languageName = languageData?.name || languageCode;
       
       // Get personal details from PersonalDetailsScreen
       const personalDetails = JSON.parse(localStorage.getItem("userPersonalDetails") || "{}");
@@ -580,13 +599,13 @@ const TermsAgreementScreen = () => {
         phone: phone,
         date_of_birth: dateOfBirth || null,
         age: age,
-        country: country,
-        state: state,
+        country: countryName,
+        state: stateName,
         city: city || null,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        primary_language: primaryLanguage,
-        preferred_language: primaryLanguage, // Also set preferred language
+        primary_language: languageName,
+        preferred_language: languageName, // Also set preferred language
         photo_url: photoUrl,
         // Personal details from PersonalDetailsScreen
         bio: personalDetails.bio || null,
