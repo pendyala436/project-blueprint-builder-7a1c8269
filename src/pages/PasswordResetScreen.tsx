@@ -4,84 +4,57 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ArrowLeft, Lock, Eye, EyeOff, Check, X, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, Check, X, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MeowLogo from "@/components/MeowLogo";
+import AuroraBackground from "@/components/AuroraBackground";
 
 const PasswordResetScreen = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const [token, setToken] = useState<string | null>(null);
-  const [isValidating, setIsValidating] = useState(true);
-  const [isValidToken, setIsValidToken] = useState(false);
-  const [tokenError, setTokenError] = useState<string | null>(null);
-  
+  const [userId, setUserId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Password validation
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
+  const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-  const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && passwordsMatch;
+  const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSymbol && passwordsMatch;
 
   useEffect(() => {
-    const tokenFromUrl = searchParams.get("token");
-    if (!tokenFromUrl) {
-      setIsValidating(false);
-      setTokenError("No reset token provided");
+    const userIdFromUrl = searchParams.get("userId");
+    if (!userIdFromUrl) {
+      toast({
+        title: "Invalid access",
+        description: "Please use the forgot password flow to reset your password.",
+        variant: "destructive",
+      });
+      navigate("/forgot-password");
       return;
     }
-
-    setToken(tokenFromUrl);
-    validateToken(tokenFromUrl);
-  }, [searchParams]);
-
-  const validateToken = async (tokenValue: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: {
-          action: "validate-token",
-          token: tokenValue,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.valid) {
-        setIsValidToken(true);
-      } else {
-        setTokenError(data?.error || "Invalid or expired reset link");
-      }
-    } catch (error: any) {
-      console.error("Token validation error:", error);
-      setTokenError("Failed to validate reset link");
-    } finally {
-      setIsValidating(false);
-    }
-  };
+    setUserId(userIdFromUrl);
+  }, [searchParams, navigate, toast]);
 
   const handleResetPassword = async () => {
-    if (!isPasswordValid || !token) return;
+    if (!isPasswordValid || !userId) return;
 
     setIsLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("reset-password", {
         body: {
-          action: "reset-password",
-          token: token,
+          action: "direct-reset",
+          userId: userId,
           newPassword: password,
         },
       });
@@ -91,11 +64,12 @@ const PasswordResetScreen = () => {
       }
 
       if (data?.success) {
-        setResetSuccess(true);
         toast({
           title: "Password Reset Successful",
-          description: "Your password has been updated. You can now log in with your new password.",
+          description: "Your password has been updated. Redirecting to login...",
         });
+        // Navigate to success page
+        navigate("/password-reset-success");
       } else {
         throw new Error(data?.error || "Failed to reset password");
       }
@@ -114,124 +88,68 @@ const PasswordResetScreen = () => {
   const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
     <div className="flex items-center gap-2 text-sm">
       {met ? (
-        <Check className="w-4 h-4 text-green-500" />
+        <Check className="w-4 h-4 text-accent" />
       ) : (
         <X className="w-4 h-4 text-muted-foreground" />
       )}
-      <span className={met ? "text-green-500" : "text-muted-foreground"}>{text}</span>
+      <span className={met ? "text-accent" : "text-muted-foreground"}>{text}</span>
     </div>
   );
 
-  // Loading state
-  if (isValidating) {
+  if (!userId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-border/50 shadow-xl">
+      <div className="min-h-screen flex items-center justify-center relative">
+        <AuroraBackground />
+        <Card className="w-full max-w-md border-border/50 shadow-xl bg-card/70 backdrop-blur-xl">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Validating reset link...</p>
+            <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+            <p className="text-muted-foreground">Invalid access. Redirecting...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Invalid token state
-  if (!isValidToken && !isValidating) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-border/50 shadow-xl">
-          <CardHeader className="text-center pb-4">
-            <MeowLogo size="lg" className="mx-auto mb-4" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-destructive" />
-            </div>
-            <h2 className="text-xl font-semibold">Invalid Reset Link</h2>
-            <p className="text-muted-foreground">
-              {tokenError || "This password reset link is invalid or has expired."}
-            </p>
-            <Button
-              onClick={() => navigate("/forgot-password")}
-              variant="aurora"
-              className="w-full"
-            >
-              Request New Reset Link
-            </Button>
-            <Button
-              variant="auroraGhost"
-              onClick={() => navigate("/auth")}
-            >
-              Back to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Success state
-  if (resetSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-border/50 shadow-xl">
-          <CardHeader className="text-center pb-4">
-            <MeowLogo size="lg" className="mx-auto mb-4" />
-          </CardHeader>
-          <CardContent className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
-            </div>
-            <h2 className="text-xl font-semibold">Password Reset Complete</h2>
-            <p className="text-muted-foreground">
-              Your password has been successfully updated. You can now log in with your new password.
-            </p>
-            <Button
-              onClick={() => navigate("/auth")}
-              variant="aurora"
-              className="w-full"
-            >
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Password reset form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-border/50 shadow-xl">
-        <CardHeader className="space-y-4 pb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="auroraGhost"
-              size="icon"
-              onClick={() => navigate("/auth")}
-              className="shrink-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <MeowLogo size="md" />
+    <div className="min-h-screen flex flex-col relative">
+      <AuroraBackground />
+      
+      {/* Header */}
+      <header className="px-6 pt-8 pb-4 relative z-10">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="auroraGhost"
+            size="icon"
+            onClick={() => navigate("/forgot-password")}
+            className="shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1 text-center pr-10">
+            <MeowLogo size="sm" className="mx-auto" />
           </div>
-          <div className="space-y-2 text-center">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-orange-500 bg-clip-text text-transparent">
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
+        <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
+          <CardHeader className="space-y-2 text-center p-0 pb-6">
+            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground font-display">
               Create New Password
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Enter your new password below
             </p>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
+          <CardContent className="space-y-6 p-0">
             {/* Password Input */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="password" className="flex items-center gap-2 text-sm font-semibold">
+                <Lock className="w-4 h-4 text-primary" />
                 New Password
               </Label>
               <div className="relative">
@@ -241,7 +159,7 @@ const PasswordResetScreen = () => {
                   placeholder="Enter new password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 h-12 rounded-xl border-2 bg-background/50"
                 />
                 <Button
                   type="button"
@@ -260,18 +178,19 @@ const PasswordResetScreen = () => {
             </div>
 
             {/* Password Requirements */}
-            <div className="space-y-2 p-3 rounded-lg bg-muted/30">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Password Requirements:</p>
+            <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/50">
+              <p className="text-sm font-medium text-muted-foreground mb-3">Password Requirements:</p>
               <PasswordRequirement met={hasMinLength} text="At least 8 characters" />
               <PasswordRequirement met={hasUppercase} text="One uppercase letter" />
               <PasswordRequirement met={hasLowercase} text="One lowercase letter" />
               <PasswordRequirement met={hasNumber} text="One number" />
+              <PasswordRequirement met={hasSymbol} text="One special character (!@#$%...)" />
             </div>
 
             {/* Confirm Password Input */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-muted-foreground" />
+              <Label htmlFor="confirmPassword" className="flex items-center gap-2 text-sm font-semibold">
+                <Lock className="w-4 h-4 text-primary" />
                 Confirm Password
               </Label>
               <div className="relative">
@@ -281,7 +200,9 @@ const PasswordResetScreen = () => {
                   placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`pr-10 ${confirmPassword && !passwordsMatch ? "border-destructive" : ""}`}
+                  className={`pr-10 h-12 rounded-xl border-2 bg-background/50 ${
+                    confirmPassword && !passwordsMatch ? "border-destructive" : ""
+                  }`}
                 />
                 <Button
                   type="button"
@@ -298,34 +219,38 @@ const PasswordResetScreen = () => {
                 </Button>
               </div>
               {confirmPassword && !passwordsMatch && (
-                <p className="text-sm text-destructive">Passwords do not match</p>
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <X className="w-4 h-4" />
+                  Passwords do not match
+                </p>
               )}
               {passwordsMatch && (
-                <p className="text-sm text-green-500 flex items-center gap-1">
+                <p className="text-sm text-accent flex items-center gap-1">
                   <Check className="w-4 h-4" />
                   Passwords match
                 </p>
               )}
             </div>
-          </div>
 
-          <Button
-            onClick={handleResetPassword}
-            disabled={!isPasswordValid || isLoading}
-            variant="aurora"
-            className="w-full font-semibold py-6 text-lg"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Resetting Password...
-              </>
-            ) : (
-              "Reset Password"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+            <Button
+              onClick={handleResetPassword}
+              disabled={!isPasswordValid || isLoading}
+              variant="aurora"
+              size="xl"
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Resetting Password...
+                </>
+              ) : (
+                "Reset Password"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 };

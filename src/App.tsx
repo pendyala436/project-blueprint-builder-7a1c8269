@@ -82,6 +82,7 @@ const ShiftComplianceScreen = lazy(() => import(/* webpackChunkName: "shifts" */
 const AdminPolicyAlerts = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminPolicyAlerts"));
 const AdminLanguageLimits = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminLanguageLimits"));
 const PasswordResetScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetScreen"));
+const PasswordResetSuccessScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetSuccessScreen"));
 const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminTransactionHistory"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
@@ -161,7 +162,8 @@ const App = () => (
         
         {/* Lazy routes - grouped by feature */}
         <Route path="/forgot-password" element={<LazyRoute component={ForgotPasswordScreen} />} />
-        <Route path="/password-reset" element={<LazyRoute component={PasswordResetScreen} />} />
+        <Route path="/reset-password" element={<LazyRoute component={PasswordResetScreen} />} />
+        <Route path="/password-reset-success" element={<LazyRoute component={PasswordResetSuccessScreen} />} />
         <Route path="/register" element={<LazyRoute component={LanguageCountryScreen} />} />
         <Route path="/basic-info" element={<LazyRoute component={BasicInfoScreen} />} />
         <Route path="/personal-details" element={<LazyRoute component={PersonalDetailsScreen} />} />
