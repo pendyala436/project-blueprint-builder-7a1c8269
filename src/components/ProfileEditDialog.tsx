@@ -357,9 +357,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Note: phone and gender are NOT included as they are protected fields
       const profileData = {
         full_name: profile.full_name,
-        phone: profile.phone,
         date_of_birth: profile.date_of_birth,
         country: profile.country,
         state: profile.state,
