@@ -250,7 +250,7 @@ const PhotoUploadScreen = () => {
 
   const handleBack = () => {
     stopCamera();
-    navigate("/password-setup");
+    navigate("/personal-details");
   };
 
   const clearSelfie = () => {
