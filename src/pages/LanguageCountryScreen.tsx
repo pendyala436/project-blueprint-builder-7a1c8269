@@ -48,7 +48,7 @@ const LanguageCountryScreen = () => {
       description: "Let's complete your profile.",
     });
     
-    navigate("/ai-verification");
+    navigate("/basic-info");
   };
 
   const isComplete = selectedLanguage && selectedCountry;
@@ -64,7 +64,7 @@ const LanguageCountryScreen = () => {
 
       {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
-        <ProgressIndicator currentStep={1} totalSteps={10} />
+        <ProgressIndicator currentStep={1} totalSteps={8} />
       </header>
 
       {/* Main Content */}
