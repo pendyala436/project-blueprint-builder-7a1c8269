@@ -15,6 +15,27 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
+// Currency rate type
+interface CurrencyRate {
+  rate: number;
+  symbol: string;
+  code: string;
+}
+
+// Payment gateway type
+interface PaymentGateway {
+  id: string;
+  name: string;
+  logo: string;
+  description: string;
+  features: string[];
+}
+
+interface PaymentGateways {
+  indian: PaymentGateway[];
+  international: PaymentGateway[];
+}
+
 // Type definitions for settings
 interface AppSettings {
   // Wallet settings
@@ -23,6 +44,8 @@ interface AppSettings {
   supportedCurrencies: string[];
   defaultCurrency: string;
   withdrawalProcessingHours: number;
+  currencyRates: Record<string, CurrencyRate>;
+  paymentGateways: PaymentGateways;
   
   // Chat settings
   maxParallelChats: number;
@@ -49,6 +72,21 @@ const DEFAULT_SETTINGS: AppSettings = {
   supportedCurrencies: ["INR", "USD", "EUR"],
   defaultCurrency: "INR",
   withdrawalProcessingHours: 24,
+  currencyRates: {
+    IN: { rate: 1, symbol: "₹", code: "INR" },
+    US: { rate: 0.012, symbol: "$", code: "USD" },
+    GB: { rate: 0.0095, symbol: "£", code: "GBP" },
+    EU: { rate: 0.011, symbol: "€", code: "EUR" },
+    DEFAULT: { rate: 0.012, symbol: "$", code: "USD" },
+  },
+  paymentGateways: {
+    indian: [
+      { id: "razorpay", name: "Razorpay", logo: "🇮🇳", description: "UPI, Cards, Netbanking", features: ["UPI", "Cards", "Netbanking"] },
+    ],
+    international: [
+      { id: "stripe", name: "Stripe", logo: "💎", description: "Cards, Apple Pay, Google Pay", features: ["Cards", "Apple Pay", "Google Pay"] },
+    ],
+  },
   maxParallelChats: 3,
   maxReconnectAttempts: 3,
   maxMessageLength: 2000,
@@ -65,6 +103,8 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   supported_currencies: "supportedCurrencies",
   default_currency: "defaultCurrency",
   withdrawal_processing_hours: "withdrawalProcessingHours",
+  currency_rates: "currencyRates",
+  payment_gateways: "paymentGateways",
   max_parallel_chats: "maxParallelChats",
   max_reconnect_attempts: "maxReconnectAttempts",
   max_message_length: "maxMessageLength",

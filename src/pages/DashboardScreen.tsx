@@ -58,6 +58,7 @@ import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface Notification {
   id: string;
@@ -87,45 +88,8 @@ interface DashboardStats {
   unreadNotifications: number;
 }
 
-// Currency conversion rates (base: INR)
-const CURRENCY_RATES: Record<string, { rate: number; symbol: string; code: string }> = {
-  IN: { rate: 1, symbol: "₹", code: "INR" },
-  US: { rate: 0.012, symbol: "$", code: "USD" },
-  GB: { rate: 0.0095, symbol: "£", code: "GBP" },
-  EU: { rate: 0.011, symbol: "€", code: "EUR" },
-  AE: { rate: 0.044, symbol: "د.إ", code: "AED" },
-  AU: { rate: 0.018, symbol: "A$", code: "AUD" },
-  CA: { rate: 0.016, symbol: "C$", code: "CAD" },
-  JP: { rate: 1.79, symbol: "¥", code: "JPY" },
-  SG: { rate: 0.016, symbol: "S$", code: "SGD" },
-  MY: { rate: 0.053, symbol: "RM", code: "MYR" },
-  PH: { rate: 0.67, symbol: "₱", code: "PHP" },
-  TH: { rate: 0.41, symbol: "฿", code: "THB" },
-  SA: { rate: 0.045, symbol: "﷼", code: "SAR" },
-  QA: { rate: 0.044, symbol: "ر.ق", code: "QAR" },
-  KW: { rate: 0.0037, symbol: "د.ك", code: "KWD" },
-  BD: { rate: 1.31, symbol: "৳", code: "BDT" },
-  PK: { rate: 3.34, symbol: "Rs", code: "PKR" },
-  NP: { rate: 1.59, symbol: "रू", code: "NPR" },
-  LK: { rate: 3.66, symbol: "Rs", code: "LKR" },
-  DEFAULT: { rate: 0.012, symbol: "$", code: "USD" },
-};
-
-// Generate recharge amounts (multiples of 200 and 300 up to 1000 INR)
-const generateRechargeAmounts = (): number[] => {
-  const amounts = new Set<number>();
-  // Multiples of 200
-  for (let i = 200; i <= 1000; i += 200) {
-    amounts.add(i);
-  }
-  // Multiples of 300
-  for (let i = 300; i <= 1000; i += 300) {
-    amounts.add(i);
-  }
-  return Array.from(amounts).sort((a, b) => a - b);
-};
-
-const RECHARGE_AMOUNTS_INR = generateRechargeAmounts();
+// Note: Currency rates and payment gateways are now loaded dynamically from app_settings
+// via useAppSettings hook - no hardcoded values
 
 interface PaymentGateway {
   id: string;
@@ -134,56 +98,6 @@ interface PaymentGateway {
   description: string;
   features?: string[];
 }
-
-const INDIAN_GATEWAYS: PaymentGateway[] = [
-  { 
-    id: "razorpay", 
-    name: "Razorpay", 
-    logo: "🇮🇳", 
-    description: "UPI, Cards, Netbanking",
-    features: ["UPI", "Debit/Credit Cards", "Netbanking", "Wallets"]
-  },
-  { 
-    id: "ccavenue", 
-    name: "CCAvenue", 
-    logo: "🏦", 
-    description: "Cards, Wallets, EMI",
-    features: ["Cards", "EMI", "Wallets", "Netbanking"]
-  },
-];
-
-const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [
-  { 
-    id: "stripe", 
-    name: "Stripe", 
-    logo: "💎", 
-    description: "Cards, Apple Pay, Google Pay",
-    features: ["Cards", "Apple Pay", "Google Pay", "Bank Transfers"]
-  },
-  { 
-    id: "paypal", 
-    name: "PayPal", 
-    logo: "🅿️", 
-    description: "200+ countries supported",
-    features: ["PayPal Balance", "Cards", "Bank Account"]
-  },
-  { 
-    id: "wise", 
-    name: "Wise", 
-    logo: "💸", 
-    description: "International Transfers",
-    features: ["Bank Transfer", "Low Fees", "Multi-currency"]
-  },
-  { 
-    id: "adyen", 
-    name: "Adyen", 
-    logo: "🌐", 
-    description: "Global Payments",
-    features: ["Cards", "Local Methods", "Digital Wallets"]
-  },
-];
-
-const ALL_GATEWAYS = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -243,6 +157,9 @@ const DashboardScreen = () => {
     hasBio: false,
   });
 
+  // App settings (currency rates, payment gateways, recharge amounts - all from database)
+  const { settings } = useAppSettings();
+
   // Chat pricing from admin settings
   const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
   
@@ -271,9 +188,16 @@ const DashboardScreen = () => {
     }
   });
 
+  // Derived values from settings (dynamic, not hardcoded)
+  const CURRENCY_RATES = settings.currencyRates;
+  const RECHARGE_AMOUNTS_INR = settings.rechargeAmounts;
+  const INDIAN_GATEWAYS = settings.paymentGateways.indian;
+  const INTERNATIONAL_GATEWAYS = settings.paymentGateways.international;
+  const ALL_GATEWAYS = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
+
   // Get currency info based on user's country
   const getCurrencyInfo = () => {
-    return CURRENCY_RATES[userCountry] || CURRENCY_RATES.DEFAULT;
+    return CURRENCY_RATES[userCountry] || CURRENCY_RATES.DEFAULT || { rate: 0.012, symbol: "$", code: "USD" };
   };
 
   // Convert INR to local currency
