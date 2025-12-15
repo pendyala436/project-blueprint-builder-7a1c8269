@@ -200,7 +200,7 @@ const SRSVideoCallModal = ({
               <Button
                 variant="outline"
                 size="lg"
-                className={`rounded-full w-14 h-14 ${!isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                className={`rounded-full w-14 h-14 ${!isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-primary/20 border-primary/30 text-primary-foreground hover:bg-primary/30'}`}
                 onClick={toggleAudio}
               >
                 {isAudioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
@@ -209,7 +209,7 @@ const SRSVideoCallModal = ({
               <Button
                 variant="outline"
                 size="lg"
-                className={`rounded-full w-14 h-14 ${!isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                className={`rounded-full w-14 h-14 ${!isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-primary/20 border-primary/30 text-primary-foreground hover:bg-primary/30'}`}
                 onClick={toggleVideo}
               >
                 {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}

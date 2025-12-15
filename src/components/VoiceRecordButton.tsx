@@ -122,7 +122,7 @@ export const VoiceRecordButton = ({
             {/* Recording duration indicator */}
             {isRecording && (
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 whitespace-nowrap animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-destructive-foreground animate-pulse" />
                 {formatDuration(recordingDuration)}
               </div>
             )}

@@ -1760,9 +1760,9 @@ const ChatScreen = () => {
           <div className="p-6 flex justify-center">
             <button 
               onClick={captureSelfie}
-              className="w-16 h-16 rounded-full bg-white border-4 border-primary flex items-center justify-center"
+              className="w-16 h-16 rounded-full bg-primary border-4 border-primary-foreground flex items-center justify-center"
             >
-              <Camera className="w-8 h-8 text-primary" />
+              <Camera className="w-8 h-8 text-primary-foreground" />
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
