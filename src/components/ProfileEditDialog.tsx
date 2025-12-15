@@ -511,7 +511,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg border border-border">
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Lock className="w-4 h-4" />
-                This field cannot be changed
+                These fields cannot be changed for security reasons
               </p>
 
               {/* Email - Protected */}
@@ -523,6 +523,32 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
                   className="bg-muted cursor-not-allowed"
                 />
               </div>
+
+              {/* Mobile Number - Protected */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  Mobile Number
+                </Label>
+                <Input
+                  value={profile.phone || ""}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+
+              {/* Gender - Protected */}
+              <div className="space-y-2">
+                <Label className="text-muted-foreground flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Gender
+                </Label>
+                <Input
+                  value={profile.gender === 'male' ? 'Male' : profile.gender === 'female' ? 'Female' : profile.gender || ''}
+                  disabled
+                  className="bg-muted cursor-not-allowed capitalize"
+                />
+              </div>
             </div>
 
             {/* ==================== Profile Photos Section ==================== */}
@@ -530,7 +556,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
               <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Camera className="w-4 h-4" />
-                  Profile Photos
+                  Profile Photos & Selfie Verification
                 </div>
                 <ProfilePhotosSection 
                   userId={currentUserId}
@@ -544,41 +570,6 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
             )}
 
             {/* ==================== Editable Fields Section ==================== */}
-            
-            {/* Mobile Number - Editable */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Mobile Number
-              </Label>
-              <PhoneInputWithCode
-                value={profile.phone || ""}
-                onChange={(value) => updateField("phone", value)}
-                placeholder="Enter your phone number"
-                defaultCountryCode="IN"
-              />
-            </div>
-
-            {/* Gender - Editable */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Gender
-              </Label>
-              <Select
-                value={profile.gender || ""}
-                onValueChange={(value) => updateField("gender", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* ==================== Editable Fields Section ==================== */}
             
