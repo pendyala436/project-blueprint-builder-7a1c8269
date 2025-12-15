@@ -92,7 +92,10 @@ serve(async (req) => {
     // ACTION: Verify account by email + phone
     // ==========================================
     if (action === "verify-account") {
+      console.log("Verify account request received:", { email, phone });
+      
       if (!email || !validateEmail(email)) {
+        console.log("Invalid email format:", email);
         return new Response(
           JSON.stringify({ verified: false, error: "Invalid email format" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -100,6 +103,7 @@ serve(async (req) => {
       }
 
       if (!phone || !validatePhone(phone)) {
+        console.log("Invalid phone format:", phone);
         return new Response(
           JSON.stringify({ verified: false, error: "Invalid phone format" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -138,9 +142,12 @@ serve(async (req) => {
         );
       }
 
+      console.log("Total users found:", users?.users?.length);
       const user = users?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      console.log("User found by email:", user ? { id: user.id, email: user.email } : "NOT FOUND");
 
       if (!user) {
+        console.log("No user found with email:", email);
         return new Response(
           JSON.stringify({ verified: false, error: "No account found with this email" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
