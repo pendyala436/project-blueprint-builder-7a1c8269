@@ -493,12 +493,8 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile from male_profiles table
-      const { data: maleProfile } = await supabase
-        .from("male_profiles")
-        .select("full_name, country, primary_language, preferred_language, date_of_birth")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Use data from main profiles table (single source of truth)
+      // mainProfile already fetched above contains all needed fields
 
       // Fetch user's languages
       const { data: userLanguages } = await supabase
@@ -507,25 +503,23 @@ const DashboardScreen = () => {
         .eq("user_id", user.id)
         .limit(1);
 
-      // Use main profiles table first (registration data), then fall back to male_profiles
+      // Use main profiles table (single source of truth)
       const motherTongue = userLanguages?.[0]?.language_name || 
                           mainProfile?.primary_language ||
                           mainProfile?.preferred_language ||
-                          maleProfile?.primary_language || 
-                          maleProfile?.preferred_language || 
                           "English";
       const languageCode = userLanguages?.[0]?.language_code || "eng_Latn";
       setUserLanguage(motherTongue);
       setUserLanguageCode(languageCode);
 
-      // Use name from main profiles table first (registration data), then fall back to male_profiles
-      const fullName = mainProfile?.full_name || maleProfile?.full_name;
+      // Use name from main profiles table
+      const fullName = mainProfile?.full_name;
       if (fullName) {
         setUserName(fullName.split(" ")[0]);
       }
       
-      // Use country from main profiles table first (registration data), then fall back to male_profiles
-      const userCountryValue = mainProfile?.country || maleProfile?.country;
+      // Use country from main profiles table
+      const userCountryValue = mainProfile?.country;
       if (userCountryValue) {
         setUserCountryName(userCountryValue); // Store full country name for NLLB feature
         // Map country name to code
@@ -1666,7 +1660,6 @@ const DashboardScreen = () => {
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
-        profileType="male"
       />
 
       {/* Parallel Mini Chat Windows */}
