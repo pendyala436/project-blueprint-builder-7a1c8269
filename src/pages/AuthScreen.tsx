@@ -314,17 +314,22 @@ const AuthScreen = () => {
               {t('auth.signup')}
             </Button>
 
-            {/* PWA Install Button */}
-            {!isInstalled && (isInstallable || isIOS) && (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Install App
-                  </span>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                </div>
+            {/* PWA Install Button - Always visible */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                Install App
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            </div>
 
+            {isInstalled ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-primary py-3">
+                <Smartphone className="w-4 h-4" />
+                <span>App installed</span>
+              </div>
+            ) : (
+              <>
                 <Button
                   variant="outline"
                   size="lg"
@@ -332,8 +337,11 @@ const AuthScreen = () => {
                   onClick={() => {
                     if (isIOS) {
                       setShowIOSInstructions(true);
-                    } else {
+                    } else if (isInstallable) {
                       install();
+                    } else {
+                      // Show instructions for browsers that don't support auto-install
+                      setShowIOSInstructions(true);
                     }
                   }}
                 >
@@ -342,16 +350,26 @@ const AuthScreen = () => {
                   Install App
                 </Button>
 
-                {/* iOS Instructions Modal */}
-                {showIOSInstructions && isIOS && (
+                {/* Installation Instructions */}
+                {showIOSInstructions && (
                   <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
                     <p className="text-sm font-medium text-foreground">
-                      To install on iOS:
+                      {isIOS ? 'To install on iOS:' : 'To install this app:'}
                     </p>
                     <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                      {getInstallInstructions().steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
+                      {isIOS ? (
+                        <>
+                          <li>Tap the Share button in Safari</li>
+                          <li>Scroll down and tap "Add to Home Screen"</li>
+                          <li>Tap "Add" to confirm</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Open this site in Chrome, Edge, or Safari</li>
+                          <li>Look for the install icon in the address bar</li>
+                          <li>Or use browser menu → "Install app" / "Add to Home Screen"</li>
+                        </>
+                      )}
                     </ol>
                     <Button 
                       variant="ghost" 
@@ -364,14 +382,6 @@ const AuthScreen = () => {
                   </Card>
                 )}
               </>
-            )}
-
-            {/* Already Installed Badge */}
-            {isInstalled && (
-              <div className="flex items-center justify-center gap-2 text-sm text-primary">
-                <Smartphone className="w-4 h-4" />
-                <span>App installed</span>
-              </div>
             )}
           </div>
         </Card>
