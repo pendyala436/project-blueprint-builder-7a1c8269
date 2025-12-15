@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Ruler, Briefcase, GraduationCap, Heart, Utensils, Dumbbell, Baby, PawPrint, Plane, Brain, Star, Wine, Cigarette } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
-import AuroraBackground from "@/components/AuroraBackground";
+import ScreenTitle from "@/components/ScreenTitle";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SearchableSelect from "@/components/SearchableSelect";
+
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 // Options for various fields
 const bodyTypeOptions = [
@@ -205,17 +207,22 @@ const PersonalDetailsScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <AuroraBackground />
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
+      {/* Aurora Background */}
+      <Suspense fallback={
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
+      }>
+        <AuroraBackground />
+      </Suspense>
       
       {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            variant="auroraGhost"
+            variant="ghost"
             size="icon"
             onClick={handleBack}
-            className="shrink-0"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -229,18 +236,15 @@ const PersonalDetailsScreen = () => {
       <main className="flex-1 overflow-y-auto px-6 pb-8 relative z-10">
         <div className="max-w-lg mx-auto">
           {/* Title */}
-          <div className="text-center mb-6 animate-fade-in">
-            <MeowLogo size="sm" className="mx-auto mb-3" />
-            <h1 className="font-display text-2xl font-bold text-foreground mb-1">
-              Personal Details
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Share more about yourself (optional but helps matching)
-            </p>
-          </div>
+          <ScreenTitle
+            title="Personal Details"
+            subtitle="Share more about yourself (optional but helps matching)"
+            logoSize="sm"
+            className="mb-6"
+          />
 
           {/* Form */}
-          <div className="space-y-6 bg-card/70 backdrop-blur-xl rounded-3xl p-6 border border-primary/20">
+          <div className="space-y-6 bg-card/70 backdrop-blur-xl rounded-3xl p-6 border border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
             
             {/* Bio */}
             <div className="space-y-2">

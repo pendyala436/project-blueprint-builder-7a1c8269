@@ -1,12 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import ScreenTitle from "@/components/ScreenTitle";
 import { toast } from "@/hooks/use-toast";
 import { useGenderClassification } from "@/hooks/useGenderClassification";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
+
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 type VerificationState = "idle" | "verifying" | "verified" | "failed";
 
@@ -257,31 +260,39 @@ const PhotoUploadScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
+      {/* Aurora Background */}
+      <Suspense fallback={
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
+      }>
+        <AuroraBackground />
+      </Suspense>
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleBack}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <ProgressIndicator currentStep={5} totalSteps={10} />
-        <div className="w-10" />
-      </div>
+      <header className="px-6 pt-8 pb-4 relative z-10">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <ProgressIndicator currentStep={5} totalSteps={10} />
+          </div>
+        </div>
+      </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto">
-        <MeowLogo size="md" className="mb-4" />
-        
-        <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-          Add Your Photos
-        </h1>
-        <p className="text-muted-foreground text-center mb-6 max-w-sm">
-          Take a selfie for verification, then add more photos
-        </p>
+      <main className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto relative z-10">
+        <ScreenTitle
+          title="Add Your Photos"
+          subtitle="Take a selfie for verification, then add more photos"
+          logoSize="md"
+          className="mb-6"
+        />
 
         {/* Camera View */}
         {showCamera && (
@@ -316,12 +327,12 @@ const PhotoUploadScreen = () => {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Selfie Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/50 backdrop-blur-sm border-border/50 mb-6">
+        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Selfie for Verification</h2>
             {verificationState === "verified" && (
-              <span className="ml-auto text-xs bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="ml-auto text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Check className="h-3 w-3" /> Verified
               </span>
             )}
@@ -417,7 +428,7 @@ const PhotoUploadScreen = () => {
         </Card>
 
         {/* Additional Photos Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/50 backdrop-blur-sm border-border/50">
+        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="flex items-center gap-2 mb-3">
             <Upload className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Additional Photos</h2>
@@ -490,11 +501,7 @@ const PhotoUploadScreen = () => {
         >
           Continue
         </Button>
-      </div>
-
-      {/* Decorative Elements */}
-      <div className="fixed top-20 left-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed bottom-20 right-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+      </main>
     </div>
   );
 };
