@@ -317,6 +317,8 @@ const AuthScreen = () => {
         <a 
           href="/app-installation-guide.txt" 
           download="App-Installation-Guide.txt"
+          target="_blank"
+          rel="noopener noreferrer"
           className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           <Download className="h-4 w-4" />
