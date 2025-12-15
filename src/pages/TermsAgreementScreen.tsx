@@ -478,37 +478,14 @@ const TermsAgreementScreen = () => {
         return;
       }
 
-      // Check if email confirmation is required (user exists but identities is empty)
-      const needsEmailConfirmation = user.identities?.length === 0;
-      
-      if (needsEmailConfirmation) {
-        // User already exists - show message
+      // Check if user already exists (identities is empty means duplicate email)
+      if (user.identities?.length === 0) {
         toast({
           title: "Email already registered",
-          description: "This email is already registered. Please check your email for confirmation or try logging in.",
+          description: "This email is already registered. Please try logging in instead.",
           variant: "destructive",
         });
         setIsLoading(false);
-        return;
-      }
-
-      // Check if we have a session (email confirmation might be required)
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        // Email confirmation is required - navigate to AI processing with pending state
-        // Store user data for later profile creation after email confirmation
-        localStorage.setItem("pendingUserId", user.id);
-        
-        toast({
-          title: "Check your email",
-          description: "Please confirm your email address to complete registration.",
-        });
-        
-        // Clean up sensitive data but keep profile data for later
-        localStorage.removeItem("userPassword");
-        
-        navigate("/ai-processing");
         return;
       }
 
