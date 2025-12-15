@@ -571,9 +571,10 @@ const TermsAgreementScreen = () => {
         }
       }
 
-      // Build complete profile data including personal details
+      // Build complete profile data including ALL registration fields
       const profileData: any = {
         user_id: user.id,
+        email: email, // Store email in profiles table
         full_name: fullName,
         gender: gender.toLowerCase(),
         phone: phone,
@@ -585,6 +586,7 @@ const TermsAgreementScreen = () => {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         primary_language: primaryLanguage,
+        preferred_language: primaryLanguage, // Also set preferred language
         photo_url: photoUrl,
         // Personal details from PersonalDetailsScreen
         bio: personalDetails.bio || null,
