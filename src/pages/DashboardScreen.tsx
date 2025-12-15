@@ -1090,7 +1090,12 @@ const DashboardScreen = () => {
             {/* Settings */}
             <button 
               className="p-2 rounded-full hover:bg-muted transition-colors"
-              onClick={() => toast({ title: "Settings", description: "Coming soon!" })}
+              onClick={() => {
+                const settingsSection = document.getElementById('settings-section');
+                if (settingsSection) {
+                  settingsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
             >
               <Settings className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -1452,7 +1457,7 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 7: Settings */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
+        <div id="settings-section" className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Settings className="w-5 h-5 text-primary" />
             {t('settings', 'Settings')}
