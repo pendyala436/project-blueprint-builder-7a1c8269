@@ -128,28 +128,61 @@ export const LanguageCommunityPanel = ({
 
   const loadCommunityData = async () => {
     setIsLoading(true);
+    console.log("[LanguageCommunity] Loading data for language:", motherTongue);
     try {
       // Load members who speak the same language (women only)
+      // First get from profiles table with female gender filter
+      const { data: femaleProfilesWithLanguage, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, photo_url, created_at, primary_language, preferred_language")
+        .or(`primary_language.eq.${motherTongue},preferred_language.eq.${motherTongue}`)
+        .eq("gender", "female");
+
+      console.log("[LanguageCommunity] Female profiles query result:", femaleProfilesWithLanguage?.length, profilesError);
+
+      // Also check user_languages table for additional members
       const { data: languageUsers } = await supabase
         .from("user_languages")
         .select("user_id, language_name, created_at")
         .eq("language_name", motherTongue);
 
-      if (languageUsers && languageUsers.length > 0) {
-        const userIds = languageUsers.map(u => u.user_id);
-        const joinDates = new Map(languageUsers.map(u => [u.user_id, u.created_at]));
+      console.log("[LanguageCommunity] Language users:", languageUsers?.length);
 
-        // Get female profiles only
-        const { data: femaleProfiles } = await supabase
+      // Combine user IDs from both sources
+      const profileUserIds = femaleProfilesWithLanguage?.map(p => p.user_id) || [];
+      const languageUserIds = languageUsers?.map(u => u.user_id) || [];
+      const allUserIds = [...new Set([...profileUserIds, ...languageUserIds])];
+      
+      console.log("[LanguageCommunity] Combined user IDs:", allUserIds.length);
+
+      if (allUserIds.length > 0) {
+        // Get full profile data for all users (filtering for females only)
+        const { data: allProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, created_at, gender")
+          .in("user_id", allUserIds)
+          .eq("gender", "female");
+
+        console.log("[LanguageCommunity] All female profiles:", allProfiles?.length);
+
+        // Also get female_profiles for additional data
+        const { data: femaleSpecificProfiles } = await supabase
           .from("female_profiles")
           .select("user_id, full_name, photo_url, created_at")
-          .in("user_id", userIds);
+          .in("user_id", allUserIds);
+
+        // Merge data - prefer female_profiles data, fallback to profiles
+        const femaleProfileMap = new Map(femaleSpecificProfiles?.map(p => [p.user_id, p]) || []);
+        const profileMap = new Map(allProfiles?.map(p => [p.user_id, p]) || []);
+
+        // Create join dates map from user_languages
+        const joinDates = new Map(languageUsers?.map(u => [u.user_id, u.created_at]) || []);
 
         // Get online status
         const { data: onlineStatus } = await supabase
           .from("user_status")
           .select("user_id, is_online")
-          .in("user_id", userIds);
+          .in("user_id", allUserIds);
 
         const onlineMap = new Map(onlineStatus?.map(s => [s.user_id, s.is_online]) || []);
 
@@ -164,6 +197,8 @@ export const LanguageCommunityPanel = ({
             `election_data_${motherTongue}`,
             `votes_${motherTongue}`
           ]);
+
+        console.log("[LanguageCommunity] Leadership data:", leadershipData);
 
         const settings = new Map(leadershipData?.map(s => [s.setting_key, s.setting_value]) || []);
         const leaderId = (settings.get(`leader_${motherTongue}`) as any)?.userId;
@@ -181,19 +216,28 @@ export const LanguageCommunityPanel = ({
           return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
         };
 
-        // Build members list with seniority
-        const membersList: CommunityMember[] = (femaleProfiles || []).map(p => ({
-          userId: p.user_id,
-          fullName: p.full_name || "Unknown",
-          photoUrl: p.photo_url,
-          isLeader: p.user_id === leaderId,
-          isElectionOfficer: p.user_id === officerId,
-          isCandidate: election.candidates?.includes(p.user_id) || false,
-          voteCount: Object.values(votes).filter(v => v === p.user_id).length,
-          isOnline: onlineMap.get(p.user_id) || false,
-          joinedAt: joinDates.get(p.user_id) || p.created_at,
-          seniority: calculateSeniority(joinDates.get(p.user_id) || p.created_at)
-        }));
+        // Build members list - only include female profiles
+        const femaleUserIds = allProfiles?.map(p => p.user_id) || [];
+        const membersList: CommunityMember[] = femaleUserIds.map(userId => {
+          const femaleProfile = femaleProfileMap.get(userId);
+          const mainProfile = profileMap.get(userId);
+          const profile = femaleProfile || mainProfile;
+          
+          return {
+            userId,
+            fullName: femaleProfile?.full_name || mainProfile?.full_name || "Unknown User",
+            photoUrl: femaleProfile?.photo_url || mainProfile?.photo_url,
+            isLeader: userId === leaderId,
+            isElectionOfficer: userId === officerId,
+            isCandidate: election.candidates?.includes(userId) || false,
+            voteCount: Object.values(votes).filter(v => v === userId).length,
+            isOnline: onlineMap.get(userId) || false,
+            joinedAt: joinDates.get(userId) || profile?.created_at || new Date().toISOString(),
+            seniority: calculateSeniority(joinDates.get(userId) || profile?.created_at || new Date().toISOString())
+          };
+        });
+
+        console.log("[LanguageCommunity] Members list:", membersList.length, membersList.map(m => m.fullName));
 
         // Sort by seniority (most senior first = longest time on app)
         membersList.sort((a, b) => b.seniority - a.seniority);
@@ -201,9 +245,11 @@ export const LanguageCommunityPanel = ({
         // Auto-assign election officer if none exists
         // Election Officer = the member with the longest time on the app (most seniority)
         if (!officerId && membersList.length > 0) {
-          // The most senior member becomes the Election Officer (Commissioner)
-          const mostSeniorMember = membersList[0]; // Already sorted by seniority
+          console.log("[LanguageCommunity] Auto-assigning election officer:", membersList[0].fullName);
+          const mostSeniorMember = membersList[0];
           await autoAssignElectionOfficer(mostSeniorMember.userId);
+          // Mark as officer in local state
+          membersList[0].isElectionOfficer = true;
         }
 
         // Re-sort: leader first, then election officer, then by seniority
@@ -218,13 +264,16 @@ export const LanguageCommunityPanel = ({
         setMembers(membersList);
         setCurrentLeader(membersList.find(m => m.isLeader) || null);
         setElectionOfficer(membersList.find(m => m.isElectionOfficer) || null);
+      } else {
+        console.log("[LanguageCommunity] No members found for language:", motherTongue);
+        setMembers([]);
       }
 
       // Load community messages
       await loadMessages();
 
     } catch (error) {
-      console.error("Error loading community data:", error);
+      console.error("[LanguageCommunity] Error loading community data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -245,31 +294,45 @@ export const LanguageCommunityPanel = ({
         .order("created_at", { ascending: true })
         .limit(100);
 
-      if (messagesData) {
+      if (messagesData && messagesData.length > 0) {
         const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
-        const { data: senderProfiles } = await supabase
+        
+        // Get from female_profiles first
+        const { data: femaleSenderProfiles } = await supabase
           .from("female_profiles")
           .select("user_id, full_name, photo_url")
           .in("user_id", senderIds);
 
-        const senderMap = new Map(senderProfiles?.map(p => [p.user_id, p]) || []);
+        // Also get from main profiles as fallback
+        const { data: mainSenderProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url")
+          .in("user_id", senderIds);
 
-        setMessages(messagesData.map(m => ({
-          id: m.id,
-          senderId: m.sender_id,
-          senderName: senderMap.get(m.sender_id)?.full_name || "Unknown",
-          senderPhoto: senderMap.get(m.sender_id)?.photo_url || null,
-          message: m.message,
-          createdAt: m.created_at,
-          isAnnouncement: m.message.startsWith("[ANNOUNCEMENT]")
-        })));
+        const femaleSenderMap = new Map(femaleSenderProfiles?.map(p => [p.user_id, p]) || []);
+        const mainSenderMap = new Map(mainSenderProfiles?.map(p => [p.user_id, p]) || []);
+
+        setMessages(messagesData.map(m => {
+          const femaleProfile = femaleSenderMap.get(m.sender_id);
+          const mainProfile = mainSenderMap.get(m.sender_id);
+          return {
+            id: m.id,
+            senderId: m.sender_id,
+            senderName: femaleProfile?.full_name || mainProfile?.full_name || "Unknown User",
+            senderPhoto: femaleProfile?.photo_url || mainProfile?.photo_url || null,
+            message: m.message,
+            createdAt: m.created_at,
+            isAnnouncement: m.message.startsWith("[ANNOUNCEMENT]")
+          };
+        }));
       }
     }
   };
 
   const autoAssignElectionOfficer = async (userId: string) => {
     try {
-      await supabase
+      console.log("[LanguageCommunity] Assigning election officer:", userId);
+      const { error } = await supabase
         .from("app_settings")
         .upsert({
           setting_key: `election_officer_${motherTongue}`,
@@ -282,8 +345,14 @@ export const LanguageCommunityPanel = ({
           } as any,
           is_public: false
         }, { onConflict: "setting_key" });
+      
+      if (error) {
+        console.error("[LanguageCommunity] Error assigning election officer:", error);
+      } else {
+        console.log("[LanguageCommunity] Election officer assigned successfully");
+      }
     } catch (error) {
-      console.error("Error auto-assigning election officer:", error);
+      console.error("[LanguageCommunity] Exception assigning election officer:", error);
     }
   };
 
@@ -353,7 +422,15 @@ export const LanguageCommunityPanel = ({
   };
 
   const createElection = async () => {
-    if (!isElectionOfficer) return;
+    console.log("[LanguageCommunity] createElection called, isElectionOfficer:", isElectionOfficer);
+    if (!isElectionOfficer) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('onlyOfficerCanCreate', 'Only the Election Officer can create elections'),
+        variant: "destructive"
+      });
+      return;
+    }
     
     if (selectedCandidates.length < 2) {
       toast({
@@ -417,7 +494,15 @@ export const LanguageCommunityPanel = ({
   };
 
   const startElection = async () => {
-    if (!isElectionOfficer) return;
+    console.log("[LanguageCommunity] startElection called, isElectionOfficer:", isElectionOfficer, "candidates:", electionData.candidates);
+    if (!isElectionOfficer) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('onlyOfficerCanStart', 'Only the Election Officer can start elections'),
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (electionData.candidates.length < 2) {
       setShowCreateElectionDialog(true);
@@ -425,7 +510,7 @@ export const LanguageCommunityPanel = ({
     }
 
     try {
-      await supabase
+      const { error } = await supabase
         .from("app_settings")
         .upsert({
           setting_key: `election_data_${motherTongue}`,
@@ -439,6 +524,12 @@ export const LanguageCommunityPanel = ({
           is_public: false
         }, { onConflict: "setting_key" });
 
+      if (error) {
+        console.error("[LanguageCommunity] Error starting election:", error);
+        throw error;
+      }
+
+      console.log("[LanguageCommunity] Election started successfully");
       toast({
         title: t('electionStarted', 'Election Started'),
         description: t('membersCanVote', 'Community members can now vote for their leader')
@@ -454,10 +545,21 @@ export const LanguageCommunityPanel = ({
   };
 
   const castVote = async (candidateId: string) => {
+    console.log("[LanguageCommunity] castVote called for:", candidateId, "hasVoted:", hasVoted, "isCandidate:", electionData.candidates.includes(candidateId));
+    
     if (hasVoted) {
       toast({
         title: t('alreadyVoted', 'Already Voted'),
         description: t('oneVoteOnly', 'You can only vote once per election'),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!electionData.active) {
+      toast({
+        title: t('electionNotActive', 'Election Not Active'),
+        description: t('waitForElection', 'Please wait for the election to start'),
         variant: "destructive"
       });
       return;
@@ -508,7 +610,15 @@ export const LanguageCommunityPanel = ({
   };
 
   const endElection = async () => {
-    if (!isElectionOfficer) return;
+    console.log("[LanguageCommunity] endElection called, isElectionOfficer:", isElectionOfficer);
+    if (!isElectionOfficer) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('onlyOfficerCanEnd', 'Only the Election Officer can end elections'),
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const { data: votesData } = await supabase
@@ -518,17 +628,23 @@ export const LanguageCommunityPanel = ({
         .maybeSingle();
 
       const votes = (votesData?.setting_value as any) || {};
+      console.log("[LanguageCommunity] Current votes:", votes);
+      
       const voteCounts: Record<string, number> = {};
       
       Object.values(votes).forEach((candidateId: any) => {
         voteCounts[candidateId] = (voteCounts[candidateId] || 0) + 1;
       });
 
+      console.log("[LanguageCommunity] Vote counts:", voteCounts);
+
       // Find max votes
       const maxVotes = Math.max(...Object.values(voteCounts), 0);
       const topCandidates = Object.entries(voteCounts)
         .filter(([_, count]) => count === maxVotes)
         .map(([id]) => id);
+
+      console.log("[LanguageCommunity] Max votes:", maxVotes, "Top candidates:", topCandidates);
 
       // Check for tie
       if (topCandidates.length > 1) {
@@ -539,11 +655,22 @@ export const LanguageCommunityPanel = ({
         return;
       }
 
+      // Handle case where no one voted
+      if (topCandidates.length === 0 || maxVotes === 0) {
+        toast({
+          title: t('noVotes', 'No Votes'),
+          description: t('noVotesCast', 'No votes were cast in this election'),
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Single winner
       const winnerId = topCandidates[0];
       await finalizeElection(winnerId);
       
     } catch (error) {
+      console.error("[LanguageCommunity] Error ending election:", error);
       toast({
         title: t('error', 'Error'),
         description: t('electionEndFailed', 'Failed to end election'),
