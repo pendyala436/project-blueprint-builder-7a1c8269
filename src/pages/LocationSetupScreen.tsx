@@ -27,6 +27,7 @@ const LocationSetupScreen = () => {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [country, setCountry] = useState("");
   const [state, setState] = useState("");
+  const [village, setVillage] = useState("");
   const [manualMode, setManualMode] = useState(false);
 
   const countryOptions = countries.map(c => ({
@@ -42,10 +43,45 @@ const LocationSetupScreen = () => {
 
   const countryHasStates = country ? hasStates(country) : false;
 
-  // Reset state when country changes
+  // Reset state and village when country changes
   const handleCountryChange = (newCountry: string) => {
     setCountry(newCountry);
     setState("");
+    setVillage("");
+  };
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      // Using OpenStreetMap Nominatim API (open source)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
+        {
+          headers: {
+            'User-Agent': 'MeowMeow-App/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) throw new Error('Geocoding failed');
+      
+      const data = await response.json();
+      const address = data.address || {};
+      
+      // Extract country code (ISO 3166-1 alpha-2)
+      const countryCode = address.country_code?.toUpperCase() || "";
+      
+      // Extract state/province
+      const stateValue = address.state || address.province || address.region || "";
+      
+      // Extract village/town/city
+      const villageValue = address.village || address.town || address.city || 
+                          address.municipality || address.suburb || address.neighbourhood || "";
+      
+      return { countryCode, stateValue, villageValue };
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return null;
+    }
   };
 
   const detectLocation = useCallback(async () => {
@@ -69,19 +105,56 @@ const LocationSetupScreen = () => {
         setLatitude(lat);
         setLongitude(lng);
         
-        // Location coordinates captured - user will select country/state manually
-        // This avoids dependency on external geocoding APIs
+        // Use OpenStreetMap Nominatim for reverse geocoding
+        const geocodeResult = await reverseGeocode(lat, lng);
+        
+        if (geocodeResult) {
+          const { countryCode, stateValue, villageValue } = geocodeResult;
+          
+          // Auto-fill country if found in our country list
+          const matchedCountry = countries.find(c => c.code === countryCode);
+          if (matchedCountry) {
+            setCountry(matchedCountry.code);
+            
+            // Try to match state
+            if (stateValue) {
+              const statesForCountry = getStatesForCountry(matchedCountry.code);
+              const matchedState = statesForCountry.find(
+                s => s.name.toLowerCase() === stateValue.toLowerCase() ||
+                     s.code.toLowerCase() === stateValue.toLowerCase()
+              );
+              if (matchedState) {
+                setState(matchedState.code);
+              } else {
+                setState(stateValue);
+              }
+            }
+          }
+          
+          // Set village/town
+          if (villageValue) {
+            setVillage(villageValue);
+          }
+          
+          toast({
+            title: "Location detected",
+            description: villageValue 
+              ? `Found: ${villageValue}${stateValue ? `, ${stateValue}` : ''}`
+              : "Location found. Please verify below.",
+          });
+        } else {
+          toast({
+            title: "Location detected",
+            description: "Please select your country and state below.",
+          });
+        }
+        
         setLocationDetected(true);
         
         // Trigger pin drop animation
         setTimeout(() => {
           setPinDropped(true);
         }, 500);
-        
-        toast({
-          title: "Location detected",
-          description: "Please select your country and state below.",
-        });
         
         setIsDetecting(false);
       },
@@ -135,6 +208,7 @@ const LocationSetupScreen = () => {
           longitude,
           country,
           state: state || null,
+          city: village || null,
         })
         .eq("user_id", user.id);
 
@@ -319,6 +393,23 @@ const LocationSetupScreen = () => {
                     onChange={(e) => setState(e.target.value)}
                     className="h-12"
                   />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="village">Village / Town / City</Label>
+                <Input
+                  id="village"
+                  placeholder="Enter your village, town, or city"
+                  value={village}
+                  onChange={(e) => setVillage(e.target.value)}
+                  className="h-12"
+                />
+                {village && locationDetected && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    Auto-detected location
+                  </p>
                 )}
               </div>
             </div>
