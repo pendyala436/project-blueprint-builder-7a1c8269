@@ -516,7 +516,70 @@ supabase.channel('notifications:${userId}')
                           │                   │                   │
                           ▼                   ▼                   ▼
                     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-                    │   ESLint    │     │  Generate   │     │ Production  │
-                    │    Check    │     │  Artifacts  │     │   Deploy    │
-                    └─────────────┘     └─────────────┘     └─────────────┘
+                     │   ESLint    │     │  Generate   │     │ Production  │
+                     │    Check    │     │  Artifacts  │     │   Deploy    │
+                     └─────────────┘     └─────────────┘     └─────────────┘
 ```
+
+---
+
+## MVP Architecture Pattern
+
+This project follows the **MVP (Model-View-Presenter)** pattern with clear layer separation.
+
+### Layer Structure
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (src/)                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Views     │  │  Presenters │  │       Models            │ │
+│  │  (pages/    │◄─┤   (hooks/)  │◄─┤   (services/, types/)   │ │
+│  │  components)│  │             │  │                         │ │
+│  └─────────────┘  └─────────────┘  └───────────┬─────────────┘ │
+└───────────────────────────────────────────────│───────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  BACKEND (supabase/functions/)                  │
+│              Edge Functions (Deno Runtime)                      │
+└───────────────────────────────────────────────│───────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              DATABASE (Supabase PostgreSQL)                     │
+│        Tables • RLS Policies • Functions • Triggers             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Frontend Layer Organization
+
+| Folder | Layer | Purpose |
+|--------|-------|---------|
+| `src/pages/` | View | Route-level components |
+| `src/components/` | View | Reusable UI components |
+| `src/components/ui/` | View | Design system primitives |
+| `src/hooks/` | Presenter | Business logic, state management |
+| `src/services/` | Model | API calls to backend |
+| `src/types/` | Model | TypeScript interfaces |
+| `src/constants/` | Model | Application constants |
+
+### Services (API Layer)
+
+```
+src/services/
+├── index.ts           # Central export
+├── auth.service.ts    # Authentication
+├── profile.service.ts # User profiles
+├── wallet.service.ts  # Wallet & transactions
+├── chat.service.ts    # Chat & messaging
+└── admin.service.ts   # Admin operations
+```
+
+### Key Principles
+
+1. **Views** only render UI, no business logic
+2. **Hooks** handle state, effects, and service calls
+3. **Services** are the only layer that talks to Supabase
+4. **Types** are centralized for consistency
+5. **Database functions** handle atomic operations
