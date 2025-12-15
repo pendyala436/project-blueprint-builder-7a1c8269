@@ -219,7 +219,7 @@ const LocationSetupScreen = () => {
         description: "Your location has been saved successfully.",
       });
 
-      navigate("/language-preferences");
+      navigate("/password-setup");
     } catch (error) {
       console.error("Error saving location:", error);
       toast({

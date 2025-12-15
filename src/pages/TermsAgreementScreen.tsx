@@ -579,12 +579,12 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userPrimaryLanguage");
 
       toast({
-        title: "Terms Accepted!",
-        description: "Now let's set up your password.",
+        title: "Registration Complete!",
+        description: "Your account is being verified.",
       });
 
-      // Navigate to password setup (final step)
-      navigate("/password-setup");
+      // Navigate to AI processing for verification
+      navigate("/ai-processing");
     } catch (error) {
       console.error("Error saving registration:", error);
       toast({
@@ -742,7 +742,7 @@ const TermsAgreementScreen = () => {
           <div className="flex gap-3">
             <Button
               variant="auroraOutline"
-              onClick={() => navigate("/language-preferences")}
+              onClick={() => navigate("/password-setup")}
               className="flex-1 h-12"
             >
               Back
