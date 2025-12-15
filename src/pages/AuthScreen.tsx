@@ -1,17 +1,34 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, memo, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import MeowLogo from "@/components/MeowLogo";
-import AuroraBackground from "@/components/AuroraBackground";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useI18n } from "@/hooks/useI18n";
-import { preloadUserContext } from "@/hooks/useOptimizedAuth";
+
+// Lazy load non-critical components
+const MeowLogo = lazy(() => import("@/components/MeowLogo"));
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
+
+// Inline translations for instant render - no async loading needed
+const translations: Record<string, string> = {
+  'app.name': 'MEOW MEOW',
+  'app.tagline': 'Find your purrfect match',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.login': 'Login',
+  'auth.signup': 'Sign Up',
+  'auth.forgotPassword': 'Forgot Password?',
+  'auth.noAccount': 'No account?',
+  'auth.emailRequired': 'Email is required',
+  'auth.invalidCredentials': 'Invalid email format',
+  'auth.passwordRequired': 'Password is required',
+  'auth.passwordTooShort': 'Password must be at least 8 characters',
+  'common.loading': 'Loading...',
+};
+
+const t = (key: string, fallback?: string) => translations[key] || fallback || key;
 
 // Memoized form inputs for better performance
 const EmailInput = memo(({ 
@@ -97,7 +114,6 @@ PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -133,13 +149,16 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
+      // Dynamic imports for auth
+      const [{ supabase }, { toast }, { preloadUserContext }] = await Promise.all([
+        import("@/integrations/supabase/client"),
+        import("@/hooks/use-toast"),
+        import("@/hooks/useOptimizedAuth"),
+      ]);
+      
       // Start auth and preload routes in parallel
       const [authResult] = await Promise.all([
-        supabase.auth.signInWithPassword({
-          email,
-          password,
-        }),
-        // Preload likely next routes while authenticating
+        supabase.auth.signInWithPassword({ email, password }),
         import("./DashboardScreen").catch(() => {}),
         import("./WomenDashboardScreen").catch(() => {}),
       ]);
@@ -147,11 +166,7 @@ const AuthScreen = () => {
       const { data: authData, error } = authResult;
 
       if (error) {
-        toast({
-          title: t('auth.login'),
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: "Login", description: error.message, variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -161,13 +176,10 @@ const AuthScreen = () => {
         return;
       }
 
-      // Show success immediately
-      toast({
-        title: t('dashboard.welcome'),
-        description: t('auth.login'),
-      });
+      // Show success
+      toast({ title: "Welcome!", description: "Login successful" });
 
-      // Fetch all user context in parallel (single optimized call)
+      // Fetch all user context in parallel
       const context = await preloadUserContext(authData.user.id);
 
       // Navigate based on context
@@ -187,15 +199,12 @@ const AuthScreen = () => {
         navigate("/dashboard");
       }
     } catch (error: any) {
-      toast({
-        title: t('auth.login'),
-        description: error.message || t('errors.unknown'),
-        variant: "destructive",
-      });
+      const { toast } = await import("@/hooks/use-toast");
+      toast({ title: "Login", description: error.message || "Unknown error", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, navigate, t, validateEmail]);
+  }, [email, password, navigate, validateEmail, t]);
 
   const handleEmailChange = useCallback((value: string) => {
     setEmail(value);
@@ -212,13 +221,17 @@ const AuthScreen = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <AuroraBackground />
+    <div className="min-h-screen flex flex-col relative bg-background">
+      <Suspense fallback={<div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />}>
+        <AuroraBackground />
+      </Suspense>
       
       {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="text-center">
-          <MeowLogo size="lg" className="mx-auto mb-4" />
+          <Suspense fallback={<div className="w-20 h-20 mx-auto mb-4 bg-primary/20 rounded-full animate-pulse" />}>
+            <MeowLogo size="lg" className="mx-auto mb-4" />
+          </Suspense>
           <h1 className="font-display text-4xl font-bold text-foreground mb-2 drop-shadow-sm">
             {t('app.name', 'MEOW MEOW')}
           </h1>

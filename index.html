@@ -101,23 +101,37 @@
         --sal: env(safe-area-inset-left);
       }
       
-      /* Prevent FOUC (Flash of Unstyled Content) */
+      /* Instant render - no FOUC */
       html { visibility: visible; opacity: 1; }
       
-      /* Cross-browser smooth scrolling */
+      /* Critical CSS for instant paint */
+      body {
+        margin: 0;
+        background: #0a0d14;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      #root {
+        min-height: 100vh;
+        background: #0a0d14;
+      }
+      
+      /* Instant loading placeholder */
+      .app-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0a0d14 0%, #111827 100%);
+      }
+      
       html {
         scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
       }
       
-      /* Cross-browser text rendering */
-      body {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        text-rendering: optimizeLegibility;
-      }
-      
-      /* Hide scrollbar but keep functionality - Cross-browser */
       .hide-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
@@ -126,17 +140,22 @@
         display: none;
       }
     </style>
+
+    <!-- Preload main script for faster execution -->
+    <link rel="modulepreload" href="/src/main.tsx" />
   </head>
 
   <body>
-    <!-- No JavaScript fallback -->
     <noscript>
       <div style="padding: 20px; text-align: center; background: #0a0d14; color: white; min-height: 100vh;">
         <h1>Meow Meow</h1>
         <p>Please enable JavaScript to use this app.</p>
       </div>
     </noscript>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline instant loading state - removed by React on hydration -->
+      <div class="app-loading" aria-hidden="true"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

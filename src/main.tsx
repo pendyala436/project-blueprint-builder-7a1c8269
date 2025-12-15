@@ -1,18 +1,12 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
 
-// Performance: Use concurrent rendering without StrictMode in production
+// Inline critical CSS and render immediately
 const root = createRoot(document.getElementById("root")!);
 
-// StrictMode causes double renders in dev - skip in production for speed
-if (import.meta.env.DEV) {
-  const { StrictMode } = await import("react");
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  );
-} else {
+// Import CSS asynchronously for faster FCP
+import("./index.css");
+
+// Render App immediately - no StrictMode for maximum speed
+import("./App.tsx").then(({ default: App }) => {
   root.render(<App />);
-}
+});
