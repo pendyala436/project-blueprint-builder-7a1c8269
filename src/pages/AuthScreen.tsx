@@ -313,14 +313,14 @@ const AuthScreen = () => {
           </div>
         </Card>
 
-        {/* iOS Install Guide Download */}
+        {/* App Installation Guide Download */}
         <a 
-          href="/ios-install-guide.txt" 
-          download="iOS-App-Installation-Guide.txt"
+          href="/app-installation-guide.txt" 
+          download="App-Installation-Guide.txt"
           className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           <Download className="h-4 w-4" />
-          <span>Download iOS Installation Guide</span>
+          <span>Download App Installation Guide (All Devices)</span>
         </a>
       </main>
     </div>
