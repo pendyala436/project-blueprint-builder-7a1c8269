@@ -373,7 +373,7 @@ const AdminPolicyAlerts = () => {
       case "high":
         return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />High</Badge>;
       case "medium":
-        return <Badge className="bg-yellow-500"><AlertTriangle className="h-3 w-3 mr-1" />Medium</Badge>;
+        return <Badge variant="warning"><AlertTriangle className="h-3 w-3 mr-1" />Medium</Badge>;
       case "low":
         return <Badge variant="secondary">Low</Badge>;
       default:
@@ -384,11 +384,11 @@ const AdminPolicyAlerts = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-orange-500">Pending</Badge>;
+        return <Badge variant="warning">Pending</Badge>;
       case "reviewing":
-        return <Badge className="bg-blue-500">Reviewing</Badge>;
+        return <Badge variant="info">Reviewing</Badge>;
       case "resolved":
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Resolved</Badge>;
+        return <Badge variant="success"><CheckCircle className="h-3 w-3 mr-1" />Resolved</Badge>;
       case "dismissed":
         return <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Dismissed</Badge>;
       default:
@@ -397,17 +397,8 @@ const AdminPolicyAlerts = () => {
   };
 
   const getViolationTypeBadge = (type: string) => {
-    const colors: Record<string, string> = {
-      sexual_content: "bg-pink-500",
-      harassment: "bg-red-500",
-      hate_speech: "bg-red-700",
-      spam: "bg-gray-500",
-      scam: "bg-orange-500",
-      contact_sharing: "bg-blue-500",
-      tos_violation: "bg-purple-500",
-      guidelines_violation: "bg-indigo-500",
-    };
-    return <Badge className={colors[type] || "bg-gray-500"}>{type.replace(/_/g, " ")}</Badge>;
+    // Use primary theme color for all violation types for consistency
+    return <Badge variant="destructive">{type.replace(/_/g, " ")}</Badge>;
   };
 
   const filteredAlerts = alerts.filter(alert => {

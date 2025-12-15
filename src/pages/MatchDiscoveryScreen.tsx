@@ -767,7 +767,7 @@ const MatchDiscoveryScreen = () => {
                 >
                   <Card className="overflow-hidden shadow-card border-border/50">
                     {/* Match Score Badge - positioned top left */}
-                    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary to-rose-500 text-white">
+                    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary text-primary-foreground">
                       <Sparkles className="w-4 h-4" />
                       <span className="text-sm font-bold">{currentMatch.matchScore}% Match</span>
                     </div>

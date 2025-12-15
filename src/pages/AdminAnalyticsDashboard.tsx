@@ -87,9 +87,11 @@ const CHART_COLORS = {
   secondary: "hsl(var(--secondary))",
   accent: "hsl(var(--accent))",
   muted: "hsl(var(--muted))",
-  success: "#22c55e",
-  warning: "#f59e0b",
-  danger: "#ef4444",
+  success: "hsl(var(--success))",
+  warning: "hsl(var(--warning))",
+  danger: "hsl(var(--destructive))",
+  male: "hsl(var(--male))",
+  female: "hsl(var(--female))",
 };
 
 const AdminAnalyticsDashboard = () => {
@@ -206,9 +208,9 @@ const AdminAnalyticsDashboard = () => {
       const otherCount = (genderData?.length || 0) - maleCount - femaleCount;
 
       setGenderDistribution([
-        { name: "Male", value: maleCount, color: "#3b82f6" },
-        { name: "Female", value: femaleCount, color: "#ec4899" },
-        { name: "Other", value: otherCount, color: "#8b5cf6" },
+        { name: "Male", value: maleCount, color: CHART_COLORS.male },
+        { name: "Female", value: femaleCount, color: CHART_COLORS.female },
+        { name: "Other", value: otherCount, color: CHART_COLORS.accent },
       ]);
 
       // Calculate conversion rate (matches / users)
@@ -618,9 +620,9 @@ const AdminAnalyticsDashboard = () => {
                     <Area
                       type="monotone"
                       dataKey="activeUsers"
-                      stroke="#22c55e"
+                      stroke={CHART_COLORS.success}
                       fillOpacity={0.3}
-                      fill="#22c55e"
+                      fill={CHART_COLORS.success}
                       name="Active Users"
                       animationDuration={1200}
                     />
@@ -695,9 +697,9 @@ const AdminAnalyticsDashboard = () => {
                     <Line
                       type="monotone"
                       dataKey="matches"
-                      stroke="#ec4899"
+                      stroke={CHART_COLORS.female}
                       strokeWidth={2}
-                      dot={{ fill: "#ec4899", strokeWidth: 2 }}
+                      dot={{ fill: CHART_COLORS.female, strokeWidth: 2 }}
                       name="Matches"
                       animationDuration={1000}
                     />
@@ -721,8 +723,8 @@ const AdminAnalyticsDashboard = () => {
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                        <stop offset="5%" stopColor={CHART_COLORS.accent} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={CHART_COLORS.accent} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -738,7 +740,7 @@ const AdminAnalyticsDashboard = () => {
                     <Area
                       type="monotone"
                       dataKey="messages"
-                      stroke="#8b5cf6"
+                      stroke={CHART_COLORS.accent}
                       fillOpacity={1}
                       fill="url(#colorMessages)"
                       name="Messages"

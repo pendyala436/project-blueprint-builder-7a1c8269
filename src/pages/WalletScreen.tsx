@@ -453,9 +453,9 @@ const WalletScreen = () => {
 
       <div className="max-w-md mx-auto p-4 space-y-6">
         {/* Balance Card */}
-        <Card className="relative overflow-hidden gradient-aurora text-white border-0 shadow-glow">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        <Card className="relative overflow-hidden gradient-aurora text-primary-foreground border-0 shadow-glow">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-foreground/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary-foreground/5 rounded-full translate-y-1/2 -translate-x-1/2" />
           
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-primary-foreground/80 font-medium text-sm">
