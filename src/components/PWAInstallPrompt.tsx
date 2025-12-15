@@ -84,13 +84,27 @@ export function PWAInstallPrompt() {
 
   const handleInstall = async () => {
     if (isInstallable) {
-      // Native install prompt available
+      // Native install prompt available - trigger it
+      console.log('[PWA] Triggering native install prompt');
       const result = await install();
+      console.log('[PWA] Install result:', result);
       if (result) {
         setDismissed(true);
       }
+    } else if (isIOSDevice) {
+      // iOS - open share sheet hint (can't programmatically install)
+      // Just dismiss and let user follow manual instructions
+      setDismissed(true);
     } else {
-      // Manual install - just dismiss, user will follow instructions
+      // Fallback - try to trigger install anyway
+      const result = await install();
+      if (!result) {
+        // If failed, show browser-specific instructions
+        alert(isAndroid 
+          ? 'Tap the menu (⋮) in your browser and select "Install App" or "Add to Home Screen"'
+          : 'Look for the install icon (⊕) in your browser\'s address bar, or check the browser menu'
+        );
+      }
       setDismissed(true);
     }
   };
@@ -122,13 +136,11 @@ export function PWAInstallPrompt() {
           <p className="font-semibold text-foreground mb-1">Install This App</p>
           <p className="text-sm text-muted-foreground mb-3">
             {isIOSDevice ? (
-              <>Tap <Share className="inline h-4 w-4 mx-0.5" /> <strong>Share</strong> then <strong>Add to Home Screen</strong></>
+              <>Tap <Share className="inline h-4 w-4 mx-0.5" /> <strong>Share</strong> below, then <strong>Add to Home Screen</strong></>
             ) : isAndroid ? (
-              <>Tap <MoreVertical className="inline h-4 w-4 mx-0.5" /> <strong>Menu</strong> then <strong>Install App</strong></>
-            ) : isMacOS && isSafari ? (
-              <>Click <strong>File</strong> → <strong>Add to Dock</strong></>
+              <>Install for quick access and offline use</>
             ) : (
-              <>Get faster access with the installed app</>
+              <>Install for faster access and offline support</>
             )}
           </p>
           <div className="flex gap-2">
@@ -138,8 +150,17 @@ export function PWAInstallPrompt() {
               onClick={handleInstall}
               className="flex-1"
             >
-              <Download className="h-4 w-4 mr-1" />
-              Install
+              {isIOSDevice ? (
+                <>
+                  <Share className="h-4 w-4 mr-1" />
+                  Open Share
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-1" />
+                  Install Now
+                </>
+              )}
             </Button>
             <Button 
               variant="outline" 
