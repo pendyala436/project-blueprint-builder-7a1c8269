@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, Download, Smartphone } from "lucide-react";
+import { usePWA } from "@/hooks/usePWA";
 import { cn } from "@/lib/utils";
 
 // Lazy load non-critical components
@@ -114,11 +115,13 @@ PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
+  const { isInstallable, isInstalled, install, isIOS, getInstallInstructions } = usePWA();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -310,6 +313,66 @@ const AuthScreen = () => {
             >
               {t('auth.signup')}
             </Button>
+
+            {/* PWA Install Button */}
+            {!isInstalled && (isInstallable || isIOS) && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Install App
+                  </span>
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-primary/30 hover:bg-primary/10 group"
+                  onClick={() => {
+                    if (isIOS) {
+                      setShowIOSInstructions(true);
+                    } else {
+                      install();
+                    }
+                  }}
+                >
+                  <Download className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Install App
+                </Button>
+
+                {/* iOS Instructions Modal */}
+                {showIOSInstructions && isIOS && (
+                  <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
+                    <p className="text-sm font-medium text-foreground">
+                      To install on iOS:
+                    </p>
+                    <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                      {getInstallInstructions().steps.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => setShowIOSInstructions(false)}
+                    >
+                      Got it
+                    </Button>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* Already Installed Badge */}
+            {isInstalled && (
+              <div className="flex items-center justify-center gap-2 text-sm text-primary">
+                <Smartphone className="w-4 h-4" />
+                <span>App installed</span>
+              </div>
+            )}
           </div>
         </Card>
       </main>
