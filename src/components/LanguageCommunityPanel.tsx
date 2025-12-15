@@ -34,12 +34,15 @@ import {
   Plus,
   UserPlus,
   CalendarClock,
-  Trophy
+  Trophy,
+  LayoutDashboard
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { cn } from "@/lib/utils";
+import { LeaderDashboard } from "@/components/community/LeaderDashboard";
+import { DisputeReportButton } from "@/components/community/DisputeReportButton";
 
 interface CommunityMember {
   userId: string;
@@ -109,8 +112,12 @@ export const LanguageCommunityPanel = ({
   // Tiebreaker dialog
   const [showTiebreakerDialog, setShowTiebreakerDialog] = useState(false);
   const [tiedCandidates, setTiedCandidates] = useState<CommunityMember[]>([]);
+  
+  // Leader dashboard
+  const [showLeaderDashboard, setShowLeaderDashboard] = useState(false);
 
   const isElectionOfficer = electionOfficer?.userId === currentUserId;
+  const isLeader = currentLeader?.userId === currentUserId;
   const isCandidate = electionData.candidates.includes(currentUserId);
 
   // Load community data
@@ -1081,6 +1088,29 @@ export const LanguageCommunityPanel = ({
                       </div>
                     )}
 
+                    {/* Leader Dashboard Button */}
+                    {isLeader && (
+                      <Button 
+                        className="w-full" 
+                        variant="aurora"
+                        onClick={() => setShowLeaderDashboard(true)}
+                      >
+                        <LayoutDashboard className="w-4 h-4 mr-2" />
+                        {t('openLeaderDashboard', 'Open Leader Dashboard')}
+                      </Button>
+                    )}
+
+                    {/* Report Issue Button for non-leaders */}
+                    {!isLeader && (
+                      <div className="flex justify-center">
+                        <DisputeReportButton
+                          currentUserId={currentUserId}
+                          motherTongue={motherTongue}
+                          members={members}
+                        />
+                      </div>
+                    )}
+
                     {/* Leader Responsibilities */}
                     <div className="p-3 rounded-lg border bg-muted/50">
                       <h4 className="text-xs font-semibold mb-2 flex items-center gap-2">
@@ -1101,6 +1131,16 @@ export const LanguageCommunityPanel = ({
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Leader Dashboard Modal */}
+      {showLeaderDashboard && isLeader && (
+        <LeaderDashboard
+          currentUserId={currentUserId}
+          motherTongue={motherTongue}
+          members={members}
+          onClose={() => setShowLeaderDashboard(false)}
+        />
+      )}
 
       {/* Create Election Dialog */}
       <Dialog open={showCreateElectionDialog} onOpenChange={setShowCreateElectionDialog}>
