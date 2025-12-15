@@ -5,7 +5,7 @@
 
 import { lazy, Suspense, memo, startTransition } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Inline critical components - no lazy for auth path
 import AuthScreen from "./pages/AuthScreen";
@@ -154,7 +154,7 @@ AppShell.displayName = 'AppShell';
 
 const App = () => (
   <AppShell>
-    <MemoryRouter initialEntries={["/"]}>
+    <BrowserRouter>
       <Routes>
         {/* Auth route - eagerly loaded for instant render */}
         <Route path="/" element={<AuthScreen />} />
@@ -209,7 +209,7 @@ const App = () => (
         <Route path="/install" element={<LazyRoute component={InstallApp} />} />
         <Route path="*" element={<LazyRoute component={NotFound} />} />
       </Routes>
-    </MemoryRouter>
+    </BrowserRouter>
   </AppShell>
 );
 
