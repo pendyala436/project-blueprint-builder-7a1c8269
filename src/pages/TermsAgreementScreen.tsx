@@ -617,42 +617,9 @@ const TermsAgreementScreen = () => {
 
       if (profileError) throw profileError;
 
-      // Also save to gender-specific table (male_profiles or female_profiles)
-      // Include ALL registration data except email and gender (which is implicit in table name)
-      const genderProfileData: any = {
-        user_id: user.id,
-        full_name: fullName,
-        phone: phone,
-        date_of_birth: dateOfBirth || null,
-        age: age,
-        country: country,
-        state: state,
-        photo_url: photoUrl,
-        primary_language: primaryLanguage,
-        preferred_language: primaryLanguage,
-        bio: personalDetails.bio || null,
-        height_cm: personalDetails.height_cm || null,
-        occupation: personalDetails.occupation || null,
-        body_type: personalDetails.body_type || null,
-        education_level: personalDetails.education_level || null,
-        marital_status: personalDetails.marital_status || null,
-        religion: personalDetails.religion || null,
-        interests: personalDetails.interests || [],
-        life_goals: personalDetails.life_goals || [],
-        account_status: "active",
-        updated_at: new Date().toISOString(),
-      };
-
-      if (gender.toLowerCase() === "female") {
-        genderProfileData.approval_status = "pending";
-        await supabase
-          .from("female_profiles")
-          .upsert(genderProfileData, { onConflict: "user_id" });
-      } else {
-        await supabase
-          .from("male_profiles")
-          .upsert(genderProfileData, { onConflict: "user_id" });
-      }
+      // NOTE: All user data is now stored in the single 'profiles' table
+      // Gender-specific tables (male_profiles/female_profiles) are no longer used
+      // This simplifies the data model and ensures consistency
 
       // Save selfie as primary photo in user_photos
       if (photoUrl) {

@@ -344,20 +344,16 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      // Fetch user profile from female_profiles table
-      const { data: femaleProfile } = await supabase
-        .from("female_profiles")
-        .select("full_name, country, primary_language, preferred_language, date_of_birth")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Use data from main profiles table (single source of truth)
+      // mainProfile already fetched above contains all needed fields
 
-      // Use name from main profiles table first (registration data), then fall back to female_profiles
-      const fullName = mainProfile?.full_name || femaleProfile?.full_name;
+      // Use name from main profiles table
+      const fullName = mainProfile?.full_name;
       if (fullName) {
         setUserName(fullName.split(" ")[0]);
       }
 
-      // Get woman's mother tongue - use main profiles table first (registration data)
+      // Get woman's mother tongue - use main profiles table first
       const { data: womanLanguages } = await supabase
         .from("user_languages")
         .select("language_name, language_code")
@@ -367,15 +363,13 @@ const WomenDashboardScreen = () => {
       const womanLanguage = womanLanguages?.[0]?.language_name || 
                            mainProfile?.primary_language ||
                            mainProfile?.preferred_language ||
-                           femaleProfile?.primary_language || 
-                           femaleProfile?.preferred_language || 
                            "English";
       const womanLanguageCode = womanLanguages?.[0]?.language_code || "eng_Latn";
       setCurrentWomanLanguage(womanLanguage);
       setCurrentWomanLanguageCode(womanLanguageCode);
       
-      // Use country from main profiles table first (registration data)
-      const userCountryValue = mainProfile?.country || femaleProfile?.country || "";
+      // Use country from main profiles table
+      const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
       // Set all supported NLLB languages for women
@@ -383,7 +377,7 @@ const WomenDashboardScreen = () => {
 
       // Fetch all data with woman's language context
       await Promise.all([
-        fetchOnlineMen(user.id, womanLanguage, femaleProfile?.country || ""),
+        fetchOnlineMen(user.id, womanLanguage, userCountryValue),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
         fetchTodayEarnings(user.id)
@@ -1183,7 +1177,6 @@ const WomenDashboardScreen = () => {
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
-        profileType="female"
       />
 
       {/* Parallel Mini Chat Windows */}
