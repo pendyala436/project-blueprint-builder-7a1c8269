@@ -141,10 +141,10 @@ const PasswordSetupScreen = () => {
                   return (
                     <div
                       key={index}
-                      className={cn(
-                        "flex items-center gap-2 text-xs transition-all duration-200",
-                        met ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
-                      )}
+                    className={cn(
+                      "flex items-center gap-2 text-xs transition-all duration-200",
+                      met ? "text-success" : "text-muted-foreground"
+                    )}
                     >
                       {met ? (
                         <Check className="h-3 w-3" />
@@ -189,7 +189,7 @@ const PasswordSetupScreen = () => {
               {touched.confirm && confirmPassword.length > 0 && (
                 <p className={cn(
                   "text-xs flex items-center gap-1 animate-fade-in",
-                  passwordsMatch ? "text-green-600 dark:text-green-400" : "text-destructive"
+                  passwordsMatch ? "text-success" : "text-destructive"
                 )}>
                   {passwordsMatch ? (
                     <>

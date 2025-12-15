@@ -116,17 +116,17 @@ const IncomingCallModal = ({
         <div className="flex flex-col items-center text-center">
           {/* Animated ring effect */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" style={{ animationDuration: '1.5s' }} />
-            <div className="absolute inset-2 rounded-full bg-green-500/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
-            <Avatar className="w-28 h-28 relative z-10 border-4 border-green-500">
+            <div className="absolute inset-0 rounded-full bg-success/20 animate-ping" style={{ animationDuration: '1.5s' }} />
+            <div className="absolute inset-2 rounded-full bg-success/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
+            <Avatar className="w-28 h-28 relative z-10 border-4 border-success">
               <AvatarImage src={callerPhoto || undefined} />
-              <AvatarFallback className="text-3xl bg-gradient-to-br from-pink-500 to-purple-600 text-white">
+              <AvatarFallback className="text-3xl bg-gradient-to-br from-primary to-secondary text-white">
                 {callerName.charAt(0)}
               </AvatarFallback>
             </Avatar>
           </div>
 
-          <div className="flex items-center gap-2 mb-2 text-green-400">
+          <div className="flex items-center gap-2 mb-2 text-success">
             <Video className="w-5 h-5" />
             <span className="text-sm font-medium">Incoming Video Call</span>
           </div>
@@ -138,15 +138,16 @@ const IncomingCallModal = ({
             <Button
               variant="destructive"
               size="lg"
-              className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600"
+              className="rounded-full w-16 h-16"
               onClick={handleDecline}
             >
               <PhoneOff className="w-7 h-7" />
             </Button>
 
             <Button
+              variant="success"
               size="lg"
-              className="rounded-full w-16 h-16 bg-green-500 hover:bg-green-600 text-white"
+              className="rounded-full w-16 h-16"
               onClick={handleAnswer}
             >
               <Phone className="w-7 h-7" />

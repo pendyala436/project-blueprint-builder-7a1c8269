@@ -244,12 +244,12 @@ export const ActiveChatsSection = ({ maxDisplay = 5 }: ActiveChatsSectionProps) 
             <div className="relative">
               <Avatar className="h-10 w-10 border border-border">
                 <AvatarImage src={chat.photoUrl || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-rose-500/20 text-sm">
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-sm">
                   {chat.fullName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               {chat.isOnline && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-online rounded-full border-2 border-background" />
               )}
             </div>
             

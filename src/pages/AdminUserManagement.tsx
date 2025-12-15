@@ -608,11 +608,11 @@ const AdminUserManagement = () => {
   const getAccountStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
+        return <Badge variant="success"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>;
       case "blocked":
         return <Badge variant="destructive"><Ban className="h-3 w-3 mr-1" />Blocked</Badge>;
       case "suspended":
-        return <Badge className="bg-yellow-500"><Pause className="h-3 w-3 mr-1" />Suspended</Badge>;
+        return <Badge variant="warning"><Pause className="h-3 w-3 mr-1" />Suspended</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -623,14 +623,14 @@ const AdminUserManagement = () => {
     
     // Men are auto-approved
     if (gender?.toLowerCase() === "male") {
-      return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Auto-Approved</Badge>;
+      return <Badge variant="success"><CheckCircle className="h-3 w-3 mr-1" />Auto-Approved</Badge>;
     }
     
     switch (approval_status) {
       case "approved":
         return (
           <div className="flex flex-col gap-1">
-            <Badge className={ai_approved ? "bg-purple-500" : "bg-green-500"}>
+            <Badge className={ai_approved ? "bg-secondary text-secondary-foreground" : "bg-success text-success-foreground"}>
               {ai_approved ? <Bot className="h-3 w-3 mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
               {ai_approved ? "AI Approved" : "Approved"}
             </Badge>
@@ -752,19 +752,19 @@ const AdminUserManagement = () => {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Active</p>
-                  <p className="text-2xl font-bold text-green-500">{stats.activeUsers}</p>
+                  <p className="text-2xl font-bold text-success">{stats.activeUsers}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Blocked</p>
-                  <p className="text-2xl font-bold text-red-500">{stats.blockedUsers}</p>
+                  <p className="text-2xl font-bold text-destructive">{stats.blockedUsers}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Suspended</p>
-                  <p className="text-2xl font-bold text-yellow-500">{stats.suspendedUsers}</p>
+                  <p className="text-2xl font-bold text-warning">{stats.suspendedUsers}</p>
                 </CardContent>
               </Card>
               <Card>
