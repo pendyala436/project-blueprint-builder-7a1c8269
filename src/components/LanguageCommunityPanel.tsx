@@ -1264,14 +1264,16 @@ export const LanguageCommunityPanel = ({
                         </CardHeader>
                         <CardContent className="space-y-3 px-3 pb-3">
                           <p className="text-xs text-muted-foreground">
-                            {t('voteToApprove', 'Vote to approve a commissioner. Majority approval confirms the officer.')}
+                            {t('voteToApprove', 'Vote to approve a commissioner. Approval from all members confirms the officer.')}
                           </p>
                           {officerNominations.map((nomination) => {
                             const totalVotes = nomination.approvals + nomination.rejections;
                             const approvalRate = totalVotes > 0 
                               ? Math.round((nomination.approvals / totalVotes) * 100) 
                               : 0;
-                            const hasEnoughApproval = nomination.approvals > members.length / 2;
+                            // Require approval from all members (excluding the nominee)
+                            const eligibleVoters = members.filter(m => m.userId !== nomination.nomineeId).length;
+                            const hasEnoughApproval = nomination.approvals >= eligibleVoters && eligibleVoters > 0 && nomination.rejections === 0;
 
                             return (
                               <div key={nomination.id} className="p-3 rounded-lg border bg-card space-y-2">
@@ -1312,8 +1314,8 @@ export const LanguageCommunityPanel = ({
                                     />
                                   </div>
                                   <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>{approvalRate}% {t('approval', 'approval')}</span>
-                                    <span>{totalVotes}/{members.length} {t('voted', 'voted')}</span>
+                                    <span>{nomination.approvals}/{eligibleVoters} {t('approvals', 'approvals')} {t('needed', 'needed')}</span>
+                                    <span>{totalVotes}/{eligibleVoters} {t('voted', 'voted')}</span>
                                   </div>
                                 </div>
 
