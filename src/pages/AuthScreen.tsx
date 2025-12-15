@@ -129,6 +129,7 @@ const AuthScreen = () => {
     isSafari,
     isFirefox
   } = usePWA();
+  
   const browserName = isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'your browser';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,94 +138,112 @@ const AuthScreen = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showInstallInstructions, setShowInstallInstructions] = useState(false);
 
-  // Get OS-specific install instructions
-  const getOSInstructions = () => {
+  // Get OS-specific install instructions and actions
+  const getOSInstallInfo = () => {
+    const baseUrl = window.location.origin;
+    
     if (isIOS) {
       return {
-        title: "Install on iOS",
+        title: "Install on iPhone/iPad",
         icon: "🍎",
+        canAutoInstall: false,
         steps: [
-          "Tap the Share button (square with arrow) in Safari",
+          "Tap the Share button (□↑) at the bottom of Safari",
           "Scroll down and tap 'Add to Home Screen'",
-          "Tap 'Add' to confirm installation"
-        ]
+          "Tap 'Add' in the top right corner"
+        ],
+        note: "Make sure you're using Safari browser"
       };
     }
     if (isAndroid) {
       return {
         title: "Install on Android",
         icon: "🤖",
+        canAutoInstall: isInstallable,
         steps: [
-          "Tap the menu (⋮) in Chrome or your browser",
+          "Tap the menu (⋮) in your browser",
           "Tap 'Install app' or 'Add to Home screen'",
-          "Confirm by tapping 'Install'"
-        ]
+          "Tap 'Install' to confirm"
+        ],
+        note: "Works best in Chrome or Samsung Internet"
       };
     }
     if (isWindows) {
       return {
         title: "Install on Windows",
         icon: "🪟",
+        canAutoInstall: isInstallable,
         steps: [
-          `In ${browserName || 'Chrome/Edge'}, click the install icon (⊕) in the address bar`,
-          "Or click menu (⋯) → 'Install Meow Meow'",
-          "Click 'Install' to add to your Start menu"
-        ]
+          `Click the install icon (⊕) in ${browserName}'s address bar`,
+          "Or click menu (⋯) → 'Install Meow Meow...'",
+          "Click 'Install' to add to Start menu"
+        ],
+        note: "Works in Chrome, Edge, or Brave"
       };
     }
     if (isMacOS) {
       return {
-        title: "Install on macOS",
+        title: "Install on Mac",
         icon: "🍏",
+        canAutoInstall: isInstallable,
         steps: [
-          `In ${browserName || 'Chrome/Safari'}, click the install icon in the address bar`,
-          "Or use File menu → 'Install Meow Meow...'",
-          "The app will appear in your Applications folder"
-        ]
+          isSafari 
+            ? "Click File → Add to Dock" 
+            : `Click the install icon in ${browserName}'s address bar`,
+          "Or use browser menu → 'Install Meow Meow...'",
+          "The app will appear in your Applications/Dock"
+        ],
+        note: isSafari ? "Safari 17+ supports PWA installation" : "Works in Chrome or Edge"
       };
     }
     if (isLinux) {
       return {
         title: "Install on Linux",
         icon: "🐧",
+        canAutoInstall: isInstallable,
         steps: [
-          `In ${browserName || 'Chrome/Firefox'}, click the install icon in the address bar`,
+          `Click the install icon in ${browserName}'s address bar`,
           "Or click menu → 'Install app'",
-          "The app will be added to your applications"
-        ]
+          "The app will be added to your applications menu"
+        ],
+        note: "Works in Chrome, Edge, or Chromium"
       };
     }
     return {
       title: "Install App",
       icon: "📱",
+      canAutoInstall: isInstallable,
       steps: [
-        "Open this site in Chrome, Edge, or Safari",
-        "Look for the install icon in the address bar",
+        "Open this site in a supported browser (Chrome, Edge, Safari)",
+        "Look for the install icon (⊕) in the address bar",
         "Click 'Install' to add to your device"
-      ]
+      ],
+      note: "PWA installation supported on most modern browsers"
     };
   };
 
   const handleInstallClick = async () => {
-    console.log('Install button clicked', { isInstallable, isInstalled, isIOS, isAndroid, isWindows, isMacOS, isLinux });
+    const osInfo = getOSInstallInfo();
+    console.log('Install clicked:', { 
+      os: osInfo.title, 
+      canAutoInstall: osInfo.canAutoInstall,
+      isInstallable 
+    });
     
-    if (isInstallable) {
-      // Browser supports native install prompt
+    if (osInfo.canAutoInstall && isInstallable) {
       try {
         const installed = await install();
-        console.log('Install result:', installed);
-        if (!installed) {
-          setShowInstallInstructions(true);
+        if (installed) {
+          console.log('App installed successfully!');
+          return;
         }
       } catch (err) {
-        console.error('Install error:', err);
-        setShowInstallInstructions(true);
+        console.error('Auto-install failed:', err);
       }
-    } else {
-      // Show manual instructions for this platform
-      console.log('Showing manual instructions');
-      setShowInstallInstructions(true);
     }
+    
+    // Show manual instructions
+    setShowInstallInstructions(true);
   };
 
   const validateEmail = useCallback((email: string) => {
@@ -449,16 +468,21 @@ const AuthScreen = () => {
                 {showInstallInstructions && (
                   <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{getOSInstructions().icon}</span>
+                      <span className="text-xl">{getOSInstallInfo().icon}</span>
                       <p className="text-sm font-medium text-foreground">
-                        {getOSInstructions().title}
+                        {getOSInstallInfo().title}
                       </p>
                     </div>
                     <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                      {getOSInstructions().steps.map((step, i) => (
+                      {getOSInstallInfo().steps.map((step, i) => (
                         <li key={i}>{step}</li>
                       ))}
                     </ol>
+                    {getOSInstallInfo().note && (
+                      <p className="text-xs text-muted-foreground/70 italic">
+                        💡 {getOSInstallInfo().note}
+                      </p>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm" 
