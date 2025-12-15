@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Globe, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import SearchableSelect from "@/components/SearchableSelect";
+import FormCard from "@/components/FormCard";
+import ScreenTitle from "@/components/ScreenTitle";
 import { languages } from "@/data/languages";
 import { countries } from "@/data/countries";
 import { toast } from "@/hooks/use-toast";
+
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 const LanguageCountryScreen = () => {
   const navigate = useNavigate();
@@ -37,47 +40,45 @@ const LanguageCountryScreen = () => {
       return;
     }
 
-    // Store preferences in sessionStorage for later use
     sessionStorage.setItem("selectedLanguage", selectedLanguage);
     sessionStorage.setItem("selectedCountry", selectedCountry);
 
     toast({
-      title: "Preferences saved! 🎉",
+      title: "Preferences saved!",
       description: "Let's complete your profile.",
     });
     
-    // Navigate to basic info screen
     navigate("/basic-info");
-  };
-
-  const handleBack = () => {
-    navigate("/");
   };
 
   const isComplete = selectedLanguage && selectedCountry;
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
+      {/* Aurora Background */}
+      <Suspense fallback={
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
+      }>
+        <AuroraBackground />
+      </Suspense>
+
       {/* Header */}
-      <header className="px-6 pt-8 pb-4">
+      <header className="px-6 pt-8 pb-4 relative z-10">
         <ProgressIndicator currentStep={1} totalSteps={10} />
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-6 pb-8">
+      <main className="flex-1 flex flex-col items-center px-6 pb-8 relative z-10">
         {/* Logo & Title */}
-        <div className="text-center mb-10 animate-fade-in">
-          <MeowLogo size="lg" className="mx-auto mb-6" />
-          <h1 className="font-display text-4xl font-bold text-foreground mb-3">
-            MEOW MEOW
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-xs mx-auto">
-            Find your purrfect match worldwide
-          </p>
-        </div>
+        <ScreenTitle
+          title="MEOW MEOW"
+          subtitle="Find your purrfect match worldwide"
+          logoSize="lg"
+          className="mb-10"
+        />
 
         {/* Selection Card */}
-        <div className="w-full max-w-md bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-card border border-border/30 animate-slide-up">
+        <FormCard>
           <div className="space-y-6">
             {/* Language Section */}
             <div className="space-y-3">
@@ -115,7 +116,7 @@ const LanguageCountryScreen = () => {
               </p>
             </div>
           </div>
-        </div>
+        </FormCard>
 
         {/* Spacer */}
         <div className="flex-1 min-h-8" />

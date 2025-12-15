@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import MeowLogo from "@/components/MeowLogo";
-import { Eye, EyeOff, Lock, Check, X, ArrowRight } from "lucide-react";
+import FormCard from "@/components/FormCard";
+import { Eye, EyeOff, Lock, Check, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInYears } from "date-fns";
+
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 const PasswordSetupScreen = () => {
   const navigate = useNavigate();
@@ -241,17 +243,39 @@ const PasswordSetupScreen = () => {
     return (strength / 5) * 100;
   };
 
+  const handleBack = () => {
+    navigate("/personal-details");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
+      {/* Aurora Background */}
+      <Suspense fallback={
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
+      }>
+        <AuroraBackground />
+      </Suspense>
+
       {/* Header */}
-      <header className="p-6 flex items-center justify-between">
-        <MeowLogo size="sm" />
-        <ProgressIndicator currentStep={4} totalSteps={10} />
+      <header className="px-6 pt-8 pb-4 relative z-10">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleBack}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <ProgressIndicator currentStep={4} totalSteps={10} />
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col justify-center px-6 pb-12 animate-fade-in">
-        <div className="max-w-md mx-auto w-full space-y-8">
+      <main className="flex-1 flex flex-col justify-center px-6 pb-12 animate-fade-in relative z-10">
+        <FormCard className="space-y-8">
           {/* Title Section */}
           <div className="text-center space-y-3">
             <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
@@ -420,9 +444,9 @@ const PasswordSetupScreen = () => {
 
           {/* Security Note */}
           <p className="text-center text-sm text-muted-foreground">
-            🔒 Your password is encrypted and secure
+            Your password is encrypted and secure
           </p>
-        </div>
+        </FormCard>
       </main>
     </div>
   );

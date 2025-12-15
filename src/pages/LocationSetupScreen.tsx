@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Navigation, Loader2, Globe } from "lucide-react";
+import { MapPin, Navigation, Loader2, Globe, ArrowLeft } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { countries } from "@/data/countries";
 import { getStatesForCountry, hasStates } from "@/data/states";
 import { supabase } from "@/integrations/supabase/client";
+
+const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 const LocationSetupScreen = () => {
   const navigate = useNavigate();
@@ -157,21 +159,39 @@ const LocationSetupScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-background text-foreground">
+      {/* Aurora Background */}
+      <Suspense fallback={
+        <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
+      }>
+        <AuroraBackground />
+      </Suspense>
+
       {/* Header */}
-      <header className="p-6 flex justify-between items-center">
-        <MeowLogo />
-        <ProgressIndicator currentStep={6} totalSteps={10} />
+      <header className="px-6 pt-8 pb-4 relative z-10">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/photo-upload")}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <ProgressIndicator currentStep={6} totalSteps={10} />
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-6">
-        <Card className="w-full max-w-lg p-8 space-y-8 bg-card/80 backdrop-blur-sm border-border/50 shadow-xl">
+      <main className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <Card className="w-full max-w-lg p-8 space-y-8 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
               <Globe className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Your Location</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">Your Location</h1>
             <p className="text-muted-foreground">
               Help us personalize your experience
             </p>
