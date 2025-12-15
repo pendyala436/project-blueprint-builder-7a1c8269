@@ -17,6 +17,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         gradient: "gradient-primary text-primary-foreground hover:opacity-90 active:opacity-80",
         hero: "gradient-primary text-primary-foreground font-display font-bold text-base hover:opacity-90 active:opacity-80",
+        // Semantic status variants - use these for consistent theming
+        success: "bg-success text-success-foreground hover:bg-success/90 active:bg-success/80",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90 active:bg-warning/80",
+        info: "bg-info text-info-foreground hover:bg-info/90 active:bg-info/80",
         // Aurora themed variants - optimized for performance
         aurora: "gradient-aurora text-white aurora-glow hover:opacity-95 active:opacity-85",
         auroraOutline: "border-2 border-primary bg-transparent text-primary hover:bg-primary/10 hover:border-accent active:bg-primary/20",

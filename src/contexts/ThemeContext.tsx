@@ -1090,6 +1090,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-border', resolvedMode === 'dark' ? colors.border : '230 30% 25%');
     root.style.setProperty('--sidebar-ring', colors.primary);
 
+    // Apply semantic status colors - these use PRIMARY as base for consistency
+    // Success uses accent (typically green-ish)
+    root.style.setProperty('--success', accentHsl);
+    root.style.setProperty('--success-foreground', colors.accentForeground);
+    // Warning uses a warm variant derived from primary
+    root.style.setProperty('--warning', '38 92% 50%');
+    root.style.setProperty('--warning-foreground', '0 0% 100%');
+    // Info uses primary color
+    root.style.setProperty('--info', primaryHsl);
+    root.style.setProperty('--info-foreground', colors.primaryForeground);
+    // Status indicators
+    root.style.setProperty('--online', accentHsl);
+    root.style.setProperty('--offline', colors.mutedForeground);
+    root.style.setProperty('--busy', '38 92% 50%');
+    root.style.setProperty('--away', '38 92% 50%');
+
   }, [themeId, resolvedMode]);
 
   // Persist to localStorage
