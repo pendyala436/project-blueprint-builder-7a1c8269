@@ -115,13 +115,108 @@ PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { isInstallable, isInstalled, install, isIOS, getInstallInstructions } = usePWA();
+  const { 
+    isInstallable, 
+    isInstalled, 
+    install, 
+    isIOS, 
+    isAndroid, 
+    isWindows, 
+    isMacOS, 
+    isLinux,
+    isChrome,
+    isEdge,
+    isSafari,
+    isFirefox
+  } = usePWA();
+  const browserName = isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'your browser';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
+
+  // Get OS-specific install instructions
+  const getOSInstructions = () => {
+    if (isIOS) {
+      return {
+        title: "Install on iOS",
+        icon: "🍎",
+        steps: [
+          "Tap the Share button (square with arrow) in Safari",
+          "Scroll down and tap 'Add to Home Screen'",
+          "Tap 'Add' to confirm installation"
+        ]
+      };
+    }
+    if (isAndroid) {
+      return {
+        title: "Install on Android",
+        icon: "🤖",
+        steps: [
+          "Tap the menu (⋮) in Chrome or your browser",
+          "Tap 'Install app' or 'Add to Home screen'",
+          "Confirm by tapping 'Install'"
+        ]
+      };
+    }
+    if (isWindows) {
+      return {
+        title: "Install on Windows",
+        icon: "🪟",
+        steps: [
+          `In ${browserName || 'Chrome/Edge'}, click the install icon (⊕) in the address bar`,
+          "Or click menu (⋯) → 'Install Meow Meow'",
+          "Click 'Install' to add to your Start menu"
+        ]
+      };
+    }
+    if (isMacOS) {
+      return {
+        title: "Install on macOS",
+        icon: "🍏",
+        steps: [
+          `In ${browserName || 'Chrome/Safari'}, click the install icon in the address bar`,
+          "Or use File menu → 'Install Meow Meow...'",
+          "The app will appear in your Applications folder"
+        ]
+      };
+    }
+    if (isLinux) {
+      return {
+        title: "Install on Linux",
+        icon: "🐧",
+        steps: [
+          `In ${browserName || 'Chrome/Firefox'}, click the install icon in the address bar`,
+          "Or click menu → 'Install app'",
+          "The app will be added to your applications"
+        ]
+      };
+    }
+    return {
+      title: "Install App",
+      icon: "📱",
+      steps: [
+        "Open this site in Chrome, Edge, or Safari",
+        "Look for the install icon in the address bar",
+        "Click 'Install' to add to your device"
+      ]
+    };
+  };
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      // Browser supports native install prompt
+      const installed = await install();
+      if (!installed) {
+        setShowInstallInstructions(true);
+      }
+    } else {
+      // Show manual instructions
+      setShowInstallInstructions(true);
+    }
+  };
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -334,16 +429,7 @@ const AuthScreen = () => {
                   variant="outline"
                   size="lg"
                   className="w-full border-primary/30 hover:bg-primary/10 group"
-                  onClick={() => {
-                    if (isIOS) {
-                      setShowIOSInstructions(true);
-                    } else if (isInstallable) {
-                      install();
-                    } else {
-                      // Show instructions for browsers that don't support auto-install
-                      setShowIOSInstructions(true);
-                    }
-                  }}
+                  onClick={handleInstallClick}
                 >
                   <Download className="w-5 h-5 mr-2 group-hover:animate-bounce" />
                   <Smartphone className="w-4 h-4 mr-2" />
@@ -351,31 +437,24 @@ const AuthScreen = () => {
                 </Button>
 
                 {/* Installation Instructions */}
-                {showIOSInstructions && (
+                {showInstallInstructions && (
                   <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
-                    <p className="text-sm font-medium text-foreground">
-                      {isIOS ? 'To install on iOS:' : 'To install this app:'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{getOSInstructions().icon}</span>
+                      <p className="text-sm font-medium text-foreground">
+                        {getOSInstructions().title}
+                      </p>
+                    </div>
                     <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                      {isIOS ? (
-                        <>
-                          <li>Tap the Share button in Safari</li>
-                          <li>Scroll down and tap "Add to Home Screen"</li>
-                          <li>Tap "Add" to confirm</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>Open this site in Chrome, Edge, or Safari</li>
-                          <li>Look for the install icon in the address bar</li>
-                          <li>Or use browser menu → "Install app" / "Add to Home Screen"</li>
-                        </>
-                      )}
+                      {getOSInstructions().steps.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
                     </ol>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className="w-full"
-                      onClick={() => setShowIOSInstructions(false)}
+                      onClick={() => setShowInstallInstructions(false)}
                     >
                       Got it
                     </Button>
