@@ -48,7 +48,7 @@ const LanguageCountryScreen = () => {
       description: "Let's complete your profile.",
     });
     
-    navigate("/basic-info");
+    navigate("/ai-verification");
   };
 
   const isComplete = selectedLanguage && selectedCountry;
