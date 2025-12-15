@@ -41,6 +41,19 @@ export function PWAInstallPrompt() {
     }
   }, [isInstallable, isInstalled, install, autoPromptTriggered]);
 
+  // Check if previously dismissed (within 7 days)
+  useEffect(() => {
+    const dismissedAt = localStorage.getItem('pwa-install-dismissed');
+    if (dismissedAt) {
+      const daysSinceDismissed = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSinceDismissed < 7) {
+        setDismissed(true);
+      } else {
+        localStorage.removeItem('pwa-install-dismissed');
+      }
+    }
+  }, []);
+
   // Show manual prompt for iOS or when auto-prompt isn't available
   useEffect(() => {
     if (dismissed || isInstalled || isInStandaloneMode) return;
@@ -69,10 +82,29 @@ export function PWAInstallPrompt() {
   const instructions = getInstallInstructions();
   const isIOSDevice = isIOS || isIPadOS;
 
+  const handleInstall = async () => {
+    if (isInstallable) {
+      // Native install prompt available
+      const result = await install();
+      if (result) {
+        setDismissed(true);
+      }
+    } else {
+      // Manual install - just dismiss, user will follow instructions
+      setDismissed(true);
+    }
+  };
+
+  const handleIgnore = () => {
+    setDismissed(true);
+    // Store in localStorage to not show again for 7 days
+    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+  };
+
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 bg-card border border-border rounded-xl p-4 shadow-lg animate-in slide-in-from-bottom-4">
       <button 
-        onClick={() => setDismissed(true)}
+        onClick={handleIgnore}
         className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground"
       >
         <X className="h-4 w-4" />
@@ -96,17 +128,28 @@ export function PWAInstallPrompt() {
             ) : isMacOS && isSafari ? (
               <>Click <strong>File</strong> → <strong>Add to Dock</strong></>
             ) : (
-              <>Look for the install icon in your browser's address bar or menu</>
+              <>Get faster access with the installed app</>
             )}
           </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setDismissed(true)}
-            className="w-full"
-          >
-            Got it
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleInstall}
+              className="flex-1"
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Install
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleIgnore}
+              className="flex-1"
+            >
+              Not Now
+            </Button>
+          </div>
         </div>
       </div>
     </div>
