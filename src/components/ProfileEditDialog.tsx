@@ -58,7 +58,18 @@ interface ProfileData {
   marital_status: string | null;
   religion: string | null;
   interests: string[] | null;
+  life_goals: string[] | null;
   primary_language: string | null;
+  // Lifestyle fields
+  smoking_habit: string | null;
+  drinking_habit: string | null;
+  dietary_preference: string | null;
+  fitness_level: string | null;
+  has_children: boolean | null;
+  pet_preference: string | null;
+  travel_frequency: string | null;
+  personality_type: string | null;
+  zodiac_sign: string | null;
 }
 
 /**
@@ -133,6 +144,67 @@ const RELIGIONS = [
   "Prefer not to say"
 ];
 
+/**
+ * Smoking habit options
+ */
+const SMOKING_HABITS = ["Never", "Occasionally", "Regularly", "Trying to Quit"];
+
+/**
+ * Drinking habit options
+ */
+const DRINKING_HABITS = ["Never", "Socially", "Occasionally", "Regularly"];
+
+/**
+ * Dietary preference options
+ */
+const DIETARY_PREFERENCES = ["No Preference", "Vegetarian", "Vegan", "Non-Vegetarian", "Eggetarian", "Pescatarian"];
+
+/**
+ * Fitness level options
+ */
+const FITNESS_LEVELS = ["Sedentary", "Light Exercise", "Moderate", "Very Active", "Athlete"];
+
+/**
+ * Pet preference options
+ */
+const PET_PREFERENCES = ["Love Pets", "Have Pets", "No Pets", "Allergic to Pets"];
+
+/**
+ * Travel frequency options
+ */
+const TRAVEL_FREQUENCIES = ["Rarely", "Occasionally", "Frequently", "Love Traveling"];
+
+/**
+ * Personality type options
+ */
+const PERSONALITY_TYPES = ["Introvert", "Extrovert", "Ambivert"];
+
+/**
+ * Zodiac sign options
+ */
+const ZODIAC_SIGNS = [
+  "Aries ♈", "Taurus ♉", "Gemini ♊", "Cancer ♋", "Leo ♌", "Virgo ♍",
+  "Libra ♎", "Scorpio ♏", "Sagittarius ♐", "Capricorn ♑", "Aquarius ♒", "Pisces ♓"
+];
+
+/**
+ * Interest options
+ */
+const INTEREST_OPTIONS = [
+  "Music", "Movies", "Travel", "Reading", "Sports", "Cooking", "Photography",
+  "Art", "Gaming", "Fitness", "Dancing", "Writing", "Technology", "Fashion",
+  "Nature", "Yoga", "Meditation", "Food", "Pets", "Adventure"
+];
+
+/**
+ * Life goal options
+ */
+const LIFE_GOAL_OPTIONS = [
+  "Career Growth", "Family", "Travel the World", "Financial Freedom", 
+  "Health & Fitness", "Education", "Start a Business", "Spiritual Growth",
+  "Creative Pursuits", "Community Service", "Finding Love", "Personal Development"
+];
+
 // ==================== Component ====================
 
 const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }: ProfileEditDialogProps) => {
@@ -154,7 +226,17 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
     marital_status: null,
     religion: null,
     interests: null,
+    life_goals: null,
     primary_language: null,
+    smoking_habit: null,
+    drinking_habit: null,
+    dietary_preference: null,
+    fitness_level: null,
+    has_children: null,
+    pet_preference: null,
+    travel_frequency: null,
+    personality_type: null,
+    zodiac_sign: null,
   });
   
   // Original profile data to track changes
@@ -328,7 +410,17 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
           marital_status: data.marital_status,
           religion: data.religion,
           interests: data.interests,
+          life_goals: data.life_goals,
           primary_language: data.primary_language,
+          smoking_habit: data.smoking_habit,
+          drinking_habit: data.drinking_habit,
+          dietary_preference: data.dietary_preference,
+          fitness_level: data.fitness_level,
+          has_children: data.has_children,
+          pet_preference: data.pet_preference,
+          travel_frequency: data.travel_frequency,
+          personality_type: data.personality_type,
+          zodiac_sign: data.zodiac_sign,
         };
         setProfile(profileData);
         setOriginalProfile(profileData);
@@ -371,8 +463,18 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
         marital_status: profile.marital_status,
         religion: profile.religion,
         interests: profile.interests,
+        life_goals: profile.life_goals,
         primary_language: userLanguage?.language_name || profile.primary_language,
         preferred_language: userLanguage?.language_name || profile.primary_language,
+        smoking_habit: profile.smoking_habit,
+        drinking_habit: profile.drinking_habit,
+        dietary_preference: profile.dietary_preference,
+        fitness_level: profile.fitness_level,
+        has_children: profile.has_children,
+        pet_preference: profile.pet_preference,
+        travel_frequency: profile.travel_frequency,
+        personality_type: profile.personality_type,
+        zodiac_sign: profile.zodiac_sign,
         updated_at: new Date().toISOString(),
       };
 
@@ -891,6 +993,260 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated, profileType }
               />
               <p className="text-xs text-muted-foreground text-right">
                 {(profile.bio?.length || 0)}/500 characters
+              </p>
+            </div>
+
+            {/* ==================== Lifestyle Section ==================== */}
+            <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
+              <h3 className="text-sm font-semibold text-foreground">Lifestyle</h3>
+              
+              {/* Smoking & Drinking */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Smoking</Label>
+                  <Select
+                    value={profile.smoking_habit || ""}
+                    onValueChange={(value) => updateField("smoking_habit", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SMOKING_HABITS.map((habit) => (
+                        <SelectItem key={habit} value={habit.toLowerCase()}>
+                          {habit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Drinking</Label>
+                  <Select
+                    value={profile.drinking_habit || ""}
+                    onValueChange={(value) => updateField("drinking_habit", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DRINKING_HABITS.map((habit) => (
+                        <SelectItem key={habit} value={habit.toLowerCase()}>
+                          {habit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Diet & Fitness */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Diet</Label>
+                  <Select
+                    value={profile.dietary_preference || ""}
+                    onValueChange={(value) => updateField("dietary_preference", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIETARY_PREFERENCES.map((diet) => (
+                        <SelectItem key={diet} value={diet.toLowerCase().replace(/ /g, '_')}>
+                          {diet}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Fitness Level</Label>
+                  <Select
+                    value={profile.fitness_level || ""}
+                    onValueChange={(value) => updateField("fitness_level", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FITNESS_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level.toLowerCase().replace(/ /g, '_')}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Pets & Travel */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Pets</Label>
+                  <Select
+                    value={profile.pet_preference || ""}
+                    onValueChange={(value) => updateField("pet_preference", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PET_PREFERENCES.map((pref) => (
+                        <SelectItem key={pref} value={pref.toLowerCase().replace(/ /g, '_')}>
+                          {pref}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Travel</Label>
+                  <Select
+                    value={profile.travel_frequency || ""}
+                    onValueChange={(value) => updateField("travel_frequency", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRAVEL_FREQUENCIES.map((freq) => (
+                        <SelectItem key={freq} value={freq.toLowerCase().replace(/ /g, '_')}>
+                          {freq}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Has Children */}
+              <div className="space-y-2">
+                <Label className="text-xs">Do you have children?</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={profile.has_children === true ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => updateField("has_children", profile.has_children === true ? null : true)}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={profile.has_children === false ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => updateField("has_children", profile.has_children === false ? null : false)}
+                  >
+                    No
+                  </Button>
+                </div>
+              </div>
+
+              {/* Personality & Zodiac */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Personality</Label>
+                  <Select
+                    value={profile.personality_type || ""}
+                    onValueChange={(value) => updateField("personality_type", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PERSONALITY_TYPES.map((type) => (
+                        <SelectItem key={type} value={type.toLowerCase()}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Zodiac Sign</Label>
+                  <Select
+                    value={profile.zodiac_sign || ""}
+                    onValueChange={(value) => updateField("zodiac_sign", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ZODIAC_SIGNS.map((sign) => (
+                        <SelectItem key={sign} value={sign.split(' ')[0].toLowerCase()}>
+                          {sign}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* ==================== Interests Section ==================== */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Interests (select up to 10)</Label>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_OPTIONS.map((interest) => {
+                  const isSelected = profile.interests?.includes(interest);
+                  return (
+                    <Button
+                      key={interest}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        const current = profile.interests || [];
+                        if (isSelected) {
+                          updateField("interests", current.filter(i => i !== interest));
+                        } else if (current.length < 10) {
+                          updateField("interests", [...current, interest]);
+                        }
+                      }}
+                    >
+                      {interest}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(profile.interests?.length || 0)}/10 selected
+              </p>
+            </div>
+
+            {/* ==================== Life Goals Section ==================== */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Life Goals (select up to 5)</Label>
+              <div className="flex flex-wrap gap-2">
+                {LIFE_GOAL_OPTIONS.map((goal) => {
+                  const isSelected = profile.life_goals?.includes(goal);
+                  return (
+                    <Button
+                      key={goal}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        const current = profile.life_goals || [];
+                        if (isSelected) {
+                          updateField("life_goals", current.filter(g => g !== goal));
+                        } else if (current.length < 5) {
+                          updateField("life_goals", [...current, goal]);
+                        }
+                      }}
+                    >
+                      {goal}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(profile.life_goals?.length || 0)}/5 selected
               </p>
             </div>
 
