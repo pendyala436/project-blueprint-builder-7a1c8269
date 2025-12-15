@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, ArrowLeft, ArrowRight, Loader2, ShieldCheck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 
 const ForgotPasswordScreen = () => {
   const navigate = useNavigate();
@@ -154,25 +155,21 @@ const ForgotPasswordScreen = () => {
               )}
             </div>
 
-            {/* Phone Input */}
+            {/* Phone Input with Country Code */}
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-sm font-semibold flex items-center gap-2">
                 <Phone className="w-4 h-4 text-primary" />
                 Phone Number
               </Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="Enter your phone number"
+              <PhoneInputWithCode
                 value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value);
+                onChange={(value) => {
+                  setPhone(value);
                   setPhoneError(undefined);
                 }}
-                className={cn(
-                  "h-12 rounded-xl border-2 transition-all bg-background/50 backdrop-blur-sm",
-                  phoneError ? "border-destructive" : "border-input focus:border-primary"
-                )}
+                error={!!phoneError}
+                placeholder="Enter your phone number"
+                defaultCountryCode="IN"
               />
               {phoneError && (
                 <p className="text-xs text-destructive">{phoneError}</p>
