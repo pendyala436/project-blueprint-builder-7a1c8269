@@ -436,7 +436,8 @@ const TermsAgreementScreen = () => {
         return;
       }
 
-      const { error } = await supabase
+      // Save all consent data
+      const { error: consentError } = await supabase
         .from("user_consent")
         .upsert({
           user_id: user.id,
@@ -449,19 +450,150 @@ const TermsAgreementScreen = () => {
           user_agent: navigator.userAgent,
         });
 
-      if (error) throw error;
+      if (consentError) throw consentError;
+
+      // Get registration data from localStorage
+      const fullName = localStorage.getItem("userName") || "";
+      const gender = localStorage.getItem("userGender") || "";
+      const dateOfBirth = localStorage.getItem("userDateOfBirth") || "";
+      const country = localStorage.getItem("userCountry") || "";
+      const state = localStorage.getItem("userState") || "";
+      const primaryLanguage = localStorage.getItem("userPrimaryLanguage") || "";
+      const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
+      const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
+
+      // Calculate age from DOB
+      let age: number | null = null;
+      if (dateOfBirth) {
+        const dob = new Date(dateOfBirth);
+        const today = new Date();
+        age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+      }
+
+      // Upload selfie photo if exists
+      let photoUrl: string | null = null;
+      if (pendingPhotoData && pendingPhotoData.startsWith("data:image")) {
+        const base64Data = pendingPhotoData.split(",")[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "image/jpeg" });
+        
+        const fileName = `${user.id}/selfie_${Date.now()}.jpg`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("profile-photos")
+          .upload(fileName, blob, { contentType: "image/jpeg", upsert: true });
+        
+        if (!uploadError && uploadData) {
+          const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(fileName);
+          photoUrl = urlData.publicUrl;
+        }
+      }
+
+      // Update profile with all registration data
+      const profileData: any = {
+        user_id: user.id,
+        full_name: fullName,
+        gender: gender.toLowerCase(),
+        date_of_birth: dateOfBirth || null,
+        age: age,
+        country: country,
+        state: state,
+        primary_language: primaryLanguage,
+        photo_url: photoUrl,
+        account_status: "active",
+        approval_status: gender.toLowerCase() === "female" ? "pending" : "approved",
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert(profileData, { onConflict: "user_id" });
+
+      if (profileError) throw profileError;
+
+      // Save selfie as primary photo in user_photos
+      if (photoUrl) {
+        await supabase.from("user_photos").upsert({
+          user_id: user.id,
+          photo_url: photoUrl,
+          photo_type: "selfie",
+          is_primary: true,
+          display_order: 0,
+        }, { onConflict: "user_id,photo_url" });
+      }
+
+      // Upload and save additional photos
+      for (let i = 0; i < pendingAdditionalPhotos.length; i++) {
+        const photoData = pendingAdditionalPhotos[i];
+        if (photoData && photoData.startsWith("data:image")) {
+          const base64Data = photoData.split(",")[1];
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let j = 0; j < byteCharacters.length; j++) {
+            byteNumbers[j] = byteCharacters.charCodeAt(j);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: "image/jpeg" });
+          
+          const fileName = `${user.id}/photo_${i + 1}_${Date.now()}.jpg`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("profile-photos")
+            .upload(fileName, blob, { contentType: "image/jpeg", upsert: true });
+          
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage.from("profile-photos").getPublicUrl(fileName);
+            await supabase.from("user_photos").insert({
+              user_id: user.id,
+              photo_url: urlData.publicUrl,
+              photo_type: "gallery",
+              is_primary: false,
+              display_order: i + 1,
+            });
+          }
+        }
+      }
+
+      // Create wallet for user
+      await supabase.from("wallets").upsert({
+        user_id: user.id,
+        balance: 0,
+        currency: "INR",
+      }, { onConflict: "user_id" });
+
+      // Clear localStorage registration data
+      localStorage.removeItem("pendingPhotoData");
+      localStorage.removeItem("pendingAdditionalPhotos");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userGender");
+      localStorage.removeItem("userDateOfBirth");
+      localStorage.removeItem("userCountry");
+      localStorage.removeItem("userState");
+      localStorage.removeItem("userPrimaryLanguage");
 
       toast({
-        title: "All Policies Accepted",
-        description: "Thank you for agreeing to our policies. Proceeding to verification...",
+        title: "Registration Complete!",
+        description: "Your account has been created successfully.",
       });
 
-      navigate("/ai-processing");
+      // Navigate based on gender
+      if (gender.toLowerCase() === "female") {
+        navigate("/approval-pending");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
-      console.error("Error saving consent:", error);
+      console.error("Error saving registration:", error);
       toast({
         title: "Error",
-        description: "Failed to save your consent. Please try again.",
+        description: "Failed to complete registration. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -484,7 +616,7 @@ const TermsAgreementScreen = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/language-preferences")}
+            onClick={() => navigate("/photo-upload")}
             className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -614,7 +746,7 @@ const TermsAgreementScreen = () => {
           <div className="flex gap-3">
             <Button
               variant="auroraOutline"
-              onClick={() => navigate("/language-preferences")}
+              onClick={() => navigate("/photo-upload")}
               className="flex-1 h-12"
             >
               Back
