@@ -314,16 +314,21 @@ const AuthScreen = () => {
         </Card>
 
         {/* App Installation Guide Download */}
-        <a 
-          href="/app-installation-guide.txt" 
-          download="App-Installation-Guide.txt"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            const link = document.createElement('a');
+            link.href = '/app-installation-guide.txt';
+            link.download = 'App-Installation-Guide.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }}
           className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           <Download className="h-4 w-4" />
           <span>Download App Installation Guide (All Devices)</span>
-        </a>
+        </button>
       </main>
     </div>
   );
