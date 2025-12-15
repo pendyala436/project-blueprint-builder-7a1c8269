@@ -1337,7 +1337,7 @@ const ChatScreen = () => {
                 )}
                 {/* Online status indicator dot */}
                 <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${
-                  chatPartner.isOnline ? "bg-emerald-500" : "bg-muted-foreground"
+                  chatPartner.isOnline ? "bg-online" : "bg-muted-foreground"
                 }`} />
               </div>
 
@@ -1347,7 +1347,7 @@ const ChatScreen = () => {
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   {/* Online/Offline status text */}
                   {chatPartner.isOnline ? (
-                    <span className="text-emerald-500">Online</span>
+                    <span className="text-online">Online</span>
                   ) : (
                     <span>Offline</span>
                   )}
@@ -1544,8 +1544,8 @@ const ChatScreen = () => {
 
       {/* Your own block warning */}
       {isBlocked && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
-          <p className="text-sm text-amber-600 text-center">
+        <div className="bg-warning/10 border-b border-warning/20 px-4 py-2">
+          <p className="text-sm text-warning text-center">
             You have blocked this user. Unblock to send messages.
           </p>
         </div>
@@ -1553,8 +1553,8 @@ const ChatScreen = () => {
 
       {/* ============= TRANSLATION INFO BAR ============= */}
       {chatPartner && currentUserLanguage !== chatPartner.preferredLanguage && showTranslations && (
-        <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-2">
-          <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+        <div className="bg-info/10 border-b border-info/20 px-4 py-2">
+          <div className="flex items-center justify-center gap-2 text-sm text-info">
             <Languages className="w-4 h-4" />
             <span>Auto-translating: <strong>{currentUserLanguage}</strong> ↔ <strong>{chatPartner.preferredLanguage}</strong></span>
             <span className="text-xs opacity-75">(NLLB-200)</span>
@@ -1703,8 +1703,8 @@ const ChatScreen = () => {
 
                         {/* Translation preview for sender */}
                         {showTranslations && isMine && message.isTranslated && message.translatedMessage && (
-                          <div className="px-4 py-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 rounded-br-md">
-                            <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mb-1">
+                          <div className="px-4 py-2 rounded-2xl bg-info/10 border border-info/20 rounded-br-md">
+                            <p className="text-xs text-info flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
                               They see
                             </p>

@@ -34,12 +34,12 @@ const RegistrationCompleteScreen = () => {
 
   const colors = [
     "bg-primary",
-    "bg-rose-500",
-    "bg-amber-500",
-    "bg-emerald-500",
-    "bg-violet-500",
-    "bg-blue-500",
-    "bg-pink-500",
+    "bg-accent",
+    "bg-warning",
+    "bg-success",
+    "bg-secondary",
+    "bg-info",
+    "bg-primary",
   ];
 
   const generateConfetti = useCallback(() => {
@@ -283,8 +283,8 @@ const RegistrationCompleteScreen = () => {
       {/* Background Decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute top-1/4 -left-20 w-64 h-64 rounded-full bg-gradient-to-br from-primary to-primary/60 opacity-10 blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-gradient-to-br from-rose-500 to-amber-500 opacity-10 blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 opacity-5 blur-3xl" />
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-gradient-to-br from-accent to-warning opacity-10 blur-3xl animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-br from-secondary to-primary opacity-5 blur-3xl" />
       </div>
     </div>
   );

@@ -492,45 +492,45 @@ const AdminGiftPricing = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5">
+          <Card className="bg-gradient-to-br from-success/10 to-success/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/20">
-                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                <div className="p-2 rounded-lg bg-success/20">
+                  <DollarSign className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Earned</p>
-                  <p className="text-2xl font-bold text-emerald-500">
+                  <p className="text-2xl font-bold text-success">
                     ₹{transactionStats.totalRevenue.toLocaleString()}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5">
+          <Card className="bg-gradient-to-br from-warning/10 to-warning/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <DollarSign className="h-5 w-5 text-amber-500" />
+                <div className="p-2 rounded-lg bg-warning/20">
+                  <DollarSign className="h-5 w-5 text-warning" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Gift Value</p>
-                  <p className="text-2xl font-bold text-amber-500">
+                  <p className="text-2xl font-bold text-warning">
                     ₹{transactionStats.avgGiftValue.toLocaleString()}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-rose-500/10 to-rose-500/5">
+          <Card className="bg-gradient-to-br from-accent/10 to-accent/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-rose-500/20">
-                  <Sparkles className="h-5 w-5 text-rose-500" />
+                <div className="p-2 rounded-lg bg-accent/20">
+                  <Sparkles className="h-5 w-5 text-accent" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Premium Gifts</p>
-                  <p className="text-2xl font-bold text-rose-500">
+                  <p className="text-2xl font-bold text-accent">
                     {transactionStats.premiumGiftsSent}
                   </p>
                 </div>

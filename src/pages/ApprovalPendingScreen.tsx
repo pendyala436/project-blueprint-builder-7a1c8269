@@ -150,8 +150,8 @@ const ApprovalPendingScreen = () => {
           <CardHeader className="text-center pb-4">
             {status === "pending" && (
               <>
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
-                  <Clock className="w-10 h-10 text-amber-500 animate-pulse" />
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-warning/20 flex items-center justify-center">
+                  <Clock className="w-10 h-10 text-warning animate-pulse" />
                 </div>
                 <CardTitle className="text-2xl">Approval Pending</CardTitle>
                 <CardDescription>
@@ -176,18 +176,18 @@ const ApprovalPendingScreen = () => {
           <CardContent className="space-y-6">
             {status === "pending" && (
               <>
-                <div className="bg-amber-500/10 rounded-xl p-4 border border-amber-500/20">
-                  <h4 className="font-semibold text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-2">
+                <div className="bg-warning/10 rounded-xl p-4 border border-warning/20">
+                  <h4 className="font-semibold text-warning mb-2 flex items-center gap-2">
                     <Shield className="w-4 h-4" />
                     What happens next?
                   </h4>
                   <ul className="text-sm text-muted-foreground space-y-2">
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <CheckCircle className="w-4 h-4 mt-0.5 text-success flex-shrink-0" />
                       <span>Our AI system reviews your profile automatically</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <CheckCircle className="w-4 h-4 mt-0.5 text-success flex-shrink-0" />
                       <span>Approval depends on language group availability</span>
                     </li>
                     <li className="flex items-start gap-2">

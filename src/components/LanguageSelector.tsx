@@ -182,8 +182,8 @@ export const LanguageSelector = ({
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
             lang.isIndian 
-              ? "bg-gradient-to-br from-orange-500 to-green-500 text-white" 
-              : "bg-gradient-to-br from-blue-500 to-purple-500 text-white"
+              ? "bg-gradient-to-br from-warning to-success text-white" 
+              : "bg-gradient-to-br from-primary to-secondary text-white"
           )}>
             {lang.name.charAt(0)}
           </div>
@@ -220,8 +220,8 @@ export const LanguageSelector = ({
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
             ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian
-              ? "bg-gradient-to-br from-orange-500 to-green-500 text-white"
-              : "bg-gradient-to-br from-blue-500 to-purple-500 text-white"
+              ? "bg-gradient-to-br from-warning to-success text-white"
+              : "bg-gradient-to-br from-primary to-secondary text-white"
           )}>
             {selectedLanguage?.charAt(0) || "?"}
           </div>
@@ -340,8 +340,8 @@ export const LanguageSelector = ({
               {/* World Languages Section */}
               {worldLanguages.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 px-2 py-2 mb-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg">
-                    <Globe className="h-5 w-5 text-blue-500" />
+                  <div className="flex items-center gap-2 px-2 py-2 mb-3 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg">
+                    <Globe className="h-5 w-5 text-primary" />
                     <span className="text-sm font-bold text-foreground">
                       World Languages
                     </span>

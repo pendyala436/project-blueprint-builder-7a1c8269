@@ -1008,7 +1008,7 @@ const AdminModerationScreen = () => {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setWarnDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleWarnUser} className="bg-amber-500 hover:bg-amber-600">
+            <Button onClick={handleWarnUser} variant="warning">
               <MessageSquareWarning className="w-4 h-4 mr-2" />
               Send Warning
             </Button>

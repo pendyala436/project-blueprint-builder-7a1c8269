@@ -159,7 +159,7 @@ const SRSVideoCallModal = ({
             {/* Live Streaming Badge */}
             {isLiveStreaming && callStatus === 'active' && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2">
-                <Badge className="bg-red-500 text-white animate-pulse flex items-center gap-2 px-4 py-1">
+                <Badge className="bg-destructive text-destructive-foreground animate-pulse flex items-center gap-2 px-4 py-1">
                   <Radio className="w-4 h-4" />
                   LIVE
                 </Badge>
@@ -180,9 +180,9 @@ const SRSVideoCallModal = ({
             <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  callStatus === 'active' ? 'bg-green-500' : 
-                  callStatus === 'publishing' || callStatus === 'playing' ? 'bg-yellow-500 animate-pulse' : 
-                  'bg-gray-500'
+                  callStatus === 'active' ? 'bg-online' : 
+                  callStatus === 'publishing' || callStatus === 'playing' ? 'bg-warning animate-pulse' : 
+                  'bg-muted-foreground'
                 }`} />
                 <span className="text-xs text-white">{getStatusText()}</span>
               </div>
@@ -200,7 +200,7 @@ const SRSVideoCallModal = ({
               <Button
                 variant="outline"
                 size="lg"
-                className={`rounded-full w-14 h-14 ${!isAudioEnabled ? 'bg-red-500 border-red-500 text-white' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                className={`rounded-full w-14 h-14 ${!isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
                 onClick={toggleAudio}
               >
                 {isAudioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
@@ -209,7 +209,7 @@ const SRSVideoCallModal = ({
               <Button
                 variant="outline"
                 size="lg"
-                className={`rounded-full w-14 h-14 ${!isVideoEnabled ? 'bg-red-500 border-red-500 text-white' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                className={`rounded-full w-14 h-14 ${!isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
                 onClick={toggleVideo}
               >
                 {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
@@ -218,7 +218,7 @@ const SRSVideoCallModal = ({
               <Button
                 variant="destructive"
                 size="lg"
-                className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600"
+                className="rounded-full w-16 h-16"
                 onClick={handleEndCall}
               >
                 <PhoneOff className="w-7 h-7" />

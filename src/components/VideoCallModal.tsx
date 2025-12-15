@@ -90,7 +90,7 @@ const VideoCallModal = ({
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                 <Avatar className="w-32 h-32 mb-4">
                   <AvatarImage src={remotePhoto || undefined} />
-                  <AvatarFallback className="text-4xl bg-gradient-to-br from-pink-500 to-purple-600">
+                  <AvatarFallback className="text-4xl bg-gradient-to-br from-primary to-accent">
                     {remoteName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
