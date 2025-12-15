@@ -618,6 +618,7 @@ const TermsAgreementScreen = () => {
       if (profileError) throw profileError;
 
       // Also save to gender-specific table (male_profiles or female_profiles)
+      // Include ALL registration data except email and gender (which is implicit in table name)
       const genderProfileData: any = {
         user_id: user.id,
         full_name: fullName,
