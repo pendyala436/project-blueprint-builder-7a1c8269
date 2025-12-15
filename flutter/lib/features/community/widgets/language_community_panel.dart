@@ -75,31 +75,66 @@ class LanguageCommunityService {
   Future<List<CommunityMember>> loadMembers(String language) async {
     if (_currentUserId == null) return [];
 
-    // Get users who speak this language
+    debugPrint('[LanguageCommunity] Loading members for language: $language');
+
+    // Get users who speak this language from user_languages
     final languageUsers = await _supabase
         .from('user_languages')
         .select('user_id, created_at')
         .eq('language_name', language);
 
-    if (languageUsers.isEmpty) return [];
+    // Also get from profiles table with language filter
+    final profilesWithLanguage = await _supabase
+        .from('profiles')
+        .select('user_id, full_name, photo_url, created_at, primary_language, preferred_language')
+        .or('primary_language.eq.$language,preferred_language.eq.$language')
+        .eq('gender', 'female');
 
-    final userIds = (languageUsers as List).map((u) => u['user_id'] as String).toList();
+    debugPrint('[LanguageCommunity] Language users: ${languageUsers.length}, Profiles: ${profilesWithLanguage.length}');
+
+    // Combine user IDs from both sources
+    final languageUserIds = (languageUsers as List).map((u) => u['user_id'] as String).toSet();
+    final profileUserIds = (profilesWithLanguage as List).map((p) => p['user_id'] as String).toSet();
+    final allUserIds = [...languageUserIds, ...profileUserIds].toSet().toList();
+
+    if (allUserIds.isEmpty) {
+      debugPrint('[LanguageCommunity] No members found for language: $language');
+      return [];
+    }
+
     final joinDates = <String, String>{};
     for (final u in languageUsers) {
       joinDates[u['user_id'] as String] = u['created_at'] as String;
     }
 
-    // Get female profiles
-    final profiles = await _supabase
+    // Get all female profiles
+    final allProfiles = await _supabase
+        .from('profiles')
+        .select('user_id, full_name, photo_url, created_at, gender')
+        .inFilter('user_id', allUserIds)
+        .eq('gender', 'female');
+
+    // Get female_profiles for additional data
+    final femaleProfiles = await _supabase
         .from('female_profiles')
         .select('user_id, full_name, photo_url, created_at')
-        .inFilter('user_id', userIds);
+        .inFilter('user_id', allUserIds);
+
+    final femaleProfileMap = <String, Map<String, dynamic>>{};
+    for (final p in femaleProfiles) {
+      femaleProfileMap[p['user_id'] as String] = p;
+    }
+
+    final mainProfileMap = <String, Map<String, dynamic>>{};
+    for (final p in allProfiles) {
+      mainProfileMap[p['user_id'] as String] = p;
+    }
 
     // Get online status
     final onlineStatus = await _supabase
         .from('user_status')
         .select('user_id, is_online')
-        .inFilter('user_id', userIds);
+        .inFilter('user_id', allUserIds);
 
     final onlineMap = <String, bool>{};
     for (final s in onlineStatus) {
@@ -128,6 +163,8 @@ class LanguageCommunityService {
     final election = ElectionData.fromJson(settings['election_data_$language'] as Map<String, dynamic>?);
     final votes = settings['votes_$language'] as Map<String, dynamic>? ?? {};
 
+    debugPrint('[LanguageCommunity] Leadership - Leader: $leaderId, Officer: $officerId');
+
     // Calculate vote counts
     final voteCounts = <String, int>{};
     for (final v in votes.values) {
@@ -135,19 +172,29 @@ class LanguageCommunityService {
       voteCounts[candidateId] = (voteCounts[candidateId] ?? 0) + 1;
     }
 
-    // Build members list
+    // Build members list - only include profiles that exist
     final now = DateTime.now();
     final members = <CommunityMember>[];
     
-    for (final p in profiles) {
-      final userId = p['user_id'] as String;
-      final joinedAt = joinDates[userId] ?? p['created_at'] as String;
-      final seniority = now.difference(DateTime.parse(joinedAt)).inDays;
+    for (final userId in mainProfileMap.keys) {
+      final femaleProfile = femaleProfileMap[userId];
+      final mainProfile = mainProfileMap[userId];
+      
+      final fullName = (femaleProfile?['full_name'] as String?) ?? 
+                       (mainProfile?['full_name'] as String?) ?? 
+                       'Unknown User';
+      final photoUrl = (femaleProfile?['photo_url'] as String?) ?? 
+                       (mainProfile?['photo_url'] as String?);
+      final createdAt = joinDates[userId] ?? 
+                        (mainProfile?['created_at'] as String?) ?? 
+                        DateTime.now().toIso8601String();
+      
+      final seniority = now.difference(DateTime.parse(createdAt)).inDays;
 
       members.add(CommunityMember(
         userId: userId,
-        fullName: p['full_name'] as String? ?? 'Unknown',
-        photoUrl: p['photo_url'] as String?,
+        fullName: fullName,
+        photoUrl: photoUrl,
         isLeader: userId == leaderId,
         isElectionOfficer: userId == officerId,
         isCandidate: election.candidates.contains(userId),
@@ -156,6 +203,8 @@ class LanguageCommunityService {
         seniority: seniority,
       ));
     }
+
+    debugPrint('[LanguageCommunity] Members built: ${members.length}, names: ${members.map((m) => m.fullName).toList()}');
 
     // Sort by seniority (most senior first)
     members.sort((a, b) => b.seniority.compareTo(a.seniority));
