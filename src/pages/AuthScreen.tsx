@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, Download, Smartphone } from "lucide-react";
-import { usePWA } from "@/hooks/usePWA";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Lazy load non-critical components
@@ -115,136 +114,11 @@ PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { 
-    isInstallable, 
-    isInstalled, 
-    install, 
-    isIOS, 
-    isAndroid, 
-    isWindows, 
-    isMacOS, 
-    isLinux,
-    isChrome,
-    isEdge,
-    isSafari,
-    isFirefox
-  } = usePWA();
-  
-  const browserName = isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'your browser';
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
-
-  // Get OS-specific install instructions and actions
-  const getOSInstallInfo = () => {
-    const baseUrl = window.location.origin;
-    
-    if (isIOS) {
-      return {
-        title: "Install on iPhone/iPad",
-        icon: "🍎",
-        canAutoInstall: false,
-        steps: [
-          "Tap the Share button (□↑) at the bottom of Safari",
-          "Scroll down and tap 'Add to Home Screen'",
-          "Tap 'Add' in the top right corner"
-        ],
-        note: "Make sure you're using Safari browser"
-      };
-    }
-    if (isAndroid) {
-      return {
-        title: "Install on Android",
-        icon: "🤖",
-        canAutoInstall: isInstallable,
-        steps: [
-          "Tap the menu (⋮) in your browser",
-          "Tap 'Install app' or 'Add to Home screen'",
-          "Tap 'Install' to confirm"
-        ],
-        note: "Works best in Chrome or Samsung Internet"
-      };
-    }
-    if (isWindows) {
-      return {
-        title: "Install on Windows",
-        icon: "🪟",
-        canAutoInstall: isInstallable,
-        steps: [
-          `Click the install icon (⊕) in ${browserName}'s address bar`,
-          "Or click menu (⋯) → 'Install Meow Meow...'",
-          "Click 'Install' to add to Start menu"
-        ],
-        note: "Works in Chrome, Edge, or Brave"
-      };
-    }
-    if (isMacOS) {
-      return {
-        title: "Install on Mac",
-        icon: "🍏",
-        canAutoInstall: isInstallable,
-        steps: [
-          isSafari 
-            ? "Click File → Add to Dock" 
-            : `Click the install icon in ${browserName}'s address bar`,
-          "Or use browser menu → 'Install Meow Meow...'",
-          "The app will appear in your Applications/Dock"
-        ],
-        note: isSafari ? "Safari 17+ supports PWA installation" : "Works in Chrome or Edge"
-      };
-    }
-    if (isLinux) {
-      return {
-        title: "Install on Linux",
-        icon: "🐧",
-        canAutoInstall: isInstallable,
-        steps: [
-          `Click the install icon in ${browserName}'s address bar`,
-          "Or click menu → 'Install app'",
-          "The app will be added to your applications menu"
-        ],
-        note: "Works in Chrome, Edge, or Chromium"
-      };
-    }
-    return {
-      title: "Install App",
-      icon: "📱",
-      canAutoInstall: isInstallable,
-      steps: [
-        "Open this site in a supported browser (Chrome, Edge, Safari)",
-        "Look for the install icon (⊕) in the address bar",
-        "Click 'Install' to add to your device"
-      ],
-      note: "PWA installation supported on most modern browsers"
-    };
-  };
-
-  const handleInstallClick = async () => {
-    const osInfo = getOSInstallInfo();
-    console.log('Install clicked:', { 
-      os: osInfo.title, 
-      canAutoInstall: osInfo.canAutoInstall,
-      isInstallable 
-    });
-    
-    if (osInfo.canAutoInstall && isInstallable) {
-      try {
-        const installed = await install();
-        if (installed) {
-          console.log('App installed successfully!');
-          return;
-        }
-      } catch (err) {
-        console.error('Auto-install failed:', err);
-      }
-    }
-    
-    // Show manual instructions
-    setShowInstallInstructions(true);
-  };
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -436,65 +310,6 @@ const AuthScreen = () => {
             >
               {t('auth.signup')}
             </Button>
-
-            {/* PWA Install Button - Always visible */}
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                Install App
-              </span>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-            </div>
-
-            {isInstalled ? (
-              <div className="flex items-center justify-center gap-2 text-sm text-primary py-3">
-                <Smartphone className="w-4 h-4" />
-                <span>App installed</span>
-              </div>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full border-primary/30 hover:bg-primary/10 group"
-                  onClick={handleInstallClick}
-                >
-                  <Download className="w-5 h-5 mr-2 group-hover:animate-bounce" />
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Install App
-                </Button>
-
-                {/* Installation Instructions */}
-                {showInstallInstructions && (
-                  <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{getOSInstallInfo().icon}</span>
-                      <p className="text-sm font-medium text-foreground">
-                        {getOSInstallInfo().title}
-                      </p>
-                    </div>
-                    <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                      {getOSInstallInfo().steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                    </ol>
-                    {getOSInstallInfo().note && (
-                      <p className="text-xs text-muted-foreground/70 italic">
-                        💡 {getOSInstallInfo().note}
-                      </p>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => setShowInstallInstructions(false)}
-                    >
-                      Got it
-                    </Button>
-                  </Card>
-                )}
-              </>
-            )}
           </div>
         </Card>
       </main>
