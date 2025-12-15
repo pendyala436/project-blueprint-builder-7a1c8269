@@ -133,13 +133,18 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
-      // Start auth request
-      const authPromise = supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Start auth and preload routes in parallel
+      const [authResult] = await Promise.all([
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        // Preload likely next routes while authenticating
+        import("./DashboardScreen").catch(() => {}),
+        import("./WomenDashboardScreen").catch(() => {}),
+      ]);
 
-      const { data: authData, error } = await authPromise;
+      const { data: authData, error } = authResult;
 
       if (error) {
         toast({
