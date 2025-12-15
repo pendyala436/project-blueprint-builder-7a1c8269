@@ -1370,6 +1370,7 @@ export type Database = {
           avg_response_time_seconds: number | null
           bio: string | null
           body_type: string | null
+          city: string | null
           country: string | null
           created_at: string
           date_of_birth: string | null
@@ -1418,6 +1419,7 @@ export type Database = {
           avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
+          city?: string | null
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -1466,6 +1468,7 @@ export type Database = {
           avg_response_time_seconds?: number | null
           bio?: string | null
           body_type?: string | null
+          city?: string | null
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
