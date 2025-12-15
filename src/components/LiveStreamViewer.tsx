@@ -148,7 +148,7 @@ const LiveStreamViewer = ({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20"
+            className="text-primary-foreground hover:bg-primary/20"
             onClick={onClose}
           >
             <X className="w-5 h-5" />
@@ -163,7 +163,7 @@ const LiveStreamViewer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20"
+              className="text-primary-foreground hover:bg-primary/20"
               onClick={toggleMute}
             >
               {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -178,7 +178,7 @@ const LiveStreamViewer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/20"
+              className="text-primary-foreground hover:bg-primary/20"
               onClick={toggleFullscreen}
             >
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
