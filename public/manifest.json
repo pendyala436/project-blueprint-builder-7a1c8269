@@ -2,19 +2,24 @@
   "name": "Meow Meow - Dating & Chat",
   "short_name": "Meow Meow",
   "description": "Connect, chat, and find meaningful relationships with Meow Meow dating app. Available on all devices.",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "id": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "window-controls-overlay"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#0a0d14",
   "theme_color": "#1aa39b",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
   "categories": ["social", "lifestyle", "dating", "entertainment"],
-  "iarc_rating_id": "",
   "icons": [
+    {
+      "src": "/icons/icon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
@@ -46,6 +51,12 @@
       "purpose": "any"
     },
     {
+      "src": "/icons/icon-167x167.png",
+      "sizes": "167x167",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icons/icon-180x180.png",
       "sizes": "180x180",
       "type": "image/png",
@@ -54,6 +65,12 @@
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-256x256.png",
+      "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
@@ -94,24 +111,24 @@
   ],
   "shortcuts": [
     {
-      "name": "Chat",
+      "name": "Open Chat",
       "short_name": "Chat",
-      "description": "Open your chats",
-      "url": "/chat?source=shortcut",
+      "description": "Open your conversations",
+      "url": "/chat",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Wallet",
+      "name": "My Wallet",
       "short_name": "Wallet",
-      "description": "View your wallet",
-      "url": "/wallet?source=shortcut",
+      "description": "View your wallet balance",
+      "url": "/wallet",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Matches",
+      "name": "Find Matches",
       "short_name": "Matches",
-      "description": "View your matches",
-      "url": "/match-discovery?source=shortcut",
+      "description": "Discover new matches",
+      "url": "/match-discovery",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
@@ -126,7 +143,7 @@
       "files": [
         {
           "name": "media",
-          "accept": ["image/*"]
+          "accept": ["image/*", "video/*"]
         }
       ]
     }
@@ -144,11 +161,5 @@
   "edge_side_panel": {
     "preferred_width": 400
   },
-  "related_applications": [
-    {
-      "platform": "webapp",
-      "url": "https://meowmeow.app/manifest.json"
-    }
-  ],
   "prefer_related_applications": false
 }
