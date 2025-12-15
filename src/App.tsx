@@ -6,6 +6,7 @@
 import { lazy, Suspense, memo, startTransition } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Inline critical components - no lazy for auth path
 import AuthScreen from "./pages/AuthScreen";
@@ -124,30 +125,32 @@ LazyRoute.displayName = 'LazyRoute';
 const AppShell = memo(({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={null}>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Suspense fallback={children}>
-          <I18nProvider>
-            <Suspense fallback={null}>
-              <SecurityProvider
-                enableDevToolsDetection={false}
-                enableKeyboardBlocking={false}
-                enableConsoleProtection={false}
-              >
-                <Suspense fallback={null}>
-                  <TooltipProvider>
-                    <Suspense fallback={null}>
-                      <Toaster />
-                      <Sonner />
-                      <PWAInstallPrompt />
-                    </Suspense>
-                    {children}
-                  </TooltipProvider>
-                </Suspense>
-              </SecurityProvider>
-            </Suspense>
-          </I18nProvider>
-        </Suspense>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={children}>
+            <I18nProvider>
+              <Suspense fallback={null}>
+                <SecurityProvider
+                  enableDevToolsDetection={false}
+                  enableKeyboardBlocking={false}
+                  enableConsoleProtection={false}
+                >
+                  <Suspense fallback={null}>
+                    <TooltipProvider>
+                      <Suspense fallback={null}>
+                        <Toaster />
+                        <Sonner />
+                        <PWAInstallPrompt />
+                      </Suspense>
+                      {children}
+                    </TooltipProvider>
+                  </Suspense>
+                </SecurityProvider>
+              </Suspense>
+            </I18nProvider>
+          </Suspense>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   </Suspense>
 ));

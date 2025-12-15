@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { ThemeSelector } from "@/components/ThemeSelector";
 
 interface UserSettings {
   theme: string;
@@ -230,76 +231,17 @@ const SettingsScreen = () => {
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
-        {/* Section 1: Appearance Settings */}
+        {/* Section 1: Appearance Settings - New Theme Selector */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Palette className="h-5 w-5 text-primary" />
               {t('appearance', 'Appearance')}
             </CardTitle>
-            <CardDescription>{t('customizeAppLooks', 'Customize how the app looks')}</CardDescription>
+            <CardDescription>{t('customizeAppLooks', 'Customize how the app looks with 20 beautiful themes')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Theme Selector */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">{t('theme', 'Theme')}</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {THEME_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() => updateSetting("theme", option.id)}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200",
-                        settings.theme === option.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <Icon className={cn(
-                        "h-6 w-6 mb-2",
-                        settings.theme === option.id ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <span className={cn(
-                        "text-sm font-medium",
-                        settings.theme === option.id ? "text-primary" : "text-muted-foreground"
-                      )}>
-                        {t(option.id, option.label)}
-                      </span>
-                      {settings.theme === option.id && (
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-1" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Accent Color */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">{t('accentColor', 'Accent Color')}</Label>
-              <div className="flex gap-3 flex-wrap">
-                {ACCENT_COLORS.map((color) => (
-                  <button
-                    key={color.id}
-                    onClick={() => updateSetting("accent_color", color.id)}
-                    className={cn(
-                      "w-10 h-10 rounded-full transition-all duration-200 relative",
-                      settings.accent_color === color.id && "ring-2 ring-offset-2 ring-offset-background ring-primary"
-                    )}
-                    style={{ backgroundColor: color.color }}
-                    title={color.name}
-                  >
-                    {settings.accent_color === color.id && (
-                      <CheckCircle2 className="h-5 w-5 text-white absolute inset-0 m-auto" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <CardContent>
+            <ThemeSelector compact />
           </CardContent>
         </Card>
 
