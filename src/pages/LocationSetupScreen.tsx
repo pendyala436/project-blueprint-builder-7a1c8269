@@ -186,50 +186,19 @@ const LocationSetupScreen = () => {
       return;
     }
 
-    setIsLoading(true);
+    // Save location data to localStorage for later use during account creation
+    localStorage.setItem("userCountry", country);
+    localStorage.setItem("userState", state || "");
+    localStorage.setItem("userCity", village || "");
+    if (latitude) localStorage.setItem("userLatitude", latitude.toString());
+    if (longitude) localStorage.setItem("userLongitude", longitude.toString());
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Not authenticated",
-          description: "Please sign in to continue.",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
+    toast({
+      title: "Location saved",
+      description: "Your location has been saved.",
+    });
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          latitude,
-          longitude,
-          country,
-          state: state || null,
-          city: village || null,
-        })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Location saved",
-        description: "Your location has been saved successfully.",
-      });
-
-      navigate("/password-setup");
-    } catch (error) {
-      console.error("Error saving location:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save location. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    navigate("/password-setup");
   };
 
   return (
