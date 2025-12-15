@@ -622,7 +622,7 @@ const TermsAgreementScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={9} totalSteps={10} />
+            <ProgressIndicator currentStep={8} totalSteps={8} />
           </div>
         </div>
       </header>

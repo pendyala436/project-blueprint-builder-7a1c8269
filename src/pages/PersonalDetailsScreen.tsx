@@ -228,7 +228,7 @@ const PersonalDetailsScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={4} totalSteps={10} />
+            <ProgressIndicator currentStep={3} totalSteps={8} />
           </div>
         </div>
       </header>

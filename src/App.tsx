@@ -39,7 +39,6 @@ if (typeof window !== 'undefined') {
 // Lazy load all routes with chunk naming for better caching
 const ForgotPasswordScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/ForgotPasswordScreen"));
 const LanguageCountryScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/LanguageCountryScreen"));
-const AIVerificationScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/AIVerificationScreen"));
 const BasicInfoScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/BasicInfoScreen"));
 const PersonalDetailsScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/PersonalDetailsScreen"));
 const PasswordSetupScreen = lazy(() => import(/* webpackChunkName: "register" */ "./pages/PasswordSetupScreen"));
@@ -164,7 +163,6 @@ const App = () => (
         <Route path="/forgot-password" element={<LazyRoute component={ForgotPasswordScreen} />} />
         <Route path="/password-reset" element={<LazyRoute component={PasswordResetScreen} />} />
         <Route path="/register" element={<LazyRoute component={LanguageCountryScreen} />} />
-        <Route path="/ai-verification" element={<LazyRoute component={AIVerificationScreen} />} />
         <Route path="/basic-info" element={<LazyRoute component={BasicInfoScreen} />} />
         <Route path="/personal-details" element={<LazyRoute component={PersonalDetailsScreen} />} />
         <Route path="/password-setup" element={<LazyRoute component={PasswordSetupScreen} />} />

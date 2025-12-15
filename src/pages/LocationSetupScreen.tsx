@@ -179,7 +179,7 @@ const LocationSetupScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={7} totalSteps={10} />
+            <ProgressIndicator currentStep={6} totalSteps={8} />
           </div>
         </div>
       </header>
