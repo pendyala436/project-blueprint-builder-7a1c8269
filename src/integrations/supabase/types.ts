@@ -1377,6 +1377,7 @@ export type Database = {
           dietary_preference: string | null
           drinking_habit: string | null
           education_level: string | null
+          email: string | null
           fitness_level: string | null
           full_name: string | null
           gender: string | null
@@ -1426,6 +1427,7 @@ export type Database = {
           dietary_preference?: string | null
           drinking_habit?: string | null
           education_level?: string | null
+          email?: string | null
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
@@ -1475,6 +1477,7 @@ export type Database = {
           dietary_preference?: string | null
           drinking_habit?: string | null
           education_level?: string | null
+          email?: string | null
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
