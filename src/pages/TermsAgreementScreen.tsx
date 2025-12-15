@@ -612,13 +612,13 @@ const TermsAgreementScreen = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/language-preferences")}
+            onClick={() => navigate("/password-setup")}
             className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={8} totalSteps={8} />
+            <ProgressIndicator currentStep={8} totalSteps={9} />
           </div>
         </div>
       </header>
