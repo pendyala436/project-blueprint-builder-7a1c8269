@@ -206,14 +206,23 @@ const AuthScreen = () => {
   };
 
   const handleInstallClick = async () => {
+    console.log('Install button clicked', { isInstallable, isInstalled, isIOS, isAndroid, isWindows, isMacOS, isLinux });
+    
     if (isInstallable) {
       // Browser supports native install prompt
-      const installed = await install();
-      if (!installed) {
+      try {
+        const installed = await install();
+        console.log('Install result:', installed);
+        if (!installed) {
+          setShowInstallInstructions(true);
+        }
+      } catch (err) {
+        console.error('Install error:', err);
         setShowInstallInstructions(true);
       }
     } else {
-      // Show manual instructions
+      // Show manual instructions for this platform
+      console.log('Showing manual instructions');
       setShowInstallInstructions(true);
     }
   };
