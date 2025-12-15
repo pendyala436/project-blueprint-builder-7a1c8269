@@ -277,10 +277,10 @@ const AdminBackupManagement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Failed</p>
-                  <p className="text-2xl font-bold text-red-400">{stats.failed}</p>
+                  <p className="text-2xl font-bold text-destructive">{stats.failed}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                  <XCircle className="w-6 h-6 text-red-400" />
+                <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="w-6 h-6 text-destructive" />
                 </div>
               </div>
             </CardContent>
@@ -293,8 +293,8 @@ const AdminBackupManagement = () => {
                   <p className="text-sm text-muted-foreground">Total Size</p>
                   <p className="text-2xl font-bold text-foreground">{formatBytes(stats.totalSize)}</p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <HardDrive className="w-6 h-6 text-blue-400" />
+                <div className="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center">
+                  <HardDrive className="w-6 h-6 text-info" />
                 </div>
               </div>
             </CardContent>
@@ -328,10 +328,10 @@ const AdminBackupManagement = () => {
 
         {/* In Progress Backup */}
         {stats.inProgress > 0 && (
-          <Card className="bg-amber-500/5 border-amber-500/20">
+          <Card className="bg-warning/5 border-warning/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
-                <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                <Loader2 className="w-8 h-8 text-warning animate-spin" />
                 <div className="flex-1">
                   <p className="font-medium text-foreground">Backup in Progress</p>
                   <p className="text-sm text-muted-foreground">Please wait while the backup completes...</p>
@@ -362,7 +362,7 @@ const AdminBackupManagement = () => {
                     key={backup.id}
                     className={`p-4 rounded-lg border transition-all duration-300 ${
                       backup.status === "in_progress" 
-                        ? "bg-amber-500/5 border-amber-500/20 animate-pulse" 
+                        ? "bg-warning/5 border-warning/20 animate-pulse" 
                         : "bg-muted/30 border-border hover:bg-muted/50"
                     }`}
                     style={{ animationDelay: `${index * 50}ms` }}
@@ -371,17 +371,17 @@ const AdminBackupManagement = () => {
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           backup.status === "completed" 
-                            ? "bg-emerald-500/10" 
+                            ? "bg-success/10" 
                             : backup.status === "failed" 
-                            ? "bg-red-500/10" 
-                            : "bg-amber-500/10"
+                            ? "bg-destructive/10" 
+                            : "bg-warning/10"
                         }`}>
                           {backup.status === "in_progress" ? (
-                            <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                            <Loader2 className="w-5 h-5 text-warning animate-spin" />
                           ) : backup.status === "completed" ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            <CheckCircle2 className="w-5 h-5 text-success" />
                           ) : (
-                            <XCircle className="w-5 h-5 text-red-400" />
+                            <XCircle className="w-5 h-5 text-destructive" />
                           )}
                         </div>
                         <div>
@@ -448,8 +448,8 @@ const AdminBackupManagement = () => {
                 </div>
               </div>
               <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/30">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5 text-blue-400" />
+                <div className="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-info" />
                 </div>
                 <div>
                   <p className="font-medium text-foreground">Backup Retention</p>

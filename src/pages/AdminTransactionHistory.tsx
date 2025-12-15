@@ -408,16 +408,16 @@ const AdminTransactionHistory = () => {
     switch (status.toLowerCase()) {
       case "completed":
       case "ended":
-        return <Badge className="bg-green-500/20 text-green-700">Completed</Badge>;
+        return <Badge variant="success">Completed</Badge>;
       case "active":
         return <Badge className="bg-primary/20 text-primary">Active</Badge>;
       case "pending":
-        return <Badge className="bg-amber-500/20 text-amber-700">Pending</Badge>;
+        return <Badge variant="warning">Pending</Badge>;
       case "failed":
       case "rejected":
         return <Badge variant="destructive">Failed</Badge>;
       case "ringing":
-        return <Badge className="bg-blue-500/20 text-blue-700">Ringing</Badge>;
+        return <Badge variant="info">Ringing</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -540,8 +540,8 @@ const AdminTransactionHistory = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/10">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  <div className="p-2 rounded-lg bg-success/10">
+                    <TrendingUp className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Total Revenue</p>
@@ -553,8 +553,8 @@ const AdminTransactionHistory = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Users className="h-5 w-5 text-amber-600" />
+                  <div className="p-2 rounded-lg bg-warning/10">
+                    <Users className="h-5 w-5 text-warning" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Earnings Paid</p>
@@ -566,8 +566,8 @@ const AdminTransactionHistory = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 rounded-lg bg-info/10">
+                    <CreditCard className="h-5 w-5 text-info" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Withdrawals</p>
@@ -613,10 +613,10 @@ const AdminTransactionHistory = () => {
 
           {/* Men & Women Stats */}
           <div className="grid grid-cols-2 gap-4">
-            <Card className="border-blue-500/30 bg-blue-500/5">
+            <Card className="border-male/30 bg-male/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-600" />
+                  <User className="h-4 w-4 text-male" />
                   Men Statistics
                 </CardTitle>
               </CardHeader>
@@ -635,10 +635,10 @@ const AdminTransactionHistory = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-pink-500/30 bg-pink-500/5">
+            <Card className="border-female/30 bg-female/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <User className="h-4 w-4 text-pink-600" />
+                  <User className="h-4 w-4 text-female" />
                   Women Statistics
                 </CardTitle>
               </CardHeader>

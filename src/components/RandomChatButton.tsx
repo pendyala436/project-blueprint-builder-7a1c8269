@@ -394,12 +394,12 @@ export const RandomChatButton = ({
                       className="w-20 h-20 rounded-full object-cover border-4 border-primary/20"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-2xl font-bold">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-2xl font-bold">
                       {matchedUser.fullName.charAt(0)}
                     </div>
                   )}
                   <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-online rounded-full border-2 border-background flex items-center justify-center">
-                    <UserCheck className="h-3 w-3 text-white" />
+                    <UserCheck className="h-3 w-3 text-online-foreground" />
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold">{matchedUser.fullName}</h3>

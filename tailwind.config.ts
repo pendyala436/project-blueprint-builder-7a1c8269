@@ -210,10 +210,22 @@ export default {
           foreground: "hsl(var(--info-foreground))",
         },
         // Status indicator colors
-        online: "hsl(var(--online))",
-        offline: "hsl(var(--offline))",
-        busy: "hsl(var(--busy))",
-        away: "hsl(var(--away))",
+        online: {
+          DEFAULT: "hsl(var(--online))",
+          foreground: "hsl(var(--online-foreground))",
+        },
+        offline: {
+          DEFAULT: "hsl(var(--offline))",
+          foreground: "hsl(var(--offline-foreground))",
+        },
+        busy: {
+          DEFAULT: "hsl(var(--busy))",
+          foreground: "hsl(var(--busy-foreground))",
+        },
+        away: {
+          DEFAULT: "hsl(var(--away))",
+          foreground: "hsl(var(--away-foreground))",
+        },
         // Gender colors
         male: "hsl(var(--male))",
         female: "hsl(var(--female))",

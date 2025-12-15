@@ -180,10 +180,7 @@ export const LanguageSelector = ({
       >
         <div className="flex items-center gap-3">
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
-            lang.isIndian 
-              ? "bg-gradient-to-br from-warning to-success text-white" 
-              : "bg-gradient-to-br from-primary to-secondary text-white"
+            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground"
           )}>
             {lang.name.charAt(0)}
           </div>
@@ -217,12 +214,7 @@ export const LanguageSelector = ({
       {/* Current Language Display with Change/Save Button */}
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/50">
-          <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
-            ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian
-              ? "bg-gradient-to-br from-warning to-success text-white"
-              : "bg-gradient-to-br from-primary to-secondary text-white"
-          )}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
             {selectedLanguage?.charAt(0) || "?"}
           </div>
           <div className="flex-1">

@@ -54,9 +54,13 @@
     
     /* Status indicators */
     --online: 142 71% 45%;
+    --online-foreground: 0 0% 100%;
     --offline: 220 15% 60%;
+    --offline-foreground: 0 0% 100%;
     --busy: 38 92% 50%;
+    --busy-foreground: 0 0% 100%;
     --away: 38 92% 50%;
+    --away-foreground: 0 0% 100%;
     
     /* Gender colors */
     --male: 210 90% 50%;
@@ -128,9 +132,13 @@
     
     /* Status indicators */
     --online: 142 71% 50%;
+    --online-foreground: 230 35% 8%;
     --offline: 220 20% 50%;
+    --offline-foreground: 0 0% 100%;
     --busy: 38 92% 55%;
+    --busy-foreground: 230 35% 8%;
     --away: 38 92% 55%;
+    --away-foreground: 230 35% 8%;
     
     /* Gender colors */
     --male: 210 90% 55%;

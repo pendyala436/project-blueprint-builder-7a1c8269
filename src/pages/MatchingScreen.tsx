@@ -743,18 +743,18 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
             </div>
           )}
           {showTranslationBadge && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/90 text-white text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/90 text-warning-foreground text-xs font-medium">
               <Languages className="w-3 h-3" />
               <span>Translate</span>
             </div>
           )}
           {woman.aiVerified && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/90 text-white text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-info/90 text-info-foreground text-xs font-medium">
               <Shield className="w-3 h-3" />
               <span>Verified</span>
             </div>
           )}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/90 text-white text-xs font-medium">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/90 text-success-foreground text-xs font-medium">
             <IndianRupee className="w-3 h-3" />
             <span>Earns</span>
           </div>
