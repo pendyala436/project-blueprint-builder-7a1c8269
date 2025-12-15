@@ -164,3 +164,46 @@ export async function processChatBilling(
   const result = data as unknown as { success: boolean; error?: string };
   return result;
 }
+
+/**
+ * End chat session (synced with Flutter)
+ */
+export async function endChatSession(
+  sessionId: string,
+  reason?: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('active_chat_sessions')
+    .update({
+      status: 'ended',
+      ended_at: new Date().toISOString(),
+      end_reason: reason || null,
+    })
+    .eq('id', sessionId);
+
+  return !error;
+}
+
+/**
+ * Subscribe to new messages (real-time)
+ */
+export function subscribeToMessages(
+  chatId: string,
+  onMessage: (message: ChatMessage) => void
+) {
+  return supabase
+    .channel(`chat:${chatId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload) => {
+        onMessage(payload.new as ChatMessage);
+      }
+    )
+    .subscribe();
+}
