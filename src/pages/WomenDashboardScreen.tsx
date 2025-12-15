@@ -44,6 +44,7 @@ import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
+import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
 
 interface Notification {
   id: string;
@@ -1070,8 +1071,20 @@ const WomenDashboardScreen = () => {
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
-        {/* Private Groups Section */}
+        {/* Language Community Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.16s" }}>
+          {currentWomanLanguage && (
+            <LanguageCommunityPanel
+              currentUserId={currentUserId}
+              motherTongue={currentWomanLanguage}
+              userName={userName || 'User'}
+              userPhoto={null}
+            />
+          )}
+        </div>
+
+        {/* Private Groups Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
           <PrivateGroupsSection
             currentUserId={currentUserId}
             userName={userName || 'User'}
