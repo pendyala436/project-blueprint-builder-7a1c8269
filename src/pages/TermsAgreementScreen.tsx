@@ -458,6 +458,9 @@ const TermsAgreementScreen = () => {
       const dateOfBirth = localStorage.getItem("userDateOfBirth") || "";
       const country = localStorage.getItem("userCountry") || "";
       const state = localStorage.getItem("userState") || "";
+      const city = localStorage.getItem("userCity") || "";
+      const latitude = localStorage.getItem("userLatitude");
+      const longitude = localStorage.getItem("userLongitude");
       const primaryLanguage = localStorage.getItem("userPrimaryLanguage") || "";
       const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
       const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
@@ -506,6 +509,9 @@ const TermsAgreementScreen = () => {
         age: age,
         country: country,
         state: state,
+        city: city || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
         primary_language: primaryLanguage,
         photo_url: photoUrl,
         account_status: "active",
@@ -576,7 +582,11 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userDateOfBirth");
       localStorage.removeItem("userCountry");
       localStorage.removeItem("userState");
+      localStorage.removeItem("userCity");
+      localStorage.removeItem("userLatitude");
+      localStorage.removeItem("userLongitude");
       localStorage.removeItem("userPrimaryLanguage");
+      localStorage.removeItem("userPassword");
 
       toast({
         title: "Registration Complete!",
