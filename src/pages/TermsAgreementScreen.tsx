@@ -622,7 +622,7 @@ const TermsAgreementScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={8} totalSteps={10} />
+            <ProgressIndicator currentStep={10} totalSteps={10} />
           </div>
         </div>
       </header>
@@ -634,9 +634,9 @@ const TermsAgreementScreen = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
               <FileText className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">Legal Agreements</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">Final Step: Legal Agreements</h1>
             <p className="text-muted-foreground">
-              Please read and accept all policies to continue
+              Please read and accept all 12 policies to complete your registration
             </p>
             <div className="flex items-center justify-center gap-2 mt-2">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -773,7 +773,7 @@ const TermsAgreementScreen = () => {
 
           {/* Footer Note */}
           <p className="text-xs text-center text-muted-foreground">
-            Your consent will be recorded with a timestamp for GDPR, CCPA, and DPDP compliance.
+            By completing registration, your consent to all 12 documents will be recorded with a timestamp for GDPR, CCPA, and DPDP compliance.
             You can withdraw consent at any time from Settings.
           </p>
         </Card>
