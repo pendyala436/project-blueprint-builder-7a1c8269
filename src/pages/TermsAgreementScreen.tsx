@@ -471,7 +471,7 @@ const TermsAgreementScreen = () => {
       {/* Header */}
       <header className="p-6 flex justify-between items-center">
         <MeowLogo />
-        <ProgressIndicator currentStep={7} totalSteps={9} />
+        <ProgressIndicator currentStep={8} totalSteps={10} />
       </header>
 
       {/* Main Content */}

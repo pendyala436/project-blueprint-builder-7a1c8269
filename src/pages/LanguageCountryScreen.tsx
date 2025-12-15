@@ -60,7 +60,7 @@ const LanguageCountryScreen = () => {
     <div className="min-h-screen gradient-hero flex flex-col">
       {/* Header */}
       <header className="px-6 pt-8 pb-4">
-        <ProgressIndicator currentStep={1} totalSteps={9} />
+        <ProgressIndicator currentStep={1} totalSteps={10} />
       </header>
 
       {/* Main Content */}
