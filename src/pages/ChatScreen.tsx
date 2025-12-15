@@ -145,8 +145,7 @@ const ChatScreen = () => {
   const navigate = useNavigate();
   
   // Extract chat partner ID from URL parameter
-  // Note: "oderId" is a typo that should be "orderId" but kept for route compatibility
-  const { oderId } = useParams<{ oderId: string }>();
+  const { chatId: partnerId } = useParams<{ chatId: string }>();
   
   // Toast notifications hook
   const { toast } = useToast();
@@ -300,10 +299,10 @@ const ChatScreen = () => {
    * Loads chat partner info and message history.
    */
   useEffect(() => {
-    if (oderId) {
-      initializeChat(oderId);
+    if (partnerId) {
+      initializeChat(partnerId);
     }
-  }, [oderId]); // Re-run if partner ID changes
+  }, [partnerId]); // Re-run if partner ID changes
 
   /**
    * useEffect: Auto-scroll to Latest Message

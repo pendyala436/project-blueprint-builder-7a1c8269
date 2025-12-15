@@ -108,7 +108,7 @@ const App = () => (
             <Route path="/find-match" element={<MatchingScreen />} />
             <Route path="/match-discovery" element={<MatchDiscoveryScreen />} />
             <Route path="/profile/:userId" element={<ProfileDetailScreen />} />
-            <Route path="/chat/:oderId" element={<ChatScreen />} />
+            <Route path="/chat/:chatId" element={<ChatScreen />} />
             <Route path="/wallet" element={<WalletScreen />} />
             <Route path="/transaction-history" element={<TransactionHistoryScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />

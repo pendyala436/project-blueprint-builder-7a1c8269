@@ -43,14 +43,16 @@ EDGE_FUNCTIONS=(
     "chat-manager"
     "content-moderation"
     "data-cleanup"
+    "group-cleanup"
     "reset-password"
     "seed-legal-documents"
-    "seed-sample-users"
     "seed-super-users"
     "shift-scheduler"
     "translate-message"
     "trigger-backup"
     "verify-photo"
+    "video-call-server"
+    "video-cleanup"
 )
 
 # ============================================================================
