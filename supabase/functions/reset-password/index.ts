@@ -131,22 +131,63 @@ serve(async (req) => {
       // Add delay to prevent timing attacks
       await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 200));
 
-      // Get user by email
-      const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+      // First, look up the user in profiles table by email to get user_id
+      const { data: profileByEmail, error: profileLookupError } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id, phone, email")
+        .eq("email", email.toLowerCase())
+        .maybeSingle();
       
-      if (usersError) {
-        console.error("Error listing users:", usersError);
+      if (profileLookupError) {
+        console.error("Error looking up profile by email:", profileLookupError);
         return new Response(
           JSON.stringify({ verified: false, error: "Failed to verify account" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );
       }
 
-      console.log("Total users found:", users?.users?.length);
-      const user = users?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      console.log("User found by email:", user ? { id: user.id, email: user.email } : "NOT FOUND");
+      // If not found in profiles, check auth.users by listing with pagination
+      let userId: string | null = profileByEmail?.user_id || null;
+      let storedPhone: string | null = profileByEmail?.phone || null;
+      
+      if (!userId) {
+        // Search through auth users with pagination
+        let page = 1;
+        let found = false;
+        while (!found && page <= 20) { // Max 20 pages = 1000 users
+          const { data: usersPage, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+            page: page,
+            perPage: 50
+          });
+          
+          if (usersError) {
+            console.error("Error listing users:", usersError);
+            break;
+          }
+          
+          const user = usersPage?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+          if (user) {
+            userId = user.id;
+            found = true;
+            console.log("User found in auth.users:", { id: user.id, email: user.email });
+            
+            // Get phone from profiles
+            const { data: profile } = await supabaseAdmin
+              .from("profiles")
+              .select("phone")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            storedPhone = profile?.phone || null;
+          }
+          
+          if (!usersPage?.users?.length || usersPage.users.length < 50) break;
+          page++;
+        }
+      } else {
+        console.log("User found in profiles table:", { user_id: userId, email: profileByEmail?.email });
+      }
 
-      if (!user) {
+      if (!userId) {
         console.log("No user found with email:", email);
         return new Response(
           JSON.stringify({ verified: false, error: "No account found with this email" }),
@@ -154,33 +195,24 @@ serve(async (req) => {
         );
       }
 
-      // Check phone in profiles table
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .select("phone, user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Compare normalized phone numbers
+      const normalizedInputPhone = normalizePhone(phone);
+      const normalizedStoredPhone = storedPhone ? normalizePhone(storedPhone) : '';
 
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-        return new Response(
-          JSON.stringify({ verified: false, error: "Failed to verify account" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-        );
-      }
+      console.log("Phone comparison:", { 
+        input: normalizedInputPhone, 
+        stored: normalizedStoredPhone,
+        match: normalizedInputPhone === normalizedStoredPhone 
+      });
 
-      if (!profile) {
+      if (!normalizedStoredPhone) {
         return new Response(
-          JSON.stringify({ verified: false, error: "Profile not found for this account" }),
+          JSON.stringify({ verified: false, error: "No phone number on file for this account" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
         );
       }
 
-      // Compare normalized phone numbers
-      const normalizedInputPhone = normalizePhone(phone);
-      const normalizedStoredPhone = profile.phone ? normalizePhone(profile.phone) : '';
-
-      if (!normalizedStoredPhone || normalizedInputPhone !== normalizedStoredPhone) {
+      if (normalizedInputPhone !== normalizedStoredPhone) {
         return new Response(
           JSON.stringify({ verified: false, error: "Email and phone number do not match" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -188,12 +220,12 @@ serve(async (req) => {
       }
 
       // Account verified
-      console.log(`Account verified for user: ${user.id}`);
+      console.log(`Account verified for user: ${userId}`);
       
       return new Response(
         JSON.stringify({ 
           verified: true, 
-          userId: user.id 
+          userId: userId 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
