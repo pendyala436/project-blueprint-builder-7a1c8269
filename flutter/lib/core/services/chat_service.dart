@@ -27,7 +27,7 @@ class ChatService {
       }
 
       return ChatPricingModel(
-        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 5,
+        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 2,
         womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2,
         videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 10,
         videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 5,
@@ -127,7 +127,7 @@ class ChatService {
                     : null,
                 totalMinutes: (json['total_minutes'] as num?)?.toDouble() ?? 0,
                 totalEarned: (json['total_earned'] as num?)?.toDouble() ?? 0,
-                ratePerMinute: (json['rate_per_minute'] as num?)?.toDouble() ?? 5,
+                ratePerMinute: (json['rate_per_minute'] as num?)?.toDouble() ?? 2,
                 lastActivityAt: json['last_activity_at'] != null
                     ? DateTime.parse(json['last_activity_at'])
                     : null,

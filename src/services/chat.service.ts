@@ -41,7 +41,7 @@ export interface ChatPricing {
 }
 
 const DEFAULT_PRICING: ChatPricing = {
-  ratePerMinute: 5,
+  ratePerMinute: 2,
   womenEarningRate: 2,
   videoRatePerMinute: 10,
   videoWomenEarningRate: 5,

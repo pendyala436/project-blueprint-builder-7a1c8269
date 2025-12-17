@@ -48,3 +48,15 @@
 - **Video Calling**: Agora RTC Engine
 - **Push Notifications**: Firebase Cloud Messaging + Local Notifications
 - **Offline Support**: Hive for local caching
+
+## Synced Constants (React ↔ Flutter)
+
+| Setting | Value | Files Synced |
+|---------|-------|--------------|
+| MAX_MESSAGE_LENGTH | 2000 | constants/index.ts, app_config.dart |
+| MAX_PARALLEL_CHATS | 3 | constants/index.ts, app_config.dart |
+| rate_per_minute (default) | 2 INR | chat.service.ts, chat_service.dart, chat_model.dart |
+| women_earning_rate (default) | 2 INR | chat.service.ts, chat_service.dart |
+| Transaction status (default) | completed | wallet.service.ts, wallet_model.dart |
+
+## Last Sync: December 2025
