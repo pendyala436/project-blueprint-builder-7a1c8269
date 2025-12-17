@@ -24,6 +24,7 @@ class AppConfig {
   /// Chat Configuration
   static const int messageRateLimit = 60; // messages per minute
   static const int maxMessageLength = 2000;
+  static const int maxParallelChats = 3; // synced with React LIMITS.MAX_PARALLEL_CHATS
   static const int chatSessionTimeout = 30; // minutes
 
   /// Media Configuration
