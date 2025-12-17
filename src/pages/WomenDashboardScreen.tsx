@@ -395,19 +395,12 @@ const WomenDashboardScreen = () => {
     try {
       const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
 
-      // Get all NLLB-200 language names for checking
-      const allNllbLanguages = [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
-      const nllbLanguageNames = new Set(allNllbLanguages.map(l => l.name.toLowerCase()));
-      const nonIndianNllbNames = new Set(NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
-      const indianNllbNames = new Set(INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase()));
-
-      // Get all online male users with their profiles and wallet info
+      // Get all online male users (global - no country/language restrictions)
       const { data: onlineStatuses } = await supabase
         .from("user_status")
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      // Only use real authenticated users from database - no sample/mock data
       const onlineMen: OnlineMan[] = [];
 
       // Process real users
@@ -422,8 +415,26 @@ const WomenDashboardScreen = () => {
           .not("photo_url", "is", null)
           .neq("photo_url", "");
 
-        if (maleProfiles && maleProfiles.length > 0) {
-          const maleUserIds = maleProfiles.map(p => p.user_id);
+        // Also check main profiles table
+        const { data: mainProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
+          .or("gender.eq.male,gender.eq.Male")
+          .in("user_id", onlineUserIds)
+          .not("photo_url", "is", null)
+          .neq("photo_url", "");
+
+        // Combine profiles (deduplicate by user_id)
+        const allMaleProfiles = [...(maleProfiles || [])];
+        const existingUserIds = new Set(allMaleProfiles.map(p => p.user_id));
+        mainProfiles?.forEach(p => {
+          if (!existingUserIds.has(p.user_id)) {
+            allMaleProfiles.push(p);
+          }
+        });
+
+        if (allMaleProfiles.length > 0) {
+          const maleUserIds = allMaleProfiles.map(p => p.user_id);
 
           // Fetch wallet balances
           const { data: wallets } = await supabase
@@ -441,25 +452,16 @@ const WomenDashboardScreen = () => {
           const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
           const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-          // Process male profiles
-          maleProfiles.forEach(profile => {
+          // Process male profiles (no language/country filtering - global app)
+          allMaleProfiles.forEach(profile => {
             const manLanguage = languageMap.get(profile.user_id) || 
                                profile.primary_language || 
                                profile.preferred_language || 
                                "Unknown";
-            const manCountry = profile.country?.toLowerCase() || "";
-            const isManIndian = manCountry === "india";
             
             const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
-            const isManNllbLanguage = nllbLanguageNames.has(manLanguage.toLowerCase());
-            const isManNonIndianNllb = nonIndianNllbNames.has(manLanguage.toLowerCase());
             const walletBalance = walletMap.get(profile.user_id) || 0;
             const hasRecharged = walletBalance > 0;
-
-            // Filter: Must speak NLLB-200 language
-            // Indian men only shown if same language as woman
-            if (!isManNllbLanguage) return;
-            if (isManIndian && !isSameLanguage) return;
 
             onlineMen.push({
               userId: profile.user_id,
@@ -474,13 +476,11 @@ const WomenDashboardScreen = () => {
               hasRecharged,
               lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
               isSameLanguage,
-              isNllbLanguage: isManNllbLanguage,
+              isNllbLanguage: true, // All languages supported with translation
             });
           });
         }
       }
-
-      // Note: Only real authenticated users are shown - no sample/mock data
 
       // Get active chat counts for all men
       const menUserIds = onlineMen.map(m => m.userId);

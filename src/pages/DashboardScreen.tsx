@@ -643,14 +643,6 @@ const DashboardScreen = () => {
     console.log("[Dashboard] fetchOnlineWomen called with language:", language);
     setLoadingOnlineWomen(true);
     try {
-      const userHasIndianLanguage = isIndianLanguage(language);
-      const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
-      const nonIndianNLLBNames = NON_INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
-      
-      // Check if user's language is a non-Indian NLLB-200 language
-      const isUserNonIndianNLLB = nonIndianNLLBNames.includes(language.toLowerCase());
-      setIsNonIndianNLLBUser(isUserNonIndianNLLB);
-
       // Get online user IDs
       const { data: onlineUsers } = await supabase
         .from("user_status")
@@ -662,7 +654,7 @@ const DashboardScreen = () => {
       // Fetch women from all sources
       let allWomen: OnlineWoman[] = [];
 
-      // Fetch from female_profiles table - only users with photos
+      // Fetch from female_profiles table - only users with photos (global - all countries/languages)
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
@@ -676,7 +668,25 @@ const DashboardScreen = () => {
         allWomen = [...femaleProfiles];
       }
 
-      // Note: Only real authenticated users from database are shown - no sample/mock data fallback
+      // Also fetch from main profiles table for women who may not have female_profiles entry
+      const { data: mainProfiles } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .or("gender.eq.female,gender.eq.Female")
+        .eq("approval_status", "approved")
+        .not("photo_url", "is", null)
+        .neq("photo_url", "")
+        .limit(50);
+
+      if (mainProfiles && mainProfiles.length > 0) {
+        // Add profiles that aren't already in allWomen
+        const existingUserIds = new Set(allWomen.map(w => w.user_id));
+        mainProfiles.forEach(p => {
+          if (!existingUserIds.has(p.user_id)) {
+            allWomen.push(p);
+          }
+        });
+      }
 
       // Filter by online status if we have online user IDs
       const onlineWomenList = onlineUserIds.length > 0 
@@ -708,11 +718,21 @@ const DashboardScreen = () => {
         availabilityData?.map(a => [a.user_id, a]) || []
       );
 
+      // Get languages from user_languages table
+      const { data: userLanguages } = await supabase
+        .from("user_languages")
+        .select("user_id, language_name")
+        .in("user_id", womenUserIds);
+
+      const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
+
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
         const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
+        const womanLanguage = languageMap.get(w.user_id) || w.primary_language || "Unknown";
         return {
           ...w,
+          primary_language: womanLanguage,
           active_chat_count: chatCount,
           is_available: avail?.is_available !== false,
           max_chats: avail?.max_concurrent_chats || 3
@@ -737,32 +757,15 @@ const DashboardScreen = () => {
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
         .sort(sortByAvailability);
 
-      // 2. All other NLLB-200 language women (for auto-translate) - NOT same as user's language
-      const allNLLBNames = ALL_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
-      
-      // For non-Indian language users, only show Indian women
-      const userHasNonIndianLanguage = !userHasIndianLanguage;
-      
-      const otherNLLBWomen = womenWithChatCount
-        .filter(w => {
-          const womenLang = w.primary_language?.toLowerCase() || "";
-          // Must be NLLB-200 supported language and NOT same as user's language
-          const isNLLB = allNLLBNames.includes(womenLang);
-          const isDifferentLang = womenLang !== language.toLowerCase();
-          
-          // If user has non-Indian language, only show Indian women
-          if (userHasNonIndianLanguage) {
-            return isNLLB && isDifferentLang && indianLanguageNames.includes(womenLang);
-          }
-          
-          return isNLLB && isDifferentLang;
-        })
+      // 2. All other women (for auto-translate) - NOT same as user's language
+      const otherWomen = womenWithChatCount
+        .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
         .sort(sortByAvailability);
 
       console.log("[Dashboard] Same language women found:", sameLanguage.length, "for language:", language);
-      console.log("[Dashboard] Other NLLB women found:", otherNLLBWomen.length);
+      console.log("[Dashboard] Other women found:", otherWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
-      setIndianTranslatedWomen(otherNLLBWomen.slice(0, 15));
+      setIndianTranslatedWomen(otherWomen.slice(0, 15));
     } catch (error) {
       console.error("Error fetching online women:", error);
       setSameLanguageWomen([]);

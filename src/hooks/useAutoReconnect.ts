@@ -2,12 +2,11 @@
  * useAutoReconnect Hook
  * 
  * Handles automatic reconnection when a connected woman becomes busy.
- * Implements the NLLB-200 fallback rules for finding the next available woman.
+ * Finds the next available woman globally with same-language priority.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { isIndianLanguage } from '@/data/nllb200Languages';
 import { useToast } from '@/hooks/use-toast';
 
 export interface ReconnectableWoman {
@@ -52,8 +51,6 @@ export const useAutoReconnect = (
     excludeUserId?: string
   ): Promise<ReconnectableWoman | null> => {
     try {
-      const manHasIndianLanguage = isIndianLanguage(userLanguage);
-
       // Call the backend chat-manager to find a match
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
@@ -67,7 +64,7 @@ export const useAutoReconnect = (
       if (error) {
         console.error("Backend matching failed:", error);
         // Fall back to local matching
-        return await findLocalMatch(excludeUserId, manHasIndianLanguage);
+        return await findLocalMatch(excludeUserId);
       }
 
       if (data?.success && data?.woman_user_id) {
@@ -83,7 +80,7 @@ export const useAutoReconnect = (
       }
 
       // No match from backend, try local
-      return await findLocalMatch(excludeUserId, manHasIndianLanguage);
+      return await findLocalMatch(excludeUserId);
     } catch (error) {
       console.error("Error finding next available woman:", error);
       return null;
@@ -92,10 +89,10 @@ export const useAutoReconnect = (
 
   /**
    * Local fallback matching when backend is unavailable
+   * Global matching - all languages supported with translation
    */
   const findLocalMatch = async (
-    excludeUserId?: string,
-    manHasIndianLanguage?: boolean
+    excludeUserId?: string
   ): Promise<ReconnectableWoman | null> => {
     try {
       // Get online women
@@ -114,11 +111,11 @@ export const useAutoReconnect = (
 
       if (filteredIds.length === 0) return null;
 
-      // Get female profiles
+      // Get female profiles (global - no country/language restrictions)
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, photo_url, primary_language, preferred_language, country")
-        .eq("gender", "Female")
+        .or("gender.eq.Female,gender.eq.female")
         .in("user_id", filteredIds);
 
       if (!profiles || profiles.length === 0) return null;
@@ -143,7 +140,7 @@ export const useAutoReconnect = (
         languages?.map(l => [l.user_id, l.language_name]) || []
       );
 
-      // Filter and sort women
+      // Filter and sort women (no language/country restrictions - global app)
       const eligibleWomen: ReconnectableWoman[] = [];
 
       for (const profile of profiles) {
@@ -159,13 +156,6 @@ export const useAutoReconnect = (
                              profile.primary_language || 
                              profile.preferred_language || 
                              "Unknown";
-
-        const womanHasIndianLanguage = isIndianLanguage(womanLanguage);
-
-        // Apply NLLB visibility rules
-        if (!manHasIndianLanguage && !womanHasIndianLanguage) {
-          continue; // Non-Indian men can only see Indian women
-        }
 
         eligibleWomen.push({
           userId: profile.user_id,
