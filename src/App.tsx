@@ -7,16 +7,17 @@ import { lazy, Suspense, memo, startTransition } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { TranslationProvider } from "@/contexts/TranslationContext";
 
-// Inline critical components - no lazy for auth path
+// Critical components - no lazy for stability
 import AuthScreen from "./pages/AuthScreen";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { I18nProvider } from "@/components/I18nProvider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Defer non-critical imports
 const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
 const Sonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
-const TooltipProvider = lazy(() => import("@/components/ui/tooltip").then(m => ({ default: m.TooltipProvider })));
-const I18nProvider = lazy(() => import("@/components/I18nProvider").then(m => ({ default: m.I18nProvider })));
-const ErrorBoundary = lazy(() => import("@/components/ErrorBoundary"));
 const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
@@ -125,12 +126,12 @@ LazyRoute.displayName = 'LazyRoute';
 
 // Minimal shell for fastest possible render
 const AppShell = memo(({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={null}>
-    <ErrorBoundary>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <Suspense fallback={children}>
-            <I18nProvider>
+  <ErrorBoundary>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <TranslationProvider>
+            <TooltipProvider>
               <Suspense fallback={null}>
                 <SecurityProvider
                   enableDevToolsDetection={false}
@@ -138,24 +139,20 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
                   enableConsoleProtection={false}
                 >
                   <Suspense fallback={null}>
-                    <TooltipProvider>
-                      <Suspense fallback={null}>
-                        <Toaster />
-                        <Sonner />
-                        <PWAInstallPrompt />
-                        <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
-                      </Suspense>
-                      {children}
-                    </TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <PWAInstallPrompt />
+                    <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
                   </Suspense>
+                  {children}
                 </SecurityProvider>
               </Suspense>
-            </I18nProvider>
-          </Suspense>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  </Suspense>
+            </TooltipProvider>
+          </TranslationProvider>
+        </I18nProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  </ErrorBoundary>
 ));
 AppShell.displayName = 'AppShell';
 
