@@ -49,14 +49,24 @@
 - **Push Notifications**: Firebase Cloud Messaging + Local Notifications
 - **Offline Support**: Hive for local caching
 
-## Synced Constants (React ↔ Flutter)
+## Synced Constants (React ↔ Flutter ↔ Database)
 
 | Setting | Value | Files Synced |
 |---------|-------|--------------|
 | MAX_MESSAGE_LENGTH | 2000 | constants/index.ts, app_config.dart |
 | MAX_PARALLEL_CHATS | 3 | constants/index.ts, app_config.dart |
-| rate_per_minute (default) | 2 INR | chat.service.ts, chat_service.dart, chat_model.dart |
+| rate_per_minute (default) | 2 INR | chat.service.ts, chat_service.dart, chat_model.dart, DB |
 | women_earning_rate (default) | 2 INR | chat.service.ts, chat_service.dart |
-| Transaction status (default) | completed | wallet.service.ts, wallet_model.dart |
+| Transaction status (default) | completed | wallet.service.ts, wallet_model.dart, DB |
+| Currency (default) | INR | constants/index.ts, wallet_model.dart, gift_model.dart |
+
+## Route Sync (React ↔ Flutter)
+
+| Route | React | Flutter |
+|-------|-------|---------|
+| Chat | /chat/:chatId | /chat/:chatId |
+| Profile | /profile/:userId | /profile/:userId |
+| Send Gift | /send-gift/:receiverId | /send-gift/:receiverId |
 
 ## Last Sync: December 2025
+
