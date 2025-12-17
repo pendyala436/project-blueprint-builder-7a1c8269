@@ -80,7 +80,7 @@ const VideoCallButton = ({
       if (!result.success || !result.woman) {
         toast({
           title: "No Available Users",
-          description: result.reason || "No women are available for video calls right now. Please try again later.",
+          description: result.reason || `No women speaking ${userLanguage} are available for video calls right now. Video calls require same language.`,
           variant: "destructive",
         });
         setIsSearching(false);
