@@ -20,6 +20,7 @@ const ErrorBoundary = lazy(() => import("@/components/ErrorBoundary"));
 const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
+const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
 
 // Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
@@ -161,61 +162,65 @@ AppShell.displayName = 'AppShell';
 const App = () => (
   <AppShell>
     <BrowserRouter>
-      <Routes>
-        {/* Auth route - eagerly loaded for instant render */}
-        <Route path="/" element={<AuthScreen />} />
-        
-        {/* Lazy routes - grouped by feature */}
-        <Route path="/forgot-password" element={<LazyRoute component={ForgotPasswordScreen} />} />
-        <Route path="/reset-password" element={<LazyRoute component={PasswordResetScreen} />} />
-        <Route path="/password-reset-success" element={<LazyRoute component={PasswordResetSuccessScreen} />} />
-        <Route path="/register" element={<LazyRoute component={LanguageCountryScreen} />} />
-        <Route path="/basic-info" element={<LazyRoute component={BasicInfoScreen} />} />
-        <Route path="/personal-details" element={<LazyRoute component={PersonalDetailsScreen} />} />
-        <Route path="/photo-upload" element={<LazyRoute component={PhotoUploadScreen} />} />
-        <Route path="/location-setup" element={<LazyRoute component={LocationSetupScreen} />} />
-        <Route path="/language-preferences" element={<LazyRoute component={LanguagePreferencesScreen} />} />
-        <Route path="/terms-agreement" element={<LazyRoute component={TermsAgreementScreen} />} />
-        <Route path="/password-setup" element={<LazyRoute component={PasswordSetupScreen} />} />
-        <Route path="/ai-processing" element={<LazyRoute component={AIProcessingScreen} />} />
-        <Route path="/welcome-tutorial" element={<LazyRoute component={WelcomeTutorialScreen} />} />
-        <Route path="/registration-complete" element={<LazyRoute component={RegistrationCompleteScreen} />} />
-        <Route path="/dashboard" element={<LazyRoute component={DashboardScreen} />} />
-        <Route path="/online-users" element={<LazyRoute component={OnlineUsersScreen} />} />
-        <Route path="/find-match" element={<LazyRoute component={MatchingScreen} />} />
-        <Route path="/match-discovery" element={<LazyRoute component={MatchDiscoveryScreen} />} />
-        <Route path="/profile/:userId" element={<LazyRoute component={ProfileDetailScreen} />} />
-        <Route path="/chat/:chatId" element={<LazyRoute component={ChatScreen} />} />
-        <Route path="/wallet" element={<LazyRoute component={WalletScreen} />} />
-        <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
-        <Route path="/settings" element={<LazyRoute component={SettingsScreen} />} />
-        <Route path="/shift-management" element={<LazyRoute component={ShiftManagementScreen} />} />
-        <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
-        <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} />} />
-        <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} />} />
-        <Route path="/admin" element={<LazyRoute component={AdminDashboard} />} />
-        <Route path="/admin/analytics" element={<LazyRoute component={AdminAnalyticsDashboard} />} />
-        <Route path="/admin/users" element={<LazyRoute component={AdminUserManagement} />} />
-        <Route path="/admin/gifts" element={<LazyRoute component={AdminGiftPricing} />} />
-        <Route path="/admin/languages" element={<LazyRoute component={AdminLanguageGroups} />} />
-        <Route path="/admin/chat-monitoring" element={<LazyRoute component={AdminChatMonitoring} />} />
-        <Route path="/admin/finance" element={<LazyRoute component={AdminFinanceDashboard} />} />
-        <Route path="/admin/finance-reports" element={<LazyRoute component={AdminFinanceReports} />} />
-        <Route path="/admin/backups" element={<LazyRoute component={AdminBackupManagement} />} />
-        <Route path="/admin/legal-documents" element={<LazyRoute component={AdminLegalDocuments} />} />
-        <Route path="/admin/chat-pricing" element={<LazyRoute component={AdminChatPricing} />} />
-        <Route path="/admin/performance" element={<LazyRoute component={AdminPerformanceMonitoring} />} />
-        <Route path="/admin/settings" element={<LazyRoute component={AdminSettings} />} />
-        <Route path="/admin/audit-logs" element={<LazyRoute component={AdminAuditLogs} />} />
-        <Route path="/send-gift/:receiverId" element={<LazyRoute component={GiftSendingScreen} />} />
-        <Route path="/shift-compliance" element={<LazyRoute component={ShiftComplianceScreen} />} />
-        <Route path="/admin/moderation" element={<LazyRoute component={AdminModerationScreen} />} />
-        <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
-        <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
-        <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
-        <Route path="/install" element={<LazyRoute component={InstallApp} />} />
-        <Route path="*" element={<LazyRoute component={NotFound} />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <AutoLogoutWrapper>
+          <Routes>
+            {/* Auth route - eagerly loaded for instant render */}
+            <Route path="/" element={<AuthScreen />} />
+            
+            {/* Lazy routes - grouped by feature */}
+            <Route path="/forgot-password" element={<LazyRoute component={ForgotPasswordScreen} />} />
+            <Route path="/reset-password" element={<LazyRoute component={PasswordResetScreen} />} />
+            <Route path="/password-reset-success" element={<LazyRoute component={PasswordResetSuccessScreen} />} />
+            <Route path="/register" element={<LazyRoute component={LanguageCountryScreen} />} />
+            <Route path="/basic-info" element={<LazyRoute component={BasicInfoScreen} />} />
+            <Route path="/personal-details" element={<LazyRoute component={PersonalDetailsScreen} />} />
+            <Route path="/photo-upload" element={<LazyRoute component={PhotoUploadScreen} />} />
+            <Route path="/location-setup" element={<LazyRoute component={LocationSetupScreen} />} />
+            <Route path="/language-preferences" element={<LazyRoute component={LanguagePreferencesScreen} />} />
+            <Route path="/terms-agreement" element={<LazyRoute component={TermsAgreementScreen} />} />
+            <Route path="/password-setup" element={<LazyRoute component={PasswordSetupScreen} />} />
+            <Route path="/ai-processing" element={<LazyRoute component={AIProcessingScreen} />} />
+            <Route path="/welcome-tutorial" element={<LazyRoute component={WelcomeTutorialScreen} />} />
+            <Route path="/registration-complete" element={<LazyRoute component={RegistrationCompleteScreen} />} />
+            <Route path="/dashboard" element={<LazyRoute component={DashboardScreen} />} />
+            <Route path="/online-users" element={<LazyRoute component={OnlineUsersScreen} />} />
+            <Route path="/find-match" element={<LazyRoute component={MatchingScreen} />} />
+            <Route path="/match-discovery" element={<LazyRoute component={MatchDiscoveryScreen} />} />
+            <Route path="/profile/:userId" element={<LazyRoute component={ProfileDetailScreen} />} />
+            <Route path="/chat/:chatId" element={<LazyRoute component={ChatScreen} />} />
+            <Route path="/wallet" element={<LazyRoute component={WalletScreen} />} />
+            <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
+            <Route path="/settings" element={<LazyRoute component={SettingsScreen} />} />
+            <Route path="/shift-management" element={<LazyRoute component={ShiftManagementScreen} />} />
+            <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
+            <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} />} />
+            <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} />} />
+            <Route path="/admin" element={<LazyRoute component={AdminDashboard} />} />
+            <Route path="/admin/analytics" element={<LazyRoute component={AdminAnalyticsDashboard} />} />
+            <Route path="/admin/users" element={<LazyRoute component={AdminUserManagement} />} />
+            <Route path="/admin/gifts" element={<LazyRoute component={AdminGiftPricing} />} />
+            <Route path="/admin/languages" element={<LazyRoute component={AdminLanguageGroups} />} />
+            <Route path="/admin/chat-monitoring" element={<LazyRoute component={AdminChatMonitoring} />} />
+            <Route path="/admin/finance" element={<LazyRoute component={AdminFinanceDashboard} />} />
+            <Route path="/admin/finance-reports" element={<LazyRoute component={AdminFinanceReports} />} />
+            <Route path="/admin/backups" element={<LazyRoute component={AdminBackupManagement} />} />
+            <Route path="/admin/legal-documents" element={<LazyRoute component={AdminLegalDocuments} />} />
+            <Route path="/admin/chat-pricing" element={<LazyRoute component={AdminChatPricing} />} />
+            <Route path="/admin/performance" element={<LazyRoute component={AdminPerformanceMonitoring} />} />
+            <Route path="/admin/settings" element={<LazyRoute component={AdminSettings} />} />
+            <Route path="/admin/audit-logs" element={<LazyRoute component={AdminAuditLogs} />} />
+            <Route path="/send-gift/:receiverId" element={<LazyRoute component={GiftSendingScreen} />} />
+            <Route path="/shift-compliance" element={<LazyRoute component={ShiftComplianceScreen} />} />
+            <Route path="/admin/moderation" element={<LazyRoute component={AdminModerationScreen} />} />
+            <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
+            <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
+            <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
+            <Route path="/install" element={<LazyRoute component={InstallApp} />} />
+            <Route path="*" element={<LazyRoute component={NotFound} />} />
+          </Routes>
+        </AutoLogoutWrapper>
+      </Suspense>
     </BrowserRouter>
   </AppShell>
 );
