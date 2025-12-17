@@ -37,7 +37,7 @@ class ChatSessionModel with _$ChatSessionModel {
     DateTime? endedAt,
     @Default(0) double totalMinutes,
     @Default(0) double totalEarned,
-    @Default(5) double ratePerMinute,
+    @Default(2) double ratePerMinute,
     String? endReason,
     DateTime? lastActivityAt,
   }) = _ChatSessionModel;
@@ -50,7 +50,7 @@ class ChatSessionModel with _$ChatSessionModel {
 @freezed
 class ChatPricingModel with _$ChatPricingModel {
   const factory ChatPricingModel({
-    @Default(5) double ratePerMinute,
+    @Default(2) double ratePerMinute,
     @Default(2) double womenEarningRate,
     @Default(10) double videoRatePerMinute,
     @Default(5) double videoWomenEarningRate,
@@ -66,7 +66,7 @@ class ChatPricingModel with _$ChatPricingModel {
 @freezed
 class ChatPartnerInfo with _$ChatPartnerInfo {
   const factory ChatPartnerInfo({
-    required String oderId,
+    required String userId,
     required String name,
     String? photoUrl,
     @Default(false) bool isOnline,

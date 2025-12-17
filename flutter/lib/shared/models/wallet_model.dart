@@ -30,7 +30,7 @@ class WalletTransactionModel with _$WalletTransactionModel {
     required double amount,
     String? description,
     String? referenceId,
-    @Default('pending') String status,
+    @Default('completed') String status,
     DateTime? createdAt,
   }) = _WalletTransactionModel;
 
