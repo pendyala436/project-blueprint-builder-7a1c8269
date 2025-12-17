@@ -395,125 +395,128 @@ const WomenDashboardScreen = () => {
     try {
       const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
 
-      // Get all online male users (global - no country/language restrictions)
+      // Get ONLY online male users - strict online check
       const { data: onlineStatuses } = await supabase
         .from("user_status")
         .select("user_id, last_seen")
         .eq("is_online", true);
 
-      const onlineMen: OnlineMan[] = [];
-
-      // Process real users
-      if (onlineStatuses && onlineStatuses.length > 0) {
-        const onlineUserIds = onlineStatuses.map(s => s.user_id);
-
-        // Fetch male profiles from male_profiles table - only with photos
-        const { data: maleProfiles } = await supabase
-          .from("male_profiles")
-          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
-          .in("user_id", onlineUserIds)
-          .not("photo_url", "is", null)
-          .neq("photo_url", "");
-
-        // Also check main profiles table
-        const { data: mainProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
-          .or("gender.eq.male,gender.eq.Male")
-          .in("user_id", onlineUserIds)
-          .not("photo_url", "is", null)
-          .neq("photo_url", "");
-
-        // Combine profiles (deduplicate by user_id)
-        const allMaleProfiles = [...(maleProfiles || [])];
-        const existingUserIds = new Set(allMaleProfiles.map(p => p.user_id));
-        mainProfiles?.forEach(p => {
-          if (!existingUserIds.has(p.user_id)) {
-            allMaleProfiles.push(p);
-          }
-        });
-
-        if (allMaleProfiles.length > 0) {
-          const maleUserIds = allMaleProfiles.map(p => p.user_id);
-
-          // Fetch wallet balances
-          const { data: wallets } = await supabase
-            .from("wallets")
-            .select("user_id, balance")
-            .in("user_id", maleUserIds);
-
-          // Fetch languages for each man
-          const { data: userLanguages } = await supabase
-            .from("user_languages")
-            .select("user_id, language_name")
-            .in("user_id", maleUserIds);
-
-          const walletMap = new Map(wallets?.map(w => [w.user_id, Number(w.balance)]) || []);
-          const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
-          const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
-
-          // Process male profiles (no language/country filtering - global app)
-          allMaleProfiles.forEach(profile => {
-            const manLanguage = languageMap.get(profile.user_id) || 
-                               profile.primary_language || 
-                               profile.preferred_language || 
-                               "Unknown";
-            
-            const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
-            const walletBalance = walletMap.get(profile.user_id) || 0;
-            const hasRecharged = walletBalance > 0;
-
-            onlineMen.push({
-              userId: profile.user_id,
-              fullName: profile.full_name || "Anonymous",
-              age: profile.age,
-              photoUrl: profile.photo_url,
-              country: profile.country,
-              state: profile.state,
-              motherTongue: manLanguage,
-              preferredLanguage: profile.preferred_language,
-              walletBalance,
-              hasRecharged,
-              lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
-              isSameLanguage,
-              isNllbLanguage: true, // All languages supported with translation
-            });
-          });
-        }
+      // If no users online, show empty lists
+      if (!onlineStatuses || onlineStatuses.length === 0) {
+        console.log("[WomenDashboard] No online men found");
+        setRechargedMen([]);
+        setNonRechargedMen([]);
+        setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
+        return;
       }
 
-      // Get active chat counts for all men
-      const menUserIds = onlineMen.map(m => m.userId);
-      const { data: chatCounts } = await supabase
-        .from("active_chat_sessions")
-        .select("man_user_id")
-        .in("man_user_id", menUserIds)
-        .eq("status", "active");
+      const onlineUserIds = onlineStatuses.map(s => s.user_id);
+      const onlineMen: OnlineMan[] = [];
 
-      // Count chats per man
+      // Fetch ONLY online male profiles
+      const { data: maleProfiles } = await supabase
+        .from("male_profiles")
+        .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
+        .in("user_id", onlineUserIds)
+        .not("photo_url", "is", null)
+        .neq("photo_url", "");
+
+      // Also check main profiles table for online men
+      const { data: mainProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
+        .or("gender.eq.male,gender.eq.Male")
+        .in("user_id", onlineUserIds)
+        .not("photo_url", "is", null)
+        .neq("photo_url", "");
+
+      // Combine profiles (deduplicate)
+      const allMaleProfiles = [...(maleProfiles || [])];
+      const existingUserIds = new Set(allMaleProfiles.map(p => p.user_id));
+      mainProfiles?.forEach(p => {
+        if (!existingUserIds.has(p.user_id)) {
+          allMaleProfiles.push(p);
+        }
+      });
+
+      if (allMaleProfiles.length === 0) {
+        console.log("[WomenDashboard] No online male profiles found");
+        setRechargedMen([]);
+        setNonRechargedMen([]);
+        setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
+        return;
+      }
+
+      const maleUserIds = allMaleProfiles.map(p => p.user_id);
+
+      // Fetch wallet balances, languages, chat counts in parallel
+      const [walletsRes, languagesRes, chatCountsRes] = await Promise.all([
+        supabase.from("wallets").select("user_id, balance").in("user_id", maleUserIds),
+        supabase.from("user_languages").select("user_id, language_name").in("user_id", maleUserIds),
+        supabase.from("active_chat_sessions").select("man_user_id").in("man_user_id", maleUserIds).eq("status", "active")
+      ]);
+
+      const walletMap = new Map(walletsRes.data?.map(w => [w.user_id, Number(w.balance)]) || []);
+      const lastSeenMap = new Map(onlineStatuses.map(s => [s.user_id, s.last_seen]));
+      const languageMap = new Map(languagesRes.data?.map(l => [l.user_id, l.language_name]) || []);
+
+      // Count active chats per man for load balancing
       const chatCountMap = new Map<string, number>();
-      chatCounts?.forEach(chat => {
+      chatCountsRes.data?.forEach(chat => {
         const count = chatCountMap.get(chat.man_user_id) || 0;
         chatCountMap.set(chat.man_user_id, count + 1);
       });
 
-      // Add chat count to each man
-      const menWithChatCount = onlineMen.map(m => ({
-        ...m,
-        activeChatCount: chatCountMap.get(m.userId) || 0
-      }));
+      // Process male profiles
+      allMaleProfiles.forEach(profile => {
+        const manLanguage = languageMap.get(profile.user_id) || 
+                           profile.primary_language || 
+                           profile.preferred_language || 
+                           "Unknown";
+        
+        const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
+        const walletBalance = walletMap.get(profile.user_id) || 0;
+        const hasRecharged = walletBalance > 0;
+        const activeChatCount = chatCountMap.get(profile.user_id) || 0;
 
-      // Sort: same language first, then by wallet balance
-      const sortedMen = menWithChatCount.sort((a, b) => {
+        onlineMen.push({
+          userId: profile.user_id,
+          fullName: profile.full_name || "Anonymous",
+          age: profile.age,
+          photoUrl: profile.photo_url,
+          country: profile.country,
+          state: profile.state,
+          motherTongue: manLanguage,
+          preferredLanguage: profile.preferred_language,
+          walletBalance,
+          hasRecharged,
+          lastSeen: lastSeenMap.get(profile.user_id) || new Date().toISOString(),
+          isSameLanguage,
+          isNllbLanguage: true, // All languages supported with translation
+          activeChatCount
+        });
+      });
+
+      // Sort by load: lowest chat count first, then same language, then wallet balance
+      const sortedMen = onlineMen.sort((a, b) => {
+        // First: by active chat count (load balancing - lower is better)
+        if (a.activeChatCount !== b.activeChatCount) {
+          return a.activeChatCount - b.activeChatCount;
+        }
+        // Second: same language preference
         if (a.isSameLanguage !== b.isSameLanguage) {
           return a.isSameLanguage ? -1 : 1;
         }
+        // Third: by wallet balance (higher is better for women)
         return b.walletBalance - a.walletBalance;
       });
 
       // Separate recharged (with balance) and non-recharged
       const recharged = sortedMen.filter(m => m.hasRecharged);
       const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
+
+      console.log("[WomenDashboard] Online recharged men:", recharged.length);
+      console.log("[WomenDashboard] Online non-recharged men:", nonRecharged.length);
 
       setRechargedMen(recharged);
       setNonRechargedMen(nonRecharged);
@@ -524,8 +527,10 @@ const WomenDashboardScreen = () => {
         nonRechargedMen: nonRecharged.length
       }));
 
-    } catch {
-      // Error fetching online men - silently handled
+    } catch (error) {
+      console.error("Error fetching online men:", error);
+      setRechargedMen([]);
+      setNonRechargedMen([]);
     }
   };
 

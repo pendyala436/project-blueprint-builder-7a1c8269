@@ -643,57 +643,65 @@ const DashboardScreen = () => {
     console.log("[Dashboard] fetchOnlineWomen called with language:", language);
     setLoadingOnlineWomen(true);
     try {
-      // Get online user IDs
+      // Get ONLY online user IDs - strict online check
       const { data: onlineUsers } = await supabase
         .from("user_status")
         .select("user_id")
         .eq("is_online", true);
 
       const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
+      
+      // If no users online, show empty lists
+      if (onlineUserIds.length === 0) {
+        console.log("[Dashboard] No online users found");
+        setSameLanguageWomen([]);
+        setIndianTranslatedWomen([]);
+        setLoadingOnlineWomen(false);
+        return;
+      }
 
-      // Fetch women from all sources
-      let allWomen: OnlineWoman[] = [];
-
-      // Fetch from female_profiles table - only users with photos (global - all countries/languages)
+      // Fetch ONLY online women from female_profiles table
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
+        .in("user_id", onlineUserIds)
         .not("photo_url", "is", null)
         .neq("photo_url", "")
         .limit(50);
 
-      if (femaleProfiles && femaleProfiles.length > 0) {
-        allWomen = [...femaleProfiles];
-      }
+      let onlineWomenList: OnlineWoman[] = femaleProfiles || [];
 
-      // Also fetch from main profiles table for women who may not have female_profiles entry
+      // Also fetch from main profiles table for online women
       const { data: mainProfiles } = await supabase
         .from("profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .or("gender.eq.female,gender.eq.Female")
         .eq("approval_status", "approved")
+        .in("user_id", onlineUserIds)
         .not("photo_url", "is", null)
         .neq("photo_url", "")
         .limit(50);
 
       if (mainProfiles && mainProfiles.length > 0) {
-        // Add profiles that aren't already in allWomen
-        const existingUserIds = new Set(allWomen.map(w => w.user_id));
+        const existingUserIds = new Set(onlineWomenList.map(w => w.user_id));
         mainProfiles.forEach(p => {
           if (!existingUserIds.has(p.user_id)) {
-            allWomen.push(p);
+            onlineWomenList.push(p);
           }
         });
       }
 
-      // Filter by online status if we have online user IDs
-      const onlineWomenList = onlineUserIds.length > 0 
-        ? allWomen.filter(w => onlineUserIds.includes(w.user_id))
-        : allWomen;
+      if (onlineWomenList.length === 0) {
+        console.log("[Dashboard] No online women found");
+        setSameLanguageWomen([]);
+        setIndianTranslatedWomen([]);
+        setLoadingOnlineWomen(false);
+        return;
+      }
 
-      // Get active chat counts for all women
+      // Get active chat counts for load balancing
       const womenUserIds = onlineWomenList.map(w => w.user_id);
       const { data: chatCounts } = await supabase
         .from("active_chat_sessions")
@@ -701,14 +709,13 @@ const DashboardScreen = () => {
         .in("woman_user_id", womenUserIds)
         .eq("status", "active");
 
-      // Count chats per woman
       const chatCountMap = new Map<string, number>();
       chatCounts?.forEach(chat => {
         const count = chatCountMap.get(chat.woman_user_id) || 0;
         chatCountMap.set(chat.woman_user_id, count + 1);
       });
 
-      // Add chat count to each woman and get availability
+      // Get availability data
       const { data: availabilityData } = await supabase
         .from("women_availability")
         .select("user_id, is_available, current_chat_count, max_concurrent_chats")
@@ -718,7 +725,7 @@ const DashboardScreen = () => {
         availabilityData?.map(a => [a.user_id, a]) || []
       );
 
-      // Get languages from user_languages table
+      // Get languages
       const { data: userLanguages } = await supabase
         .from("user_languages")
         .select("user_id, language_name")
@@ -739,31 +746,29 @@ const DashboardScreen = () => {
         };
       });
 
-      // Sort women: Free (0 chats) first, then by chat count ascending
-      const sortByAvailability = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
+      // Sort by load: lowest chat count first (load balancing)
+      const sortByLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
         // First: available vs not available
         if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
         // Second: not at max capacity
         const aAtMax = a.active_chat_count >= a.max_chats;
         const bAtMax = b.active_chat_count >= b.max_chats;
         if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
-        // Third: by chat count (lower first = more available)
+        // Third: by chat count (lower first = less load)
         return a.active_chat_count - b.active_chat_count;
       };
 
-      // Split women into two categories:
-      // 1. Same language women (sorted by availability)
+      // Split: same language first, others for auto-translate
       const sameLanguage = womenWithChatCount
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
-        .sort(sortByAvailability);
+        .sort(sortByLoad);
 
-      // 2. All other women (for auto-translate) - NOT same as user's language
       const otherWomen = womenWithChatCount
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
-        .sort(sortByAvailability);
+        .sort(sortByLoad);
 
-      console.log("[Dashboard] Same language women found:", sameLanguage.length, "for language:", language);
-      console.log("[Dashboard] Other women found:", otherWomen.length);
+      console.log("[Dashboard] Online same-language women:", sameLanguage.length);
+      console.log("[Dashboard] Online other-language women (auto-translate):", otherWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
       setIndianTranslatedWomen(otherWomen.slice(0, 15));
     } catch (error) {
