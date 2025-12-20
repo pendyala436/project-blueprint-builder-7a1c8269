@@ -98,6 +98,27 @@ async function autoApproveWomen(supabase: any) {
         approvedIds.push(woman.id);
         console.log(`Auto-approved woman: ${woman.full_name} (${woman.id})`);
 
+        // Insert into women_availability table
+        const { error: availError } = await supabase
+          .from('women_availability')
+          .upsert({
+            user_id: woman.user_id,
+            is_available: false,
+            is_available_for_calls: false,
+            current_chat_count: 0,
+            current_call_count: 0,
+            max_concurrent_chats: 3,
+            max_concurrent_calls: 1,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+
+        if (availError) {
+          console.error(`Error creating women_availability for ${woman.full_name}:`, availError);
+        } else {
+          console.log(`✓ Created women_availability entry for ${woman.full_name}`);
+        }
+
         // Create notification
         await supabase.from('notifications').insert({
           user_id: woman.user_id,

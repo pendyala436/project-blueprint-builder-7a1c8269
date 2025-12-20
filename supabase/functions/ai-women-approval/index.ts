@@ -193,6 +193,27 @@ serve(async (req) => {
         })
         .eq("user_id", woman.user_id);
 
+      // Insert into women_availability table for the approved woman
+      const { error: availError } = await supabase
+        .from("women_availability")
+        .upsert({
+          user_id: woman.user_id,
+          is_available: false,
+          is_available_for_calls: false,
+          current_chat_count: 0,
+          current_call_count: 0,
+          max_concurrent_chats: 3,
+          max_concurrent_calls: 1,
+          last_activity_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+
+      if (availError) {
+        console.error(`Error creating women_availability for ${woman.full_name}:`, availError);
+      } else {
+        console.log(`✓ Created women_availability entry for ${woman.full_name}`);
+      }
+
       if (matchedGroup) {
         // Increment group count
         await supabase
@@ -285,6 +306,27 @@ serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingFp.id);
+        }
+
+        // Insert into women_availability table
+        const { error: availError } = await supabase
+          .from("women_availability")
+          .upsert({
+            user_id: woman.user_id,
+            is_available: false,
+            is_available_for_calls: false,
+            current_chat_count: 0,
+            current_call_count: 0,
+            max_concurrent_chats: 3,
+            max_concurrent_calls: 1,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+
+        if (availError) {
+          console.error(`Error creating women_availability for profile ${woman.full_name}:`, availError);
+        } else {
+          console.log(`✓ Created women_availability entry for profile ${woman.full_name}`);
         }
 
         if (matchedGroup) {
