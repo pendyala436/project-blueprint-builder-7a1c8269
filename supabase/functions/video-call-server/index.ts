@@ -16,11 +16,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// SRS Server Configuration (localhost for development)
+// SRS Server Configuration - Using ngrok tunnel to local SRS
 // Note: SRS should be started with recording DISABLED (no --dvr flag)
 const SRS_CONFIG = {
-  apiUrl: Deno.env.get('SRS_API_URL') || 'http://localhost:1985',
-  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'http://localhost:1985/rtc/v1',
+  apiUrl: Deno.env.get('SRS_API_URL') || 'https://b260163ae766.ngrok-free.app',
+  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'https://b260163ae766.ngrok-free.app/rtc/v1',
   noRecording: true, // Ensure SRS is configured without recording
 };
 
