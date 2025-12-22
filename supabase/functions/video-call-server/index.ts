@@ -20,8 +20,8 @@ const corsHeaders = {
 // Note: SRS should be started with recording DISABLED (no --dvr flag)
 // IMPORTANT: Update the ngrok URL when you restart ngrok!
 const SRS_CONFIG = {
-  apiUrl: Deno.env.get('SRS_API_URL') || 'https://b260163ae766.ngrok-free.app',
-  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'https://b260163ae766.ngrok-free.app/rtc/v1',
+  apiUrl: Deno.env.get('SRS_API_URL') || 'https://45b84e11c2d2.ngrok-free.app',
+  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'https://45b84e11c2d2.ngrok-free.app/rtc/v1',
   noRecording: true, // Ensure SRS is configured without recording
 };
 
