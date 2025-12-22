@@ -18,10 +18,17 @@ const corsHeaders = {
 
 // SRS Server Configuration - Using ngrok tunnel to local SRS
 // Note: SRS should be started with recording DISABLED (no --dvr flag)
+// IMPORTANT: Update the ngrok URL when you restart ngrok!
 const SRS_CONFIG = {
   apiUrl: Deno.env.get('SRS_API_URL') || 'https://b260163ae766.ngrok-free.app',
   rtcUrl: Deno.env.get('SRS_RTC_URL') || 'https://b260163ae766.ngrok-free.app/rtc/v1',
   noRecording: true, // Ensure SRS is configured without recording
+};
+
+// Headers to bypass ngrok browser warning
+const ngrokHeaders = {
+  'Content-Type': 'application/json',
+  'ngrok-skip-browser-warning': 'true',
 };
 
 interface VideoCallRequest {
@@ -37,18 +44,20 @@ interface VideoCallRequest {
 // SRS API helper functions
 async function srsPublish(streamName: string, sdp: string): Promise<{ success: boolean; sdp?: string; error?: string }> {
   try {
-    console.log(`SRS Publish: ${streamName}`);
+    console.log(`SRS Publish: ${streamName} to ${SRS_CONFIG.rtcUrl}/publish/`);
     
     // SRS WebRTC publish endpoint
     const response = await fetch(`${SRS_CONFIG.rtcUrl}/publish/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ngrokHeaders,
       body: JSON.stringify({
         api: `${SRS_CONFIG.rtcUrl}/publish/`,
         streamurl: `webrtc://localhost/live/${streamName}`,
         sdp: sdp,
       }),
     });
+    
+    console.log(`SRS Publish response status: ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -83,15 +92,18 @@ async function srsPlay(streamName: string, sdp: string): Promise<{ success: bool
     console.log(`SRS Play: ${streamName}`);
     
     // SRS WebRTC play endpoint
+    console.log(`SRS Play: ${streamName} from ${SRS_CONFIG.rtcUrl}/play/`);
     const response = await fetch(`${SRS_CONFIG.rtcUrl}/play/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ngrokHeaders,
       body: JSON.stringify({
         api: `${SRS_CONFIG.rtcUrl}/play/`,
         streamurl: `webrtc://localhost/live/${streamName}`,
         sdp: sdp,
       }),
     });
+    
+    console.log(`SRS Play response status: ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -124,7 +136,9 @@ async function srsUnpublish(streamName: string): Promise<{ success: boolean; err
     
     // SRS doesn't have a direct unpublish API - the stream ends when WebRTC connection closes
     // We can use the clients API to kick the publisher if needed
-    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/clients/`);
+    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/clients/`, {
+      headers: ngrokHeaders,
+    });
     
     if (response.ok) {
       const data = await response.json();
@@ -148,7 +162,9 @@ async function srsUnpublish(streamName: string): Promise<{ success: boolean; err
 
 async function srsGetViewers(streamName: string): Promise<{ viewerCount: number }> {
   try {
-    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/clients/`);
+    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/clients/`, {
+      headers: ngrokHeaders,
+    });
     
     if (response.ok) {
       const data = await response.json();
@@ -170,7 +186,9 @@ async function srsGetViewers(streamName: string): Promise<{ viewerCount: number 
 
 async function srsGetStreams(): Promise<{ streams: string[] }> {
   try {
-    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/streams/`);
+    const response = await fetch(`${SRS_CONFIG.apiUrl}/api/v1/streams/`, {
+      headers: ngrokHeaders,
+    });
     
     if (response.ok) {
       const data = await response.json();
