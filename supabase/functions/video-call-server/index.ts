@@ -42,27 +42,51 @@ interface VideoCallRequest {
 }
 
 // SRS API helper functions
+function getSrsPublicHost(): string {
+  // Use rtcUrl for WebRTC public host; fallback to apiUrl
+  try {
+    const url = new URL(SRS_CONFIG.rtcUrl);
+    return url.host;
+  } catch {
+    try {
+      const url = new URL(SRS_CONFIG.apiUrl);
+      return url.host;
+    } catch {
+      return 'localhost';
+    }
+  }
+}
+
+async function parseSrsErrorText(res: Response): Promise<string> {
+  const text = await res.text();
+  // Detect ngrok's upstream connection failure page
+  if (text.includes('ERR_NGROK_8012')) {
+    return 'Ngrok cannot reach your local SRS service (ERR_NGROK_8012). Make sure SRS is running and tunnel the correct port (usually http://localhost:1985).';
+  }
+  return text.slice(0, 5000);
+}
+
 async function srsPublish(streamName: string, sdp: string): Promise<{ success: boolean; sdp?: string; error?: string }> {
   try {
-    console.log(`SRS Publish: ${streamName} to ${SRS_CONFIG.rtcUrl}/publish/`);
-    
-    // SRS WebRTC publish endpoint
+    const publicHost = getSrsPublicHost();
+    console.log(`SRS Publish: ${streamName} to ${SRS_CONFIG.rtcUrl}/publish/ (host: ${publicHost})`);
+
     const response = await fetch(`${SRS_CONFIG.rtcUrl}/publish/`, {
       method: 'POST',
       headers: ngrokHeaders,
       body: JSON.stringify({
         api: `${SRS_CONFIG.rtcUrl}/publish/`,
-        streamurl: `webrtc://localhost/live/${streamName}`,
-        sdp: sdp,
+        streamurl: `webrtc://${publicHost}/live/${streamName}`,
+        sdp,
       }),
     });
-    
+
     console.log(`SRS Publish response status: ${response.status}`);
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await parseSrsErrorText(response);
       console.error('SRS publish error:', errorText);
-      return { success: false, error: `SRS server error: ${response.status}` };
+      return { success: false, error: errorText };
     }
 
     const data = await response.json();
@@ -75,40 +99,31 @@ async function srsPublish(streamName: string, sdp: string): Promise<{ success: b
     return { success: true, sdp: data.sdp };
   } catch (error) {
     console.error('SRS publish exception:', error);
-    // For development without SRS server, return mock response
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.log('SRS server not available, using mock response');
-      return { 
-        success: true, 
-        sdp: sdp // Return same SDP for testing without actual SRS
-      };
-    }
-    return { success: false, error: 'Failed to connect to SRS server' };
+    return { success: false, error: 'Failed to connect to SRS server. Ensure your ngrok tunnel points to the SRS HTTP API port (usually 1985) and SRS is running.' };
   }
 }
 
 async function srsPlay(streamName: string, sdp: string): Promise<{ success: boolean; sdp?: string; error?: string }> {
   try {
-    console.log(`SRS Play: ${streamName}`);
-    
-    // SRS WebRTC play endpoint
-    console.log(`SRS Play: ${streamName} from ${SRS_CONFIG.rtcUrl}/play/`);
+    const publicHost = getSrsPublicHost();
+    console.log(`SRS Play: ${streamName} from ${SRS_CONFIG.rtcUrl}/play/ (host: ${publicHost})`);
+
     const response = await fetch(`${SRS_CONFIG.rtcUrl}/play/`, {
       method: 'POST',
       headers: ngrokHeaders,
       body: JSON.stringify({
         api: `${SRS_CONFIG.rtcUrl}/play/`,
-        streamurl: `webrtc://localhost/live/${streamName}`,
-        sdp: sdp,
+        streamurl: `webrtc://${publicHost}/live/${streamName}`,
+        sdp,
       }),
     });
-    
+
     console.log(`SRS Play response status: ${response.status}`);
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await parseSrsErrorText(response);
       console.error('SRS play error:', errorText);
-      return { success: false, error: `SRS server error: ${response.status}` };
+      return { success: false, error: errorText };
     }
 
     const data = await response.json();
@@ -121,12 +136,7 @@ async function srsPlay(streamName: string, sdp: string): Promise<{ success: bool
     return { success: true, sdp: data.sdp };
   } catch (error) {
     console.error('SRS play exception:', error);
-    // For development without SRS server
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.log('SRS server not available, using mock response');
-      return { success: true, sdp: sdp };
-    }
-    return { success: false, error: 'Failed to connect to SRS server' };
+    return { success: false, error: 'Failed to connect to SRS server. Ensure your ngrok tunnel points to the SRS HTTP API port (usually 1985) and SRS is running.' };
   }
 }
 
@@ -147,6 +157,7 @@ async function srsUnpublish(streamName: string): Promise<{ success: boolean; err
         if (client.publish && client.url?.includes(streamName)) {
           await fetch(`${SRS_CONFIG.apiUrl}/api/v1/clients/${client.id}`, {
             method: 'DELETE',
+            headers: ngrokHeaders,
           });
           console.log(`Kicked client ${client.id} for stream ${streamName}`);
         }
