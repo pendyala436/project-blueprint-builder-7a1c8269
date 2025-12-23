@@ -10,9 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift } from 'lucide-react';
-import { GroupChatWindow } from './GroupChatWindow';
-import { GroupVideoCall } from './GroupVideoCall';
+import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid } from 'lucide-react';
+import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
 
 // Fixed gift amounts available in the app
 const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
@@ -47,8 +46,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
-  const [activeGroupChat, setActiveGroupChat] = useState<PrivateGroup | null>(null);
-  const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);
+  const [activeGroup, setActiveGroup] = useState<PrivateGroup | null>(null);
   
   // Form state
   const [groupName, setGroupName] = useState('');
@@ -356,28 +354,15 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   )}
                 </div>
                 <div className="flex gap-2 pt-2">
-                  {(group.access_type === 'chat' || group.access_type === 'both') && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="flex-1 gap-2"
-                      onClick={() => setActiveGroupChat(group)}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Open Chat
-                    </Button>
-                  )}
-                  {(group.access_type === 'video' || group.access_type === 'both') && (
-                    <Button 
-                      size="sm" 
-                      variant="default"
-                      className="flex-1 gap-2"
-                      onClick={() => setActiveGroupVideo(group)}
-                    >
-                      <Video className="h-4 w-4" />
-                      {group.is_live ? 'Join Live' : 'Go Live'}
-                    </Button>
-                  )}
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    className="flex-1 gap-2"
+                    onClick={() => setActiveGroup(group)}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                    Open Group
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -446,26 +431,14 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         </DialogContent>
       </Dialog>
 
-      {/* Group Chat Window */}
-      {activeGroupChat && (
-        <GroupChatWindow
-          group={activeGroupChat}
+      {/* Teams-Style Group Window (Chat + Video Combined) */}
+      {activeGroup && (
+        <TeamsStyleGroupWindow
+          group={activeGroup}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
-          onClose={() => setActiveGroupChat(null)}
-          isOwner={true}
-        />
-      )}
-
-      {/* Group Video Call */}
-      {activeGroupVideo && (
-        <GroupVideoCall
-          group={activeGroupVideo}
-          currentUserId={currentUserId}
-          userName={userName}
-          userPhoto={userPhoto}
-          onClose={() => setActiveGroupVideo(null)}
+          onClose={() => setActiveGroup(null)}
           isOwner={true}
         />
       )}
