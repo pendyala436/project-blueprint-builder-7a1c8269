@@ -816,6 +816,58 @@ serve(async (req) => {
           );
         }
 
+        // SECURITY: Verify that the authenticated user is the man (initiator)
+        // Women cannot initiate chats - they can only respond
+        if (authenticatedUserId !== man_user_id) {
+          // Check if the authenticated user is the woman trying to initiate
+          if (authenticatedUserId === woman_user_id) {
+            console.log(`[SECURITY] Woman ${authenticatedUserId} attempted to initiate chat - BLOCKED`);
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                message: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
+                error_code: "WOMEN_CANNOT_INITIATE"
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+            );
+          }
+          
+          // Check if admin (admins can act on behalf)
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', authenticatedUserId)
+            .eq('role', 'admin')
+            .maybeSingle();
+          
+          if (!roleData) {
+            console.log(`[SECURITY] User ${authenticatedUserId} attempted to start chat as ${man_user_id} - BLOCKED`);
+            return new Response(
+              JSON.stringify({ success: false, message: "You can only initiate chats as yourself" }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+            );
+          }
+        }
+
+        // Verify the initiator (man_user_id) is actually male
+        const { data: initiatorProfile } = await supabase
+          .from("profiles")
+          .select("gender")
+          .eq("user_id", man_user_id)
+          .maybeSingle();
+        
+        if (initiatorProfile?.gender?.toLowerCase() === "female") {
+          console.log(`[SECURITY] Female user ${man_user_id} attempted to initiate chat as man - BLOCKED`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
+              error_code: "WOMEN_CANNOT_INITIATE"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+          );
+        }
+
         const MAX_PARALLEL_CHATS = 3;
 
         // Check man's active chat count (max 3 parallel sessions)

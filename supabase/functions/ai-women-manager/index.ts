@@ -16,8 +16,41 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get authenticated user from auth header
+    const authHeader = req.headers.get('authorization');
+    let authenticatedUserId: string | null = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      authenticatedUserId = user?.id || null;
+    }
+
     const { action, data } = await req.json();
     console.log(`AI Women Manager - Action: ${action}`, data);
+
+    // SECURITY: For distribution actions, verify the caller is male (only men can initiate)
+    if (action === 'distribute_for_chat' || action === 'distribute_for_call') {
+      if (authenticatedUserId) {
+        const { data: callerProfile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', authenticatedUserId)
+          .maybeSingle();
+        
+        if (callerProfile?.gender?.toLowerCase() === 'female') {
+          console.log(`[SECURITY] Female user ${authenticatedUserId} attempted to initiate ${action} - BLOCKED`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Women cannot initiate chats or video calls. Please wait for men to start a conversation with you.',
+              error_code: 'WOMEN_CANNOT_INITIATE'
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
 
     switch (action) {
       case 'auto_approve_women':
