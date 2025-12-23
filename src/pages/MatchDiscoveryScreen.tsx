@@ -776,7 +776,7 @@ const MatchDiscoveryScreen = () => {
                     </div>
 
                     {/* ============= AVATAR SECTION ============= */}
-                    <div className="relative h-96 bg-gradient-to-br from-muted to-muted/50">
+                    <div className="relative h-[50vh] max-h-80 sm:max-h-96 bg-gradient-to-br from-muted to-muted/50">
                       {currentMatch.avatar ? (
                         // Profile photo
                         <img 
@@ -797,27 +797,27 @@ const MatchDiscoveryScreen = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                       
                       {/* User info overlay at bottom */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
                         {/* Name and badges row */}
                         <div className="flex items-center gap-2 mb-2">
-                          <h2 className="text-2xl font-bold">{currentMatch.fullName}</h2>
+                          <h2 className="text-xl sm:text-2xl font-bold">{currentMatch.fullName}</h2>
                           {/* Age display */}
                           {currentMatch.age && (
-                            <span className="text-lg opacity-80">{currentMatch.age}</span>
+                            <span className="text-base sm:text-lg opacity-80">{currentMatch.age}</span>
                           )}
                           {/* Verified badge */}
                           {currentMatch.isVerified && (
-                            <Shield className="w-5 h-5 text-blue-400" />
+                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                           )}
                           {/* Premium badge */}
                           {currentMatch.isPremium && (
-                            <Star className="w-5 h-5 text-amber-400" />
+                            <Star className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                           )}
                         </div>
                         
                         {/* Location with online indicator */}
-                        <div className="flex items-center gap-2 text-sm opacity-90 mb-3">
-                          <MapPin className="w-4 h-4" />
+                        <div className="flex items-center gap-2 text-xs sm:text-sm opacity-90 mb-2 sm:mb-3">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span>{currentMatch.country}</span>
                           {/* Online status indicator */}
                           {currentMatch.isOnline && (
@@ -831,8 +831,8 @@ const MatchDiscoveryScreen = () => {
                         {/* Common languages display */}
                         {currentMatch.commonLanguages.length > 0 && (
                           <div className="flex items-center gap-2">
-                            <Languages className="w-4 h-4" />
-                            <span className="text-sm">
+                            <Languages className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="text-xs sm:text-sm">
                               {currentMatch.commonLanguages.join(", ")}
                             </span>
                           </div>
@@ -842,43 +842,43 @@ const MatchDiscoveryScreen = () => {
 
                     {/* ============= BIO SECTION ============= */}
                     {currentMatch.bio && (
-                      <div className="p-4 border-t border-border/50">
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                      <div className="p-3 sm:p-4 border-t border-border/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3">
                           {currentMatch.bio}
                         </p>
                       </div>
                     )}
 
                     {/* ============= ACTION BUTTONS ============= */}
-                    <div className="p-4 flex justify-center gap-6">
+                    <div className="p-3 sm:p-4 flex justify-center gap-4 sm:gap-6 bg-card">
                       {/* Dislike (X) button */}
                       <Button
                         size="lg"
                         variant="outline"
-                        className="w-16 h-16 rounded-full border-2 border-destructive/50 hover:bg-destructive/10 hover:border-destructive transition-all"
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-destructive/50 hover:bg-destructive/10 hover:border-destructive transition-all"
                         onClick={handleDislike}
                       >
-                        <X className="w-8 h-8 text-destructive" />
+                        <X className="w-6 h-6 sm:w-8 sm:h-8 text-destructive" />
                       </Button>
                       
                       {/* View Profile button */}
                       <Button
                         size="lg"
                         variant="outline"
-                        className="w-14 h-14 rounded-full border-2 border-muted-foreground/30 hover:bg-muted"
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-muted-foreground/30 hover:bg-muted"
                         onClick={() => navigate(`/profile/${currentMatch.userId}`)}
                       >
-                        <Eye className="w-6 h-6 text-muted-foreground" />
+                        <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                       </Button>
                       
                       {/* Like (Heart) button */}
                       <Button
                         size="lg"
                         variant="outline"
-                        className="w-16 h-16 rounded-full border-2 border-emerald-500/50 hover:bg-emerald-500/10 hover:border-emerald-500 transition-all"
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-emerald-500/50 hover:bg-emerald-500/10 hover:border-emerald-500 transition-all"
                         onClick={() => handleLike(currentMatch)}
                       >
-                        <Heart className="w-8 h-8 text-emerald-500" />
+                        <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-500" />
                       </Button>
                     </div>
                   </Card>
