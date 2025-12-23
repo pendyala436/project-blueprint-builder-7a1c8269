@@ -78,6 +78,16 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
+    // SECURITY: Women cannot initiate chats - they can only respond
+    if (userGender === "female") {
+      toast({
+        title: "Action Not Allowed",
+        description: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check wallet balance for men - need at least ₹8 to start chat
     if (userGender === "male") {
       const minBalance = 8; // Minimum balance required to start chat

@@ -226,10 +226,41 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get authenticated user from auth header
+    const authHeader = req.headers.get('authorization');
+    let authenticatedUserId: string | null = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      authenticatedUserId = user?.id || null;
+    }
+
     const body = await req.json() as VideoCallRequest;
     const { action, callId, userId, streamName, sdp, mode } = body;
 
     console.log(`Video call action: ${action}, callId: ${callId}, userId: ${userId}, streamName: ${streamName}`);
+
+    // SECURITY: For create_room action, verify the caller is male (only men can initiate video calls)
+    if (action === 'create_room' && authenticatedUserId) {
+      const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('gender')
+        .eq('user_id', authenticatedUserId)
+        .maybeSingle();
+      
+      if (callerProfile?.gender?.toLowerCase() === 'female') {
+        console.log(`[SECURITY] Female user ${authenticatedUserId} attempted to create video call room - BLOCKED`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Women cannot initiate video calls. Please wait for men to call you.',
+            error_code: 'WOMEN_CANNOT_INITIATE'
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     switch (action) {
       // SRS WebRTC Publish

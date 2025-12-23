@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
-import { RandomChatButton } from "@/components/RandomChatButton";
+// RandomChatButton removed - Women cannot initiate chats
 import ParallelChatsContainer from "@/components/ParallelChatsContainer";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
@@ -644,60 +644,15 @@ const WomenDashboardScreen = () => {
     navigate(`/profile/${userId}`);
   };
 
+  // Women cannot initiate chats - they can only respond to incoming chats from men
+  // This function is disabled for women users
   const handleStartChatWithUser = async (userId: string) => {
-    if (!canStartNewChat) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time. Close a chat to start a new one.'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if there's already an active session with this user
-    const { data: existingSession } = await supabase
-      .from("active_chat_sessions")
-      .select("id, chat_id")
-      .eq("man_user_id", userId)
-      .eq("woman_user_id", currentUserId)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (existingSession) {
-      toast({
-        title: t('chatExists', 'Chat Already Active'),
-        description: t('youAlreadyHaveChat', 'You already have an active chat with this user.'),
-      });
-      return;
-    }
-
-    // Start a new chat session
-    try {
-      const response = await supabase.functions.invoke("chat-manager", {
-        body: {
-          action: "start_chat",
-          man_user_id: userId,
-          woman_user_id: currentUserId
-        }
-      });
-
-      if (response.data?.success) {
-        loadActiveChatCount();
-        toast({
-          title: t('chatStarted', 'Chat Started'),
-          description: t('chatWindowOpened', 'A new chat window has been opened.'),
-        });
-      } else {
-        throw new Error(response.data?.message || "Failed to start chat");
-      }
-    } catch (error) {
-      console.error("Error starting chat:", error);
-      toast({
-        title: t('error', 'Error'),
-        description: t('failedToStartChat', 'Failed to start chat. Please try again.'),
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: t('actionNotAllowed', 'Action Not Allowed'),
+      description: t('womenCannotInitiateChat', 'Women cannot initiate chats. Please wait for men to start a conversation with you.'),
+      variant: "destructive",
+    });
+    return;
   };
 
   const handleViewProfile = (userId: string) => {
@@ -1047,26 +1002,20 @@ const WomenDashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Section 3: Primary Action - Random Chat */}
+        {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
           <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <MessageCircle className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">{t('randomChat', 'Start Random Chat')}</p>
-                  <p className="text-xs text-muted-foreground">{t('connectWithMan', 'Connect with a man speaking your language')}</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/20">
+                <MessageCircle className="w-5 h-5 text-primary" />
               </div>
-              <RandomChatButton 
-                userGender="female"
-                userLanguage={currentWomanLanguage}
-                userCountry={currentWomanCountry}
-                variant="aurora"
-                size="default"
-              />
+              <div className="flex-1">
+                <p className="text-sm font-bold">{t('chatMode', 'Reply Mode')}</p>
+                <p className="text-xs text-muted-foreground">{t('womenCanOnlyReply', 'You can reply to messages from men who start chats with you')}</p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {activeChatCount} {t('activeChats', 'active')}
+              </Badge>
             </div>
           </Card>
         </div>
