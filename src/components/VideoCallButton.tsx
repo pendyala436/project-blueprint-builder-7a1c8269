@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import SRSVideoCallModal from "./SRSVideoCallModal";
+import VideoCallModal from "./VideoCallModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -163,7 +163,7 @@ const VideoCallButton = ({
       </Button>
 
       {callSession && (
-        <SRSVideoCallModal
+        <VideoCallModal
           isOpen={!!callSession}
           onClose={handleEndCall}
           callId={callSession.callId}
@@ -172,7 +172,6 @@ const VideoCallButton = ({
           remotePhoto={callSession.womanPhoto}
           isInitiator={true}
           currentUserId={currentUserId}
-          mode="call"
         />
       )}
 
