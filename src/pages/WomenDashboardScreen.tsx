@@ -46,6 +46,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
+import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 
 interface Notification {
   id: string;
@@ -993,6 +994,14 @@ const WomenDashboardScreen = () => {
           >
             <AIShiftDisplay userId={currentUserId} compact />
           </Card>
+        </div>
+
+        {/* Section 2.5: Language Group 24/7 Coverage */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.09s" }}>
+          <LanguageGroupShiftsPanel 
+            userId={currentUserId} 
+            language={currentWomanLanguage}
+          />
         </div>
 
         {/* Section 3: Active Chats Info - Women can only reply to existing chats */}

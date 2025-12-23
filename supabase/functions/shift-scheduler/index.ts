@@ -503,6 +503,186 @@ serve(async (req) => {
       );
     }
 
+    // ============= GET LANGUAGE GROUP SHIFTS =============
+    // Returns all women in the same language group with their shift schedules for 24/7 coverage display
+    if (action === "get_language_group_shifts") {
+      // Get user's language if not provided
+      let targetLanguage = null;
+      
+      // First get user's profile for language
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("primary_language, preferred_language")
+          .eq("user_id", userId)
+          .maybeSingle();
+        targetLanguage = profile?.primary_language || profile?.preferred_language || "English";
+      }
+
+      if (!targetLanguage) {
+        targetLanguage = "English";
+      }
+
+      console.log(`[AI Scheduler] Getting shifts for language group: ${targetLanguage}`);
+
+      const today = now.toISOString().split("T")[0];
+
+      // Get all women who speak this language (from profiles and user_languages)
+      const { data: languageUsers } = await supabase
+        .from("user_languages")
+        .select("user_id, language_name")
+        .ilike("language_name", `%${targetLanguage}%`);
+
+      const { data: profileUsers } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, photo_url, country, primary_language, gender")
+        .or(`primary_language.ilike.%${targetLanguage}%,preferred_language.ilike.%${targetLanguage}%`)
+        .eq("gender", "female");
+
+      // Combine user IDs
+      const allUserIds = new Set<string>();
+      languageUsers?.forEach(u => allUserIds.add(u.user_id));
+      profileUsers?.forEach(u => allUserIds.add(u.user_id));
+
+      if (allUserIds.size === 0) {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            language: targetLanguage,
+            womenCount: 0,
+            womenShifts: [],
+            coverage24x7: []
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get female profiles for these users
+      const { data: femaleProfiles } = await supabase
+        .from("female_profiles")
+        .select("user_id, full_name, photo_url, country, primary_language, approval_status")
+        .in("user_id", Array.from(allUserIds))
+        .eq("approval_status", "approved");
+
+      // Also get from main profiles for women
+      const { data: mainProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, photo_url, country, primary_language")
+        .in("user_id", Array.from(allUserIds))
+        .eq("gender", "female");
+
+      // Merge profiles (prefer female_profiles data)
+      const profileMap = new Map<string, { user_id: string; full_name: string | null; photo_url: string | null; country: string | null; primary_language: string | null }>();
+      mainProfiles?.forEach(p => profileMap.set(p.user_id, p));
+      femaleProfiles?.forEach(p => profileMap.set(p.user_id, { ...profileMap.get(p.user_id), ...p }));
+
+      const womenUserIds = Array.from(profileMap.keys());
+
+      if (womenUserIds.length === 0) {
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            language: targetLanguage,
+            womenCount: 0,
+            womenShifts: [],
+            coverage24x7: []
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get today's scheduled shifts for all these women
+      const { data: todayShifts } = await supabase
+        .from("scheduled_shifts")
+        .select("*")
+        .in("user_id", womenUserIds)
+        .eq("scheduled_date", today)
+        .neq("status", "cancelled");
+
+      // Get shift assignments for week off info
+      const { data: assignments } = await supabase
+        .from("women_shift_assignments")
+        .select("user_id, week_off_days")
+        .in("user_id", womenUserIds)
+        .eq("is_active", true);
+
+      const assignmentMap = new Map<string, number[]>();
+      assignments?.forEach(a => assignmentMap.set(a.user_id, a.week_off_days || []));
+
+      // Build women shifts array with their schedule info
+      const womenShifts = womenUserIds.map(wUserId => {
+        const profile = profileMap.get(wUserId);
+        const shift = todayShifts?.find(s => s.user_id === wUserId);
+        const weekOffs = assignmentMap.get(wUserId) || [];
+        const shiftTimes = calculateShiftStartTime(profile?.country || "India");
+
+        return {
+          userId: wUserId,
+          fullName: profile?.full_name || "Unknown",
+          photoUrl: profile?.photo_url,
+          country: profile?.country || "Unknown",
+          language: profile?.primary_language || targetLanguage,
+          todayShift: shift ? {
+            startTime: shift.start_time,
+            endTime: shift.end_time,
+            status: shift.status
+          } : null,
+          isWeekOff: weekOffs.includes(now.getDay()),
+          weekOffDays: weekOffs.map((d: number) => DAYS_OF_WEEK[d]),
+          shiftHours: {
+            startHour: shiftTimes.startHour,
+            endHour: shiftTimes.endHour,
+            duration: SHIFT_HOURS
+          }
+        };
+      });
+
+      // Build 24/7 coverage visualization (hour-by-hour for today)
+      const coverage24x7: { hour: number; womenOnDuty: string[] }[] = [];
+      for (let hour = 0; hour < 24; hour++) {
+        const womenOnDuty: string[] = [];
+        
+        womenShifts.forEach(woman => {
+          if (woman.todayShift && !woman.isWeekOff) {
+            const startHour = parseInt(woman.todayShift.startTime.split(":")[0]);
+            let endHour = parseInt(woman.todayShift.endTime.split(":")[0]);
+            
+            // Handle overnight shifts
+            if (endHour < startHour) {
+              // Shift goes past midnight
+              if (hour >= startHour || hour < endHour) {
+                womenOnDuty.push(woman.fullName);
+              }
+            } else {
+              if (hour >= startHour && hour < endHour) {
+                womenOnDuty.push(woman.fullName);
+              }
+            }
+          }
+        });
+        
+        coverage24x7.push({ hour, womenOnDuty });
+      }
+
+      console.log(`[AI Scheduler] Found ${womenShifts.length} women in ${targetLanguage} group`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          language: targetLanguage,
+          womenCount: womenShifts.length,
+          womenShifts,
+          coverage24x7,
+          shiftConfig: {
+            hours: SHIFT_HOURS,
+            changeBuffer: SHIFT_CHANGE_BUFFER,
+            weekOffInterval: WEEK_OFF_INTERVAL
+          }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ============= MONTHLY REFRESH =============
     // Called to refresh schedules at the start of each month
     if (action === "monthly_refresh") {
@@ -557,7 +737,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: "Invalid action. Valid actions: ai_auto_schedule, work_on_week_off, get_shift_status, mark_attendance, monthly_refresh" }),
+      JSON.stringify({ error: "Invalid action. Valid actions: ai_auto_schedule, work_on_week_off, get_shift_status, mark_attendance, monthly_refresh, get_language_group_shifts" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
