@@ -8,7 +8,8 @@ const corsHeaders = {
 
 // Default values (will be overridden by admin_settings)
 let PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
-let INACTIVITY_TIMEOUT_SECONDS = 180; // 3 minutes inactivity timeout
+let CHAT_INACTIVITY_TIMEOUT_SECONDS = 120; // 2 minutes - chat auto-stops if inactive
+let USER_IDLE_TIMEOUT_SECONDS = 600; // 10 minutes - user auto-logged out if idle
 let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
 let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
@@ -91,7 +92,11 @@ async function loadAdminSettings(supabase: any): Promise<void> {
 
         switch (setting.setting_key) {
           case "auto_disconnect_timer":
-            INACTIVITY_TIMEOUT_SECONDS = value;
+          case "chat_inactivity_timeout":
+            CHAT_INACTIVITY_TIMEOUT_SECONDS = value;
+            break;
+          case "user_idle_timeout":
+            USER_IDLE_TIMEOUT_SECONDS = value;
             break;
           case "max_parallel_connections":
             MAX_PARALLEL_CHATS = value;
@@ -108,7 +113,7 @@ async function loadAdminSettings(supabase: any): Promise<void> {
         }
       }
     }
-    console.log(`[CONFIG] Loaded settings: inactivity=${INACTIVITY_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
+    console.log(`[CONFIG] Loaded settings: chatInactivity=${CHAT_INACTIVITY_TIMEOUT_SECONDS}s, userIdle=${USER_IDLE_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
   } catch (error) {
     console.error("[CONFIG] Error loading admin settings, using defaults:", error);
   }
@@ -277,7 +282,7 @@ serve(async (req) => {
         }
 
         const now = new Date();
-        const thresholdTime = new Date(now.getTime() - INACTIVITY_TIMEOUT_SECONDS * 1000);
+        const thresholdTime = new Date(now.getTime() - CHAT_INACTIVITY_TIMEOUT_SECONDS * 1000);
 
         // Find inactive sessions for this user (as man)
         const { data: inactiveManSessions } = await supabase
@@ -1516,7 +1521,8 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             settings: {
-              inactivity_timeout_seconds: INACTIVITY_TIMEOUT_SECONDS,
+              chat_inactivity_timeout_seconds: CHAT_INACTIVITY_TIMEOUT_SECONDS,
+              user_idle_timeout_seconds: USER_IDLE_TIMEOUT_SECONDS,
               max_parallel_chats: MAX_PARALLEL_CHATS,
               reconnect_attempts: RECONNECT_ATTEMPTS,
               heartbeat_interval_seconds: HEARTBEAT_INTERVAL_SECONDS,
