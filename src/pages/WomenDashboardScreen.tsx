@@ -47,6 +47,7 @@ import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
+import { AIElectionPanel } from "@/components/AIElectionPanel";
 
 interface Notification {
   id: string;
@@ -1036,6 +1037,19 @@ const WomenDashboardScreen = () => {
               userName={userName || 'User'}
               userPhoto={null}
             />
+          )}
+        </div>
+
+        {/* AI Election Panel */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
+          {currentWomanLanguage && currentUserId && (
+            <Card className="p-4">
+              <AIElectionPanel
+                currentUserId={currentUserId}
+                languageCode={currentWomanLanguage}
+                members={[]}
+              />
+            </Card>
           )}
         </div>
 

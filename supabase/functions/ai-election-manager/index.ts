@@ -61,7 +61,10 @@ serve(async (req) => {
           .select("*, profiles:user_id(full_name, photo_url)")
           .eq("election_id", election.id)
           .order("vote_count", { ascending: false });
-        candidates = candidatesData || [];
+        candidates = (candidatesData || []).map(c => ({
+          ...c,
+          platform_statement: c.platform_statement || null
+        }));
       }
 
       // Check if user has voted
@@ -110,7 +113,8 @@ serve(async (req) => {
           candidates: candidates.map(c => ({
             ...c,
             full_name: (c.profiles as any)?.full_name,
-            photo_url: (c.profiles as any)?.photo_url
+            photo_url: (c.profiles as any)?.photo_url,
+            platform_statement: c.platform_statement || null
           })),
           hasVoted,
           totalVotes,
@@ -176,11 +180,21 @@ serve(async (req) => {
       );
     }
 
-    // ============= NOMINATE CANDIDATE =============
+    // ============= NOMINATE CANDIDATE (Self or Others) =============
     if (action === "nominate_candidate") {
-      if (!languageCode || !nomineeId) {
+      if (!languageCode) {
         return new Response(
-          JSON.stringify({ error: "Language code and nominee ID are required" }),
+          JSON.stringify({ error: "Language code is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { nomineeId, platformStatement, isSelfNomination } = body;
+      const targetId = nomineeId || userId;
+
+      if (!targetId) {
+        return new Response(
+          JSON.stringify({ error: "Nominee ID or self-nomination required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -188,7 +202,7 @@ serve(async (req) => {
       // Get active election
       const { data: election } = await supabase
         .from("community_elections")
-        .select("id, status")
+        .select("id, status, scheduled_at")
         .eq("language_code", languageCode)
         .eq("election_year", currentYear)
         .eq("status", "active")
@@ -206,7 +220,7 @@ serve(async (req) => {
         .from("election_candidates")
         .select("id")
         .eq("election_id", election.id)
-        .eq("user_id", nomineeId)
+        .eq("user_id", targetId)
         .maybeSingle();
 
       if (existing) {
@@ -216,23 +230,55 @@ serve(async (req) => {
         );
       }
 
-      // Add candidate
+      // Check 30-day activity requirement
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("last_active_at, full_name")
+        .eq("user_id", targetId)
+        .maybeSingle();
+
+      if (!profile) {
+        return new Response(
+          JSON.stringify({ error: "Profile not found" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const lastActive = profile.last_active_at ? new Date(profile.last_active_at) : null;
+      if (!lastActive || lastActive < thirtyDaysAgo) {
+        return new Response(
+          JSON.stringify({ error: "Nominee must have been active in the last 30 days to be eligible" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Add candidate with platform statement
       const { data: candidate, error } = await supabase
         .from("election_candidates")
         .insert({
           election_id: election.id,
-          user_id: nomineeId,
-          nomination_status: "approved" // Auto-approved
+          user_id: targetId,
+          nomination_status: "approved",
+          platform_statement: platformStatement || (isSelfNomination 
+            ? `I'm ${profile.full_name} and I want to serve our community.`
+            : `Nominated by a community member.`)
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      console.log(`[AI Election] Nominated candidate ${nomineeId} for election ${election.id}`);
+      console.log(`[AI Election] Nominated candidate ${targetId} for election ${election.id}, self-nomination: ${isSelfNomination}`);
 
       return new Response(
-        JSON.stringify({ success: true, candidate, message: "Candidate nominated successfully" }),
+        JSON.stringify({ 
+          success: true, 
+          candidate, 
+          message: isSelfNomination 
+            ? "You have been nominated successfully!" 
+            : "Candidate nominated successfully" 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
