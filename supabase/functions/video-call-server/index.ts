@@ -16,12 +16,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// SRS Server Configuration - Using ngrok tunnel to local SRS
-// Note: SRS should be started with recording DISABLED (no --dvr flag)
-// IMPORTANT: Update the ngrok URL when you restart ngrok!
+// SRS Server Configuration
+// SRS_API_URL should point to port 1985 (HTTP API)
+// SRS_RTC_URL should point to port 1985/rtc/v1 (WebRTC signaling - same port)
+// Example: SRS_API_URL=http://34.47.250.115:1985, SRS_RTC_URL=http://34.47.250.115:1985/rtc/v1
 const SRS_CONFIG = {
-  apiUrl: Deno.env.get('SRS_API_URL') || 'https://45b84e11c2d2.ngrok-free.app',
-  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'https://45b84e11c2d2.ngrok-free.app/rtc/v1',
+  apiUrl: Deno.env.get('SRS_API_URL') || 'http://localhost:1985',
+  rtcUrl: Deno.env.get('SRS_RTC_URL') || 'http://localhost:1985/rtc/v1',
   noRecording: true, // Ensure SRS is configured without recording
 };
 
