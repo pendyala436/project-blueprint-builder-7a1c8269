@@ -1027,6 +1027,10 @@ export type Database = {
       group_messages: {
         Row: {
           created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           is_translated: boolean | null
@@ -1036,6 +1040,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           is_translated?: boolean | null
@@ -1045,6 +1053,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           is_translated?: boolean | null
@@ -1061,6 +1073,101 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      language_community_groups: {
+        Row: {
+          created_at: string
+          id: string
+          language_code: string
+          language_name: string
+          member_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language_code: string
+          language_name: string
+          member_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language_code?: string
+          language_name?: string
+          member_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      language_community_members: {
+        Row: {
+          group_id: string
+          id: string
+          is_active: boolean | null
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "language_community_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "language_community_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      language_community_messages: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          language_code: string
+          message: string | null
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          language_code: string
+          message?: string | null
+          sender_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          language_code?: string
+          message?: string | null
+          sender_id?: string
+        }
+        Relationships: []
       }
       language_groups: {
         Row: {

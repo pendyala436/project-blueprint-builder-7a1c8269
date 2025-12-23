@@ -44,7 +44,7 @@ import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
-import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
+import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
@@ -1028,12 +1028,13 @@ const WomenDashboardScreen = () => {
           <ActiveChatsSection maxDisplay={5} />
         </div>
 
-        {/* Language Community Section */}
+        {/* Language Community Group Chat */}
         <div className="animate-fade-in" style={{ animationDelay: "0.16s" }}>
-          {currentWomanLanguage && (
-            <LanguageCommunityPanel
+          {currentWomanLanguage && currentUserId && (
+            <LanguageGroupChat
               currentUserId={currentUserId}
-              motherTongue={currentWomanLanguage}
+              languageCode={currentWomanLanguageCode}
+              languageName={currentWomanLanguage}
               userName={userName || 'User'}
               userPhoto={null}
             />
