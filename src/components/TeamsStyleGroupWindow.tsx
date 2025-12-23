@@ -435,7 +435,7 @@ export function TeamsStyleGroupWindow({
             {/* Video Grid */}
             <div className="flex-1 p-2 bg-black min-h-0 overflow-y-auto">
               <div className={cn(
-                "grid gap-2 auto-rows-fr",
+                "grid gap-2 auto-rows-fr h-full",
                 remoteParticipants.length === 0 ? 'grid-cols-1' :
                 remoteParticipants.length <= 1 ? 'grid-cols-1 sm:grid-cols-2' :
                 'grid-cols-2'
