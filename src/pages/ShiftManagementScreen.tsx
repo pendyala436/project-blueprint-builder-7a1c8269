@@ -394,7 +394,7 @@ const ShiftManagementScreen = () => {
       if (!user) return;
 
       const { data, error } = await supabase.functions.invoke("shift-scheduler", {
-        body: { userId: user.id, timezone: userTimezone, action: "generate_ai_schedule" }
+        body: { userId: user.id, timezone: userTimezone, action: "ai_auto_schedule" }
       });
 
       if (error) throw error;
