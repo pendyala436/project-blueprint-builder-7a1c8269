@@ -13,7 +13,7 @@ const corsHeaders = {
  * DELETION SCHEDULE (configurable via admin_settings):
  * - Chat content & media: Deleted every X minutes (default: 15 min)
  * - Chat history: Deleted after X days (default: 7 days)
- * - Transactions: Preserved for X years (default: 7 years)
+ * - Transactions: Preserved for X years (default: 9 years)
  * - User profiles: Maintained while active (no auto-deletion)
  * 
  * This function should be called by a cron job or scheduler every 15 minutes
@@ -22,7 +22,7 @@ const corsHeaders = {
 // Default retention periods (will be overridden by admin_settings)
 let CONTENT_DELETION_MINUTES = 15;
 let CHAT_HISTORY_RETENTION_DAYS = 7;
-let TRANSACTION_RETENTION_YEARS = 7;
+let TRANSACTION_RETENTION_YEARS = 9; // 9 years as per policy
 
 // Helper to load admin settings
 async function loadRetentionSettings(supabase: any): Promise<void> {
@@ -235,7 +235,71 @@ Deno.serve(async (req) => {
       results.errors.push(`Transactions exception: ${error.message}`);
     }
 
-    // ============= 4. CLEANUP OTHER DATA =============
+    // ============= 4. DELETE MEDIA/ATTACHMENTS FROM STORAGE (every 15 min) =============
+    try {
+      const mediaCutoff = new Date(now.getTime() - CONTENT_DELETION_MINUTES * 60 * 1000);
+      
+      // Delete old voice messages from storage bucket
+      const { data: voiceFiles } = await supabase.storage
+        .from('voice-messages')
+        .list('', { limit: 1000 });
+      
+      if (voiceFiles && voiceFiles.length > 0) {
+        const oldVoiceFiles = voiceFiles.filter(file => {
+          const fileDate = new Date(file.created_at);
+          return fileDate < mediaCutoff;
+        });
+        
+        if (oldVoiceFiles.length > 0) {
+          const filePaths = oldVoiceFiles.map(f => f.name);
+          const { error: voiceDeleteError } = await supabase.storage
+            .from('voice-messages')
+            .remove(filePaths);
+          
+          if (voiceDeleteError) {
+            console.error('[Data Cleanup] Error deleting voice messages:', voiceDeleteError);
+            results.errors.push(`Voice messages: ${voiceDeleteError.message}`);
+          } else {
+            console.log(`[Data Cleanup] Deleted ${oldVoiceFiles.length} voice messages older than ${CONTENT_DELETION_MINUTES} min`);
+          }
+        }
+      }
+      
+      // Delete old selfies from storage bucket (verification selfies)
+      const { data: selfieFiles } = await supabase.storage
+        .from('selfies')
+        .list('', { limit: 1000 });
+      
+      if (selfieFiles && selfieFiles.length > 0) {
+        // Delete selfies older than 24 hours (verification is one-time)
+        const selfiesCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const oldSelfies = selfieFiles.filter(file => {
+          const fileDate = new Date(file.created_at);
+          return fileDate < selfiesCutoff;
+        });
+        
+        if (oldSelfies.length > 0) {
+          const filePaths = oldSelfies.map(f => f.name);
+          const { error: selfieDeleteError } = await supabase.storage
+            .from('selfies')
+            .remove(filePaths);
+          
+          if (selfieDeleteError) {
+            console.error('[Data Cleanup] Error deleting selfies:', selfieDeleteError);
+            results.errors.push(`Selfies: ${selfieDeleteError.message}`);
+          } else {
+            console.log(`[Data Cleanup] Deleted ${oldSelfies.length} verification selfies older than 24 hours`);
+          }
+        }
+      }
+      
+      console.log('[Data Cleanup] Media cleanup completed');
+    } catch (error: any) {
+      console.error('[Data Cleanup] Error in media cleanup:', error);
+      results.errors.push(`Media cleanup: ${error.message}`);
+    }
+
+    // ============= 5. CLEANUP OTHER DATA =============
     try {
       // Delete old processing logs (older than 30 days)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -268,6 +332,13 @@ Deno.serve(async (req) => {
         .from('system_metrics')
         .delete()
         .lt('recorded_at', thirtyDaysAgo.toISOString());
+      
+      // Delete old group messages (older than 15 minutes as per spec)
+      const groupMessageCutoff = new Date(now.getTime() - CONTENT_DELETION_MINUTES * 60 * 1000);
+      await supabase
+        .from('group_messages')
+        .delete()
+        .lt('created_at', groupMessageCutoff.toISOString());
 
       console.log('[Data Cleanup] Additional cleanup completed');
     } catch (error: any) {
