@@ -1029,25 +1029,93 @@ serve(async (req) => {
           );
         }
 
-        // Check if billing should start - only after first message is sent
-        const { count: messageCount } = await supabase
-          .from("chat_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("chat_id", chat_id);
+        const MESSAGE_INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes in milliseconds
+        const now = new Date();
 
-        // No messages yet = no billing
-        if (!messageCount || messageCount === 0) {
+        // Get messages from both parties to check two-way conversation
+        const { data: manMessages } = await supabase
+          .from("chat_messages")
+          .select("created_at")
+          .eq("chat_id", chat_id)
+          .eq("sender_id", session.man_user_id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        const { data: womanMessages } = await supabase
+          .from("chat_messages")
+          .select("created_at")
+          .eq("chat_id", chat_id)
+          .eq("sender_id", session.woman_user_id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        const manHasMessaged = manMessages && manMessages.length > 0;
+        const womanHasMessaged = womanMessages && womanMessages.length > 0;
+        const bothHaveMessaged = manHasMessaged && womanHasMessaged;
+
+        // BILLING REQUIREMENT: Both man AND woman must have sent at least one message
+        if (!bothHaveMessaged) {
           // Just update activity timestamp, no billing
           await supabase
             .from("active_chat_sessions")
-            .update({ last_activity_at: new Date().toISOString() })
+            .update({ last_activity_at: now.toISOString() })
             .eq("chat_id", chat_id);
+
+          const waitingFor = !manHasMessaged && !womanHasMessaged 
+            ? "both parties to send first message"
+            : !manHasMessaged 
+              ? "man to send first message" 
+              : "woman to reply";
 
           return new Response(
             JSON.stringify({ 
               success: true, 
               billing_started: false,
-              message: "No messages yet, billing not started"
+              man_has_messaged: manHasMessaged,
+              woman_has_messaged: womanHasMessaged,
+              waiting_for: waitingFor,
+              message: `Billing not started: waiting for ${waitingFor}`
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check 3-minute inactivity from either party - AUTO DISCONNECT
+        const manLastMessageTime = new Date(manMessages[0].created_at).getTime();
+        const womanLastMessageTime = new Date(womanMessages[0].created_at).getTime();
+        const nowTime = now.getTime();
+
+        const manInactiveMs = nowTime - manLastMessageTime;
+        const womanInactiveMs = nowTime - womanLastMessageTime;
+
+        // If either party hasn't replied for 3 minutes, end the chat
+        if (manInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
+          console.log(`[HEARTBEAT] Man ${session.man_user_id} inactive for ${Math.floor(manInactiveMs / 1000)}s - auto-disconnecting chat ${chat_id}`);
+          await endChatSession(supabase, chat_id, "man_inactive_3min", session);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Chat ended: Man did not reply for 3 minutes",
+              end_chat: true,
+              end_reason: "man_inactive_3min",
+              inactive_party: "man",
+              inactive_seconds: Math.floor(manInactiveMs / 1000)
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (womanInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
+          console.log(`[HEARTBEAT] Woman ${session.woman_user_id} inactive for ${Math.floor(womanInactiveMs / 1000)}s - auto-disconnecting chat ${chat_id}`);
+          await endChatSession(supabase, chat_id, "woman_inactive_3min", session);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Chat ended: Woman did not reply for 3 minutes",
+              end_chat: true,
+              end_reason: "woman_inactive_3min",
+              inactive_party: "woman",
+              inactive_seconds: Math.floor(womanInactiveMs / 1000)
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
@@ -1062,9 +1130,8 @@ serve(async (req) => {
 
         const womenEarningRate = pricing?.women_earning_rate || 2.00;
 
-        // Calculate time elapsed since last activity
+        // Calculate time elapsed since last activity (using 'now' from above)
         const lastActivity = new Date(session.last_activity_at);
-        const now = new Date();
         const minutesElapsed = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
 
         // Calculate charges and earnings for this period (different rates)

@@ -47,13 +47,19 @@ const ChatBillingDisplay = ({
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [billingStarted, setBillingStarted] = useState(false);
-  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [waitingFor, setWaitingFor] = useState<string>("both parties to send first message");
+  const [manHasMessaged, setManHasMessaged] = useState(false);
+  const [womanHasMessaged, setWomanHasMessaged] = useState(false);
+  const [lastManMessageTime, setLastManMessageTime] = useState<number | null>(null);
+  const [lastWomanMessageTime, setLastWomanMessageTime] = useState<number | null>(null);
+  const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
-  const inactivityInterval = useRef<NodeJS.Timeout | null>(null);
+  const messageCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const sessionStarted = useRef(false);
 
-  const INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
+  const MESSAGE_INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
+  const WARNING_THRESHOLD = 120000; // 2 minutes - show warning
 
   // Only men see the billing (they are charged)
   if (userGender !== "male") {
@@ -117,7 +123,7 @@ const ChatBillingDisplay = ({
         sessionStarted.current = true;
         startHeartbeat(existingSession.chat_id);
         startTimer();
-        startInactivityCheck(existingSession.chat_id);
+        startMessageCheck(existingSession.chat_id);
       } else if (wallet && wallet.balance > 0 && !sessionStarted.current) {
         // Start a new session if balance is available
         await startChatSession();
@@ -155,7 +161,7 @@ const ChatBillingDisplay = ({
         });
         startHeartbeat(data.chat_id);
         startTimer();
-        startInactivityCheck(data.chat_id);
+        startMessageCheck(data.chat_id);
         
         toast({
           title: "Chat Started",
@@ -182,62 +188,61 @@ const ChatBillingDisplay = ({
     }
   };
 
-  // Track user activity
-  const updateActivity = useCallback(() => {
-    setLastActivityTime(Date.now());
-  }, []);
-
-  // Add activity listeners
-  useEffect(() => {
-    const handleActivity = () => updateActivity();
+  // Check message-based inactivity - monitors if either party hasn't messaged for 3 mins
+  const startMessageCheck = useCallback((chatId: string) => {
+    if (messageCheckInterval.current) clearInterval(messageCheckInterval.current);
     
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
+    messageCheckInterval.current = setInterval(async () => {
+      try {
+        // Get last message from each party
+        const { data: messages } = await supabase
+          .from("chat_messages")
+          .select("sender_id, created_at")
+          .eq("chat_id", chatId)
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-    return () => {
-      window.removeEventListener('click', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('touchstart', handleActivity);
-    };
-  }, [updateActivity]);
+        if (!messages || messages.length === 0) return;
 
-  // Check inactivity and end session if no activity for 3 minutes
-  const startInactivityCheck = useCallback((chatId: string) => {
-    if (inactivityInterval.current) clearInterval(inactivityInterval.current);
-    
-    inactivityInterval.current = setInterval(async () => {
-      const timeSinceActivity = Date.now() - lastActivityTime;
-      
-      if (timeSinceActivity >= INACTIVITY_TIMEOUT && isSessionActive) {
-        // Session ended due to inactivity
-        
-        try {
-          await supabase.functions.invoke("chat-manager", {
-            body: { action: "end_chat", chat_id: chatId, end_reason: "inactivity_timeout" }
-          });
-        } catch (error) {
-          console.error("Error ending inactive chat:", error);
+        const now = Date.now();
+        let manLastMsg: number | null = null;
+        let womanLastMsg: number | null = null;
+
+        for (const msg of messages) {
+          if (msg.sender_id === currentUserId && !manLastMsg) {
+            manLastMsg = new Date(msg.created_at).getTime();
+          } else if (msg.sender_id === chatPartnerId && !womanLastMsg) {
+            womanLastMsg = new Date(msg.created_at).getTime();
+          }
+          if (manLastMsg && womanLastMsg) break;
         }
-        
-        if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
-        if (timerInterval.current) clearInterval(timerInterval.current);
-        if (inactivityInterval.current) clearInterval(inactivityInterval.current);
-        
-        setIsSessionActive(false);
-        sessionStarted.current = false;
-        onSessionEnd?.("inactivity_timeout");
-        
-        toast({
-          title: "Chat Disconnected",
-          description: "Session ended due to 3 minutes of inactivity.",
-          variant: "destructive"
-        });
+
+        setLastManMessageTime(manLastMsg);
+        setLastWomanMessageTime(womanLastMsg);
+        setManHasMessaged(!!manLastMsg);
+        setWomanHasMessaged(!!womanLastMsg);
+
+        // Check for inactivity warnings and auto-disconnect
+        if (manLastMsg && womanLastMsg) {
+          const manInactive = now - manLastMsg;
+          const womanInactive = now - womanLastMsg;
+
+          // Show warning at 2 minutes
+          if (womanInactive >= WARNING_THRESHOLD && womanInactive < MESSAGE_INACTIVITY_TIMEOUT) {
+            const remainingSecs = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - womanInactive) / 1000);
+            setInactiveWarning(`Partner hasn't replied. Chat will end in ${remainingSecs}s`);
+          } else if (manInactive >= WARNING_THRESHOLD && manInactive < MESSAGE_INACTIVITY_TIMEOUT) {
+            const remainingSecs = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - manInactive) / 1000);
+            setInactiveWarning(`You haven't replied. Chat will end in ${remainingSecs}s`);
+          } else {
+            setInactiveWarning(null);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking message activity:", error);
       }
-    }, 10000); // Check every 10 seconds
-  }, [lastActivityTime, isSessionActive, onSessionEnd, toast]);
+    }, 5000); // Check every 5 seconds
+  }, [currentUserId, chatPartnerId]);
 
   useEffect(() => {
     loadPricingAndWallet();
@@ -245,7 +250,7 @@ const ChatBillingDisplay = ({
     return () => {
       if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
       if (timerInterval.current) clearInterval(timerInterval.current);
-      if (inactivityInterval.current) clearInterval(inactivityInterval.current);
+      if (messageCheckInterval.current) clearInterval(messageCheckInterval.current);
     };
   }, [loadPricingAndWallet]);
 
@@ -283,10 +288,31 @@ const ChatBillingDisplay = ({
 
         if (error) throw error;
 
-        // Check if billing has started
+        // Check if billing has started - requires BOTH parties to have messaged
         if (data.billing_started === false) {
-          // No billing yet - waiting for first message
           setBillingStarted(false);
+          setManHasMessaged(data.man_has_messaged || false);
+          setWomanHasMessaged(data.woman_has_messaged || false);
+          setWaitingFor(data.waiting_for || "both parties to message");
+          return;
+        }
+
+        // Check if chat ended due to inactivity
+        if (data.end_chat) {
+          if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
+          if (timerInterval.current) clearInterval(timerInterval.current);
+          if (messageCheckInterval.current) clearInterval(messageCheckInterval.current);
+          setIsSessionActive(false);
+          sessionStarted.current = false;
+          
+          const reason = data.end_reason || "inactivity";
+          onSessionEnd?.(reason);
+          
+          toast({
+            title: "Chat Disconnected",
+            description: data.message || "Chat ended due to inactivity (3 min no reply).",
+            variant: "destructive"
+          });
           return;
         }
 
@@ -346,14 +372,27 @@ const ChatBillingDisplay = ({
     <>
       <div className={cn(
         "flex items-center gap-4 px-4 py-2 text-sm border-b",
-        !billingStarted ? "bg-muted/50 border-muted" : isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
+        inactiveWarning ? "bg-destructive/10 border-destructive/30" :
+        !billingStarted ? "bg-muted/50 border-muted" : 
+        isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
       )}>
-        {!billingStarted ? (
+        {inactiveWarning ? (
           <>
-            {/* Not billing yet */}
+            <div className="flex items-center gap-1.5 text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">{inactiveWarning}</span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Wallet className="h-3.5 w-3.5" />
+              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
+            </div>
+          </>
+        ) : !billingStarted ? (
+          <>
+            {/* Not billing yet - waiting for two-way conversation */}
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
-              <span className="text-xs">Billing starts after first message</span>
+              <span className="text-xs">Waiting for {waitingFor}</span>
             </div>
             <div className="flex items-center gap-1.5 ml-auto">
               <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
