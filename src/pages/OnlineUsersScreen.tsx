@@ -117,11 +117,13 @@ const OnlineUsersScreen = () => {
 
       const onlineUserIds = onlineStatus.map(s => s.user_id);
 
-      // Fetch profiles of online users with opposite gender
+      // Fetch profiles of online users with opposite gender (must have photo)
       let query = supabase
         .from("profiles")
         .select("user_id, full_name, photo_url, gender, preferred_language")
-        .in("user_id", onlineUserIds);
+        .in("user_id", onlineUserIds)
+        .not("photo_url", "is", null)
+        .neq("photo_url", "");
 
       if (oppositeGender) {
         query = query.eq("gender", oppositeGender);
@@ -129,24 +131,26 @@ const OnlineUsersScreen = () => {
 
       const { data: profiles } = await query;
 
-      // Fetch languages for each user
+      // Fetch languages for each user (only users with valid photos)
       const users: OnlineUser[] = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          const { data: languages } = await supabase
-            .from("user_languages")
-            .select("language_name")
-            .eq("user_id", profile.user_id)
-            .limit(1);
+        (profiles || [])
+          .filter(profile => profile.photo_url && profile.photo_url.trim() !== "")
+          .map(async (profile) => {
+            const { data: languages } = await supabase
+              .from("user_languages")
+              .select("language_name")
+              .eq("user_id", profile.user_id)
+              .limit(1);
 
-          return {
-            userId: profile.user_id,
-            avatar: profile.photo_url || "",
-            fullName: profile.full_name || "Anonymous",
-            onlineStatus: true,
-            motherTongue: languages?.[0]?.language_name || profile.preferred_language || "Unknown",
-            gender: profile.gender || "",
-          };
-        })
+            return {
+              userId: profile.user_id,
+              avatar: profile.photo_url!,
+              fullName: profile.full_name || "Anonymous",
+              onlineStatus: true,
+              motherTongue: languages?.[0]?.language_name || profile.preferred_language || "Unknown",
+              gender: profile.gender || "",
+            };
+          })
       );
 
       // Translate user data if not English
@@ -323,23 +327,15 @@ const OnlineUsersScreen = () => {
                         onClick={() => handleUserSelect(user, index)}
                         onDoubleClick={() => navigate(`/profile/${user.userId}`)}
                       >
-                        {/* Avatar */}
+                        {/* Avatar - only shows users with photos */}
                         <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                          {user.avatar ? (
-                            <img 
-                              src={user.avatar} 
-                              alt={user.fullName}
-                              className={`w-full h-full object-cover transition-transform duration-500 ${
-                                currentIndex === index ? "scale-110" : "scale-100"
-                              }`}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-rose-500/20">
-                              <span className="text-6xl font-bold text-primary/50">
-                                {user.fullName.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
+                          <img 
+                            src={user.avatar} 
+                            alt={user.fullName}
+                            className={`w-full h-full object-cover transition-transform duration-500 ${
+                              currentIndex === index ? "scale-110" : "scale-100"
+                            }`}
+                          />
 
                           {/* Online indicator */}
                           <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
