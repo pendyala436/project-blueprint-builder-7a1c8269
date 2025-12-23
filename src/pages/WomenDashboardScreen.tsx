@@ -45,6 +45,7 @@ import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
+import AIShiftDisplay from "@/components/AIShiftDisplay";
 
 interface Notification {
   id: string;
@@ -987,18 +988,10 @@ const WomenDashboardScreen = () => {
           </Card>
 
           <Card 
-            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer"
+            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer col-span-2"
             onClick={() => navigate("/shift-management")}
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-accent/20">
-                <Clock className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm font-bold">{t('shifts', 'Shift')}</p>
-                <p className="text-xs text-muted-foreground">{t('shiftManagement', 'Manage')} →</p>
-              </div>
-            </div>
+            <AIShiftDisplay userId={currentUserId} compact />
           </Card>
         </div>
 
