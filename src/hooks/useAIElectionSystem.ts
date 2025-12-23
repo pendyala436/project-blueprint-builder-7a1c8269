@@ -30,6 +30,7 @@ export interface AIElectionStatus {
     photo_url: string | null;
     vote_count: number;
     nomination_status: string;
+    platform_statement?: string;
   }[];
   hasVoted: boolean;
   totalVotes: number;
@@ -155,8 +156,8 @@ export const useAIElectionSystem = (
     }
   };
 
-  // Nominate a candidate
-  const nominateCandidate = async (nomineeId: string): Promise<boolean> => {
+  // Nominate a candidate (self or others)
+  const nominateCandidate = async (nomineeId: string, platformStatement?: string, isSelfNomination?: boolean): Promise<boolean> => {
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-election-manager", {
@@ -164,7 +165,9 @@ export const useAIElectionSystem = (
           action: "nominate_candidate", 
           languageCode, 
           userId: currentUserId,
-          nomineeId 
+          nomineeId,
+          platformStatement,
+          isSelfNomination
         }
       });
 
@@ -172,7 +175,7 @@ export const useAIElectionSystem = (
 
       if (data.success) {
         toast({
-          title: "Candidate Nominated",
+          title: isSelfNomination ? "You're Running!" : "Candidate Nominated",
           description: data.message
         });
         loadStatus();
