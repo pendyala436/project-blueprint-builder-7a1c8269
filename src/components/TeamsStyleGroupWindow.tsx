@@ -429,25 +429,25 @@ export function TeamsStyleGroupWindow({
         {/* Video Section */}
         {hasVideo && (
           <div className={cn(
-            "flex flex-col border-r",
+            "flex flex-col border-r min-h-0",
             hasChat ? "w-1/2" : "flex-1"
           )}>
             {/* Video Grid */}
-            <div className="flex-1 p-2 bg-black/95 overflow-auto">
+            <div className="flex-1 p-2 bg-black min-h-0 overflow-y-auto">
               <div className={cn(
-                "grid gap-2 h-full",
+                "grid gap-2 auto-rows-fr",
                 remoteParticipants.length === 0 ? 'grid-cols-1' :
                 remoteParticipants.length <= 1 ? 'grid-cols-1 sm:grid-cols-2' :
                 'grid-cols-2'
               )}>
                 {/* Local Video */}
-                <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video min-h-[120px]">
+                <div className="relative bg-gray-900 rounded-lg overflow-hidden min-h-[150px]">
                   <video
                     ref={localVideoRef}
                     autoPlay
                     muted
                     playsInline
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                   {!isVideoEnabled && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
@@ -457,14 +457,14 @@ export function TeamsStyleGroupWindow({
                       </Avatar>
                     </div>
                   )}
-                  <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                  <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
                     You {isOwner && '(Host)'}
                   </div>
                 </div>
 
                 {/* Remote Participants */}
                 {remoteParticipants.map(participant => (
-                  <div key={participant.id} className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video min-h-[120px]">
+                  <div key={participant.id} className="relative bg-gray-900 rounded-lg overflow-hidden min-h-[150px]">
                     <video
                       ref={(el) => {
                         if (el) {
@@ -476,7 +476,7 @@ export function TeamsStyleGroupWindow({
                       }}
                       autoPlay
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                     {!participant.stream && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
@@ -486,7 +486,7 @@ export function TeamsStyleGroupWindow({
                         </Avatar>
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
                       {participant.name} {participant.isOwner && '(Host)'}
                     </div>
                   </div>
