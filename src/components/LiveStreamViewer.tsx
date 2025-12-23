@@ -12,7 +12,7 @@ import {
   Radio,
   Loader2
 } from "lucide-react";
-import { useSRSCall } from "@/hooks/useSRSCall";
+import { useMediaServerCall } from "@/hooks/useMediaServerCall";
 
 interface LiveStreamViewerProps {
   streamId: string;
@@ -33,35 +33,31 @@ const LiveStreamViewer = ({
 }: LiveStreamViewerProps) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [viewerCount] = useState(1); // P2P is 1-to-1
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
     callStatus,
-    viewerCount,
     remoteVideoRef,
-    watchStream,
     cleanup,
-  } = useSRSCall({
+  } = useMediaServerCall({
     callId: streamId,
     currentUserId,
     remoteUserId: streamerUserId,
     isInitiator: false,
-    mode: 'stream',
+    onCallEnded: onClose,
   });
 
   useEffect(() => {
     if (videoRef.current) {
       (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = videoRef.current;
     }
-    
-    // Start watching the stream
-    watchStream(streamerUserId);
 
     return () => {
       cleanup();
     };
-  }, []);
+  }, [cleanup, remoteVideoRef]);
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -171,7 +167,7 @@ const LiveStreamViewer = ({
           </div>
 
           <div className="text-white text-sm">
-            SRS Media Server
+            P2P Connection
           </div>
 
           <div className="flex items-center gap-2">

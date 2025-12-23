@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Radio, Loader2, StopCircle, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import SRSVideoCallModal from "./SRSVideoCallModal";
+import VideoCallModal from "./VideoCallModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,7 +122,7 @@ const LiveStreamButton = ({
       </Button>
 
       {streamSession && (
-        <SRSVideoCallModal
+        <VideoCallModal
           isOpen={!!streamSession}
           onClose={handleEndStream}
           callId={streamSession.streamId}
@@ -131,7 +131,6 @@ const LiveStreamButton = ({
           remotePhoto={userPhoto}
           isInitiator={true}
           currentUserId={currentUserId}
-          mode="stream"
         />
       )}
 
@@ -143,10 +142,10 @@ const LiveStreamButton = ({
               Start Live Stream
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>You're about to start a live stream that anyone can watch.</p>
+              <p>You're about to start a live video broadcast.</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="w-4 h-4" />
-                <span>Viewers can join using HLS for low-latency streaming</span>
+                <span>Viewers can join your P2P video broadcast</span>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
