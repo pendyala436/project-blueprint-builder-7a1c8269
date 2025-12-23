@@ -2908,6 +2908,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_vote_count: {
+        Args: { candidate_uuid: string }
+        Returns: undefined
+      }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
       process_atomic_transfer: {
         Args: {
