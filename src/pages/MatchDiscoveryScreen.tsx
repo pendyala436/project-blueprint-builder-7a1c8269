@@ -209,6 +209,7 @@ const MatchDiscoveryScreen = () => {
       // ============= BUILD DATABASE QUERY =============
       
       // Start building the query with all profile fields we need
+      // MANDATORY: Only show users with photos
       let profilesQuery = supabase
         .from("profiles")
         .select(`
@@ -218,7 +219,9 @@ const MatchDiscoveryScreen = () => {
           dietary_preference, fitness_level, pet_preference, travel_frequency,
           personality_type, zodiac_sign, bio, is_verified, is_premium, last_active_at
         `)
-        .neq("user_id", user.id); // Exclude current user from results
+        .neq("user_id", user.id) // Exclude current user from results
+        .not("photo_url", "is", null)
+        .neq("photo_url", ""); // Only users with photos are visible
 
       // Apply gender filter if we have opposite gender defined
       if (oppositeGender) {
