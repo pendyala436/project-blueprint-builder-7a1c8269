@@ -14,6 +14,9 @@ import {
   Loader2
 } from "lucide-react";
 import { useMediaServerCall } from "@/hooks/useMediaServerCall";
+import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
+import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoCallModalProps {
   isOpen: boolean;
@@ -36,6 +39,7 @@ const VideoCallModal = ({
   isInitiator,
   currentUserId
 }: VideoCallModalProps) => {
+  const { toast } = useToast();
   const {
     callStatus,
     callDuration,
@@ -55,6 +59,23 @@ const VideoCallModal = ({
     ratePerMinute: 5,
     onCallEnded: onClose,
   });
+
+  // Check block status - auto-close if blocked
+  const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, remoteUserId);
+
+  // Auto-close call if blocked
+  useEffect(() => {
+    if (isBlocked) {
+      toast({
+        title: "Call Ended",
+        description: isBlockedByThem 
+          ? "This user has blocked you" 
+          : "You have blocked this user",
+        variant: "destructive"
+      });
+      handleEndCall();
+    }
+  }, [isBlocked]);
 
   // Connect refs to video elements
   const localVideoElement = useRef<HTMLVideoElement>(null);
@@ -140,15 +161,25 @@ const VideoCallModal = ({
             )}
 
             {/* Connection Status Badge */}
-            <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  callStatus === 'active' ? 'bg-green-500' : 
-                  callStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
-                  'bg-gray-500'
-                }`} />
-                <span className="text-xs text-white capitalize">{callStatus}</span>
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    callStatus === 'active' ? 'bg-green-500' : 
+                    callStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
+                    'bg-gray-500'
+                  }`} />
+                  <span className="text-xs text-white capitalize">{callStatus}</span>
+                </div>
               </div>
+              {/* Relationship Actions */}
+              <ChatRelationshipActions
+                currentUserId={currentUserId}
+                targetUserId={remoteUserId}
+                targetUserName={remoteName}
+                onBlock={handleEndCall}
+                className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+              />
             </div>
           </div>
 

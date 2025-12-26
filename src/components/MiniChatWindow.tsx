@@ -17,8 +17,11 @@ import {
   IndianRupee,
   Loader2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ShieldAlert
 } from "lucide-react";
+import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
+import { useBlockCheck } from "@/hooks/useBlockCheck";
 
 const INACTIVITY_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes - auto disconnect
 
@@ -75,6 +78,23 @@ const MiniChatWindow = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check block status - auto-close if blocked
+  const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
+
+  // Auto-close chat if blocked
+  useEffect(() => {
+    if (isBlocked) {
+      toast({
+        title: "Chat Ended",
+        description: isBlockedByThem 
+          ? "This user has blocked you" 
+          : "You have blocked this user",
+        variant: "destructive"
+      });
+      handleClose();
+    }
+  }, [isBlocked]);
 
   // Load messages and subscribe
   useEffect(() => {
@@ -431,6 +451,14 @@ const MiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5">
+          {/* Relationship Actions (Block/Friend) */}
+          <ChatRelationshipActions
+            currentUserId={currentUserId}
+            targetUserId={partnerId}
+            targetUserName={partnerName}
+            onBlock={handleClose}
+            className="h-5 w-5"
+          />
           <Button
             variant="ghost"
             size="icon"
