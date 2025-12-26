@@ -36,7 +36,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
-import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
+import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 
@@ -789,12 +789,13 @@ const DraggableMiniChatWindow = ({
               disabled={!billingStarted}
             />
           )}
-          <ChatRelationshipActions
+          <MiniChatActions
             currentUserId={currentUserId}
             targetUserId={partnerId}
             targetUserName={partnerName}
+            isPartnerOnline={isPartnerOnline}
             onBlock={handleClose}
-            className="h-6 w-6 hover:bg-muted"
+            onStopChat={handleClose}
           />
           <Button
             variant="ghost"
