@@ -109,36 +109,41 @@ const EnhancedParallelChatsContainer = ({
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
     const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
 
-    // Create unique chats - one per partner (no duplicates)
-    const seenPartners = new Set<string>();
-    const chats: ActiveChat[] = sessions
-      .filter(session => {
-        // Only include chats that user has responded to (accepted)
-        return chatsWithUserMessages.has(session.chat_id) || 
-               acceptedSessionsRef.current.has(session.id);
-      })
-      .map(session => {
-        const partnerId = userGender === "male" ? session.woman_user_id : session.man_user_id;
-        const profile = profileMap.get(partnerId);
-        
-        return {
-          id: session.id,
-          chatId: session.chat_id,
-          partnerId,
-          partnerName: profile?.full_name || "Anonymous",
-          partnerPhoto: profile?.photo_url || null,
-          partnerLanguage: profile?.primary_language || "Unknown",
-          isPartnerOnline: statusMap.get(partnerId) || false,
-          ratePerMinute: session.rate_per_minute || 2,
-          startedAt: session.created_at
-        };
-      })
-      .filter(chat => {
-        // Ensure only one window per partner
-        if (seenPartners.has(chat.partnerId)) return false;
-        seenPartners.add(chat.partnerId);
-        return true;
-      });
+    // Create unique chats - strictly ONE window per partner (keep most recent session only)
+    const partnerToSession = new Map<string, typeof sessions[0]>();
+    
+    // First pass: keep only the most recent session per partner
+    sessions.forEach(session => {
+      const partnerId = userGender === "male" ? session.woman_user_id : session.man_user_id;
+      const existing = partnerToSession.get(partnerId);
+      
+      // Only include if user has accepted/responded
+      const isAccepted = chatsWithUserMessages.has(session.chat_id) || 
+                         acceptedSessionsRef.current.has(session.id);
+      if (!isAccepted) return;
+      
+      // Keep only the most recent session per partner
+      if (!existing || new Date(session.created_at) > new Date(existing.created_at)) {
+        partnerToSession.set(partnerId, session);
+      }
+    });
+    
+    // Second pass: build chat objects from deduplicated sessions
+    const chats: ActiveChat[] = Array.from(partnerToSession.entries()).map(([partnerId, session]) => {
+      const profile = profileMap.get(partnerId);
+      
+      return {
+        id: session.id,
+        chatId: session.chat_id,
+        partnerId,
+        partnerName: profile?.full_name || "Anonymous",
+        partnerPhoto: profile?.photo_url || null,
+        partnerLanguage: profile?.primary_language || "Unknown",
+        isPartnerOnline: statusMap.get(partnerId) || false,
+        ratePerMinute: session.rate_per_minute || 2,
+        startedAt: session.created_at
+      };
+    });
 
     setActiveChats(chats);
   }, [currentUserId, userGender]);
