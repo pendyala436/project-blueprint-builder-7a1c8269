@@ -98,6 +98,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_revenue_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          man_user_id: string | null
+          reference_id: string | null
+          session_id: string | null
+          transaction_type: string
+          woman_user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          man_user_id?: string | null
+          reference_id?: string | null
+          session_id?: string | null
+          transaction_type: string
+          woman_user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          man_user_id?: string | null
+          reference_id?: string | null
+          session_id?: string | null
+          transaction_type?: string
+          woman_user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           category: string
@@ -3044,6 +3083,15 @@ export type Database = {
       }
       process_group_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_recharge: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_reference_id?: string
+          p_user_id: string
+        }
         Returns: Json
       }
       process_video_billing: {
