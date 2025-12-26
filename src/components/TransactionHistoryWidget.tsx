@@ -51,12 +51,31 @@ export const TransactionHistoryWidget = ({
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [currentBalance, setCurrentBalance] = useState(0);
+  const [earningRates, setEarningRates] = useState<{ chatRate: number; videoRate: number } | null>(null);
 
   useEffect(() => {
     if (userId) {
       loadTransactions();
+      if (userGender === 'female') {
+        loadEarningRates();
+      }
     }
   }, [userId, userGender]);
+
+  const loadEarningRates = async () => {
+    const { data } = await supabase
+      .from("chat_pricing")
+      .select("women_earning_rate, video_women_earning_rate")
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    if (data) {
+      setEarningRates({
+        chatRate: Number(data.women_earning_rate) || 0,
+        videoRate: Number(data.video_women_earning_rate) || 0
+      });
+    }
+  };
 
   // Real-time updates
   useEffect(() => {
@@ -292,6 +311,13 @@ export const TransactionHistoryWidget = ({
             </Button>
           </div>
         </div>
+        {userGender === 'female' && earningRates && (
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <span>Earning Rates:</span>
+            <Badge variant="outline" className="text-xs">Chat: ₹{earningRates.chatRate}/min</Badge>
+            <Badge variant="outline" className="text-xs">Video: ₹{earningRates.videoRate}/min</Badge>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
