@@ -71,8 +71,8 @@ const AdminChatPricing = () => {
           video_women_earning_rate: (data as any).video_women_earning_rate?.toString() || "5.00",
           min_withdrawal_balance: data.min_withdrawal_balance?.toString() || "10000"
         });
-      } else {
-        // Set defaults if no pricing exists
+      } else if (!pricing) {
+        // Set defaults only when we truly have no pricing loaded
         setFormData({
           rate_per_minute: "5.00",
           women_earning_rate: "2.00",
