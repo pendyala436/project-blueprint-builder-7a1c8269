@@ -188,6 +188,7 @@ const App = () => (
             <Route path="/chat/:chatId" element={<LazyRoute component={ChatScreen} />} />
             <Route path="/wallet" element={<LazyRoute component={WalletScreen} />} />
             <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
+            <Route path="/transactions" element={<LazyRoute component={TransactionHistoryScreen} />} />
             <Route path="/settings" element={<LazyRoute component={SettingsScreen} />} />
             <Route path="/shift-management" element={<LazyRoute component={ShiftManagementScreen} />} />
             <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
