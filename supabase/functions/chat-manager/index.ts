@@ -821,6 +821,28 @@ serve(async (req) => {
           );
         }
 
+        // SECURITY: Check if either user has blocked the other
+        const { data: blockCheck } = await supabase
+          .from("user_blocks")
+          .select("id, blocked_by")
+          .or(`and(blocked_by.eq.${man_user_id},blocked_user_id.eq.${woman_user_id}),and(blocked_by.eq.${woman_user_id},blocked_user_id.eq.${man_user_id})`)
+          .maybeSingle();
+
+        if (blockCheck) {
+          const blockedByMan = blockCheck.blocked_by === man_user_id;
+          console.log(`[SECURITY] Chat blocked - ${blockedByMan ? 'Man blocked woman' : 'Woman blocked man'}`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: blockedByMan 
+                ? "You have blocked this user" 
+                : "This user has blocked you",
+              error_code: "USER_BLOCKED"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+          );
+        }
+
         // SECURITY: Verify that the authenticated user is the man (initiator)
         // Women cannot initiate chats - they can only respond
         if (authenticatedUserId !== man_user_id) {
