@@ -85,6 +85,12 @@ interface DashboardStats {
   todayEarnings: number;
 }
 
+interface BiggestEarner {
+  name: string;
+  amount: number;
+  photoUrl?: string;
+}
+
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -105,6 +111,8 @@ const WomenDashboardScreen = () => {
     unreadNotifications: 0,
     todayEarnings: 0
   });
+  const [myTodayEarnings, setMyTodayEarnings] = useState(0);
+  const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
@@ -562,17 +570,67 @@ const WomenDashboardScreen = () => {
   };
 
   const fetchTodayEarnings = async (userId: string) => {
-    const today = new Date().toISOString().split("T")[0];
+    // Get today's start in local time
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
     
-    const { data: shifts } = await supabase
-      .from("shifts")
-      .select("earnings, bonus_earnings")
+    // Fetch current user's earnings today from women_earnings table
+    const { data: myEarnings } = await supabase
+      .from("women_earnings")
+      .select("amount")
       .eq("user_id", userId)
-      .gte("start_time", `${today}T00:00:00`)
-      .eq("status", "completed");
+      .gte("created_at", todayStart)
+      .lte("created_at", todayEnd);
 
-    const todayTotal = shifts?.reduce((acc, s) => acc + Number(s.earnings) + Number(s.bonus_earnings), 0) || 0;
-    setStats(prev => ({ ...prev, todayEarnings: todayTotal }));
+    const myTotal = myEarnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+    setMyTodayEarnings(myTotal);
+    setStats(prev => ({ ...prev, todayEarnings: myTotal }));
+
+    // Fetch all women's earnings today to find biggest earner
+    const { data: allWomenEarnings } = await supabase
+      .from("women_earnings")
+      .select("user_id, amount")
+      .gte("created_at", todayStart)
+      .lte("created_at", todayEnd);
+
+    if (allWomenEarnings && allWomenEarnings.length > 0) {
+      // Sum earnings by user
+      const earningsByUser = new Map<string, number>();
+      allWomenEarnings.forEach(e => {
+        const current = earningsByUser.get(e.user_id) || 0;
+        earningsByUser.set(e.user_id, current + Number(e.amount));
+      });
+
+      // Find top earner
+      let topUserId = "";
+      let topAmount = 0;
+      earningsByUser.forEach((amount, uid) => {
+        if (amount > topAmount) {
+          topAmount = amount;
+          topUserId = uid;
+        }
+      });
+
+      if (topUserId && topAmount > 0) {
+        // Fetch top earner's profile
+        const { data: topProfile } = await supabase
+          .from("profiles")
+          .select("full_name, photo_url")
+          .eq("user_id", topUserId)
+          .maybeSingle();
+
+        setBiggestEarner({
+          name: topProfile?.full_name || "Top Earner",
+          amount: topAmount,
+          photoUrl: topProfile?.photo_url || undefined
+        });
+      } else {
+        setBiggestEarner(null);
+      }
+    } else {
+      setBiggestEarner(null);
+    }
   };
 
   const updateUserOnlineStatus = async (online: boolean) => {
@@ -871,7 +929,44 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
-        {/* Section 2: Online Men Tabs (Moved to top) */}
+        {/* Today's Earnings Summary */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
+          <div className="grid grid-cols-2 gap-3">
+            {/* My Today's Earnings */}
+            <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/20">
+                  <IndianRupee className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
+                  <p className="text-xl font-bold text-emerald-600">₹{myTodayEarnings.toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Biggest Earner Today */}
+            <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/20">
+                  <Crown className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
+                  {biggestEarner ? (
+                    <>
+                      <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
+                      <p className="text-lg font-bold text-amber-600">₹{biggestEarner.amount.toLocaleString()}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
         <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recharged" className="flex items-center gap-2">
