@@ -50,6 +50,7 @@ import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { TeamsChatLayout } from "@/components/TeamsChatLayout";
 import VideoCallButton from "@/components/VideoCallButton";
+import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -1370,6 +1371,18 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.22s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
+
+        {/* Section 6: Transaction History */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.24s" }}>
+            <TransactionHistoryWidget
+              userId={currentUserId}
+              userGender="male"
+              maxItems={8}
+              showViewAll={true}
+            />
+          </div>
+        )}
 
 
 

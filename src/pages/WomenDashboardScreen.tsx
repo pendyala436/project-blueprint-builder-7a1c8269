@@ -48,6 +48,7 @@ import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
+import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 
 interface Notification {
   id: string;
@@ -1027,6 +1028,18 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <ActiveChatsSection maxDisplay={5} />
         </div>
+
+        {/* Transaction History for Women */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.155s" }}>
+            <TransactionHistoryWidget
+              userId={currentUserId}
+              userGender="female"
+              maxItems={8}
+              showViewAll={true}
+            />
+          </div>
+        )}
 
         {/* Language Community Group Chat */}
         <div className="animate-fade-in" style={{ animationDelay: "0.16s" }}>
