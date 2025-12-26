@@ -109,6 +109,8 @@ const EnhancedParallelChatsContainer = ({
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
     const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
 
+    // Create unique chats - one per partner (no duplicates)
+    const seenPartners = new Set<string>();
     const chats: ActiveChat[] = sessions
       .filter(session => {
         // Only include chats that user has responded to (accepted)
@@ -130,6 +132,12 @@ const EnhancedParallelChatsContainer = ({
           ratePerMinute: session.rate_per_minute || 2,
           startedAt: session.created_at
         };
+      })
+      .filter(chat => {
+        // Ensure only one window per partner
+        if (seenPartners.has(chat.partnerId)) return false;
+        seenPartners.add(chat.partnerId);
+        return true;
       });
 
     setActiveChats(chats);
