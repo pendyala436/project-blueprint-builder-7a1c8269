@@ -209,21 +209,53 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // For women: Get earnings
+      // For women: Get earnings with rate info
       if (userGender === 'female') {
-        const { data: earnings } = await supabase
-          .from("women_earnings")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(maxItems);
+        const [{ data: earnings }, { data: chatSessions }] = await Promise.all([
+          supabase
+            .from("women_earnings")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(maxItems),
+          supabase
+            .from("active_chat_sessions")
+            .select("id, total_minutes, rate_per_minute, total_earned, status, end_reason")
+            .eq("woman_user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(maxItems)
+        ]);
+
+        const sessionMap = new Map(chatSessions?.map(s => [s.id, s]) || []);
 
         earnings?.forEach(e => {
+          let description = e.description || `${e.earning_type} earnings`;
+          const session = e.chat_session_id ? sessionMap.get(e.chat_session_id) : null;
+          
+          // Build better description with rate info
+          if (e.earning_type === 'chat' && session) {
+            const rate = earningRates?.chatRate || Number(session.rate_per_minute) || 0;
+            const mins = Number(session.total_minutes) || 0;
+            description = `💬 Chat earnings (${mins.toFixed(1)} min × ₹${rate}/min)`;
+          } else if (e.earning_type === 'video_call' && session) {
+            const rate = earningRates?.videoRate || 0;
+            const mins = Number(session.total_minutes) || 0;
+            description = `📹 Video call earnings (${mins.toFixed(1)} min × ₹${rate}/min)`;
+          } else if (e.earning_type === 'gift') {
+            description = `🎁 Gift earnings`;
+          } else if (e.earning_type === 'chat') {
+            const rate = earningRates?.chatRate || 0;
+            description = `💬 Chat earnings (₹${rate}/min)`;
+          } else if (e.earning_type === 'video_call') {
+            const rate = earningRates?.videoRate || 0;
+            description = `📹 Video call earnings (₹${rate}/min)`;
+          }
+
           unified.push({
             id: `earning-${e.id}`,
             type: 'earning',
             amount: Number(e.amount),
-            description: e.description || `${e.earning_type} earnings`,
+            description,
             created_at: e.created_at,
             status: 'completed',
             is_credit: true,
