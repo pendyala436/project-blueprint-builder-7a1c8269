@@ -48,7 +48,7 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
-import ParallelChatsContainer from "@/components/ParallelChatsContainer";
+import { TeamsChatLayout } from "@/components/TeamsChatLayout";
 import VideoCallButton from "@/components/VideoCallButton";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 
@@ -1594,12 +1594,12 @@ const DashboardScreen = () => {
         onProfileUpdated={() => loadDashboardData()}
       />
 
-      {/* Parallel Mini Chat Windows */}
+      {/* Teams-Style Chat Layout */}
       {currentUserId && (
-        <ParallelChatsContainer
+        <TeamsChatLayout
           currentUserId={currentUserId}
-          userGender="male"
           currentUserLanguage={userLanguage}
+          userGender="male"
         />
       )}
     </div>
