@@ -38,7 +38,7 @@ import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGE
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 // RandomChatButton removed - Women cannot initiate chats
-import ParallelChatsContainer from "@/components/ParallelChatsContainer";
+import { TeamsChatLayout } from "@/components/TeamsChatLayout";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
@@ -1163,12 +1163,12 @@ const WomenDashboardScreen = () => {
         onProfileUpdated={() => loadDashboardData()}
       />
 
-      {/* Parallel Mini Chat Windows */}
+      {/* Teams-Style Chat Layout */}
       {currentUserId && (
-        <ParallelChatsContainer
+        <TeamsChatLayout
           currentUserId={currentUserId}
-          userGender="female"
           currentUserLanguage={currentWomanLanguage || "English"}
+          userGender="female"
         />
       )}
 
