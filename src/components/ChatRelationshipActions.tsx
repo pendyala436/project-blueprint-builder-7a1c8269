@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ChatRelationshipActionsProps {
   currentUserId: string;
@@ -348,7 +349,7 @@ export const ChatRelationshipActions = ({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className={className} disabled={isLoading}>
+          <Button variant="ghost" size="icon" className={cn("hover:bg-muted", className)} disabled={isLoading} title="More actions">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
