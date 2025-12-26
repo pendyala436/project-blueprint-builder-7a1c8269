@@ -175,17 +175,6 @@ const AdminChatPricing = () => {
 
     setIsSaving(true);
     try {
-      // Always fetch the latest active pricing record first to ensure we update, not insert
-      const { data: existingPricing, error: fetchError } = await supabase
-        .from("chat_pricing")
-        .select("id")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
       const pricingData = {
         rate_per_minute: ratePerMinute,
         women_earning_rate: womenEarningRate,
@@ -197,16 +186,16 @@ const AdminChatPricing = () => {
         updated_at: new Date().toISOString()
       };
 
-      if (existingPricing?.id) {
-        // Update existing record
+      // Use the pricing ID from state if available (already loaded on page)
+      if (pricing?.id) {
         const { error } = await supabase
           .from("chat_pricing")
           .update(pricingData as any)
-          .eq("id", existingPricing.id);
+          .eq("id", pricing.id);
 
         if (error) throw error;
       } else {
-        // Insert new record only if none exists
+        // Only insert if no pricing exists at all
         const { error } = await supabase
           .from("chat_pricing")
           .insert(pricingData as any);
