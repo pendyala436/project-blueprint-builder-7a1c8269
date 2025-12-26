@@ -27,8 +27,10 @@ import {
   Languages,
   Globe,
   Filter,
-  Power
+  Power,
+  Users2
 } from "lucide-react";
+import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,6 +117,7 @@ const WomenDashboardScreen = () => {
   const [myTodayEarnings, setMyTodayEarnings] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
     heightRange: [140, 200],
@@ -831,6 +834,15 @@ const WomenDashboardScreen = () => {
           <MeowLogo size="sm" />
           
           <div className="flex items-center gap-3">
+            {/* Friends & Blocked */}
+            <button 
+              className="relative p-2 rounded-full hover:bg-muted transition-colors"
+              onClick={() => setShowFriendsPanel(true)}
+              title="Friends & Blocked Users"
+            >
+              <Users2 className="w-5 h-5 text-muted-foreground" />
+            </button>
+
             <button 
               className="relative p-2 rounded-full hover:bg-muted transition-colors"
               onClick={() => navigate("/shift-management")}
@@ -1273,6 +1285,15 @@ const WomenDashboardScreen = () => {
           callerName={incomingCall.callerName}
           callerPhoto={incomingCall.callerPhoto}
           currentUserId={currentUserId}
+        />
+      )}
+
+      {/* Friends & Blocked Panel */}
+      {showFriendsPanel && currentUserId && (
+        <FriendsBlockedPanel
+          currentUserId={currentUserId}
+          userGender="female"
+          onClose={() => setShowFriendsPanel(false)}
         />
       )}
     </div>
