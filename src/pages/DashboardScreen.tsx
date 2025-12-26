@@ -533,7 +533,11 @@ const DashboardScreen = () => {
         .maybeSingle();
 
       if (existingChat) {
-        navigate(`/chat/${womanUserId}`);
+        // Chat already exists - parallel chat container will show it
+        toast({
+          title: t('chatActive', 'Chat Active'),
+          description: `${t('alreadyChattingWith', 'Already chatting with')} ${womanName}`,
+        });
         setIsConnecting(false);
         return;
       }
@@ -621,7 +625,8 @@ const DashboardScreen = () => {
         description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(ratePerMinute)}/min)`,
       });
 
-      navigate(`/chat/${womanUserId}`);
+      // Chat session created - parallel chat container will display it automatically
+      // No navigation needed - stay on dashboard
     } catch (error) {
       console.error("Error starting chat:", error);
       
@@ -1127,7 +1132,7 @@ const DashboardScreen = () => {
                       <Card
                         key={woman.id}
                         className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
-                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
                         <div className="relative mx-auto mb-2">
                           <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
@@ -1197,7 +1202,7 @@ const DashboardScreen = () => {
                       <Card
                         key={woman.id}
                         className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
-                        onClick={() => navigate(`/profile/${woman.user_id}`)}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
                         <div className="relative mx-auto mb-2">
                           <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">

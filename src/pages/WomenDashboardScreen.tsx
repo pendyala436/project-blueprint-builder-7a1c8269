@@ -655,8 +655,11 @@ const WomenDashboardScreen = () => {
       .maybeSingle();
 
     if (existingSession) {
-      // Navigate to existing chat
-      navigate(`/chat/${userId}`);
+      // Chat already exists - parallel chat container will show it
+      toast({
+        title: t('chatActive', 'Chat Active'),
+        description: t('chatAlreadyActive', 'This chat is already active'),
+      });
       return;
     }
 
@@ -676,8 +679,11 @@ const WomenDashboardScreen = () => {
       return;
     }
 
-    // Navigate to profile to see more info before accepting
-    navigate(`/profile/${userId}`);
+    // Stay on dashboard - incoming chat popup handles new chat requests
+    toast({
+      title: t('viewingProfile', 'Profile'),
+      description: t('waitForChatRequest', 'Wait for this user to send a chat request'),
+    });
   };
 
   // Women cannot initiate chats - they can only respond to incoming chats from men
@@ -692,7 +698,11 @@ const WomenDashboardScreen = () => {
   };
 
   const handleViewProfile = (userId: string) => {
-    navigate(`/profile/${userId}`);
+    // Stay on dashboard - profile info shown in UserCard, chats handled by parallel container
+    toast({
+      title: t('viewingProfile', 'Profile'),
+      description: t('waitForChatRequest', 'Wait for this user to send you a chat request'),
+    });
   };
 
   const UserCard = ({ user }: { user: OnlineMan }) => (
