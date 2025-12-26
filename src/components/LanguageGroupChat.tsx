@@ -385,7 +385,7 @@ export const LanguageGroupChat = ({
             </div>
             <div>
               <CardTitle className="text-lg">
-                {languageName} {t("community", "Community")}
+                {languageName} {t("womenCommunity", "Women Community")}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 {members.length} {t("members", "members")} · {onlineCount} {t("online", "online")}
