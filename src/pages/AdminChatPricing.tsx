@@ -175,32 +175,41 @@ const AdminChatPricing = () => {
 
     setIsSaving(true);
     try {
-      if (pricing) {
+      // Always fetch the latest active pricing record first to ensure we update, not insert
+      const { data: existingPricing, error: fetchError } = await supabase
+        .from("chat_pricing")
+        .select("id")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      const pricingData = {
+        rate_per_minute: ratePerMinute,
+        women_earning_rate: womenEarningRate,
+        video_rate_per_minute: videoRatePerMinute,
+        video_women_earning_rate: videoWomenEarningRate,
+        min_withdrawal_balance: minWithdrawal,
+        currency: "INR",
+        is_active: true,
+        updated_at: new Date().toISOString()
+      };
+
+      if (existingPricing?.id) {
+        // Update existing record
         const { error } = await supabase
           .from("chat_pricing")
-          .update({
-            rate_per_minute: ratePerMinute,
-            women_earning_rate: womenEarningRate,
-            video_rate_per_minute: videoRatePerMinute,
-            video_women_earning_rate: videoWomenEarningRate,
-            min_withdrawal_balance: minWithdrawal,
-            updated_at: new Date().toISOString()
-          } as any)
-          .eq("id", pricing.id);
+          .update(pricingData as any)
+          .eq("id", existingPricing.id);
 
         if (error) throw error;
       } else {
+        // Insert new record only if none exists
         const { error } = await supabase
           .from("chat_pricing")
-          .insert({
-            rate_per_minute: ratePerMinute,
-            women_earning_rate: womenEarningRate,
-            video_rate_per_minute: videoRatePerMinute,
-            video_women_earning_rate: videoWomenEarningRate,
-            min_withdrawal_balance: minWithdrawal,
-            currency: "INR",
-            is_active: true
-          } as any);
+          .insert(pricingData as any);
 
         if (error) throw error;
       }
@@ -212,7 +221,7 @@ const AdminChatPricing = () => {
       setIsEditingRates(false);
       setIsEditingVideoRates(false);
       setIsEditingWithdrawal(false);
-      loadPricing();
+      await loadPricing();
     } catch (error) {
       console.error("Error saving pricing:", error);
       toast({
