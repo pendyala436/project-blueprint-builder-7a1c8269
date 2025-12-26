@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
+import { toast } from "sonner";
 import {
   Users,
   MessageSquare,
@@ -25,7 +26,8 @@ import {
   Languages,
   ChevronRight,
   TrendingUp,
-  MessageCircle
+  MessageCircle,
+  UserPlus
 } from "lucide-react";
 
 interface DashboardStats {
@@ -50,6 +52,50 @@ const AdminDashboard = () => {
     pendingApprovals: 0,
     policyAlerts: 0
   });
+  const [seedingUsers, setSeedingUsers] = useState(false);
+
+  const handleSeedSuperUsers = async () => {
+    setSeedingUsers(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("You must be logged in as admin");
+        return;
+      }
+
+      const response = await fetch(
+        "https://tvneohngeracipjajzos.supabase.co/functions/v1/seed-super-users",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`
+          }
+        }
+      );
+
+      const result = await response.json();
+      
+      if (result.success) {
+        const created = (result.results?.females?.filter((f: any) => f.status === 'created').length || 0) +
+                       (result.results?.males?.filter((m: any) => m.status === 'created').length || 0) +
+                       (result.results?.admins?.filter((a: any) => a.status === 'created').length || 0);
+        const existing = (result.results?.females?.filter((f: any) => f.status === 'already exists').length || 0) +
+                        (result.results?.males?.filter((m: any) => m.status === 'already exists').length || 0) +
+                        (result.results?.admins?.filter((a: any) => a.status === 'already exists').length || 0);
+        
+        toast.success(`Super users seeded! Created: ${created}, Already existed: ${existing}`);
+        loadStats();
+      } else {
+        toast.error(result.error || "Failed to seed super users");
+      }
+    } catch (error) {
+      console.error("Error seeding super users:", error);
+      toast.error("Failed to seed super users");
+    } finally {
+      setSeedingUsers(false);
+    }
+  };
 
   const adminModules = [
     {
@@ -253,11 +299,21 @@ const AdminDashboard = () => {
     <AdminNav>
       <div className="space-y-8">
         {/* Welcome Section */}
-        <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and monitor the Meow Meow platform • {adminEmail}
-          </p>
+        <div className="animate-fade-in flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage and monitor the Meow Meow platform • {adminEmail}
+            </p>
+          </div>
+          <Button 
+            onClick={handleSeedSuperUsers} 
+            disabled={seedingUsers}
+            className="bg-gradient-to-r from-primary to-secondary"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            {seedingUsers ? "Seeding..." : "Seed Super Users"}
+          </Button>
         </div>
 
         {/* Quick Stats */}
