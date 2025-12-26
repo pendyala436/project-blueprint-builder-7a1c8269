@@ -3032,6 +3032,23 @@ export type Database = {
           state: string
         }[]
       }
+      get_online_men_dashboard: {
+        Args: never
+        Returns: {
+          active_chat_count: number
+          age: number
+          country: string
+          full_name: string
+          last_seen: string
+          mother_tongue: string
+          photo_url: string
+          preferred_language: string
+          primary_language: string
+          state: string
+          user_id: string
+          wallet_balance: number
+        }[]
+      }
       get_safe_profile: {
         Args: { target_user_id: string }
         Returns: {
