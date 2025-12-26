@@ -412,14 +412,19 @@ export const TransactionHistoryWidget = ({
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                       <span>{format(new Date(tx.created_at), "MMM d, h:mm a")}</span>
+                      {tx.counterparty && (
+                        <span className="text-foreground/70 font-medium">
+                          • {tx.counterparty}
+                        </span>
+                      )}
                       {tx.duration !== undefined && tx.rate !== undefined && (
                         <span className="text-primary/80">
-                          {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
+                          • {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
                         </span>
                       )}
                       {tx.balance_after !== undefined && (
                         <span className="text-muted-foreground/70">
-                          Bal: ₹{tx.balance_after.toLocaleString()}
+                          • Bal: ₹{tx.balance_after.toLocaleString()}
                         </span>
                       )}
                     </div>
