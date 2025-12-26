@@ -49,6 +49,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { TeamsChatLayout } from "@/components/TeamsChatLayout";
+import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import VideoCallButton from "@/components/VideoCallButton";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
@@ -1613,6 +1614,15 @@ const DashboardScreen = () => {
           currentUserId={currentUserId}
           currentUserLanguage={userLanguage}
           userGender="male"
+        />
+      )}
+
+      {/* Enhanced Parallel Chat Windows */}
+      {currentUserId && (
+        <EnhancedParallelChatsContainer
+          currentUserId={currentUserId}
+          userGender="male"
+          currentUserLanguage={userLanguage}
         />
       )}
     </div>
