@@ -455,7 +455,8 @@ const MiniChatWindow = ({
   };
 
   const openFullChat = () => {
-    navigate(`/chat/${partnerId}`);
+    // Maximize the window instead of navigating - chat stays in parallel container
+    setIsMinimized(false);
   };
 
   const handleClose = async () => {

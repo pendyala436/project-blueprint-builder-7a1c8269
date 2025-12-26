@@ -314,8 +314,8 @@ export const ChatInterface = ({
         description: t('chatSessionStarted', 'Chat session started!'),
       });
 
-      // Navigate to chat
-      navigate(`/chat/${request.fromUserId}`);
+      // Chat accepted - parallel chat container will show it automatically
+      // No navigation needed
     } catch (error) {
       console.error("Error accepting chat:", error);
       toast({
@@ -574,7 +574,7 @@ export const ChatInterface = ({
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => navigate(`/chat/${partner.userId}`)}
+                    onClick={() => {/* Chat is already shown in parallel container */}}
                   >
                     <MessageCircle className="h-4 w-4 mr-1" />
                     {t('openChat', 'Open Chat')}
