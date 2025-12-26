@@ -58,7 +58,7 @@ const OnlineUsersScreen = lazy(() => import(/* webpackChunkName: "dashboard" */ 
 const MatchingScreen = lazy(() => import(/* webpackChunkName: "matching" */ "./pages/MatchingScreen"));
 const MatchDiscoveryScreen = lazy(() => import(/* webpackChunkName: "matching" */ "./pages/MatchDiscoveryScreen"));
 const ProfileDetailScreen = lazy(() => import(/* webpackChunkName: "profile" */ "./pages/ProfileDetailScreen"));
-const ChatScreen = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/ChatScreen"));
+// ChatScreen removed - chats now handled via parallel chat windows on dashboard
 const WalletScreen = lazy(() => import(/* webpackChunkName: "wallet" */ "./pages/WalletScreen"));
 const TransactionHistoryScreen = lazy(() => import(/* webpackChunkName: "wallet" */ "./pages/TransactionHistoryScreen"));
 const SettingsScreen = lazy(() => import(/* webpackChunkName: "settings" */ "./pages/SettingsScreen"));
@@ -185,7 +185,7 @@ const App = () => (
             <Route path="/find-match" element={<LazyRoute component={MatchingScreen} />} />
             <Route path="/match-discovery" element={<LazyRoute component={MatchDiscoveryScreen} />} />
             <Route path="/profile/:userId" element={<LazyRoute component={ProfileDetailScreen} />} />
-            <Route path="/chat/:chatId" element={<LazyRoute component={ChatScreen} />} />
+            {/* Chat route removed - chats handled via parallel chat windows on dashboard */}
             <Route path="/wallet" element={<LazyRoute component={WalletScreen} />} />
             <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
             <Route path="/transactions" element={<LazyRoute component={TransactionHistoryScreen} />} />
