@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,13 +18,16 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  TrendingUp
+  TrendingUp,
+  Wallet,
+  AlertTriangle
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
+const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
 
 interface Message {
   id: string;
@@ -78,10 +81,16 @@ const MiniChatWindow = ({
   const [billingStarted, setBillingStarted] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
   const [totalEarned, setTotalEarned] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [earningRate, setEarningRate] = useState(2);
+  const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
+  const [sessionStarted, setSessionStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStartedRef = useRef(false);
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
@@ -99,6 +108,63 @@ const MiniChatWindow = ({
       handleClose();
     }
   }, [isBlocked]);
+
+  // Load initial data (wallet, earnings, pricing)
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Load pricing
+        const { data: pricing } = await supabase
+          .from("chat_pricing")
+          .select("rate_per_minute, women_earning_rate")
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (pricing) {
+          setEarningRate(pricing.women_earning_rate || ratePerMinute * 0.5);
+        }
+
+        if (userGender === "male") {
+          // Load wallet balance for men
+          const { data: wallet } = await supabase
+            .from("wallets")
+            .select("balance")
+            .eq("user_id", currentUserId)
+            .maybeSingle();
+          
+          if (wallet) {
+            setWalletBalance(wallet.balance);
+          }
+        } else {
+          // Load today's earnings for women
+          const today = new Date().toISOString().split("T")[0];
+          const { data: earnings } = await supabase
+            .from("women_earnings")
+            .select("amount")
+            .eq("user_id", currentUserId)
+            .gte("created_at", `${today}T00:00:00`);
+          
+          const total = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+          setTodayEarnings(total);
+        }
+
+        // Start chat session if not already started
+        if (!sessionStartedRef.current) {
+          sessionStartedRef.current = true;
+          toast({
+            title: "Chat Started",
+            description: userGender === "male" 
+              ? `You're being charged ₹${pricing?.rate_per_minute || ratePerMinute}/min`
+              : `You'll earn ₹${pricing?.women_earning_rate || earningRate}/min`,
+          });
+        }
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
+    };
+
+    loadInitialData();
+  }, [currentUserId, userGender, ratePerMinute]);
 
   // Load messages and subscribe
   useEffect(() => {
@@ -130,9 +196,21 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Inactivity check - auto disconnect after 2 mins of no activity
+  // Inactivity check with warning - auto disconnect after 3 mins of no activity
   useEffect(() => {
     if (!billingStarted) return;
+
+    // Update warning every second
+    const warningInterval = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      
+      if (timeSinceActivity >= WARNING_THRESHOLD_MS && timeSinceActivity < INACTIVITY_TIMEOUT_MS) {
+        const remainingSecs = Math.ceil((INACTIVITY_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Ends in ${remainingSecs}s`);
+      } else {
+        setInactiveWarning(null);
+      }
+    }, 1000);
 
     if (inactivityRef.current) {
       clearTimeout(inactivityRef.current);
@@ -151,7 +229,7 @@ const MiniChatWindow = ({
       
       toast({
         title: "Chat Disconnected",
-        description: "No activity for 2 minutes. Chat ended automatically.",
+        description: "No activity for 3 minutes. Chat ended automatically.",
       });
       
       // Auto-close the chat session
@@ -172,6 +250,7 @@ const MiniChatWindow = ({
     }, INACTIVITY_TIMEOUT_MS);
 
     return () => {
+      clearInterval(warningInterval);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
@@ -412,6 +491,14 @@ const MiniChatWindow = ({
         isPartnerOnline ? "border-primary/30" : "border-muted"
       )}
     >
+      {/* Inactivity Warning Bar */}
+      {inactiveWarning && (
+        <div className="flex items-center gap-1 px-2 py-0.5 bg-destructive/10 text-destructive text-[9px]">
+          <AlertTriangle className="h-2.5 w-2.5" />
+          <span>{inactiveWarning}</span>
+        </div>
+      )}
+      
       {/* Header */}
       <div 
         className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b cursor-pointer"
@@ -431,7 +518,20 @@ const MiniChatWindow = ({
             )} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{partnerName}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-xs font-medium truncate">{partnerName}</p>
+              {/* Wallet/Earnings badge */}
+              {userGender === "male" && walletBalance > 0 && (
+                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
+                  <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(0)}
+                </Badge>
+              )}
+              {userGender === "female" && todayEarnings > 0 && (
+                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
+                  <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(0)}
+                </Badge>
+              )}
+            </div>
             {billingStarted && (
               <div className="flex items-center gap-1 text-[10px]">
                 <Clock className="h-2 w-2 text-muted-foreground" />
@@ -446,14 +546,14 @@ const MiniChatWindow = ({
                   <>
                     <span className="text-muted-foreground">•</span>
                     <TrendingUp className="h-2 w-2 text-green-500" />
-                    <span className="text-green-500">₹{estimatedEarning.toFixed(1)}</span>
+                    <span className="text-green-500">+₹{estimatedEarning.toFixed(1)}</span>
                   </>
                 )}
               </div>
             )}
             {!billingStarted && (
               <p className="text-[10px] text-muted-foreground">
-                Type to start
+                {userGender === "male" ? `₹${ratePerMinute}/min - Type to start` : `Earn ₹${earningRate}/min`}
               </p>
             )}
           </div>
