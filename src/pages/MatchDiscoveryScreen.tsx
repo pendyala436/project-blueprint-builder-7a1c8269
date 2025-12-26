@@ -44,8 +44,11 @@ import {
   RefreshCw,       // Refresh button icon
   Eye,             // View profile icon
   Shield,          // Verified badge icon
-  Star             // Premium badge icon
+  Star,            // Premium badge icon
+  MoreVertical     // Actions menu icon
 } from "lucide-react";
+// Relationship actions component
+import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 // Supabase client for database operations
 import { supabase } from "@/integrations/supabase/client";
 // Custom filter panel component and types
@@ -124,6 +127,9 @@ const MatchDiscoveryScreen = () => {
   // Current user's country (used for NLLB-200 feature visibility)
   const [currentUserCountry, setCurrentUserCountry] = useState<string>("");
   
+  // Current user's ID for relationship actions
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  
   // Reference to the card DOM element for animations
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -198,6 +204,7 @@ const MatchDiscoveryScreen = () => {
       const userGender = maleProfile ? "Male" : (currentProfile?.gender || "");
       setCurrentUserGender(userGender);
       setCurrentUserCountry(maleProfile?.country || currentProfile?.country || "");
+      setCurrentUserId(user.id);
 
       // ============= DETERMINE MATCHING GENDER =============
       
@@ -870,6 +877,17 @@ const MatchDiscoveryScreen = () => {
                       >
                         <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                       </Button>
+                      
+                      {/* Relationship Actions (Friend/Block) */}
+                      {currentUserId && (
+                        <ChatRelationshipActions
+                          currentUserId={currentUserId}
+                          targetUserId={currentMatch.userId}
+                          targetUserName={currentMatch.fullName}
+                          onBlock={() => goToNext()}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-muted-foreground/30"
+                        />
+                      )}
                       
                       {/* Like (Heart) button */}
                       <Button
