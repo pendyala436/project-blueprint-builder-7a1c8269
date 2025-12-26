@@ -22,8 +22,20 @@ import {
   Wallet,
   AlertTriangle,
   GripVertical,
-  Move
+  Move,
+  Paperclip,
+  Image,
+  Video,
+  FileText,
+  Mic,
+  Square
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
@@ -93,6 +105,9 @@ const DraggableMiniChatWindow = ({
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [isAttachOpen, setIsAttachOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
@@ -573,6 +588,84 @@ const DraggableMiniChatWindow = ({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // File upload handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 50MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setIsAttachOpen(false);
+    setLastActivityTime(Date.now());
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUserId}/${chatId}/${Date.now()}.${fileExt}`;
+      const bucket = fileType === 'image' ? 'profile-photos' : 'community-files';
+
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+
+      // Send message with file
+      const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
+      const { error: messageError } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: currentUserId,
+          receiver_id: partnerId,
+          message: `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`
+        });
+
+      if (messageError) throw messageError;
+
+      toast({
+        title: "File sent",
+        description: `${file.name} has been sent`
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to send file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerFileInput = (accept: string, fileType: 'image' | 'video' | 'document') => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.dataset.fileType = fileType;
+      fileInputRef.current.click();
+    }
+  };
+
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
@@ -740,45 +833,171 @@ const DraggableMiniChatWindow = ({
                   Say hi to start! Billing begins when both reply.
                 </p>
               )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex",
-                    msg.senderId === currentUserId ? "justify-end" : "justify-start"
-                  )}
-                >
+              {messages.map((msg) => {
+                // Parse special message formats
+                const isVoice = msg.message.startsWith('[VOICE:');
+                const isImage = msg.message.includes('[IMAGE:');
+                const isVideo = msg.message.includes('[VIDEO:');
+                const isDocument = msg.message.includes('[DOCUMENT:');
+                const isFile = isImage || isVideo || isDocument;
+
+                // Extract URL from special format
+                const extractUrl = (text: string, type: string) => {
+                  const match = text.match(new RegExp(`\\[${type}:([^\\]]+)\\]`));
+                  return match ? match[1] : null;
+                };
+
+                const fileUrl = isVoice 
+                  ? msg.message.replace('[VOICE:', '').replace(']', '')
+                  : isImage ? extractUrl(msg.message, 'IMAGE')
+                  : isVideo ? extractUrl(msg.message, 'VIDEO')
+                  : isDocument ? extractUrl(msg.message, 'DOCUMENT')
+                  : null;
+
+                return (
                   <div
+                    key={msg.id}
                     className={cn(
-                      "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-                      msg.senderId === currentUserId
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted rounded-bl-sm"
+                      "flex",
+                      msg.senderId === currentUserId ? "justify-end" : "justify-start"
                     )}
                   >
-                    {msg.isTranslated && msg.translatedMessage ? (
-                      <div className="space-y-0.5">
-                        <p>{msg.translatedMessage}</p>
-                        <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                          {msg.message}
-                          {msg.detectedLanguage && (
-                            <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                          )}
-                        </p>
-                      </div>
-                    ) : (
-                      msg.message
-                    )}
+                    <div
+                      className={cn(
+                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+                        msg.senderId === currentUserId
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
+                      )}
+                    >
+                      {isVoice && fileUrl ? (
+                        <div className="flex items-center gap-2">
+                          <Mic className="h-3 w-3" />
+                          <audio src={fileUrl} controls className="h-6 max-w-[150px]" />
+                        </div>
+                      ) : isImage && fileUrl ? (
+                        <div className="space-y-1">
+                          <img 
+                            src={fileUrl} 
+                            alt="Shared image" 
+                            className="max-w-[200px] max-h-[150px] rounded object-cover cursor-pointer"
+                            onClick={() => window.open(fileUrl, '_blank')}
+                          />
+                        </div>
+                      ) : isVideo && fileUrl ? (
+                        <div className="space-y-1">
+                          <video 
+                            src={fileUrl} 
+                            controls 
+                            className="max-w-[200px] max-h-[150px] rounded"
+                          />
+                        </div>
+                      ) : isDocument && fileUrl ? (
+                        <a 
+                          href={fileUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 underline hover:opacity-80"
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span>View Document</span>
+                        </a>
+                      ) : msg.isTranslated && msg.translatedMessage ? (
+                        <div className="space-y-0.5">
+                          <p>{msg.translatedMessage}</p>
+                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                            {msg.message}
+                            {msg.detectedLanguage && (
+                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                            )}
+                          </p>
+                        </div>
+                      ) : (
+                        msg.message
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
           {/* Input area */}
           <div className="p-1.5 border-t">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const fileType = (e.target.dataset.fileType || 'document') as 'image' | 'video' | 'document';
+                handleFileUpload(e, fileType);
+              }}
+            />
+            
             <div className="flex items-center gap-1">
+              {/* Attach button */}
+              <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-40 p-1" side="top" align="start">
+                  <div className="flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-8 text-xs"
+                      onClick={() => triggerFileInput('image/*', 'image')}
+                    >
+                      <Image className="h-4 w-4 mr-2 text-blue-500" />
+                      Photo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-8 text-xs"
+                      onClick={() => triggerFileInput('video/*', 'video')}
+                    >
+                      <Video className="h-4 w-4 mr-2 text-purple-500" />
+                      Video
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-8 text-xs"
+                      onClick={() => triggerFileInput('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar', 'document')}
+                    >
+                      <FileText className="h-4 w-4 mr-2 text-orange-500" />
+                      Document
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Voice recorder */}
+              <VoiceMessageRecorder
+                chatId={chatId}
+                currentUserId={currentUserId}
+                partnerId={partnerId}
+                onMessageSent={() => setLastActivityTime(Date.now())}
+                disabled={isSending}
+                className="h-8 w-8 shrink-0"
+              />
+
+              {/* Text input */}
               <Input
                 placeholder="Type a message..."
                 value={newMessage}
@@ -787,19 +1006,21 @@ const DraggableMiniChatWindow = ({
                   handleTyping();
                 }}
                 onKeyDown={handleKeyPress}
-                className="h-8 text-xs"
-                disabled={isSending}
+                className="h-8 text-xs flex-1"
+                disabled={isSending || isUploading}
               />
+
+              {/* Send button */}
               <Button
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
                 onClick={sendMessage}
                 disabled={!newMessage.trim() || isSending}
               >
                 {isSending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Send className="h-3 w-3" />
+                  <Send className="h-3.5 w-3.5" />
                 )}
               </Button>
             </div>
