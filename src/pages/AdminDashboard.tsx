@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
+import { AdminTransactionHistoryWidget } from "@/components/AdminTransactionHistoryWidget";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { toast } from "sonner";
@@ -403,6 +404,11 @@ const AdminDashboard = () => {
               </Card>
             ))}
           </div>
+        </div>
+
+        {/* All User Transactions Section */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <AdminTransactionHistoryWidget />
         </div>
 
         {/* Alerts Section */}
