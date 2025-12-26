@@ -40,6 +40,8 @@ export const useChatPricing = () => {
         .from("chat_pricing")
         .select("*")
         .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (fetchError) throw fetchError;
