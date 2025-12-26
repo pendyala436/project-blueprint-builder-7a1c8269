@@ -780,7 +780,7 @@ const DraggableMiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
           {userGender === "male" && (
             <GiftSendButton
               senderId={currentUserId}
@@ -794,7 +794,7 @@ const DraggableMiniChatWindow = ({
             targetUserId={partnerId}
             targetUserName={partnerName}
             onBlock={handleClose}
-            className="h-5 w-5"
+            className="h-6 w-6 hover:bg-muted"
           />
           <Button
             variant="ghost"
