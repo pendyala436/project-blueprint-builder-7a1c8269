@@ -135,10 +135,10 @@ Deno.serve(async (req) => {
           is_verified: true
         }, { onConflict: 'user_id' })
 
-        // Create wallet with unlimited balance (999999999)
+        // Create wallet with zero balance (super users bypass balance checks via should_bypass_balance function)
         await supabase.from('wallets').upsert({
           user_id: userId,
-          balance: 999999999,
+          balance: 0,
           currency: 'INR'
         }, { onConflict: 'user_id' })
 
@@ -183,9 +183,10 @@ Deno.serve(async (req) => {
           is_verified: true
         }, { onConflict: 'user_id' })
 
+        // Super users bypass balance checks via should_bypass_balance function
         await supabase.from('wallets').upsert({
           user_id: userId,
-          balance: 999999999,
+          balance: 0,
           currency: 'INR'
         }, { onConflict: 'user_id' })
 
@@ -230,9 +231,10 @@ Deno.serve(async (req) => {
           is_verified: true
         }, { onConflict: 'user_id' })
 
+        // Super users bypass balance checks via should_bypass_balance function
         await supabase.from('wallets').upsert({
           user_id: userId,
-          balance: 999999999,
+          balance: 0,
           currency: 'INR'
         }, { onConflict: 'user_id' })
 
