@@ -48,7 +48,7 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 import { RandomChatButton } from "@/components/RandomChatButton";
-import { TeamsChatLayout } from "@/components/TeamsChatLayout";
+// TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import VideoCallButton from "@/components/VideoCallButton";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
@@ -1610,14 +1610,7 @@ const DashboardScreen = () => {
         onProfileUpdated={() => loadDashboardData()}
       />
 
-      {/* Teams-Style Chat Layout */}
-      {currentUserId && (
-        <TeamsChatLayout
-          currentUserId={currentUserId}
-          currentUserLanguage={userLanguage}
-          userGender="male"
-        />
-      )}
+      {/* TeamsChatLayout removed - all chats handled via EnhancedParallelChatsContainer */}
 
       {/* Enhanced Parallel Chat Windows */}
       {currentUserId && (
