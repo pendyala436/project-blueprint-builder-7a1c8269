@@ -531,10 +531,13 @@ const WomenDashboardScreen = () => {
       const recharged = sortedMen.filter(m => m.hasRecharged);
       const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
 
-      console.log("[WomenDashboard] Online recharged men:", recharged.length);
+      // Sort recharged men by wallet balance descending (highest balance first)
+      const sortedRecharged = recharged.sort((a, b) => b.walletBalance - a.walletBalance);
+
+      console.log("[WomenDashboard] Online recharged men:", sortedRecharged.length);
       console.log("[WomenDashboard] Online non-recharged men:", nonRecharged.length);
 
-      setRechargedMen(recharged);
+      setRechargedMen(sortedRecharged);
       setNonRechargedMen(nonRecharged);
       setStats(prev => ({
         ...prev,
