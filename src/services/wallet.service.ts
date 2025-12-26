@@ -4,6 +4,11 @@
  * Handles all wallet and transaction-related API calls.
  * All financial operations use database functions for ACID compliance.
  * Synced with Flutter wallet_service.dart
+ * 
+ * Revenue Distribution Logic:
+ * - When man recharges: 100% goes to admin, man gets spending balance
+ * - During chat/video: Man charged per-minute, woman earns her rate, admin keeps difference
+ * - Gifts: 50/50 split between woman and admin
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -58,7 +63,30 @@ export interface TransactionResult {
   transaction_id?: string;
   previous_balance?: number;
   new_balance?: number;
+  admin_revenue?: number;
   error?: string;
+}
+
+export interface RechargeResult {
+  success: boolean;
+  transaction_id?: string;
+  previous_balance?: number;
+  new_balance?: number;
+  admin_revenue?: number;
+  error?: string;
+}
+
+export interface AdminRevenueTransaction {
+  id: string;
+  transaction_type: 'recharge' | 'chat_revenue' | 'video_revenue' | 'gift_revenue';
+  amount: number;
+  man_user_id?: string;
+  woman_user_id?: string;
+  session_id?: string;
+  reference_id?: string;
+  description?: string;
+  currency: string;
+  created_at: string;
 }
 
 /**
@@ -253,6 +281,96 @@ export async function getWithdrawalRequests(
     .limit(limit);
 
   return data || [];
+}
+
+/**
+ * Process wallet recharge
+ * 100% of recharge goes to admin revenue, man gets spending balance
+ */
+export async function processRecharge(
+  userId: string,
+  amount: number,
+  referenceId?: string,
+  description?: string
+): Promise<RechargeResult> {
+  const { data, error } = await supabase.rpc('process_recharge', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_reference_id: referenceId || null,
+    p_description: description || null,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return data as unknown as RechargeResult;
+}
+
+/**
+ * Get admin revenue transactions (admin only)
+ */
+export async function getAdminRevenueTransactions(
+  limit = 100,
+  transactionType?: 'recharge' | 'chat_revenue' | 'video_revenue' | 'gift_revenue'
+): Promise<AdminRevenueTransaction[]> {
+  let query = supabase
+    .from('admin_revenue_transactions')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (transactionType) {
+    query = query.eq('transaction_type', transactionType);
+  }
+
+  const { data } = await query;
+  return (data || []) as AdminRevenueTransaction[];
+}
+
+/**
+ * Get admin revenue summary
+ */
+export async function getAdminRevenueSummary(): Promise<{
+  totalRecharge: number;
+  totalChatRevenue: number;
+  totalVideoRevenue: number;
+  totalGiftRevenue: number;
+  grandTotal: number;
+}> {
+  const { data } = await supabase
+    .from('admin_revenue_transactions')
+    .select('transaction_type, amount');
+
+  const summary = {
+    totalRecharge: 0,
+    totalChatRevenue: 0,
+    totalVideoRevenue: 0,
+    totalGiftRevenue: 0,
+    grandTotal: 0,
+  };
+
+  if (data) {
+    data.forEach((tx: { transaction_type: string; amount: number }) => {
+      summary.grandTotal += tx.amount;
+      switch (tx.transaction_type) {
+        case 'recharge':
+          summary.totalRecharge += tx.amount;
+          break;
+        case 'chat_revenue':
+          summary.totalChatRevenue += tx.amount;
+          break;
+        case 'video_revenue':
+          summary.totalVideoRevenue += tx.amount;
+          break;
+        case 'gift_revenue':
+          summary.totalGiftRevenue += tx.amount;
+          break;
+      }
+    });
+  }
+
+  return summary;
 }
 
 /**
