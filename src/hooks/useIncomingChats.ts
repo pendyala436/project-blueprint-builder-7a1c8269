@@ -127,28 +127,37 @@ export const useIncomingChats = (
     if (!currentUserId) return;
 
     const checkForNewChats = async () => {
+      console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
+      
       // Get recent active sessions where this user is the target
       const column = userGender === "male" ? "man_user_id" : "woman_user_id";
       const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
       
-      const { data: sessions } = await supabase
+      const { data: sessions, error: sessionsError } = await supabase
         .from("active_chat_sessions")
         .select("*")
         .eq(column, currentUserId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
+      console.log(`[useIncomingChats] Found ${sessions?.length || 0} active sessions`, sessionsError);
+
       if (!sessions || sessions.length === 0) return;
 
       // Check if any session has no messages from this user (incoming)
       for (const session of sessions) {
-        if (acceptedChatsRef.current.has(session.id)) continue;
+        if (acceptedChatsRef.current.has(session.id)) {
+          console.log(`[useIncomingChats] Session ${session.id} already accepted`);
+          continue;
+        }
 
         const { count } = await supabase
           .from("chat_messages")
           .select("*", { count: "exact", head: true })
           .eq("chat_id", session.chat_id)
           .eq("sender_id", currentUserId);
+
+        console.log(`[useIncomingChats] Session ${session.id} has ${count} messages from current user`);
 
         // If user hasn't sent any message, it's an incoming chat
         if (count === 0) {
@@ -171,6 +180,8 @@ export const useIncomingChats = (
             ratePerMinute: session.rate_per_minute || 2,
             startedAt: session.created_at
           };
+
+          console.log(`[useIncomingChats] Adding incoming chat:`, newChat);
 
           setIncomingChats(prev => {
             if (prev.some(c => c.sessionId === newChat.sessionId)) return prev;
