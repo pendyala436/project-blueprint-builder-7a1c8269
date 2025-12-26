@@ -955,13 +955,47 @@ const ChatScreen = () => {
   };
 
   /**
+   * convertMessageToTargetLanguage Function
+   * 
+   * Converts English typing to the target language script.
+   * Example: "bagunnava" → బాగున్నావా (Telugu)
+   * Example: "kaise ho" → कैसे हो (Hindi)
+   * 
+   * @param message - Text typed in English/Latin characters
+   * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
+   * @returns Converted text in target language script
+   */
+  const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message, 
+          targetLanguage,
+          mode: "convert" // Force conversion mode for outgoing messages
+        }
+      });
+
+      if (error) {
+        console.error("Conversion error:", error);
+        return message;
+      }
+      
+      return data.convertedMessage || data.translatedMessage || message;
+    } catch (error) {
+      console.error("Conversion failed:", error);
+      return message;
+    }
+  };
+
+  /**
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner:
    * 1. Validates input
-   * 2. Translates to partner's language
-   * 3. Inserts into database
-   * 4. Clears input field
+   * 2. Converts English typing to partner's language
+   * 3. Translates to partner's language
+   * 4. Inserts into database
+   * 5. Clears input field
    */
   const handleSendMessage = async () => {
     // ============= VALIDATION =============
@@ -987,10 +1021,15 @@ const ChatScreen = () => {
     setIsSending(true);
 
     try {
+      // ============= CONVERT ENGLISH TYPING TO TARGET LANGUAGE =============
+      
+      // First, convert English typing to partner's language script
+      const convertedMessage = await convertMessageToTargetLanguage(messageText, chatPartner.preferredLanguage);
+      
       // ============= TRANSLATE FOR RECEIVER =============
       
-      // Translate message to partner's preferred language
-      const translation = await translateMessage(messageText, chatPartner.preferredLanguage);
+      // Translate message to partner's preferred language (for display)
+      const translation = await translateMessage(convertedMessage, chatPartner.preferredLanguage);
       const translatedMessage = translation.translatedMessage;
       const isTranslated = translation.isTranslated;
 
@@ -1002,7 +1041,7 @@ const ChatScreen = () => {
           chat_id: chatId.current,          // Consistent chat identifier
           sender_id: currentUserId,          // Current user as sender
           receiver_id: chatPartner.userId,   // Partner as receiver
-          message: messageText,              // Original message
+          message: convertedMessage,         // Converted message (English typing → target script)
           translated_message: translatedMessage || null, // Translation if different
           is_translated: isTranslated,       // Flag if translation occurred
         });

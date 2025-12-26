@@ -503,6 +503,30 @@ const DraggableMiniChatWindow = ({
 
   const MAX_MESSAGE_LENGTH = 2000;
 
+  // Convert English typing to target language before sending
+  const convertMessageToTargetLanguage = async (text: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message: text,
+          targetLanguage: partnerLanguage,
+          mode: "convert" // Force conversion mode for outgoing messages
+        }
+      });
+
+      if (error) {
+        console.error("Conversion error:", error);
+        return text;
+      }
+
+      // Return converted message if available, otherwise original
+      return data.convertedMessage || data.translatedMessage || text;
+    } catch (err) {
+      console.error("Conversion failed:", err);
+      return text;
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
@@ -522,13 +546,16 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
+      // Convert English typing to target language before sending
+      const convertedMessage = await convertMessageToTargetLanguage(messageText);
+      
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: messageText
+          message: convertedMessage // Send converted message
         });
 
       if (error) throw error;

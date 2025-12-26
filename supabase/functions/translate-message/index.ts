@@ -249,173 +249,55 @@ const languageToNLLB: Record<string, string> = {
   "pali": "pli_Deva",
   "classical chinese": "lzh_Hans",
   "literary chinese": "lzh_Hans",
-  
-  // ========== ADDITIONAL NLLB LANGUAGES ==========
-  "asturian": "ast_Latn",
-  "aragonese": "arg_Latn",
-  "silesian": "szl_Latn",
-  "kashubian": "csb_Latn",
-  "sorbian": "hsb_Latn",
-  "limburgish": "lim_Latn",
-  "low german": "nds_Latn",
-  "scots": "sco_Latn",
-  "venetian": "vec_Latn",
-  "neapolitan": "nap_Latn",
-  "sicilian": "scn_Latn",
-  "piedmontese": "pms_Latn",
-  "lombard": "lmo_Latn",
-  "ligurian": "lij_Latn",
-  "emilian": "egl_Latn",
-  "franco-provencal": "frp_Latn",
-  "walloon": "wln_Latn",
-  "aromanian": "rup_Latn",
-  "istro-romanian": "ist_Latn",
-  "mirandese": "mwl_Latn",
-  "ladino": "lad_Latn",
-  "chavacano": "cbk_Latn",
-  "bikolano": "bik_Latn",
-  "kapampangan": "pam_Latn",
-  "hiligaynon": "hil_Latn",
-  "tausug": "tsg_Latn",
-  "maranao": "mrw_Latn",
-  "maguindanao": "mdh_Latn",
-  "tetum": "tet_Latn",
-  "batak": "bbc_Latn",
-  "buginese": "bug_Latn",
-  "makassar": "mak_Latn",
-  "gorontalo": "gor_Latn",
-  "sasak": "sas_Latn",
-  "rejang": "rej_Latn",
 };
 
 // Unicode script detection patterns - comprehensive global coverage
 const scriptPatterns: { regex: RegExp; language: string; nllbCode: string }[] = [
   // ========== INDIAN SCRIPTS ==========
-  { regex: /[\u0900-\u097F]/, language: "hindi", nllbCode: "hin_Deva" }, // Devanagari (Hindi, Marathi, Sanskrit, Nepali)
-  { regex: /[\u0980-\u09FF]/, language: "bengali", nllbCode: "ben_Beng" }, // Bengali
-  { regex: /[\u0C00-\u0C7F]/, language: "telugu", nllbCode: "tel_Telu" }, // Telugu
-  { regex: /[\u0B80-\u0BFF]/, language: "tamil", nllbCode: "tam_Taml" }, // Tamil
-  { regex: /[\u0A80-\u0AFF]/, language: "gujarati", nllbCode: "guj_Gujr" }, // Gujarati
-  { regex: /[\u0C80-\u0CFF]/, language: "kannada", nllbCode: "kan_Knda" }, // Kannada
-  { regex: /[\u0D00-\u0D7F]/, language: "malayalam", nllbCode: "mal_Mlym" }, // Malayalam
-  { regex: /[\u0A00-\u0A7F]/, language: "punjabi", nllbCode: "pan_Guru" }, // Gurmukhi (Punjabi)
-  { regex: /[\u0B00-\u0B7F]/, language: "odia", nllbCode: "ory_Orya" }, // Odia/Oriya
-  { regex: /[\u0D80-\u0DFF]/, language: "sinhala", nllbCode: "sin_Sinh" }, // Sinhala
-  { regex: /[\u1C50-\u1C7F]/, language: "manipuri", nllbCode: "mni_Mtei" }, // Ol Chiki (Santali)
-  { regex: /[\u1C00-\u1C4F]/, language: "manipuri", nllbCode: "mni_Beng" }, // Lepcha
+  { regex: /[\u0900-\u097F]/, language: "hindi", nllbCode: "hin_Deva" },
+  { regex: /[\u0980-\u09FF]/, language: "bengali", nllbCode: "ben_Beng" },
+  { regex: /[\u0C00-\u0C7F]/, language: "telugu", nllbCode: "tel_Telu" },
+  { regex: /[\u0B80-\u0BFF]/, language: "tamil", nllbCode: "tam_Taml" },
+  { regex: /[\u0A80-\u0AFF]/, language: "gujarati", nllbCode: "guj_Gujr" },
+  { regex: /[\u0C80-\u0CFF]/, language: "kannada", nllbCode: "kan_Knda" },
+  { regex: /[\u0D00-\u0D7F]/, language: "malayalam", nllbCode: "mal_Mlym" },
+  { regex: /[\u0A00-\u0A7F]/, language: "punjabi", nllbCode: "pan_Guru" },
+  { regex: /[\u0B00-\u0B7F]/, language: "odia", nllbCode: "ory_Orya" },
+  { regex: /[\u0D80-\u0DFF]/, language: "sinhala", nllbCode: "sin_Sinh" },
   
   // ========== EAST ASIAN SCRIPTS ==========
-  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: "chinese", nllbCode: "zho_Hans" }, // CJK Unified Ideographs
-  { regex: /[\u3040-\u309F]/, language: "japanese", nllbCode: "jpn_Jpan" }, // Hiragana
-  { regex: /[\u30A0-\u30FF]/, language: "japanese", nllbCode: "jpn_Jpan" }, // Katakana
-  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: "korean", nllbCode: "kor_Hang" }, // Hangul
-  { regex: /[\u31F0-\u31FF]/, language: "japanese", nllbCode: "jpn_Jpan" }, // Katakana Phonetic Extensions
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: "chinese", nllbCode: "zho_Hans" },
+  { regex: /[\u3040-\u309F]/, language: "japanese", nllbCode: "jpn_Jpan" },
+  { regex: /[\u30A0-\u30FF]/, language: "japanese", nllbCode: "jpn_Jpan" },
+  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: "korean", nllbCode: "kor_Hang" },
   
   // ========== SOUTHEAST ASIAN SCRIPTS ==========
-  { regex: /[\u0E00-\u0E7F]/, language: "thai", nllbCode: "tha_Thai" }, // Thai
-  { regex: /[\u1000-\u109F]/, language: "burmese", nllbCode: "mya_Mymr" }, // Myanmar/Burmese
-  { regex: /[\u1780-\u17FF]/, language: "khmer", nllbCode: "khm_Khmr" }, // Khmer
-  { regex: /[\u0E80-\u0EFF]/, language: "lao", nllbCode: "lao_Laoo" }, // Lao
-  { regex: /[\uA980-\uA9DF]/, language: "javanese", nllbCode: "jav_Java" }, // Javanese
-  { regex: /[\u1B80-\u1BBF]/, language: "sundanese", nllbCode: "sun_Sund" }, // Sundanese
-  { regex: /[\u1700-\u171F]/, language: "tagalog", nllbCode: "tgl_Tglg" }, // Baybayin/Tagalog
-  { regex: /[\u1720-\u173F]/, language: "hanunoo", nllbCode: "hnn_Hano" }, // Hanunoo
-  { regex: /[\u1740-\u175F]/, language: "buhid", nllbCode: "bku_Buhd" }, // Buhid
-  { regex: /[\u1760-\u177F]/, language: "tagbanwa", nllbCode: "tbw_Tagb" }, // Tagbanwa
-  { regex: /[\u1A00-\u1A1F]/, language: "buginese", nllbCode: "bug_Bugi" }, // Buginese/Lontara
-  { regex: /[\u1B00-\u1B7F]/, language: "balinese", nllbCode: "ban_Bali" }, // Balinese
-  { regex: /[\uA930-\uA97F]/, language: "rejang", nllbCode: "rej_Rjng" }, // Rejang
-  { regex: /[\u1CC0-\u1CCF]/, language: "sundanese", nllbCode: "sun_Sund" }, // Sundanese Supplement
+  { regex: /[\u0E00-\u0E7F]/, language: "thai", nllbCode: "tha_Thai" },
+  { regex: /[\u1000-\u109F]/, language: "burmese", nllbCode: "mya_Mymr" },
+  { regex: /[\u1780-\u17FF]/, language: "khmer", nllbCode: "khm_Khmr" },
+  { regex: /[\u0E80-\u0EFF]/, language: "lao", nllbCode: "lao_Laoo" },
   
   // ========== MIDDLE EASTERN SCRIPTS ==========
-  { regex: /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/, language: "arabic", nllbCode: "arb_Arab" }, // Arabic
-  { regex: /[\u0590-\u05FF\uFB1D-\uFB4F]/, language: "hebrew", nllbCode: "heb_Hebr" }, // Hebrew
-  { regex: /[\u0700-\u074F]/, language: "syriac", nllbCode: "syr_Syrc" }, // Syriac
-  { regex: /[\u0780-\u07BF]/, language: "dhivehi", nllbCode: "div_Thaa" }, // Thaana (Dhivehi/Maldivian)
-  { regex: /[\u0840-\u085F]/, language: "mandaic", nllbCode: "mid_Mand" }, // Mandaic
-  { regex: /[\u0860-\u086F]/, language: "syriac", nllbCode: "syr_Syre" }, // Syriac Supplement
+  { regex: /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/, language: "arabic", nllbCode: "arb_Arab" },
+  { regex: /[\u0590-\u05FF\uFB1D-\uFB4F]/, language: "hebrew", nllbCode: "heb_Hebr" },
+  { regex: /[\u0780-\u07BF]/, language: "dhivehi", nllbCode: "div_Thaa" },
   
   // ========== CYRILLIC SCRIPTS ==========
-  { regex: /[\u0400-\u04FF]/, language: "russian", nllbCode: "rus_Cyrl" }, // Cyrillic (Russian, Ukrainian, etc.)
-  { regex: /[\u0500-\u052F]/, language: "russian", nllbCode: "rus_Cyrl" }, // Cyrillic Supplement
-  { regex: /[\u2DE0-\u2DFF]/, language: "russian", nllbCode: "rus_Cyrl" }, // Cyrillic Extended-A
-  { regex: /[\uA640-\uA69F]/, language: "russian", nllbCode: "rus_Cyrl" }, // Cyrillic Extended-B
+  { regex: /[\u0400-\u04FF]/, language: "russian", nllbCode: "rus_Cyrl" },
   
   // ========== CAUCASIAN SCRIPTS ==========
-  { regex: /[\u10A0-\u10FF]/, language: "georgian", nllbCode: "kat_Geor" }, // Georgian
-  { regex: /[\u2D00-\u2D2F]/, language: "georgian", nllbCode: "kat_Geor" }, // Georgian Supplement
-  { regex: /[\u0530-\u058F]/, language: "armenian", nllbCode: "hye_Armn" }, // Armenian
-  { regex: /[\uFB00-\uFB4F]/, language: "armenian", nllbCode: "hye_Armn" }, // Alphabetic Presentation Forms
+  { regex: /[\u10A0-\u10FF]/, language: "georgian", nllbCode: "kat_Geor" },
+  { regex: /[\u0530-\u058F]/, language: "armenian", nllbCode: "hye_Armn" },
   
   // ========== AFRICAN SCRIPTS ==========
-  { regex: /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF]/, language: "amharic", nllbCode: "amh_Ethi" }, // Ethiopic
-  { regex: /[\u2C80-\u2CFF]/, language: "coptic", nllbCode: "cop_Copt" }, // Coptic
-  { regex: /[\uA6A0-\uA6FF]/, language: "bamum", nllbCode: "bax_Bamu" }, // Bamum
-  { regex: /[\u07C0-\u07FF]/, language: "nko", nllbCode: "nqo_Nkoo" }, // N'Ko (Manding languages)
-  { regex: /[\uA500-\uA63F]/, language: "vai", nllbCode: "vai_Vaii" }, // Vai
-  { regex: /[\uA840-\uA87F]/, language: "phags-pa", nllbCode: "phk_Phag" }, // Phags-pa
-  { regex: /[\u2D30-\u2D7F]/, language: "berber", nllbCode: "tzm_Tfng" }, // Tifinagh (Berber)
-  { regex: /[\uAB00-\uAB2F]/, language: "ethiopic", nllbCode: "gez_Ethi" }, // Ethiopic Extended-A
-  { regex: /[\u1E00-\u1EFF]/, language: "vietnamese", nllbCode: "vie_Latn" }, // Latin Extended Additional (Vietnamese)
+  { regex: /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF]/, language: "amharic", nllbCode: "amh_Ethi" },
+  { regex: /[\u2D30-\u2D7F]/, language: "berber", nllbCode: "tzm_Tfng" },
   
   // ========== CENTRAL ASIAN SCRIPTS ==========
-  { regex: /[\u0F00-\u0FFF]/, language: "tibetan", nllbCode: "bod_Tibt" }, // Tibetan
-  { regex: /[\u1800-\u18AF]/, language: "mongolian", nllbCode: "mon_Mong" }, // Traditional Mongolian
-  { regex: /[\u11660-\u1167F]/, language: "mongolian", nllbCode: "mon_Mong" }, // Mongolian Supplement
+  { regex: /[\u0F00-\u0FFF]/, language: "tibetan", nllbCode: "bod_Tibt" },
   
   // ========== GREEK SCRIPT ==========
-  { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, language: "greek", nllbCode: "ell_Grek" }, // Greek
-  
-  // ========== INDIC EXTENSIONS ==========
-  { regex: /[\u11000-\u1107F]/, language: "brahmi", nllbCode: "pra_Brah" }, // Brahmi
-  { regex: /[\u11080-\u110CF]/, language: "kaithi", nllbCode: "kfy_Kthi" }, // Kaithi
-  { regex: /[\u110D0-\u110FF]/, language: "sora", nllbCode: "srb_Sora" }, // Sora Sompeng
-  { regex: /[\u11100-\u1114F]/, language: "chakma", nllbCode: "ccp_Cakm" }, // Chakma
-  { regex: /[\u11150-\u1117F]/, language: "mahajani", nllbCode: "mah_Mahj" }, // Mahajani
-  { regex: /[\u11180-\u111DF]/, language: "sharada", nllbCode: "saz_Shrd" }, // Sharada
-  { regex: /[\u11200-\u1124F]/, language: "khojki", nllbCode: "khj_Khoj" }, // Khojki
-  { regex: /[\u112B0-\u112FF]/, language: "khudawadi", nllbCode: "snd_Sind" }, // Khudawadi (Sindhi)
-  { regex: /[\u11300-\u1137F]/, language: "grantha", nllbCode: "san_Gran" }, // Grantha
-  { regex: /[\u11400-\u1147F]/, language: "newa", nllbCode: "new_Newa" }, // Newa (Newari)
-  { regex: /[\u11480-\u114DF]/, language: "tirhuta", nllbCode: "mai_Tirh" }, // Tirhuta (Maithili)
-  { regex: /[\u11580-\u115FF]/, language: "siddham", nllbCode: "san_Sidd" }, // Siddham
-  { regex: /[\u11600-\u1165F]/, language: "modi", nllbCode: "mar_Modi" }, // Modi
-  { regex: /[\u11680-\u116CF]/, language: "takri", nllbCode: "doi_Takr" }, // Takri
-  { regex: /[\u11700-\u1173F]/, language: "ahom", nllbCode: "aho_Ahom" }, // Ahom
-  { regex: /[\u11800-\u1184F]/, language: "dogra", nllbCode: "doi_Dogr" }, // Dogra
-  { regex: /[\u11A00-\u11A4F]/, language: "zanabazar", nllbCode: "xwo_Zanb" }, // Zanabazar Square
-  { regex: /[\u11A50-\u11AAF]/, language: "soyombo", nllbCode: "xwo_Soyo" }, // Soyombo
-  { regex: /[\u11C00-\u11C6F]/, language: "bhaiksuki", nllbCode: "san_Bhks" }, // Bhaiksuki
-  { regex: /[\u11C70-\u11CBF]/, language: "marchen", nllbCode: "bod_Marc" }, // Marchen
-  { regex: /[\u11D00-\u11D5F]/, language: "masaram", nllbCode: "gon_Gonm" }, // Masaram Gondi
-  { regex: /[\u11D60-\u11DAF]/, language: "gunjala", nllbCode: "gon_Gong" }, // Gunjala Gondi
-  { regex: /[\u11EE0-\u11EFF]/, language: "makasar", nllbCode: "mak_Maka" }, // Makasar
-  { regex: /[\u11FB0-\u11FBF]/, language: "lisu", nllbCode: "lis_Lisu" }, // Lisu Supplement
-  { regex: /[\u11FC0-\u11FFF]/, language: "tamil", nllbCode: "tam_Taml" }, // Tamil Supplement
-  
-  // ========== CANADIAN ABORIGINAL ==========
-  { regex: /[\u1400-\u167F]/, language: "cree", nllbCode: "cre_Cans" }, // Unified Canadian Aboriginal Syllabics
-  { regex: /[\u18B0-\u18FF]/, language: "cree", nllbCode: "cre_Cans" }, // UCAS Extended
-  
-  // ========== RUNIC & HISTORIC ==========
-  { regex: /[\u16A0-\u16FF]/, language: "runic", nllbCode: "non_Runr" }, // Runic
-  { regex: /[\u10300-\u1032F]/, language: "gothic", nllbCode: "got_Goth" }, // Gothic
-  { regex: /[\u10330-\u1034F]/, language: "gothic", nllbCode: "got_Goth" }, // Gothic
-  
-  // ========== SOUTHEAST ASIAN EXTENDED ==========
-  { regex: /[\u1980-\u19DF]/, language: "tai lue", nllbCode: "khb_Talu" }, // New Tai Lue
-  { regex: /[\u1A20-\u1AAF]/, language: "tai tham", nllbCode: "nod_Lana" }, // Tai Tham (Lanna)
-  { regex: /[\uAA60-\uAA7F]/, language: "myanmar", nllbCode: "mya_Mymr" }, // Myanmar Extended-A
-  { regex: /[\uA9E0-\uA9FF]/, language: "myanmar", nllbCode: "mya_Mymr" }, // Myanmar Extended-B
-  { regex: /[\uAA00-\uAA5F]/, language: "cham", nllbCode: "cja_Cham" }, // Cham
-  { regex: /[\uAA80-\uAADF]/, language: "tai viet", nllbCode: "tdd_Tavt" }, // Tai Viet
-  
-  // ========== YI SCRIPT ==========
-  { regex: /[\uA000-\uA48F\uA490-\uA4CF]/, language: "yi", nllbCode: "iii_Yiii" }, // Yi
-  
-  // ========== LISU & MIAO ==========
-  { regex: /[\uA4D0-\uA4FF]/, language: "lisu", nllbCode: "lis_Lisu" }, // Lisu
-  { regex: /[\u16F00-\u16F9F]/, language: "miao", nllbCode: "hmd_Plrd" }, // Miao (Pollard)
+  { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, language: "greek", nllbCode: "ell_Grek" },
 ];
 
 function getNLLBCode(language: string): string | null {
@@ -434,43 +316,60 @@ function isIndianLanguage(language: string): boolean {
   return indianLanguages.includes(language.toLowerCase().trim());
 }
 
+// Check if text is in Latin/English script
+function isLatinScript(text: string): boolean {
+  const trimmedText = text.trim();
+  if (!trimmedText) return false;
+  
+  // Check if the text is primarily Latin characters
+  const latinPattern = /^[a-zA-Z0-9\s\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]+$/;
+  
+  // Also allow common punctuation and numbers with Latin
+  const latinChars = trimmedText.match(/[a-zA-Z]/g);
+  const totalChars = trimmedText.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
+  
+  if (!latinChars || !totalChars.length) return latinPattern.test(trimmedText);
+  
+  // If more than 80% of non-space chars are Latin, consider it Latin script
+  return (latinChars.length / totalChars.length) > 0.8;
+}
+
 // Comprehensive language detection from Unicode script patterns
-function detectLanguageFromText(text: string): { language: string; nllbCode: string } {
+function detectLanguageFromText(text: string): { language: string; nllbCode: string; isLatin: boolean } {
   const trimmedText = text.trim();
   if (!trimmedText) {
-    return { language: "english", nllbCode: "eng_Latn" };
+    return { language: "english", nllbCode: "eng_Latn", isLatin: true };
   }
 
   // Check each script pattern
   for (const pattern of scriptPatterns) {
     if (pattern.regex.test(trimmedText)) {
       console.log(`[NLLB-200] Detected script: ${pattern.language} from Unicode pattern`);
-      return { language: pattern.language, nllbCode: pattern.nllbCode };
+      return { language: pattern.language, nllbCode: pattern.nllbCode, isLatin: false };
     }
   }
 
   // Check for extended Latin with diacritics (various European languages)
   if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/i.test(trimmedText)) {
-    // Try to distinguish between European languages by common patterns
-    if (/[ñ¿¡]/i.test(trimmedText)) return { language: "spanish", nllbCode: "spa_Latn" };
-    if (/[ç]/i.test(trimmedText) && /[ã|õ]/i.test(trimmedText)) return { language: "portuguese", nllbCode: "por_Latn" };
-    if (/[éèêë]/i.test(trimmedText) && /[çà]/i.test(trimmedText)) return { language: "french", nllbCode: "fra_Latn" };
-    if (/[äöüß]/i.test(trimmedText)) return { language: "german", nllbCode: "deu_Latn" };
-    if (/[ăîâșț]/i.test(trimmedText)) return { language: "romanian", nllbCode: "ron_Latn" };
-    if (/[ąćęłńóśźż]/i.test(trimmedText)) return { language: "polish", nllbCode: "pol_Latn" };
-    if (/[čďěňřšťůž]/i.test(trimmedText)) return { language: "czech", nllbCode: "ces_Latn" };
-    if (/[őű]/i.test(trimmedText)) return { language: "hungarian", nllbCode: "hun_Latn" };
-    if (/[åäö]/i.test(trimmedText)) return { language: "swedish", nllbCode: "swe_Latn" };
-    if (/[æøå]/i.test(trimmedText)) return { language: "norwegian", nllbCode: "nob_Latn" };
+    if (/[ñ¿¡]/i.test(trimmedText)) return { language: "spanish", nllbCode: "spa_Latn", isLatin: true };
+    if (/[ç]/i.test(trimmedText) && /[ã|õ]/i.test(trimmedText)) return { language: "portuguese", nllbCode: "por_Latn", isLatin: true };
+    if (/[éèêë]/i.test(trimmedText) && /[çà]/i.test(trimmedText)) return { language: "french", nllbCode: "fra_Latn", isLatin: true };
+    if (/[äöüß]/i.test(trimmedText)) return { language: "german", nllbCode: "deu_Latn", isLatin: true };
+    if (/[ăîâșț]/i.test(trimmedText)) return { language: "romanian", nllbCode: "ron_Latn", isLatin: true };
+    if (/[ąćęłńóśźż]/i.test(trimmedText)) return { language: "polish", nllbCode: "pol_Latn", isLatin: true };
+    if (/[čďěňřšťůž]/i.test(trimmedText)) return { language: "czech", nllbCode: "ces_Latn", isLatin: true };
+    if (/[őű]/i.test(trimmedText)) return { language: "hungarian", nllbCode: "hun_Latn", isLatin: true };
+    if (/[åäö]/i.test(trimmedText)) return { language: "swedish", nllbCode: "swe_Latn", isLatin: true };
+    if (/[æøå]/i.test(trimmedText)) return { language: "norwegian", nllbCode: "nob_Latn", isLatin: true };
   }
 
   // Check for Vietnamese diacritics specifically
   if (/[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i.test(trimmedText)) {
-    return { language: "vietnamese", nllbCode: "vie_Latn" };
+    return { language: "vietnamese", nllbCode: "vie_Latn", isLatin: true };
   }
 
   // Default to English for basic Latin script
-  return { language: "english", nllbCode: "eng_Latn" };
+  return { language: "english", nllbCode: "eng_Latn", isLatin: true };
 }
 
 serve(async (req) => {
@@ -479,9 +378,9 @@ serve(async (req) => {
   }
 
   try {
-    const { message, sourceLanguage, targetLanguage } = await req.json();
+    const { message, sourceLanguage, targetLanguage, mode = "auto" } = await req.json();
 
-    console.log(`[NLLB-200] Translation request: source="${sourceLanguage}", target="${targetLanguage}"`);
+    console.log(`[NLLB-200] Request: source="${sourceLanguage}", target="${targetLanguage}", mode="${mode}"`);
 
     if (!message || !targetLanguage) {
       return new Response(
@@ -496,7 +395,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           translatedMessage: message, 
+          convertedMessage: message,
           isTranslated: false,
+          isConverted: false,
           detectedLanguage: "unknown",
           error: "Translation service not configured"
         }),
@@ -511,7 +412,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           translatedMessage: message, 
+          convertedMessage: message,
           isTranslated: false,
+          isConverted: false,
           detectedLanguage: "unknown",
           error: `Unsupported language: ${targetLanguage}`
         }),
@@ -519,19 +422,104 @@ serve(async (req) => {
       );
     }
 
-    // Detect or use provided source language
-    let sourceNLLBCode: string;
-    let detectedLanguage: string;
+    // Detect source language from text
+    const detected = detectLanguageFromText(message);
+    let sourceNLLBCode = detected.nllbCode;
+    let detectedLanguage = detected.language;
+    const isInputLatin = detected.isLatin;
     
+    // Override with provided source language if available
     if (sourceLanguage) {
-      sourceNLLBCode = getNLLBCode(sourceLanguage) || "eng_Latn";
-      detectedLanguage = sourceLanguage;
-    } else {
-      // Auto-detect from text script patterns
-      const detected = detectLanguageFromText(message);
-      sourceNLLBCode = detected.nllbCode;
-      detectedLanguage = detected.language;
-      console.log(`[NLLB-200] Auto-detected language from text: ${detectedLanguage} (${sourceNLLBCode})`);
+      const providedCode = getNLLBCode(sourceLanguage);
+      if (providedCode) {
+        sourceNLLBCode = providedCode;
+        detectedLanguage = sourceLanguage;
+      }
+    }
+    
+    console.log(`[NLLB-200] Detected: ${detectedLanguage} (${sourceNLLBCode}), isLatin: ${isInputLatin}`);
+
+    // ============= CONVERSION MODE =============
+    // If mode is "convert" or (auto mode AND input is Latin AND target is non-Latin),
+    // convert English typing to target language script
+    const shouldConvert = mode === "convert" || 
+      (mode === "auto" && isInputLatin && !targetNLLBCode.endsWith("_Latn"));
+    
+    if (shouldConvert) {
+      console.log(`[NLLB-200] ✓ CONVERSION MODE: English typing → ${targetLanguage} script`);
+      
+      // Use translation from English to target language
+      const response = await fetch(
+        "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${HF_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: message,
+            parameters: {
+              src_lang: "eng_Latn", // Always from English for conversion
+              tgt_lang: targetNLLBCode,
+              max_length: 512,
+            },
+            options: {
+              wait_for_model: true,
+            }
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Conversion API error:", response.status, errorText);
+        
+        return new Response(
+          JSON.stringify({ 
+            translatedMessage: message,
+            convertedMessage: message, 
+            isTranslated: false,
+            isConverted: false,
+            detectedLanguage,
+            error: response.status === 503 
+              ? "Translation model is loading, please try again" 
+              : "Conversion failed"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const data = await response.json();
+      let convertedText = message;
+      
+      if (Array.isArray(data) && data.length > 0) {
+        convertedText = data[0].translation_text || data[0].generated_text || message;
+      } else if (data.translation_text) {
+        convertedText = data.translation_text;
+      } else if (data.generated_text) {
+        convertedText = data.generated_text;
+      }
+
+      const isConverted = convertedText !== message;
+      console.log(`[NLLB-200] Conversion result: "${convertedText.substring(0, 50)}..." (converted: ${isConverted})`);
+
+      return new Response(
+        JSON.stringify({
+          translatedMessage: convertedText,
+          convertedMessage: convertedText,
+          originalMessage: message,
+          isTranslated: isConverted,
+          isConverted: isConverted,
+          detectedLanguage: "english",
+          sourceLanguageCode: "eng_Latn",
+          targetLanguageCode: targetNLLBCode,
+          mode: "convert",
+          model: "nllb-200-distilled-600M",
+          conversionPair: `English → ${targetLanguage}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // ============= SAME LANGUAGE CHECK =============
@@ -539,23 +527,25 @@ serve(async (req) => {
     const targetLower = targetLanguage.toLowerCase().trim();
     
     if (sourceNLLBCode === targetNLLBCode || sourceLower === targetLower) {
-      console.log(`[NLLB-200] ✓ Same language detected (${detectedLanguage} == ${targetLanguage}), NO TRANSLATION needed`);
+      console.log(`[NLLB-200] ✓ Same language (${detectedLanguage} == ${targetLanguage}), NO TRANSLATION`);
       return new Response(
         JSON.stringify({
           translatedMessage: message,
+          convertedMessage: message,
           isTranslated: false,
+          isConverted: false,
           detectedLanguage,
           sourceLanguageCode: sourceNLLBCode,
           targetLanguageCode: targetNLLBCode,
+          mode: "same_language",
           reason: "same_language"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    // ============= DIFFERENT LANGUAGES - TRANSLATE =============
-    console.log(`[NLLB-200] ✓ Different languages (${detectedLanguage} != ${targetLanguage}), TRANSLATION enabled`);
-    console.log(`Translating from ${detectedLanguage} (${sourceNLLBCode}) to ${targetLanguage} (${targetNLLBCode}): "${message.substring(0, 50)}..."`);
+    // ============= TRANSLATION MODE =============
+    console.log(`[NLLB-200] ✓ TRANSLATION MODE: ${detectedLanguage} → ${targetLanguage}`);
 
     const response = await fetch(
       "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
@@ -583,32 +573,22 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("Hugging Face API error:", response.status, errorText);
       
-      if (response.status === 503) {
-        return new Response(
-          JSON.stringify({ 
-            translatedMessage: message, 
-            isTranslated: false,
-            detectedLanguage,
-            error: "Translation model is loading, please try again in a few seconds"
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
       return new Response(
         JSON.stringify({ 
-          translatedMessage: message, 
+          translatedMessage: message,
+          convertedMessage: message, 
           isTranslated: false,
+          isConverted: false,
           detectedLanguage,
-          error: "Translation failed"
+          error: response.status === 503 
+            ? "Translation model is loading, please try again" 
+            : "Translation failed"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    console.log("NLLB-200 Response:", JSON.stringify(data).substring(0, 200));
-
     let translatedText = message;
     
     if (Array.isArray(data) && data.length > 0) {
@@ -620,18 +600,20 @@ serve(async (req) => {
     }
 
     const isTranslated = translatedText !== message;
-
-    console.log(`Translation result: "${translatedText.substring(0, 50)}..." (translated: ${isTranslated})`);
+    console.log(`[NLLB-200] Translation result: "${translatedText.substring(0, 50)}..." (translated: ${isTranslated})`);
 
     return new Response(
       JSON.stringify({
         translatedMessage: translatedText,
+        convertedMessage: translatedText,
         isTranslated,
+        isConverted: false,
         detectedLanguage,
         sourceLanguageCode: sourceNLLBCode,
         targetLanguageCode: targetNLLBCode,
         isIndianSource: isIndianLanguage(detectedLanguage),
         isIndianTarget: isIndianLanguage(targetLanguage),
+        mode: "translate",
         model: "nllb-200-distilled-600M",
         translationPair: `${detectedLanguage} → ${targetLanguage}`
       }),
