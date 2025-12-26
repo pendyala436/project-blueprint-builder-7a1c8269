@@ -46,7 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
-import { ActiveChatsSection } from "@/components/ActiveChatsSection";
+// ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { TeamsChatLayout } from "@/components/TeamsChatLayout";
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
@@ -1373,10 +1373,7 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Section 5: Active Chats */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.22s" }}>
-          <ActiveChatsSection maxDisplay={5} />
-        </div>
+        {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
 
         {/* Section 6: Transaction History */}
         {currentUserId && (

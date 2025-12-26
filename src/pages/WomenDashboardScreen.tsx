@@ -36,7 +36,7 @@ import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
-import { ActiveChatsSection } from "@/components/ActiveChatsSection";
+// ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed - Women cannot initiate chats
 import { TeamsChatLayout } from "@/components/TeamsChatLayout";
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
@@ -1103,10 +1103,7 @@ const WomenDashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Section 4: Active Chats */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <ActiveChatsSection maxDisplay={5} />
-        </div>
+        {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
 
         {/* Transaction History for Women */}
         {currentUserId && (
