@@ -40,8 +40,10 @@ import {
   RefreshCw,
   Filter,
   Eye,
-  Power
+  Power,
+  Users2
 } from "lucide-react";
+import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -128,6 +130,7 @@ const DashboardScreen = () => {
   });
   const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState("stripe");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -1012,6 +1015,15 @@ const DashboardScreen = () => {
           <MeowLogo size="sm" />
           
           <div className="flex items-center gap-4">
+            {/* Friends & Blocked */}
+            <button 
+              className="relative p-2 rounded-full hover:bg-muted transition-colors"
+              onClick={() => setShowFriendsPanel(true)}
+              title="Friends & Blocked Users"
+            >
+              <Users2 className="w-5 h-5 text-muted-foreground" />
+            </button>
+
             {/* Notification Bell */}
             <button 
               className="relative p-2 rounded-full hover:bg-muted transition-colors"
@@ -1618,6 +1630,15 @@ const DashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="male"
           currentUserLanguage={userLanguage}
+        />
+      )}
+
+      {/* Friends & Blocked Panel */}
+      {showFriendsPanel && currentUserId && (
+        <FriendsBlockedPanel
+          currentUserId={currentUserId}
+          userGender="male"
+          onClose={() => setShowFriendsPanel(false)}
         />
       )}
     </div>
