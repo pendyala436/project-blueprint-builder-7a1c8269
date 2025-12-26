@@ -132,9 +132,12 @@ const EnhancedParallelChatsContainer = ({
     sessions.forEach(session => {
       const partnerId = userGender === "male" ? session.woman_user_id : session.man_user_id;
       
-      // Only include if user has accepted/responded
-      const isAccepted = chatsWithUserMessages.has(session.chat_id) || 
-                         acceptedSessionsRef.current.has(session.id);
+      // For MEN: Show chat window immediately (they initiate)
+      // For WOMEN: Only show if they have accepted (sent a message or clicked accept)
+      const isAccepted = userGender === "male" 
+        ? true // Men always see their initiated chats
+        : (chatsWithUserMessages.has(session.chat_id) || acceptedSessionsRef.current.has(session.id));
+      
       if (!isAccepted) return;
       
       // Keep only the most recent session per partner (prevent duplicate windows)
@@ -305,6 +308,9 @@ const EnhancedParallelChatsContainer = ({
           !activeChats.some(ac => ac.id === ic.sessionId) &&
           !existingPartnersRef.current.has(ic.partnerId) // Don't show popup if already chatting
   );
+
+  // Debug logging
+  console.log(`[EnhancedParallelChats] User: ${userGender}, Active: ${activeChats.length}, Incoming: ${incomingChats.length}, Pending Popups: ${pendingIncomingChats.length}`);
 
   return (
     <>
