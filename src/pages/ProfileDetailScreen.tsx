@@ -234,9 +234,57 @@ const ProfileDetailScreen = () => {
     }
   };
 
-  const handleChat = () => {
-    if (profile) {
-      navigate(`/chat/${profile.userId}`);
+  const handleChat = async () => {
+    if (!profile || !currentUserId) return;
+
+    try {
+      // Get current user's gender
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      const currentUserGender = currentProfile?.gender?.toLowerCase();
+      const isMale = currentUserGender === "male";
+
+      // Create chat ID
+      const chatId = [currentUserId, profile.userId].sort().join("-");
+
+      // Check if there's already an active session
+      const { data: existingSession } = await supabase
+        .from("active_chat_sessions")
+        .select("id")
+        .eq("chat_id", chatId)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!existingSession) {
+        // Create new chat session
+        await supabase.from("active_chat_sessions").insert({
+          chat_id: chatId,
+          man_user_id: isMale ? currentUserId : profile.userId,
+          woman_user_id: isMale ? profile.userId : currentUserId,
+          status: "active",
+          rate_per_minute: 2,
+        });
+      }
+
+      // Navigate back to dashboard - the parallel chat container will show the chat
+      const dashboardRoute = isMale ? "/dashboard" : "/women-dashboard";
+      navigate(dashboardRoute);
+      
+      toast({
+        title: t('chatStarted', 'Chat Started'),
+        description: `${t('chattingWith', 'Chatting with')} ${profile.fullName}`,
+      });
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start chat",
+        variant: "destructive",
+      });
     }
   };
 
