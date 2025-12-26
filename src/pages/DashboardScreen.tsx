@@ -1017,19 +1017,19 @@ const DashboardScreen = () => {
           <div className="flex items-center gap-4">
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2 rounded-full hover:bg-muted transition-colors"
+              className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
               onClick={() => setShowFriendsPanel(true)}
               title="Friends & Blocked Users"
             >
-              <Users2 className="w-5 h-5 text-muted-foreground" />
+              <Users2 className="w-5 h-5 text-primary" />
             </button>
 
             {/* Notification Bell */}
             <button 
-              className="relative p-2 rounded-full hover:bg-muted transition-colors"
+              className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
               onClick={() => toast({ title: "Notifications", description: "Coming soon!" })}
             >
-              <Bell className="w-5 h-5 text-muted-foreground" />
+              <Bell className="w-5 h-5 text-primary" />
               {stats.unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                   {stats.unreadNotifications > 9 ? "9+" : stats.unreadNotifications}
@@ -1039,18 +1039,18 @@ const DashboardScreen = () => {
 
             {/* Settings */}
             <button 
-              className="p-2 rounded-full hover:bg-muted transition-colors"
+              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
               onClick={() => navigate('/settings')}
             >
-              <Settings className="w-5 h-5 text-muted-foreground" />
+              <Settings className="w-5 h-5 text-primary" />
             </button>
 
             {/* Logout */}
             <button 
-              className="p-2 rounded-full hover:bg-muted transition-colors"
+              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5 text-muted-foreground" />
+              <LogOut className="w-5 h-5 text-primary" />
             </button>
           </div>
         </div>
