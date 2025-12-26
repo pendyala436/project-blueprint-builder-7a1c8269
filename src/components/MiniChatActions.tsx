@@ -22,7 +22,8 @@ import {
   ShieldOff, 
   Shield, 
   PhoneOff,
-  Circle
+  Circle,
+  LogOut
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,7 @@ interface MiniChatActionsProps {
   isPartnerOnline: boolean;
   onBlock?: () => void;
   onStopChat?: () => void;
+  onLogOff?: () => void;
   className?: string;
 }
 
@@ -45,6 +47,7 @@ export const MiniChatActions = ({
   isPartnerOnline,
   onBlock,
   onStopChat,
+  onLogOff,
   className
 }: MiniChatActionsProps) => {
   const { toast } = useToast();
@@ -54,6 +57,7 @@ export const MiniChatActions = ({
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
   const [showStopDialog, setShowStopDialog] = useState(false);
+  const [showLogOffDialog, setShowLogOffDialog] = useState(false);
 
   useEffect(() => {
     if (currentUserId && targetUserId) {
@@ -277,6 +281,14 @@ export const MiniChatActions = ({
     onStopChat?.();
   };
 
+  const handleLogOff = async () => {
+    setShowLogOffDialog(false);
+    // End the chat session first
+    onStopChat?.();
+    // Then trigger log off
+    onLogOff?.();
+  };
+
   return (
     <TooltipProvider>
       <div className={cn("flex items-center gap-0.5", className)}>
@@ -389,6 +401,24 @@ export const MiniChatActions = ({
           </TooltipContent>
         </Tooltip>
 
+        {/* Log Off */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 hover:bg-orange-500/20"
+              onClick={() => setShowLogOffDialog(true)}
+              disabled={isLoading}
+            >
+              <LogOut className="h-2.5 w-2.5 text-orange-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Log Off</p>
+          </TooltipContent>
+        </Tooltip>
+
         {/* Block Confirmation Dialog */}
         <AlertDialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
           <AlertDialogContent>
@@ -440,6 +470,24 @@ export const MiniChatActions = ({
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleStopChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 End Chat
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Log Off Confirmation Dialog */}
+        <AlertDialog open={showLogOffDialog} onOpenChange={setShowLogOffDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Log off from this chat session?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will end the chat with {targetUserName} and close this window. You will remain logged into the app.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogOff} className="bg-orange-500 text-white hover:bg-orange-600">
+                Log Off
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
