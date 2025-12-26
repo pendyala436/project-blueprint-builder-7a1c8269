@@ -89,7 +89,7 @@ import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 // Voice-to-text component
-import VoiceRecordButton from "@/components/VoiceRecordButton";
+// Voice message components
 // Voice message components
 import VoiceMessageRecorder from "@/components/VoiceMessageRecorder";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -1879,12 +1879,6 @@ const ChatScreen = () => {
               currentUserId={currentUserId}
               partnerId={chatPartner?.userId || ''}
               disabled={isSending || !chatPartner}
-            />
-            
-            {/* Voice-to-text button (transcribes to text for translation) */}
-            <VoiceRecordButton 
-              onTranscription={(text) => setNewMessage(prev => prev ? `${prev} ${text}` : text)}
-              disabled={isSending}
             />
             
             {/* Text input field */}
