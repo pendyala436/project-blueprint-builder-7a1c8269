@@ -19,7 +19,7 @@ interface UseIncomingChatsResult {
   clearChat: (sessionId: string) => void;
 }
 
-// Create audio context for buzz sound
+// Create audio context for sounds
 let buzzAudioContext: AudioContext | null = null;
 let buzzIntervalId: NodeJS.Timeout | null = null;
 
@@ -48,6 +48,32 @@ const playBuzzSound = () => {
   }
 };
 
+// Small notification sound for men (single beep, not looping)
+const playSmallNotificationSound = () => {
+  try {
+    if (!buzzAudioContext) {
+      buzzAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    const oscillator = buzzAudioContext.createOscillator();
+    const gainNode = buzzAudioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(buzzAudioContext.destination);
+
+    oscillator.frequency.value = 520; // Higher pitch for notification
+    oscillator.type = "sine";
+    
+    gainNode.gain.setValueAtTime(0.15, buzzAudioContext.currentTime); // Quieter
+    gainNode.gain.exponentialRampToValueAtTime(0.01, buzzAudioContext.currentTime + 0.15);
+
+    oscillator.start(buzzAudioContext.currentTime);
+    oscillator.stop(buzzAudioContext.currentTime + 0.15);
+  } catch (error) {
+    console.error("Error playing notification sound:", error);
+  }
+};
+
 const startBuzzLoop = () => {
   if (buzzIntervalId) return;
   
@@ -70,19 +96,31 @@ export const useIncomingChats = (
 ): UseIncomingChatsResult => {
   const [incomingChats, setIncomingChats] = useState<IncomingChat[]>([]);
   const acceptedChatsRef = useRef<Set<string>>(new Set());
+  const previousCountRef = useRef<number>(0);
 
-  // Start/stop buzz sound based on incoming chats
+  // Start/stop buzz sound based on incoming chats - ONLY for women
   useEffect(() => {
-    if (incomingChats.length > 0) {
-      startBuzzLoop();
+    if (userGender === "female") {
+      // Women get continuous buzz until they reply or cancel
+      if (incomingChats.length > 0) {
+        startBuzzLoop();
+      } else {
+        stopBuzzLoop();
+      }
     } else {
-      stopBuzzLoop();
+      // Men get a small notification sound only when new chats arrive
+      if (incomingChats.length > previousCountRef.current && incomingChats.length > 0) {
+        playSmallNotificationSound();
+      }
+      stopBuzzLoop(); // Always stop buzz loop for men
     }
+    
+    previousCountRef.current = incomingChats.length;
 
     return () => {
       stopBuzzLoop();
     };
-  }, [incomingChats.length]);
+  }, [incomingChats.length, userGender]);
 
   // Subscribe to new incoming chat sessions
   useEffect(() => {
