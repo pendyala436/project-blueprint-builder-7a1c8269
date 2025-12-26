@@ -18,7 +18,7 @@ import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useToast } from "@/hooks/use-toast";
 
-interface VideoCallModalProps {
+interface P2PVideoCallModalProps {
   isOpen: boolean;
   onClose: () => void;
   callId: string;
@@ -29,7 +29,7 @@ interface VideoCallModalProps {
   currentUserId: string;
 }
 
-const VideoCallModal = ({
+const P2PVideoCallModal = ({
   isOpen,
   onClose,
   callId,
@@ -38,7 +38,7 @@ const VideoCallModal = ({
   remotePhoto,
   isInitiator,
   currentUserId
-}: VideoCallModalProps) => {
+}: P2PVideoCallModalProps) => {
   const { toast } = useToast();
   const {
     callStatus,
@@ -101,6 +101,25 @@ const VideoCallModal = ({
     onClose();
   };
 
+  const getStatusColor = () => {
+    switch (callStatus) {
+      case 'active': return 'bg-green-500';
+      case 'connecting': case 'ringing': return 'bg-yellow-500 animate-pulse';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (callStatus) {
+      case 'idle': return 'Initializing...';
+      case 'ringing': return 'Ringing...';
+      case 'connecting': return 'Connecting...';
+      case 'active': return 'Connected';
+      case 'ended': return 'Ended';
+      default: return callStatus;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={() => handleEndCall()}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden bg-black">
@@ -118,12 +137,9 @@ const VideoCallModal = ({
                 <h2 className="text-2xl font-semibold mb-2">{remoteName}</h2>
                 <div className="flex items-center gap-2 text-gray-300">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>
-                    {callStatus === 'idle' && 'Initializing...'}
-                    {callStatus === 'ringing' && 'Ringing...'}
-                    {callStatus === 'connecting' && 'Connecting...'}
-                  </span>
+                  <span>{getStatusText()}</span>
                 </div>
+                <p className="text-xs text-gray-500 mt-4">P2P WebRTC Connection</p>
               </div>
             ) : (
               <video
@@ -160,16 +176,12 @@ const VideoCallModal = ({
               </div>
             )}
 
-            {/* Connection Status Badge */}
+            {/* Connection Status Badge + Actions */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
               <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    callStatus === 'active' ? 'bg-green-500' : 
-                    callStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
-                    'bg-gray-500'
-                  }`} />
-                  <span className="text-xs text-white capitalize">{callStatus}</span>
+                  <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
+                  <span className="text-xs text-white">{getStatusText()}</span>
                 </div>
               </div>
               {/* Relationship Actions */}
@@ -180,6 +192,11 @@ const VideoCallModal = ({
                 onBlock={handleEndCall}
                 className="bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
               />
+            </div>
+
+            {/* P2P indicator */}
+            <div className="absolute bottom-20 left-4 text-xs text-white/50">
+              P2P WebRTC
             </div>
           </div>
 
@@ -220,4 +237,4 @@ const VideoCallModal = ({
   );
 };
 
-export default VideoCallModal;
+export default P2PVideoCallModal;
