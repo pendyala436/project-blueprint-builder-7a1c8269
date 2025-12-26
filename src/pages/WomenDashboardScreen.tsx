@@ -39,6 +39,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { ActiveChatsSection } from "@/components/ActiveChatsSection";
 // RandomChatButton removed - Women cannot initiate chats
 import { TeamsChatLayout } from "@/components/TeamsChatLayout";
+import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
@@ -1250,6 +1251,15 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           currentUserLanguage={currentWomanLanguage || "English"}
           userGender="female"
+        />
+      )}
+
+      {/* Enhanced Parallel Chat Windows */}
+      {currentUserId && (
+        <EnhancedParallelChatsContainer
+          currentUserId={currentUserId}
+          userGender="female"
+          currentUserLanguage={currentWomanLanguage || "English"}
         />
       )}
 

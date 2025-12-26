@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { 
   Bell, 
@@ -23,13 +24,16 @@ import {
   Map,
   Save,
   CheckCircle2,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { ThemeSelector } from "@/components/ThemeSelector";
+import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
 
 interface UserSettings {
   theme: string;
@@ -76,6 +80,12 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState("eng_Latn");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Parallel chat settings
+  const { maxParallelChats, setMaxParallelChats, isLoading: parallelSettingsLoading } = 
+    useParallelChatSettings(currentUserId || undefined);
+  const [selectedParallelChats, setSelectedParallelChats] = useState(maxParallelChats.toString());
 
   const fetchSettings = async () => {
     try {
@@ -84,6 +94,8 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
         navigate("/auth");
         return;
       }
+
+      setCurrentUserId(user.id);
 
       let { data: settingsData, error } = await supabase
         .from("user_settings")
@@ -139,10 +151,16 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
     onUpdate: fetchSettings
   });
 
+  // Update parallel chats selection when loaded
   useEffect(() => {
-    const changed = JSON.stringify(settings) !== JSON.stringify(originalSettings);
+    setSelectedParallelChats(maxParallelChats.toString());
+  }, [maxParallelChats]);
+
+  useEffect(() => {
+    const changed = JSON.stringify(settings) !== JSON.stringify(originalSettings) ||
+                   selectedParallelChats !== maxParallelChats.toString();
     setHasChanges(changed);
-  }, [settings, originalSettings]);
+  }, [settings, originalSettings, selectedParallelChats, maxParallelChats]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -156,6 +174,9 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
         .eq("user_id", user.id);
 
       if (error) throw error;
+
+      // Save parallel chat settings
+      await setMaxParallelChats(Number(selectedParallelChats));
 
       setOriginalSettings(settings);
       toast.success("Settings saved successfully!");
@@ -182,6 +203,57 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
 
   return (
     <div className={cn("space-y-6", compact && "space-y-4")}>
+      {/* Parallel Chat Settings */}
+      <Card>
+        <CardHeader className={cn("pb-3", compact && "py-3 px-4")}>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            {t('parallelChats', 'Parallel Chats')}
+          </CardTitle>
+          <CardDescription>{t('parallelChatsDesc', 'Set how many chat windows you want open at once')}</CardDescription>
+        </CardHeader>
+        <CardContent className={compact ? "px-4 pb-4" : undefined}>
+          <RadioGroup
+            value={selectedParallelChats}
+            onValueChange={setSelectedParallelChats}
+            className="grid grid-cols-3 gap-3"
+            disabled={parallelSettingsLoading}
+          >
+            {[
+              { value: "1", label: "1 Chat", desc: "Focus mode" },
+              { value: "2", label: "2 Chats", desc: "Moderate" },
+              { value: "3", label: "3 Chats", desc: "Maximum" }
+            ].map((option) => (
+              <div key={option.value} className="relative">
+                <RadioGroupItem value={option.value} id={`pc-${option.value}`} className="peer sr-only" />
+                <Label
+                  htmlFor={`pc-${option.value}`}
+                  className={cn(
+                    "flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer transition-all text-center",
+                    "hover:border-primary/50",
+                    selectedParallelChats === option.value ? "border-primary bg-primary/10" : "border-border"
+                  )}
+                >
+                  <div className="flex gap-0.5 mb-1">
+                    {Array.from({ length: Number(option.value) }).map((_, i) => (
+                      <MessageSquare key={i} className={cn("h-4 w-4", selectedParallelChats === option.value ? "text-primary" : "text-muted-foreground")} />
+                    ))}
+                  </div>
+                  <span className="font-semibold text-sm">{option.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{option.desc}</span>
+                  {selectedParallelChats === option.value && (
+                    <Check className="absolute top-1 right-1 h-3 w-3 text-primary" />
+                  )}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+          <p className="text-[10px] text-muted-foreground text-center mt-3">
+            Old windows auto-close when new chats arrive at max capacity
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Appearance Settings */}
       <Card>
         <CardHeader className={cn("pb-3", compact && "py-3 px-4")}>
