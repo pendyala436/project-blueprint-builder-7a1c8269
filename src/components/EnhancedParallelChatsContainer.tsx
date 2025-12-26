@@ -7,7 +7,7 @@ import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
 import { useIncomingChats } from "@/hooks/useIncomingChats";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Settings2 } from "lucide-react";
+import { Settings2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ interface ActiveChat {
   isPartnerOnline: boolean;
   ratePerMinute: number;
   startedAt: string;
+  position?: { x: number; y: number };
 }
 
 interface EnhancedParallelChatsContainerProps {
@@ -28,6 +29,14 @@ interface EnhancedParallelChatsContainerProps {
   userGender: "male" | "female";
   currentUserLanguage?: string;
 }
+
+// Calculate initial positions for stacked windows
+const getInitialPosition = (index: number): { x: number; y: number } => {
+  return {
+    x: -(index * 330), // Stack horizontally with some offset
+    y: 0
+  };
+};
 
 const EnhancedParallelChatsContainer = ({ 
   currentUserId, 
@@ -220,31 +229,46 @@ const EnhancedParallelChatsContainer = ({
           !activeChats.some(ac => ac.id === ic.sessionId)
   );
 
+  // Handle position changes for draggable windows
+  const handlePositionChange = useCallback((chatId: string, newPos: { x: number; y: number }) => {
+    setActiveChats(prev => prev.map(chat => 
+      chat.chatId === chatId ? { ...chat, position: newPos } : chat
+    ));
+  }, []);
+
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
-      {/* Settings button */}
-      <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className={cn(
-              "h-10 w-10 rounded-full shadow-lg bg-background/95 backdrop-blur-sm",
-              "hover:bg-primary/10 transition-all",
-              activeChats.length > 0 && "border-primary"
-            )}
-          >
-            <Settings2 className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" align="end">
-          <ParallelChatSettingsPanel
-            currentValue={maxParallelChats}
-            onSave={setMaxParallelChats}
-            isLoading={settingsLoading}
-          />
-        </PopoverContent>
-      </Popover>
+      {/* Settings and chat count button */}
+      <div className="flex items-center gap-2">
+        {displayedChats.length > 0 && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full text-xs font-medium">
+            <MessageSquare className="h-3 w-3 text-primary" />
+            <span>{displayedChats.length}/{maxParallelChats}</span>
+          </div>
+        )}
+        <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "h-10 w-10 rounded-full shadow-lg bg-background/95 backdrop-blur-sm",
+                "hover:bg-primary/10 transition-all",
+                activeChats.length > 0 && "border-primary"
+              )}
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-0" align="end">
+            <ParallelChatSettingsPanel
+              currentValue={maxParallelChats}
+              onSave={setMaxParallelChats}
+              isLoading={settingsLoading}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Incoming chat popups */}
       <div className="flex flex-col gap-2">
@@ -266,9 +290,9 @@ const EnhancedParallelChatsContainer = ({
         ))}
       </div>
 
-      {/* Active chat windows */}
-      <div className="flex flex-row-reverse gap-2 flex-wrap justify-end max-w-[calc(100vw-2rem)]">
-        {displayedChats.map((chat) => (
+      {/* Active chat windows - positioned absolutely for dragging */}
+      <div className="relative flex flex-row-reverse gap-2 flex-wrap justify-end">
+        {displayedChats.map((chat, index) => (
           <MiniChatWindow
             key={chat.chatId}
             chatId={chat.chatId}
@@ -283,16 +307,11 @@ const EnhancedParallelChatsContainer = ({
             userGender={userGender}
             ratePerMinute={chat.ratePerMinute}
             onClose={() => handleCloseChat(chat.chatId, chat.id)}
+            initialPosition={chat.position || getInitialPosition(index)}
+            onPositionChange={(pos) => handlePositionChange(chat.chatId, pos)}
           />
         ))}
       </div>
-
-      {/* Active chats count indicator */}
-      {displayedChats.length > 0 && (
-        <div className="absolute -top-2 -left-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
-          {displayedChats.length}
-        </div>
-      )}
     </div>
   );
 };
