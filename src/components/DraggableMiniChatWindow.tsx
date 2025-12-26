@@ -796,6 +796,7 @@ const DraggableMiniChatWindow = ({
             isPartnerOnline={isPartnerOnline}
             onBlock={handleClose}
             onStopChat={handleClose}
+            onLogOff={handleClose}
           />
           <Button
             variant="ghost"
