@@ -30,6 +30,8 @@ interface UnifiedTransaction {
   balance_after?: number;
   is_credit: boolean;
   icon: 'wallet' | 'chat' | 'video' | 'gift' | 'arrow';
+  duration?: number;
+  rate?: number;
 }
 
 interface TransactionHistoryWidgetProps {
@@ -209,9 +211,9 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // For women: Get earnings with rate info
+      // For women: Get earnings with chat/call session details and counterparty
       if (userGender === 'female') {
-        const [{ data: earnings }, { data: chatSessions }] = await Promise.all([
+        const [{ data: earnings }, { data: chatSessions }, { data: videoSessions }] = await Promise.all([
           supabase
             .from("women_earnings")
             .select("*")
@@ -220,35 +222,65 @@ export const TransactionHistoryWidget = ({
             .limit(maxItems),
           supabase
             .from("active_chat_sessions")
-            .select("id, total_minutes, rate_per_minute, total_earned, status, end_reason")
+            .select("id, man_user_id, total_minutes, rate_per_minute, total_earned, status, end_reason, created_at")
+            .eq("woman_user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(maxItems),
+          supabase
+            .from("video_call_sessions")
+            .select("id, man_user_id, total_minutes, total_earned, status, created_at")
             .eq("woman_user_id", userId)
             .order("created_at", { ascending: false })
             .limit(maxItems)
         ]);
 
-        const sessionMap = new Map(chatSessions?.map(s => [s.id, s]) || []);
+        // Get all man user IDs to fetch their profiles
+        const manUserIds = new Set<string>();
+        chatSessions?.forEach(s => manUserIds.add(s.man_user_id));
+        videoSessions?.forEach(s => manUserIds.add(s.man_user_id));
+
+        let profileMap = new Map<string, string>();
+        if (manUserIds.size > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", Array.from(manUserIds));
+          profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name || 'User']) || []);
+        }
+
+        const chatSessionMap = new Map(chatSessions?.map(s => [s.id, s]) || []);
+        const videoSessionMap = new Map(videoSessions?.map(s => [s.id, s]) || []);
 
         earnings?.forEach(e => {
           let description = e.description || `${e.earning_type} earnings`;
-          const session = e.chat_session_id ? sessionMap.get(e.chat_session_id) : null;
+          let counterparty: string | undefined;
+          let duration: number | undefined;
+          let rate: number | undefined;
           
-          // Build better description with rate info
-          if (e.earning_type === 'chat' && session) {
-            const rate = earningRates?.chatRate || Number(session.rate_per_minute) || 0;
-            const mins = Number(session.total_minutes) || 0;
-            description = `💬 Chat earnings (${mins.toFixed(1)} min × ₹${rate}/min)`;
-          } else if (e.earning_type === 'video_call' && session) {
-            const rate = earningRates?.videoRate || 0;
-            const mins = Number(session.total_minutes) || 0;
-            description = `📹 Video call earnings (${mins.toFixed(1)} min × ₹${rate}/min)`;
+          const chatSession = e.chat_session_id ? chatSessionMap.get(e.chat_session_id) : null;
+          
+          // Build description with user, duration, and rate
+          if (e.earning_type === 'chat' && chatSession) {
+            counterparty = profileMap.get(chatSession.man_user_id) || 'User';
+            rate = earningRates?.chatRate || Number(chatSession.rate_per_minute) || 0;
+            duration = Number(chatSession.total_minutes) || 0;
+            description = `💬 Chat with ${counterparty}`;
+          } else if (e.earning_type === 'video_call') {
+            // Find matching video session
+            const videoSession = Array.from(videoSessionMap.values()).find(v => 
+              Math.abs(new Date(v.created_at).getTime() - new Date(e.created_at).getTime()) < 300000
+            );
+            if (videoSession) {
+              counterparty = profileMap.get(videoSession.man_user_id) || 'User';
+              duration = Number(videoSession.total_minutes) || 0;
+            }
+            rate = earningRates?.videoRate || 0;
+            description = `📹 Video call${counterparty ? ` with ${counterparty}` : ''}`;
           } else if (e.earning_type === 'gift') {
             description = `🎁 Gift earnings`;
           } else if (e.earning_type === 'chat') {
-            const rate = earningRates?.chatRate || 0;
-            description = `💬 Chat earnings (₹${rate}/min)`;
-          } else if (e.earning_type === 'video_call') {
-            const rate = earningRates?.videoRate || 0;
-            description = `📹 Video call earnings (₹${rate}/min)`;
+            rate = earningRates?.chatRate || 0;
+            description = `💬 Chat earnings`;
           }
 
           unified.push({
@@ -259,7 +291,10 @@ export const TransactionHistoryWidget = ({
             created_at: e.created_at,
             status: 'completed',
             is_credit: true,
-            icon: e.earning_type === 'chat' ? 'chat' : e.earning_type === 'video_call' ? 'video' : 'gift'
+            icon: e.earning_type === 'chat' ? 'chat' : e.earning_type === 'video_call' ? 'video' : 'gift',
+            counterparty,
+            duration,
+            rate
           });
         });
       }
@@ -375,11 +410,16 @@ export const TransactionHistoryWidget = ({
                       <p className="text-sm font-medium truncate">{tx.description}</p>
                       {!compact && getTypeBadge(tx.type)}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                       <span>{format(new Date(tx.created_at), "MMM d, h:mm a")}</span>
+                      {tx.duration !== undefined && tx.rate !== undefined && (
+                        <span className="text-primary/80">
+                          {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
+                        </span>
+                      )}
                       {tx.balance_after !== undefined && (
                         <span className="text-muted-foreground/70">
-                          Balance: ₹{tx.balance_after.toLocaleString()}
+                          Bal: ₹{tx.balance_after.toLocaleString()}
                         </span>
                       )}
                     </div>
