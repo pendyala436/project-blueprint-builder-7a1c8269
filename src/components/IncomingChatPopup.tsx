@@ -146,8 +146,9 @@ const IncomingChatPopup = ({
 
   return (
     <Card className={cn(
-      "w-72 p-4 shadow-2xl border-2 border-primary/50 bg-gradient-to-br from-background to-muted",
+      "w-72 p-4 shadow-2xl border-2 border-primary/50 bg-background",
       "animate-in slide-in-from-bottom-5 fade-in duration-300",
+      "z-[9999] relative",
       isExiting && "animate-out slide-out-to-right fade-out duration-200"
     )}>
       {/* Pulsing indicator with sound icon */}
