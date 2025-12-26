@@ -576,58 +576,31 @@ const WomenDashboardScreen = () => {
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
     
     // Fetch current user's earnings today from women_earnings table
-    const { data: myEarnings } = await supabase
+    const { data: myEarnings, error: myError } = await supabase
       .from("women_earnings")
       .select("amount")
       .eq("user_id", userId)
       .gte("created_at", todayStart)
       .lte("created_at", todayEnd);
 
+    console.log("[Earnings] My earnings query:", { myEarnings, myError, todayStart, todayEnd });
+    
     const myTotal = myEarnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
     setMyTodayEarnings(myTotal);
     setStats(prev => ({ ...prev, todayEarnings: myTotal }));
 
-    // Fetch all women's earnings today to find biggest earner
-    const { data: allWomenEarnings } = await supabase
-      .from("women_earnings")
-      .select("user_id, amount")
-      .gte("created_at", todayStart)
-      .lte("created_at", todayEnd);
+    // Use secure RPC function to get top earner (bypasses RLS safely)
+    const { data: topEarnerData, error: topError } = await supabase
+      .rpc('get_top_earner_today');
+    
+    console.log("[Earnings] Top earner query:", { topEarnerData, topError });
 
-    if (allWomenEarnings && allWomenEarnings.length > 0) {
-      // Sum earnings by user
-      const earningsByUser = new Map<string, number>();
-      allWomenEarnings.forEach(e => {
-        const current = earningsByUser.get(e.user_id) || 0;
-        earningsByUser.set(e.user_id, current + Number(e.amount));
+    if (topEarnerData && topEarnerData.length > 0) {
+      const topEarner = topEarnerData[0];
+      setBiggestEarner({
+        name: topEarner.full_name || "Top Earner",
+        amount: Number(topEarner.total_amount) || 0
       });
-
-      // Find top earner
-      let topUserId = "";
-      let topAmount = 0;
-      earningsByUser.forEach((amount, uid) => {
-        if (amount > topAmount) {
-          topAmount = amount;
-          topUserId = uid;
-        }
-      });
-
-      if (topUserId && topAmount > 0) {
-        // Fetch top earner's profile
-        const { data: topProfile } = await supabase
-          .from("profiles")
-          .select("full_name, photo_url")
-          .eq("user_id", topUserId)
-          .maybeSingle();
-
-        setBiggestEarner({
-          name: topProfile?.full_name || "Top Earner",
-          amount: topAmount,
-          photoUrl: topProfile?.photo_url || undefined
-        });
-      } else {
-        setBiggestEarner(null);
-      }
     } else {
       setBiggestEarner(null);
     }
