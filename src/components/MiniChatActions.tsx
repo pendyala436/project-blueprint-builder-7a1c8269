@@ -316,11 +316,11 @@ export const MiniChatActions = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 hover:bg-orange-500/20"
+                className="h-5 w-5 hover:bg-primary/20"
                 onClick={() => setShowUnfriendDialog(true)}
                 disabled={isLoading}
               >
-                <UserMinus className="h-2.5 w-2.5 text-orange-500" />
+                <UserMinus className="h-2.5 w-2.5 text-primary" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -333,11 +333,11 @@ export const MiniChatActions = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 hover:bg-green-500/20"
+                className="h-5 w-5 hover:bg-primary/20"
                 onClick={handleAddFriend}
                 disabled={isLoading || isBlocked}
               >
-                <UserPlus className="h-2.5 w-2.5 text-green-500" />
+                <UserPlus className="h-2.5 w-2.5 text-primary" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -353,11 +353,11 @@ export const MiniChatActions = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 hover:bg-blue-500/20"
+                className="h-5 w-5 hover:bg-primary/20"
                 onClick={handleUnblock}
                 disabled={isLoading}
               >
-                <ShieldOff className="h-2.5 w-2.5 text-blue-500" />
+                <ShieldOff className="h-2.5 w-2.5 text-primary" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -407,11 +407,11 @@ export const MiniChatActions = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 hover:bg-orange-500/20"
+              className="h-5 w-5 hover:bg-primary/20"
               onClick={() => setShowLogOffDialog(true)}
               disabled={isLoading}
             >
-              <LogOut className="h-2.5 w-2.5 text-orange-500" />
+              <LogOut className="h-2.5 w-2.5 text-primary" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -486,7 +486,7 @@ export const MiniChatActions = ({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleLogOff} className="bg-orange-500 text-white hover:bg-orange-600">
+              <AlertDialogAction onClick={handleLogOff} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 Log Off
               </AlertDialogAction>
             </AlertDialogFooter>
