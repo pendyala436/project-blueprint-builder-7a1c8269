@@ -51,10 +51,13 @@ const AdminChatPricing = () => {
 
   const loadPricing = async () => {
     try {
+      // Get the most recent active pricing - order by updated_at to get latest
       const { data, error } = await supabase
         .from("chat_pricing")
         .select("*")
         .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
