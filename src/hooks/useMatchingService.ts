@@ -164,7 +164,6 @@ export const useMatchingService = () => {
         // Check language compatibility
         const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
         const isWomanNllbSupported = nllbLanguageNames.has(womanLanguage.toLowerCase());
-        const isWomanIndian = indianLanguageNames.has(womanLanguage.toLowerCase());
         const needsTranslation = requiresTranslation(userLanguage, womanLanguage);
 
         const user: MatchableUser = {
@@ -188,12 +187,12 @@ export const useMatchingService = () => {
         if (isSameLanguage) {
           // Priority 1: Same language users
           sameLanguageUsers.push(user);
-        } else if (isWomanNllbSupported) {
-          // For non-Indian language men: Show NLLB-200 Indian women as fallback
-          if (!userHasIndianLanguage && isWomanIndian) {
+        } else {
+          // Priority 2: Any other available woman with NLLB support for auto-translation
+          // Global matching - no country restrictions
+          if (isWomanNllbSupported) {
             translatedUsers.push(user);
           }
-          // For Indian language men: Only show same language (already handled above)
         }
       }
 
@@ -294,12 +293,8 @@ export const useMatchingService = () => {
             // Skip users who are already at max chats (3)
             if (currentChatCount >= 3) continue;
 
-            // For Indian men, only show if same language
-            const manCountry = profile.country?.toLowerCase() || "";
-            const isManIndian = manCountry === "india";
+            // Global matching - allow cross-language with auto-translation
             const isSameLanguage = manLanguage.toLowerCase() === userLanguage.toLowerCase();
-
-            if (isManIndian && !isSameLanguage) continue;
 
             matchableMen.push({
               userId: profile.user_id,
