@@ -473,14 +473,6 @@ const MiniChatWindow = ({
               disabled={!billingStarted}
             />
           )}
-          {userGender === "male" && (
-            <GiftSendButton
-              senderId={currentUserId}
-              receiverId={partnerId}
-              receiverName={partnerName}
-              disabled={!billingStarted}
-            />
-          )}
           {/* Relationship Actions (Block/Friend) */}
           <ChatRelationshipActions
             currentUserId={currentUserId}
