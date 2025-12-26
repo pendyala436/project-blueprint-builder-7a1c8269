@@ -429,22 +429,18 @@ const WomenDashboardScreen = () => {
       const onlineUserIds = onlineStatuses.map(s => s.user_id);
       const onlineMen: OnlineMan[] = [];
 
-      // Fetch ONLY online male profiles
+      // Fetch ONLY online male profiles (no photo filter - all users visible)
       const { data: maleProfiles } = await supabase
         .from("male_profiles")
         .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
-        .in("user_id", onlineUserIds)
-        .not("photo_url", "is", null)
-        .neq("photo_url", "");
+        .in("user_id", onlineUserIds);
 
       // Also check main profiles table for online men
       const { data: mainProfiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, photo_url, country, state, preferred_language, primary_language, age")
         .or("gender.eq.male,gender.eq.Male")
-        .in("user_id", onlineUserIds)
-        .not("photo_url", "is", null)
-        .neq("photo_url", "");
+        .in("user_id", onlineUserIds);
 
       // Combine profiles (deduplicate)
       const allMaleProfiles = [...(maleProfiles || [])];
