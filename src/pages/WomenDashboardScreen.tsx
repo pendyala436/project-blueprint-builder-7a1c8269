@@ -488,7 +488,8 @@ const WomenDashboardScreen = () => {
         
         const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
         const walletBalance = walletMap.get(profile.user_id) || 0;
-        const hasRecharged = walletBalance > 0;
+        // Premium users have wallet balance > 10 INR, regular users have <= 10 INR
+        const hasRecharged = walletBalance > 10;
         const activeChatCount = chatCountMap.get(profile.user_id) || 0;
 
         onlineMen.push({
