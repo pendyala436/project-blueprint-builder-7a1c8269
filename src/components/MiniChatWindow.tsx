@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
-  GripVertical,
   TrendingUp
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
@@ -50,8 +49,7 @@ interface MiniChatWindowProps {
   userGender: "male" | "female";
   ratePerMinute: number;
   onClose: () => void;
-  initialPosition?: { x: number; y: number };
-  onPositionChange?: (pos: { x: number; y: number }) => void;
+  windowWidthClass?: string;
 }
 
 const MiniChatWindow = ({
@@ -67,8 +65,7 @@ const MiniChatWindow = ({
   userGender,
   ratePerMinute,
   onClose,
-  initialPosition,
-  onPositionChange
+  windowWidthClass = "w-72"
 }: MiniChatWindowProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -81,64 +78,13 @@ const MiniChatWindow = ({
   const [billingStarted, setBillingStarted] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
   const [totalEarned, setTotalEarned] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState(initialPosition || { x: 0, y: 0 });
-  const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
-
-  // Drag handlers for making window movable
-  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    dragStartRef.current = {
-      x: position.x,
-      y: position.y,
-      startX: clientX,
-      startY: clientY
-    };
-  }, [position]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMove = (e: MouseEvent | TouchEvent) => {
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      const deltaX = clientX - dragStartRef.current.startX;
-      const deltaY = clientY - dragStartRef.current.startY;
-      const newPos = {
-        x: dragStartRef.current.x + deltaX,
-        y: dragStartRef.current.y + deltaY
-      };
-      setPosition(newPos);
-      onPositionChange?.(newPos);
-    };
-
-    const handleEnd = () => {
-      setIsDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleEnd);
-    window.addEventListener('touchmove', handleMove);
-    window.addEventListener('touchend', handleEnd);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleMove);
-      window.removeEventListener('touchend', handleEnd);
-    };
-  }, [isDragging, onPositionChange]);
 
   // Auto-close chat if blocked
   useEffect(() => {
@@ -460,32 +406,18 @@ const MiniChatWindow = ({
 
   return (
     <Card 
-      ref={cardRef}
       className={cn(
-        "flex flex-col shadow-xl border-2 transition-all duration-200 select-none",
-        isMinimized ? "w-64 h-14" : "w-80 h-96",
-        isPartnerOnline ? "border-primary/30" : "border-muted",
-        isDragging && "cursor-grabbing opacity-90"
+        "flex flex-col shadow-xl border-2 transition-all duration-200",
+        isMinimized ? "w-56 h-12" : `${windowWidthClass} h-80`,
+        isPartnerOnline ? "border-primary/30" : "border-muted"
       )}
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`,
-        zIndex: isDragging ? 100 : 50
-      }}
     >
-      {/* Header with drag handle */}
+      {/* Header */}
       <div 
-        className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b"
+        className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b cursor-pointer"
+        onClick={toggleMinimize}
       >
-        {/* Drag handle */}
-        <div 
-          className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-muted/50 rounded"
-          onMouseDown={handleDragStart}
-          onTouchStart={handleDragStart}
-        >
-          <GripVertical className="h-3 w-3 text-muted-foreground" />
-        </div>
-
-        <div className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={toggleMinimize}>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="relative">
             <Avatar className="h-7 w-7">
               <AvatarImage src={partnerPhoto || undefined} />

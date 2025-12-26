@@ -21,7 +21,6 @@ interface ActiveChat {
   isPartnerOnline: boolean;
   ratePerMinute: number;
   startedAt: string;
-  position?: { x: number; y: number };
 }
 
 interface EnhancedParallelChatsContainerProps {
@@ -30,12 +29,12 @@ interface EnhancedParallelChatsContainerProps {
   currentUserLanguage?: string;
 }
 
-// Calculate initial positions for stacked windows
-const getInitialPosition = (index: number): { x: number; y: number } => {
-  return {
-    x: -(index * 330), // Stack horizontally with some offset
-    y: 0
-  };
+// Calculate window width based on number of max chats to fit side by side
+const getWindowWidth = (maxChats: number): string => {
+  // Fit windows in available space (accounting for gaps and padding)
+  if (maxChats === 1) return "w-80";
+  if (maxChats === 2) return "w-72";
+  return "w-64"; // 3 chats
 };
 
 const EnhancedParallelChatsContainer = ({ 
@@ -229,15 +228,11 @@ const EnhancedParallelChatsContainer = ({
           !activeChats.some(ac => ac.id === ic.sessionId)
   );
 
-  // Handle position changes for draggable windows
-  const handlePositionChange = useCallback((chatId: string, newPos: { x: number; y: number }) => {
-    setActiveChats(prev => prev.map(chat => 
-      chat.chatId === chatId ? { ...chat, position: newPos } : chat
-    ));
-  }, []);
+  // Calculate window width class based on max chats
+  const windowWidthClass = getWindowWidth(maxParallelChats);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 max-w-[calc(100vw-2rem)]">
       {/* Settings and chat count button */}
       <div className="flex items-center gap-2">
         {displayedChats.length > 0 && (
@@ -290,9 +285,9 @@ const EnhancedParallelChatsContainer = ({
         ))}
       </div>
 
-      {/* Active chat windows - positioned absolutely for dragging */}
-      <div className="relative flex flex-row-reverse gap-2 flex-wrap justify-end">
-        {displayedChats.map((chat, index) => (
+      {/* Active chat windows - side by side layout */}
+      <div className="flex flex-row-reverse gap-2 items-end">
+        {displayedChats.map((chat) => (
           <MiniChatWindow
             key={chat.chatId}
             chatId={chat.chatId}
@@ -307,8 +302,7 @@ const EnhancedParallelChatsContainer = ({
             userGender={userGender}
             ratePerMinute={chat.ratePerMinute}
             onClose={() => handleCloseChat(chat.chatId, chat.id)}
-            initialPosition={chat.position || getInitialPosition(index)}
-            onPositionChange={(pos) => handlePositionChange(chat.chatId, pos)}
+            windowWidthClass={windowWidthClass}
           />
         ))}
       </div>
