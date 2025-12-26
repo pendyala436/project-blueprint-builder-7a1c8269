@@ -316,9 +316,9 @@ export const RandomChatButton = ({
         }
       }
 
-      // Navigate to chat
+      // Close dialog and navigate to dashboard - parallel chat container will show the chat
       setSearchDialogOpen(false);
-      navigate(`/chat/${matchedUser.userId}`);
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast({

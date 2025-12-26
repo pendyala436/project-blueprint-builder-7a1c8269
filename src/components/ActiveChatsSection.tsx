@@ -239,7 +239,7 @@ export const ActiveChatsSection = ({ maxDisplay = 5 }: ActiveChatsSectionProps) 
               "hover:bg-muted/50 active:bg-muted",
               chat.unreadCount > 0 && "bg-primary/5"
             )}
-            onClick={() => navigate(`/chat/${chat.oderId}`)}
+            onClick={() => {/* Chat is already shown in parallel container */}}
           >
             <div className="relative">
               <Avatar className="h-10 w-10 border border-border">

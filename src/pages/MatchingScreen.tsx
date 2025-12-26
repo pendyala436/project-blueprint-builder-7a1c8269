@@ -409,8 +409,8 @@ const MatchingScreen = () => {
           description: `You're now chatting with ${woman.fullName}`,
         });
         
-        // Navigate to chat screen
-        navigate(`/chat/${woman.userId}`);
+        // Navigate to dashboard - parallel chat container will show the chat
+        navigate("/dashboard");
       } else if (data?.message === "Insufficient balance") {
         toast({
           title: "Insufficient Balance",
