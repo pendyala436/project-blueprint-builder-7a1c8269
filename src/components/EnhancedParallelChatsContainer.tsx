@@ -245,7 +245,7 @@ const EnhancedParallelChatsContainer = ({
   const windowWidthClass = getWindowWidth(maxParallelChats);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-row-reverse items-end gap-3 max-w-[calc(100vw-2rem)]">
       {/* Settings and chat count button */}
       <div className="flex items-center gap-2">
         {displayedChats.length > 0 && (
