@@ -670,15 +670,13 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch ONLY online women from female_profiles table
+      // Fetch ONLY online women from female_profiles table (no photo filter - all users visible)
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
         .select("id, user_id, full_name, photo_url, age, country, primary_language")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
         .in("user_id", onlineUserIds)
-        .not("photo_url", "is", null)
-        .neq("photo_url", "")
         .limit(50);
 
       let onlineWomenList: OnlineWoman[] = femaleProfiles || [];
@@ -690,8 +688,6 @@ const DashboardScreen = () => {
         .or("gender.eq.female,gender.eq.Female")
         .eq("approval_status", "approved")
         .in("user_id", onlineUserIds)
-        .not("photo_url", "is", null)
-        .neq("photo_url", "")
         .limit(50);
 
       if (mainProfiles && mainProfiles.length > 0) {
