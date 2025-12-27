@@ -42,7 +42,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-import IncomingCallModal from "@/components/IncomingCallModal";
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -1234,16 +1234,15 @@ const WomenDashboardScreen = () => {
         />
       )}
 
-      {/* Incoming Video Call Modal */}
+      {/* Incoming Video Call Window - Draggable like mini chat */}
       {incomingCall && (
-        <IncomingCallModal
-          isOpen={!!incomingCall}
-          onClose={clearIncomingCall}
+        <IncomingVideoCallWindow
           callId={incomingCall.callId}
           callerUserId={incomingCall.callerUserId}
           callerName={incomingCall.callerName}
           callerPhoto={incomingCall.callerPhoto}
           currentUserId={currentUserId}
+          onClose={clearIncomingCall}
         />
       )}
 
