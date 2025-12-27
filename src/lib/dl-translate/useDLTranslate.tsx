@@ -61,6 +61,7 @@ export function useDLTranslate(): UseDLTranslateReturn {
       const errorMsg = err instanceof Error ? err.message : 'Translation failed';
       setError(errorMsg);
       return {
+        mode: 'passthrough',
         text,
         originalText: text,
         source: source || 'english',
@@ -86,6 +87,7 @@ export function useDLTranslate(): UseDLTranslateReturn {
       const errorMsg = err instanceof Error ? err.message : 'Translation failed';
       setError(errorMsg);
       return {
+        mode: 'passthrough',
         text,
         originalText: text,
         source: options.senderLanguage,
@@ -111,6 +113,7 @@ export function useDLTranslate(): UseDLTranslateReturn {
       const errorMsg = err instanceof Error ? err.message : 'Conversion failed';
       setError(errorMsg);
       return {
+        mode: 'passthrough',
         text,
         originalText: text,
         source: 'english',
