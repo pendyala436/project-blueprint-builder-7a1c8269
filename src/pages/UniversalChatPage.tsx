@@ -2,12 +2,13 @@
  * Universal Chat Page - Single Page Multilingual Chat
  * 
  * Features:
- * - 200+ NLLB-200 language support
+ * - 200+ NLLB-200 language support (client-side)
  * - Auto-detect source language
  * - Auto-transliterate Romanized input → native script
  * - Translate to target language in native script
  * - "Translated from X" indicator (Tinder-style)
  * - Full Unicode support with IME
+ * - Runs entirely in browser using @huggingface/transformers
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -18,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -27,11 +29,11 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES, type NLLB200Language } from '@/data/nllb200Languages';
+import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Download } from 'lucide-react';
+import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useClientTranslator } from '@/hooks/useClientTranslator';
 
 // ============= TYPES =============
 
@@ -47,16 +49,6 @@ interface Message {
   timestamp: Date;
   model?: string;
   usedPivot?: boolean;
-}
-
-interface TranslationResult {
-  translatedMessage: string;
-  originalMessage: string;
-  isTranslated: boolean;
-  model: string;
-  detectedLanguage: string;
-  usedPivot: boolean;
-  pivotLanguage?: string;
 }
 
 // ============= CONSTANTS =============
@@ -87,6 +79,11 @@ const TranslatedFromBadge: React.FC<{
     {usedPivot && (
       <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
         via English
+      </Badge>
+    )}
+    {model && (
+      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+        {model.includes('fallback') ? 'local' : 'NLLB'}
       </Badge>
     )}
     {showOriginal ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -198,6 +195,17 @@ const UniversalChatPage: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
+  // Client-side translator
+  const {
+    isModelLoading,
+    modelLoadProgress,
+    isModelReady,
+    error: modelError,
+    loadModel,
+    translate,
+    convertToNativeScript,
+  } = useClientTranslator();
+  
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -215,7 +223,7 @@ const UniversalChatPage: React.FC = () => {
     }
   }, [messages]);
   
-  // Live preview for transliteration
+  // Live preview for transliteration (client-side)
   useEffect(() => {
     if (!autoTransliterate || !input.trim() || isComposing) {
       setLivePreview('');
@@ -224,53 +232,22 @@ const UniversalChatPage: React.FC = () => {
     
     const timer = setTimeout(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('translate-message', {
-          body: {
-            message: input,
-            targetLanguage: userLanguage,
-            mode: 'convert'
-          }
-        });
-        
-        if (!error && data?.isConverted && data.convertedMessage !== input) {
-          setLivePreview(data.convertedMessage);
+        const result = await convertToNativeScript(input, userLanguage);
+        if (result.isConverted && result.converted !== input) {
+          setLivePreview(result.converted);
         } else {
           setLivePreview('');
         }
       } catch {
         setLivePreview('');
       }
-    }, 500);
+    }, 300);
     
     return () => clearTimeout(timer);
-  }, [input, userLanguage, autoTransliterate, isComposing]);
-  
-  // Translate message
-  const translateMessage = useCallback(async (
-    text: string, 
-    sourceLanguage: string, 
-    targetLanguage: string
-  ): Promise<TranslationResult | null> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          sourceLanguage,
-          targetLanguage,
-          mode: 'translate'
-        }
-      });
-      
-      if (error) throw error;
-      return data as TranslationResult;
-    } catch (err) {
-      console.error('Translation error:', err);
-      return null;
-    }
-  }, []);
+  }, [input, userLanguage, autoTransliterate, isComposing, convertToNativeScript]);
   
   // Send message
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
     
     setIsLoading(true);
@@ -292,15 +269,7 @@ const UniversalChatPage: React.FC = () => {
     setLivePreview('');
     
     try {
-      // Simulate partner receiving and responding
-      // In real app, this would be via realtime subscription
-      const translatedForPartner = await translateMessage(
-        messageText,
-        userLanguage,
-        partnerLanguage
-      );
-      
-      // Simulate partner response
+      // Simulate partner response with translation
       setTimeout(async () => {
         const partnerResponses = [
           'नमस्ते! कैसे हो आप?',
@@ -312,8 +281,8 @@ const UniversalChatPage: React.FC = () => {
         
         const partnerText = partnerResponses[Math.floor(Math.random() * partnerResponses.length)];
         
-        // Translate partner message for user
-        const translatedForUser = await translateMessage(
+        // Translate partner message for user (client-side)
+        const translatedForUser = await translate(
           partnerText,
           partnerLanguage,
           userLanguage
@@ -322,20 +291,20 @@ const UniversalChatPage: React.FC = () => {
         const partnerMessage: Message = {
           id: `partner-${Date.now()}`,
           text: partnerText,
-          translatedText: translatedForUser?.translatedMessage,
+          translatedText: translatedForUser.translatedText,
           sourceLanguage: partnerLanguage,
           targetLanguage: userLanguage,
-          isTranslated: translatedForUser?.isTranslated || false,
+          isTranslated: translatedForUser.isTranslated,
           showOriginal: false,
           sender: 'partner',
           timestamp: new Date(),
-          model: translatedForUser?.model,
-          usedPivot: translatedForUser?.usedPivot,
+          model: translatedForUser.model,
+          usedPivot: translatedForUser.usedPivot,
         };
         
         setMessages(prev => [...prev, partnerMessage]);
         setIsLoading(false);
-      }, 1500);
+      }, 1000);
       
     } catch (err) {
       console.error('Send error:', err);
@@ -346,7 +315,7 @@ const UniversalChatPage: React.FC = () => {
       });
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, autoTransliterate, livePreview, userLanguage, partnerLanguage, translate, toast]);
   
   // Toggle original/translated text
   const toggleOriginal = (messageId: string) => {
@@ -376,6 +345,50 @@ const UniversalChatPage: React.FC = () => {
               </Badge>
             </CardTitle>
           </div>
+          
+          {/* Model Loading Status */}
+          {!isModelReady && (
+            <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
+              {isModelLoading ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading NLLB-200 model... {modelLoadProgress}%</span>
+                  </div>
+                  <Progress value={modelLoadProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    First load may take a few minutes. Model is cached for future use.
+                  </p>
+                </div>
+              ) : modelError ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-destructive">{modelError}</p>
+                  <Button onClick={loadModel} size="sm" variant="outline">
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Load Translation Model</p>
+                    <p className="text-xs text-muted-foreground">
+                      Download NLLB-200 for full 200+ language translation (runs locally)
+                    </p>
+                  </div>
+                  <Button onClick={loadModel} size="sm" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Load Model
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {isModelReady && (
+            <Badge variant="default" className="mt-2 w-fit">
+              ✓ NLLB-200 Ready (Client-side)
+            </Badge>
+          )}
           
           {/* Language Selectors */}
           <div className="grid grid-cols-2 gap-4 mt-4">
@@ -415,7 +428,9 @@ const UniversalChatPage: React.FC = () => {
                 <Globe className="h-12 w-12 mb-3 opacity-50" />
                 <p className="text-sm">Start a conversation in any language!</p>
                 <p className="text-xs mt-1">
-                  Messages are automatically translated
+                  {isModelReady 
+                    ? 'Messages are translated locally using NLLB-200' 
+                    : 'Load the model for full translation support'}
                 </p>
               </div>
             ) : (
@@ -480,7 +495,9 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by NLLB-200 • {ALL_NLLB200_LANGUAGES.length}+ languages • Auto-detect • English pivot fallback
+              {isModelReady 
+                ? `Powered by NLLB-200 (Client-side) • ${ALL_NLLB200_LANGUAGES.length}+ languages`
+                : 'Using basic transliteration • Load model for full translation'}
             </p>
           </div>
         </CardContent>
