@@ -1,24 +1,30 @@
 /**
- * DL-Translate Inspired Translation Module
+ * Universal Real-Time Translation Module
  * 
- * TypeScript implementation of translation functionality
- * inspired by https://github.com/xhluca/dl-translate
+ * TypeScript implementation for universal multilingual chat
+ * Supports all human languages with M2M100/NLLB-200 + English pivot fallback
  * 
- * Uses NLLB-200 model via Hugging Face for 200+ language support
+ * Features:
+ * - Real-time typing in sender's native language
+ * - Automatic translation for recipient
+ * - Skip translation when same language
+ * - English pivot for rare language pairs
+ * - Real-time typing indicators with translation
  * 
  * @example
  * ```tsx
- * import { translator, translate, useTranslator } from '@/lib/translation';
+ * import { translator, translate, useTranslator, useRealtimeTranslation } from '@/lib/translation';
  * 
  * // Using the Translator class
  * const result = await translator.translate('Hello', { targetLanguage: 'hindi' });
  * console.log(result.translatedText); // "नमस्ते"
  * 
- * // Using the convenience function
- * const { translatedText } = await translate('Hello', { targetLanguage: 'hindi' });
- * 
- * // Using the React hook
- * const { translate, isTranslating } = useTranslator();
+ * // Real-time typing with translation
+ * const { sendTypingIndicator, partnerTyping } = useRealtimeTranslation({
+ *   currentUserId: 'user-1',
+ *   currentUserLanguage: 'english',
+ *   channelId: 'chat-123'
+ * });
  * ```
  */
 
@@ -58,5 +64,6 @@ export {
   LATIN_SCRIPT_LANGUAGES,
 } from './language-codes';
 
-// React hook
+// React hooks
 export { useTranslator } from './useTranslator';
+export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
