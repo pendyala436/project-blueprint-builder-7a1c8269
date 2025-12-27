@@ -36,6 +36,7 @@ interface GiftSendButtonProps {
   receiverId: string;
   receiverName: string;
   disabled?: boolean;
+  className?: string;
 }
 
 export const GiftSendButton = ({
@@ -43,6 +44,7 @@ export const GiftSendButton = ({
   receiverId,
   receiverName,
   disabled = false,
+  className,
 }: GiftSendButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
@@ -180,7 +182,10 @@ export const GiftSendButton = ({
           <button
             type="button"
             disabled={disabled}
-            className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+            className={cn(
+              "p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-primary disabled:opacity-50",
+              className
+            )}
           >
             <Gift className="w-5 h-5" />
           </button>
