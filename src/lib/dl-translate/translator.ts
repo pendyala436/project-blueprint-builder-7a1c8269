@@ -1,148 +1,186 @@
 /**
  * DL-Translate Translator
- * Server-based translation using Supabase Edge Function
- * No client-side model loading
+ * Auto-detects languages and translates via Edge Function
+ * Handles sender/receiver native language translation for chat
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { TranslatorConfig, TranslationResult } from './types';
-import { getCode, detectLanguage, isSameLanguage } from './languages';
+import type { TranslationResult, ChatTranslationOptions } from './types';
+import { detectLanguage, isSameLanguage, isLatinScript, normalizeLanguage } from './languages';
 
 // Translation cache
-const cache = new Map<string, string>();
+const cache = new Map<string, TranslationResult>();
 
 /**
- * TranslationModel - Main translation class
- * Uses server-side translation via Edge Function
+ * Generate cache key
  */
-export class TranslationModel {
-  private config: TranslatorConfig;
-
-  constructor(config: TranslatorConfig = {}) {
-    this.config = {
-      cacheEnabled: true,
-      ...config,
-    };
-  }
-
-  /**
-   * Translate text from source to target language
-   */
-  async translate(
-    text: string,
-    source: string,
-    target: string
-  ): Promise<TranslationResult> {
-    // Skip if same language
-    if (isSameLanguage(source, target)) {
-      return this.createResult(text, source, target, false);
-    }
-
-    // Skip empty text
-    if (!text.trim()) {
-      return this.createResult(text, source, target, false);
-    }
-
-    // Check cache
-    const cacheKey = `${text}:${source}:${target}`;
-    if (this.config.cacheEnabled && cache.has(cacheKey)) {
-      return this.createResult(cache.get(cacheKey)!, source, target, true);
-    }
-
-    try {
-      // Call edge function for translation
-      const { data, error } = await supabase.functions.invoke('translate-message', {
-        body: {
-          text,
-          sourceLanguage: source,
-          targetLanguage: target,
-        },
-      });
-
-      if (error) {
-        console.error('[DL-Translate] Edge function error:', error);
-        return this.createResult(text, source, target, false);
-      }
-
-      const translatedText = data?.translatedText || text;
-
-      // Cache result
-      if (this.config.cacheEnabled && translatedText !== text) {
-        cache.set(cacheKey, translatedText);
-      }
-
-      return this.createResult(translatedText, source, target, translatedText !== text);
-    } catch (error) {
-      console.error('[DL-Translate] Translation error:', error);
-      return this.createResult(text, source, target, false);
-    }
-  }
-
-  /**
-   * Detect language from text
-   */
-  detect(text: string): { language: string; code: string } {
-    const language = detectLanguage(text);
-    return {
-      language,
-      code: getCode(language),
-    };
-  }
-
-  /**
-   * Translate with auto-detection of source language
-   */
-  async translateAuto(text: string, target: string): Promise<TranslationResult> {
-    const detected = this.detect(text);
-    return this.translate(text, detected.language, target);
-  }
-
-  /**
-   * Clear translation cache
-   */
-  clearCache(): void {
-    cache.clear();
-  }
-
-  /**
-   * Create translation result object
-   */
-  private createResult(
-    text: string,
-    source: string,
-    target: string,
-    isTranslated: boolean
-  ): TranslationResult {
-    return {
-      text,
-      source,
-      target,
-      isTranslated,
-    };
-  }
+function getCacheKey(text: string, source: string, target: string): string {
+  return `${text}:${normalizeLanguage(source)}:${normalizeLanguage(target)}`;
 }
 
-// Default instance
-export const mt = new TranslationModel();
-
-// Convenience functions
+/**
+ * Translate text between languages
+ * Auto-detects source if not provided
+ */
 export async function translate(
   text: string,
-  source: string,
-  target: string
+  sourceLanguage?: string,
+  targetLanguage?: string
 ): Promise<TranslationResult> {
-  return mt.translate(text, source, target);
+  const trimmed = text.trim();
+  
+  if (!trimmed) {
+    return {
+      text: text,
+      originalText: text,
+      source: sourceLanguage || 'english',
+      target: targetLanguage || 'english',
+      isTranslated: false,
+    };
+  }
+
+  // Auto-detect source language
+  const detectedSource = detectLanguage(trimmed);
+  const source = sourceLanguage || detectedSource;
+  const target = targetLanguage || 'english';
+
+  // Same language - no translation needed
+  if (isSameLanguage(source, target)) {
+    return {
+      text: trimmed,
+      originalText: trimmed,
+      source,
+      target,
+      isTranslated: false,
+      detectedLanguage: detectedSource,
+    };
+  }
+
+  // Check cache
+  const cacheKey = getCacheKey(trimmed, source, target);
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey)!;
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text: trimmed,
+        sourceLanguage: source,
+        targetLanguage: target,
+      },
+    });
+
+    if (error) {
+      console.error('[dl-translate] Edge function error:', error);
+      return {
+        text: trimmed,
+        originalText: trimmed,
+        source,
+        target,
+        isTranslated: false,
+        detectedLanguage: detectedSource,
+      };
+    }
+
+    const result: TranslationResult = {
+      text: data?.translatedText || trimmed,
+      originalText: trimmed,
+      source: data?.sourceLanguage || source,
+      target: data?.targetLanguage || target,
+      isTranslated: data?.isTranslated || false,
+      detectedLanguage: data?.detectedLanguage || detectedSource,
+    };
+
+    // Cache successful translations
+    if (result.isTranslated) {
+      cache.set(cacheKey, result);
+    }
+
+    return result;
+  } catch (error) {
+    console.error('[dl-translate] Translation error:', error);
+    return {
+      text: trimmed,
+      originalText: trimmed,
+      source,
+      target,
+      isTranslated: false,
+      detectedLanguage: detectedSource,
+    };
+  }
 }
 
-export async function translateAuto(
+/**
+ * Translate for chat: sender types in English, converts to receiver's native language
+ * - If sender types Latin text, it gets translated to receiver's language
+ * - If sender and receiver have same language, no translation
+ * - Auto-detects the source language from the text
+ */
+export async function translateForChat(
   text: string,
-  target: string
+  options: ChatTranslationOptions
 ): Promise<TranslationResult> {
-  return mt.translateAuto(text, target);
+  const { senderLanguage, receiverLanguage } = options;
+  
+  // Same language - no translation needed
+  if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    return {
+      text,
+      originalText: text,
+      source: senderLanguage,
+      target: receiverLanguage,
+      isTranslated: false,
+    };
+  }
+
+  // Detect if sender is typing in Latin (English/romanized)
+  const isTypingLatin = isLatinScript(text);
+  const detectedSource = detectLanguage(text);
+
+  // If typing in Latin and sender's native is non-Latin, assume English input
+  // Translate to receiver's native language
+  const effectiveSource = isTypingLatin ? 'english' : detectedSource;
+  
+  return translate(text, effectiveSource, receiverLanguage);
 }
 
-export function detect(text: string): { language: string; code: string } {
-  return mt.detect(text);
+/**
+ * Convert English/Latin text to sender's native script (for preview while typing)
+ */
+export async function convertToNativeScript(
+  text: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  // Skip if already in target script or target is English
+  if (!isLatinScript(text) || isSameLanguage(targetLanguage, 'english')) {
+    return {
+      text,
+      originalText: text,
+      source: 'english',
+      target: targetLanguage,
+      isTranslated: false,
+    };
+  }
+
+  return translate(text, 'english', targetLanguage);
 }
 
-export { isSameLanguage, getCode, detectLanguage } from './languages';
+/**
+ * Clear translation cache
+ */
+export function clearCache(): void {
+  cache.clear();
+}
+
+/**
+ * Detect language from text
+ */
+export function detect(text: string): { language: string; isLatin: boolean } {
+  const language = detectLanguage(text);
+  const isLatin = isLatinScript(text);
+  return { language, isLatin };
+}
+
+// Re-export utilities
+export { detectLanguage, isSameLanguage, isLatinScript } from './languages';

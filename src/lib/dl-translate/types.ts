@@ -1,34 +1,34 @@
 /**
  * DL-Translate TypeScript Types
- * Simplified version without client-side model
  */
-
-// Language code type
-export type LanguageCode = string;
 
 // Translation result
 export interface TranslationResult {
   text: string;
+  originalText: string;
   source: string;
   target: string;
   isTranslated: boolean;
+  detectedLanguage?: string;
 }
 
 // Language info
 export interface LanguageInfo {
   name: string;
   code: string;
+  native?: string;
 }
 
-// Translator configuration
-export interface TranslatorConfig {
-  cacheEnabled?: boolean;
-  apiEndpoint?: string;
+// Chat translation options
+export interface ChatTranslationOptions {
+  senderLanguage: string;
+  receiverLanguage: string;
 }
 
 // Script detection result
 export interface ScriptDetectionResult {
   script: string;
   language: string;
+  isLatin: boolean;
   confidence: number;
 }
