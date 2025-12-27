@@ -94,47 +94,20 @@ const MiniChatWindow = ({
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [transliteratedPreview, setTransliteratedPreview] = useState("");
-  const [isConverting, setIsConverting] = useState(false);
 
-  // Multilingual chat - handles transliteration and translation
+  // Multilingual chat - handles transliteration, translation, and live preview
   const {
     processOutgoingMessage,
     processIncomingMessage,
-    convertToNativeScript,
-    isLatinText
+    livePreview,
+    updateLivePreview,
+    clearLivePreview,
+    isSameLanguage
   } = useMultilingualChat({
     currentUserLanguage,
+    partnerLanguage,
     enabled: transliterationEnabled
   });
-
-  // Real-time preview of transliteration
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const handleTransliterationInput = useCallback((text: string) => {
-    if (!transliterationEnabled || !text.trim()) {
-      setTransliteratedPreview("");
-      return;
-    }
-    
-    // Only show preview for Latin input
-    if (!isLatinText(text)) {
-      setTransliteratedPreview("");
-      return;
-    }
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    setIsConverting(true);
-    
-    debounceRef.current = setTimeout(async () => {
-      const converted = await convertToNativeScript(text, currentUserLanguage);
-      if (converted !== text) {
-        setTransliteratedPreview(converted);
-      } else {
-        setTransliteratedPreview("");
-      }
-      setIsConverting(false);
-    }, 400);
-  }, [transliterationEnabled, currentUserLanguage, convertToNativeScript, isLatinText]);
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
@@ -436,7 +409,7 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
-    setTransliteratedPreview("");
+    clearLivePreview();
     setIsSending(true);
     setLastActivityTime(Date.now());
 
@@ -685,13 +658,23 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area with transliteration */}
+          {/* Input area with live translation preview */}
           <div className="p-1.5 border-t space-y-1">
-            {/* Transliteration preview - shows text in user's native script */}
-            {transliterationEnabled && transliteratedPreview && transliteratedPreview !== newMessage && newMessage.trim() && (
-              <div className="px-2 py-0.5 bg-primary/5 rounded text-[9px] text-primary/80 border border-primary/10">
-                <span className="font-medium">{currentUserLanguage}:</span> {transliteratedPreview}
-                {isConverting && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
+            {/* Live translation preview - shows text in user's native language */}
+            {transliterationEnabled && livePreview.previewText && livePreview.previewText !== newMessage && newMessage.trim() && (
+              <div className="px-2 py-1 bg-primary/5 rounded text-[10px] text-primary/80 border border-primary/10">
+                <div className="flex items-center gap-1">
+                  <Languages className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">{currentUserLanguage}:</span>
+                </div>
+                <p className="mt-0.5 pl-4">{livePreview.previewText}</p>
+                {livePreview.isConverting && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
+              </div>
+            )}
+            {/* Same language indicator */}
+            {isSameLanguage() && newMessage.trim() && (
+              <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
+                Same language - no translation needed
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -709,13 +692,13 @@ const MiniChatWindow = ({
                 <Languages className="h-3 w-3" />
               </Button>
               <Input
-                placeholder="Type in English..."
+                placeholder="Type in any language..."
                 value={newMessage}
                 onChange={(e) => {
                   const val = e.target.value;
                   setNewMessage(val);
                   handleTyping();
-                  handleTransliterationInput(val);
+                  updateLivePreview(val);
                 }}
                 onKeyDown={handleKeyPress}
                 className="h-7 text-[11px]"
