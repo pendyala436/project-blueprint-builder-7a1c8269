@@ -122,21 +122,21 @@ export const useIncomingChats = (
     };
   }, [incomingChats.length, userGender]);
 
-  // Subscribe to new incoming chat sessions
+  // Subscribe to new incoming chat sessions - ONLY for women (men initiate, women accept/reject)
   useEffect(() => {
     if (!currentUserId) return;
+    
+    // Men initiate chats, they don't receive incoming chat popups
+    if (userGender === "male") return;
 
     const checkForNewChats = async () => {
-      console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
+      console.log(`[useIncomingChats] Checking for new chats for female user: ${currentUserId}`);
       
-      // Get recent active sessions where this user is the target
-      const column = userGender === "male" ? "man_user_id" : "woman_user_id";
-      const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
-      
+      // Women receive chats from men - query by woman_user_id
       const { data: sessions, error: sessionsError } = await supabase
         .from("active_chat_sessions")
         .select("*")
-        .eq(column, currentUserId)
+        .eq("woman_user_id", currentUserId)
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
@@ -161,8 +161,8 @@ export const useIncomingChats = (
 
         // If user hasn't sent any message, it's an incoming chat
         if (count === 0) {
-          const partnerId = session[partnerColumn];
-          
+          // Partner is the man who initiated the chat
+          const partnerId = session.man_user_id;
           // Get partner info
           const { data: profile } = await supabase
             .from("profiles")
@@ -206,9 +206,9 @@ export const useIncomingChats = (
         },
         (payload) => {
           const session = payload.new;
-          const column = userGender === "male" ? "man_user_id" : "woman_user_id";
           
-          if (session[column] === currentUserId) {
+          // Check if this session is for the current woman user
+          if (session.woman_user_id === currentUserId) {
             checkForNewChats();
           }
         }
