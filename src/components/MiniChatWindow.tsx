@@ -25,8 +25,8 @@ import {
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
+import { useMultilingualChat } from "@/hooks/useMultilingualChat";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { useRealTimeTransliteration } from "@/hooks/useRealTimeTransliteration";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -94,18 +94,47 @@ const MiniChatWindow = ({
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
+  const [transliteratedPreview, setTransliteratedPreview] = useState("");
+  const [isConverting, setIsConverting] = useState(false);
 
-  // Real-time transliteration - converts English typing to user's OWN native script
+  // Multilingual chat - handles transliteration and translation
   const {
-    converted: transliteratedText,
-    isConverting,
-    handleInput: handleTransliterationInput,
-    convertFullMessage
-  } = useRealTimeTransliteration({
-    targetLanguage: currentUserLanguage, // Convert to user's OWN language for preview
-    enabled: transliterationEnabled,
-    debounceMs: 400
+    processOutgoingMessage,
+    processIncomingMessage,
+    convertToNativeScript,
+    isLatinText
+  } = useMultilingualChat({
+    currentUserLanguage,
+    enabled: transliterationEnabled
   });
+
+  // Real-time preview of transliteration
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const handleTransliterationInput = useCallback((text: string) => {
+    if (!transliterationEnabled || !text.trim()) {
+      setTransliteratedPreview("");
+      return;
+    }
+    
+    // Only show preview for Latin input
+    if (!isLatinText(text)) {
+      setTransliteratedPreview("");
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setIsConverting(true);
+    
+    debounceRef.current = setTimeout(async () => {
+      const converted = await convertToNativeScript(text, currentUserLanguage);
+      if (converted !== text) {
+        setTransliteratedPreview(converted);
+      } else {
+        setTransliteratedPreview("");
+      }
+      setIsConverting(false);
+    }, 400);
+  }, [transliterationEnabled, currentUserLanguage, convertToNativeScript, isLatinText]);
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
@@ -271,37 +300,18 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language
-  const translateMessage = async (text: string, senderId: string): Promise<{
+  const translateMessage = useCallback(async (text: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message: text,
-          targetLanguage: currentUserLanguage 
-        }
-      });
-
-      if (error) {
-        console.error("Translation error:", error);
-        return {};
-      }
-
-      // Check if translation is different from original
-      const isTranslated = data.translatedMessage && data.translatedMessage !== text;
-      
-      return {
-        translatedMessage: data.translatedMessage,
-        isTranslated,
-        detectedLanguage: data.detectedLanguage
-      };
-    } catch (err) {
-      console.error("Failed to translate:", err);
-      return {};
-    }
-  };
+    const result = await processIncomingMessage(text);
+    return {
+      translatedMessage: result.translatedMessage,
+      isTranslated: result.isTranslated,
+      detectedLanguage: result.detectedLanguage
+    };
+  }, [processIncomingMessage]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -315,8 +325,8 @@ const MiniChatWindow = ({
       // Translate ALL messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
-          // Translate to current user's language (for both incoming and outgoing)
-          const translation = await translateMessage(m.message, m.sender_id);
+          // Translate to current user's language
+          const translation = await translateMessage(m.message);
           return {
             id: m.id,
             senderId: m.sender_id,
@@ -346,8 +356,8 @@ const MiniChatWindow = ({
         async (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate if from partner
-          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
+          // Translate message for display
+          const translation = await translateMessage(newMsg.message);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -405,26 +415,6 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
-  // Convert English typing to user's OWN native script
-  // Store in sender's language - receiver will translate on their end
-  const convertToUserScript = async (text: string): Promise<string> => {
-    try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message: text,
-          targetLanguage: currentUserLanguage,
-          mode: "convert"
-        }
-      });
-
-      if (error) return text;
-      return data?.convertedMessage || data?.translatedMessage || text;
-    } catch (err) {
-      console.error("Conversion failed:", err);
-      return text;
-    }
-  };
-
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
@@ -446,12 +436,13 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
+    setTransliteratedPreview("");
     setIsSending(true);
     setLastActivityTime(Date.now());
 
     try {
-      // Convert to user's native script (store in sender's language)
-      const userScript = await convertToUserScript(messageText);
+      // Convert to user's native script using multilingual chat hook
+      const processedMessage = await processOutgoingMessage(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -459,7 +450,7 @@ const MiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: userScript // Store in sender's language
+          message: processedMessage // Store in sender's native script
         });
 
       if (error) throw error;
@@ -697,9 +688,9 @@ const MiniChatWindow = ({
           {/* Input area with transliteration */}
           <div className="p-1.5 border-t space-y-1">
             {/* Transliteration preview - shows text in user's native script */}
-            {transliterationEnabled && transliteratedText && transliteratedText !== newMessage && newMessage.trim() && (
+            {transliterationEnabled && transliteratedPreview && transliteratedPreview !== newMessage && newMessage.trim() && (
               <div className="px-2 py-0.5 bg-primary/5 rounded text-[9px] text-primary/80 border border-primary/10">
-                <span className="font-medium">{currentUserLanguage}:</span> {transliteratedText}
+                <span className="font-medium">{currentUserLanguage}:</span> {transliteratedPreview}
                 {isConverting && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
               </div>
             )}
