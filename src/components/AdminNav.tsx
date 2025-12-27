@@ -90,6 +90,15 @@ const AdminNav = ({ children }: AdminNavProps) => {
   };
 
   const handleLogout = async () => {
+    // Get current user to set offline status
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const now = new Date().toISOString();
+      await supabase
+        .from('user_status')
+        .update({ is_online: false, last_seen: now })
+        .eq('user_id', user.id);
+    }
     await supabase.auth.signOut();
     navigate("/");
   };
