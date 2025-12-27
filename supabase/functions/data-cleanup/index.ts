@@ -20,9 +20,11 @@ const corsHeaders = {
  */
 
 // Default retention periods (will be overridden by admin_settings)
-let CONTENT_DELETION_MINUTES = 15;
-let CHAT_HISTORY_RETENTION_DAYS = 7;
-let TRANSACTION_RETENTION_YEARS = 9; // 9 years as per policy
+let CONTENT_DELETION_MINUTES = 5; // Media files deleted every 5 mins
+let CHAT_IDLE_MINUTES = 3; // Chat window closes after 3 min idle
+let CHAT_HISTORY_RETENTION_DAYS = 7; // Chat history deleted after 7 days
+let TRANSACTION_RETENTION_YEARS = 9; // Transaction records deleted after 9 years
+let VIDEO_CONTENT_MINUTES = 5; // Video call content available for 5 mins after end
 
 // Helper to load admin settings
 async function loadRetentionSettings(supabase: any): Promise<void> {
@@ -91,7 +93,37 @@ Deno.serve(async (req) => {
 
     console.log(`[Data Cleanup] Starting cleanup at ${now.toISOString()}`);
 
-    // ============= 1. DELETE CHAT CONTENT OLDER THAN X MINUTES =============
+    // ============= 0. CLOSE IDLE CHAT SESSIONS (3 MIN INACTIVITY) =============
+    try {
+      const idleCutoff = new Date(now.getTime() - CHAT_IDLE_MINUTES * 60 * 1000);
+      
+      const { data: idleSessions, error: idleError } = await supabase
+        .from('active_chat_sessions')
+        .update({
+          status: 'ended',
+          end_reason: 'idle_3min',
+          ended_at: now.toISOString(),
+        })
+        .lt('last_activity_at', idleCutoff.toISOString())
+        .eq('status', 'active')
+        .select('id');
+
+      if (idleError) {
+        console.error('[Data Cleanup] Error closing idle sessions:', idleError);
+        results.errors.push(`Idle sessions: ${idleError.message}`);
+      } else if (idleSessions) {
+        console.log(`[Data Cleanup] Closed ${idleSessions.length} idle chat sessions (3min inactivity)`);
+      }
+
+      // Also run the DB function for idle sessions cleanup
+      await supabase.rpc('cleanup_idle_sessions');
+      await supabase.rpc('cleanup_expired_data');
+    } catch (error: any) {
+      console.error('[Data Cleanup] Error in idle session cleanup:', error);
+      results.errors.push(`Idle sessions exception: ${error.message}`);
+    }
+
+    // ============= 1. DELETE CHAT CONTENT/MEDIA OLDER THAN 5 MINUTES =============
     // This removes message content but preserves metadata for billing purposes
     try {
       const contentCutoff = new Date(now.getTime() - CONTENT_DELETION_MINUTES * 60 * 1000);
@@ -124,6 +156,9 @@ Deno.serve(async (req) => {
       } else {
         console.log('[Data Cleanup] No chat content to clear');
       }
+
+      // Also run DB function for media cleanup
+      await supabase.rpc('cleanup_chat_media');
     } catch (error: any) {
       console.error('[Data Cleanup] Error in chat content cleanup:', error);
       results.errors.push(`Chat content exception: ${error.message}`);
@@ -333,12 +368,23 @@ Deno.serve(async (req) => {
         .delete()
         .lt('recorded_at', thirtyDaysAgo.toISOString());
       
-      // Delete old group messages (older than 15 minutes as per spec)
+      // Delete old group messages (older than 5 minutes as per spec)
       const groupMessageCutoff = new Date(now.getTime() - CONTENT_DELETION_MINUTES * 60 * 1000);
       await supabase
         .from('group_messages')
         .delete()
         .lt('created_at', groupMessageCutoff.toISOString());
+
+      // Delete ended video sessions (content available for 5 mins)
+      const videoContentCutoff = new Date(now.getTime() - VIDEO_CONTENT_MINUTES * 60 * 1000);
+      await supabase
+        .from('video_call_sessions')
+        .delete()
+        .eq('status', 'ended')
+        .lt('ended_at', videoContentCutoff.toISOString());
+
+      // Run DB function for video cleanup
+      await supabase.rpc('cleanup_video_sessions');
 
       console.log('[Data Cleanup] Additional cleanup completed');
     } catch (error: any) {
