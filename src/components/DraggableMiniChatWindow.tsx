@@ -112,14 +112,14 @@ const DraggableMiniChatWindow = ({
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Real-time transliteration hook - converts English typing to partner's language script
+  // Real-time transliteration hook - converts English typing to user's OWN native script
   const {
     converted: transliteratedText,
     isConverting,
     handleInput: handleTransliterationInput,
     convertFullMessage
   } = useRealTimeTransliteration({
-    targetLanguage: partnerLanguage,
+    targetLanguage: currentUserLanguage, // Convert to user's OWN language for preview
     enabled: transliterationEnabled,
     debounceMs: 400
   });
@@ -662,27 +662,39 @@ const DraggableMiniChatWindow = ({
 
   const MAX_MESSAGE_LENGTH = 2000;
 
-  // Convert English typing to target language before sending
-  const convertMessageToTargetLanguage = async (text: string): Promise<string> => {
+  // Convert English typing to user's OWN native script, then translate to partner's language
+  const convertAndTranslateMessage = async (text: string): Promise<{
+    userScript: string;  // Message in user's own native script
+    partnerScript: string;  // Message translated to partner's language
+  }> => {
     try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
+      // First: Convert to user's own native script (what they see)
+      const { data: userConvert, error: userError } = await supabase.functions.invoke("translate-message", {
         body: { 
           message: text,
-          targetLanguage: partnerLanguage,
-          mode: "convert" // Force conversion mode for outgoing messages
+          targetLanguage: currentUserLanguage,
+          mode: "convert"
         }
       });
 
-      if (error) {
-        console.error("Conversion error:", error);
-        return text;
-      }
+      const userScript = userError ? text : (userConvert?.convertedMessage || userConvert?.translatedMessage || text);
 
-      // Return converted message if available, otherwise original
-      return data.convertedMessage || data.translatedMessage || text;
+      // Second: Translate to partner's language (what partner receives)
+      const { data: partnerTranslate, error: partnerError } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message: userScript, // Use converted text as source
+          sourceLanguage: currentUserLanguage,
+          targetLanguage: partnerLanguage,
+          mode: "translate"
+        }
+      });
+
+      const partnerScript = partnerError ? userScript : (partnerTranslate?.translatedMessage || userScript);
+
+      return { userScript, partnerScript };
     } catch (err) {
-      console.error("Conversion failed:", err);
-      return text;
+      console.error("Conversion/translation failed:", err);
+      return { userScript: text, partnerScript: text };
     }
   };
 
@@ -705,11 +717,8 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Use the transliteration hook's convertFullMessage for final conversion
-      // This gives better results than word-by-word conversion
-      const convertedMessage = transliterationEnabled 
-        ? await convertFullMessage(messageText)
-        : await convertMessageToTargetLanguage(messageText);
+      // Convert to user's native script and translate to partner's language
+      const { partnerScript } = await convertAndTranslateMessage(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -717,7 +726,7 @@ const DraggableMiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: convertedMessage // Send converted message
+          message: partnerScript // Send message in partner's language
         });
 
       if (error) throw error;
@@ -1188,9 +1197,9 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input with transliteration preview */}
+              {/* Text input with transliteration preview (shows user's own language) */}
               <div className="flex-1 relative">
-                {/* Transliteration preview */}
+                {/* Transliteration preview - shows text in user's OWN native script */}
                 {transliterationEnabled && transliteratedText && transliteratedText !== newMessage && newMessage.trim() && (
                   <div className="absolute -top-6 left-0 right-0 px-2 py-0.5 bg-primary/10 rounded-t text-[10px] text-primary truncate border border-b-0 border-primary/20">
                     {isConverting ? (
@@ -1201,19 +1210,19 @@ const DraggableMiniChatWindow = ({
                     ) : (
                       <span className="flex items-center gap-1">
                         <Languages className="h-2.5 w-2.5" />
-                        {transliteratedText}
+                        <span className="font-medium">{currentUserLanguage}:</span> {transliteratedText}
                       </span>
                     )}
                   </div>
                 )}
                 <Input
-                  placeholder={`Type in English → ${partnerLanguage}`}
+                  placeholder="Type in English..."
                   value={newMessage}
                   onChange={(e) => {
                     const value = e.target.value;
                     setNewMessage(value);
                     handleTyping();
-                    // Trigger real-time transliteration
+                    // Trigger real-time transliteration to user's own language
                     if (transliterationEnabled) {
                       handleTransliterationInput(value);
                     }
