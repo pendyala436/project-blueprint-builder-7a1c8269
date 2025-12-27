@@ -2584,6 +2584,7 @@ export type Database = {
       }
       user_status: {
         Row: {
+          active_chat_count: number | null
           created_at: string
           id: string
           is_online: boolean
@@ -2593,6 +2594,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
@@ -2602,6 +2604,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
