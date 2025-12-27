@@ -1,5 +1,22 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+/**
+ * useMultilingualChat Hook
+ * 
+ * Refactored to use the dl-translate inspired translation module
+ * Provides multilingual chat functionality with:
+ * 1. Latin-to-native script conversion
+ * 2. Auto-translation between languages
+ * 3. Live preview for sender
+ * 
+ * Uses NLLB-200 model via Hugging Face for 200+ language support
+ */
+
+import { useCallback, useEffect } from 'react';
+import { 
+  useTranslator, 
+  isSameLanguage as checkSameLanguage,
+  isLatinScript,
+  isLatinScriptLanguage 
+} from '@/lib/translation';
 
 interface TranslationResult {
   translatedMessage: string;
@@ -39,99 +56,66 @@ export const useMultilingualChat = ({
   partnerLanguage = '',
   enabled = true
 }: UseMultilingualChatOptions) => {
-  const cacheRef = useRef<Map<string, TranslationResult>>(new Map());
   
-  // Live preview state for sender's native language translation
-  const [livePreview, setLivePreview] = useState<LivePreviewResult>({
-    originalText: '',
-    previewText: '',
-    isConverting: false,
-    targetLanguage: currentUserLanguage
+  // Use the new translation hook
+  const {
+    translate,
+    convertScript,
+    livePreview: translatorLivePreview,
+    updateLivePreview: translatorUpdatePreview,
+    clearLivePreview: translatorClearPreview,
+    clearCache: translatorClearCache,
+    isTranslating
+  } = useTranslator({
+    userLanguage: currentUserLanguage,
+    partnerLanguage,
+    enableLivePreview: enabled,
+    previewDebounceMs: 300
   });
-  
-  // Debounce timer for live preview
-  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   /**
    * Check if sender and receiver share the same language (skip translation)
    */
   const isSameLanguage = useCallback((): boolean => {
     if (!partnerLanguage) return false;
-    const senderLang = currentUserLanguage.toLowerCase().trim();
-    const receiverLang = partnerLanguage.toLowerCase().trim();
-    return senderLang === receiverLang;
+    return checkSameLanguage(currentUserLanguage, partnerLanguage);
   }, [currentUserLanguage, partnerLanguage]);
-  
-  // List of Latin-script languages (no conversion needed)
-  const latinLanguages = [
-    'english', 'spanish', 'french', 'german', 'portuguese', 'italian',
-    'dutch', 'polish', 'romanian', 'swedish', 'danish', 'norwegian',
-    'finnish', 'czech', 'hungarian', 'vietnamese', 'indonesian', 'malay',
-    'tagalog', 'filipino', 'swahili', 'turkish', 'croatian', 'slovenian'
-  ];
 
   /**
    * Check if a language uses Latin script
    */
   const isLatinLanguage = useCallback((lang: string): boolean => {
-    return latinLanguages.includes(lang.toLowerCase().trim());
+    return isLatinScriptLanguage(lang);
   }, []);
 
   /**
    * Check if text is primarily in Latin script
    */
   const isLatinText = useCallback((text: string): boolean => {
-    if (!text.trim()) return true;
-    const latinChars = text.match(/[a-zA-Z]/g);
-    const totalChars = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
-    if (!latinChars || !totalChars.length) return true;
-    return (latinChars.length / totalChars.length) > 0.6;
+    return isLatinScript(text);
   }, []);
 
   /**
    * Convert Latin text to user's native script (transliteration)
-   * Called BEFORE sending a message
-   * 
-   * Example: "namaste" typed by Hindi user → "नमस्ते"
    */
   const convertToNativeScript = useCallback(async (
     text: string,
     targetLanguage: string
   ): Promise<string> => {
     if (!enabled || !text.trim()) return text;
-    
-    // Skip if target language uses Latin script
-    if (isLatinLanguage(targetLanguage)) return text;
-    
-    // Skip if text is already in non-Latin script
-    if (!isLatinText(text)) return text;
+    if (isLatinScriptLanguage(targetLanguage)) return text;
+    if (!isLatinScript(text)) return text;
     
     try {
-      const { data, error } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          targetLanguage: targetLanguage,
-          mode: 'convert'
-        }
-      });
-
-      if (error) {
-        console.error('[MultilingualChat] Conversion error:', error);
-        return text;
-      }
-
-      return data?.convertedMessage || data?.translatedMessage || text;
+      return await convertScript(text, targetLanguage);
     } catch (err) {
-      console.error('[MultilingualChat] Failed to convert:', err);
+      console.error('[MultilingualChat] Conversion error:', err);
       return text;
     }
-  }, [enabled, isLatinLanguage, isLatinText]);
+  }, [enabled, convertScript]);
 
   /**
    * Translate a message to a target language
-   * Called when DISPLAYING messages to the receiver
-   * 
-   * Example: Hindi message "नमस्ते" displayed to Tamil user → "வணக்கம்"
    */
   const translateMessage = useCallback(async (
     text: string,
@@ -141,159 +125,55 @@ export const useMultilingualChat = ({
       return { translatedMessage: text, isTranslated: false };
     }
 
-    // Check cache first
-    const cacheKey = `translate:${targetLanguage}:${text}`;
-    if (cacheRef.current.has(cacheKey)) {
-      return cacheRef.current.get(cacheKey)!;
-    }
-
     try {
-      const { data, error } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          targetLanguage: targetLanguage,
-          mode: 'auto' // Auto-detect source and translate
-        }
-      });
-
-      if (error) {
-        console.error('[MultilingualChat] Translation error:', error);
-        return { translatedMessage: text, isTranslated: false };
-      }
-
-      const result: TranslationResult = {
-        translatedMessage: data?.translatedMessage || text,
-        isTranslated: data?.isTranslated || false,
-        detectedLanguage: data?.detectedLanguage,
-        sourceLanguageCode: data?.sourceLanguageCode,
-        targetLanguageCode: data?.targetLanguageCode
-      };
-
-      // Cache the result
-      cacheRef.current.set(cacheKey, result);
+      const result = await translate(text, { targetLanguage });
       
-      // Limit cache size
-      if (cacheRef.current.size > 500) {
-        const firstKey = cacheRef.current.keys().next().value;
-        if (firstKey) cacheRef.current.delete(firstKey);
-      }
-
-      return result;
+      return {
+        translatedMessage: result.translatedText,
+        isTranslated: result.isTranslated,
+        detectedLanguage: result.sourceLanguage,
+        sourceLanguageCode: result.sourceCode,
+        targetLanguageCode: result.targetCode
+      };
     } catch (err) {
-      console.error('[MultilingualChat] Failed to translate:', err);
+      console.error('[MultilingualChat] Translation error:', err);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [enabled]);
+  }, [enabled, translate]);
 
   /**
    * Update live preview as user types
-   * Shows real-time translation to sender's native language
-   * 
-   * @param inputText - Current text in the input field
    */
   const updateLivePreview = useCallback((inputText: string) => {
-    if (!enabled || !inputText.trim()) {
-      setLivePreview(prev => ({
-        ...prev,
-        originalText: '',
-        previewText: '',
-        isConverting: false
-      }));
-      return;
-    }
-
-    // Skip preview for non-Latin input (already in native script)
-    if (!isLatinText(inputText)) {
-      setLivePreview(prev => ({
-        ...prev,
-        originalText: inputText,
-        previewText: '',
-        isConverting: false
-      }));
-      return;
-    }
-
-    // Skip preview for Latin languages (no conversion needed)
-    if (isLatinLanguage(currentUserLanguage)) {
-      setLivePreview(prev => ({
-        ...prev,
-        originalText: inputText,
-        previewText: '',
-        isConverting: false
-      }));
-      return;
-    }
-
-    // Set converting state
-    setLivePreview(prev => ({
-      ...prev,
-      originalText: inputText,
-      isConverting: true
-    }));
-
-    // Debounce the API call
-    if (previewDebounceRef.current) {
-      clearTimeout(previewDebounceRef.current);
-    }
-
-    previewDebounceRef.current = setTimeout(async () => {
-      try {
-        const converted = await convertToNativeScript(inputText, currentUserLanguage);
-        
-        // Only show preview if it's different from original
-        if (converted !== inputText) {
-          setLivePreview({
-            originalText: inputText,
-            previewText: converted,
-            isConverting: false,
-            targetLanguage: currentUserLanguage
-          });
-        } else {
-          setLivePreview(prev => ({
-            ...prev,
-            previewText: '',
-            isConverting: false
-          }));
-        }
-      } catch (err) {
-        console.error('[MultilingualChat] Live preview error:', err);
-        setLivePreview(prev => ({
-          ...prev,
-          previewText: '',
-          isConverting: false
-        }));
-      }
-    }, 300); // 300ms debounce for smooth typing
-  }, [enabled, currentUserLanguage, isLatinText, isLatinLanguage, convertToNativeScript]);
+    if (!enabled) return;
+    translatorUpdatePreview(inputText);
+  }, [enabled, translatorUpdatePreview]);
 
   /**
-   * Clear live preview (call after sending message)
+   * Clear live preview
    */
   const clearLivePreview = useCallback(() => {
-    if (previewDebounceRef.current) {
-      clearTimeout(previewDebounceRef.current);
-    }
-    setLivePreview({
-      originalText: '',
-      previewText: '',
-      isConverting: false,
-      targetLanguage: currentUserLanguage
-    });
-  }, [currentUserLanguage]);
+    translatorClearPreview();
+  }, [translatorClearPreview]);
 
   /**
-   * Process an outgoing message before sending:
-   * 1. Convert Latin input to sender's native script
-   * 
-   * @param messageText - The raw text the user typed
-   * @returns The message in sender's native script (ready to store)
+   * Get live preview in the expected format
+   */
+  const livePreview: LivePreviewResult = {
+    originalText: translatorLivePreview?.originalText || '',
+    previewText: translatorLivePreview?.previewText || '',
+    isConverting: translatorLivePreview?.isLoading || isTranslating,
+    targetLanguage: currentUserLanguage
+  };
+
+  /**
+   * Process an outgoing message before sending
    */
   const processOutgoingMessage = useCallback(async (
     messageText: string
   ): Promise<string> => {
     if (!enabled || !messageText.trim()) return messageText;
 
-    // Convert Latin typing to user's native script
     const convertedMessage = await convertToNativeScript(messageText, currentUserLanguage);
     
     console.log('[MultilingualChat] Outgoing:', {
@@ -308,13 +188,7 @@ export const useMultilingualChat = ({
   }, [enabled, currentUserLanguage, partnerLanguage, convertToNativeScript, isSameLanguage]);
 
   /**
-   * Process an incoming message for display:
-   * 1. Skip translation if same language
-   * 2. Translate to current user's language if different
-   * 
-   * @param messageText - The stored message (in sender's language)
-   * @param senderLanguage - Optional: explicit sender language for skip check
-   * @returns Translation result with translated text
+   * Process an incoming message for display
    */
   const processIncomingMessage = useCallback(async (
     messageText: string,
@@ -324,11 +198,9 @@ export const useMultilingualChat = ({
       return { translatedMessage: messageText, isTranslated: false };
     }
 
-    // Check if sender and receiver have same language - skip translation
-    const senderLang = (senderLanguage || partnerLanguage).toLowerCase().trim();
-    const receiverLang = currentUserLanguage.toLowerCase().trim();
+    const senderLang = senderLanguage || partnerLanguage;
     
-    if (senderLang && senderLang === receiverLang) {
+    if (senderLang && checkSameLanguage(senderLang, currentUserLanguage)) {
       console.log('[MultilingualChat] Same language, skipping translation:', senderLang);
       return { 
         translatedMessage: messageText, 
@@ -337,7 +209,6 @@ export const useMultilingualChat = ({
       };
     }
 
-    // Translate to current user's language
     const result = await translateMessage(messageText, currentUserLanguage);
     
     console.log('[MultilingualChat] Incoming:', {
@@ -355,17 +226,8 @@ export const useMultilingualChat = ({
    * Clear translation cache
    */
   const clearCache = useCallback(() => {
-    cacheRef.current.clear();
-  }, []);
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (previewDebounceRef.current) {
-        clearTimeout(previewDebounceRef.current);
-      }
-    };
-  }, []);
+    translatorClearCache();
+  }, [translatorClearCache]);
 
   return {
     // Core functions
