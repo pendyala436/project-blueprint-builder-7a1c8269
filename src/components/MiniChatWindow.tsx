@@ -270,22 +270,16 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
-  // Auto-translate a message
+  // Auto-translate a message to current user's language
   const translateMessage = async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Only translate messages from partner (not our own messages)
-    if (senderId === currentUserId) {
-      return {};
-    }
-
     try {
       const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
           message: text,
-          // sourceLanguage is auto-detected from text
           targetLanguage: currentUserLanguage 
         }
       });
@@ -295,9 +289,12 @@ const MiniChatWindow = ({
         return {};
       }
 
+      // Check if translation is different from original
+      const isTranslated = data.translatedMessage && data.translatedMessage !== text;
+      
       return {
         translatedMessage: data.translatedMessage,
-        isTranslated: data.isTranslated,
+        isTranslated,
         detectedLanguage: data.detectedLanguage
       };
     } catch (err) {
@@ -315,15 +312,16 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      // Translate messages from partner
+      // Translate ALL messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
+          // Translate to current user's language (for both incoming and outgoing)
           const translation = await translateMessage(m.message, m.sender_id);
           return {
             id: m.id,
             senderId: m.sender_id,
-            message: m.message,
-            translatedMessage: translation.translatedMessage,
+            message: m.message, // Original message (in sender's language)
+            translatedMessage: translation.translatedMessage, // In current user's language
             isTranslated: translation.isTranslated,
             detectedLanguage: translation.detectedLanguage,
             createdAt: m.created_at
@@ -407,15 +405,11 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
-  // Convert English typing to user's OWN native script (for preview)
-  // Then translate to partner's language before sending
-  const convertAndTranslateMessage = async (text: string): Promise<{
-    userScript: string;  // Message in user's own native script
-    partnerScript: string;  // Message translated to partner's language
-  }> => {
+  // Convert English typing to user's OWN native script
+  // Store in sender's language - receiver will translate on their end
+  const convertToUserScript = async (text: string): Promise<string> => {
     try {
-      // First: Convert to user's own native script (what they see)
-      const { data: userConvert, error: userError } = await supabase.functions.invoke("translate-message", {
+      const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
           message: text,
           targetLanguage: currentUserLanguage,
@@ -423,24 +417,11 @@ const MiniChatWindow = ({
         }
       });
 
-      const userScript = userError ? text : (userConvert?.convertedMessage || userConvert?.translatedMessage || text);
-
-      // Second: Translate to partner's language (what partner receives)
-      const { data: partnerTranslate, error: partnerError } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message: userScript, // Use converted text as source
-          sourceLanguage: currentUserLanguage,
-          targetLanguage: partnerLanguage,
-          mode: "translate"
-        }
-      });
-
-      const partnerScript = partnerError ? userScript : (partnerTranslate?.translatedMessage || userScript);
-
-      return { userScript, partnerScript };
+      if (error) return text;
+      return data?.convertedMessage || data?.translatedMessage || text;
     } catch (err) {
-      console.error("Conversion/translation failed:", err);
-      return { userScript: text, partnerScript: text };
+      console.error("Conversion failed:", err);
+      return text;
     }
   };
 
@@ -469,8 +450,8 @@ const MiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Convert to user's native script and translate to partner's language
-      const { partnerScript } = await convertAndTranslateMessage(messageText);
+      // Convert to user's native script (store in sender's language)
+      const userScript = await convertToUserScript(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -478,7 +459,7 @@ const MiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: partnerScript // Send message in partner's language
+          message: userScript // Store in sender's language
         });
 
       if (error) throw error;
@@ -690,24 +671,18 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Outgoing: show in partner's language (already translated) */}
-                    {/* Incoming: show translated to user's language */}
-                    {msg.senderId === currentUserId ? (
-                      <div className="space-y-0.5">
-                        <p>{msg.message}</p>
-                        <p className="text-[8px] opacity-50 mt-0.5">
-                          → {partnerLanguage}
-                        </p>
-                      </div>
-                    ) : msg.isTranslated && msg.translatedMessage ? (
+                    {/* Show translated message in current user's language */}
+                    {msg.translatedMessage ? (
                       <div className="space-y-0.5">
                         <p>{msg.translatedMessage}</p>
-                        <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                          {msg.message}
-                          {msg.detectedLanguage && (
-                            <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                          )}
-                        </p>
+                        {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                            {msg.message}
+                            {msg.detectedLanguage && (
+                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       msg.message
