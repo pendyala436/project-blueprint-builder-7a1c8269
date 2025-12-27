@@ -11,32 +11,84 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Script detection patterns for language detection
+// Complete script detection for ALL world languages
 const scriptPatterns = [
-  { regex: /[\u0900-\u097F]/, language: "hindi", native: "हिंदी" },
-  { regex: /[\u0980-\u09FF]/, language: "bengali", native: "বাংলা" },
-  { regex: /[\u0C00-\u0C7F]/, language: "telugu", native: "తెలుగు" },
-  { regex: /[\u0B80-\u0BFF]/, language: "tamil", native: "தமிழ்" },
-  { regex: /[\u0A80-\u0AFF]/, language: "gujarati", native: "ગુજરાતી" },
-  { regex: /[\u0C80-\u0CFF]/, language: "kannada", native: "ಕನ್ನಡ" },
-  { regex: /[\u0D00-\u0D7F]/, language: "malayalam", native: "മലയാളം" },
-  { regex: /[\u0A00-\u0A7F]/, language: "punjabi", native: "ਪੰਜਾਬੀ" },
-  { regex: /[\u0B00-\u0B7F]/, language: "odia", native: "ଓଡ଼ିଆ" },
-  { regex: /[\u4E00-\u9FFF]/, language: "chinese", native: "中文" },
-  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: "japanese", native: "日本語" },
-  { regex: /[\uAC00-\uD7AF]/, language: "korean", native: "한국어" },
-  { regex: /[\u0E00-\u0E7F]/, language: "thai", native: "ไทย" },
-  { regex: /[\u0600-\u06FF]/, language: "arabic", native: "العربية" },
-  { regex: /[\u0590-\u05FF]/, language: "hebrew", native: "עברית" },
-  { regex: /[\u0400-\u04FF]/, language: "russian", native: "Русский" },
-  { regex: /[\u0D80-\u0DFF]/, language: "sinhala", native: "සිංහල" },
-  { regex: /[\u1000-\u109F]/, language: "burmese", native: "မြန်မာ" },
-  { regex: /[\u1780-\u17FF]/, language: "khmer", native: "ខ្មែរ" },
-  { regex: /[\u0370-\u03FF]/, language: "greek", native: "Ελληνικά" },
-  { regex: /[\u10A0-\u10FF]/, language: "georgian", native: "ქართული" },
-  { regex: /[\u0530-\u058F]/, language: "armenian", native: "Հայերdelays" },
-  { regex: /[\u1200-\u137F]/, language: "amharic", native: "አማርኛ" },
+  // South Asian
+  { regex: /[\u0900-\u097F]/, language: "hindi" },
+  { regex: /[\u0980-\u09FF]/, language: "bengali" },
+  { regex: /[\u0C00-\u0C7F]/, language: "telugu" },
+  { regex: /[\u0B80-\u0BFF]/, language: "tamil" },
+  { regex: /[\u0A80-\u0AFF]/, language: "gujarati" },
+  { regex: /[\u0C80-\u0CFF]/, language: "kannada" },
+  { regex: /[\u0D00-\u0D7F]/, language: "malayalam" },
+  { regex: /[\u0A00-\u0A7F]/, language: "punjabi" },
+  { regex: /[\u0B00-\u0B7F]/, language: "odia" },
+  { regex: /[\u0D80-\u0DFF]/, language: "sinhala" },
+  // East Asian
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: "chinese" },
+  { regex: /[\u3040-\u309F\u30A0-\u30FF\u31F0-\u31FF]/, language: "japanese" },
+  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: "korean" },
+  // Southeast Asian
+  { regex: /[\u0E00-\u0E7F]/, language: "thai" },
+  { regex: /[\u0E80-\u0EFF]/, language: "lao" },
+  { regex: /[\u1000-\u109F]/, language: "burmese" },
+  { regex: /[\u1780-\u17FF]/, language: "khmer" },
+  { regex: /[\u1A00-\u1A1F]/, language: "buginese" },
+  { regex: /[\u1B00-\u1B7F]/, language: "balinese" },
+  { regex: /[\u1980-\u19DF]/, language: "tai_lue" },
+  { regex: /[\uA980-\uA9DF]/, language: "javanese" },
+  // Middle Eastern
+  { regex: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/, language: "arabic" },
+  { regex: /[\u0590-\u05FF]/, language: "hebrew" },
+  { regex: /[\u0700-\u074F]/, language: "syriac" },
+  // Cyrillic (Eastern European)
+  { regex: /[\u0400-\u04FF]/, language: "russian" },
+  // Greek
+  { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, language: "greek" },
+  // Caucasian
+  { regex: /[\u10A0-\u10FF]/, language: "georgian" },
+  { regex: /[\u0530-\u058F]/, language: "armenian" },
+  // African
+  { regex: /[\u1200-\u137F\u1380-\u139F]/, language: "amharic" },
+  { regex: /[\u2D30-\u2D7F]/, language: "tifinagh" },
+  { regex: /[\uA6A0-\uA6FF]/, language: "bamum" },
+  { regex: /[\u07C0-\u07FF]/, language: "nko" },
+  // Indic Extended
+  { regex: /[\u0F00-\u0FFF]/, language: "tibetan" },
+  { regex: /[\u1900-\u194F]/, language: "limbu" },
+  { regex: /[\u11800-\u1184F]/, language: "dogra" },
+  { regex: /[\uA800-\uA82F]/, language: "syloti_nagri" },
+  { regex: /[\u1C00-\u1C4F]/, language: "lepcha" },
+  { regex: /[\u1C50-\u1C7F]/, language: "ol_chiki" },
+  { regex: /[\uABC0-\uABFF]/, language: "meetei_mayek" },
+  // Canadian Aboriginal
+  { regex: /[\u1400-\u167F]/, language: "canadian_aboriginal" },
+  // Cherokee
+  { regex: /[\u13A0-\u13FF]/, language: "cherokee" },
+  // Mongolian
+  { regex: /[\u1800-\u18AF]/, language: "mongolian" },
 ];
+
+// Language aliases for normalization
+const languageAliases: Record<string, string> = {
+  bangla: "bengali",
+  oriya: "odia",
+  farsi: "persian",
+  mandarin: "chinese",
+  cantonese: "chinese",
+  taiwanese: "chinese",
+  simplified_chinese: "chinese",
+  traditional_chinese: "chinese",
+  brazilian: "portuguese",
+  mexican: "spanish",
+  argentinian: "spanish",
+  castilian: "spanish",
+  flemish: "dutch",
+  ukrainian: "russian",
+  belarusian: "russian",
+  serbian: "russian",
+  bulgarian: "russian",
+};
 
 function detectLanguageFromText(text: string): { language: string; isLatin: boolean } {
   const trimmed = text.trim();
@@ -48,24 +100,21 @@ function detectLanguageFromText(text: string): { language: string; isLatin: bool
     }
   }
 
-  // Check if Latin script
-  const latinChars = trimmed.match(/[a-zA-Z]/g) || [];
-  const isLatin = latinChars.length / trimmed.replace(/\s/g, '').length > 0.5;
+  // Check if Latin script (covers most European languages)
+  const latinChars = trimmed.match(/[a-zA-ZÀ-ÿĀ-žƀ-ɏ]/g) || [];
+  const totalChars = trimmed.replace(/\s/g, '').length;
+  const isLatin = totalChars > 0 && latinChars.length / totalChars > 0.5;
 
   return { language: "english", isLatin };
 }
 
+function normalizeLanguage(lang: string): string {
+  const normalized = lang.toLowerCase().trim().replace(/[_-]/g, '_');
+  return languageAliases[normalized] || normalized;
+}
+
 function isSameLanguage(lang1: string, lang2: string): boolean {
-  const normalize = (l: string) => l.toLowerCase().trim();
-  const aliases: Record<string, string> = {
-    bangla: "bengali",
-    oriya: "odia",
-    farsi: "persian",
-    mandarin: "chinese",
-  };
-  const n1 = aliases[normalize(lang1)] || normalize(lang1);
-  const n2 = aliases[normalize(lang2)] || normalize(lang2);
-  return n1 === n2;
+  return normalizeLanguage(lang1) === normalizeLanguage(lang2);
 }
 
 serve(async (req) => {
