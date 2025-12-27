@@ -690,8 +690,16 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Show translated message if available, otherwise original */}
-                    {msg.isTranslated && msg.translatedMessage ? (
+                    {/* Outgoing: show in partner's language (already translated) */}
+                    {/* Incoming: show translated to user's language */}
+                    {msg.senderId === currentUserId ? (
+                      <div className="space-y-0.5">
+                        <p>{msg.message}</p>
+                        <p className="text-[8px] opacity-50 mt-0.5">
+                          → {partnerLanguage}
+                        </p>
+                      </div>
+                    ) : msg.isTranslated && msg.translatedMessage ? (
                       <div className="space-y-0.5">
                         <p>{msg.translatedMessage}</p>
                         <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">

@@ -1102,7 +1102,16 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
+                      ) : msg.senderId === currentUserId ? (
+                        // Outgoing message: display in partner's language (already translated)
+                        <div className="space-y-0.5">
+                          <p>{msg.message}</p>
+                          <p className="text-[8px] opacity-50 mt-0.5">
+                            → {partnerLanguage}
+                          </p>
+                        </div>
                       ) : msg.isTranslated && msg.translatedMessage ? (
+                        // Incoming: show translated to user's language
                         <div className="space-y-0.5">
                           <p>{msg.translatedMessage}</p>
                           <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
