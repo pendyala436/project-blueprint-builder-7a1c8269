@@ -1,7 +1,12 @@
 /**
  * Translate Message Edge Function
  * Uses LibreTranslate (Open-Source) for unlimited free translation
- * No API keys required - fully open-source solution
+ * Supports transliteration + translation workflow
+ * 
+ * Flow for romanized input:
+ * 1. User types "bagunnava" (Telugu in Latin script)
+ * 2. First transliterate to Telugu script: "బాగున్నావా"
+ * 3. Then translate from Telugu to Bengali: "ভালো আছো"
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -160,6 +165,15 @@ const languageAliases: Record<string, string> = {
   flemish: "dutch",
 };
 
+// Languages that use non-Latin scripts
+const nonLatinLanguages = new Set([
+  "hindi", "bengali", "telugu", "tamil", "gujarati", "kannada", "malayalam",
+  "punjabi", "odia", "marathi", "urdu", "nepali", "sinhala",
+  "chinese", "japanese", "korean", "thai", "burmese", "khmer", "lao",
+  "arabic", "persian", "hebrew", "russian", "ukrainian", "bulgarian",
+  "greek", "georgian", "armenian", "amharic", "tibetan"
+]);
+
 function detectLanguageFromText(text: string): { language: string; isLatin: boolean; libreCode: string } {
   const trimmed = text.trim();
   if (!trimmed) return { language: "english", isLatin: true, libreCode: "en" };
@@ -189,6 +203,15 @@ function getLibreCode(language: string): string {
 
 function isSameLanguage(lang1: string, lang2: string): boolean {
   return normalizeLanguage(lang1) === normalizeLanguage(lang2);
+}
+
+function isLatinScript(text: string): boolean {
+  const detected = detectLanguageFromText(text);
+  return detected.isLatin;
+}
+
+function isNonLatinLanguage(language: string): boolean {
+  return nonLatinLanguages.has(normalizeLanguage(language));
 }
 
 // Translate using LibreTranslate API (open-source, free)
@@ -247,6 +270,30 @@ async function translateWithLibre(
   return { translatedText: text, success: false };
 }
 
+/**
+ * Transliterate Latin text to native script using translation
+ * This converts "bagunnava" → "బాగున్నావా" by translating from English
+ */
+async function transliterateToNativeScript(
+  latinText: string,
+  targetLanguage: string
+): Promise<{ text: string; success: boolean }> {
+  const targetCode = getLibreCode(targetLanguage);
+  
+  console.log(`[translate-message] Transliterating to ${targetLanguage} (${targetCode})`);
+  
+  // Use translation from English to target language
+  // This effectively transliterates common phrases and words
+  const result = await translateWithLibre(latinText, "en", targetCode);
+  
+  // If the result is still in Latin, the transliteration didn't work
+  if (result.success && !isLatinScript(result.translatedText)) {
+    return { text: result.translatedText, success: true };
+  }
+  
+  return { text: latinText, success: false };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -265,7 +312,7 @@ serve(async (req) => {
     } = body;
 
     const inputText = text || message;
-    console.log(`[translate-message] Mode: ${mode}, Input length: ${inputText?.length}`);
+    console.log(`[translate-message] Mode: ${mode}, Input: "${inputText?.substring(0, 50)}"`);
 
     if (!inputText) {
       return new Response(
@@ -274,15 +321,87 @@ serve(async (req) => {
       );
     }
 
-    // Detect source language
+    // Detect source language from text
     const detected = detectLanguageFromText(inputText);
     const effectiveSource = sourceLanguage || senderLanguage || detected.language;
     const effectiveTarget = targetLanguage || receiverLanguage || "english";
+    const inputIsLatin = detected.isLatin;
 
-    console.log(`[translate-message] Detected: ${detected.language}, Source: ${effectiveSource}, Target: ${effectiveTarget}`);
+    console.log(`[translate-message] Detected: ${detected.language}, isLatin: ${inputIsLatin}`);
+    console.log(`[translate-message] Source: ${effectiveSource}, Target: ${effectiveTarget}`);
 
-    // Same language - no translation needed
+    // Special case: Latin input but source is non-Latin language
+    // This means user typed romanized text (e.g., "bagunnava" for Telugu)
+    // We need to:
+    // 1. First convert to source language script (transliterate)
+    // 2. Then translate to target language
+    if (inputIsLatin && isNonLatinLanguage(effectiveSource) && !isSameLanguage(effectiveSource, effectiveTarget)) {
+      console.log(`[translate-message] Romanized input detected for ${effectiveSource}`);
+      
+      // Step 1: Transliterate Latin to source language script
+      // e.g., "bagunnava" → translate to Telugu → "బాగున్నావా"
+      const transliterated = await transliterateToNativeScript(inputText, effectiveSource);
+      
+      if (transliterated.success) {
+        console.log(`[translate-message] Transliterated: "${inputText}" → "${transliterated.text}"`);
+        
+        // Step 2: Now translate from source native script to target language
+        const sourceCode = getLibreCode(effectiveSource);
+        const targetCode = getLibreCode(effectiveTarget);
+        
+        console.log(`[translate-message] Now translating ${sourceCode} → ${targetCode}`);
+        
+        const { translatedText, success } = await translateWithLibre(
+          transliterated.text,
+          sourceCode,
+          targetCode
+        );
+
+        console.log(`[translate-message] Final translation: "${transliterated.text}" → "${translatedText}"`);
+
+        return new Response(
+          JSON.stringify({
+            translatedText,
+            translatedMessage: translatedText,
+            originalText: inputText,
+            nativeScriptText: transliterated.text, // The intermediate native script version
+            isTranslated: success && translatedText !== transliterated.text,
+            wasTransliterated: true,
+            detectedLanguage: effectiveSource,
+            sourceLanguage: effectiveSource,
+            targetLanguage: effectiveTarget,
+            isSourceLatin: true,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Transliteration failed, try direct translation as fallback
+      console.log(`[translate-message] Transliteration failed, trying direct translation`);
+    }
+
+    // Same language - no translation needed (but may need script conversion)
     if (isSameLanguage(effectiveSource, effectiveTarget)) {
+      // If input is Latin but target is non-Latin, convert to native script
+      if (inputIsLatin && isNonLatinLanguage(effectiveTarget)) {
+        console.log(`[translate-message] Same language, converting to native script`);
+        const converted = await transliterateToNativeScript(inputText, effectiveTarget);
+        
+        return new Response(
+          JSON.stringify({
+            translatedText: converted.success ? converted.text : inputText,
+            translatedMessage: converted.success ? converted.text : inputText,
+            originalText: inputText,
+            isTranslated: converted.success,
+            wasTransliterated: converted.success,
+            detectedLanguage: detected.language,
+            sourceLanguage: effectiveSource,
+            targetLanguage: effectiveTarget,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       console.log('[translate-message] Same language, skipping translation');
       return new Response(
         JSON.stringify({
@@ -298,8 +417,8 @@ serve(async (req) => {
       );
     }
 
-    // Get LibreTranslate codes
-    const sourceCode = sourceLanguage || senderLanguage ? getLibreCode(effectiveSource) : "auto";
+    // Standard translation: Get LibreTranslate codes and translate
+    const sourceCode = detected.isLatin ? "en" : getLibreCode(effectiveSource);
     const targetCode = getLibreCode(effectiveTarget);
 
     console.log(`[translate-message] LibreTranslate: ${sourceCode} -> ${targetCode}`);
