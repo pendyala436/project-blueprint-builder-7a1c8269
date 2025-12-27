@@ -320,8 +320,9 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleEndCall = async () => {
+    console.log('[VideoCall] handleEndCall triggered');
     try {
-      // Update session in database
+      // Update session in database first
       await supabase
         .from('video_call_sessions')
         .update({
@@ -331,12 +332,16 @@ const DraggableVideoCallWindow = ({
         })
         .eq('call_id', callId);
       
+      console.log('[VideoCall] Database updated, calling endCall');
+      // End the P2P call
       await endCall();
+      console.log('[VideoCall] endCall completed');
     } catch (error) {
-      console.error("Error ending call:", error);
-    } finally {
-      onClose();
+      console.error("[VideoCall] Error ending call:", error);
     }
+    // Always call onClose, even if there was an error
+    console.log('[VideoCall] Calling onClose');
+    onClose();
   };
 
   const handleBlock = async () => {
@@ -538,24 +543,50 @@ const DraggableVideoCallWindow = ({
               </div>
             )}
 
+            {/* Minimize/Restore button */}
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsMinimized(!isMinimized);
+                e.preventDefault();
+                if (isMaximized) {
+                  setIsMaximized(false);
+                } else {
+                  setIsMinimized(!isMinimized);
+                }
               }}
             >
               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
+
+            {/* Maximize/Normal screen button */}
+            {!isMinimized && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsMaximized(!isMaximized);
+                }}
+              >
+                {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </Button>
+            )}
+
+            {/* Close/End Call button */}
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                handleEndCall();
+                e.preventDefault();
+                console.log('[VideoCall] Close button clicked');
+                await handleEndCall();
               }}
             >
               <X className="w-4 h-4" />
@@ -653,7 +684,12 @@ const DraggableVideoCallWindow = ({
                       variant="destructive"
                       size="sm"
                       className="rounded-full w-12 h-12"
-                      onClick={handleEndCall}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        console.log('[VideoCall] End call button clicked');
+                        await handleEndCall();
+                      }}
                     >
                       <PhoneOff className="w-5 h-5" />
                     </Button>
