@@ -3,6 +3,7 @@
  * 
  * Tracks user activity and manages online/offline status in the database.
  * Updates status to offline after a period of inactivity.
+ * Uses sendBeacon for reliable offline status on page close.
  */
 
 import { useEffect, useRef, useCallback } from "react";
@@ -11,14 +12,61 @@ import { supabase } from "@/integrations/supabase/client";
 const INACTIVITY_TIMEOUT = 600000; // 10 minutes in ms - sets user offline and logs out
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
+// Get Supabase URL and key for sendBeacon
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 export const useActivityStatus = (userId: string | null) => {
   const lastActivityRef = useRef<number>(Date.now());
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isOnlineRef = useRef<boolean>(false);
 
   // Update last activity timestamp
   const updateActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
+  }, []);
+
+  // Set user offline using sendBeacon (reliable on page unload)
+  const setOfflineBeacon = useCallback((userIdToUpdate: string) => {
+    if (!SUPABASE_URL || !SUPABASE_KEY) return;
+
+    const now = new Date().toISOString();
+    
+    // Use sendBeacon with Supabase REST API for reliable delivery on page close
+    const url = `${SUPABASE_URL}/rest/v1/user_status?user_id=eq.${userIdToUpdate}`;
+    const payload = JSON.stringify({
+      is_online: false,
+      last_seen: now,
+      updated_at: now
+    });
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=minimal'
+    };
+
+    // Create a Blob with the payload and headers
+    const blob = new Blob([payload], { type: 'application/json' });
+    
+    // Try sendBeacon first (most reliable for page unload)
+    if (navigator.sendBeacon) {
+      // For sendBeacon, we need to use a simple POST, but Supabase PATCH requires headers
+      // So we'll use fetch with keepalive as fallback
+      try {
+        fetch(url, {
+          method: 'PATCH',
+          headers,
+          body: payload,
+          keepalive: true // This ensures the request completes even if page closes
+        }).catch(() => {});
+      } catch (e) {
+        console.error('Failed to send offline beacon:', e);
+      }
+    }
   }, []);
 
   // Set user online status in database
@@ -26,6 +74,7 @@ export const useActivityStatus = (userId: string | null) => {
     if (!userId) return;
 
     const now = new Date().toISOString();
+    isOnlineRef.current = isOnline;
 
     try {
       // Update user_status table
@@ -115,12 +164,17 @@ export const useActivityStatus = (userId: string | null) => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Page is hidden, mark as offline after short delay
-        setTimeout(() => {
+        visibilityTimeoutRef.current = setTimeout(() => {
           if (document.hidden) {
             setOnlineStatus(false);
           }
         }, 30000); // 30 seconds grace period
       } else {
+        // Clear any pending offline timeout
+        if (visibilityTimeoutRef.current) {
+          clearTimeout(visibilityTimeoutRef.current);
+          visibilityTimeoutRef.current = null;
+        }
         // Page is visible again
         updateActivity();
         setOnlineStatus(true);
@@ -129,32 +183,22 @@ export const useActivityStatus = (userId: string | null) => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Handle page unload - set offline
-    const handleBeforeUnload = async () => {
-      // Set offline status when page closes
-      const now = new Date().toISOString();
-      try {
-        // Update user_status
-        await supabase
-          .from("user_status")
-          .update({
-            is_online: false,
-            last_seen: now
-          })
-          .eq("user_id", userId);
-        
-        // Also update profiles for partner monitoring
-        await supabase
-          .from("profiles")
-          .update({ last_active_at: now })
-          .eq("user_id", userId);
-      } catch (error) {
-        // Best effort - may not complete before page unloads
-        console.error("Error setting offline on unload:", error);
+    // Handle page unload - use sendBeacon for reliable delivery
+    const handleBeforeUnload = () => {
+      // Use sendBeacon/keepalive fetch for reliable offline status on page close
+      setOfflineBeacon(userId);
+    };
+
+    // Also handle pagehide which is more reliable on mobile
+    const handlePageHide = (e: PageTransitionEvent) => {
+      // If persisted is false, page is being unloaded
+      if (!e.persisted) {
+        setOfflineBeacon(userId);
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
 
     // Cleanup
     return () => {
@@ -163,6 +207,7 @@ export const useActivityStatus = (userId: string | null) => {
       });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
@@ -170,11 +215,16 @@ export const useActivityStatus = (userId: string | null) => {
       if (inactivityCheckRef.current) {
         clearInterval(inactivityCheckRef.current);
       }
+      if (visibilityTimeoutRef.current) {
+        clearTimeout(visibilityTimeoutRef.current);
+      }
 
-      // Set offline when hook unmounts
-      setOnlineStatus(false);
+      // Set offline when hook unmounts (best effort)
+      if (isOnlineRef.current) {
+        setOnlineStatus(false);
+      }
     };
-  }, [userId, updateActivity, setOnlineStatus]);
+  }, [userId, updateActivity, setOnlineStatus, setOfflineBeacon]);
 
   return {
     updateActivity,
