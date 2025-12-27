@@ -519,14 +519,12 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // Auto-translate
+  // Auto-translate a message to current user's language
   const translateMessage = async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    if (senderId === currentUserId) return {};
-
     try {
       const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
@@ -537,9 +535,11 @@ const DraggableMiniChatWindow = ({
 
       if (error) return {};
 
+      const isTranslated = data.translatedMessage && data.translatedMessage !== text;
+      
       return {
         translatedMessage: data.translatedMessage,
-        isTranslated: data.isTranslated,
+        isTranslated,
         detectedLanguage: data.detectedLanguage
       };
     } catch (err) {
@@ -556,6 +556,7 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
+      // Translate ALL messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
           const translation = await translateMessage(m.message, m.sender_id);
@@ -587,6 +588,7 @@ const DraggableMiniChatWindow = ({
         },
         async (payload: any) => {
           const newMsg = payload.new;
+          // Translate to current user's language
           const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
@@ -660,16 +662,11 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
   };
 
-  const MAX_MESSAGE_LENGTH = 2000;
-
-  // Convert English typing to user's OWN native script, then translate to partner's language
-  const convertAndTranslateMessage = async (text: string): Promise<{
-    userScript: string;  // Message in user's own native script
-    partnerScript: string;  // Message translated to partner's language
-  }> => {
+  // Convert English typing to user's OWN native script
+  // Store in sender's language - receiver will translate on their end
+  const convertToUserScript = async (text: string): Promise<string> => {
     try {
-      // First: Convert to user's own native script (what they see)
-      const { data: userConvert, error: userError } = await supabase.functions.invoke("translate-message", {
+      const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
           message: text,
           targetLanguage: currentUserLanguage,
@@ -677,26 +674,15 @@ const DraggableMiniChatWindow = ({
         }
       });
 
-      const userScript = userError ? text : (userConvert?.convertedMessage || userConvert?.translatedMessage || text);
-
-      // Second: Translate to partner's language (what partner receives)
-      const { data: partnerTranslate, error: partnerError } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message: userScript, // Use converted text as source
-          sourceLanguage: currentUserLanguage,
-          targetLanguage: partnerLanguage,
-          mode: "translate"
-        }
-      });
-
-      const partnerScript = partnerError ? userScript : (partnerTranslate?.translatedMessage || userScript);
-
-      return { userScript, partnerScript };
+      if (error) return text;
+      return data?.convertedMessage || data?.translatedMessage || text;
     } catch (err) {
-      console.error("Conversion/translation failed:", err);
-      return { userScript: text, partnerScript: text };
+      console.error("Conversion failed:", err);
+      return text;
     }
   };
+
+  const MAX_MESSAGE_LENGTH = 2000;
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
@@ -717,8 +703,8 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Convert to user's native script and translate to partner's language
-      const { partnerScript } = await convertAndTranslateMessage(messageText);
+      // Convert to user's native script (store in sender's language)
+      const userScript = await convertToUserScript(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -726,7 +712,7 @@ const DraggableMiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: partnerScript // Send message in partner's language
+          message: userScript // Store in sender's language
         });
 
       if (error) throw error;
@@ -1102,24 +1088,18 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
-                      ) : msg.senderId === currentUserId ? (
-                        // Outgoing message: display in partner's language (already translated)
-                        <div className="space-y-0.5">
-                          <p>{msg.message}</p>
-                          <p className="text-[8px] opacity-50 mt-0.5">
-                            → {partnerLanguage}
-                          </p>
-                        </div>
-                      ) : msg.isTranslated && msg.translatedMessage ? (
-                        // Incoming: show translated to user's language
+                      ) : msg.translatedMessage ? (
+                        // Show translated message in current user's language
                         <div className="space-y-0.5">
                           <p>{msg.translatedMessage}</p>
-                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                            {msg.message}
-                            {msg.detectedLanguage && (
-                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                            )}
-                          </p>
+                          {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                            <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                              {msg.message}
+                              {msg.detectedLanguage && (
+                                <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         msg.message
