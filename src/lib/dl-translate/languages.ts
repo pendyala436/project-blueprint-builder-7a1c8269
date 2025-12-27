@@ -1,71 +1,76 @@
 /**
  * DL-Translate Language Utilities
- * Language detection and mapping without client-side model
+ * Auto-detection and mapping for 50+ languages
  */
 
 import type { LanguageInfo, ScriptDetectionResult } from './types';
 
-// Language name mappings
-export const LANGUAGE_TO_CODE: Record<string, string> = {
-  english: 'en',
-  spanish: 'es',
-  french: 'fr',
-  german: 'de',
-  portuguese: 'pt',
-  italian: 'it',
-  dutch: 'nl',
-  russian: 'ru',
-  polish: 'pl',
-  ukrainian: 'uk',
-  chinese: 'zh',
-  japanese: 'ja',
-  korean: 'ko',
-  vietnamese: 'vi',
-  hindi: 'hi',
-  bengali: 'bn',
-  tamil: 'ta',
-  telugu: 'te',
-  marathi: 'mr',
-  gujarati: 'gu',
-  kannada: 'kn',
-  malayalam: 'ml',
-  punjabi: 'pa',
-  odia: 'or',
-  urdu: 'ur',
-  nepali: 'ne',
-  sinhala: 'si',
-  thai: 'th',
-  indonesian: 'id',
-  malay: 'ms',
-  tagalog: 'tl',
-  burmese: 'my',
-  khmer: 'km',
-  arabic: 'ar',
-  persian: 'fa',
-  turkish: 'tr',
-  hebrew: 'he',
-  greek: 'el',
-  czech: 'cs',
-  romanian: 'ro',
-  hungarian: 'hu',
-  swedish: 'sv',
-  danish: 'da',
-  finnish: 'fi',
-  norwegian: 'no',
-  swahili: 'sw',
-  amharic: 'am',
-  georgian: 'ka',
-  armenian: 'hy',
-};
+// Complete language mappings with native names
+export const LANGUAGES: LanguageInfo[] = [
+  { name: 'english', code: 'en', native: 'English' },
+  { name: 'hindi', code: 'hi', native: 'हिंदी' },
+  { name: 'bengali', code: 'bn', native: 'বাংলা' },
+  { name: 'tamil', code: 'ta', native: 'தமிழ்' },
+  { name: 'telugu', code: 'te', native: 'తెలుగు' },
+  { name: 'marathi', code: 'mr', native: 'मराठी' },
+  { name: 'gujarati', code: 'gu', native: 'ગુજરાતી' },
+  { name: 'kannada', code: 'kn', native: 'ಕನ್ನಡ' },
+  { name: 'malayalam', code: 'ml', native: 'മലയാളം' },
+  { name: 'punjabi', code: 'pa', native: 'ਪੰਜਾਬੀ' },
+  { name: 'odia', code: 'or', native: 'ଓଡ଼ିଆ' },
+  { name: 'urdu', code: 'ur', native: 'اردو' },
+  { name: 'nepali', code: 'ne', native: 'नेपाली' },
+  { name: 'sinhala', code: 'si', native: 'සිංහල' },
+  { name: 'spanish', code: 'es', native: 'Español' },
+  { name: 'french', code: 'fr', native: 'Français' },
+  { name: 'german', code: 'de', native: 'Deutsch' },
+  { name: 'portuguese', code: 'pt', native: 'Português' },
+  { name: 'italian', code: 'it', native: 'Italiano' },
+  { name: 'dutch', code: 'nl', native: 'Nederlands' },
+  { name: 'russian', code: 'ru', native: 'Русский' },
+  { name: 'polish', code: 'pl', native: 'Polski' },
+  { name: 'ukrainian', code: 'uk', native: 'Українська' },
+  { name: 'chinese', code: 'zh', native: '中文' },
+  { name: 'japanese', code: 'ja', native: '日本語' },
+  { name: 'korean', code: 'ko', native: '한국어' },
+  { name: 'vietnamese', code: 'vi', native: 'Tiếng Việt' },
+  { name: 'thai', code: 'th', native: 'ไทย' },
+  { name: 'indonesian', code: 'id', native: 'Bahasa Indonesia' },
+  { name: 'malay', code: 'ms', native: 'Bahasa Melayu' },
+  { name: 'tagalog', code: 'tl', native: 'Tagalog' },
+  { name: 'burmese', code: 'my', native: 'မြန်မာ' },
+  { name: 'khmer', code: 'km', native: 'ខ្មែរ' },
+  { name: 'arabic', code: 'ar', native: 'العربية' },
+  { name: 'persian', code: 'fa', native: 'فارسی' },
+  { name: 'turkish', code: 'tr', native: 'Türkçe' },
+  { name: 'hebrew', code: 'he', native: 'עברית' },
+  { name: 'greek', code: 'el', native: 'Ελληνικά' },
+  { name: 'czech', code: 'cs', native: 'Čeština' },
+  { name: 'romanian', code: 'ro', native: 'Română' },
+  { name: 'hungarian', code: 'hu', native: 'Magyar' },
+  { name: 'swedish', code: 'sv', native: 'Svenska' },
+  { name: 'danish', code: 'da', native: 'Dansk' },
+  { name: 'finnish', code: 'fi', native: 'Suomi' },
+  { name: 'norwegian', code: 'no', native: 'Norsk' },
+  { name: 'swahili', code: 'sw', native: 'Kiswahili' },
+  { name: 'amharic', code: 'am', native: 'አማርኛ' },
+  { name: 'georgian', code: 'ka', native: 'ქართული' },
+  { name: 'armenian', code: 'hy', native: 'Հայdelays' },
+];
+
+// Language name to code mapping
+export const LANGUAGE_TO_CODE: Record<string, string> = LANGUAGES.reduce(
+  (acc, lang) => ({ ...acc, [lang.name]: lang.code }),
+  {}
+);
 
 // Code to language name
-export const CODE_TO_LANGUAGE: Record<string, string> = Object.entries(LANGUAGE_TO_CODE)
-  .reduce((acc, [name, code]) => {
-    if (!acc[code]) acc[code] = name;
-    return acc;
-  }, {} as Record<string, string>);
+export const CODE_TO_LANGUAGE: Record<string, string> = LANGUAGES.reduce(
+  (acc, lang) => ({ ...acc, [lang.code]: lang.name }),
+  {}
+);
 
-// Script patterns for detection
+// Script patterns for auto-detection
 const SCRIPT_PATTERNS: Array<{ regex: RegExp; script: string; language: string }> = [
   { regex: /[\u0900-\u097F]/, script: 'Devanagari', language: 'hindi' },
   { regex: /[\u0980-\u09FF]/, script: 'Bengali', language: 'bengali' },
@@ -92,11 +97,84 @@ const SCRIPT_PATTERNS: Array<{ regex: RegExp; script: string; language: string }
   { regex: /[\u0370-\u03FF]/, script: 'Greek', language: 'greek' },
 ];
 
+// Language aliases
+const LANGUAGE_ALIASES: Record<string, string> = {
+  bangla: 'bengali',
+  oriya: 'odia',
+  farsi: 'persian',
+  mandarin: 'chinese',
+  filipino: 'tagalog',
+};
+
+/**
+ * Detect script and language from text (auto-detection)
+ */
+export function detectScript(text: string): ScriptDetectionResult {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { script: 'Latin', language: 'english', isLatin: true, confidence: 1 };
+  }
+
+  for (const pattern of SCRIPT_PATTERNS) {
+    if (pattern.regex.test(trimmed)) {
+      const matches = trimmed.match(pattern.regex) || [];
+      const confidence = Math.min(matches.length / trimmed.replace(/\s/g, '').length, 1);
+      return {
+        script: pattern.script,
+        language: pattern.language,
+        isLatin: false,
+        confidence,
+      };
+    }
+  }
+
+  // Check Latin script
+  const latinChars = trimmed.match(/[a-zA-Z]/g) || [];
+  const totalChars = trimmed.replace(/\s/g, '').length;
+  const isLatin = totalChars > 0 && latinChars.length / totalChars > 0.5;
+
+  return {
+    script: 'Latin',
+    language: 'english',
+    isLatin,
+    confidence: isLatin ? latinChars.length / totalChars : 0.5,
+  };
+}
+
+/**
+ * Auto-detect language from text
+ */
+export function detectLanguage(text: string): string {
+  return detectScript(text).language;
+}
+
+/**
+ * Check if text is Latin script
+ */
+export function isLatinScript(text: string): boolean {
+  return detectScript(text).isLatin;
+}
+
+/**
+ * Normalize language name
+ */
+export function normalizeLanguage(lang: string): string {
+  const normalized = lang.toLowerCase().trim();
+  return LANGUAGE_ALIASES[normalized] || normalized;
+}
+
+/**
+ * Check if two languages are the same
+ */
+export function isSameLanguage(lang1: string, lang2: string): boolean {
+  return normalizeLanguage(lang1) === normalizeLanguage(lang2);
+}
+
 /**
  * Get language code from name
  */
 export function getCode(language: string): string {
-  const normalized = language.toLowerCase().trim();
+  const normalized = normalizeLanguage(language);
   return LANGUAGE_TO_CODE[normalized] || 'en';
 }
 
@@ -108,59 +186,17 @@ export function getLanguage(code: string): string {
 }
 
 /**
- * Check if text is Latin script
+ * Get native name for a language
  */
-export function isLatinScript(text: string): boolean {
-  const latinChars = text.match(/[a-zA-Z]/g) || [];
-  const totalChars = text.replace(/\s/g, '').length;
-  return totalChars > 0 && latinChars.length / totalChars > 0.5;
-}
-
-/**
- * Detect script and language from text
- */
-export function detectScript(text: string): ScriptDetectionResult {
-  for (const pattern of SCRIPT_PATTERNS) {
-    if (pattern.regex.test(text)) {
-      const matches = text.match(pattern.regex) || [];
-      const confidence = matches.length / text.replace(/\s/g, '').length;
-      return {
-        script: pattern.script,
-        language: pattern.language,
-        confidence: Math.min(confidence, 1),
-      };
-    }
-  }
-  
-  return {
-    script: 'Latin',
-    language: 'english',
-    confidence: 0.5,
-  };
-}
-
-/**
- * Detect language from text
- */
-export function detectLanguage(text: string): string {
-  return detectScript(text).language;
+export function getNativeName(language: string): string {
+  const normalized = normalizeLanguage(language);
+  const lang = LANGUAGES.find(l => l.name === normalized);
+  return lang?.native || language;
 }
 
 /**
  * Get all supported languages
  */
 export function getSupportedLanguages(): LanguageInfo[] {
-  return Object.entries(LANGUAGE_TO_CODE).map(([name, code]) => ({
-    name,
-    code,
-  }));
-}
-
-/**
- * Check if two languages are the same
- */
-export function isSameLanguage(lang1: string, lang2: string): boolean {
-  const code1 = getCode(lang1);
-  const code2 = getCode(lang2);
-  return code1 === code2;
+  return [...LANGUAGES];
 }

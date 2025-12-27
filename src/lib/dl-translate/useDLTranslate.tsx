@@ -1,84 +1,142 @@
 /**
  * React Hook for DL-Translate
- * Server-based translation without client-side model
+ * Handles chat translation with auto-detection
  */
 
-import { useState, useCallback } from 'react';
-import { TranslationModel } from './translator';
-import { detectLanguage, isLatinScript, isSameLanguage } from './languages';
-import type { TranslationResult } from './types';
+import { useState, useCallback, useRef } from 'react';
+import { 
+  translate, 
+  translateForChat, 
+  convertToNativeScript,
+  detect,
+  clearCache as clearTranslationCache 
+} from './translator';
+import { isSameLanguage, isLatinScript, getNativeName, detectLanguage } from './languages';
+import type { TranslationResult, ChatTranslationOptions } from './types';
 
 interface UseDLTranslateReturn {
-  translate: (text: string, source: string, target: string) => Promise<TranslationResult>;
-  translateAuto: (text: string, target: string) => Promise<TranslationResult>;
-  detect: (text: string) => { language: string; code: string };
+  // Translation functions
+  translate: (text: string, source?: string, target?: string) => Promise<TranslationResult>;
+  translateForChat: (text: string, options: ChatTranslationOptions) => Promise<TranslationResult>;
+  convertToNative: (text: string, targetLanguage: string) => Promise<TranslationResult>;
+  
+  // Detection
+  detect: (text: string) => { language: string; isLatin: boolean };
+  detectLanguage: (text: string) => string;
+  
+  // Utilities
+  isSameLanguage: (lang1: string, lang2: string) => boolean;
+  isLatinScript: (text: string) => boolean;
+  getNativeName: (language: string) => string;
+  
+  // State
   isTranslating: boolean;
   error: string | null;
+  
+  // Cache
   clearCache: () => void;
-  isLatinScript: (text: string) => boolean;
-  isSameLanguage: (lang1: string, lang2: string) => boolean;
 }
 
 export function useDLTranslate(): UseDLTranslateReturn {
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [model] = useState(() => new TranslationModel());
+  const pendingRef = useRef<AbortController | null>(null);
 
-  const translate = useCallback(async (
+  const translateFn = useCallback(async (
     text: string,
-    source: string,
-    target: string
+    source?: string,
+    target?: string
   ): Promise<TranslationResult> => {
+    // Cancel pending request
+    pendingRef.current?.abort();
+    pendingRef.current = new AbortController();
+
     setIsTranslating(true);
     setError(null);
-    
+
     try {
-      const result = await model.translate(text, source, target);
+      const result = await translate(text, source, target);
       return result;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Translation failed';
       setError(errorMsg);
-      return { text, source, target, isTranslated: false };
+      return {
+        text,
+        originalText: text,
+        source: source || 'english',
+        target: target || 'english',
+        isTranslated: false,
+      };
     } finally {
       setIsTranslating(false);
     }
-  }, [model]);
+  }, []);
 
-  const translateAuto = useCallback(async (
+  const translateForChatFn = useCallback(async (
     text: string,
-    target: string
+    options: ChatTranslationOptions
   ): Promise<TranslationResult> => {
     setIsTranslating(true);
     setError(null);
-    
+
     try {
-      const result = await model.translateAuto(text, target);
+      const result = await translateForChat(text, options);
       return result;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Translation failed';
       setError(errorMsg);
-      return { text, source: 'auto', target, isTranslated: false };
+      return {
+        text,
+        originalText: text,
+        source: options.senderLanguage,
+        target: options.receiverLanguage,
+        isTranslated: false,
+      };
     } finally {
       setIsTranslating(false);
     }
-  }, [model]);
+  }, []);
 
-  const detect = useCallback((text: string) => {
-    return model.detect(text);
-  }, [model]);
+  const convertToNativeFn = useCallback(async (
+    text: string,
+    targetLanguage: string
+  ): Promise<TranslationResult> => {
+    setIsTranslating(true);
+    setError(null);
+
+    try {
+      const result = await convertToNativeScript(text, targetLanguage);
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Conversion failed';
+      setError(errorMsg);
+      return {
+        text,
+        originalText: text,
+        source: 'english',
+        target: targetLanguage,
+        isTranslated: false,
+      };
+    } finally {
+      setIsTranslating(false);
+    }
+  }, []);
 
   const clearCache = useCallback(() => {
-    model.clearCache();
-  }, [model]);
+    clearTranslationCache();
+  }, []);
 
   return {
-    translate,
-    translateAuto,
+    translate: translateFn,
+    translateForChat: translateForChatFn,
+    convertToNative: convertToNativeFn,
     detect,
+    detectLanguage,
+    isSameLanguage,
+    isLatinScript,
+    getNativeName,
     isTranslating,
     error,
     clearCache,
-    isLatinScript,
-    isSameLanguage,
   };
 }
