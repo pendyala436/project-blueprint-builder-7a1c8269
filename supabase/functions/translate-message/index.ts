@@ -1,8 +1,9 @@
 /**
  * Translate Message Edge Function
- * Uses Lovable AI for translation between any languages
+ * Uses OpenAI for translation between languages
  */
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -56,7 +57,7 @@ const scriptPatterns = [
   // Indic Extended
   { regex: /[\u0F00-\u0FFF]/, language: "tibetan" },
   { regex: /[\u1900-\u194F]/, language: "limbu" },
-  { regex: /[\u11800-\u1184F]/, language: "dogra" },
+  { regex: /[\u{11800}-\u{1184F}]/u, language: "dogra" },
   { regex: /[\uA800-\uA82F]/, language: "syloti_nagri" },
   { regex: /[\u1C00-\u1C4F]/, language: "lepcha" },
   { regex: /[\u1C50-\u1C7F]/, language: "ol_chiki" },
@@ -168,11 +169,11 @@ serve(async (req) => {
       );
     }
 
-    // Use Lovable AI for translation
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      console.error('[translate-message] LOVABLE_API_KEY not configured');
+    // Use OpenAI for translation
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+
+    if (!OPENAI_API_KEY) {
+      console.error('[translate-message] OPENAI_API_KEY not configured');
       return new Response(
         JSON.stringify({
           translatedText: inputText,
@@ -185,53 +186,58 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are a professional translator. Translate the given text accurately while preserving the original meaning, tone, and context. 
-- If the source is Latin/English text and target is a non-Latin language, provide the translation in the native script.
-- Maintain proper grammar and natural phrasing in the target language.
-- Do not add explanations, just provide the translation.`;
+    const hasExplicitSource = Boolean(sourceLanguage || senderLanguage);
+    const sourceForPrompt = hasExplicitSource
+      ? effectiveSource
+      : (detected.isLatin ? "auto" : detected.language);
 
-    const userPrompt = `Translate the following text from ${effectiveSource} to ${effectiveTarget}:
+    const systemPrompt = `You are a professional translator. Translate the given text accurately while preserving the original meaning, tone, and context.
+- If the target language uses a non-Latin script, output in the native script.
+- Do not add explanations, only return the translated text.`;
 
-"${inputText}"
+    const userPrompt = sourceForPrompt === "auto"
+      ? `Translate the following text to ${effectiveTarget}. Detect the source language automatically:\n\n"${inputText}"\n\nReturn only the translated text.`
+      : `Translate the following text from ${sourceForPrompt} to ${effectiveTarget}:\n\n"${inputText}"\n\nReturn only the translated text.`;
 
-Provide only the translated text in ${effectiveTarget}, nothing else.`;
+    console.log('[translate-message] Calling OpenAI for translation...');
 
-    console.log('[translate-message] Calling Lovable AI for translation...');
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.3,
+        temperature: 0.2,
         max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[translate-message] AI API error:', response.status, errorText);
-      
+      console.error('[translate-message] OpenAI API error:', response.status, errorText);
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded, please try again later" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      
+
       return new Response(
         JSON.stringify({
           translatedText: inputText,
           translatedMessage: inputText,
           originalText: inputText,
           isTranslated: false,
+          detectedLanguage: detected.language,
+          sourceLanguage: sourceForPrompt,
+          targetLanguage: effectiveTarget,
           error: "Translation failed",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -239,7 +245,7 @@ Provide only the translated text in ${effectiveTarget}, nothing else.`;
     }
 
     const aiResponse = await response.json();
-    const translatedText = aiResponse.choices?.[0]?.message?.content?.trim() || inputText;
+    const translatedText = aiResponse?.choices?.[0]?.message?.content?.trim() || inputText;
 
     console.log(`[translate-message] Translation complete: "${inputText.substring(0, 30)}..." -> "${translatedText.substring(0, 30)}..."`);
 
@@ -250,7 +256,7 @@ Provide only the translated text in ${effectiveTarget}, nothing else.`;
         originalText: inputText,
         isTranslated: translatedText !== inputText,
         detectedLanguage: detected.language,
-        sourceLanguage: effectiveSource,
+        sourceLanguage: sourceForPrompt,
         targetLanguage: effectiveTarget,
         isSourceLatin: detected.isLatin,
       }),
