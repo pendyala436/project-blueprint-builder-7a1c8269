@@ -10,6 +10,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 
 export interface ActiveChat {
   chatId: string;
@@ -48,7 +49,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
     if (!currentUserId) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "get_active_chats",
           user_id: currentUserId
@@ -141,7 +142,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
     setIsConnecting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: currentUserId,
@@ -182,7 +183,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
   // End a chat session
   const endChat = useCallback(async (chatId: string, reason?: string) => {
     try {
-      const { error } = await supabase.functions.invoke("chat-manager", {
+      const { error } = await secureInvoke("chat-manager", {
         body: {
           action: "end_chat",
           chat_id: chatId,
@@ -228,7 +229,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
 
     try {
       // Find a new match
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "auto_reconnect",
           man_user_id: currentUserId,

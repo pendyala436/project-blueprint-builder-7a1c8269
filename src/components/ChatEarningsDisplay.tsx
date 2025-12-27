@@ -3,6 +3,7 @@ import { IndianRupee, Clock, TrendingUp, Sparkles, Circle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 
 interface ChatEarningsDisplayProps {
   chatPartnerId: string;
@@ -135,7 +136,7 @@ const ChatEarningsDisplay = ({
         // Session ended due to inactivity (woman)
         
         try {
-          await supabase.functions.invoke("chat-manager", {
+          await secureInvoke("chat-manager", {
             body: { action: "end_chat", chat_id: currentChatId, end_reason: "inactivity_timeout" }
           });
         } catch (error) {

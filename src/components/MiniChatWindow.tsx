@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 import {
   Send,
   X,
@@ -391,7 +392,7 @@ const MiniChatWindow = ({
     // Start heartbeat for billing (every 60 seconds)
     heartbeatRef.current = setInterval(async () => {
       try {
-        await supabase.functions.invoke("chat-manager", {
+        await secureInvoke("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId }
         });
       } catch (error) {
