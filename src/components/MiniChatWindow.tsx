@@ -27,6 +27,8 @@ import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useMultilingualChat } from "@/hooks/useMultilingualChat";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { useRealtimeTranslation } from "@/lib/translation";
+import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -107,6 +109,18 @@ const MiniChatWindow = ({
     currentUserLanguage,
     partnerLanguage,
     enabled: transliterationEnabled
+  });
+
+  // Real-time typing indicator with translation
+  const {
+    sendTypingIndicator,
+    stopTyping,
+    partnerTyping
+  } = useRealtimeTranslation({
+    currentUserId,
+    currentUserLanguage,
+    channelId: chatId,
+    enabled: true
   });
 
   // Check block status - auto-close if blocked
@@ -383,6 +397,10 @@ const MiniChatWindow = ({
 
   const handleTyping = () => {
     setLastActivityTime(Date.now());
+    // Send typing indicator with translation
+    if (newMessage.trim()) {
+      sendTypingIndicator(newMessage.trim(), partnerLanguage);
+    }
   };
 
   // Security: Maximum message length to prevent abuse
@@ -410,6 +428,7 @@ const MiniChatWindow = ({
 
     setNewMessage("");
     clearLivePreview();
+    stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
 
@@ -654,6 +673,20 @@ const MiniChatWindow = ({
                   </div>
                 </div>
               ))}
+              
+              {/* Real-time typing indicator with translation */}
+              {partnerTyping && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%]">
+                    <TranslatedTypingIndicator
+                      indicator={partnerTyping}
+                      partnerName={partnerName}
+                      className="text-[11px] p-1.5"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
