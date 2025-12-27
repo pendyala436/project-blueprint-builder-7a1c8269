@@ -81,10 +81,33 @@ export async function signUp(email: string, password: string): Promise<AuthRespo
 }
 
 /**
- * Sign out current user
+ * Sign out current user - sets offline status before logout
  */
 export async function signOut(): Promise<{ success: boolean; error?: string }> {
   try {
+    // Get current user to set offline status
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Set user offline before signing out
+      const now = new Date().toISOString();
+      await supabase
+        .from('user_status')
+        .update({ is_online: false, last_seen: now, updated_at: now })
+        .eq('user_id', user.id);
+      
+      // End any active chat sessions
+      await supabase
+        .from('active_chat_sessions')
+        .update({ 
+          status: 'ended', 
+          ended_at: now,
+          end_reason: 'user_logout'
+        })
+        .or(`man_user_id.eq.${user.id},woman_user_id.eq.${user.id}`)
+        .eq('status', 'active');
+    }
+    
     const { error } = await supabase.auth.signOut();
     if (error) {
       return { success: false, error: error.message };
