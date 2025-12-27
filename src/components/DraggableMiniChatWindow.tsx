@@ -822,6 +822,9 @@ const DraggableMiniChatWindow = ({
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
+  // When initialPosition is {0,0}, use relative positioning for flex layout
+  const useFlexLayout = initialPosition.x === 0 && initialPosition.y === 0;
+  
   const windowStyle = isMaximized 
     ? { 
         position: 'fixed' as const, 
@@ -833,14 +836,21 @@ const DraggableMiniChatWindow = ({
         height: '100%',
         zIndex: zIndex + 100 
       }
-    : { 
-        position: 'fixed' as const,
-        right: position.x, 
-        bottom: position.y, 
-        width: isMinimized ? 240 : size.width, 
-        height: isMinimized ? 48 : size.height,
-        zIndex
-      };
+    : useFlexLayout
+      ? {
+          position: 'relative' as const,
+          width: isMinimized ? 240 : size.width, 
+          height: isMinimized ? 48 : size.height,
+          zIndex
+        }
+      : { 
+          position: 'fixed' as const,
+          right: position.x, 
+          bottom: position.y, 
+          width: isMinimized ? 240 : size.width, 
+          height: isMinimized ? 48 : size.height,
+          zIndex
+        };
 
   return (
     <Card 

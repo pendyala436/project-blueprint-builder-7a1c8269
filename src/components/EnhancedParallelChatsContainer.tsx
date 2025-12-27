@@ -315,7 +315,7 @@ const EnhancedParallelChatsContainer = ({
   return (
     <>
       {/* Settings button - fixed position */}
-      <div className="fixed bottom-4 right-4 z-[100] flex items-center gap-2">
+      <div className="fixed bottom-4 left-4 z-[100] flex items-center gap-2">
         {displayedChats.length > 0 && (
           <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full text-xs font-medium backdrop-blur-sm">
             <MessageSquare className="h-3 w-3 text-primary" />
@@ -336,7 +336,7 @@ const EnhancedParallelChatsContainer = ({
               <Settings2 className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent className="w-80 p-0" align="start">
             <ParallelChatSettingsPanel
               currentValue={maxParallelChats}
               onSave={setMaxParallelChats}
@@ -347,7 +347,7 @@ const EnhancedParallelChatsContainer = ({
       </div>
 
       {/* Incoming chat popups - fixed position, highest z-index */}
-      <div className="fixed bottom-20 right-4 z-[9999] flex flex-col gap-2">
+      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
         {pendingIncomingChats.map((incoming) => (
           <IncomingChatPopup
             key={incoming.sessionId}
@@ -366,28 +366,30 @@ const EnhancedParallelChatsContainer = ({
         ))}
       </div>
 
-      {/* Active chat windows - draggable */}
-      {displayedChats.map((chat) => (
-        <DraggableMiniChatWindow
-          key={chat.chatId}
-          chatId={chat.chatId}
-          sessionId={chat.id}
-          partnerId={chat.partnerId}
-          partnerName={chat.partnerName}
-          partnerPhoto={chat.partnerPhoto}
-          partnerLanguage={chat.partnerLanguage}
-          isPartnerOnline={chat.isPartnerOnline}
-          currentUserId={currentUserId}
-          currentUserLanguage={currentUserLanguage}
-          userGender={userGender}
-          ratePerMinute={chat.ratePerMinute}
-          earningRatePerMinute={chat.earningRatePerMinute}
-          onClose={() => handleCloseChat(chat.chatId, chat.id)}
-          initialPosition={chat.position}
-          zIndex={chat.zIndex}
-          onFocus={() => handleFocusChat(chat.chatId)}
-        />
-      ))}
+      {/* Active chat windows - side by side layout */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-row-reverse gap-3 items-end">
+        {displayedChats.map((chat) => (
+          <DraggableMiniChatWindow
+            key={chat.chatId}
+            chatId={chat.chatId}
+            sessionId={chat.id}
+            partnerId={chat.partnerId}
+            partnerName={chat.partnerName}
+            partnerPhoto={chat.partnerPhoto}
+            partnerLanguage={chat.partnerLanguage}
+            isPartnerOnline={chat.isPartnerOnline}
+            currentUserId={currentUserId}
+            currentUserLanguage={currentUserLanguage}
+            userGender={userGender}
+            ratePerMinute={chat.ratePerMinute}
+            earningRatePerMinute={chat.earningRatePerMinute}
+            onClose={() => handleCloseChat(chat.chatId, chat.id)}
+            initialPosition={{ x: 0, y: 0 }}
+            zIndex={chat.zIndex}
+            onFocus={() => handleFocusChat(chat.chatId)}
+          />
+        ))}
+      </div>
     </>
   );
 };
