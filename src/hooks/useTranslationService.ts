@@ -1,10 +1,18 @@
 /**
  * Translation Service Hook
- * Uses Supabase Edge Function for reliable NLLB-200 translation
+ * Uses browser-based @huggingface/transformers for FREE local translation
+ * No external API calls or payments required
  */
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback, useEffect } from 'react';
+import { 
+  translateText, 
+  detectLanguage as detectLang, 
+  isLatinScript,
+  preloadModel,
+  isTranslationReady,
+  getLoadingStatus
+} from '@/lib/translation/browser-translator';
 
 export interface TranslationResult {
   translatedText: string;
@@ -25,9 +33,31 @@ export interface ConversionResult {
 
 export function useTranslationService() {
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(false);
+  const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(isTranslationReady());
 
-  // Translate text via edge function
+  // Preload model on first use
+  useEffect(() => {
+    if (!isReady && !isModelLoading) {
+      const { isLoading } = getLoadingStatus();
+      if (!isLoading) {
+        setIsModelLoading(true);
+        preloadModel((progress) => {
+          setModelLoadProgress(progress);
+        }).then((success) => {
+          setIsReady(success);
+          setIsModelLoading(false);
+          if (!success) {
+            setError('Failed to load translation model');
+          }
+        });
+      }
+    }
+  }, [isReady, isModelLoading]);
+
+  // Translate text using browser-based model (FREE)
   const translate = useCallback(async (
     text: string,
     sourceLanguage: string,
@@ -62,44 +92,22 @@ export function useTranslationService() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          sourceLanguage,
-          targetLanguage,
-          mode: 'translate',
-        },
-      });
-
-      if (fnError) {
-        console.error('[TranslationService] Function error:', fnError);
-        throw new Error(fnError.message || 'Translation failed');
-      }
-
-      if (data?.error) {
-        console.warn('[TranslationService] Translation warning:', data.error);
-        // Return original text if service not configured
-        return {
-          translatedText: text,
-          originalText: text,
-          sourceLanguage,
-          targetLanguage,
-          isTranslated: false,
-          model: 'none',
-          usedPivot: false,
-        };
-      }
+      const result = await translateText(
+        text,
+        sourceLanguage,
+        targetLanguage,
+        (progress) => setModelLoadProgress(progress)
+      );
 
       return {
-        translatedText: data.translatedMessage || text,
-        originalText: text,
-        sourceLanguage: data.detectedLanguage || sourceLanguage,
-        targetLanguage,
-        isTranslated: data.isTranslated || false,
-        model: data.model || 'unknown',
-        usedPivot: data.usedPivot || false,
-        pivotLanguage: data.pivotLanguage,
-        detectedLanguage: data.detectedLanguage,
+        translatedText: result.translatedText,
+        originalText: result.originalText,
+        sourceLanguage: result.sourceLanguage,
+        targetLanguage: result.targetLanguage,
+        isTranslated: result.isTranslated,
+        model: result.model,
+        usedPivot: false,
+        detectedLanguage: result.sourceLanguage,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Translation failed';
@@ -120,7 +128,7 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Convert romanized text to native script via edge function
+  // Convert romanized text to native script (uses translation)
   const convertToNativeScript = useCallback(async (
     text: string,
     targetLanguage: string
@@ -130,32 +138,17 @@ export function useTranslationService() {
     }
 
     // Check if text is Latin script
-    const latinChars = text.match(/[a-zA-Z]/g);
-    const totalChars = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
-    const isLatin = latinChars && totalChars.length > 0 && (latinChars.length / totalChars.length) > 0.8;
-
-    if (!isLatin) {
+    if (!isLatinScript(text)) {
       return { converted: text, isConverted: false };
     }
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          sourceLanguage: 'english',
-          targetLanguage,
-          mode: 'convert',
-        },
-      });
-
-      if (fnError || data?.error) {
-        return { converted: text, isConverted: false };
-      }
-
-      const converted = data.convertedMessage || data.translatedMessage || text;
+      // Use translation from English to target language for conversion
+      const result = await translateText(text, 'english', targetLanguage);
+      
       return {
-        converted,
-        isConverted: converted !== text && data.isConverted,
+        converted: result.translatedText,
+        isConverted: result.isTranslated,
       };
     } catch {
       return { converted: text, isConverted: false };
@@ -167,34 +160,10 @@ export function useTranslationService() {
     const trimmed = text.trim();
     if (!trimmed) return { language: 'english', isLatin: true };
 
-    // Script patterns for detection
-    const patterns: Array<{ regex: RegExp; language: string }> = [
-      { regex: /[\u0900-\u097F]/, language: 'hindi' },
-      { regex: /[\u0980-\u09FF]/, language: 'bengali' },
-      { regex: /[\u0C00-\u0C7F]/, language: 'telugu' },
-      { regex: /[\u0B80-\u0BFF]/, language: 'tamil' },
-      { regex: /[\u0A80-\u0AFF]/, language: 'gujarati' },
-      { regex: /[\u0C80-\u0CFF]/, language: 'kannada' },
-      { regex: /[\u0D00-\u0D7F]/, language: 'malayalam' },
-      { regex: /[\u0A00-\u0A7F]/, language: 'punjabi' },
-      { regex: /[\u4E00-\u9FFF]/, language: 'chinese' },
-      { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese' },
-      { regex: /[\uAC00-\uD7AF]/, language: 'korean' },
-      { regex: /[\u0E00-\u0E7F]/, language: 'thai' },
-      { regex: /[\u0600-\u06FF]/, language: 'arabic' },
-      { regex: /[\u0590-\u05FF]/, language: 'hebrew' },
-      { regex: /[\u0400-\u04FF]/, language: 'russian' },
-      { regex: /[\u10A0-\u10FF]/, language: 'georgian' },
-      { regex: /[\u0530-\u058F]/, language: 'armenian' },
-    ];
+    const detected = detectLang(trimmed);
+    const latin = isLatinScript(trimmed);
 
-    for (const pattern of patterns) {
-      if (pattern.regex.test(trimmed)) {
-        return { language: pattern.language, isLatin: false };
-      }
-    }
-
-    return { language: 'english', isLatin: true };
+    return { language: detected, isLatin: latin };
   }, []);
 
   return {
@@ -202,6 +171,9 @@ export function useTranslationService() {
     convertToNativeScript,
     detectLanguage,
     isTranslating,
+    isModelLoading,
+    modelLoadProgress,
+    isReady,
     error,
   };
 }
