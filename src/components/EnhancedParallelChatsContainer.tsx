@@ -366,8 +366,8 @@ const EnhancedParallelChatsContainer = ({
         ))}
       </div>
 
-      {/* Active chat windows - side by side layout */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-row-reverse gap-3 items-end">
+      {/* Active chat windows - responsive side by side layout for all devices */}
+      <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
         {displayedChats.map((chat) => (
           <DraggableMiniChatWindow
             key={chat.chatId}

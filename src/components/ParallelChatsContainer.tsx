@@ -119,7 +119,7 @@ const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage
   }
 
   return (
-    <div className="fixed bottom-4 right-4 flex flex-row-reverse gap-2 z-50">
+    <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
       {activeChats.slice(0, 3).map((chat) => (
         <MiniChatWindow
           key={chat.chatId}

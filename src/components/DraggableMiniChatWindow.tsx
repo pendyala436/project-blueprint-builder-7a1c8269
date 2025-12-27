@@ -132,8 +132,16 @@ const DraggableMiniChatWindow = ({
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const windowRef = useRef<HTMLDivElement>(null);
 
-  // Resize state
-  const [size, setSize] = useState({ width: 320, height: 400 });
+  // Responsive size - smaller on mobile
+  const getResponsiveSize = () => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 640;
+      return isMobile ? { width: 280, height: 350 } : { width: 320, height: 400 };
+    }
+    return { width: 320, height: 400 };
+  };
+  
+  const [size, setSize] = useState(getResponsiveSize);
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<{ startWidth: number; startHeight: number; startX: number; startY: number } | null>(null);
 
@@ -160,14 +168,18 @@ const DraggableMiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // Dragging handlers
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
+  // Dragging handlers - supports both mouse and touch
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
     e.preventDefault();
     setIsDragging(true);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
+      startX: clientX,
+      startY: clientY,
       startPosX: position.x,
       startPosY: position.y
     };
@@ -175,11 +187,14 @@ const DraggableMiniChatWindow = ({
   }, [position, isMaximized, onFocus]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging || !dragRef.current) return;
       
-      const deltaX = e.clientX - dragRef.current.startX;
-      const deltaY = e.clientY - dragRef.current.startY;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - dragRef.current.startX;
+      const deltaY = clientY - dragRef.current.startY;
       
       setPosition({
         x: Math.max(0, dragRef.current.startPosX + deltaX),
@@ -187,19 +202,23 @@ const DraggableMiniChatWindow = ({
       });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       setIsDragging(false);
       dragRef.current = null;
     };
 
     if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("mouseup", handleEnd);
+      document.addEventListener("touchmove", handleMove, { passive: false });
+      document.addEventListener("touchend", handleEnd);
     }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleEnd);
+      document.removeEventListener("touchmove", handleMove);
+      document.removeEventListener("touchend", handleEnd);
     };
   }, [isDragging]);
 
@@ -872,13 +891,14 @@ const DraggableMiniChatWindow = ({
         </div>
       )}
       
-      {/* Header - Draggable */}
+      {/* Header - Draggable with mouse and touch support */}
       <div 
         className={cn(
-          "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b",
+          "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b touch-none select-none",
           !isMaximized && "cursor-move"
         )}
         onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {!isMaximized && (
