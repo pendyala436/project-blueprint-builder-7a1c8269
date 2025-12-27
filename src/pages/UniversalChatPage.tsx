@@ -2,13 +2,12 @@
  * Universal Chat Page - Single Page Multilingual Chat
  * 
  * Features:
- * - 200+ NLLB-200 language support (client-side)
+ * - 200+ NLLB-200 language support via Supabase Edge Function
  * - Auto-detect source language
  * - Auto-transliterate Romanized input → native script
  * - Translate to target language in native script
  * - "Translated from X" indicator (Tinder-style)
  * - Full Unicode support with IME
- * - Runs entirely in browser using @huggingface/transformers
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -19,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -29,11 +27,11 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Download } from 'lucide-react';
+import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Check } from 'lucide-react';
 import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useClientTranslator } from '@/hooks/useClientTranslator';
+import { useTranslationService } from '@/hooks/useTranslationService';
 
 // ============= TYPES =============
 
@@ -195,16 +193,13 @@ const UniversalChatPage: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Client-side translator
+  // Server-side translator via edge function
   const {
-    isModelLoading,
-    modelLoadProgress,
-    isModelReady,
-    error: modelError,
-    loadModel,
     translate,
     convertToNativeScript,
-  } = useClientTranslator();
+    isTranslating,
+    error: translationError,
+  } = useTranslationService();
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -223,7 +218,7 @@ const UniversalChatPage: React.FC = () => {
     }
   }, [messages]);
   
-  // Live preview for transliteration (client-side)
+  // Live preview for transliteration (via edge function)
   useEffect(() => {
     if (!autoTransliterate || !input.trim() || isComposing) {
       setLivePreview('');
@@ -241,7 +236,7 @@ const UniversalChatPage: React.FC = () => {
       } catch {
         setLivePreview('');
       }
-    }, 300);
+    }, 500);
     
     return () => clearTimeout(timer);
   }, [input, userLanguage, autoTransliterate, isComposing, convertToNativeScript]);
@@ -281,7 +276,7 @@ const UniversalChatPage: React.FC = () => {
         
         const partnerText = partnerResponses[Math.floor(Math.random() * partnerResponses.length)];
         
-        // Translate partner message for user (client-side)
+        // Translate partner message for user via edge function
         const translatedForUser = await translate(
           partnerText,
           partnerLanguage,
@@ -346,49 +341,20 @@ const UniversalChatPage: React.FC = () => {
             </CardTitle>
           </div>
           
-          {/* Model Loading Status */}
-          {!isModelReady && (
-            <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
-              {isModelLoading ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Loading NLLB-200 model... {modelLoadProgress}%</span>
-                  </div>
-                  <Progress value={modelLoadProgress} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    First load may take a few minutes. Model is cached for future use.
-                  </p>
-                </div>
-              ) : modelError ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-destructive">{modelError}</p>
-                  <Button onClick={loadModel} size="sm" variant="outline">
-                    Retry
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Load Translation Model</p>
-                    <p className="text-xs text-muted-foreground">
-                      Download NLLB-200 for full 200+ language translation (runs locally)
-                    </p>
-                  </div>
-                  <Button onClick={loadModel} size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Load Model
-                  </Button>
-                </div>
-              )}
+          {/* Translation Status */}
+          <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">Translation Ready</span>
+              <Badge variant="outline" className="text-xs">NLLB-200 via Server</Badge>
             </div>
-          )}
-          
-          {isModelReady && (
-            <Badge variant="default" className="mt-2 w-fit">
-              ✓ NLLB-200 Ready (Client-side)
-            </Badge>
-          )}
+            <p className="text-xs text-muted-foreground mt-1">
+              200+ languages supported with auto-detection and transliteration
+            </p>
+            {translationError && (
+              <p className="text-xs text-destructive mt-1">{translationError}</p>
+            )}
+          </div>
           
           {/* Language Selectors */}
           <div className="grid grid-cols-2 gap-4 mt-4">
@@ -428,9 +394,7 @@ const UniversalChatPage: React.FC = () => {
                 <Globe className="h-12 w-12 mb-3 opacity-50" />
                 <p className="text-sm">Start a conversation in any language!</p>
                 <p className="text-xs mt-1">
-                  {isModelReady 
-                    ? 'Messages are translated locally using NLLB-200' 
-                    : 'Load the model for full translation support'}
+                  Messages are translated using NLLB-200 via server
                 </p>
               </div>
             ) : (
@@ -477,16 +441,16 @@ const UniversalChatPage: React.FC = () => {
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder={`Type in ${userLanguage} (or romanized)...`}
                 className="min-h-[44px] max-h-[120px] resize-none"
-                disabled={isLoading}
+                disabled={isLoading || isTranslating}
                 dir="auto"
               />
               <Button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || isTranslating}
                 size="icon"
                 className="h-[44px] w-[44px]"
               >
-                {isLoading ? (
+                {isLoading || isTranslating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
@@ -495,9 +459,7 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              {isModelReady 
-                ? `Powered by NLLB-200 (Client-side) • ${ALL_NLLB200_LANGUAGES.length}+ languages`
-                : 'Using basic transliteration • Load model for full translation'}
+              Powered by NLLB-200 • {ALL_NLLB200_LANGUAGES.length}+ languages supported
             </p>
           </div>
         </CardContent>
