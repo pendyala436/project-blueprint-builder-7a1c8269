@@ -2985,6 +2985,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_idle_sessions: { Args: never; Returns: undefined }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       get_current_chat_rate: {
