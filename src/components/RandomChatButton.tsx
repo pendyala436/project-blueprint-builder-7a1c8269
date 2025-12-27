@@ -23,6 +23,7 @@ import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield, Walle
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/nllb200Languages";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 
 // Super user email patterns - they bypass balance requirements
 const SUPER_USER_PATTERNS = {
@@ -136,7 +137,7 @@ export const RandomChatButton = ({
         setSearchStatus("Finding an available woman for you...");
         
         // First try language-matched women
-        const { data, error } = await supabase.functions.invoke("chat-manager", {
+        const { data, error } = await secureInvoke<any>("chat-manager", {
           body: {
             action: "get_available_indian_woman",
             man_user_id: user.id,
@@ -162,7 +163,7 @@ export const RandomChatButton = ({
           });
         } else {
           // Try general matching
-          const { data: generalData, error: generalError } = await supabase.functions.invoke("chat-manager", {
+          const { data: generalData, error: generalError } = await secureInvoke<any>("chat-manager", {
             body: {
               action: "get_available_woman",
               man_user_id: user.id,
@@ -296,7 +297,7 @@ export const RandomChatButton = ({
 
       if (userGender === "male") {
         // Start the chat session via edge function
-        const { data, error } = await supabase.functions.invoke("chat-manager", {
+        const { data, error } = await secureInvoke<any>("chat-manager", {
           body: {
             action: "start_chat",
             man_user_id: user.id,

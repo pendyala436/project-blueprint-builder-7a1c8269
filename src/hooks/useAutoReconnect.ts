@@ -8,6 +8,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { secureInvoke } from '@/lib/api/secure-invoke';
 
 export interface ReconnectableWoman {
   userId: string;
@@ -52,7 +53,7 @@ export const useAutoReconnect = (
   ): Promise<ReconnectableWoman | null> => {
     try {
       // Call the backend chat-manager to find a match
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "find_match",
           man_user_id: currentUserId,

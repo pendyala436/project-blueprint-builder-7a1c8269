@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { isIndianLanguage } from "@/data/nllb200Languages";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
 import {
   Tooltip,
@@ -296,7 +297,7 @@ const MatchingScreen = () => {
   const findNextAvailableWoman = useCallback(async (excludeUserId?: string): Promise<MatchableWoman | null> => {
     try {
       // Use backend to find best match with load balancing
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "find_match",
           man_user_id: currentUserId,
@@ -390,7 +391,7 @@ const MatchingScreen = () => {
       }
 
       // Start chat via edge function
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: currentUserId,

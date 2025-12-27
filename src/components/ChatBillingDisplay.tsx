@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { IndianRupee, Clock, AlertTriangle, Wallet, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { secureInvoke } from "@/lib/api/secure-invoke";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -137,7 +138,7 @@ const ChatBillingDisplay = ({
     if (sessionStarted.current) return;
     
     try {
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
+      const { data, error } = await secureInvoke<any>("chat-manager", {
         body: { 
           action: "start_chat", 
           man_user_id: currentUserId,
@@ -263,7 +264,7 @@ const ChatBillingDisplay = ({
 
   const endChatDueToBalance = async (chatId: string) => {
     try {
-      await supabase.functions.invoke("chat-manager", {
+      await secureInvoke("chat-manager", {
         body: { action: "end_chat", chat_id: chatId, end_reason: "insufficient_balance" }
       });
     } catch (error) {
@@ -282,7 +283,7 @@ const ChatBillingDisplay = ({
     // Send heartbeat every 60 seconds to update billing
     heartbeatInterval.current = setInterval(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("chat-manager", {
+        const { data, error } = await secureInvoke<any>("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId }
         });
 
