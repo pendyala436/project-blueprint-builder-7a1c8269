@@ -164,6 +164,234 @@
   }
 }
 
+/* ========================================
+   RTL (Right-to-Left) LANGUAGE SUPPORT
+   ======================================== */
+
+@layer base {
+  /* RTL-specific styles */
+  [dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  [dir="rtl"] .rtl\:text-right {
+    text-align: right;
+  }
+
+  [dir="rtl"] .rtl\:text-left {
+    text-align: left;
+  }
+
+  /* RTL flip for icons and directional elements */
+  [dir="rtl"] .rtl\:flip {
+    transform: scaleX(-1);
+  }
+
+  /* RTL spacing adjustments */
+  [dir="rtl"] .rtl\:space-x-reverse > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 1;
+  }
+
+  /* RTL margin adjustments */
+  [dir="rtl"] .rtl\:ml-auto {
+    margin-right: auto;
+    margin-left: 0;
+  }
+
+  [dir="rtl"] .rtl\:mr-auto {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  /* Chat message bubbles RTL */
+  [dir="rtl"] .chat-message-sent {
+    margin-left: 0;
+    margin-right: auto;
+    border-bottom-right-radius: 0.25rem;
+    border-bottom-left-radius: 1rem;
+  }
+
+  [dir="rtl"] .chat-message-received {
+    margin-right: 0;
+    margin-left: auto;
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 1rem;
+  }
+
+  /* Flex direction RTL */
+  [dir="rtl"] .rtl\:flex-row-reverse {
+    flex-direction: row-reverse;
+  }
+
+  /* Animations for RTL */
+  [dir="rtl"] .animate-slide-in-right {
+    animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ========================================
+   UNICODE & MULTILINGUAL TEXT SUPPORT
+   ======================================== */
+
+@layer base {
+  /* Universal Unicode text rendering */
+  .unicode-text {
+    font-family: 'Inter', 'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 
+                 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 
+                 'Noto Sans Malayalam', 'Noto Sans CJK SC', 'Noto Sans CJK JP', 
+                 'Noto Sans CJK KR', 'Noto Sans Thai', -apple-system, 
+                 BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    unicode-bidi: plaintext;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Arabic script optimization */
+  .arabic-text,
+  [lang="ar"],
+  [lang="fa"],
+  [lang="ur"] {
+    font-family: 'Noto Sans Arabic', 'Amiri', 'Arabic Typesetting', 
+                 'Traditional Arabic', -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+
+  /* Indic script optimization */
+  .indic-text,
+  [lang="hi"],
+  [lang="mr"],
+  [lang="ne"],
+  [lang="sa"] {
+    font-family: 'Noto Sans Devanagari', 'Mangal', 'Aparajita', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* Bengali script */
+  [lang="bn"] {
+    font-family: 'Noto Sans Bengali', 'Vrinda', 'Shonar Bangla', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Tamil script */
+  [lang="ta"] {
+    font-family: 'Noto Sans Tamil', 'Latha', 'Tamil MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Telugu script */
+  [lang="te"] {
+    font-family: 'Noto Sans Telugu', 'Gautami', 'Telugu MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Malayalam script */
+  [lang="ml"] {
+    font-family: 'Noto Sans Malayalam', 'Kartika', 'Malayalam MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.9;
+  }
+
+  /* CJK (Chinese, Japanese, Korean) */
+  [lang="zh"],
+  [lang="ja"],
+  [lang="ko"] {
+    font-family: 'Noto Sans CJK SC', 'Noto Sans CJK JP', 'Noto Sans CJK KR',
+                 'PingFang SC', 'Hiragino Sans', 'MS Gothic', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* Thai script */
+  [lang="th"] {
+    font-family: 'Noto Sans Thai', 'Tahoma', 'Leelawadee', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* Gujarati script */
+  [lang="gu"] {
+    font-family: 'Noto Sans Gujarati', 'Shruti', 'Gujarati MT', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Kannada script */
+  [lang="kn"] {
+    font-family: 'Noto Sans Kannada', 'Tunga', 'Kannada MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Punjabi/Gurmukhi script */
+  [lang="pa"] {
+    font-family: 'Noto Sans Gurmukhi', 'Raavi', 'Gurmukhi MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Odia script */
+  [lang="or"] {
+    font-family: 'Noto Sans Oriya', 'Kalinga', 'Oriya MN', 
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+}
+
+/* ========================================
+   IME (Input Method Editor) SUPPORT
+   ======================================== */
+
+@layer base {
+  /* IME composition styling */
+  input[lang],
+  textarea[lang],
+  [contenteditable][lang] {
+    ime-mode: auto;
+  }
+
+  /* Chinese/Japanese/Korean IME */
+  input[lang="zh"],
+  input[lang="ja"],
+  input[lang="ko"],
+  textarea[lang="zh"],
+  textarea[lang="ja"],
+  textarea[lang="ko"] {
+    ime-mode: active;
+  }
+
+  /* IME composition text styling */
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+
+  /* Composition text underline */
+  .ime-composing {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
