@@ -20,11 +20,13 @@ import {
   ChevronUp,
   TrendingUp,
   Wallet,
-  AlertTriangle
+  AlertTriangle,
+  Languages
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { useRealTimeTransliteration } from "@/hooks/useRealTimeTransliteration";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -91,6 +93,19 @@ const MiniChatWindow = ({
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
+  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
+
+  // Real-time transliteration - converts English typing to user's OWN native script
+  const {
+    converted: transliteratedText,
+    isConverting,
+    handleInput: handleTransliterationInput,
+    convertFullMessage
+  } = useRealTimeTransliteration({
+    targetLanguage: currentUserLanguage, // Convert to user's OWN language for preview
+    enabled: transliterationEnabled,
+    debounceMs: 400
+  });
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
@@ -392,27 +407,40 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
-  // Convert English typing to target language before sending
-  const convertMessageToTargetLanguage = async (text: string): Promise<string> => {
+  // Convert English typing to user's OWN native script (for preview)
+  // Then translate to partner's language before sending
+  const convertAndTranslateMessage = async (text: string): Promise<{
+    userScript: string;  // Message in user's own native script
+    partnerScript: string;  // Message translated to partner's language
+  }> => {
     try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
+      // First: Convert to user's own native script (what they see)
+      const { data: userConvert, error: userError } = await supabase.functions.invoke("translate-message", {
         body: { 
           message: text,
-          targetLanguage: partnerLanguage,
-          mode: "convert" // Force conversion mode for outgoing messages
+          targetLanguage: currentUserLanguage,
+          mode: "convert"
         }
       });
 
-      if (error) {
-        console.error("Conversion error:", error);
-        return text;
-      }
+      const userScript = userError ? text : (userConvert?.convertedMessage || userConvert?.translatedMessage || text);
 
-      // Return converted message if available, otherwise original
-      return data.convertedMessage || data.translatedMessage || text;
+      // Second: Translate to partner's language (what partner receives)
+      const { data: partnerTranslate, error: partnerError } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message: userScript, // Use converted text as source
+          sourceLanguage: currentUserLanguage,
+          targetLanguage: partnerLanguage,
+          mode: "translate"
+        }
+      });
+
+      const partnerScript = partnerError ? userScript : (partnerTranslate?.translatedMessage || userScript);
+
+      return { userScript, partnerScript };
     } catch (err) {
-      console.error("Conversion failed:", err);
-      return text;
+      console.error("Conversion/translation failed:", err);
+      return { userScript: text, partnerScript: text };
     }
   };
 
@@ -441,8 +469,8 @@ const MiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Convert English typing to target language before sending
-      const convertedMessage = await convertMessageToTargetLanguage(messageText);
+      // Convert to user's native script and translate to partner's language
+      const { partnerScript } = await convertAndTranslateMessage(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -450,7 +478,7 @@ const MiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: convertedMessage // Send converted message
+          message: partnerScript // Send message in partner's language
         });
 
       if (error) throw error;
@@ -683,15 +711,37 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area */}
-          <div className="p-1.5 border-t">
+          {/* Input area with transliteration */}
+          <div className="p-1.5 border-t space-y-1">
+            {/* Transliteration preview - shows text in user's native script */}
+            {transliterationEnabled && transliteratedText && transliteratedText !== newMessage && newMessage.trim() && (
+              <div className="px-2 py-0.5 bg-primary/5 rounded text-[9px] text-primary/80 border border-primary/10">
+                <span className="font-medium">{currentUserLanguage}:</span> {transliteratedText}
+                {isConverting && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
+              </div>
+            )}
             <div className="flex items-center gap-1">
+              {/* Transliteration toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-7 w-7 shrink-0",
+                  transliterationEnabled ? "text-primary" : "text-muted-foreground"
+                )}
+                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
+                title={transliterationEnabled ? "Disable auto-conversion" : "Enable auto-conversion"}
+              >
+                <Languages className="h-3 w-3" />
+              </Button>
               <Input
-                placeholder="Type..."
+                placeholder="Type in English..."
                 value={newMessage}
                 onChange={(e) => {
-                  setNewMessage(e.target.value);
+                  const val = e.target.value;
+                  setNewMessage(val);
                   handleTyping();
+                  handleTransliterationInput(val);
                 }}
                 onKeyDown={handleKeyPress}
                 className="h-7 text-[11px]"
