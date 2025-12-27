@@ -1,93 +1,32 @@
 /**
- * DL-Translate TranslationModel Class
- * TypeScript port inspired by: https://github.com/xhluca/dl-translate
- * 
- * Uses @huggingface/transformers for browser-based NLLB-200 translation
+ * DL-Translate Translator
+ * Server-based translation using Supabase Edge Function
+ * No client-side model loading
  */
 
-import { pipeline } from '@huggingface/transformers';
-import type { TranslatorConfig, TranslationResult, ModelType, NLLBCode } from './types';
-import { getCode, getLanguage, detectScript, isSameLanguage, isLatinScript, LANGUAGE_TO_CODE } from './languages';
-
-// Model name mapping
-const MODEL_MAPPING: Record<ModelType, string> = {
-  'nllb-200-distilled-600M': 'Xenova/nllb-200-distilled-600M',
-  'nllb-200-distilled-1.3B': 'Xenova/nllb-200-distilled-1.3B',
-  'm2m100_418M': 'Xenova/m2m100_418M',
-};
-
-// Global pipeline instance (singleton) - use any to avoid complex type issues
-let translatorPipeline: any = null;
-let isLoading = false;
-let loadError: string | null = null;
-let currentModel: string | null = null;
+import { supabase } from '@/integrations/supabase/client';
+import type { TranslatorConfig, TranslationResult } from './types';
+import { getCode, detectLanguage, isSameLanguage } from './languages';
 
 // Translation cache
 const cache = new Map<string, string>();
 
 /**
  * TranslationModel - Main translation class
- * Inspired by dl-translate's TranslationModel class
+ * Uses server-side translation via Edge Function
  */
 export class TranslationModel {
   private config: TranslatorConfig;
-  private modelId: string;
 
   constructor(config: TranslatorConfig = {}) {
     this.config = {
-      modelName: 'nllb-200-distilled-600M',
-      device: 'wasm',
       cacheEnabled: true,
       ...config,
     };
-    this.modelId = MODEL_MAPPING[this.config.modelName!];
-  }
-
-  /**
-   * Load the translation model
-   */
-  async load(): Promise<boolean> {
-    if (translatorPipeline && currentModel === this.modelId) {
-      return true;
-    }
-
-    if (isLoading) {
-      // Wait for existing load
-      while (isLoading) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      return translatorPipeline !== null;
-    }
-
-    isLoading = true;
-    loadError = null;
-
-    try {
-      console.log('[DL-Translate] Loading translation model...');
-      
-      translatorPipeline = await pipeline('translation', this.modelId, {
-        progress_callback: (data: any) => {
-          if (data?.progress && this.config.onProgress) {
-            this.config.onProgress(data.progress);
-          }
-        },
-      });
-      
-      currentModel = this.modelId;
-      isLoading = false;
-      console.log('[DL-Translate] Model loaded successfully');
-      return true;
-    } catch (error) {
-      loadError = error instanceof Error ? error.message : 'Failed to load model';
-      isLoading = false;
-      console.error('[DL-Translate] Load error:', error);
-      return false;
-    }
   }
 
   /**
    * Translate text from source to target language
-   * Main translation method - mirrors dl-translate's translate() method
    */
   async translate(
     text: string,
@@ -104,42 +43,35 @@ export class TranslationModel {
       return this.createResult(text, source, target, false);
     }
 
-    // Get NLLB codes
-    const sourceCode = getCode(source);
-    const targetCode = getCode(target);
-
     // Check cache
-    const cacheKey = `${text}:${sourceCode}:${targetCode}`;
+    const cacheKey = `${text}:${source}:${target}`;
     if (this.config.cacheEnabled && cache.has(cacheKey)) {
       return this.createResult(cache.get(cacheKey)!, source, target, true);
     }
 
-    // Ensure model is loaded
-    const loaded = await this.load();
-    if (!loaded || !translatorPipeline) {
-      console.warn('[DL-Translate] Model not loaded, returning original text');
-      return this.createResult(text, source, target, false);
-    }
-
     try {
-      console.log(`[DL-Translate] Translating from ${sourceCode} to ${targetCode}`);
-      
-      const result = await translatorPipeline(text, {
-        src_lang: sourceCode,
-        tgt_lang: targetCode,
+      // Call edge function for translation
+      const { data, error } = await supabase.functions.invoke('translate-message', {
+        body: {
+          text,
+          sourceLanguage: source,
+          targetLanguage: target,
+        },
       });
 
-      const translatedText = Array.isArray(result) 
-        ? result[0]?.translation_text || text
-        : result?.translation_text || text;
+      if (error) {
+        console.error('[DL-Translate] Edge function error:', error);
+        return this.createResult(text, source, target, false);
+      }
+
+      const translatedText = data?.translatedText || text;
 
       // Cache result
-      if (this.config.cacheEnabled) {
+      if (this.config.cacheEnabled && translatedText !== text) {
         cache.set(cacheKey, translatedText);
       }
 
-      console.log('[DL-Translate] Translation complete');
-      return this.createResult(translatedText, source, target, true);
+      return this.createResult(translatedText, source, target, translatedText !== text);
     } catch (error) {
       console.error('[DL-Translate] Translation error:', error);
       return this.createResult(text, source, target, false);
@@ -149,11 +81,11 @@ export class TranslationModel {
   /**
    * Detect language from text
    */
-  detect(text: string): { language: string; code: NLLBCode } {
-    const result = detectScript(text);
+  detect(text: string): { language: string; code: string } {
+    const language = detectLanguage(text);
     return {
-      language: result.language,
-      code: result.code,
+      language,
+      code: getCode(language),
     };
   }
 
@@ -163,31 +95,6 @@ export class TranslationModel {
   async translateAuto(text: string, target: string): Promise<TranslationResult> {
     const detected = this.detect(text);
     return this.translate(text, detected.language, target);
-  }
-
-  /**
-   * Get available languages
-   */
-  getAvailableLanguages(): string[] {
-    return Object.keys(LANGUAGE_TO_CODE);
-  }
-
-  /**
-   * Check if model is ready
-   */
-  isReady(): boolean {
-    return translatorPipeline !== null && currentModel === this.modelId;
-  }
-
-  /**
-   * Get loading status
-   */
-  getStatus(): { isLoading: boolean; error: string | null; isReady: boolean } {
-    return {
-      isLoading,
-      error: loadError,
-      isReady: this.isReady(),
-    };
   }
 
   /**
@@ -210,8 +117,6 @@ export class TranslationModel {
       text,
       source,
       target,
-      sourceCode: getCode(source),
-      targetCode: getCode(target),
       isTranslated,
     };
   }
@@ -236,8 +141,8 @@ export async function translateAuto(
   return mt.translateAuto(text, target);
 }
 
-export function detect(text: string): { language: string; code: NLLBCode } {
+export function detect(text: string): { language: string; code: string } {
   return mt.detect(text);
 }
 
-export { isLatinScript, isSameLanguage, getCode, getLanguage };
+export { isSameLanguage, getCode, detectLanguage } from './languages';

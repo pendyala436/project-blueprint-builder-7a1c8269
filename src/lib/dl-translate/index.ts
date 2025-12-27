@@ -4,38 +4,31 @@
  * 
  * Inspired by: https://github.com/xhluca/dl-translate
  * 
- * A TypeScript implementation of dl-translate for browser-based
- * machine translation using NLLB-200 model via @huggingface/transformers.
+ * A simplified TypeScript implementation using server-side translation
+ * via Supabase Edge Function. No client-side model loading required.
  * 
  * Features:
- * - 200+ language support (NLLB-200)
- * - Browser-based translation (no server required)
- * - Automatic language detection
+ * - Language detection based on script
  * - Translation caching
- * - React hooks for easy integration
+ * - Server-side translation via Edge Function
+ * - React hook for easy integration
  * 
  * @example
  * ```tsx
- * import { TranslationModel, translate, useDLTranslate } from '@/lib/dl-translate';
- * 
- * // Using the TranslationModel class (like Python's dl-translate)
- * const mt = new TranslationModel();
- * await mt.load();
- * const result = await mt.translate('Hello world', 'english', 'hindi');
- * console.log(result.text); // "नमस्ते दुनिया"
+ * import { translate, useDLTranslate } from '@/lib/dl-translate';
  * 
  * // Using convenience function
  * const result = await translate('Hello', 'english', 'spanish');
  * 
  * // Using React hook
- * const { translate, isLoading, isReady } = useDLTranslate();
+ * const { translate, isTranslating } = useDLTranslate();
+ * const result = await translate('Hello', 'english', 'hindi');
  * ```
  */
 
 // Types
 export type {
-  NLLBCode,
-  ModelType,
+  LanguageCode,
   TranslationResult,
   LanguageInfo,
   TranslatorConfig,
@@ -49,10 +42,6 @@ export {
   translate,
   translateAuto,
   detect,
-  isLatinScript,
-  isSameLanguage,
-  getCode,
-  getLanguage,
 } from './translator';
 
 // Language utilities
@@ -61,6 +50,11 @@ export {
   CODE_TO_LANGUAGE,
   getSupportedLanguages,
   detectScript,
+  detectLanguage,
+  isLatinScript,
+  isSameLanguage,
+  getCode,
+  getLanguage,
 } from './languages';
 
 // React hook
