@@ -206,18 +206,29 @@ const DraggableVideoCallWindow = ({
   // Dragging handlers - supports both mouse and touch
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
+
+    // Don't start dragging when interacting with controls
+    const target = e.target as HTMLElement | null;
+    const interactive = target?.closest?.(
+      'button, a, input, textarea, select, [role="button"], [data-no-drag]'
+    );
+    if (interactive) return;
+
+    // Only prevent default if we are actually starting a drag
     e.preventDefault();
+
     setIsDragging(true);
-    
+
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+
     dragRef.current = {
       startX: clientX,
       startY: clientY,
       startPosX: position.x,
-      startPosY: position.y
+      startPosY: position.y,
     };
+
     onFocus?.();
   }, [position, isMaximized, onFocus]);
 
