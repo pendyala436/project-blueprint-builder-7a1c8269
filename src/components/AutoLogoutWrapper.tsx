@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 interface AutoLogoutWrapperProps {
   children: React.ReactNode;
@@ -33,8 +33,30 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
   const logout = useCallback(async () => {
     if (!isAuthenticated) return;
     
-    console.log('Auto-logout: User idle for 15 minutes');
-    toast.info('You have been logged out due to inactivity');
+    console.log('Auto-logout: User idle for 10 minutes');
+    
+    // Get current user to set offline status before logout
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // Set user offline
+      await supabase
+        .from('user_status')
+        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .eq('user_id', user.id);
+      
+      // End any active chat sessions
+      await supabase
+        .from('active_chat_sessions')
+        .update({ 
+          status: 'ended', 
+          ended_at: new Date().toISOString(),
+          end_reason: 'user_inactive_10min'
+        })
+        .or(`man_user_id.eq.${user.id},woman_user_id.eq.${user.id}`)
+        .eq('status', 'active');
+    }
+    
+    toast.info('You have been logged out due to 10 minutes of inactivity');
     await supabase.auth.signOut();
     navigate('/');
   }, [navigate, isAuthenticated]);
