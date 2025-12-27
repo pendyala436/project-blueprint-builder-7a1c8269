@@ -25,7 +25,10 @@ export const useActivityStatus = (userId: string | null) => {
   const setOnlineStatus = useCallback(async (isOnline: boolean) => {
     if (!userId) return;
 
+    const now = new Date().toISOString();
+
     try {
+      // Update user_status table
       const { data: existing } = await supabase
         .from("user_status")
         .select("id")
@@ -37,8 +40,8 @@ export const useActivityStatus = (userId: string | null) => {
           .from("user_status")
           .update({
             is_online: isOnline,
-            last_seen: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            last_seen: now,
+            updated_at: now
           })
           .eq("user_id", userId);
       } else {
@@ -47,9 +50,16 @@ export const useActivityStatus = (userId: string | null) => {
           .insert({
             user_id: userId,
             is_online: isOnline,
-            last_seen: new Date().toISOString()
+            last_seen: now
           });
       }
+
+      // Also update last_active_at in profiles table for real-time partner monitoring
+      await supabase
+        .from("profiles")
+        .update({ last_active_at: now })
+        .eq("user_id", userId);
+
     } catch (error) {
       console.error("Error updating online status:", error);
     }
@@ -122,13 +132,21 @@ export const useActivityStatus = (userId: string | null) => {
     // Handle page unload - set offline
     const handleBeforeUnload = async () => {
       // Set offline status when page closes
+      const now = new Date().toISOString();
       try {
+        // Update user_status
         await supabase
           .from("user_status")
           .update({
             is_online: false,
-            last_seen: new Date().toISOString()
+            last_seen: now
           })
+          .eq("user_id", userId);
+        
+        // Also update profiles for partner monitoring
+        await supabase
+          .from("profiles")
+          .update({ last_active_at: now })
           .eq("user_id", userId);
       } catch (error) {
         // Best effort - may not complete before page unloads
