@@ -28,7 +28,8 @@ import {
   Video,
   FileText,
   Mic,
-  Square
+  Square,
+  Languages
 } from "lucide-react";
 import {
   Popover,
@@ -39,6 +40,7 @@ import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { useRealTimeTransliteration } from "@/hooks/useRealTimeTransliteration";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -107,7 +109,20 @@ const DraggableMiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time transliteration hook - converts English typing to partner's language script
+  const {
+    converted: transliteratedText,
+    isConverting,
+    handleInput: handleTransliterationInput,
+    convertFullMessage
+  } = useRealTimeTransliteration({
+    targetLanguage: partnerLanguage,
+    enabled: transliterationEnabled,
+    debounceMs: 400
+  });
 
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
@@ -546,8 +561,11 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Convert English typing to target language before sending
-      const convertedMessage = await convertMessageToTargetLanguage(messageText);
+      // Use the transliteration hook's convertFullMessage for final conversion
+      // This gives better results than word-by-word conversion
+      const convertedMessage = transliterationEnabled 
+        ? await convertFullMessage(messageText)
+        : await convertMessageToTargetLanguage(messageText);
       
       const { error } = await supabase
         .from("chat_messages")
@@ -1026,18 +1044,59 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input */}
-              <Input
-                placeholder="Type a message..."
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
-                }}
-                onKeyDown={handleKeyPress}
-                className="h-8 text-xs flex-1"
-                disabled={isSending || isUploading}
-              />
+              {/* Text input with transliteration preview */}
+              <div className="flex-1 relative">
+                {/* Transliteration preview */}
+                {transliterationEnabled && transliteratedText && transliteratedText !== newMessage && newMessage.trim() && (
+                  <div className="absolute -top-6 left-0 right-0 px-2 py-0.5 bg-primary/10 rounded-t text-[10px] text-primary truncate border border-b-0 border-primary/20">
+                    {isConverting ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        Converting...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Languages className="h-2.5 w-2.5" />
+                        {transliteratedText}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <Input
+                  placeholder={`Type in English → ${partnerLanguage}`}
+                  value={newMessage}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewMessage(value);
+                    handleTyping();
+                    // Trigger real-time transliteration
+                    if (transliterationEnabled) {
+                      handleTransliterationInput(value);
+                    }
+                  }}
+                  onKeyDown={handleKeyPress}
+                  className="h-8 text-xs w-full"
+                  disabled={isSending || isUploading}
+                />
+              </div>
+
+              {/* Transliteration toggle */}
+              <Button
+                type="button"
+                variant={transliterationEnabled ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-8 w-8 shrink-0",
+                  transliterationEnabled && "bg-primary/20 text-primary hover:bg-primary/30"
+                )}
+                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
+                title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
+              >
+                <Languages className={cn(
+                  "h-4 w-4",
+                  isConverting && "animate-pulse"
+                )} />
+              </Button>
 
               {/* Send button */}
               <Button
