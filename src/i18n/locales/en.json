@@ -159,11 +159,7 @@
     "mute": "Mute notifications",
     "leaveChat": "Leave chat",
     "clearHistory": "Clear history",
-    "blockAndReport": "Block and report",
-    "nativePreview": "Native script",
-    "converting": "Converting...",
-    "typedAs": "You typed",
-    "recipientSees": "Recipient will see"
+    "blockAndReport": "Block and report"
   },
   "wallet": {
     "title": "Wallet",

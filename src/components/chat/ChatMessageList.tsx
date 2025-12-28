@@ -1,9 +1,10 @@
 import React, { memo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, Languages } from 'lucide-react';
+import { Check, CheckCheck, Languages, RotateCcw } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 export interface ChatMessage {
@@ -63,10 +64,9 @@ const MessageBubble = memo(({
   onToggleTranslation?: () => void;
 }) => {
   const { t } = useTranslation();
-  // DL-200 STRICT RULE: Always display ONLY translated content in viewer's language
-  // NO original text shown, NO language indicators, NO prefixes/suffixes
-  // translatedContent is ALWAYS in viewer's language (or content if same language)
-  const displayContent = message.translatedContent || message.content;
+  const displayContent = showTranslation && message.translatedContent && !message.showOriginal
+    ? message.translatedContent
+    : message.content;
 
   return (
     <div
@@ -86,10 +86,13 @@ const MessageBubble = memo(({
       )}
 
       <div className={cn('flex flex-col', isOwn ? 'items-end' : 'items-start')}>
-        {/* Sender name for received messages - no language shown per DL-200 */}
+        {/* Sender name for received messages */}
         {!isOwn && (
           <span className="text-xs text-muted-foreground mb-1 px-1">
             {message.senderName}
+            {message.senderLanguage && (
+              <span className="text-muted-foreground/60 ms-1">• {message.senderLanguage}</span>
+            )}
           </span>
         )}
 
@@ -106,7 +109,24 @@ const MessageBubble = memo(({
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
             {displayContent}
           </p>
-          {/* DL-200: No "show original" toggle - viewer sees ONLY their language */}
+
+          {/* Translation indicator */}
+          {message.translatedContent && showTranslation && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleTranslation}
+              className={cn(
+                'h-auto p-0 mt-1 text-xs font-normal',
+                isOwn
+                  ? 'text-primary-foreground/70 hover:text-primary-foreground hover:bg-transparent'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+              )}
+            >
+              <Languages className="h-3 w-3 me-1" />
+              {message.showOriginal ? t('chat.showTranslation') : t('chat.showOriginal')}
+            </Button>
+          )}
         </div>
 
         {/* Timestamp and status */}

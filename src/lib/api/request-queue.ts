@@ -18,11 +18,9 @@ class RequestQueue {
   private isProcessing = false;
   private listeners: Set<ApiEventHandler> = new Set();
   private processInterval: ReturnType<typeof setInterval> | null = null;
-  private isInitialized = false;
-  private initPromise: Promise<void> | null = null;
 
   private constructor() {
-    this.initPromise = this.initialize();
+    this.initialize();
   }
 
   static getInstance(): RequestQueue {
@@ -33,14 +31,10 @@ class RequestQueue {
   }
 
   private async initialize(): Promise<void> {
-    if (typeof indexedDB === 'undefined') {
-      this.isInitialized = true;
-      return;
-    }
+    if (typeof indexedDB === 'undefined') return;
 
     try {
       this.db = await this.openDatabase();
-      this.isInitialized = true;
       
       // Subscribe to network changes
       networkMonitor.subscribe((event) => {
@@ -58,15 +52,6 @@ class RequestQueue {
 
     } catch (error) {
       console.error('Failed to initialize request queue:', error);
-      this.isInitialized = true; // Mark as initialized even on error to prevent hanging
-    }
-  }
-  
-  // Wait for initialization to complete
-  private async ensureInitialized(): Promise<void> {
-    if (this.isInitialized) return;
-    if (this.initPromise) {
-      await this.initPromise;
     }
   }
 
@@ -104,8 +89,6 @@ class RequestQueue {
    * Add a request to the queue
    */
   async enqueue(request: Omit<PendingRequest, 'id' | 'timestamp' | 'retryCount'>): Promise<string> {
-    await this.ensureInitialized();
-    
     if (!this.db) {
       throw new Error('Queue database not initialized');
     }

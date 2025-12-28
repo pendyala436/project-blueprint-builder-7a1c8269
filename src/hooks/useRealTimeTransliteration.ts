@@ -1,16 +1,3 @@
-/**
- * Real-time Transliteration Hook for DL-200
- * 
- * Converts Latin typing to native script in real-time while user types.
- * Runs in PARALLEL - NEVER blocks typing input.
- * 
- * DL-200 Rules:
- * - Output ONLY final text, NO language names
- * - Same language = same script output
- * - Works for all 200 DL languages
- * 
- * Example: User types "bagunnava" → displays "బాగున్నావా" as preview
- */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -29,15 +16,13 @@ interface UseRealTimeTransliterationOptions {
 
 /**
  * Hook for real-time transliteration of English/Latin text to native scripts.
- * Supports 200+ DL languages via edge function.
+ * Supports 200+ languages via NLLB-200 translation model.
  * 
  * Features:
- * - PARALLEL execution - never blocks typing
  * - Debounced API calls to reduce load
  * - Caches converted text to avoid duplicate requests
  * - Shows original text while converting
  * - Falls back gracefully on errors
- * - CLEAN output - no language prefixes/suffixes
  */
 export const useRealTimeTransliteration = ({
   targetLanguage,

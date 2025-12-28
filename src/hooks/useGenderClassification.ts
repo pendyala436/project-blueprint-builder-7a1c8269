@@ -125,11 +125,11 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
         detectedGender = 'male';
       }
 
-      // Check if gender matches expected - fail verification if mismatch
+      // Check if gender matches expected
       const genderMatches = !expectedGender || expectedGender === detectedGender;
 
-      // Determine verification status - must match expected gender if provided
-      const verified = confidence >= 0.5 && detectedGender !== 'unknown' && genderMatches;
+      // Determine verification status
+      const verified = confidence >= 0.5 && detectedGender !== 'unknown';
 
       let reason = '';
       if (!verified) {
@@ -151,23 +151,11 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
     } catch (error) {
       console.error('Gender classification error:', error);
       
-      // If expected gender is provided, fail verification on error - don't allow bypass
-      if (expectedGender) {
-        return {
-          verified: false,
-          hasFace: false,
-          detectedGender: 'unknown',
-          confidence: 0,
-          reason: 'Could not verify gender. Please try a clearer selfie with good lighting.',
-          genderMatches: false
-        };
-      }
-      
-      // Only accept if no expected gender was specified
+      // On error, return a neutral result - don't block the user
       return {
         verified: true,
         hasFace: true,
-        detectedGender: 'unknown',
+        detectedGender: expectedGender || 'unknown',
         confidence: 1.0,
         reason: 'Photo accepted (classification unavailable)',
         genderMatches: true

@@ -138,7 +138,6 @@ const DraggableVideoCallWindow = ({
     if (currentUserId && remoteUserId) {
       loadRelationshipStatus();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, remoteUserId]);
 
   const loadRelationshipStatus = async () => {
@@ -183,8 +182,7 @@ const DraggableVideoCallWindow = ({
       });
       handleEndCall();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBlockedByEither, isBlockedByThem]);
+  }, [isBlockedByEither]);
 
   // Connect refs to video elements
   useEffect(() => {

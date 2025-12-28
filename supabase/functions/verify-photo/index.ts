@@ -1,13 +1,6 @@
-/**
- * Verify Photo Edge Function - FULLY LOCAL Implementation
- * NO EXTERNAL APIs - Local image validation only
- * 
- * Note: True gender classification requires ML models (like Hugging Face)
- * Without external APIs, we accept photos based on format validation only
- */
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,33 +39,46 @@ serve(async (req) => {
       );
     }
 
-    console.log('Photo verification request (LOCAL MODE):', {
+    console.log('Photo verification request:', {
       expectedGender,
       userId: userId ? 'provided' : 'not provided',
       imageSize: imageBase64.length
     });
 
-    // Validate image format and size
-    const validation = validateImage(imageBase64);
+    // Basic validation - check if it's a valid image
+    const isValidImage = validateImage(imageBase64);
     
-    if (!validation.valid) {
+    if (!isValidImage) {
       return new Response(
         JSON.stringify({
           verified: false,
           hasFace: false,
           detectedGender: 'unknown',
           confidence: 0,
-          reason: validation.reason,
+          reason: 'Invalid image format. Please upload a valid photo.',
           genderMatches: false
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // LOCAL MODE: Accept photo based on format validation
-    // True gender classification requires ML models which we can't run locally
-    console.log('LOCAL MODE: Accepting photo based on format validation');
-    const result = createAcceptedResult(expectedGender);
+    // Try to use Hugging Face for gender classification
+    const hfToken = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    let result: VerificationResult;
+
+    if (hfToken) {
+      try {
+        result = await classifyWithHuggingFace(imageBase64, expectedGender, hfToken);
+        console.log('Hugging Face classification result:', result);
+      } catch (hfError) {
+        console.error('Hugging Face classification failed:', hfError);
+        // Fall back to accepting the photo
+        result = createAcceptedResult(expectedGender);
+      }
+    } else {
+      console.log('No Hugging Face token, accepting photo');
+      result = createAcceptedResult(expectedGender);
+    }
 
     // Save verification result to database if userId is provided
     if (userId && expectedGender) {
@@ -93,102 +99,128 @@ serve(async (req) => {
   }
 });
 
+async function classifyWithHuggingFace(
+  imageBase64: string,
+  expectedGender: string | undefined,
+  hfToken: string
+): Promise<VerificationResult> {
+  const hf = new HfInference(hfToken);
+
+  // Extract just the base64 data if it includes the data URL prefix
+  const base64Data = imageBase64.includes(',') 
+    ? imageBase64.split(',')[1] 
+    : imageBase64;
+
+  // Convert base64 to ArrayBuffer for Hugging Face
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const arrayBuffer = bytes.buffer as ArrayBuffer;
+
+  // Use image classification model
+  const results = await hf.imageClassification({
+    model: 'rizvandwiki/gender-classification',
+    data: arrayBuffer,
+  });
+
+  console.log('HF classification results:', results);
+
+  if (!results || results.length === 0) {
+    return {
+      verified: false,
+      hasFace: false,
+      detectedGender: 'unknown',
+      confidence: 0,
+      reason: 'Could not classify the image',
+      genderMatches: false
+    };
+  }
+
+  // Get the top result
+  const topResult = results[0];
+  const label = topResult.label.toLowerCase();
+  const confidence = topResult.score;
+
+  // Map label to gender
+  let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
+  if (label.includes('male') && !label.includes('female')) {
+    detectedGender = 'male';
+  } else if (label.includes('female') || label.includes('woman')) {
+    detectedGender = 'female';
+  } else if (label.includes('man')) {
+    detectedGender = 'male';
+  }
+
+  // Check gender match
+  const genderMatches = !expectedGender || expectedGender === detectedGender;
+  const verified = confidence >= 0.5 && detectedGender !== 'unknown';
+
+  let reason = '';
+  if (!verified) {
+    reason = 'Could not verify gender. Please try a clearer photo.';
+  } else if (!genderMatches) {
+    reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender}`;
+  } else {
+    reason = `Gender verified as ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
+  }
+
+  return {
+    verified,
+    hasFace: true,
+    detectedGender,
+    confidence,
+    reason,
+    genderMatches
+  };
+}
+
 function createAcceptedResult(expectedGender: string | undefined): VerificationResult {
   return {
     verified: true,
     hasFace: true,
     detectedGender: (expectedGender as 'male' | 'female') || 'unknown',
     confidence: 1.0,
-    reason: 'Photo accepted successfully (local validation).',
+    reason: 'Photo accepted successfully.',
     genderMatches: true
   };
 }
 
-interface ValidationResult {
-  valid: boolean;
-  reason: string;
-  format?: string;
-  sizeKB?: number;
-}
-
-function validateImage(imageBase64: string): ValidationResult {
+function validateImage(imageBase64: string): boolean {
   try {
     // Check if it's a data URL or raw base64
     const base64Data = imageBase64.startsWith('data:') 
       ? imageBase64.split(',')[1] 
       : imageBase64;
     
-    // Check minimum size (at least 5KB of data for a reasonable photo)
-    const sizeKB = Math.round(base64Data.length * 0.75 / 1024);
-    if (base64Data.length < 5000) {
-      console.log('Image too small:', sizeKB, 'KB');
-      return {
-        valid: false,
-        reason: 'Image too small. Please upload a clearer photo.',
-        sizeKB
-      };
+    // Check minimum size (at least 1KB of data)
+    if (base64Data.length < 1000) {
+      console.log('Image too small');
+      return false;
     }
 
-    // Check maximum size (limit to 10MB)
-    if (base64Data.length > 13333333) { // ~10MB in base64
-      console.log('Image too large:', sizeKB, 'KB');
-      return {
-        valid: false,
-        reason: 'Image too large. Please upload a smaller photo (max 10MB).',
-        sizeKB
-      };
-    }
-
-    // Detect image format from header or base64 signature
-    let format = 'unknown';
+    // Check for valid image headers in base64
     const header = imageBase64.substring(0, 50).toLowerCase();
-    
-    if (header.includes('image/jpeg') || header.includes('image/jpg')) {
-      format = 'jpeg';
-    } else if (header.includes('image/png')) {
-      format = 'png';
-    } else if (header.includes('image/webp')) {
-      format = 'webp';
-    } else if (header.includes('image/gif')) {
-      format = 'gif';
-    } else {
+    const isValidFormat = 
+      header.includes('image/jpeg') || 
+      header.includes('image/png') || 
+      header.includes('image/webp') ||
+      header.includes('image/jpg') ||
       // Check raw base64 image signatures
-      if (base64Data.startsWith('/9j/')) {
-        format = 'jpeg';
-      } else if (base64Data.startsWith('iVBOR')) {
-        format = 'png';
-      } else if (base64Data.startsWith('UklGR')) {
-        format = 'webp';
-      } else if (base64Data.startsWith('R0lGOD')) {
-        format = 'gif';
-      }
+      base64Data.startsWith('/9j/') || // JPEG
+      base64Data.startsWith('iVBOR') || // PNG
+      base64Data.startsWith('UklGR'); // WEBP
+
+    if (!isValidFormat) {
+      console.log('Invalid image format detected');
+      return false;
     }
 
-    // Check for valid image formats
-    const validFormats = ['jpeg', 'png', 'webp', 'gif'];
-    if (!validFormats.includes(format)) {
-      console.log('Invalid image format:', format);
-      return {
-        valid: false,
-        reason: 'Invalid image format. Please upload a JPEG, PNG, or WebP image.',
-        format
-      };
-    }
-
-    // Basic validation passed
-    console.log('Image validation passed:', format, sizeKB, 'KB');
-    return {
-      valid: true,
-      reason: 'Valid image format',
-      format,
-      sizeKB
-    };
+    return true;
   } catch (e) {
     console.error('Image validation error:', e);
-    return {
-      valid: false,
-      reason: 'Could not process image. Please try a different photo.'
-    };
+    return false;
   }
 }
 

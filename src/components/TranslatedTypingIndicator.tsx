@@ -1,9 +1,8 @@
 /**
  * TranslatedTypingIndicator Component
- * DL-200 STRICT: Display ONLY viewer's language text
  * 
- * Shows typing indicator with real-time translation to recipient's language
- * NO original text shown, NO language names, NO prefixes/suffixes
+ * Displays a typing indicator with real-time translation
+ * Shows the partner's message being translated to recipient's language
  */
 
 import { Loader2 } from 'lucide-react';
@@ -13,18 +12,18 @@ import type { TypingIndicator } from '@/lib/translation/useRealtimeTranslation';
 interface TranslatedTypingIndicatorProps {
   indicator: TypingIndicator;
   partnerName?: string;
+  showOriginal?: boolean;
   className?: string;
 }
 
 export function TranslatedTypingIndicator({
   indicator,
   partnerName = 'Partner',
+  showOriginal = false,
   className
 }: TranslatedTypingIndicatorProps) {
   const { originalText, translatedText, isTranslating, senderLanguage, recipientLanguage } = indicator;
   
-  // DL-200 STRICT: Show ONLY viewer's language
-  // If same language, show original; otherwise show translated
   const isSameLanguage = senderLanguage.toLowerCase() === recipientLanguage.toLowerCase();
   const displayText = isSameLanguage ? originalText : (translatedText || originalText);
 
@@ -43,8 +42,7 @@ export function TranslatedTypingIndicator({
           )}
         </div>
         
-        {/* DL-200 STRICT: Display ONLY viewer's language text */}
-        {/* NO original text, NO language indicators */}
+        {/* Translated text (recipient's language) */}
         <p className="text-sm text-foreground/80 break-words">
           {displayText}
           <span className="inline-flex items-center ml-1">
@@ -53,6 +51,13 @@ export function TranslatedTypingIndicator({
             <span className="w-1 h-4 bg-primary/20 animate-pulse rounded-full ml-0.5" style={{ animationDelay: '0.4s' }} />
           </span>
         </p>
+        
+        {/* Original text (optional, for debugging or transparency) */}
+        {showOriginal && !isSameLanguage && originalText !== translatedText && (
+          <p className="text-xs text-muted-foreground mt-1 italic">
+            Original ({senderLanguage}): {originalText}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { secureInvoke } from "@/lib/api/secure-invoke";
 import {
   Send,
   X,
@@ -47,8 +46,7 @@ import {
   processIncomingMessage as dlProcessIncoming,
   isSameLanguage,
   isLatinScript,
-  isLatinScriptLanguage,
-  detectLanguage
+  isLatinScriptLanguage
 } from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
@@ -119,7 +117,8 @@ const DraggableMiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const conversionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed
@@ -541,47 +540,24 @@ const DraggableMiniChatWindow = ({
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
   // Auto-translate a message to current user's language using dl-translate
-  // DL-200 RULE: Always display text in viewer's NATIVE language/script
-  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
-    translatedMessage: string;
-    isTranslated: boolean;
+  const translateMessage = useCallback(async (text: string): Promise<{
+    translatedMessage?: string;
+    isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // SENDER'S OWN MESSAGES: Convert to native script if Latin input
-      if (senderId === currentUserId) {
-        // If sender's language uses non-Latin script and text is Latin, convert it
-        if (needsScriptConversion && isLatinScript(text)) {
-          try {
-            const converted = await convertToNativeScript(text, currentUserLanguage);
-            return {
-              translatedMessage: converted.text || text,
-              isTranslated: true
-            };
-          } catch (err) {
-            console.error('[DraggableMiniChatWindow] Script conversion for sender failed:', err);
-          }
-        }
-        // Already in native script or Latin language
-        return {
-          translatedMessage: text,
-          isTranslated: false
-        };
-      }
-      
-      // For partner's messages: translate from partner's language to current user's language
-      // DL-Translate handles all 200 languages
+      // Use dl-translate to process incoming message
       const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
       return {
-        translatedMessage: result.text || text,
+        translatedMessage: result.text,
         isTranslated: result.isTranslated,
         detectedLanguage: result.detectedLanguage
       };
     } catch (error) {
-      console.error('[DraggableMiniChatWindow] DL-Translate error:', error);
+      console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId, needsScriptConversion]);
+  }, [partnerLanguage, currentUserLanguage]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -592,15 +568,15 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // DL-200 RULE: Translate ALL messages to current user's language
+      // Translate ALL messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
-          const translation = await translateMessage(m.message, m.sender_id);
+          const translation = await translateMessage(m.message);
           return {
             id: m.id,
             senderId: m.sender_id,
-            message: m.message, // Original (for reference)
-            translatedMessage: translation.translatedMessage, // DISPLAY THIS
+            message: m.message,
+            translatedMessage: translation.translatedMessage,
             isTranslated: translation.isTranslated,
             detectedLanguage: translation.detectedLanguage,
             createdAt: m.created_at
@@ -624,16 +600,16 @@ const DraggableMiniChatWindow = ({
         },
         async (payload: any) => {
           const newMsg = payload.new;
-          // DL-200: Translate to current user's language
-          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
+          // Translate to current user's language
+          const translation = await translateMessage(newMsg.message);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              message: newMsg.message, // Original (for reference)
-              translatedMessage: translation.translatedMessage, // DISPLAY THIS
+              message: newMsg.message,
+              translatedMessage: translation.translatedMessage,
               isTranslated: translation.isTranslated,
               detectedLanguage: translation.detectedLanguage,
               createdAt: newMsg.created_at
@@ -663,7 +639,7 @@ const DraggableMiniChatWindow = ({
 
     heartbeatRef.current = setInterval(async () => {
       try {
-        await secureInvoke("chat-manager", {
+        await supabase.functions.invoke("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId, session_id: sessionId }
         });
 
@@ -715,6 +691,7 @@ const DraggableMiniChatWindow = ({
     }
 
     setNewMessage("");
+    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     setIsSending(true);
     setLastActivityTime(Date.now());
 
@@ -1126,10 +1103,21 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
+                      ) : msg.translatedMessage ? (
+                        // Show translated message in current user's language
+                        <div className="space-y-0.5">
+                          <p>{msg.translatedMessage}</p>
+                          {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                            <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                              {msg.message}
+                              {msg.detectedLanguage && (
+                                <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
                       ) : (
-                        // DL-200: Display in viewer's native language
-                        // translatedMessage is native script for same language or translated for different
-                        <p>{msg.translatedMessage || msg.message}</p>
+                        msg.message
                       )}
                     </div>
                   </div>
@@ -1213,8 +1201,31 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input - auto-converts to native script */}
+              {/* Text input with live translation preview */}
               <div className="flex-1 relative">
+                {/* Live translation preview - shows text in sender's native language */}
+                {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
+                  <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
+                    {livePreview.isLoading ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        Converting...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Languages className="h-2.5 w-2.5" />
+                        <span className="font-medium">{currentUserLanguage}:</span>
+                        <span className="truncate">{livePreview.text}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Same language indicator */}
+                {!needsTranslation && newMessage.trim() && !livePreview.text && (
+                  <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
+                    Same language - no translation
+                  </div>
+                )}
                 <Input
                   placeholder="Type in any language..."
                   value={newMessage}
@@ -1222,42 +1233,27 @@ const DraggableMiniChatWindow = ({
                     const value = e.target.value;
                     setNewMessage(value);
                     handleTyping();
-                    // Auto-translate to native language with debounce
-                    if (conversionTimeoutRef.current) {
-                      clearTimeout(conversionTimeoutRef.current);
+                    // Update live preview with debounce
+                    if (previewTimeoutRef.current) {
+                      clearTimeout(previewTimeoutRef.current);
                     }
-                    // Convert to native language if transliteration enabled
-                    if (transliterationEnabled && value.trim()) {
-                      conversionTimeoutRef.current = setTimeout(async () => {
+                    if (transliterationEnabled && needsScriptConversion && isLatinScript(value) && value.trim()) {
+                      setLivePreview({ text: '', isLoading: true });
+                      previewTimeoutRef.current = setTimeout(async () => {
                         try {
-                          // For non-Latin languages: convert Latin input to native script
-                          // For all languages: detect input language and translate to native if different
-                          if (needsScriptConversion && isLatinScript(value)) {
-                            // User typing Latin text but native language uses non-Latin script
-                            const result = await convertToNativeScript(value, currentUserLanguage);
-                            if (result.text && result.text !== value) {
-                              setNewMessage(result.text);
-                            }
-                          } else if (isLatinScriptLanguage(currentUserLanguage)) {
-                            // User's native is Latin-script (e.g., English)
-                            // Detect if input is in a different language and translate
-                            const detected = detectLanguage(value);
-                            if (detected && !isSameLanguage(detected, currentUserLanguage)) {
-                              const result = await translate(value, detected, currentUserLanguage);
-                              if (result.text && result.isTranslated) {
-                                setNewMessage(result.text);
-                              }
-                            }
-                          }
-                        } catch (err) {
-                          console.error('[DraggableMiniChatWindow] Live conversion error:', err);
+                          const result = await convertToNativeScript(value, currentUserLanguage);
+                          setLivePreview({ text: result.text || value, isLoading: false });
+                        } catch {
+                          setLivePreview({ text: '', isLoading: false });
                         }
-                      }, 600); // 600ms delay to allow typing flow
+                      }, 300);
+                    } else {
+                      setLivePreview({ text: '', isLoading: false });
                     }
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs w-full"
-                  disabled={false}
+                  disabled={isSending || isUploading}
                 />
               </div>
 
@@ -1273,7 +1269,10 @@ const DraggableMiniChatWindow = ({
                 onClick={() => setTransliterationEnabled(!transliterationEnabled)}
                 title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
               >
-                <Languages className="h-4 w-4" />
+                <Languages className={cn(
+                  "h-4 w-4",
+                  livePreview.isLoading && "animate-pulse"
+                )} />
               </Button>
 
               {/* Send button */}

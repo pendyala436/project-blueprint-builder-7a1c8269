@@ -4,11 +4,10 @@ import DraggableMiniChatWindow from "./DraggableMiniChatWindow";
 import IncomingChatPopup from "./IncomingChatPopup";
 import ParallelChatSettingsPanel from "./ParallelChatSettingsPanel";
 import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
-import { useWomenAvailabilitySettings } from "@/hooks/useWomenAvailabilitySettings";
 import { useIncomingChats } from "@/hooks/useIncomingChats";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Settings2, MessageSquare, Video } from "lucide-react";
+import { Settings2, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -54,18 +53,9 @@ const EnhancedParallelChatsContainer = ({
   const existingPartnersRef = useRef<Set<string>>(new Set());
   const nextZIndexRef = useRef(50);
   
-  // Get user's parallel chat settings (men use this hook)
-  const { maxParallelChats: menMaxChats, setMaxParallelChats: setMenMaxChats, isLoading: menSettingsLoading } = 
+  // Get user's parallel chat settings
+  const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
     useParallelChatSettings(currentUserId);
-
-  // Get women's availability settings (women use this hook)
-  const { settings: womenSettings, setMaxChats: setWomenMaxChats, setMaxCalls: setWomenMaxCalls, isLoading: womenSettingsLoading } = 
-    useWomenAvailabilitySettings(userGender === "female" ? currentUserId : undefined);
-
-  // Use appropriate max based on gender
-  const maxParallelChats = userGender === "female" ? womenSettings.maxConcurrentChats : menMaxChats;
-  const maxParallelCalls = userGender === "female" ? womenSettings.maxConcurrentCalls : 3;
-  const settingsLoading = userGender === "female" ? womenSettingsLoading : menSettingsLoading;
 
   // Get incoming chat notifications
   const { incomingChats, acceptChat, rejectChat } = useIncomingChats(currentUserId, userGender);
@@ -349,21 +339,17 @@ const EnhancedParallelChatsContainer = ({
           <PopoverContent className="w-80 p-0" align="start">
             <ParallelChatSettingsPanel
               currentValue={maxParallelChats}
-              onSave={userGender === "female" ? setWomenMaxChats : setMenMaxChats}
+              onSave={setMaxParallelChats}
               isLoading={settingsLoading}
-              currentCallValue={maxParallelCalls}
-              onSaveCallLimit={userGender === "female" ? setWomenMaxCalls : undefined}
-              showCallSettings={userGender === "female"}
             />
           </PopoverContent>
         </Popover>
       </div>
 
-      {/* Incoming chat popups - ONLY for women (men initiate, women accept/reject) */}
-      {userGender === "female" && (
-        <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
-          {pendingIncomingChats.map((incoming) => (
-            <IncomingChatPopup
+      {/* Incoming chat popups - fixed position, highest z-index */}
+      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
+        {pendingIncomingChats.map((incoming) => (
+          <IncomingChatPopup
             key={incoming.sessionId}
             sessionId={incoming.sessionId}
             chatId={incoming.chatId}
@@ -376,10 +362,9 @@ const EnhancedParallelChatsContainer = ({
             userGender={userGender}
             onAccept={handleAcceptChat}
             onReject={handleRejectChat}
-            />
-          ))}
-        </div>
-      )}
+          />
+        ))}
+      </div>
 
       {/* Active chat windows - responsive side by side layout for all devices */}
       <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">

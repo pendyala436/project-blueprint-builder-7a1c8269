@@ -23,7 +23,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { isIndianLanguage } from "@/data/nllb200Languages";
-import { secureInvoke } from "@/lib/api/secure-invoke";
 import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
 import {
   Tooltip,
@@ -232,10 +231,7 @@ const MatchingScreen = () => {
                                "Unknown";
 
           const avail = availabilityMap.get(profile.user_id);
-          // Woman is busy if: chat count >= max OR is_available is explicitly false
-          const isBusy = avail 
-            ? (avail.current_chat_count >= avail.max_concurrent_chats || avail.is_available === false)
-            : false;
+          const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
           const aiVerified = profile.ai_approved === true && profile.approval_status === "approved";
           const isInShift = activeShiftUserIds.has(profile.user_id) || (avail?.is_available ?? true);
           const profileVisibility = (settingsMap.get(profile.user_id) || "high") as ProfileVisibility;
@@ -300,7 +296,7 @@ const MatchingScreen = () => {
   const findNextAvailableWoman = useCallback(async (excludeUserId?: string): Promise<MatchableWoman | null> => {
     try {
       // Use backend to find best match with load balancing
-      const { data, error } = await secureInvoke<any>("chat-manager", {
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "find_match",
           man_user_id: currentUserId,
@@ -394,7 +390,7 @@ const MatchingScreen = () => {
       }
 
       // Start chat via edge function
-      const { data, error } = await secureInvoke<any>("chat-manager", {
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: currentUserId,

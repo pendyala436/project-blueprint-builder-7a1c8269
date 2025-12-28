@@ -27,11 +27,12 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { Loader2, Send, Globe, Sparkles, Check, Languages } from 'lucide-react';
+import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Check } from 'lucide-react';
 import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useDLTranslate } from '@/lib/dl-translate';
+import { useTranslationService } from '@/hooks/useTranslationService';
+
 // ============= TYPES =============
 
 interface Message {
@@ -58,17 +59,43 @@ const POPULAR_LANGUAGES = [
 
 // ============= HELPER COMPONENTS =============
 
-// DL-200 Rule: NO translation indicators, NO "Translated from X", NO language labels
-// Viewer sees ONLY the message in their language - nothing else
+const TranslatedFromBadge: React.FC<{
+  sourceLanguage: string;
+  model?: string;
+  usedPivot?: boolean;
+  onClick: () => void;
+  showOriginal: boolean;
+}> = ({ sourceLanguage, model, usedPivot, onClick, showOriginal }) => (
+  <button
+    onClick={onClick}
+    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+  >
+    <Languages className="h-3 w-3" />
+    <span>
+      {showOriginal ? 'Show translation' : `Translated from ${sourceLanguage}`}
+    </span>
+    {usedPivot && (
+      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+        via English
+      </Badge>
+    )}
+    {model && (
+      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+        {model.includes('fallback') ? 'local' : 'NLLB'}
+      </Badge>
+    )}
+    {showOriginal ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+  </button>
+);
 
 const MessageBubble: React.FC<{
   message: Message;
+  onToggleOriginal: () => void;
   userLanguage: string;
-}> = ({ message, userLanguage }) => {
+}> = ({ message, onToggleOriginal, userLanguage }) => {
   const isUser = message.sender === 'user';
-  // DL-200 Rule: Always show translated text in viewer's language
-  // NEVER show original text, NEVER show "showOriginal" toggle
-  const displayText = message.translatedText || message.text;
+  const displayText = message.showOriginal ? message.text : (message.translatedText || message.text);
+  const needsTranslation = message.isTranslated && message.sourceLanguage.toLowerCase() !== userLanguage.toLowerCase();
   
   return (
     <div className={cn(
@@ -86,7 +113,16 @@ const MessageBubble: React.FC<{
         </p>
       </div>
       
-      {/* DL-200: NO translation indicators shown */}
+      {/* Tinder-style "Translated from X" indicator */}
+      {needsTranslation && !isUser && (
+        <TranslatedFromBadge
+          sourceLanguage={message.sourceLanguage}
+          model={message.model}
+          usedPivot={message.usedPivot}
+          onClick={onToggleOriginal}
+          showOriginal={message.showOriginal}
+        />
+      )}
       
       <span className="text-[10px] text-muted-foreground mt-1">
         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -157,13 +193,13 @@ const UniversalChatPage: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // DL-Translate (server edge function)
+  // Server-side translator via edge function
   const {
     translate,
-    convertToNative: convertToNativeScript,
+    convertToNativeScript,
     isTranslating,
     error: translationError,
-  } = useDLTranslate();
+  } = useTranslationService();
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -192,8 +228,8 @@ const UniversalChatPage: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const result = await convertToNativeScript(input, userLanguage);
-        if (result.isTranslated && result.text !== input) {
-          setLivePreview(result.text);
+        if (result.isConverted && result.converted !== input) {
+          setLivePreview(result.converted);
         } else {
           setLivePreview('');
         }
@@ -240,6 +276,7 @@ const UniversalChatPage: React.FC = () => {
         
         const partnerText = partnerResponses[Math.floor(Math.random() * partnerResponses.length)];
         
+        // Translate partner message for user via edge function
         const translatedForUser = await translate(
           partnerText,
           partnerLanguage,
@@ -249,13 +286,15 @@ const UniversalChatPage: React.FC = () => {
         const partnerMessage: Message = {
           id: `partner-${Date.now()}`,
           text: partnerText,
-          translatedText: translatedForUser.text,
+          translatedText: translatedForUser.translatedText,
           sourceLanguage: partnerLanguage,
           targetLanguage: userLanguage,
           isTranslated: translatedForUser.isTranslated,
           showOriginal: false,
           sender: 'partner',
           timestamp: new Date(),
+          model: translatedForUser.model,
+          usedPivot: translatedForUser.usedPivot,
         };
         
         setMessages(prev => [...prev, partnerMessage]);
@@ -307,7 +346,7 @@ const UniversalChatPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium">Translation Ready</span>
-              <Badge variant="outline" className="text-xs">DL-Translate via Server</Badge>
+              <Badge variant="outline" className="text-xs">NLLB-200 via Server</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               200+ languages supported with auto-detection and transliteration
@@ -354,7 +393,9 @@ const UniversalChatPage: React.FC = () => {
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                 <Globe className="h-12 w-12 mb-3 opacity-50" />
                 <p className="text-sm">Start a conversation in any language!</p>
-                <p className="text-xs mt-1">Messages are translated using DL-Translate via server</p>
+                <p className="text-xs mt-1">
+                  Messages are translated using NLLB-200 via server
+                </p>
               </div>
             ) : (
               <div className="flex flex-col">
@@ -362,6 +403,7 @@ const UniversalChatPage: React.FC = () => {
                   <MessageBubble
                     key={message.id}
                     message={message}
+                    onToggleOriginal={() => toggleOriginal(message.id)}
                     userLanguage={userLanguage}
                   />
                 ))}
@@ -399,12 +441,12 @@ const UniversalChatPage: React.FC = () => {
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder={`Type in ${userLanguage} (or romanized)...`}
                 className="min-h-[44px] max-h-[120px] resize-none"
-                disabled={isLoading}
+                disabled={isLoading || isTranslating}
                 dir="auto"
               />
               <Button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || isTranslating}
                 size="icon"
                 className="h-[44px] w-[44px]"
               >
@@ -417,7 +459,7 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by DL-Translate • {ALL_NLLB200_LANGUAGES.length}+ languages supported
+              Powered by NLLB-200 • {ALL_NLLB200_LANGUAGES.length}+ languages supported
             </p>
           </div>
         </CardContent>

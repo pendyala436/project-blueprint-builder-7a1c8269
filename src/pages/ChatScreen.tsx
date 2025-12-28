@@ -83,8 +83,6 @@ import {
 } from "@/components/ui/alert-dialog";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
-// Secure edge function invocation
-import { secureInvoke } from "@/lib/api/secure-invoke";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
@@ -251,7 +249,7 @@ const ChatScreen = () => {
     setIsReconnecting(true);
 
     try {
-      const { data, error } = await secureInvoke<any>("chat-manager", {
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "auto_reconnect",
           man_user_id: currentUserId,
@@ -858,7 +856,7 @@ const ChatScreen = () => {
 
     try {
       // End the chat session via chat-manager
-      const { error } = await secureInvoke("chat-manager", {
+      const { error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "end_chat",
           chat_id: chatId.current,

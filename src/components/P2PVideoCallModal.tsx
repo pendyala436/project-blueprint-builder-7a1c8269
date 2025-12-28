@@ -75,8 +75,7 @@ const P2PVideoCallModal = ({
       });
       handleEndCall();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBlocked, isBlockedByThem]);
+  }, [isBlocked]);
 
   // Connect refs to video elements
   const localVideoElement = useRef<HTMLVideoElement>(null);

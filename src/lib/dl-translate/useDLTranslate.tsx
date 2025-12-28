@@ -21,7 +21,7 @@ interface UseDLTranslateReturn {
   convertToNative: (text: string, targetLanguage: string) => Promise<TranslationResult>;
   
   // Detection
-  detect: (text: string) => { language: string; isLatin: boolean; script: string };
+  detect: (text: string) => { language: string; isLatin: boolean };
   detectLanguage: (text: string) => string;
   
   // Utilities

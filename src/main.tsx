@@ -1,12 +1,17 @@
 import { createRoot } from "react-dom/client";
-import "./index.css";
-import App from "./App";
 
-// Load polyfills for older browsers (non-blocking)
+// Load polyfills for older browsers
 import("./lib/polyfills").then(({ default: loadPolyfills }) => {
   loadPolyfills();
 });
 
-// Render App immediately
+// Inline critical CSS and render immediately
 const root = createRoot(document.getElementById("root")!);
-root.render(<App />);
+
+// Import CSS asynchronously for faster FCP
+import("./index.css");
+
+// Render App immediately - no StrictMode for maximum speed
+import("./App.tsx").then(({ default: App }) => {
+  root.render(<App />);
+});

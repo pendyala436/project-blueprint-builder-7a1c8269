@@ -68,7 +68,6 @@ interface PWAState {
 
 export function usePWA() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [state, setState] = useState<PWAState>({
     isInstallable: false,
     isInstalled: false,
@@ -107,12 +106,6 @@ export function usePWA() {
     isPersistentStorageGranted: false,
   });
 
-  // Track mount state to prevent state updates before mount
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
-
   // Register service worker with auto-update
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -120,7 +113,8 @@ export function usePWA() {
   } = useRegisterSW({
     onRegistered(registration) {
       console.log('Service Worker registered:', registration);
-      // Note: checkPushPermission and checkStorageInfo are called in useEffect after mount
+      checkPushPermission();
+      checkStorageInfo();
     },
     onRegisterError(error) {
       console.error('Service Worker registration error:', error);
@@ -280,44 +274,6 @@ export function usePWA() {
   useEffect(() => {
     setState(prev => ({ ...prev, needsUpdate: needRefresh }));
   }, [needRefresh]);
-
-  // Check push notification permission (safe version that checks mount state)
-  const checkPushPermissionSafe = useCallback(() => {
-    if ('Notification' in window) {
-      const permission = Notification.permission;
-      setState(prev => ({ 
-        ...prev, 
-        isPushEnabled: permission === 'granted',
-        pushPermission: permission,
-      }));
-    }
-  }, []);
-
-  // Check storage info (safe version that checks mount state)
-  const checkStorageInfoSafe = useCallback(async () => {
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
-      try {
-        const estimate = await navigator.storage.estimate();
-        const isPersisted = await navigator.storage.persisted?.() || false;
-        setState(prev => ({
-          ...prev,
-          storageQuota: estimate.quota || 0,
-          storageUsed: estimate.usage || 0,
-          isPersistentStorageGranted: isPersisted,
-        }));
-      } catch (error) {
-        console.error('Failed to get storage estimate:', error);
-      }
-    }
-  }, []);
-
-  // Initialize push permission and storage info after mount
-  useEffect(() => {
-    if (isMounted) {
-      checkPushPermissionSafe();
-      checkStorageInfoSafe();
-    }
-  }, [isMounted, checkPushPermissionSafe, checkStorageInfoSafe]);
 
   // Check push notification permission
   const checkPushPermission = useCallback(async () => {

@@ -308,10 +308,12 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   mexican_spanish: 'spanish',
   castilian: 'spanish',
   flemish: 'dutch',
-  myanmar: 'burmese',       // burmese is the canonical name
-  cambodian: 'khmer',       // khmer is the canonical name
-  pilipino: 'filipino',
+  burmese: 'myanmar',
+  myanmar: 'burmese',
+  khmer: 'cambodian',
+  cambodian: 'khmer',
   tagalog: 'filipino',
+  pilipino: 'filipino',
 };
 
 /**

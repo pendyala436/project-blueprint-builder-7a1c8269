@@ -372,11 +372,8 @@ export const useMediaServerCall = ({
       joinCall();
     }
 
-    return () => {
-      cleanup();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitiator]);
+    return cleanup;
+  }, []);
 
   // Subscribe to call status updates
   useEffect(() => {
