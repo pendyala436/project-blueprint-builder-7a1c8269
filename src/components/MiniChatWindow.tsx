@@ -768,7 +768,7 @@ const MiniChatWindow = ({
                 }}
                 onKeyDown={handleKeyPress}
                 className="h-7 text-[11px]"
-                disabled={isSending}
+                disabled={false}
               />
               <Button
                 size="icon"

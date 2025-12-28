@@ -435,12 +435,12 @@ const UniversalChatPage: React.FC = () => {
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder={`Type in ${userLanguage} (or romanized)...`}
                 className="min-h-[44px] max-h-[120px] resize-none"
-                disabled={isLoading || isTranslating}
+                disabled={isLoading}
                 dir="auto"
               />
               <Button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading || isTranslating}
+                disabled={!input.trim() || isLoading}
                 size="icon"
                 className="h-[44px] w-[44px]"
               >

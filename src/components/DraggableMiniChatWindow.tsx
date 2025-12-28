@@ -1254,7 +1254,7 @@ const DraggableMiniChatWindow = ({
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs w-full"
-                  disabled={isSending || isUploading}
+                  disabled={false}
                 />
               </div>
 
