@@ -329,7 +329,7 @@ const LIBRE_TRANSLATE_MIRRORS = [
 ];
 
 // ============================================================
-// TRANSLATION OUTPUT CLEANUP
+// TRANSLATION OUTPUT CLEANUP - STRICT DL-200 CLEAN OUTPUT
 // ============================================================
 
 function escapeRegExp(input: string): string {
@@ -342,11 +342,14 @@ const KNOWN_LANGUAGE_NAMES = Array.from(
   new Set(
     [
       ...LANGUAGES.map((l) => l.name.toLowerCase()),
+      ...LANGUAGES.map((l) => l.native.toLowerCase()),
       ...Object.keys(languageAliases).map((k) => k.toLowerCase()),
       ...Object.values(languageAliases).map((v) => v.toLowerCase()),
       // Common UI variants
       "chinese (simplified)",
       "chinese (traditional)",
+      "simplified chinese",
+      "traditional chinese",
     ].filter(Boolean)
   )
 ).sort((a, b) => b.length - a.length); // longer first
@@ -358,28 +361,37 @@ const LANGUAGE_NAME_PART = KNOWN_LANGUAGE_NAMES.map(escapeRegExp).join("|");
 const languagePrefixPatterns: RegExp[] = [
   // Generic, but restricted to known language names
   new RegExp(
-    `^[\\s"'“”‘’\\(\\[]*(?:translated\\s+to\\s+)?(?:in\\s+)?(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\s*[:\\-–—]?\\s+`,
+    `^[\\s"'""''\\(\\[]*(?:translated\\s+(?:to|in|into)\\s+)?(?:in\\s+)?(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\s*[:\\-–—]?\\s+`,
     "i"
   ),
+  
+  // "Translation:" or "Translated:" prefixes
+  /^[\s"'""''\(\[]*(?:translation|translated)\s*[:\-–—]\s+/i,
+  
+  // "The translation is:" style
+  /^[\s"'""''\(\[]*(?:the\s+)?(?:translation\s+is|meaning\s+is)\s*[:\-–—]?\s+/i,
 
   // Indian language romanized prefixes returned by some services
-  /^[\s"'“”‘’\(\[]*telugulo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*hindilo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*tamilil\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*bengalilo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*marathilo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*gujaratilo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*kannadalo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*malayalamlo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*punjabilo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*odialo\b[:\-–—]?\s+/i,
-  /^[\s"'“”‘’\(\[]*urdulo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*telugulo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*hindilo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*tamilil\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*bengalilo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*marathilo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*gujaratilo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*kannadalo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*malayalamlo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*punjabilo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*odialo\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*urdulo\b[:\-–—]?\s+/i,
 
   // Generic "<something>lo/il/mein" patterns
-  /^[\s"'“”‘’\(\[]*\w+(?:lo|il|mein)\b[:\-–—]?\s+/i,
+  /^[\s"'""''\(\[]*\w+(?:lo|il|mein|la|le)\b[:\-–—]?\s+/i,
 
-  // Telugu script "...ల" style prefix (keep from previous implementation)
-  /^[\s"'“”‘’\(\[]*\w+ల\b[:\-–—]?\s+/i,
+  // Telugu script "...ల" style prefix
+  /^[\s"'""''\(\[]*\w+ల\b[:\-–—]?\s+/i,
+  
+  // Quote wrapped prefixes
+  /^["'""'']+\s*/,
 ];
 
 // Language suffix patterns to strip from translated text
@@ -389,20 +401,29 @@ const languageSuffixPatterns: RegExp[] = [
   new RegExp(`\\s+in\\s+(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\.?$`, "i"),
   new RegExp(`\\s*\\(\\s*in\\s+(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\s*\\)\\.?$`, "i"),
   new RegExp(`\\s*\\(\\s*(?:${LANGUAGE_NAME_PART})\\s+translation\\s*\\)\\.?$`, "i"),
-  new RegExp(`\\s*\\(\\s*translated\\s+to\\s+(?:${LANGUAGE_NAME_PART})\\s*\\)\\.?$`, "i"),
+  new RegExp(`\\s*\\(\\s*translated\\s+(?:to|in|into)\\s+(?:${LANGUAGE_NAME_PART})\\s*\\)\\.?$`, "i"),
   new RegExp(`\\s*-\\s*(?:${LANGUAGE_NAME_PART})\\s+translation\\.?$`, "i"),
   new RegExp(`\\s+\\[(?:${LANGUAGE_NAME_PART})\\]\\.?$`, "i"),
+  
+  // Generic suffix patterns
+  /\s*\(\s*translation\s*\)\s*\.?$/i,
+  /\s*\(\s*translated\s*\)\s*\.?$/i,
+  /\s+-\s+translation\.?$/i,
+  
+  // Trailing quotes
+  /\s*["'""'']+$/,
 ];
 
 /**
  * Strip language prefixes/suffixes from translated text.
  * Keeps translation logic unchanged; only cleans API-added labels.
+ * DL-200 RULE: Output ONLY final text, NO language names, NO metadata.
  */
 function stripLanguagePrefix(text: string): string {
   let result = text.trim();
 
-  // Run a couple of times in case multiple wrappers exist.
-  for (let i = 0; i < 2; i++) {
+  // Run multiple passes to handle nested wrappers
+  for (let i = 0; i < 3; i++) {
     const before = result;
 
     // Strip prefixes
