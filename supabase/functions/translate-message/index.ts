@@ -354,14 +354,56 @@ const languagePrefixPatterns = [
   /^\w+ల\s+/i, // Telugu script "lo" pattern
 ];
 
+// Language suffix patterns to strip from translated text
+// Some APIs append "in Telugu", "in Malayalam", etc. at the end
+const languageSuffixPatterns = [
+  // English suffixes - "in <language>" at end
+  /\s+in\s+english\.?$/i,
+  /\s+in\s+hindi\.?$/i,
+  /\s+in\s+telugu\.?$/i,
+  /\s+in\s+tamil\.?$/i,
+  /\s+in\s+malayalam\.?$/i,
+  /\s+in\s+kannada\.?$/i,
+  /\s+in\s+bengali\.?$/i,
+  /\s+in\s+marathi\.?$/i,
+  /\s+in\s+gujarati\.?$/i,
+  /\s+in\s+punjabi\.?$/i,
+  /\s+in\s+odia\.?$/i,
+  /\s+in\s+urdu\.?$/i,
+  /\s+in\s+arabic\.?$/i,
+  /\s+in\s+french\.?$/i,
+  /\s+in\s+spanish\.?$/i,
+  /\s+in\s+german\.?$/i,
+  /\s+in\s+portuguese\.?$/i,
+  /\s+in\s+russian\.?$/i,
+  /\s+in\s+japanese\.?$/i,
+  /\s+in\s+korean\.?$/i,
+  /\s+in\s+chinese\.?$/i,
+  // Generic pattern - catches any "in <word>" at end
+  /\s+in\s+\w+\.?$/i,
+  // Parenthetical language names
+  /\s*\(in\s+\w+\)\.?$/i,
+  /\s*\(\w+\s+translation\)\.?$/i,
+  /\s*\(translated\s+to\s+\w+\)\.?$/i,
+  // Other patterns
+  /\s+-\s+\w+\s+translation\.?$/i,
+  /\s+\[\w+\]\.?$/i,
+];
+
 /**
- * Strip language prefixes from translated text
- * Removes patterns like "in English", "telugulo", etc.
+ * Strip language prefixes and suffixes from translated text
+ * Removes patterns like "in English", "telugulo", "in Telugu", etc.
  */
 function stripLanguagePrefix(text: string): string {
   let result = text.trim();
   
+  // Strip prefixes
   for (const pattern of languagePrefixPatterns) {
+    result = result.replace(pattern, '');
+  }
+  
+  // Strip suffixes
+  for (const pattern of languageSuffixPatterns) {
     result = result.replace(pattern, '');
   }
   
