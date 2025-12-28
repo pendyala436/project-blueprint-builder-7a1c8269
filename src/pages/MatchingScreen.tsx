@@ -232,7 +232,10 @@ const MatchingScreen = () => {
                                "Unknown";
 
           const avail = availabilityMap.get(profile.user_id);
-          const isBusy = avail ? avail.current_chat_count >= avail.max_concurrent_chats : false;
+          // Woman is busy if: chat count >= max OR is_available is explicitly false
+          const isBusy = avail 
+            ? (avail.current_chat_count >= avail.max_concurrent_chats || avail.is_available === false)
+            : false;
           const aiVerified = profile.ai_approved === true && profile.approval_status === "approved";
           const isInShift = activeShiftUserIds.has(profile.user_id) || (avail?.is_available ?? true);
           const profileVisibility = (settingsMap.get(profile.user_id) || "high") as ProfileVisibility;
