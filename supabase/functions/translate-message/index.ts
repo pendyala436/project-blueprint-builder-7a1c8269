@@ -642,6 +642,49 @@ serve(async (req) => {
     console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}`);
 
     // ================================================================
+    // CASE 0: Convert mode - only script conversion, no translation
+    // Used for converting Latin input to native script (e.g., "namaste" -> "नमस्ते")
+    // ================================================================
+    if (mode === 'convert') {
+      console.log(`[dl-translate] Convert mode: converting to ${effectiveTarget}`);
+      
+      if (inputIsLatin && isNonLatinLanguage(effectiveTarget)) {
+        const converted = await transliterateToNative(inputText, effectiveTarget);
+        
+        return new Response(
+          JSON.stringify({
+            translatedText: converted.success ? converted.text : inputText,
+            translatedMessage: converted.success ? converted.text : inputText,
+            originalText: inputText,
+            isTranslated: converted.success,
+            wasTransliterated: converted.success,
+            detectedLanguage: detected.language,
+            sourceLanguage: 'english',
+            targetLanguage: effectiveTarget,
+            mode: 'convert',
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Not Latin or target is Latin - return as-is
+      return new Response(
+        JSON.stringify({
+          translatedText: inputText,
+          translatedMessage: inputText,
+          originalText: inputText,
+          isTranslated: false,
+          wasTransliterated: false,
+          detectedLanguage: detected.language,
+          sourceLanguage: effectiveSource,
+          targetLanguage: effectiveTarget,
+          mode: 'convert',
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
     // CASE 1: Latin input for non-Latin source language
     // User typed romanized text (e.g., "bagunnava" for Telugu)
     // Need to: 1) Transliterate to source script 2) Translate to target
