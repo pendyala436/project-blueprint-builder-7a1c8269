@@ -281,14 +281,6 @@ export function usePWA() {
     setState(prev => ({ ...prev, needsUpdate: needRefresh }));
   }, [needRefresh]);
 
-  // Initialize push permission and storage info after mount
-  useEffect(() => {
-    if (isMounted) {
-      checkPushPermissionSafe();
-      checkStorageInfoSafe();
-    }
-  }, [isMounted]);
-
   // Check push notification permission (safe version that checks mount state)
   const checkPushPermissionSafe = useCallback(() => {
     if ('Notification' in window) {
@@ -318,6 +310,14 @@ export function usePWA() {
       }
     }
   }, []);
+
+  // Initialize push permission and storage info after mount
+  useEffect(() => {
+    if (isMounted) {
+      checkPushPermissionSafe();
+      checkStorageInfoSafe();
+    }
+  }, [isMounted, checkPushPermissionSafe, checkStorageInfoSafe]);
 
   // Check push notification permission
   const checkPushPermission = useCallback(async () => {
