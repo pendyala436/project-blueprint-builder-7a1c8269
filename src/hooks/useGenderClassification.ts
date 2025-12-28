@@ -1,12 +1,14 @@
 /**
- * useGenderClassification Hook - Age & Gender Prediction
+ * useGenderClassification Hook - Gender Detection
  *
- * Uses Hugging Face model: abhilash88/age-gender-prediction
- * Validates face exists and classifies gender.
+ * Uses BlazeFace for face detection + ONNX model for gender prediction
+ * Model file should be placed at: public/models/model.onnx
  */
 
-import { useState, useCallback } from 'react';
-import { pipeline } from '@huggingface/transformers';
+import { useState, useCallback, useRef } from 'react';
+import * as ort from 'onnxruntime-web';
+import * as blazeface from '@tensorflow-models/blazeface';
+import '@tensorflow/tfjs';
 
 export interface GenderClassificationResult {
   verified: boolean;
@@ -24,32 +26,31 @@ export interface UseGenderClassificationReturn {
   classifyGender: (imageBase64: string, expectedGender?: 'male' | 'female') => Promise<GenderClassificationResult>;
 }
 
-let classifierInstance: any = null;
-let loadingPromise: Promise<any> | null = null;
+let blazefaceModel: blazeface.BlazeFaceModel | null = null;
+let onnxSession: ort.InferenceSession | null = null;
+let loadingPromise: Promise<void> | null = null;
 
-const getClassifier = async (onProgress: (progress: number) => void): Promise<any> => {
-  if (classifierInstance) return classifierInstance;
+const loadModels = async (onProgress: (progress: number) => void): Promise<void> => {
+  if (blazefaceModel && onnxSession) return;
   if (loadingPromise) return loadingPromise;
 
   loadingPromise = (async () => {
     try {
-      console.log('Loading abhilash88/age-gender-prediction model...');
-      const classifier = await pipeline(
-        'image-classification',
-        'abhilash88/age-gender-prediction',
-        {
-          progress_callback: (p: any) => {
-            if (p && typeof p.progress === 'number') {
-              onProgress(Math.round(p.progress));
-            }
-          },
-        }
-      );
-      classifierInstance = classifier;
-      console.log('Model loaded successfully');
-      return classifier;
+      // Load BlazeFace model
+      onProgress(10);
+      console.log('Loading BlazeFace model...');
+      blazefaceModel = await blazeface.load();
+      onProgress(50);
+      console.log('BlazeFace model loaded');
+
+      // Load ONNX model
+      console.log('Loading ONNX gender model...');
+      onProgress(60);
+      onnxSession = await ort.InferenceSession.create('/models/model.onnx');
+      onProgress(100);
+      console.log('ONNX model loaded');
     } catch (err) {
-      console.error('Failed to load model:', err);
+      console.error('Failed to load models:', err);
       loadingPromise = null;
       throw err;
     }
@@ -70,62 +71,95 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
       setModelLoadProgress(0);
 
       try {
-        // Load model
-        const classifier = await getClassifier((p) => setModelLoadProgress(Math.round(p * 0.8)));
-        setModelLoadProgress(85);
+        // Load models
+        await loadModels((p) => setModelLoadProgress(p));
+        
+        if (!blazefaceModel || !onnxSession) {
+          throw new Error('Models not loaded');
+        }
 
-        // Run classification
-        console.log('Running gender classification...');
-        const results = await classifier(imageBase64);
-        setModelLoadProgress(95);
-        console.log('Classification results:', results);
+        // Create image element from base64
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
+        });
 
-        if (!results || !Array.isArray(results) || results.length === 0) {
+        // Detect faces using BlazeFace
+        console.log('Detecting faces...');
+        const predictions = await blazefaceModel.estimateFaces(img, false);
+
+        if (predictions.length === 0) {
           return {
             verified: false,
             hasFace: false,
             detectedGender: 'unknown',
             confidence: 0,
-            reason: 'No face detected. Please take a clear selfie.',
+            reason: 'No face detected. Please take a clear selfie showing your face.',
             genderMatches: false,
           };
         }
 
-        // Find gender labels (male/female) from results
-        let maleScore = 0;
-        let femaleScore = 0;
+        // Use the first detected face
+        const face = predictions[0];
+        const topLeft = face.topLeft as number[];
+        const bottomRight = face.bottomRight as number[];
+        const x1 = topLeft[0];
+        const y1 = topLeft[1];
+        const x2 = bottomRight[0];
+        const y2 = bottomRight[1];
+        const width = x2 - x1;
+        const height = y2 - y1;
 
-        for (const result of results) {
-          const label = (result.label || '').toLowerCase();
-          const score = result.score || 0;
-          
-          if (label.includes('male') && !label.includes('female')) {
-            maleScore = Math.max(maleScore, score);
-          } else if (label.includes('female') || label.includes('woman')) {
-            femaleScore = Math.max(femaleScore, score);
-          }
-        }
+        // Add padding to face crop
+        const padding = 0.2;
+        const paddedX1 = Math.max(0, x1 - width * padding);
+        const paddedY1 = Math.max(0, y1 - height * padding);
+        const paddedWidth = Math.min(img.width - paddedX1, width * (1 + 2 * padding));
+        const paddedHeight = Math.min(img.height - paddedY1, height * (1 + 2 * padding));
 
-        const detectedGender: 'male' | 'female' | 'unknown' = 
-          maleScore > femaleScore ? 'male' : 
-          femaleScore > maleScore ? 'female' : 'unknown';
+        // Crop and resize face to 224x224
+        const canvas = document.createElement('canvas');
+        canvas.width = 224;
+        canvas.height = 224;
+        const ctx = canvas.getContext('2d');
         
-        const confidence = Math.max(maleScore, femaleScore);
-
-        // Minimum confidence threshold
-        if (confidence < 0.4) {
-          return {
-            verified: false,
-            hasFace: false,
-            detectedGender: 'unknown',
-            confidence,
-            reason: 'Could not detect face clearly. Please try a better lit selfie.',
-            genderMatches: false,
-          };
+        if (!ctx) {
+          throw new Error('Could not get canvas context');
         }
+
+        ctx.drawImage(img, paddedX1, paddedY1, paddedWidth, paddedHeight, 0, 0, 224, 224);
+
+        const imageData = ctx.getImageData(0, 0, 224, 224);
+        const data = imageData.data;
+
+        // Preprocess to float32 tensor (CHW format)
+        const input = new Float32Array(1 * 3 * 224 * 224);
+        for (let i = 0; i < 224 * 224; i++) {
+          input[i] = data[i * 4] / 255; // R
+          input[i + 224 * 224] = data[i * 4 + 1] / 255; // G
+          input[i + 224 * 224 * 2] = data[i * 4 + 2] / 255; // B
+        }
+
+        // Run ONNX inference
+        console.log('Running gender prediction...');
+        const feeds: Record<string, ort.Tensor> = {
+          input: new ort.Tensor('float32', input, [1, 3, 224, 224])
+        };
+
+        const results = await onnxSession.run(feeds);
+        const genderOutput = results['output_gender'].data as Float32Array;
+
+        const genderProb = genderOutput[0];
+        const detectedGender: 'male' | 'female' = genderProb >= 0.5 ? 'female' : 'male';
+        const confidence = Math.max(genderProb, 1 - genderProb);
+
+        console.log(`Detected gender: ${detectedGender}, confidence: ${(confidence * 100).toFixed(1)}%`);
 
         const genderMatches = !expectedGender || detectedGender === expectedGender;
-        setModelLoadProgress(100);
 
         if (!genderMatches) {
           return {
@@ -146,8 +180,9 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
           reason: `Verified as ${detectedGender} (${Math.round(confidence * 100)}% confidence)`,
           genderMatches: true,
         };
+
       } catch (error) {
-        console.error('Classification error:', error);
+        console.error('Gender classification error:', error);
         return {
           verified: false,
           hasFace: false,
@@ -166,5 +201,3 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
 
   return { isVerifying, isLoadingModel, modelLoadProgress, classifyGender };
 };
-
-
