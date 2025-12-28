@@ -118,8 +118,7 @@ const DraggableMiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const conversionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed
@@ -715,7 +714,6 @@ const DraggableMiniChatWindow = ({
     }
 
     setNewMessage("");
-    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     setIsSending(true);
     setLastActivityTime(Date.now());
 
@@ -1215,31 +1213,8 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input with live translation preview */}
+              {/* Text input - auto-converts to native script */}
               <div className="flex-1 relative">
-                {/* Live translation preview - shows text in sender's native language */}
-                {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-                  <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
-                    {livePreview.isLoading ? (
-                      <span className="flex items-center gap-1">
-                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                        Converting...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Languages className="h-2.5 w-2.5" />
-                        <span className="font-medium">{currentUserLanguage}:</span>
-                        <span className="truncate">{livePreview.text}</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-                {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && !livePreview.text && (
-                  <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
-                    Same language - no translation
-                  </div>
-                )}
                 <Input
                   placeholder="Type in any language..."
                   value={newMessage}
@@ -1247,22 +1222,23 @@ const DraggableMiniChatWindow = ({
                     const value = e.target.value;
                     setNewMessage(value);
                     handleTyping();
-                    // Update live preview with debounce
-                    if (previewTimeoutRef.current) {
-                      clearTimeout(previewTimeoutRef.current);
+                    // Auto-convert to native script with debounce
+                    if (conversionTimeoutRef.current) {
+                      clearTimeout(conversionTimeoutRef.current);
                     }
+                    // Only convert if transliteration enabled and user's language needs conversion
                     if (transliterationEnabled && needsScriptConversion && isLatinScript(value) && value.trim()) {
-                      setLivePreview({ text: '', isLoading: true });
-                      previewTimeoutRef.current = setTimeout(async () => {
+                      conversionTimeoutRef.current = setTimeout(async () => {
                         try {
                           const result = await convertToNativeScript(value, currentUserLanguage);
-                          setLivePreview({ text: result.text || value, isLoading: false });
-                        } catch {
-                          setLivePreview({ text: '', isLoading: false });
+                          if (result.text && result.text !== value) {
+                            // Replace input with converted native script text
+                            setNewMessage(result.text);
+                          }
+                        } catch (err) {
+                          console.error('[DraggableMiniChatWindow] Live conversion error:', err);
                         }
-                      }, 300);
-                    } else {
-                      setLivePreview({ text: '', isLoading: false });
+                      }, 500); // 500ms delay to allow typing flow
                     }
                   }}
                   onKeyDown={handleKeyPress}
@@ -1283,10 +1259,7 @@ const DraggableMiniChatWindow = ({
                 onClick={() => setTransliterationEnabled(!transliterationEnabled)}
                 title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
               >
-                <Languages className={cn(
-                  "h-4 w-4",
-                  livePreview.isLoading && "animate-pulse"
-                )} />
+                <Languages className="h-4 w-4" />
               </Button>
 
               {/* Send button */}

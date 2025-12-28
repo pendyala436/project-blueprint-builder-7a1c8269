@@ -104,8 +104,7 @@ const MiniChatWindow = ({
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const conversionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if translation is needed
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
@@ -460,7 +459,6 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
-    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
@@ -723,25 +721,8 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area with live translation preview */}
+          {/* Input area */}
           <div className="p-1.5 border-t space-y-1">
-            {/* Live translation preview - shows text in user's native language */}
-            {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-              <div className="px-2 py-1 bg-primary/5 rounded text-[10px] text-primary/80 border border-primary/10">
-                <div className="flex items-center gap-1">
-                  <Languages className="h-3 w-3 shrink-0" />
-                  <span className="font-medium">{currentUserLanguage}:</span>
-                </div>
-                <p className="mt-0.5 pl-4">{livePreview.text}</p>
-                {livePreview.isLoading && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
-              </div>
-            )}
-            {/* Same language indicator */}
-            {!needsTranslation && newMessage.trim() && (
-              <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
-                Same language - no translation needed
-              </div>
-            )}
             <div className="flex items-center gap-1">
               {/* Transliteration toggle */}
               <Button
@@ -759,26 +740,27 @@ const MiniChatWindow = ({
               <Input
                 placeholder="Type in any language..."
                 value={newMessage}
-              onChange={(e) => {
+                onChange={(e) => {
                   const val = e.target.value;
                   setNewMessage(val);
                   handleTyping();
-                  // Update live preview with debounce
-                  if (previewTimeoutRef.current) {
-                    clearTimeout(previewTimeoutRef.current);
+                  // Auto-convert to native script with debounce
+                  if (conversionTimeoutRef.current) {
+                    clearTimeout(conversionTimeoutRef.current);
                   }
+                  // Only convert if transliteration enabled and user's language needs conversion
                   if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
-                    setLivePreview({ text: '', isLoading: true });
-                    previewTimeoutRef.current = setTimeout(async () => {
+                    conversionTimeoutRef.current = setTimeout(async () => {
                       try {
                         const result = await convertToNativeScript(val, currentUserLanguage);
-                        setLivePreview({ text: result.text || val, isLoading: false });
-                      } catch {
-                        setLivePreview({ text: '', isLoading: false });
+                        if (result.text && result.text !== val) {
+                          // Replace input with converted native script text
+                          setNewMessage(result.text);
+                        }
+                      } catch (err) {
+                        console.error('[MiniChatWindow] Live conversion error:', err);
                       }
-                    }, 300);
-                  } else {
-                    setLivePreview({ text: '', isLoading: false });
+                    }, 500); // 500ms delay to allow typing flow
                   }
                 }}
                 onKeyDown={handleKeyPress}
