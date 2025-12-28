@@ -92,7 +92,6 @@ const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotF
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
 const MultilingualChatDemo = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/MultilingualChatDemo"));
-const DLTranslateChatDemo = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/DLTranslateChatDemo"));
 
 // Ultra-optimized React Query - maximum caching
 const queryClient = new QueryClient({
