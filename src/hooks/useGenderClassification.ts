@@ -146,14 +146,49 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
 
         // Run ONNX inference
         console.log('Running gender prediction...');
+        
+        // Get the input name from the model
+        const inputNames = onnxSession.inputNames;
+        const outputNames = onnxSession.outputNames;
+        console.log('Model input names:', inputNames);
+        console.log('Model output names:', outputNames);
+        
+        const inputName = inputNames[0] || 'input';
         const feeds: Record<string, ort.Tensor> = {
-          input: new ort.Tensor('float32', input, [1, 3, 224, 224])
+          [inputName]: new ort.Tensor('float32', input, [1, 3, 224, 224])
         };
 
         const results = await onnxSession.run(feeds);
-        const genderOutput = results['output_gender'].data as Float32Array;
-
-        const genderProb = genderOutput[0];
+        
+        // Get the gender output - try different possible output names
+        let genderProb: number;
+        const genderOutputName = outputNames.find(name => 
+          name.toLowerCase().includes('gender') || 
+          name.toLowerCase().includes('output')
+        ) || outputNames[0];
+        
+        console.log('Using output name:', genderOutputName);
+        
+        if (!results[genderOutputName]) {
+          console.error('Available outputs:', Object.keys(results));
+          throw new Error(`Output '${genderOutputName}' not found in model results`);
+        }
+        
+        const outputData = results[genderOutputName].data as Float32Array;
+        console.log('Output data:', outputData);
+        
+        // Handle different output formats
+        if (outputData.length === 1) {
+          // Single probability output (0 = male, 1 = female)
+          genderProb = outputData[0];
+        } else if (outputData.length === 2) {
+          // Two-class output [male_prob, female_prob]
+          genderProb = outputData[1]; // female probability
+        } else {
+          console.log('Unexpected output length:', outputData.length);
+          genderProb = outputData[0];
+        }
+        
         const detectedGender: 'male' | 'female' = genderProb >= 0.5 ? 'female' : 'male';
         const confidence = Math.max(genderProb, 1 - genderProb);
 
