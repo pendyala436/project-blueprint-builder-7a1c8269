@@ -63,11 +63,10 @@ const MessageBubble = memo(({
   onToggleTranslation?: () => void;
 }) => {
   const { t } = useTranslation();
-  // DL-200 Rule: Always show translated content in viewer's language
-  // No original text shown, no language indicators
-  const displayContent = showTranslation && message.translatedContent
-    ? message.translatedContent
-    : message.content;
+  // DL-200 STRICT RULE: Always display ONLY translated content in viewer's language
+  // NO original text shown, NO language indicators, NO prefixes/suffixes
+  // translatedContent is ALWAYS in viewer's language (or content if same language)
+  const displayContent = message.translatedContent || message.content;
 
   return (
     <div

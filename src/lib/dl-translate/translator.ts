@@ -423,9 +423,15 @@ export async function processOutgoingMessage(
 }
 
 /**
- * Process incoming message for receiver
- * - Translate from sender's language to receiver's language
- * - Skip if same language
+ * Process incoming message for receiver - DL-200 STRICT IMPLEMENTATION
+ * 
+ * RULE: Receiver ALWAYS sees message in their OWN language only.
+ * NO original text, NO language names, NO prefixes, NO suffixes.
+ * 
+ * @param text - The message text (in sender's language)
+ * @param senderLanguage - Sender's native language
+ * @param receiverLanguage - Receiver's native language (TARGET)
+ * @returns TranslationResult with text in receiver's language
  */
 export async function processIncomingMessage(
   text: string,
@@ -434,6 +440,7 @@ export async function processIncomingMessage(
 ): Promise<TranslationResult> {
   const trimmed = text.trim();
   
+  // Empty text - passthrough
   if (!trimmed) {
     return {
       text,
@@ -445,8 +452,15 @@ export async function processIncomingMessage(
     };
   }
 
-  // Same language - no translation needed
+  // Same language - no translation needed, but receiver sees in their script
   if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    // Check if script conversion is needed (Latin typing -> native script)
+    const inputIsLatin = isLatinScript(trimmed);
+    if (inputIsLatin && needsScriptConversion(receiverLanguage)) {
+      // Convert Latin to receiver's native script
+      return convertToNativeScript(trimmed, receiverLanguage);
+    }
+    
     return {
       text: trimmed,
       originalText: trimmed,
@@ -457,11 +471,12 @@ export async function processIncomingMessage(
     };
   }
 
-  // Auto-detect the actual source language from the text
+  // Different languages - MUST translate to receiver's language
+  // DL-Translate handles all 200 languages with English pivot fallback
   const detected = detectScript(trimmed);
   const effectiveSource = detected.language !== 'english' ? detected.language : senderLanguage;
 
-  // Translate to receiver's language
+  // Translate to receiver's language (this is the ONLY output receiver sees)
   return translate(trimmed, effectiveSource, receiverLanguage);
 }
 
