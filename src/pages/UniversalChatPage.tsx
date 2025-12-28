@@ -31,8 +31,7 @@ import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Chec
 import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useTranslationService } from '@/hooks/useTranslationService';
-
+import { useDLTranslate } from '@/lib/dl-translate';
 // ============= TYPES =============
 
 interface Message {
@@ -193,13 +192,13 @@ const UniversalChatPage: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Server-side translator via edge function
+  // DL-Translate (server edge function)
   const {
     translate,
-    convertToNativeScript,
+    convertToNative: convertToNativeScript,
     isTranslating,
     error: translationError,
-  } = useTranslationService();
+  } = useDLTranslate();
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -228,8 +227,8 @@ const UniversalChatPage: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const result = await convertToNativeScript(input, userLanguage);
-        if (result.isConverted && result.converted !== input) {
-          setLivePreview(result.converted);
+        if (result.isTranslated && result.text !== input) {
+          setLivePreview(result.text);
         } else {
           setLivePreview('');
         }
@@ -276,7 +275,6 @@ const UniversalChatPage: React.FC = () => {
         
         const partnerText = partnerResponses[Math.floor(Math.random() * partnerResponses.length)];
         
-        // Translate partner message for user via edge function
         const translatedForUser = await translate(
           partnerText,
           partnerLanguage,
@@ -286,15 +284,13 @@ const UniversalChatPage: React.FC = () => {
         const partnerMessage: Message = {
           id: `partner-${Date.now()}`,
           text: partnerText,
-          translatedText: translatedForUser.translatedText,
+          translatedText: translatedForUser.text,
           sourceLanguage: partnerLanguage,
           targetLanguage: userLanguage,
           isTranslated: translatedForUser.isTranslated,
           showOriginal: false,
           sender: 'partner',
           timestamp: new Date(),
-          model: translatedForUser.model,
-          usedPivot: translatedForUser.usedPivot,
         };
         
         setMessages(prev => [...prev, partnerMessage]);
@@ -346,7 +342,7 @@ const UniversalChatPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium">Translation Ready</span>
-              <Badge variant="outline" className="text-xs">NLLB-200 via Server</Badge>
+              <Badge variant="outline" className="text-xs">DL-Translate via Server</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               200+ languages supported with auto-detection and transliteration
@@ -393,9 +389,7 @@ const UniversalChatPage: React.FC = () => {
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                 <Globe className="h-12 w-12 mb-3 opacity-50" />
                 <p className="text-sm">Start a conversation in any language!</p>
-                <p className="text-xs mt-1">
-                  Messages are translated using NLLB-200 via server
-                </p>
+                <p className="text-xs mt-1">Messages are translated using DL-Translate via server</p>
               </div>
             ) : (
               <div className="flex flex-col">
@@ -459,7 +453,7 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by NLLB-200 • {ALL_NLLB200_LANGUAGES.length}+ languages supported
+              Powered by DL-Translate • {ALL_NLLB200_LANGUAGES.length}+ languages supported
             </p>
           </div>
         </CardContent>

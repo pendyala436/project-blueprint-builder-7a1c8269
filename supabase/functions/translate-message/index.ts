@@ -328,87 +328,100 @@ const LIBRE_TRANSLATE_MIRRORS = [
   "https://translate.terraprint.co",
 ];
 
+// ============================================================
+// TRANSLATION OUTPUT CLEANUP
+// ============================================================
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Build a safe language-name regex from our supported languages + aliases.
+// This avoids over-stripping generic phrases like "in the morning".
+const KNOWN_LANGUAGE_NAMES = Array.from(
+  new Set(
+    [
+      ...LANGUAGES.map((l) => l.name.toLowerCase()),
+      ...Object.keys(languageAliases).map((k) => k.toLowerCase()),
+      ...Object.values(languageAliases).map((v) => v.toLowerCase()),
+      // Common UI variants
+      "chinese (simplified)",
+      "chinese (traditional)",
+    ].filter(Boolean)
+  )
+).sort((a, b) => b.length - a.length); // longer first
+
+const LANGUAGE_NAME_PART = KNOWN_LANGUAGE_NAMES.map(escapeRegExp).join("|");
+
 // Language prefix patterns to strip from translated text
-// MyMemory and some APIs return results like "in English Hello" or "telugulo Namaskaram"
-const languagePrefixPatterns = [
-  // English prefixes
-  /^in\s+english\s+/i,
-  /^english:\s*/i,
-  /^in\s+\w+\s+/i, // Generic "in <language>" pattern
-  // Indian language prefixes
-  /^telugulo\s+/i,
-  /^hindilo\s+/i,
-  /^tamilil\s+/i,
-  /^bengalilo\s+/i,
-  /^marathilo\s+/i,
-  /^gujaratilo\s+/i,
-  /^kannadalo\s+/i,
-  /^malayalamlo\s+/i,
-  /^punjabilo\s+/i,
-  /^odialo\s+/i,
-  /^urdulo\s+/i,
-  // Generic patterns
-  /^\w+lo\s+/i, // Telugu-style "lo" suffix (e.g., "telugulo")
-  /^\w+il\s+/i, // Tamil-style "il" suffix
-  /^\w+mein\s+/i, // Hindi-style "mein" suffix
-  /^\w+ల\s+/i, // Telugu script "lo" pattern
+// Examples: "in English Hello", "English: Hello", "translated to Telugu: ..."
+const languagePrefixPatterns: RegExp[] = [
+  // Generic, but restricted to known language names
+  new RegExp(
+    `^[\\s"'“”‘’\\(\\[]*(?:translated\\s+to\\s+)?(?:in\\s+)?(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\s*[:\\-–—]?\\s+`,
+    "i"
+  ),
+
+  // Indian language romanized prefixes returned by some services
+  /^[\s"'“”‘’\(\[]*telugulo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*hindilo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*tamilil\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*bengalilo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*marathilo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*gujaratilo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*kannadalo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*malayalamlo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*punjabilo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*odialo\b[:\-–—]?\s+/i,
+  /^[\s"'“”‘’\(\[]*urdulo\b[:\-–—]?\s+/i,
+
+  // Generic "<something>lo/il/mein" patterns
+  /^[\s"'“”‘’\(\[]*\w+(?:lo|il|mein)\b[:\-–—]?\s+/i,
+
+  // Telugu script "...ల" style prefix (keep from previous implementation)
+  /^[\s"'“”‘’\(\[]*\w+ల\b[:\-–—]?\s+/i,
 ];
 
 // Language suffix patterns to strip from translated text
-// Some APIs append "in Telugu", "in Malayalam", etc. at the end
-const languageSuffixPatterns = [
-  // English suffixes - "in <language>" at end
-  /\s+in\s+english\.?$/i,
-  /\s+in\s+hindi\.?$/i,
-  /\s+in\s+telugu\.?$/i,
-  /\s+in\s+tamil\.?$/i,
-  /\s+in\s+malayalam\.?$/i,
-  /\s+in\s+kannada\.?$/i,
-  /\s+in\s+bengali\.?$/i,
-  /\s+in\s+marathi\.?$/i,
-  /\s+in\s+gujarati\.?$/i,
-  /\s+in\s+punjabi\.?$/i,
-  /\s+in\s+odia\.?$/i,
-  /\s+in\s+urdu\.?$/i,
-  /\s+in\s+arabic\.?$/i,
-  /\s+in\s+french\.?$/i,
-  /\s+in\s+spanish\.?$/i,
-  /\s+in\s+german\.?$/i,
-  /\s+in\s+portuguese\.?$/i,
-  /\s+in\s+russian\.?$/i,
-  /\s+in\s+japanese\.?$/i,
-  /\s+in\s+korean\.?$/i,
-  /\s+in\s+chinese\.?$/i,
-  // Generic pattern - catches any "in <word>" at end
-  /\s+in\s+\w+\.?$/i,
-  // Parenthetical language names
-  /\s*\(in\s+\w+\)\.?$/i,
-  /\s*\(\w+\s+translation\)\.?$/i,
-  /\s*\(translated\s+to\s+\w+\)\.?$/i,
-  // Other patterns
-  /\s+-\s+\w+\s+translation\.?$/i,
-  /\s+\[\w+\]\.?$/i,
+// Examples: "Hello in Telugu", "Hello (in Malayalam)", "Hello - Telugu translation"
+const languageSuffixPatterns: RegExp[] = [
+  // Generic, but restricted to known language names
+  new RegExp(`\\s+in\\s+(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\.?$`, "i"),
+  new RegExp(`\\s*\\(\\s*in\\s+(?:${LANGUAGE_NAME_PART})(?:\\s+language)?\\s*\\)\\.?$`, "i"),
+  new RegExp(`\\s*\\(\\s*(?:${LANGUAGE_NAME_PART})\\s+translation\\s*\\)\\.?$`, "i"),
+  new RegExp(`\\s*\\(\\s*translated\\s+to\\s+(?:${LANGUAGE_NAME_PART})\\s*\\)\\.?$`, "i"),
+  new RegExp(`\\s*-\\s*(?:${LANGUAGE_NAME_PART})\\s+translation\\.?$`, "i"),
+  new RegExp(`\\s+\\[(?:${LANGUAGE_NAME_PART})\\]\\.?$`, "i"),
 ];
 
 /**
- * Strip language prefixes and suffixes from translated text
- * Removes patterns like "in English", "telugulo", "in Telugu", etc.
+ * Strip language prefixes/suffixes from translated text.
+ * Keeps translation logic unchanged; only cleans API-added labels.
  */
 function stripLanguagePrefix(text: string): string {
   let result = text.trim();
-  
-  // Strip prefixes
-  for (const pattern of languagePrefixPatterns) {
-    result = result.replace(pattern, '');
+
+  // Run a couple of times in case multiple wrappers exist.
+  for (let i = 0; i < 2; i++) {
+    const before = result;
+
+    // Strip prefixes
+    for (const pattern of languagePrefixPatterns) {
+      result = result.replace(pattern, "");
+    }
+
+    // Strip suffixes
+    for (const pattern of languageSuffixPatterns) {
+      result = result.replace(pattern, "");
+    }
+
+    result = result.trim();
+    if (result === before) break;
   }
-  
-  // Strip suffixes
-  for (const pattern of languageSuffixPatterns) {
-    result = result.replace(pattern, '');
-  }
-  
-  return result.trim();
+
+  return result;
 }
+
 
 // Translate using LibreTranslate
 async function translateWithLibre(
