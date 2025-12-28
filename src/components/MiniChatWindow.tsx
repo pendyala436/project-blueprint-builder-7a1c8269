@@ -671,22 +671,9 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Show translated message in current user's language */}
-                    {msg.translatedMessage ? (
-                      <div className="space-y-0.5">
-                        <p>{msg.translatedMessage}</p>
-                        {msg.isTranslated && msg.message !== msg.translatedMessage && (
-                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                            {msg.message}
-                            {msg.detectedLanguage && (
-                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      msg.message
-                    )}
+                    {/* DL-200 Rule: Show ONLY translated message in viewer's language */}
+                    {/* No original text, no language names, no prefixes/suffixes */}
+                    <p>{msg.translatedMessage || msg.message}</p>
                   </div>
                 </div>
               ))}

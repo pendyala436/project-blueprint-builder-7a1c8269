@@ -27,7 +27,7 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
-import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Check } from 'lucide-react';
+import { Loader2, Send, Globe, Sparkles, Check, Languages } from 'lucide-react';
 import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -58,43 +58,17 @@ const POPULAR_LANGUAGES = [
 
 // ============= HELPER COMPONENTS =============
 
-const TranslatedFromBadge: React.FC<{
-  sourceLanguage: string;
-  model?: string;
-  usedPivot?: boolean;
-  onClick: () => void;
-  showOriginal: boolean;
-}> = ({ sourceLanguage, model, usedPivot, onClick, showOriginal }) => (
-  <button
-    onClick={onClick}
-    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
-  >
-    <Languages className="h-3 w-3" />
-    <span>
-      {showOriginal ? 'Show translation' : `Translated from ${sourceLanguage}`}
-    </span>
-    {usedPivot && (
-      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-        via English
-      </Badge>
-    )}
-    {model && (
-      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
-        {model.includes('fallback') ? 'local' : 'NLLB'}
-      </Badge>
-    )}
-    {showOriginal ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-  </button>
-);
+// DL-200 Rule: NO translation indicators, NO "Translated from X", NO language labels
+// Viewer sees ONLY the message in their language - nothing else
 
 const MessageBubble: React.FC<{
   message: Message;
-  onToggleOriginal: () => void;
   userLanguage: string;
-}> = ({ message, onToggleOriginal, userLanguage }) => {
+}> = ({ message, userLanguage }) => {
   const isUser = message.sender === 'user';
-  const displayText = message.showOriginal ? message.text : (message.translatedText || message.text);
-  const needsTranslation = message.isTranslated && message.sourceLanguage.toLowerCase() !== userLanguage.toLowerCase();
+  // DL-200 Rule: Always show translated text in viewer's language
+  // NEVER show original text, NEVER show "showOriginal" toggle
+  const displayText = message.translatedText || message.text;
   
   return (
     <div className={cn(
@@ -112,16 +86,7 @@ const MessageBubble: React.FC<{
         </p>
       </div>
       
-      {/* Tinder-style "Translated from X" indicator */}
-      {needsTranslation && !isUser && (
-        <TranslatedFromBadge
-          sourceLanguage={message.sourceLanguage}
-          model={message.model}
-          usedPivot={message.usedPivot}
-          onClick={onToggleOriginal}
-          showOriginal={message.showOriginal}
-        />
-      )}
+      {/* DL-200: NO translation indicators shown */}
       
       <span className="text-[10px] text-muted-foreground mt-1">
         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -397,7 +362,6 @@ const UniversalChatPage: React.FC = () => {
                   <MessageBubble
                     key={message.id}
                     message={message}
-                    onToggleOriginal={() => toggleOriginal(message.id)}
                     userLanguage={userLanguage}
                   />
                 ))}
