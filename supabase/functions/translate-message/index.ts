@@ -328,6 +328,46 @@ const LIBRE_TRANSLATE_MIRRORS = [
   "https://translate.terraprint.co",
 ];
 
+// Language prefix patterns to strip from translated text
+// MyMemory and some APIs return results like "in English Hello" or "telugulo Namaskaram"
+const languagePrefixPatterns = [
+  // English prefixes
+  /^in\s+english\s+/i,
+  /^english:\s*/i,
+  /^in\s+\w+\s+/i, // Generic "in <language>" pattern
+  // Indian language prefixes
+  /^telugulo\s+/i,
+  /^hindilo\s+/i,
+  /^tamilil\s+/i,
+  /^bengalilo\s+/i,
+  /^marathilo\s+/i,
+  /^gujaratilo\s+/i,
+  /^kannadalo\s+/i,
+  /^malayalamlo\s+/i,
+  /^punjabilo\s+/i,
+  /^odialo\s+/i,
+  /^urdulo\s+/i,
+  // Generic patterns
+  /^\w+lo\s+/i, // Telugu-style "lo" suffix (e.g., "telugulo")
+  /^\w+il\s+/i, // Tamil-style "il" suffix
+  /^\w+mein\s+/i, // Hindi-style "mein" suffix
+  /^\w+ల\s+/i, // Telugu script "lo" pattern
+];
+
+/**
+ * Strip language prefixes from translated text
+ * Removes patterns like "in English", "telugulo", etc.
+ */
+function stripLanguagePrefix(text: string): string {
+  let result = text.trim();
+  
+  for (const pattern of languagePrefixPatterns) {
+    result = result.replace(pattern, '');
+  }
+  
+  return result.trim();
+}
+
 // Translate using LibreTranslate
 async function translateWithLibre(
   text: string,
@@ -353,7 +393,9 @@ async function translateWithLibre(
         const data = await response.json();
         if (data.translatedText && data.translatedText !== text) {
           console.log(`[dl-translate] LibreTranslate success via ${mirror}`);
-          return { translatedText: data.translatedText, success: true };
+          // Strip any language prefixes from the result
+          const cleanedText = stripLanguagePrefix(data.translatedText);
+          return { translatedText: cleanedText, success: true };
         }
       }
     } catch (error) {
@@ -383,7 +425,9 @@ async function translateWithMyMemory(
           data.responseData.translatedText !== text &&
           !data.responseData.translatedText.includes('MYMEMORY WARNING')) {
         console.log('[dl-translate] MyMemory success');
-        return { translatedText: data.responseData.translatedText, success: true };
+        // Strip any language prefixes from the result
+        const cleanedText = stripLanguagePrefix(data.responseData.translatedText);
+        return { translatedText: cleanedText, success: true };
       }
     }
   } catch (error) {
