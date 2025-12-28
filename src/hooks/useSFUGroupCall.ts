@@ -130,7 +130,8 @@ export function useSFUGroupCall({
 
     peerConnections.current.set(participantId, pc);
     return pc;
-  }, [currentUserId, iceServers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, fromId: string) => {
     let pc = peerConnections.current.get(fromId);

@@ -84,7 +84,8 @@ export const useIncomingCalls = (currentUserId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, incomingCall?.callId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   const clearIncomingCall = () => {
     setIncomingCall(null);

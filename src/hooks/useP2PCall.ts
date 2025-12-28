@@ -480,8 +480,11 @@ export const useP2PCall = ({
       joinCall();
     }
 
-    return cleanup;
-  }, []);
+    return () => {
+      cleanup();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitiator]);
 
   // Subscribe to call status updates from database
   useEffect(() => {
