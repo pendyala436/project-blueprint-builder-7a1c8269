@@ -1,18 +1,21 @@
 /**
  * Translation Service Hook
- * Uses browser-based @huggingface/transformers for FREE local translation
- * No external API calls or payments required
+ * Uses server-side DL-Translate edge function for translation
+ * No browser-based translation - all processing happens on the server
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { 
-  translateText, 
+  translate, 
+  convertToNativeScript,
+  processIncomingMessage,
+  processOutgoingMessage
+} from '@/lib/dl-translate/translator';
+import { 
   detectLanguage as detectLang, 
-  isLatinScript,
-  preloadModel,
-  isTranslationReady,
-  getLoadingStatus
-} from '@/lib/translation/browser-translator';
+  isLatinScript as checkLatinScript,
+  isSameLanguage
+} from '@/lib/dl-translate/languages';
 
 export interface TranslationResult {
   translatedText: string;
@@ -33,32 +36,10 @@ export interface ConversionResult {
 
 export function useTranslationService() {
   const [isTranslating, setIsTranslating] = useState(false);
-  const [isModelLoading, setIsModelLoading] = useState(false);
-  const [modelLoadProgress, setModelLoadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(isTranslationReady());
 
-  // Preload model on first use
-  useEffect(() => {
-    if (!isReady && !isModelLoading) {
-      const { isLoading } = getLoadingStatus();
-      if (!isLoading) {
-        setIsModelLoading(true);
-        preloadModel((progress) => {
-          setModelLoadProgress(progress);
-        }).then((success) => {
-          setIsReady(success);
-          setIsModelLoading(false);
-          if (!success) {
-            setError('Failed to load translation model');
-          }
-        });
-      }
-    }
-  }, [isReady, isModelLoading]);
-
-  // Translate text using browser-based model (FREE)
-  const translate = useCallback(async (
+  // Translate text using server-side dl-translate
+  const translateText = useCallback(async (
     text: string,
     sourceLanguage: string,
     targetLanguage: string
@@ -76,7 +57,7 @@ export function useTranslationService() {
     }
 
     // Same language - no translation needed
-    if (sourceLanguage.toLowerCase() === targetLanguage.toLowerCase()) {
+    if (isSameLanguage(sourceLanguage, targetLanguage)) {
       return {
         translatedText: text,
         originalText: text,
@@ -92,22 +73,17 @@ export function useTranslationService() {
     setError(null);
 
     try {
-      const result = await translateText(
-        text,
-        sourceLanguage,
-        targetLanguage,
-        (progress) => setModelLoadProgress(progress)
-      );
+      const result = await translate(text, sourceLanguage, targetLanguage);
 
       return {
-        translatedText: result.translatedText,
+        translatedText: result.text,
         originalText: result.originalText,
-        sourceLanguage: result.sourceLanguage,
-        targetLanguage: result.targetLanguage,
+        sourceLanguage: result.source,
+        targetLanguage: result.target,
         isTranslated: result.isTranslated,
-        model: result.model,
+        model: 'dl-translate-server',
         usedPivot: false,
-        detectedLanguage: result.sourceLanguage,
+        detectedLanguage: result.detectedLanguage,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Translation failed';
@@ -128,8 +104,8 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Convert romanized text to native script (uses translation)
-  const convertToNativeScript = useCallback(async (
+  // Convert romanized text to native script (uses server translation)
+  const convertToNative = useCallback(async (
     text: string,
     targetLanguage: string
   ): Promise<ConversionResult> => {
@@ -138,20 +114,65 @@ export function useTranslationService() {
     }
 
     // Check if text is Latin script
-    if (!isLatinScript(text)) {
+    if (!checkLatinScript(text)) {
       return { converted: text, isConverted: false };
     }
 
     try {
-      // Use translation from English to target language for conversion
-      const result = await translateText(text, 'english', targetLanguage);
+      const result = await convertToNativeScript(text, targetLanguage);
       
       return {
-        converted: result.translatedText,
+        converted: result.text,
         isConverted: result.isTranslated,
       };
     } catch {
       return { converted: text, isConverted: false };
+    }
+  }, []);
+
+  // Process outgoing message (convert Latin typing to native script)
+  const processOutgoing = useCallback(async (
+    text: string,
+    userLanguage: string
+  ): Promise<TranslationResult> => {
+    setIsTranslating(true);
+    try {
+      const result = await processOutgoingMessage(text, userLanguage);
+      return {
+        translatedText: result.text,
+        originalText: result.originalText,
+        sourceLanguage: result.source,
+        targetLanguage: result.target,
+        isTranslated: result.isTranslated,
+        model: 'dl-translate-server',
+        usedPivot: false,
+      };
+    } finally {
+      setIsTranslating(false);
+    }
+  }, []);
+
+  // Process incoming message (translate to receiver's language)
+  const processIncoming = useCallback(async (
+    text: string,
+    senderLanguage: string,
+    receiverLanguage: string
+  ): Promise<TranslationResult> => {
+    setIsTranslating(true);
+    try {
+      const result = await processIncomingMessage(text, senderLanguage, receiverLanguage);
+      return {
+        translatedText: result.text,
+        originalText: result.originalText,
+        sourceLanguage: result.source,
+        targetLanguage: result.target,
+        isTranslated: result.isTranslated,
+        model: 'dl-translate-server',
+        usedPivot: false,
+        detectedLanguage: result.detectedLanguage,
+      };
+    } finally {
+      setIsTranslating(false);
     }
   }, []);
 
@@ -161,19 +182,21 @@ export function useTranslationService() {
     if (!trimmed) return { language: 'english', isLatin: true };
 
     const detected = detectLang(trimmed);
-    const latin = isLatinScript(trimmed);
+    const latin = checkLatinScript(trimmed);
 
     return { language: detected, isLatin: latin };
   }, []);
 
   return {
-    translate,
-    convertToNativeScript,
+    translate: translateText,
+    convertToNativeScript: convertToNative,
+    processOutgoingMessage: processOutgoing,
+    processIncomingMessage: processIncoming,
     detectLanguage,
     isTranslating,
-    isModelLoading,
-    modelLoadProgress,
-    isReady,
+    isModelLoading: false, // No model loading for server-side
+    modelLoadProgress: 100, // Always ready
+    isReady: true, // Always ready - server handles it
     error,
   };
 }
