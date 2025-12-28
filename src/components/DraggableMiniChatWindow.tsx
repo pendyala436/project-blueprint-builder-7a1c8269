@@ -1127,10 +1127,9 @@ const DraggableMiniChatWindow = ({
                           <span>View Document</span>
                         </a>
                       ) : (
-                        // DL-200 STRICT RULE: Display ONLY viewer's language text
-                        // NO original text, NO language names, NO prefixes, NO suffixes
-                        // translatedMessage is ALWAYS in viewer's language
-                        <p>{msg.translatedMessage}</p>
+                        // DL-200: Display in viewer's native language
+                        // translatedMessage is native script for same language or translated for different
+                        <p>{msg.translatedMessage || msg.message}</p>
                       )}
                     </div>
                   </div>
