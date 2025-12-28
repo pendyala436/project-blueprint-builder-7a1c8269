@@ -4,10 +4,11 @@ import DraggableMiniChatWindow from "./DraggableMiniChatWindow";
 import IncomingChatPopup from "./IncomingChatPopup";
 import ParallelChatSettingsPanel from "./ParallelChatSettingsPanel";
 import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
+import { useWomenAvailabilitySettings } from "@/hooks/useWomenAvailabilitySettings";
 import { useIncomingChats } from "@/hooks/useIncomingChats";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Settings2, MessageSquare } from "lucide-react";
+import { Settings2, MessageSquare, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -53,9 +54,18 @@ const EnhancedParallelChatsContainer = ({
   const existingPartnersRef = useRef<Set<string>>(new Set());
   const nextZIndexRef = useRef(50);
   
-  // Get user's parallel chat settings
-  const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
+  // Get user's parallel chat settings (men use this hook)
+  const { maxParallelChats: menMaxChats, setMaxParallelChats: setMenMaxChats, isLoading: menSettingsLoading } = 
     useParallelChatSettings(currentUserId);
+
+  // Get women's availability settings (women use this hook)
+  const { settings: womenSettings, setMaxChats: setWomenMaxChats, setMaxCalls: setWomenMaxCalls, isLoading: womenSettingsLoading } = 
+    useWomenAvailabilitySettings(userGender === "female" ? currentUserId : undefined);
+
+  // Use appropriate max based on gender
+  const maxParallelChats = userGender === "female" ? womenSettings.maxConcurrentChats : menMaxChats;
+  const maxParallelCalls = userGender === "female" ? womenSettings.maxConcurrentCalls : 3;
+  const settingsLoading = userGender === "female" ? womenSettingsLoading : menSettingsLoading;
 
   // Get incoming chat notifications
   const { incomingChats, acceptChat, rejectChat } = useIncomingChats(currentUserId, userGender);
@@ -339,8 +349,11 @@ const EnhancedParallelChatsContainer = ({
           <PopoverContent className="w-80 p-0" align="start">
             <ParallelChatSettingsPanel
               currentValue={maxParallelChats}
-              onSave={setMaxParallelChats}
+              onSave={userGender === "female" ? setWomenMaxChats : setMenMaxChats}
               isLoading={settingsLoading}
+              currentCallValue={maxParallelCalls}
+              onSaveCallLimit={userGender === "female" ? setWomenMaxCalls : undefined}
+              showCallSettings={userGender === "female"}
             />
           </PopoverContent>
         </Popover>
