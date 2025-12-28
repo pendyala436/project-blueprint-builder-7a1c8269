@@ -522,6 +522,75 @@ serve(async (req) => {
     console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}`);
 
     // ================================================================
+    // MODE: TRANSLITERATE - Convert Latin to native script only
+    // Used for real-time input preview
+    // ================================================================
+    if (mode === "transliterate") {
+      if (!inputIsLatin || !isNonLatinLanguage(effectiveTarget)) {
+        // No transliteration needed
+        return new Response(
+          JSON.stringify({
+            translatedText: inputText,
+            nativeScriptText: inputText,
+            originalText: inputText,
+            isTranslated: false,
+            mode: "transliterate",
+            confidence: 1
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Transliterate Latin to target native script
+      const transliterated = await transliterateToNative(inputText, effectiveTarget);
+      
+      return new Response(
+        JSON.stringify({
+          translatedText: transliterated.text,
+          nativeScriptText: transliterated.text,
+          originalText: inputText,
+          isTranslated: transliterated.success,
+          mode: "transliterate",
+          confidence: transliterated.success ? 0.9 : 0.5,
+          targetLanguage: effectiveTarget
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
+    // MODE: CONVERT - Convert Latin typing to native script
+    // ================================================================
+    if (mode === "convert") {
+      if (!inputIsLatin || !isNonLatinLanguage(effectiveTarget)) {
+        return new Response(
+          JSON.stringify({
+            translatedText: inputText,
+            convertedMessage: inputText,
+            originalText: inputText,
+            isTranslated: false,
+            mode: "convert"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const converted = await transliterateToNative(inputText, effectiveTarget);
+      
+      return new Response(
+        JSON.stringify({
+          translatedText: converted.text,
+          convertedMessage: converted.text,
+          originalText: inputText,
+          isTranslated: converted.success,
+          mode: "convert",
+          targetLanguage: effectiveTarget
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
     // CASE 1: Latin input for non-Latin source language
     // User typed romanized text (e.g., "bagunnava" for Telugu)
     // Need to: 1) Transliterate to source script 2) Translate to target
