@@ -287,24 +287,38 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language using dl-translate
-  const translateMessage = useCallback(async (text: string): Promise<{
-    translatedMessage?: string;
-    isTranslated?: boolean;
+  // DL-200 RULE: Always translate to viewer's native language, display ONLY translated text
+  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
+    translatedMessage: string;
+    isTranslated: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Use dl-translate to process incoming message
+      // If this is the current user's own message, no translation needed
+      // They should see their message in their own language
+      if (senderId === currentUserId) {
+        return {
+          translatedMessage: text,
+          isTranslated: false
+        };
+      }
+      
+      // For partner's messages: translate from partner's language to current user's language
+      // DL-Translate handles all 200 languages
       const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
+      
+      // STRICT: Always return translated text, fallback to original only if translation fails
       return {
-        translatedMessage: result.text,
+        translatedMessage: result.text || text,
         isTranslated: result.isTranslated,
         detectedLanguage: result.detectedLanguage
       };
     } catch (error) {
-      console.error('[MiniChatWindow] Translation error:', error);
+      console.error('[MiniChatWindow] DL-Translate error:', error);
+      // On error, still show the original text so user sees something
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -315,16 +329,17 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      // Translate ALL messages to current user's language
+      // DL-200 RULE: Translate ALL messages to current user's language
+      // Each viewer sees messages in their OWN language only
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
-          // Translate to current user's language
-          const translation = await translateMessage(m.message);
+          // Translate to current user's language using DL-Translate
+          const translation = await translateMessage(m.message, m.sender_id);
           return {
             id: m.id,
             senderId: m.sender_id,
-            message: m.message, // Original message (in sender's language)
-            translatedMessage: translation.translatedMessage, // In current user's language
+            message: m.message, // Original stored message (for reference only)
+            translatedMessage: translation.translatedMessage, // DISPLAY THIS - viewer's language
             isTranslated: translation.isTranslated,
             detectedLanguage: translation.detectedLanguage,
             createdAt: m.created_at
@@ -349,16 +364,16 @@ const MiniChatWindow = ({
         async (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate message for display
-          const translation = await translateMessage(newMsg.message);
+          // DL-200 RULE: Translate message to viewer's language using DL-Translate
+          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              message: newMsg.message,
-              translatedMessage: translation.translatedMessage,
+              message: newMsg.message, // Original (for reference)
+              translatedMessage: translation.translatedMessage, // DISPLAY THIS
               isTranslated: translation.isTranslated,
               detectedLanguage: translation.detectedLanguage,
               createdAt: newMsg.created_at
@@ -671,9 +686,10 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* DL-200 Rule: Show ONLY translated message in viewer's language */}
-                    {/* No original text, no language names, no prefixes/suffixes */}
-                    <p>{msg.translatedMessage || msg.message}</p>
+                    {/* DL-200 STRICT RULE: Display ONLY viewer's language text */}
+                    {/* NO original text, NO language names, NO prefixes, NO suffixes */}
+                    {/* translatedMessage is ALWAYS in viewer's language */}
+                    <p>{msg.translatedMessage}</p>
                   </div>
                 </div>
               ))}
