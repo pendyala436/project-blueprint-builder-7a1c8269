@@ -104,7 +104,9 @@ export const useRealtimeSubscription = ({
 
   useEffect(() => {
     const cleanup = setupSubscription();
-    return cleanup;
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [setupSubscription]);
 
   return {
