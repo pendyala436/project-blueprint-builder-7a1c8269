@@ -4,7 +4,7 @@
  * Uses Hugging Face transformers.js with gender classification model
  * for in-browser gender verification from face images.
  * 
- * Model: AjaySharma/genderDetection
+ * Model: rizvandwiki/gender-classification-2 (ONNX compatible)
  */
 
 import { useState, useCallback } from 'react';
@@ -52,11 +52,12 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
 
     loadingPromise = (async () => {
       try {
-        console.log('Loading AjaySharma/genderDetection model...');
+        console.log('Loading gender classification model...');
         
+        // Use rizvandwiki/gender-classification-2 which is ONNX compatible
         const classifier = await pipeline(
           'image-classification',
-          'AjaySharma/genderDetection',
+          'rizvandwiki/gender-classification-2',
           {
             progress_callback: (progress: { progress?: number; status?: string }) => {
               if (progress.progress !== undefined) {
@@ -115,14 +116,15 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
       const label = topResult.label.toLowerCase();
       const confidence = topResult.score;
 
+      console.log('Top prediction:', label, 'confidence:', confidence);
+
       // Map the label to our gender types
+      // rizvandwiki/gender-classification-2 outputs 'male' or 'female' directly
       let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
-      if (label.includes('male') && !label.includes('female')) {
+      if (label === 'male' || label.includes('man') || label.includes('boy')) {
         detectedGender = 'male';
-      } else if (label.includes('female') || label.includes('woman')) {
+      } else if (label === 'female' || label.includes('woman') || label.includes('girl')) {
         detectedGender = 'female';
-      } else if (label.includes('man')) {
-        detectedGender = 'male';
       }
 
       // Check if gender matches expected - fail verification if mismatch
