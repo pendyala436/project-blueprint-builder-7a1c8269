@@ -212,13 +212,25 @@ const PhotoUploadScreen = () => {
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      // On any error, still accept the photo
-      setVerificationState("verified");
-      setVerificationResult({ reason: "Photo accepted" });
-      toast({
-        title: "Photo accepted",
-        description: "Your photo has been saved",
-      });
+      // If gender verification is required, don't accept the photo on error
+      const expectedGender = localStorage.getItem("userGender");
+      if (expectedGender === 'male' || expectedGender === 'female') {
+        setVerificationState("failed");
+        setVerificationResult({ reason: "Could not verify gender. Please try a clearer selfie with good lighting." });
+        toast({
+          title: "Verification failed",
+          description: "Please try a clearer selfie with good lighting",
+          variant: "destructive",
+        });
+      } else {
+        // Only accept if gender verification is not required
+        setVerificationState("verified");
+        setVerificationResult({ reason: "Photo accepted" });
+        toast({
+          title: "Photo accepted",
+          description: "Your photo has been saved",
+        });
+      }
     }
   };
 
