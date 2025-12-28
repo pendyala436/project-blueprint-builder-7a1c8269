@@ -35,7 +35,8 @@ import {
   processIncomingMessage as dlProcessIncoming,
   isSameLanguage,
   isLatinScript,
-  isLatinScriptLanguage
+  isLatinScriptLanguage,
+  detectLanguage
 } from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
@@ -744,23 +745,37 @@ const MiniChatWindow = ({
                   const val = e.target.value;
                   setNewMessage(val);
                   handleTyping();
-                  // Auto-convert to native script with debounce
+                  // Auto-translate to native language with debounce
                   if (conversionTimeoutRef.current) {
                     clearTimeout(conversionTimeoutRef.current);
                   }
-                  // Only convert if transliteration enabled and user's language needs conversion
-                  if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
+                  // Convert to native language if transliteration enabled
+                  if (transliterationEnabled && val.trim()) {
                     conversionTimeoutRef.current = setTimeout(async () => {
                       try {
-                        const result = await convertToNativeScript(val, currentUserLanguage);
-                        if (result.text && result.text !== val) {
-                          // Replace input with converted native script text
-                          setNewMessage(result.text);
+                        // For non-Latin languages: convert Latin input to native script
+                        // For all languages: detect input language and translate to native if different
+                        if (needsScriptConversion && isLatinScript(val)) {
+                          // User typing Latin text but native language uses non-Latin script
+                          const result = await convertToNativeScript(val, currentUserLanguage);
+                          if (result.text && result.text !== val) {
+                            setNewMessage(result.text);
+                          }
+                        } else if (isLatinScriptLanguage(currentUserLanguage)) {
+                          // User's native is Latin-script (e.g., English)
+                          // Detect if input is in a different language and translate
+                          const detected = detectLanguage(val);
+                          if (detected && !isSameLanguage(detected, currentUserLanguage)) {
+                            const result = await translate(val, detected, currentUserLanguage);
+                            if (result.text && result.isTranslated) {
+                              setNewMessage(result.text);
+                            }
+                          }
                         }
                       } catch (err) {
                         console.error('[MiniChatWindow] Live conversion error:', err);
                       }
-                    }, 500); // 500ms delay to allow typing flow
+                    }, 600); // 600ms delay to allow typing flow
                   }
                 }}
                 onKeyDown={handleKeyPress}
