@@ -513,8 +513,11 @@ export const useSRSCall = ({
       startPlaying();
     }
 
-    return cleanup;
-  }, []);
+    return () => {
+      cleanup();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitiator, mode]);
 
   // Subscribe to viewer count updates (for streaming)
   useEffect(() => {

@@ -74,7 +74,8 @@ export function GroupVideoCall({
     if (!isOwner && group.is_live && !isConnected && !isConnecting) {
       joinStream();
     }
-  }, [isOwner, group.is_live, isConnected, isConnecting, joinStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, group.is_live]);
 
   // Set video elements for participants
   useEffect(() => {
