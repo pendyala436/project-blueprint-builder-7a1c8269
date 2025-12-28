@@ -29,8 +29,9 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
+import { useNativeTyping } from "@/hooks/useNativeTyping";
 import { 
-  translate, 
+  translate,
   convertToNativeScript, 
   processIncomingMessage as dlProcessIncoming,
   isSameLanguage,
