@@ -261,7 +261,7 @@ const gujaratiMap: Record<string, string> = {
   'prem': 'પ્રેમ', 'mitra': 'મિત્ર', 'ghar': 'ઘર', 'bahar': 'બહાર',
   'paani': 'પાણી', 'jaman': 'જમણ', 'bhaat': 'ભાત', 'shaak': 'શાક',
   'savaar': 'સવાર', 'saanj': 'સાંજ', 'raat': 'રાત', 'kaam': 'કામ',
-  'gaikale': 'ગઈકાલે', 'aavtikale': 'આવતીકાલે', 'kyaa': 'ક્યાં', 'kon': 'કોણ', 'kem': 'કેમ',
+  'gaikale': 'ગઈકાલે', 'aavtikale': 'આવતીકાલે', 'kyaa': 'ક્યાં',
   'maru': 'મારું', 'tamaru': 'તમારું', 'ena': 'એનું', 'aa': 'આ', 'e': 'એ',
   'kaho': 'કહો', 'aavo': 'આવો', 'jao': 'જાઓ', 'karo': 'કરો', 'khao': 'ખાઓ',
 };
