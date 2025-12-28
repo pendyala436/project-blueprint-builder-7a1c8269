@@ -287,16 +287,28 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language using dl-translate
-  // DL-200 RULE: Always translate to viewer's native language, display ONLY translated text
+  // DL-200 RULE: Always display text in viewer's NATIVE language/script
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage: string;
     isTranslated: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // If this is the current user's own message, no translation needed
-      // They should see their message in their own language
+      // SENDER'S OWN MESSAGES: Convert to native script if Latin input
       if (senderId === currentUserId) {
+        // If sender's language uses non-Latin script and text is Latin, convert it
+        if (needsScriptConversion && isLatinScript(text)) {
+          try {
+            const converted = await convertToNativeScript(text, currentUserLanguage);
+            return {
+              translatedMessage: converted.text || text,
+              isTranslated: true
+            };
+          } catch (err) {
+            console.error('[MiniChatWindow] Script conversion for sender failed:', err);
+          }
+        }
+        // Already in native script or Latin language
         return {
           translatedMessage: text,
           isTranslated: false
@@ -318,7 +330,7 @@ const MiniChatWindow = ({
       // On error, still show the original text so user sees something
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId, needsScriptConversion]);
 
   const loadMessages = async () => {
     const { data } = await supabase
