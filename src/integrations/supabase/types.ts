@@ -2584,31 +2584,40 @@ export type Database = {
       }
       user_status: {
         Row: {
+          active_call_count: number | null
           active_chat_count: number | null
           created_at: string
           id: string
           is_online: boolean
           last_seen: string
+          max_parallel_calls: number | null
+          max_parallel_chats: number | null
           status_text: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          active_call_count?: number | null
           active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
           last_seen?: string
+          max_parallel_calls?: number | null
+          max_parallel_chats?: number | null
           status_text?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          active_call_count?: number | null
           active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
           last_seen?: string
+          max_parallel_calls?: number | null
+          max_parallel_chats?: number | null
           status_text?: string | null
           updated_at?: string
           user_id?: string
