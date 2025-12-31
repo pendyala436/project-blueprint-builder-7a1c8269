@@ -85,14 +85,22 @@ export const ChatInterface = ({
   }, [currentUserId]);
 
   const subscribeToChanges = () => {
+    // Optimized real-time subscriptions for large-scale user base
     const channel = supabase
-      .channel('chat-interface-changes')
+      .channel(`chat-interface:${currentUserId}`, {
+        config: {
+          broadcast: { self: false }
+        }
+      })
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: userGender === 'male' 
+            ? `man_user_id=eq.${currentUserId}` 
+            : `woman_user_id=eq.${currentUserId}`
         },
         () => {
           loadChatData();
@@ -103,7 +111,8 @@ export const ChatInterface = ({
         {
           event: '*',
           schema: 'public',
-          table: 'user_friends'
+          table: 'user_friends',
+          filter: `user_id=eq.${currentUserId}`
         },
         () => {
           loadChatData();
@@ -114,13 +123,18 @@ export const ChatInterface = ({
         {
           event: '*',
           schema: 'public',
-          table: 'user_blocks'
+          table: 'user_blocks',
+          filter: `blocked_by=eq.${currentUserId}`
         },
         () => {
           loadChatData();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[RealTime] ChatInterface subscribed: ${currentUserId}`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

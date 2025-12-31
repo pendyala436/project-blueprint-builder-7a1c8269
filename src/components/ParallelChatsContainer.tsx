@@ -90,20 +90,33 @@ const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage
   };
 
   const subscribeToChats = () => {
+    // Optimized channel for scalability - filter by user to reduce broadcast load
+    const filterColumn = userGender === "male" ? "man_user_id" : "woman_user_id";
+    
     const channel = supabase
-      .channel(`parallel-chats-${currentUserId}`)
+      .channel(`user-chats:${currentUserId}`, {
+        config: {
+          broadcast: { self: false }
+        }
+      })
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `${filterColumn}=eq.${currentUserId}`
         },
-        () => {
+        (payload) => {
+          console.log('[RealTime] Chat session update:', payload.eventType);
           loadActiveChats();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[RealTime] Subscribed to user chats: ${currentUserId}`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

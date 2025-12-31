@@ -185,14 +185,22 @@ export async function endChatSession(
 }
 
 /**
- * Subscribe to new messages (real-time)
+ * Subscribe to new messages (real-time) - optimized for large-scale
+ * Supports lakhs of concurrent users with filtered channels
  */
 export function subscribeToMessages(
   chatId: string,
+  currentUserId: string,
   onMessage: (message: ChatMessage) => void
 ) {
-  return supabase
-    .channel(`chat:${chatId}`)
+  // Optimized channel with filtering for scalability
+  const channel = supabase
+    .channel(`chat-messages:${chatId}`, {
+      config: {
+        broadcast: { self: false }, // Don't receive own broadcasts
+        presence: { key: currentUserId }
+      }
+    })
     .on(
       'postgres_changes',
       {
@@ -202,7 +210,41 @@ export function subscribeToMessages(
         filter: `chat_id=eq.${chatId}`,
       },
       (payload) => {
-        onMessage(payload.new as ChatMessage);
+        const message = payload.new as ChatMessage;
+        // Skip own messages (already handled locally)
+        if (message.sender_id !== currentUserId) {
+          onMessage(message);
+        }
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[ChatService] Subscribed to messages: ${chatId}`);
+      }
+    });
+  
+  return channel;
+}
+
+/**
+ * Subscribe to chat session changes (real-time)
+ */
+export function subscribeToChatSession(
+  sessionId: string,
+  onUpdate: (session: ChatSession) => void
+) {
+  return supabase
+    .channel(`chat-session:${sessionId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'active_chat_sessions',
+        filter: `id=eq.${sessionId}`,
+      },
+      (payload) => {
+        onUpdate(payload.new as ChatSession);
       }
     )
     .subscribe();

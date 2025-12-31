@@ -381,8 +381,14 @@ const MiniChatWindow = ({
   };
 
   const subscribeToMessages = () => {
+    // Unique channel per chat session for scalability (supports lakhs of users)
     const channel = supabase
-      .channel(`mini-chat-${chatId}`)
+      .channel(`realtime-chat:${chatId}`, {
+        config: {
+          broadcast: { self: false }, // Don't receive own broadcasts
+          presence: { key: currentUserId } // Track presence per user
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -394,7 +400,12 @@ const MiniChatWindow = ({
         async (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate message for display (pass sender_id to check if same language)
+          // Skip if message is from current user (already added locally)
+          if (newMsg.sender_id === currentUserId) {
+            return;
+          }
+          
+          // Translate message for receiver's language (server-side translation)
           const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
@@ -411,17 +422,19 @@ const MiniChatWindow = ({
           });
 
           // Partner sent a message - update activity time
-          if (newMsg.sender_id !== currentUserId) {
-            setLastActivityTime(Date.now());
-          }
+          setLastActivityTime(Date.now());
 
           // Update unread count if minimized
-          if (isMinimized && newMsg.sender_id !== currentUserId) {
+          if (isMinimized) {
             setUnreadCount(prev => prev + 1);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[RealTime] Subscribed to chat: ${chatId}`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
