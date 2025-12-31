@@ -22,19 +22,18 @@ import {
   Wallet,
   AlertTriangle,
   GripVertical,
-  Move,
   Paperclip,
+  Camera,
   Image,
   Video,
-  FileText,
-  Mic
+  FileText
 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
+import { HoldToRecordButton } from "@/components/HoldToRecordButton";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
@@ -112,8 +111,11 @@ const DraggableMiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Only skip conversion if mother tongue is English - all other languages need conversion
   const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
@@ -999,6 +1001,105 @@ const DraggableMiniChatWindow = ({
     }
   };
 
+  // Selfie capture
+  const startCamera = async () => {
+    setIsCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      toast({
+        title: "Camera access denied",
+        description: "Please allow camera access to take selfies",
+        variant: "destructive"
+      });
+      setIsCameraOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const captureSelfie = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Mirror the image for selfie
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    // Convert to blob
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      stopCamera();
+      setIsUploading(true);
+
+      try {
+        const fileName = `${currentUserId}/${chatId}/selfie_${Date.now()}.jpg`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(fileName, blob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/jpeg'
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('profile-photos')
+          .getPublicUrl(fileName);
+
+        const { error: messageError } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: `📷 [IMAGE:${publicUrl}] Selfie`
+          });
+
+        if (messageError) throw messageError;
+
+        toast({
+          title: "Selfie sent!",
+          description: "Your photo has been shared"
+        });
+        setLastActivityTime(Date.now());
+      } catch (error) {
+        console.error("Error sending selfie:", error);
+        toast({
+          title: "Failed to send selfie",
+          description: "Please try again",
+          variant: "destructive"
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    }, 'image/jpeg', 0.8);
+  };
+
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
@@ -1054,7 +1155,7 @@ const DraggableMiniChatWindow = ({
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {!isMaximized && (
-            <Move className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
           )}
           <div className="relative">
             <Avatar className="h-7 w-7">
@@ -1167,6 +1268,29 @@ const DraggableMiniChatWindow = ({
       {/* Messages area */}
       {!isMinimized && (
         <>
+          {/* Camera Modal for Selfie */}
+          {isCameraOpen && (
+            <div className="absolute inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-4">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className="w-full max-h-48 rounded-lg object-cover transform -scale-x-100"
+              />
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" variant="outline" onClick={stopCamera}>
+                  <X className="h-3 w-3 mr-1" /> Cancel
+                </Button>
+                <Button size="sm" onClick={captureSelfie} disabled={isUploading}>
+                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />}
+                  Capture
+                </Button>
+              </div>
+            </div>
+          )}
+
           <ScrollArea className="flex-1 p-2">
             <div className="space-y-1.5">
               {messages.length === 0 && (
@@ -1223,7 +1347,7 @@ const DraggableMiniChatWindow = ({
                     >
                       {isVoice && fileUrl ? (
                         <div className="flex items-center gap-2">
-                          <Mic className="h-3 w-3" />
+                          <span className="text-lg">🎤</span>
                           <audio src={fileUrl} controls className="h-6 max-w-[150px]" />
                         </div>
                       ) : isImage && fileUrl ? (
@@ -1302,6 +1426,15 @@ const DraggableMiniChatWindow = ({
                       variant="ghost"
                       size="sm"
                       className="justify-start h-8 text-xs"
+                      onClick={() => { setIsAttachOpen(false); startCamera(); }}
+                    >
+                      <Camera className="h-4 w-4 mr-2 text-primary" />
+                      Selfie
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-8 text-xs"
                       onClick={() => triggerFileInput('image/*', 'image')}
                     >
                       <Image className="h-4 w-4 mr-2 text-blue-500" />
@@ -1320,22 +1453,22 @@ const DraggableMiniChatWindow = ({
                       variant="ghost"
                       size="sm"
                       className="justify-start h-8 text-xs"
-                      onClick={() => triggerFileInput('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar', 'document')}
+                      onClick={() => triggerFileInput('*/*', 'document')}
                     >
                       <FileText className="h-4 w-4 mr-2 text-orange-500" />
-                      Document
+                      File
                     </Button>
                   </div>
                 </PopoverContent>
               </Popover>
 
-              {/* Voice recorder */}
-              <VoiceMessageRecorder
+              {/* Hold to record voice button */}
+              <HoldToRecordButton
                 chatId={chatId}
                 currentUserId={currentUserId}
                 partnerId={partnerId}
                 onMessageSent={() => setLastActivityTime(Date.now())}
-                disabled={isSending || isBlocked}
+                disabled={isBlocked}
                 className="h-8 w-8 shrink-0"
               />
 
