@@ -324,7 +324,7 @@ export const MultilingualChatRoom: React.FC<MultilingualChatRoomProps> = memo(({
           <ChatMessageInput
             onSendMessage={handleSendMessage}
             onTyping={handleTyping}
-            userLanguage={currentUserLanguage}
+            senderLanguage={currentUserLanguage}
           />
         </div>
       </CardContent>

@@ -1,21 +1,31 @@
+/**
+ * ChatMessageInput - Multilingual Chat Input with Auto Script Conversion
+ * 
+ * Features:
+ * - Type in English/Latin → displays in native script (based on sender's mother tongue)
+ * - Auto-detect source language
+ * - Translation happens only when sender/receiver have different languages
+ */
+
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Languages } from 'lucide-react';
+import { Send, Smile, Languages, Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useServerTranslation } from '@/hooks/useServerTranslation';
 
 interface ChatMessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, originalMessage?: string) => void;
   onTyping?: (isTyping: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
-  showTranslationPreview?: boolean;
-  translatedPreview?: string;
   className?: string;
-  userLanguage?: string;
+  /** Sender's mother tongue (user's language) */
+  senderLanguage?: string;
+  /** Receiver's mother tongue (partner's language) */
+  receiverLanguage?: string;
 }
 
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
@@ -23,10 +33,9 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   onTyping,
   disabled = false,
   placeholder,
-  showTranslationPreview = false,
-  translatedPreview,
   className,
-  userLanguage = 'english',
+  senderLanguage = 'english',
+  receiverLanguage = 'english',
 }) => {
   const { t } = useTranslation();
   const { isRTL } = useI18n();
@@ -34,25 +43,34 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastLatinInputRef = useRef<string>(''); // Track Latin input to prevent loops
-  const isUpdatingFromPreviewRef = useRef(false); // Flag to prevent re-triggering
+  const lastLatinInputRef = useRef<string>('');
+  const isUpdatingFromPreviewRef = useRef(false);
 
-  // Use server translation for real-time native script conversion
-  const { livePreview, updateLivePreview, clearLivePreview, isTranslating } = useServerTranslation({
-    userLanguage,
+  // Server translation for real-time native script conversion
+  const { 
+    livePreview, 
+    updateLivePreview, 
+    clearLivePreview, 
+    isTranslating,
+    isSameLanguage,
+    needsTranslation 
+  } = useServerTranslation({
+    userLanguage: senderLanguage,
+    partnerLanguage: receiverLanguage,
     debounceMs: 200
   });
+
+  // Check if translation will be needed when message is sent
+  const willNeedTranslation = needsTranslation(senderLanguage, receiverLanguage);
 
   // Handle typing indicator
   const handleTyping = useCallback((value: string) => {
     if (onTyping) {
       if (value.length > 0) {
         onTyping(true);
-        // Clear existing timeout
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
-        // Set new timeout to stop typing indicator
         typingTimeoutRef.current = setTimeout(() => {
           onTyping(false);
         }, 2000);
@@ -73,7 +91,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     
-    // If this change is from the livePreview update, just set message without re-triggering
+    // If this change is from the livePreview update, just set message
     if (isUpdatingFromPreviewRef.current) {
       isUpdatingFromPreviewRef.current = false;
       setMessage(value);
@@ -84,7 +102,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setMessage(value);
     handleTyping(value);
     
-    // Only trigger conversion if typing Latin script
+    // Only trigger conversion if typing Latin script and sender's language is non-Latin
     if (isLatinScript(value)) {
       lastLatinInputRef.current = value;
       updateLivePreview(value);
@@ -93,10 +111,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   // When livePreview updates (native script ready), replace message with it
   useEffect(() => {
-    // Only update if:
-    // 1. livePreview exists and is different from message
-    // 2. Not currently translating
-    // 3. livePreview is not the same as what we sent (Latin input)
     if (
       livePreview && 
       livePreview !== message && 
@@ -114,12 +128,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         }, 0);
       }
     }
-  }, [livePreview, isTranslating]);
+  }, [livePreview, isTranslating, message]);
 
-  // Handle send
+  // Handle send - message is already in sender's native script
   const handleSend = useCallback(() => {
     if (message.trim() && !disabled && !isComposing) {
-      onSendMessage(message.trim());
+      // Send the native script message (conversion already done)
+      // Original Latin input is also passed for reference
+      onSendMessage(message.trim(), lastLatinInputRef.current || message.trim());
       setMessage('');
       lastLatinInputRef.current = '';
       clearLivePreview();
@@ -130,16 +146,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Don't send during IME composition
     if (isComposing) return;
-
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   }, [isComposing, handleSend]);
 
-  // IME composition handlers for CJK languages
+  // IME composition handlers
   const handleCompositionStart = useCallback(() => {
     setIsComposing(true);
   }, []);
@@ -166,20 +180,19 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
   }, [message]);
 
-  const defaultPlaceholder = t('chat.typeMessage');
+  const defaultPlaceholder = t('chat.typeMessage', 'Type a message...');
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Translation preview */}
-      {showTranslationPreview && translatedPreview && message && (
-        <div className="px-4 py-2 border-b border-border/50 bg-muted/30">
+      {/* Translation status indicator */}
+      {willNeedTranslation && (
+        <div className="px-4 py-1.5 border-b border-border/50 bg-muted/30">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Languages className="h-3 w-3" />
-            <span>{t('chat.preview', 'Preview')}:</span>
+            <span>
+              {t('chat.willTranslate', 'Will translate')} {senderLanguage} → {receiverLanguage}
+            </span>
           </div>
-          <p className="text-sm text-foreground/80 mt-1 unicode-text" dir="auto">
-            {translatedPreview}
-          </p>
         </div>
       )}
 
@@ -196,7 +209,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled}
-            lang={userLanguage}
+            lang={senderLanguage}
             dir="auto"
             className={cn(
               'min-h-[44px] max-h-[120px] resize-none unicode-text',
@@ -208,7 +221,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             aria-label={t('chat.typeMessage')}
           />
 
-          {/* Emoji button (placeholder) */}
+          {/* Converting indicator */}
+          {isTranslating && (
+            <div className="absolute end-12 bottom-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Emoji button */}
           <Button
             type="button"
             variant="ghost"
