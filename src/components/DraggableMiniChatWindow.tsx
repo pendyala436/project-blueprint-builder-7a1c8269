@@ -230,9 +230,13 @@ const DraggableMiniChatWindow = ({
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
       
+      // Constrain within viewport
+      const maxX = window.innerWidth - size.width;
+      const maxY = window.innerHeight - size.height;
+      
       setPosition({
-        x: Math.max(0, dragRef.current.startPosX + deltaX),
-        y: Math.max(0, dragRef.current.startPosY + deltaY)
+        x: Math.max(0, Math.min(maxX, dragRef.current.startPosX + deltaX)),
+        y: Math.max(0, Math.min(maxY, dragRef.current.startPosY + deltaY))
       });
     };
 
@@ -254,7 +258,7 @@ const DraggableMiniChatWindow = ({
       document.removeEventListener("touchmove", handleMove);
       document.removeEventListener("touchend", handleEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, size]);
 
   // Resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -903,9 +907,7 @@ const DraggableMiniChatWindow = ({
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
-  // When initialPosition is {0,0}, use relative positioning for flex layout
-  const useFlexLayout = initialPosition.x === 0 && initialPosition.y === 0;
-  
+  // Always use fixed positioning for drag support
   const windowStyle = isMaximized 
     ? { 
         position: 'fixed' as const, 
@@ -917,21 +919,14 @@ const DraggableMiniChatWindow = ({
         height: '100%',
         zIndex: zIndex + 100 
       }
-    : useFlexLayout
-      ? {
-          position: 'relative' as const,
-          width: isMinimized ? 240 : size.width, 
-          height: isMinimized ? 48 : size.height,
-          zIndex
-        }
-      : { 
-          position: 'fixed' as const,
-          right: position.x, 
-          bottom: position.y, 
-          width: isMinimized ? 240 : size.width, 
-          height: isMinimized ? 48 : size.height,
-          zIndex
-        };
+    : { 
+        position: 'fixed' as const,
+        left: position.x, 
+        top: position.y, 
+        width: isMinimized ? 240 : size.width, 
+        height: isMinimized ? 48 : size.height,
+        zIndex
+      };
 
   return (
     <Card 

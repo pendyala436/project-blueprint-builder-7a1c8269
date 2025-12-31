@@ -490,9 +490,6 @@ const DraggableVideoCallWindow = ({
     }
   };
 
-  // Determine if position is within container (for flex layout) or absolute
-  const isInFlexContainer = initialPosition.x === 0 && initialPosition.y === 0;
-
   return (
     <TooltipProvider>
       <Card
@@ -506,9 +503,9 @@ const DraggableVideoCallWindow = ({
         style={isMaximized ? undefined : {
           width: size.width,
           height: isMinimized ? 52 : size.height,
-          position: isInFlexContainer ? 'relative' : 'fixed',
-          left: isInFlexContainer ? undefined : position.x,
-          top: isInFlexContainer ? undefined : position.y,
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
           zIndex,
           transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out'
         }}
