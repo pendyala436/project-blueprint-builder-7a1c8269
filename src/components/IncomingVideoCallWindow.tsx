@@ -28,6 +28,27 @@ const IncomingVideoCallWindow = ({
   const { toast } = useToast();
   const [isAnswered, setIsAnswered] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
+  const [ratePerMinute, setRatePerMinute] = useState(10);
+
+  // Fetch session rate on mount
+  useEffect(() => {
+    const fetchSessionRate = async () => {
+      try {
+        const { data } = await supabase
+          .from('video_call_sessions')
+          .select('rate_per_minute')
+          .eq('call_id', callId)
+          .maybeSingle();
+        
+        if (data?.rate_per_minute) {
+          setRatePerMinute(Number(data.rate_per_minute));
+        }
+      } catch (err) {
+        console.error('Error fetching session rate:', err);
+      }
+    };
+    fetchSessionRate();
+  }, [callId]);
 
   // Countdown timer and auto-decline
   useEffect(() => {
@@ -107,6 +128,7 @@ const IncomingVideoCallWindow = ({
         onClose={onClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
         zIndex={70}
+        ratePerMinute={ratePerMinute}
       />
     );
   }
