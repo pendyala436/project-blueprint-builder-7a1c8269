@@ -538,12 +538,20 @@ Example for Hindi: "namaste" → "नमस्ते"`
           }
         ],
         max_tokens: 200,
-        temperature: 0.1
       }),
     });
 
     if (!response.ok) {
-      console.log(`[dl-translate] AI transliteration failed: ${response.status}`);
+      const status = response.status;
+      if (status === 401) {
+        console.log(`[dl-translate] AI transliteration: Invalid API key (401)`);
+      } else if (status === 402) {
+        console.log(`[dl-translate] AI transliteration: Payment required (402) - please add credits`);
+      } else if (status === 429) {
+        console.log(`[dl-translate] AI transliteration: Rate limited (429)`);
+      } else {
+        console.log(`[dl-translate] AI transliteration failed: ${status}`);
+      }
       return { text: latinText, success: false };
     }
 
