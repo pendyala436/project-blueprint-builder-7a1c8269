@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Mic, MicOff, Languages } from 'lucide-react';
+import { Send, Smile, Languages } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
+import { useServerTranslation } from '@/hooks/useServerTranslation';
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
@@ -25,7 +26,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   showTranslationPreview = false,
   translatedPreview,
   className,
-  userLanguage,
+  userLanguage = 'english',
 }) => {
   const { t } = useTranslation();
   const { isRTL } = useI18n();
@@ -33,6 +34,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastLatinInputRef = useRef<string>(''); // Track Latin input to prevent loops
+  const isUpdatingFromPreviewRef = useRef(false); // Flag to prevent re-triggering
+
+  // Use server translation for real-time native script conversion
+  const { livePreview, updateLivePreview, clearLivePreview, isTranslating } = useServerTranslation({
+    userLanguage,
+    debounceMs: 200
+  });
 
   // Handle typing indicator
   const handleTyping = useCallback((value: string) => {
@@ -53,22 +62,71 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
   }, [onTyping]);
 
-  // Handle message change
+  // Check if text is Latin script
+  const isLatinScript = useCallback((text: string): boolean => {
+    if (!text) return true;
+    const latinPattern = /^[\u0000-\u007F\u0080-\u00FF\u0100-\u017F\u0180-\u024F\s\d\p{P}]+$/u;
+    return latinPattern.test(text.trim());
+  }, []);
+
+  // Handle message change with real-time native script conversion
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    
+    // If this change is from the livePreview update, just set message without re-triggering
+    if (isUpdatingFromPreviewRef.current) {
+      isUpdatingFromPreviewRef.current = false;
+      setMessage(value);
+      handleTyping(value);
+      return;
+    }
+    
     setMessage(value);
     handleTyping(value);
-  }, [handleTyping]);
+    
+    // Only trigger conversion if typing Latin script
+    if (isLatinScript(value)) {
+      lastLatinInputRef.current = value;
+      updateLivePreview(value);
+    }
+  }, [handleTyping, updateLivePreview, isLatinScript]);
+
+  // When livePreview updates (native script ready), replace message with it
+  useEffect(() => {
+    // Only update if:
+    // 1. livePreview exists and is different from message
+    // 2. Not currently translating
+    // 3. livePreview is not the same as what we sent (Latin input)
+    if (
+      livePreview && 
+      livePreview !== message && 
+      !isTranslating &&
+      livePreview !== lastLatinInputRef.current
+    ) {
+      isUpdatingFromPreviewRef.current = true;
+      setMessage(livePreview);
+      
+      // Update cursor position to end
+      if (textareaRef.current) {
+        const len = livePreview.length;
+        setTimeout(() => {
+          textareaRef.current?.setSelectionRange(len, len);
+        }, 0);
+      }
+    }
+  }, [livePreview, isTranslating]);
 
   // Handle send
   const handleSend = useCallback(() => {
     if (message.trim() && !disabled && !isComposing) {
       onSendMessage(message.trim());
       setMessage('');
+      lastLatinInputRef.current = '';
+      clearLivePreview();
       onTyping?.(false);
       textareaRef.current?.focus();
     }
-  }, [message, disabled, isComposing, onSendMessage, onTyping]);
+  }, [message, disabled, isComposing, onSendMessage, onTyping, clearLivePreview]);
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
