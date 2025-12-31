@@ -91,21 +91,77 @@ export const MultilingualChatRoom: React.FC<MultilingualChatRoomProps> = memo(({
     }
   }, [chatId]);
 
-  // Load users (mock for now - in real app would fetch from session participants)
-  const loadUsers = useCallback(() => {
-    // Add current user
-    const mockUsers: ChatUser[] = [
-      {
+  // Load users from the chat session
+  const loadUsers = useCallback(async () => {
+    try {
+      // Get the chat session to find participants
+      const { data: session } = await supabase
+        .from('active_chat_sessions')
+        .select('man_user_id, woman_user_id')
+        .eq('chat_id', chatId)
+        .maybeSingle();
+
+      const userIds = session 
+        ? [session.man_user_id, session.woman_user_id].filter(Boolean)
+        : [currentUserId];
+
+      // Fetch profiles for all participants
+      const { data: maleProfiles } = await supabase
+        .from('male_profiles')
+        .select('user_id, full_name, photo_url, primary_language')
+        .in('user_id', userIds);
+
+      const { data: femaleProfiles } = await supabase
+        .from('female_profiles')
+        .select('user_id, full_name, photo_url, primary_language')
+        .in('user_id', userIds);
+
+      // Get online status
+      const { data: statusData } = await supabase
+        .from('user_status')
+        .select('user_id, is_online')
+        .in('user_id', userIds);
+
+      const statusMap = new Map(statusData?.map(s => [s.user_id, s.is_online]) || []);
+
+      // Combine profiles
+      const allProfiles = [...(maleProfiles || []), ...(femaleProfiles || [])];
+      
+      const chatUsers: ChatUser[] = allProfiles.map(profile => ({
+        id: profile.user_id,
+        name: profile.full_name || 'User',
+        avatar: profile.photo_url,
+        language: profile.primary_language || 'English',
+        languageCode: (profile.primary_language || 'English').toLowerCase().slice(0, 2),
+        isOnline: statusMap.get(profile.user_id) || false,
+      }));
+
+      // Ensure current user is included
+      if (!chatUsers.find(u => u.id === currentUserId)) {
+        chatUsers.push({
+          id: currentUserId,
+          name: currentUserName,
+          avatar: currentUserAvatar,
+          language: currentUserLanguage,
+          languageCode: currentUserLanguage.toLowerCase().slice(0, 2),
+          isOnline: true,
+        });
+      }
+
+      setUsers(chatUsers);
+    } catch (error) {
+      console.error('Error loading chat users:', error);
+      // Fallback to current user only
+      setUsers([{
         id: currentUserId,
         name: currentUserName,
         avatar: currentUserAvatar,
         language: currentUserLanguage,
         languageCode: currentUserLanguage.toLowerCase().slice(0, 2),
         isOnline: true,
-      },
-    ];
-    setUsers(mockUsers);
-  }, [currentUserId, currentUserName, currentUserAvatar, currentUserLanguage]);
+      }]);
+    }
+  }, [chatId, currentUserId, currentUserName, currentUserAvatar, currentUserLanguage]);
 
   // Subscribe to real-time messages
   useEffect(() => {
