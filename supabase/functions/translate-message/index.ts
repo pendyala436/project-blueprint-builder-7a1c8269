@@ -695,10 +695,11 @@ serve(async (req) => {
     }
 
     // ================================================================
-    // MODE: CONVERT - Convert Latin typing to native script
+    // MODE: CONVERT - Convert Latin typing to native script OR translate to Latin language
     // ================================================================
     if (mode === "convert") {
-      if (!inputIsLatin || !isNonLatinLanguage(effectiveTarget)) {
+      // If target is English, no conversion needed
+      if (effectiveTarget.toLowerCase() === 'english') {
         return new Response(
           JSON.stringify({
             translatedText: inputText,
@@ -711,16 +712,49 @@ serve(async (req) => {
         );
       }
 
-      const converted = await transliterateToNative(inputText, effectiveTarget);
-      
+      // For non-Latin target languages: transliterate (e.g., "namaste" -> "नमस्ते")
+      if (isNonLatinLanguage(effectiveTarget) && inputIsLatin) {
+        const converted = await transliterateToNative(inputText, effectiveTarget);
+        
+        return new Response(
+          JSON.stringify({
+            translatedText: converted.text,
+            convertedMessage: converted.text,
+            originalText: inputText,
+            isTranslated: converted.success,
+            mode: "convert",
+            targetLanguage: effectiveTarget
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // For Latin target languages (Spanish, French, etc.): translate from English
+      if (!isNonLatinLanguage(effectiveTarget) && inputIsLatin) {
+        console.log(`[dl-translate] Converting to Latin language: ${effectiveTarget}`);
+        const translated = await translateText(inputText, 'english', effectiveTarget);
+        
+        return new Response(
+          JSON.stringify({
+            translatedText: translated.translatedText,
+            convertedMessage: translated.translatedText,
+            originalText: inputText,
+            isTranslated: translated.success,
+            mode: "convert",
+            targetLanguage: effectiveTarget
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // No conversion needed
       return new Response(
         JSON.stringify({
-          translatedText: converted.text,
-          convertedMessage: converted.text,
+          translatedText: inputText,
+          convertedMessage: inputText,
           originalText: inputText,
-          isTranslated: converted.success,
-          mode: "convert",
-          targetLanguage: effectiveTarget
+          isTranslated: false,
+          mode: "convert"
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

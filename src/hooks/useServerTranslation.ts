@@ -298,16 +298,14 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      // For non-Latin languages: use 'convert' mode (transliteration)
-      // For Latin languages (Spanish, French, etc.): use 'translate' mode
-      const mode = needsScriptConversion(normTarget) ? 'convert' : 'translate';
-      
+      // Always use 'convert' mode - the edge function handles:
+      // - Non-Latin languages: transliteration (e.g., "namaste" → "नमस्ते")
+      // - Latin languages: translation (e.g., "hello" → "hola")
       const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
         body: {
           text: trimmed,
           targetLanguage: normTarget,
-          mode: mode
-          // sourceLanguage omitted - edge function will auto-detect as Latin/English
+          mode: 'convert'
         }
       });
 
@@ -322,7 +320,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
         isTranslated: data?.isTranslated || false,
         source: data?.detectedLanguage || 'english',
         target: normTarget,
-        mode: mode
+        mode: 'convert'
       };
     } catch (err) {
       console.error('[ServerTranslation] Convert error:', err);
