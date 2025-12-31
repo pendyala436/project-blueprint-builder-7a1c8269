@@ -148,22 +148,10 @@ const WomenDashboardScreen = () => {
 
   const quickActions = [
     { 
-      icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Messages'), 
-      color: "from-primary to-primary/80",
-      action: () => navigate("/match-discovery")
-    },
-    { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Withdraw'), 
       color: "from-success to-success/80",
       action: () => navigate("/women-wallet")
-    },
-    { 
-      icon: <Heart className="w-6 h-6" />, 
-      label: t('matches', 'Matches'), 
-      color: "from-accent to-accent/80",
-      action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
@@ -1028,19 +1016,7 @@ const WomenDashboardScreen = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <Heart className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl font-bold">{stats.matchCount}</p>
-                <p className="text-xs text-muted-foreground">{t('matches', 'Matches')}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card 
+          <Card
             className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer col-span-2"
             onClick={() => navigate("/shift-management")}
           >
@@ -1178,20 +1154,12 @@ const WomenDashboardScreen = () => {
               ))}
             </div>
           ) : (
-            <Card className="p-8 text-center">
-              <Heart className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+          <Card className="p-8 text-center">
+              <Bell className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
               <p className="text-muted-foreground">No new activity yet</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Start chatting to get matches and notifications!
+                Activity notifications will appear here
               </p>
-              <Button 
-                variant="aurora" 
-                className="mt-4"
-                onClick={() => navigate("/online-users")}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Find Users
-              </Button>
             </Card>
           )}
         </div>
