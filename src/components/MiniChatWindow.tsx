@@ -540,19 +540,50 @@ const MiniChatWindow = ({
         }
       }
 
+      // Optimistic update - immediately show the message in sender's chat
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        senderId: currentUserId,
+        message: messageText,
+        translatedMessage: messageText, // Sender sees their own message as-is
+        isTranslated: false,
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticMessage]);
+
       // Store message
-      const { error } = await supabase
+      const { data: insertedMsg, error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
           message: messageText
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Replace optimistic message with real one
+      if (insertedMsg) {
+        setMessages(prev => prev.map(m => 
+          m.id === optimisticMessage.id 
+            ? {
+                id: insertedMsg.id,
+                senderId: insertedMsg.sender_id,
+                message: insertedMsg.message,
+                translatedMessage: insertedMsg.message,
+                isTranslated: false,
+                createdAt: insertedMsg.created_at
+              }
+            : m
+        ));
+      }
     } catch (error) {
       console.error("Error sending message:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')));
       setNewMessage(trimmedInput);
       toast({
         title: "Error",
@@ -747,27 +778,36 @@ const MiniChatWindow = ({
                   Say hi to start!
                 </p>
               )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex",
-                    msg.senderId === currentUserId ? "justify-end" : "justify-start"
-                  )}
-                >
+              {messages.map((msg) => {
+                const isSentByMe = msg.senderId === currentUserId;
+                const senderName = isSentByMe ? "You" : partnerName;
+                
+                return (
                   <div
+                    key={msg.id}
                     className={cn(
-                      "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-                      msg.senderId === currentUserId
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted rounded-bl-sm"
+                      "flex flex-col",
+                      isSentByMe ? "items-end" : "items-start"
                     )}
                   >
-                    {/* Display message in user's native language - translation is invisible */}
-                    {msg.translatedMessage || msg.message}
+                    {/* Sender name */}
+                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
+                      {senderName}
+                    </span>
+                    <div
+                      className={cn(
+                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+                        isSentByMe
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
+                      )}
+                    >
+                      {/* Display message in user's native language - translation is invisible */}
+                      {msg.translatedMessage || msg.message}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
               {/* Real-time typing indicator with translation */}
               {partnerTyping && (
