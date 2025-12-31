@@ -569,20 +569,20 @@ async function distributeWomanForCall(supabase: any, data: any) {
     languageMap.set(l.user_id, (l.language_name || '').toLowerCase().trim());
   });
 
-  // Step 7: VIDEO CALLS REQUIRE SAME LANGUAGE - Filter strictly
+  // Step 7: VIDEO CALLS REQUIRE SAME LANGUAGE - Filter strictly (exact match only)
   const sameLanguageWomen = womenProfiles.filter((w: any) => {
     const profileLang = (w.primary_language || '').toLowerCase().trim();
     const preferredLang = (w.preferred_language || '').toLowerCase().trim();
     const userLang = languageMap.get(w.user_id) || '';
     
-    // Check if any of the woman's language fields match the requested language
-    const matchesProfile = profileLang.includes(normalizedLanguage) || normalizedLanguage.includes(profileLang);
-    const matchesPreferred = preferredLang.includes(normalizedLanguage) || normalizedLanguage.includes(preferredLang);
-    const matchesUserLang = userLang.includes(normalizedLanguage) || normalizedLanguage.includes(userLang);
+    // Strict equality check - language must match exactly
+    const matchesProfile = profileLang !== '' && profileLang === normalizedLanguage;
+    const matchesPreferred = preferredLang !== '' && preferredLang === normalizedLanguage;
+    const matchesUserLang = userLang !== '' && userLang === normalizedLanguage;
     
     const isMatch = matchesProfile || matchesPreferred || matchesUserLang;
     
-    console.log(`[VideoCall] Checking ${w.full_name}: profile=${profileLang}, preferred=${preferredLang}, userLang=${userLang}, match=${isMatch}`);
+    console.log(`[VideoCall] Checking ${w.full_name}: profile=${profileLang}, preferred=${preferredLang}, userLang=${userLang}, requested=${normalizedLanguage}, match=${isMatch}`);
     
     return isMatch;
   });
