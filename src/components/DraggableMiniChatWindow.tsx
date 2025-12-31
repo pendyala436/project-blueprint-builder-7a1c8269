@@ -633,8 +633,14 @@ const DraggableMiniChatWindow = ({
   };
 
   const subscribeToMessages = () => {
+    // Optimized channel for scalability - unique per chat session
     const channel = supabase
-      .channel(`draggable-chat-${chatId}`)
+      .channel(`realtime-draggable:${chatId}`, {
+        config: {
+          broadcast: { self: false }, // Don't receive own broadcasts
+          presence: { key: currentUserId } // Track presence per user
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -645,7 +651,13 @@ const DraggableMiniChatWindow = ({
         },
         async (payload: any) => {
           const newMsg = payload.new;
-          // Translate to current user's language (pass sender_id to check if same language)
+          
+          // Skip if message is from current user (already added locally)
+          if (newMsg.sender_id === currentUserId) {
+            return;
+          }
+          
+          // Translate to current user's language (server-side)
           const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
@@ -661,16 +673,19 @@ const DraggableMiniChatWindow = ({
             }];
           });
 
-          if (newMsg.sender_id !== currentUserId) {
-            setLastActivityTime(Date.now());
-          }
+          // Update activity time for incoming messages
+          setLastActivityTime(Date.now());
 
-          if (isMinimized && newMsg.sender_id !== currentUserId) {
+          if (isMinimized) {
             setUnreadCount(prev => prev + 1);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[RealTime] Draggable chat subscribed: ${chatId}`);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
