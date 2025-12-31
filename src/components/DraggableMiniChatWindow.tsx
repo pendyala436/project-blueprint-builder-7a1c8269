@@ -158,18 +158,32 @@ const DraggableMiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // Real-time transliteration: Convert typing to native language
+  // Track Latin input separately to avoid double conversion
+  const lastLatinInputRef = useRef<string>('');
+  const isConvertingRef = useRef(false);
+
+  // Real-time transliteration: Convert typing to native language (ONCE only)
   useEffect(() => {
     // Skip if no conversion needed or empty input
     if (!needsNativeConversion || !newMessage.trim()) {
       setDisplayMessage(newMessage);
+      lastLatinInputRef.current = '';
       return;
     }
 
-    // For non-Latin languages, skip if already in native script
-    const isNonLatinLanguage = currentUserLanguage.toLowerCase() !== 'english';
-    if (isNonLatinLanguage && !isLatinScript(newMessage)) {
+    // Skip if already in native script (not Latin) - prevents double conversion
+    if (!isLatinScript(newMessage)) {
       setDisplayMessage(newMessage);
+      return;
+    }
+
+    // Skip if we're currently converting (prevents re-entry)
+    if (isConvertingRef.current) {
+      return;
+    }
+
+    // Skip if this is the same input we already processed
+    if (lastLatinInputRef.current === newMessage) {
       return;
     }
 
@@ -180,18 +194,28 @@ const DraggableMiniChatWindow = ({
 
     setIsConverting(true);
     transliterationTimeoutRef.current = setTimeout(async () => {
+      // Double-check we're still dealing with Latin input
+      if (!isLatinScript(newMessage)) {
+        setIsConverting(false);
+        return;
+      }
+
       try {
+        isConvertingRef.current = true;
+        lastLatinInputRef.current = newMessage; // Mark this input as processed
+        
         // Use convertToNative for non-Latin languages
         const result = await convertToNative(newMessage, currentUserLanguage);
         
-        if (result.isTranslated && result.text) {
+        if (result.isTranslated && result.text && result.text !== newMessage) {
           setDisplayMessage(result.text);
-          setNewMessage(result.text); // Update input with native language
+          setNewMessage(result.text); // Update input with native script
         }
       } catch (error) {
         console.error('Transliteration error:', error);
       } finally {
         setIsConverting(false);
+        isConvertingRef.current = false;
       }
     }, 500); // 500ms debounce
 
