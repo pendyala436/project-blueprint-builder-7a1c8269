@@ -38,13 +38,7 @@ import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { 
-  processIncomingMessage as dlProcessIncoming, 
-  convertToNativeScript,
-  translate,
-  isLatinScriptLanguage,
-  isLatinScript
-} from "@/lib/dl-translate";
+import { useDLTranslate } from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -97,6 +91,7 @@ const DraggableMiniChatWindow = ({
   onFocus
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
+  const { convertToNative, translate, translateForChat, isLatinScript, isSameLanguage } = useDLTranslate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [displayMessage, setDisplayMessage] = useState(""); // Native script display
@@ -172,7 +167,7 @@ const DraggableMiniChatWindow = ({
     }
 
     // For non-Latin languages, skip if already in native script
-    const isNonLatinLanguage = !isLatinScriptLanguage(currentUserLanguage);
+    const isNonLatinLanguage = currentUserLanguage.toLowerCase() !== 'english';
     if (isNonLatinLanguage && !isLatinScript(newMessage)) {
       setDisplayMessage(newMessage);
       return;
@@ -186,14 +181,8 @@ const DraggableMiniChatWindow = ({
     setIsConverting(true);
     transliterationTimeoutRef.current = setTimeout(async () => {
       try {
-        let result;
-        if (isNonLatinLanguage) {
-          // For non-Latin languages (Hindi, Arabic, etc.) - convert script
-          result = await convertToNativeScript(newMessage, currentUserLanguage);
-        } else {
-          // For Latin languages (French, Spanish, etc.) - translate
-          result = await translate(newMessage, 'english', currentUserLanguage);
-        }
+        // Use convertToNative for non-Latin languages
+        const result = await convertToNative(newMessage, currentUserLanguage);
         
         if (result.isTranslated && result.text) {
           setDisplayMessage(result.text);
@@ -211,7 +200,7 @@ const DraggableMiniChatWindow = ({
         clearTimeout(transliterationTimeoutRef.current);
       }
     };
-  }, [newMessage, needsNativeConversion, currentUserLanguage]);
+  }, [newMessage, needsNativeConversion, currentUserLanguage, isLatinScript, convertToNative]);
 
   // Dragging handlers - supports both mouse and touch
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -596,24 +585,24 @@ const DraggableMiniChatWindow = ({
     const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
     const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
     
-    if (senderLang.toLowerCase() === receiverLang.toLowerCase()) {
+    if (isSameLanguage(senderLang, receiverLang)) {
       // Same native language - display as-is
       return { translatedMessage: text, isTranslated: false };
     }
     
     try {
-      // Different languages - use dl-translate to process incoming message
-      const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
+      // Different languages - use translateForChat
+      const result = await translateForChat(text, { senderLanguage: partnerLanguage, receiverLanguage: currentUserLanguage });
       return {
         translatedMessage: result.text,
         isTranslated: result.isTranslated,
-        detectedLanguage: result.detectedLanguage
+        detectedLanguage: result.source
       };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);
 
   const loadMessages = async () => {
     const { data } = await supabase
