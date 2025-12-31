@@ -578,8 +578,62 @@ Example for Hindi: "namaste" → "नमस्ते"`
 }
 
 /**
+ * Transliterate using Google Input Tools (free tier) 
+ * This is a reliable fallback for script conversion
+ */
+async function transliterateWithGoogle(
+  latinText: string,
+  targetLanguage: string
+): Promise<{ text: string; success: boolean }> {
+  const langInfo = languageByName.get(targetLanguage.toLowerCase());
+  const targetCode = langInfo?.code || 'hi';
+  
+  // Google Input Tools transliteration codes
+  const googleTranslitCodes: Record<string, string> = {
+    'hi': 'hi-t-i0-und', 'te': 'te-t-i0-und', 'ta': 'ta-t-i0-und',
+    'bn': 'bn-t-i0-und', 'mr': 'mr-t-i0-und', 'gu': 'gu-t-i0-und',
+    'kn': 'kn-t-i0-und', 'ml': 'ml-t-i0-und', 'pa': 'pa-t-i0-und',
+    'or': 'or-t-i0-und', 'ne': 'ne-t-i0-und', 'si': 'si-t-i0-und',
+    'ar': 'ar-t-i0-und', 'fa': 'fa-t-i0-und', 'ur': 'ur-t-i0-und',
+    'th': 'th-t-i0-und', 'el': 'el-t-i0-und', 'ru': 'ru-t-i0-und',
+  };
+  
+  const itc = googleTranslitCodes[targetCode];
+  if (!itc) {
+    console.log(`[dl-translate] No Google translit code for ${targetCode}`);
+    return { text: latinText, success: false };
+  }
+  
+  try {
+    console.log(`[dl-translate] Trying Google transliteration for ${targetLanguage}`);
+    const url = `https://inputtools.google.com/request?text=${encodeURIComponent(latinText)}&itc=${itc}&num=1`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data[0] === 'SUCCESS' && data[1]?.[0]?.[1]?.[0]) {
+        const transliterated = data[1][0][1][0];
+        const detected = detectScriptFromText(transliterated);
+        if (!detected.isLatin) {
+          console.log(`[dl-translate] Google translit success: "${latinText}" -> "${transliterated}"`);
+          return { text: transliterated, success: true };
+        }
+      }
+    }
+  } catch (error) {
+    console.log(`[dl-translate] Google translit failed:`, error);
+  }
+  
+  return { text: latinText, success: false };
+}
+
+/**
  * Transliterate Latin text to native script
- * Tries AI first, then falls back to translation APIs
+ * Tries multiple methods: AI -> Google Input Tools -> Translation APIs
  */
 async function transliterateToNative(
   latinText: string,
@@ -595,7 +649,13 @@ async function transliterateToNative(
     return aiResult;
   }
   
-  // Fallback: Use translation APIs
+  // Try Google Input Tools (reliable for Indic languages)
+  const googleResult = await transliterateWithGoogle(latinText, targetLanguage);
+  if (googleResult.success) {
+    return googleResult;
+  }
+  
+  // Fallback: Use translation APIs (translates meaning, not just script)
   let result = await translateWithLibre(latinText, 'en', targetCode);
   
   if (!result.success) {
@@ -607,7 +667,7 @@ async function transliterateToNative(
     const detected = detectScriptFromText(result.translatedText);
     if (!detected.isLatin) {
       const cleanedText = cleanTranslatedText(result.translatedText, targetLanguage);
-      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${cleanedText}"`);
+      console.log(`[dl-translate] Transliteration via translation: "${latinText}" -> "${cleanedText}"`);
       return { text: cleanedText, success: true };
     }
   }
