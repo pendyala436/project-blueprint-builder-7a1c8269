@@ -107,7 +107,7 @@ const VideoCallButton = ({
         )}
       </div>
 
-      {callSession && isConnected && (
+      {callSession && (isRinging || isConnected) && (
         <VideoCallModal
           isOpen={true}
           onClose={endCall}

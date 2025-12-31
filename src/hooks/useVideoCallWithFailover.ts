@@ -239,6 +239,12 @@ export const useVideoCallWithFailover = ({
       // Subscribe to this call's status updates
       subscribeToCallStatus(callId);
 
+      console.log('[VideoCall] Setting state to isRinging, callSession:', {
+        callId,
+        womanUserId: result.woman.user_id,
+        womanName: result.woman.full_name,
+      });
+
       setState(prev => ({
         ...prev,
         isSearching: false,
@@ -308,6 +314,7 @@ export const useVideoCallWithFailover = ({
 
   // Start a new video call
   const startVideoCall = useCallback(async () => {
+    console.log('[VideoCall] startVideoCall called');
     // Reset state
     excludedUsersRef.current = [];
     setState(prev => ({

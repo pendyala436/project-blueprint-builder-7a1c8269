@@ -50,7 +50,9 @@ const VideoCallMiniButton = ({
   });
 
   const handleStartCall = async () => {
+    console.log('[VideoCallMiniButton] handleStartCall clicked');
     const result = await startVideoCall();
+    console.log('[VideoCallMiniButton] startVideoCall result:', result);
     if (result?.needsRecharge) {
       setRechargeMessage(result.message);
       setShowRechargeDialog(true);
@@ -115,8 +117,8 @@ const VideoCallMiniButton = ({
         )}
       </div>
 
-      {/* Draggable Video Call Window */}
-      {callSession && isConnected && (
+      {/* Draggable Video Call Window - show during ringing AND connected states */}
+      {callSession && (isRinging || isConnected) && (
         <DraggableVideoCallWindow
           callId={callSession.callId}
           remoteUserId={callSession.womanUserId}
