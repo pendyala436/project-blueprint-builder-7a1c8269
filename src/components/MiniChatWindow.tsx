@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -20,10 +25,17 @@ import {
   ChevronUp,
   TrendingUp,
   Wallet,
-  AlertTriangle
+  AlertTriangle,
+  Paperclip,
+  Camera,
+  Image,
+  Video,
+  FileText,
+  Mic
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
+import { HoldToRecordButton } from "@/components/HoldToRecordButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
@@ -94,12 +106,18 @@ const MiniChatWindow = ({
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [isAttachOpen, setIsAttachOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Only skip conversion if mother tongue is English - all other languages need conversion
   const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
@@ -636,6 +654,183 @@ const MiniChatWindow = ({
     onClose();
   };
 
+  // File upload handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 50MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    setIsAttachOpen(false);
+    setLastActivityTime(Date.now());
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUserId}/${chatId}/${Date.now()}.${fileExt}`;
+      const bucket = fileType === 'image' ? 'profile-photos' : 'community-files';
+
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+
+      // Send message with file
+      const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
+      const { error: messageError } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: currentUserId,
+          receiver_id: partnerId,
+          message: `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`
+        });
+
+      if (messageError) throw messageError;
+
+      toast({
+        title: "File sent",
+        description: `${file.name} has been sent`
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to send file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerFileInput = (accept: string, fileType: 'image' | 'video' | 'document') => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.dataset.fileType = fileType;
+      fileInputRef.current.click();
+    }
+  };
+
+  // Selfie capture
+  const startCamera = async () => {
+    setIsCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      toast({
+        title: "Camera access denied",
+        description: "Please allow camera access to take selfies",
+        variant: "destructive"
+      });
+      setIsCameraOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const captureSelfie = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Mirror the image for selfie
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    // Convert to blob
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      stopCamera();
+      setIsUploading(true);
+
+      try {
+        const fileName = `${currentUserId}/${chatId}/selfie_${Date.now()}.jpg`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(fileName, blob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/jpeg'
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('profile-photos')
+          .getPublicUrl(fileName);
+
+        const { error: messageError } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: `📷 [IMAGE:${publicUrl}] Selfie`
+          });
+
+        if (messageError) throw messageError;
+
+        toast({
+          title: "Selfie sent!",
+          description: "Your photo has been shared"
+        });
+        setLastActivityTime(Date.now());
+      } catch (error) {
+        console.error("Error sending selfie:", error);
+        toast({
+          title: "Failed to send selfie",
+          description: "Please try again",
+          variant: "destructive"
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    }, 'image/jpeg', 0.8);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -835,6 +1030,40 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
+          {/* Camera Modal for Selfie */}
+          {isCameraOpen && (
+            <div className="absolute inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-2">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className="w-full max-h-48 rounded-lg object-cover transform -scale-x-100"
+              />
+              <canvas ref={canvasRef} className="hidden" />
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" variant="outline" onClick={stopCamera}>
+                  <X className="h-3 w-3 mr-1" /> Cancel
+                </Button>
+                <Button size="sm" onClick={captureSelfie} disabled={isUploading}>
+                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />}
+                  Capture
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const fileType = (e.target.dataset.fileType || 'document') as 'image' | 'video' | 'document';
+              handleFileUpload(e, fileType);
+            }}
+          />
+
           {/* Input area - with real-time native script conversion */}
           <div className="p-1.5 border-t">
             {/* Native script preview - shown above input when converting */}
@@ -845,8 +1074,78 @@ const MiniChatWindow = ({
               </div>
             )}
             <div className="flex items-center gap-1">
+              {/* Attach button */}
+              <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    disabled={isUploading || isBlocked}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-36 p-1" side="top" align="start">
+                  <div className="flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-7 text-[10px]"
+                      onClick={startCamera}
+                    >
+                      <Camera className="h-3.5 w-3.5 mr-2 text-primary" />
+                      Selfie
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-7 text-[10px]"
+                      onClick={() => triggerFileInput('image/*', 'image')}
+                    >
+                      <Image className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                      Photo
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-7 text-[10px]"
+                      onClick={() => triggerFileInput('video/*', 'video')}
+                    >
+                      <Video className="h-3.5 w-3.5 mr-2 text-purple-500" />
+                      Video
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start h-7 text-[10px]"
+                      onClick={() => triggerFileInput('*/*', 'document')}
+                    >
+                      <FileText className="h-3.5 w-3.5 mr-2 text-orange-500" />
+                      File
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Hold to record voice button */}
+              <HoldToRecordButton
+                chatId={chatId}
+                currentUserId={currentUserId}
+                partnerId={partnerId}
+                onMessageSent={() => setLastActivityTime(Date.now())}
+                disabled={isBlocked}
+                className="h-7 w-7 shrink-0"
+              />
+
+              {/* Text input */}
               <div className="relative flex-1">
-              <Input
+                <Input
                   placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
                   onChange={(e) => {
@@ -861,9 +1160,11 @@ const MiniChatWindow = ({
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 )}
               </div>
+
+              {/* Send button */}
               <Button
                 size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 shrink-0"
                 onClick={sendMessage}
                 disabled={!newMessage.trim() || isSending || isBlocked}
               >
