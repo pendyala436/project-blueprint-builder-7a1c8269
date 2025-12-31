@@ -296,16 +296,17 @@ export const useVideoCallWithFailover = ({
 
     } catch (error) {
       console.error('[VideoCall] Error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start video call. Please try again.';
       setState(prev => ({
         ...prev,
         isSearching: false,
         isRinging: false,
-        error: 'Failed to start video call. Please try again.',
+        error: errorMessage,
         attemptCount: 0
       }));
       toast({
-        title: "Error",
-        description: "Failed to start video call. Please try again.",
+        title: "Video Call Error",
+        description: errorMessage,
         variant: "destructive",
       });
       excludedUsersRef.current = [];
