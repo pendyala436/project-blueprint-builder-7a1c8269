@@ -52,7 +52,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { RandomChatButton } from "@/components/RandomChatButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-import VideoCallMiniButton from "@/components/VideoCallMiniButton";
+
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 
@@ -1341,12 +1341,6 @@ const DashboardScreen = () => {
                   variant="aurora"
                   size="lg"
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
-                />
-                <VideoCallMiniButton
-                  currentUserId={currentUserId}
-                  userLanguage={userLanguage}
-                  walletBalance={walletBalance}
-                  onBalanceChange={setWalletBalance}
                 />
                 <Button 
                   variant="aurora" 
