@@ -264,19 +264,21 @@ const IncomingVideoCallWindow = ({
           <Button
             variant="destructive"
             size="lg"
-            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform"
+            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform flex flex-col items-center justify-center gap-0.5"
             onClick={handleDecline}
           >
-            <PhoneOff className="w-7 h-7" />
+            <PhoneOff className="w-6 h-6" />
+            <span className="text-[10px] font-medium text-white">Decline</span>
           </Button>
 
           <Button
-            variant="success"
+            variant="default"
             size="lg"
-            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform bg-success hover:bg-success/90"
+            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform bg-success hover:bg-success/90 flex flex-col items-center justify-center gap-0.5"
             onClick={handleAnswer}
           >
-            <Phone className="w-7 h-7 text-white" />
+            <Phone className="w-6 h-6 text-white" />
+            <span className="text-[10px] font-medium text-white">Answer</span>
           </Button>
         </div>
       </div>
