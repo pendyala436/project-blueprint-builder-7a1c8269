@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Video, Loader2, Wallet, X, Phone } from "lucide-react";
+import { Video, Loader2, Wallet, X, Phone, Square } from "lucide-react";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import {
   AlertDialog,
@@ -106,14 +106,26 @@ const VideoCallMiniButton = ({
         </Button>
 
         {(isSearching || isRinging) && (
-          <Button
-            onClick={cancelSearch}
-            variant="destructive"
-            size="icon"
-            className="h-11 w-11 rounded-full shadow-md"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+          <>
+            <Button
+              onClick={cancelSearch}
+              variant="destructive"
+              size="lg"
+              className="gap-2 px-4 py-3 shadow-md"
+            >
+              <Square className="w-4 h-4" />
+              <span>Stop</span>
+            </Button>
+            <Button
+              onClick={endCall}
+              variant="outline"
+              size="lg"
+              className="gap-2 px-4 py-3 shadow-md border-destructive text-destructive hover:bg-destructive hover:text-white"
+            >
+              <X className="w-4 h-4" />
+              <span>Close</span>
+            </Button>
+          </>
         )}
       </div>
 
