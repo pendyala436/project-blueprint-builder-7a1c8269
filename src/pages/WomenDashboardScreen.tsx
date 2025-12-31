@@ -42,6 +42,8 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -99,7 +101,8 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
-  
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
+
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1153,6 +1156,17 @@ const WomenDashboardScreen = () => {
         />
       )}
 
+      {/* Incoming Video Call Window - Draggable like mini chat */}
+      {incomingCall && (
+        <IncomingVideoCallWindow
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
+          onClose={clearIncomingCall}
+        />
+      )}
 
       {/* Friends & Blocked Panel */}
       {showFriendsPanel && currentUserId && (
