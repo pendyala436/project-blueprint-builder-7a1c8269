@@ -27,9 +27,7 @@ import {
   Image,
   Video,
   FileText,
-  Mic,
-  Square,
-  Languages
+  Mic
 } from "lucide-react";
 import {
   Popover,
@@ -40,14 +38,7 @@ import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { 
-  translate, 
-  convertToNativeScript, 
-  processIncomingMessage as dlProcessIncoming,
-  isSameLanguage,
-  isLatinScript,
-  isLatinScriptLanguage
-} from "@/lib/dl-translate";
+import { processIncomingMessage as dlProcessIncoming } from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -116,14 +107,8 @@ const DraggableMiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Check if translation is needed
-  const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
-  const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
+  // Translation happens automatically - no UI needed
 
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
@@ -691,32 +676,18 @@ const DraggableMiniChatWindow = ({
     }
 
     setNewMessage("");
-    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     setIsSending(true);
     setLastActivityTime(Date.now());
 
     try {
-      // Convert to user's native script using dl-translate
-      let processedMessage = messageText;
-      
-      // If user types in Latin and their language uses non-Latin script, convert
-      if (transliterationEnabled && needsScriptConversion && isLatinScript(messageText)) {
-        try {
-          const converted = await convertToNativeScript(messageText, currentUserLanguage);
-          processedMessage = converted.text || messageText;
-          console.log('[DraggableMiniChatWindow] Converted:', messageText, '->', processedMessage);
-        } catch (err) {
-          console.error('[DraggableMiniChatWindow] Script conversion error:', err);
-        }
-      }
-      
+      // Store message as-is - translation happens on receiver's end automatically
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: processedMessage // Store in sender's native script
+          message: messageText
         });
 
       if (error) throw error;
@@ -1103,21 +1074,9 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
-                      ) : msg.translatedMessage ? (
-                        // Show translated message in current user's language
-                        <div className="space-y-0.5">
-                          <p>{msg.translatedMessage}</p>
-                          {msg.isTranslated && msg.message !== msg.translatedMessage && (
-                            <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                              {msg.message}
-                              {msg.detectedLanguage && (
-                                <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                              )}
-                            </p>
-                          )}
-                        </div>
                       ) : (
-                        msg.message
+                        // Display message in user's native language - translation is invisible
+                        msg.translatedMessage || msg.message
                       )}
                     </div>
                   </div>
@@ -1201,79 +1160,18 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input with live translation preview */}
-              <div className="flex-1 relative">
-                {/* Live translation preview - shows text in sender's native language */}
-                {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-                  <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
-                    {livePreview.isLoading ? (
-                      <span className="flex items-center gap-1">
-                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                        Converting...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Languages className="h-2.5 w-2.5" />
-                        <span className="font-medium">{currentUserLanguage}:</span>
-                        <span className="truncate">{livePreview.text}</span>
-                      </span>
-                    )}
-                  </div>
-                )}
-                {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && !livePreview.text && (
-                  <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
-                    Same language - no translation
-                  </div>
-                )}
-                <Input
-                  placeholder="Type in any language..."
-                  value={newMessage}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setNewMessage(value);
-                    handleTyping();
-                    // Update live preview with debounce
-                    if (previewTimeoutRef.current) {
-                      clearTimeout(previewTimeoutRef.current);
-                    }
-                    if (transliterationEnabled && needsScriptConversion && isLatinScript(value) && value.trim()) {
-                      setLivePreview({ text: '', isLoading: true });
-                      previewTimeoutRef.current = setTimeout(async () => {
-                        try {
-                          const result = await convertToNativeScript(value, currentUserLanguage);
-                          setLivePreview({ text: result.text || value, isLoading: false });
-                        } catch {
-                          setLivePreview({ text: '', isLoading: false });
-                        }
-                      }, 300);
-                    } else {
-                      setLivePreview({ text: '', isLoading: false });
-                    }
-                  }}
-                  onKeyDown={handleKeyPress}
-                  className="h-8 text-xs w-full"
-                  disabled={isSending || isUploading}
-                />
-              </div>
-
-              {/* Transliteration toggle */}
-              <Button
-                type="button"
-                variant={transliterationEnabled ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-8 w-8 shrink-0",
-                  transliterationEnabled && "bg-primary/20 text-primary hover:bg-primary/30"
-                )}
-                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
-                title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
-              >
-                <Languages className={cn(
-                  "h-4 w-4",
-                  livePreview.isLoading && "animate-pulse"
-                )} />
-              </Button>
+              {/* Text input - clean, no translation UI */}
+              <Input
+                placeholder="Type your message..."
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
+                onKeyDown={handleKeyPress}
+                className="h-8 text-xs flex-1"
+                disabled={isSending || isUploading}
+              />
 
               {/* Send button */}
               <Button
