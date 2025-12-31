@@ -671,41 +671,41 @@ const DraggableVideoCallWindow = ({
             )}
 
             {/* Controls - Two rows */}
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/95 via-black/80 to-transparent">
               {/* Main controls row */}
-              <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="flex items-center justify-center gap-3 mb-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant={!isAudioEnabled ? "destructive" : "outline"}
                       size="sm"
                       className={cn(
-                        "rounded-full w-10 h-10",
-                        !isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                        "rounded-full w-12 h-12 font-medium",
+                        isAudioEnabled && "bg-white/20 border-white/40 text-white hover:bg-white/30 hover:text-white"
                       )}
                       onClick={toggleAudio}
                     >
-                      {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                      {isAudioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{isAudioEnabled ? 'Mute' : 'Unmute'}</TooltipContent>
+                  <TooltipContent side="top" className="bg-black text-white border-gray-700">{isAudioEnabled ? 'Mute' : 'Unmute'}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant={!isVideoEnabled ? "destructive" : "outline"}
                       size="sm"
                       className={cn(
-                        "rounded-full w-10 h-10",
-                        !isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                        "rounded-full w-12 h-12 font-medium",
+                        isVideoEnabled && "bg-white/20 border-white/40 text-white hover:bg-white/30 hover:text-white"
                       )}
                       onClick={toggleVideo}
                     >
-                      {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+                      {isVideoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{isVideoEnabled ? 'Stop Video' : 'Start Video'}</TooltipContent>
+                  <TooltipContent side="top" className="bg-black text-white border-gray-700">{isVideoEnabled ? 'Stop Video' : 'Start Video'}</TooltipContent>
                 </Tooltip>
 
                 {/* Stop/End Call Button */}
@@ -714,7 +714,7 @@ const DraggableVideoCallWindow = ({
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="rounded-full w-12 h-12"
+                      className="rounded-full w-14 h-14 shadow-lg"
                       onClick={async (e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -722,10 +722,10 @@ const DraggableVideoCallWindow = ({
                         await handleEndCall();
                       }}
                     >
-                      <PhoneOff className="w-5 h-5" />
+                      <PhoneOff className="w-6 h-6" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>End Call</TooltipContent>
+                  <TooltipContent side="top" className="bg-black text-white border-gray-700">End Call</TooltipContent>
                 </Tooltip>
 
                 {/* Gift Button */}
@@ -736,16 +736,16 @@ const DraggableVideoCallWindow = ({
                         senderId={currentUserId}
                         receiverId={remoteUserId}
                         receiverName={remoteName}
-                        className="rounded-full w-10 h-10 bg-white/10 border border-white/20 text-white hover:bg-white/20 hover:text-white"
+                        className="rounded-full w-12 h-12 bg-white/20 border border-white/40 text-white hover:bg-white/30 hover:text-white"
                       />
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent>Send Gift</TooltipContent>
+                  <TooltipContent side="top" className="bg-black text-white border-gray-700">Send Gift</TooltipContent>
                 </Tooltip>
               </div>
 
               {/* Secondary controls row */}
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-3">
                 {/* Friend/Unfriend Button */}
                 {isFriend ? (
                   <Tooltip>
@@ -753,14 +753,14 @@ const DraggableVideoCallWindow = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        className="rounded-full w-11 h-11 bg-white/20 border-white/40 text-white hover:bg-white/30 hover:text-white"
                         onClick={() => setShowUnfriendDialog(true)}
                         disabled={isActionLoading}
                       >
-                        <UserMinus className="w-4 h-4" />
+                        <UserMinus className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Unfriend</TooltipContent>
+                    <TooltipContent side="top" className="bg-black text-white border-gray-700">Unfriend</TooltipContent>
                   </Tooltip>
                 ) : isPendingFriend ? (
                   <Tooltip>
@@ -768,13 +768,13 @@ const DraggableVideoCallWindow = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full w-9 h-9 bg-warning/20 border-warning/30 text-warning hover:bg-warning/30"
+                        className="rounded-full w-11 h-11 bg-warning/30 border-warning/50 text-warning"
                         disabled
                       >
-                        <UserPlus className="w-4 h-4" />
+                        <UserPlus className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Request Pending</TooltipContent>
+                    <TooltipContent side="top" className="bg-black text-white border-gray-700">Request Pending</TooltipContent>
                   </Tooltip>
                 ) : (
                   <Tooltip>
@@ -782,14 +782,14 @@ const DraggableVideoCallWindow = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        className="rounded-full w-11 h-11 bg-success/20 border-success/40 text-success hover:bg-success/30 hover:text-success"
                         onClick={handleAddFriend}
                         disabled={isActionLoading || isBlocked}
                       >
-                        <UserPlus className="w-4 h-4" />
+                        <UserPlus className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Add Friend</TooltipContent>
+                    <TooltipContent side="top" className="bg-black text-white border-gray-700">Add Friend</TooltipContent>
                   </Tooltip>
                 )}
 
@@ -800,14 +800,14 @@ const DraggableVideoCallWindow = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        className="rounded-full w-11 h-11 bg-white/20 border-white/40 text-white hover:bg-white/30 hover:text-white"
                         onClick={handleUnblock}
                         disabled={isActionLoading}
                       >
-                        <ShieldOff className="w-4 h-4" />
+                        <ShieldOff className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Unblock</TooltipContent>
+                    <TooltipContent side="top" className="bg-black text-white border-gray-700">Unblock</TooltipContent>
                   </Tooltip>
                 ) : (
                   <Tooltip>
@@ -815,14 +815,14 @@ const DraggableVideoCallWindow = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-destructive hover:bg-destructive/20"
+                        className="rounded-full w-11 h-11 bg-destructive/20 border-destructive/40 text-destructive hover:bg-destructive/30"
                         onClick={() => setShowBlockDialog(true)}
                         disabled={isActionLoading}
                       >
-                        <Shield className="w-4 h-4" />
+                        <Shield className="w-5 h-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Block User</TooltipContent>
+                    <TooltipContent side="top" className="bg-black text-white border-gray-700">Block User</TooltipContent>
                   </Tooltip>
                 )}
               </div>
