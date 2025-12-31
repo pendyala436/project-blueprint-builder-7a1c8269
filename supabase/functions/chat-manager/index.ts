@@ -463,7 +463,10 @@ serve(async (req) => {
         );
       }
 
-      // MAIN MATCHING LOGIC: Find best match based on language with load balancing (global - all languages)
+      // MAIN MATCHING LOGIC FOR CHAT:
+      // 1. If man's language matches woman's language → connect them
+      // 2. If no same-language women available → connect to ANY available Indian-language woman online
+      // 3. Auto-translation enabled for ALL cross-language chats
       // Each parallel chat window connects to a DIFFERENT woman
       case "find_match": {
         const manLanguage = (preferred_language || "english").toLowerCase().trim();
@@ -476,6 +479,8 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
           );
         }
+
+        console.log(`[find_match] Man language: ${manLanguage}, Rule: Same language first → fallback to Indian-language women`);
 
         // Get women already in active chat with this man (to exclude them)
         const { data: existingChats } = await supabase
@@ -541,9 +546,9 @@ serve(async (req) => {
           }
         });
 
-        // Step 5: Filter women by availability (no language/country restrictions)
-        // Also exclude women already in chat with this man
-        const eligibleWomen: any[] = [];
+        // Step 5: Filter and categorize women
+        const sameLanguageWomen: any[] = [];
+        const indianLanguageWomen: any[] = [];
         
         for (const woman of womenProfiles) {
           // Skip women already chatting with this man
@@ -569,35 +574,55 @@ serve(async (req) => {
             "english"
           ).toLowerCase().trim();
 
-          eligibleWomen.push({
+          const isSameLanguage = womanLanguage === manLanguage;
+          const isIndian = isIndianLanguage(womanLanguage);
+
+          const enrichedWoman = {
             ...woman,
             language: womanLanguage,
             currentChats,
-            isSameLanguage: womanLanguage === manLanguage
-          });
+            isSameLanguage,
+            isIndianLanguage: isIndian
+          };
+
+          if (isSameLanguage) {
+            sameLanguageWomen.push(enrichedWoman);
+          } else if (isIndian) {
+            indianLanguageWomen.push(enrichedWoman);
+          }
+        }
+
+        console.log(`[find_match] Found ${sameLanguageWomen.length} same-language, ${indianLanguageWomen.length} Indian-language (fallback)`);
+
+        // Step 6: Sort by load (lower chat count = higher priority)
+        const sortByLoad = (a: any, b: any) => a.currentChats - b.currentChats;
+        sameLanguageWomen.sort(sortByLoad);
+        indianLanguageWomen.sort(sortByLoad);
+
+        // Step 7: Selection logic
+        let eligibleWomen: any[] = [];
+        let matchType = '';
+        
+        if (sameLanguageWomen.length > 0) {
+          eligibleWomen = sameLanguageWomen;
+          matchType = 'same_language';
+        } else if (indianLanguageWomen.length > 0) {
+          eligibleWomen = indianLanguageWomen;
+          matchType = 'indian_language_fallback';
+          console.log(`[find_match] No same-language women, falling back to Indian-language women`);
         }
 
         if (eligibleWomen.length === 0) {
           return new Response(
-            JSON.stringify({ success: false, message: "No women available at the moment" }),
+            JSON.stringify({ success: false, message: "No available Indian-language women at the moment" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Step 6: Sort by priority (same language first, then by load)
-        eligibleWomen.sort((a, b) => {
-          // Priority 1: Same language
-          if (a.isSameLanguage !== b.isSameLanguage) {
-            return a.isSameLanguage ? -1 : 1;
-          }
-          // Priority 2: Lower chat count (load balancing)
-          return a.currentChats - b.currentChats;
-        });
-
         const selectedWoman = eligibleWomen[0];
         const translationNeeded = !selectedWoman.isSameLanguage;
 
-        console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
+        console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, match_type: ${matchType}, translation_needed: ${translationNeeded}, load: ${selectedWoman.currentChats}`);
 
         return new Response(
           JSON.stringify({
@@ -611,6 +636,9 @@ serve(async (req) => {
             },
             same_language: selectedWoman.isSameLanguage,
             translation_needed: translationNeeded,
+            translation_enabled: translationNeeded, // Auto-translation always enabled
+            match_type: matchType,
+            woman_language: selectedWoman.language,
             current_load: selectedWoman.currentChats,
             total_available: eligibleWomen.length
           }),

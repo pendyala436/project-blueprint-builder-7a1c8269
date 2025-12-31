@@ -265,14 +265,28 @@ async function suspendInactiveWomen(supabase: any) {
 }
 
 // DYNAMIC DISTRIBUTION FOR CHAT
-// - Same language OR different language women allowed
-// - Maximum 3 parallel chats per woman (configurable via admin_settings)
-// - Cross-language chats use auto-translation
-// - Prioritizes same language, falls back to different language with translation
+// LOGIC:
+// 1. If man's language matches woman's language → connect them
+// 2. If no same-language women available → connect to ANY available Indian-language woman online
+// 3. Auto-translation enabled for ALL cross-language chats
+// Maximum 3 parallel chats per woman (configurable via admin_settings)
+const INDIAN_LANGUAGES = [
+  "hindi", "bengali", "marathi", "telugu", "tamil", "gujarati", "urdu", 
+  "kannada", "odia", "malayalam", "punjabi", "assamese", "maithili", 
+  "santali", "kashmiri", "nepali", "sindhi", "dogri", "konkani", "manipuri",
+  "bodo", "sanskrit", "english" // English is common in India too
+];
+
+function isIndianLanguage(lang: string): boolean {
+  const lowerLang = (lang || '').toLowerCase().trim();
+  return INDIAN_LANGUAGES.some(l => lowerLang.includes(l) || l.includes(lowerLang));
+}
+
 async function distributeWomanForChat(supabase: any, data: any) {
   const { language, excludeUserIds = [], manUserId } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
-  console.log(`[Chat] Finding woman for chat, preferred language: ${normalizedLanguage}, man: ${manUserId}`);
+  console.log(`[Chat] Finding woman for chat, man language: ${normalizedLanguage}, man: ${manUserId}`);
+  console.log(`[Chat] Rule: Same language first → fallback to ANY Indian-language woman online`);
 
   // Get women already in active chat with this man (to ensure each chat is with DIFFERENT woman)
   let womenAlreadyChatting: string[] = [];
@@ -370,46 +384,68 @@ async function distributeWomanForChat(supabase: any, data: any) {
     languageMap.set(l.user_id, (l.language_name || '').toLowerCase().trim());
   });
 
-  // Step 6: Categorize by language match
+  // Step 6: Categorize women:
+  // Priority 1: Same language women
+  // Priority 2: Any Indian-language women (fallback)
   const sameLanguageWomen: any[] = [];
-  const differentLanguageWomen: any[] = [];
+  const indianLanguageWomen: any[] = [];
 
   for (const woman of womenProfiles) {
     const profileLang = (woman.primary_language || '').toLowerCase().trim();
     const preferredLang = (woman.preferred_language || '').toLowerCase().trim();
     const userLang = languageMap.get(woman.user_id) || '';
     
+    // Check all possible language sources
+    const womanLanguage = userLang || profileLang || preferredLang || 'english';
+    
     const isSameLanguage = profileLang === normalizedLanguage || 
                            preferredLang === normalizedLanguage || 
                            userLang === normalizedLanguage;
 
+    const isIndian = isIndianLanguage(womanLanguage);
+
     const avail = womenWithCapacity.find((w: any) => w.user_id === woman.user_id);
     const enrichedWoman = {
       ...woman,
+      woman_language: womanLanguage,
       current_chat_count: avail?.current_chat_count || 0,
-      isSameLanguage
+      isSameLanguage,
+      isIndianLanguage: isIndian
     };
 
     if (isSameLanguage) {
       sameLanguageWomen.push(enrichedWoman);
-    } else {
-      differentLanguageWomen.push(enrichedWoman);
+    } else if (isIndian) {
+      // Only add to Indian fallback if not same language
+      indianLanguageWomen.push(enrichedWoman);
     }
   }
 
-  console.log(`[Chat] Found ${sameLanguageWomen.length} same-language, ${differentLanguageWomen.length} different-language`);
+  console.log(`[Chat] Found ${sameLanguageWomen.length} same-language, ${indianLanguageWomen.length} Indian-language (fallback)`);
 
   // Step 7: Sort by load (lowest chat count first) for fair distribution
   const sortByLoad = (a: any, b: any) => a.current_chat_count - b.current_chat_count;
   sameLanguageWomen.sort(sortByLoad);
-  differentLanguageWomen.sort(sortByLoad);
+  indianLanguageWomen.sort(sortByLoad);
 
-  // Step 8: Prioritize same language, fall back to different language
-  const candidates = sameLanguageWomen.length > 0 ? sameLanguageWomen : differentLanguageWomen;
+  // Step 8: Selection logic:
+  // 1. Same language women first
+  // 2. If none, fallback to any Indian-language woman
+  let candidates: any[] = [];
+  let matchType = '';
+  
+  if (sameLanguageWomen.length > 0) {
+    candidates = sameLanguageWomen;
+    matchType = 'same_language';
+  } else if (indianLanguageWomen.length > 0) {
+    candidates = indianLanguageWomen;
+    matchType = 'indian_language_fallback';
+    console.log(`[Chat] No same-language women available, falling back to Indian-language women`);
+  }
 
   if (candidates.length === 0) {
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No available users found.' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No available Indian-language users found.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -417,14 +453,17 @@ async function distributeWomanForChat(supabase: any, data: any) {
   const selectedWoman = candidates[0];
   const needsTranslation = !selectedWoman.isSameLanguage;
 
-  console.log(`[Chat] Selected: ${selectedWoman.full_name}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.current_chat_count}`);
+  console.log(`[Chat] Selected: ${selectedWoman.full_name}, language: ${selectedWoman.woman_language}, match_type: ${matchType}, translation_needed: ${needsTranslation}, load: ${selectedWoman.current_chat_count}`);
 
   return new Response(
     JSON.stringify({ 
       success: true, 
       woman: selectedWoman,
       needs_translation: needsTranslation,
+      translation_enabled: needsTranslation, // Auto-translation always enabled for cross-language
       same_language: selectedWoman.isSameLanguage,
+      match_type: matchType,
+      woman_language: selectedWoman.woman_language,
       available_count: candidates.length
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
