@@ -585,27 +585,36 @@ const DraggableMiniChatWindow = ({
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Same language - no translation needed, just display native language
+    // Determine sender and receiver languages based on who sent the message
     const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
     const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
     
+    // Same language - no translation needed, just display as-is
     if (isSameLanguage(senderLang, receiverLang)) {
-      // Same native language - display as-is
       return { translatedMessage: text, isTranslated: false };
     }
     
-    try {
-      // Different languages - use translateForChat
-      const result = await translateForChat(text, { senderLanguage: partnerLanguage, receiverLanguage: currentUserLanguage });
-      return {
-        translatedMessage: result.text,
-        isTranslated: result.isTranslated,
-        detectedLanguage: result.source
-      };
-    } catch (error) {
-      console.error('[DraggableMiniChatWindow] Translation error:', error);
-      return { translatedMessage: text, isTranslated: false };
+    // Only translate incoming messages (from partner) to current user's language
+    if (senderId !== currentUserId) {
+      try {
+        // Translate from partner's language to current user's language
+        const result = await translateForChat(text, { 
+          senderLanguage: partnerLanguage, 
+          receiverLanguage: currentUserLanguage 
+        });
+        return {
+          translatedMessage: result.text,
+          isTranslated: result.isTranslated,
+          detectedLanguage: result.source
+        };
+      } catch (error) {
+        console.error('[DraggableMiniChatWindow] Translation error:', error);
+        return { translatedMessage: text, isTranslated: false };
+      }
     }
+    
+    // For own messages, no translation needed (displayed as-is)
+    return { translatedMessage: text, isTranslated: false };
   }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);
 
   const loadMessages = async () => {
