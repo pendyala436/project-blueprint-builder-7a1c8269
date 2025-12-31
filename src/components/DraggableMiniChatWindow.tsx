@@ -1273,6 +1273,13 @@ const DraggableMiniChatWindow = ({
 
               {/* Text input - with real-time native script conversion */}
               <div className="relative flex-1">
+                {/* Native script preview - shown above input when converting */}
+                {displayMessage && displayMessage !== newMessage && needsNativeConversion && (
+                  <div className="absolute -top-7 left-0 right-0 p-1 bg-primary/10 rounded text-[10px] text-muted-foreground border border-primary/20 z-10">
+                    <span className="text-[9px] text-muted-foreground/70">Preview: </span>
+                    <span className="text-foreground font-medium">{displayMessage}</span>
+                  </div>
+                )}
                 <Input
                   placeholder={needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
