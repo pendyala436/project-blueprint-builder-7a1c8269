@@ -23,6 +23,17 @@ interface UseIncomingChatsResult {
 let buzzAudioContext: AudioContext | null = null;
 let buzzIntervalId: NodeJS.Timeout | null = null;
 
+// Vibration pattern for incoming chat
+const triggerVibration = () => {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  } catch (error) {
+    console.error("Error triggering vibration:", error);
+  }
+};
+
 const playBuzzSound = () => {
   try {
     if (!buzzAudioContext) {
@@ -43,6 +54,9 @@ const playBuzzSound = () => {
 
     oscillator.start(buzzAudioContext.currentTime);
     oscillator.stop(buzzAudioContext.currentTime + 0.3);
+    
+    // Trigger vibration alongside sound
+    triggerVibration();
   } catch (error) {
     console.error("Error playing buzz sound:", error);
   }
