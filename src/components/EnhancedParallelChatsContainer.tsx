@@ -30,6 +30,7 @@ interface EnhancedParallelChatsContainerProps {
   currentUserId: string;
   userGender: "male" | "female";
   currentUserLanguage?: string;
+  currentUserName?: string;
 }
 
 // Calculate initial positions for windows - spread horizontally from right
@@ -50,7 +51,8 @@ const getInitialPosition = (index: number): { x: number; y: number } => {
 const EnhancedParallelChatsContainer = ({ 
   currentUserId, 
   userGender, 
-  currentUserLanguage = "English" 
+  currentUserLanguage = "English",
+  currentUserName = "Me"
 }: EnhancedParallelChatsContainerProps) => {
   const { toast } = useToast();
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
@@ -385,6 +387,7 @@ const EnhancedParallelChatsContainer = ({
           partnerLanguage={chat.partnerLanguage}
           isPartnerOnline={chat.isPartnerOnline}
           currentUserId={currentUserId}
+          currentUserName={currentUserName}
           currentUserLanguage={currentUserLanguage}
           userGender={userGender}
           ratePerMinute={chat.ratePerMinute}

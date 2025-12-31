@@ -51,6 +51,7 @@ interface MiniChatWindowProps {
   partnerLanguage: string;
   isPartnerOnline: boolean;
   currentUserId: string;
+  currentUserName: string;
   currentUserLanguage: string;
   userGender: "male" | "female";
   ratePerMinute: number;
@@ -67,6 +68,7 @@ const MiniChatWindow = ({
   partnerLanguage,
   isPartnerOnline,
   currentUserId,
+  currentUserName,
   currentUserLanguage,
   userGender,
   ratePerMinute,
@@ -780,7 +782,10 @@ const MiniChatWindow = ({
               )}
               {messages.map((msg) => {
                 const isSentByMe = msg.senderId === currentUserId;
-                const senderName = isSentByMe ? "You" : partnerName;
+                // Get first name only for both users
+                const myFirstName = currentUserName?.split(' ')[0] || 'Me';
+                const partnerFirstName = partnerName?.split(' ')[0] || 'Partner';
+                const senderName = isSentByMe ? myFirstName : partnerFirstName;
                 
                 return (
                   <div
@@ -790,8 +795,8 @@ const MiniChatWindow = ({
                       isSentByMe ? "items-end" : "items-start"
                     )}
                   >
-                    {/* Sender name */}
-                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
+                    {/* Sender first name */}
+                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1 font-medium">
                       {senderName}
                     </span>
                     <div
