@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,6 +17,73 @@ interface IncomingVideoCallWindowProps {
   onClose: () => void;
 }
 
+// Audio context for ringtone
+let audioContext: AudioContext | null = null;
+let oscillatorRef: OscillatorNode | null = null;
+let gainNodeRef: GainNode | null = null;
+
+// Vibration pattern for incoming call [vibrate, pause, vibrate, pause...]
+const triggerVibration = () => {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([300, 200, 300, 200, 300]); // Ring pattern vibration
+    }
+  } catch (error) {
+    console.error("Error triggering vibration:", error);
+  }
+};
+
+const playRingtone = () => {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    // Create oscillator for ringtone
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Classic phone ring tone pattern
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4
+    oscillator.frequency.setValueAtTime(480, audioContext.currentTime + 0.25);
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.5);
+    oscillator.frequency.setValueAtTime(480, audioContext.currentTime + 0.75);
+    oscillator.type = "sine";
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + 0.9);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 1);
+
+    oscillatorRef = oscillator;
+    gainNodeRef = gainNode;
+    
+    // Trigger vibration alongside sound
+    triggerVibration();
+  } catch (error) {
+    console.error("Error playing ringtone:", error);
+  }
+};
+
+const stopRingtone = () => {
+  try {
+    if (oscillatorRef) {
+      oscillatorRef.stop();
+      oscillatorRef = null;
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(0); // Stop vibration
+    }
+  } catch (error) {
+    console.error("Error stopping ringtone:", error);
+  }
+};
+
 const IncomingVideoCallWindow = ({
   callId,
   callerUserId,
@@ -29,6 +96,26 @@ const IncomingVideoCallWindow = ({
   const [isAnswered, setIsAnswered] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [ratePerMinute, setRatePerMinute] = useState(10);
+  const ringtoneIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Play ringtone and vibration on mount
+  useEffect(() => {
+    // Play initial ringtone
+    playRingtone();
+    
+    // Continue ringing every 1.5 seconds
+    ringtoneIntervalRef.current = setInterval(() => {
+      playRingtone();
+    }, 1500);
+
+    return () => {
+      if (ringtoneIntervalRef.current) {
+        clearInterval(ringtoneIntervalRef.current);
+        ringtoneIntervalRef.current = null;
+      }
+      stopRingtone();
+    };
+  }, []);
 
   // Fetch session rate on mount
   useEffect(() => {
@@ -68,6 +155,13 @@ const IncomingVideoCallWindow = ({
   }, [isAnswered]);
 
   const handleAnswer = async () => {
+    // Stop ringtone and vibration
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    stopRingtone();
+
     try {
       await supabase
         .from('video_call_sessions')
@@ -94,6 +188,13 @@ const IncomingVideoCallWindow = ({
   };
 
   const handleDecline = async () => {
+    // Stop ringtone and vibration
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    stopRingtone();
+
     try {
       await supabase
         .from('video_call_sessions')
