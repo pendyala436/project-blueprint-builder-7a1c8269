@@ -23,6 +23,17 @@ interface IncomingChatPopupProps {
 // Audio context for buzz sound
 let audioContext: AudioContext | null = null;
 
+// Vibration pattern for incoming chat [vibrate, pause, vibrate]
+const triggerVibration = () => {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]); // vibrate 200ms, pause 100ms, vibrate 200ms
+    }
+  } catch (error) {
+    console.error("Error triggering vibration:", error);
+  }
+};
+
 const playBuzzSound = () => {
   try {
     if (!audioContext) {
@@ -46,6 +57,9 @@ const playBuzzSound = () => {
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.4);
+    
+    // Trigger vibration alongside sound
+    triggerVibration();
   } catch (error) {
     console.error("Error playing buzz sound:", error);
   }
