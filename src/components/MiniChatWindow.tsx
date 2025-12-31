@@ -521,25 +521,29 @@ const MiniChatWindow = ({
 
     try {
       // Determine final message text:
-      // 1. Use captured preview (native) if available and different from input
-      // 2. Otherwise, convert Latin to native on send for non-English languages
-      // 3. Or just use original text
+      // ALWAYS convert Latin input to native script for non-English languages
       let messageText = trimmedInput;
       
-      if (currentPreview && currentPreview !== trimmedInput) {
-        // Use pre-converted preview
-        messageText = currentPreview;
-      } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
-        // Convert now if preview wasn't ready
-        try {
-          const result = await convertToNative(trimmedInput, currentUserLanguage);
-          if (result.isTranslated && result.text) {
-            messageText = result.text;
+      // If user's language is not English and input is Latin, always convert
+      if (needsNativeConversion && isLatinScript(trimmedInput)) {
+        // Use pre-converted preview if available and different
+        if (currentPreview && currentPreview !== trimmedInput && !isLatinScript(currentPreview)) {
+          messageText = currentPreview;
+        } else {
+          // Convert now - always ensure native script on send
+          try {
+            const result = await convertToNative(trimmedInput, currentUserLanguage);
+            if (result.isTranslated && result.text && result.text !== trimmedInput) {
+              messageText = result.text;
+            }
+          } catch (err) {
+            console.error('Conversion on send failed:', err);
+            // Keep original text on error
           }
-        } catch (err) {
-          console.error('Conversion on send failed:', err);
-          // Keep original text
         }
+      } else if (currentPreview && currentPreview !== trimmedInput) {
+        // For other cases, use preview if available
+        messageText = currentPreview;
       }
 
       // Optimistic update - immediately show the message in sender's chat
