@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Video, Loader2, Wallet } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Video, Loader2, Wallet, X, Phone } from "lucide-react";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import {
   AlertDialog,
@@ -15,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useVideoCallWithFailover } from "@/hooks/useVideoCallWithFailover";
 
 interface VideoCallMiniButtonProps {
   currentUserId: string;
@@ -23,163 +22,109 @@ interface VideoCallMiniButtonProps {
   onBalanceChange?: (newBalance: number) => void;
 }
 
-interface ActiveVideoCall {
-  callId: string;
-  womanUserId: string;
-  womanName: string;
-  womanPhoto: string | null;
-}
-
 const VideoCallMiniButton = ({ 
   currentUserId, 
   userLanguage, 
   walletBalance,
   onBalanceChange 
 }: VideoCallMiniButtonProps) => {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const [isSearching, setIsSearching] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
-  const [activeCall, setActiveCall] = useState<ActiveVideoCall | null>(null);
 
-  const startVideoCall = async () => {
-    // Get current user email to check if super user
-    const { data: { user } } = await supabase.auth.getUser();
-    const userEmail = user?.email || '';
-    
-    // Super users (matching email pattern) bypass balance check entirely
-    const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
-    
-    if (!isSuperUser) {
-      // Minimum balance required to start video call
-      const minBalance = 16;
-      
-      if (walletBalance <= 0) {
-        setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start video calls.");
-        setShowRechargeDialog(true);
-        return;
-      } else if (walletBalance < minBalance) {
-        setRechargeMessage(`You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
-        setShowRechargeDialog(true);
-        return;
-      }
-    }
+  const {
+    isSearching,
+    isRinging,
+    isConnected,
+    callSession,
+    attemptCount,
+    startVideoCall,
+    endCall,
+    cancelSearch,
+    isActive
+  } = useVideoCallWithFailover({
+    currentUserId,
+    userLanguage,
+    walletBalance,
+    maxRetries: 5
+  });
 
-    setIsSearching(true);
-
-    try {
-      // Use AI to find available woman for video call with same language
-      const { data: result, error } = await supabase.functions.invoke('ai-women-manager', {
-        body: {
-          action: 'distribute_for_call',
-          data: { language: userLanguage }
-        }
-      });
-
-      if (error) throw error;
-
-      if (!result.success || !result.woman) {
-        toast({
-          title: "No Available Users",
-          description: result.reason || `No women speaking ${userLanguage} are available for video calls right now. Video calls require same language.`,
-          variant: "destructive",
-        });
-        setIsSearching(false);
-        return;
-      }
-
-      // Create video call session
-      const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
-      
-      const { error: sessionError } = await supabase
-        .from('video_call_sessions')
-        .insert({
-          call_id: callId,
-          man_user_id: currentUserId,
-          woman_user_id: result.woman.user_id,
-          status: 'ringing',
-          rate_per_minute: 5.00
-        });
-
-      if (sessionError) throw sessionError;
-
-      // Set active call - will show draggable window
-      setActiveCall({
-        callId,
-        womanUserId: result.woman.user_id,
-        womanName: result.woman.full_name || 'User',
-        womanPhoto: result.woman.photo_url
-      });
-
-      toast({
-        title: "Calling...",
-        description: `Connecting to ${result.woman.full_name}`,
-      });
-
-    } catch (error) {
-      console.error("Error starting video call:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start video call. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSearching(false);
+  const handleStartCall = async () => {
+    const result = await startVideoCall();
+    if (result?.needsRecharge) {
+      setRechargeMessage(result.message);
+      setShowRechargeDialog(true);
     }
   };
 
-  const handleEndCall = async () => {
-    if (activeCall) {
-      await supabase
-        .from('video_call_sessions')
-        .update({ 
-          status: 'ended', 
-          ended_at: new Date().toISOString(),
-          end_reason: 'user_ended'
-        })
-        .eq('call_id', activeCall.callId);
+  const getButtonContent = () => {
+    if (isSearching) {
+      return (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Finding... {attemptCount > 1 ? `(${attemptCount})` : ''}
+        </>
+      );
     }
-    setActiveCall(null);
+    if (isRinging) {
+      return (
+        <>
+          <Phone className="w-4 h-4 animate-pulse" />
+          Ringing...
+        </>
+      );
+    }
+    if (isConnected) {
+      return (
+        <>
+          <Video className="w-4 h-4" />
+          In Call
+        </>
+      );
+    }
+    return (
+      <>
+        <Video className="w-4 h-4" />
+        Video Call
+      </>
+    );
   };
 
   return (
     <>
-      <Button
-        onClick={startVideoCall}
-        disabled={isSearching || !!activeCall}
-        variant="aurora"
-        size="lg"
-        className="gap-2"
-      >
-        {isSearching ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Finding...
-          </>
-        ) : activeCall ? (
-          <>
-            <Video className="w-4 h-4" />
-            In Call
-          </>
-        ) : (
-          <>
-            <Video className="w-4 h-4" />
-            Video Call
-          </>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleStartCall}
+          disabled={isActive}
+          variant="aurora"
+          size="lg"
+          className="gap-2"
+        >
+          {getButtonContent()}
+        </Button>
+
+        {(isSearching || isRinging) && (
+          <Button
+            onClick={cancelSearch}
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-full hover:bg-destructive/20"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         )}
-      </Button>
+      </div>
 
       {/* Draggable Video Call Window */}
-      {activeCall && (
+      {callSession && isConnected && (
         <DraggableVideoCallWindow
-          callId={activeCall.callId}
-          remoteUserId={activeCall.womanUserId}
-          remoteName={activeCall.womanName}
-          remotePhoto={activeCall.womanPhoto}
+          callId={callSession.callId}
+          remoteUserId={callSession.womanUserId}
+          remoteName={callSession.womanName}
+          remotePhoto={callSession.womanPhoto}
           isInitiator={true}
           currentUserId={currentUserId}
-          onClose={handleEndCall}
+          onClose={endCall}
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
           zIndex={70}
         />

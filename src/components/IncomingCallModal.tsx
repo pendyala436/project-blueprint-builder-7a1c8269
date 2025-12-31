@@ -95,6 +95,28 @@ const IncomingCallModal = ({
     }
   };
 
+  const handleBusy = async () => {
+    try {
+      await supabase
+        .from('video_call_sessions')
+        .update({ 
+          status: 'busy',
+          ended_at: new Date().toISOString(),
+          end_reason: 'busy'
+        })
+        .eq('call_id', callId);
+
+      toast({
+        title: "Marked as Busy",
+        description: "The caller will be connected to another available user",
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Error marking as busy:', error);
+    }
+  };
+
   if (isAnswered) {
     return (
       <VideoCallModal
