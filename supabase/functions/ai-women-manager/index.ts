@@ -270,9 +270,25 @@ async function suspendInactiveWomen(supabase: any) {
 // - Cross-language chats use auto-translation
 // - Prioritizes same language, falls back to different language with translation
 async function distributeWomanForChat(supabase: any, data: any) {
-  const { language, excludeUserIds = [] } = data;
+  const { language, excludeUserIds = [], manUserId } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
-  console.log(`[Chat] Finding woman for chat, preferred language: ${normalizedLanguage}`);
+  console.log(`[Chat] Finding woman for chat, preferred language: ${normalizedLanguage}, man: ${manUserId}`);
+
+  // Get women already in active chat with this man (to ensure each chat is with DIFFERENT woman)
+  let womenAlreadyChatting: string[] = [];
+  if (manUserId) {
+    const { data: existingChats } = await supabase
+      .from('active_chat_sessions')
+      .select('woman_user_id')
+      .eq('man_user_id', manUserId)
+      .eq('status', 'active');
+    
+    womenAlreadyChatting = existingChats?.map((c: any) => c.woman_user_id) || [];
+    console.log(`[Chat] Man ${manUserId} already chatting with ${womenAlreadyChatting.length} women`);
+  }
+
+  // Combine all excluded users
+  const allExcludedUserIds = [...new Set([...excludeUserIds, ...womenAlreadyChatting])];
 
   // Step 1: Get online women
   const { data: onlineStatuses } = await supabase
@@ -310,10 +326,11 @@ async function distributeWomanForChat(supabase: any, data: any) {
   }
 
   // Step 3: Filter by capacity (current_chat_count < max_concurrent_chats)
+  // Also exclude women already in chat with this specific man
   const womenWithCapacity = availableWomen.filter((w: any) => {
     const maxChats = w.max_concurrent_chats || DEFAULT_MAX_CONCURRENT_CHATS;
     const currentChats = w.current_chat_count || 0;
-    return currentChats < maxChats && !excludeUserIds.includes(w.user_id);
+    return currentChats < maxChats && !allExcludedUserIds.includes(w.user_id);
   });
 
   if (womenWithCapacity.length === 0) {

@@ -464,9 +464,11 @@ serve(async (req) => {
       }
 
       // MAIN MATCHING LOGIC: Find best match based on language with load balancing (global - all languages)
+      // Each parallel chat window connects to a DIFFERENT woman
       case "find_match": {
         const manLanguage = (preferred_language || "english").toLowerCase().trim();
         const manId = man_user_id;
+        const excludeIds = exclude_user_ids || [];
         
         if (!manId) {
           return new Response(
@@ -475,7 +477,17 @@ serve(async (req) => {
           );
         }
 
-        console.log(`Finding match for man ${manId} with language: ${manLanguage}`);
+        // Get women already in active chat with this man (to exclude them)
+        const { data: existingChats } = await supabase
+          .from("active_chat_sessions")
+          .select("woman_user_id")
+          .eq("man_user_id", manId)
+          .eq("status", "active");
+
+        const womenAlreadyChatting = existingChats?.map((c: any) => c.woman_user_id) || [];
+        const allExcludedWomen = [...new Set([...excludeIds, ...womenAlreadyChatting])];
+
+        console.log(`Finding match for man ${manId} with language: ${manLanguage}, excluding ${allExcludedWomen.length} women`);
         
         // Step 1: Get all online women
         const { data: onlineStatuses } = await supabase
@@ -530,9 +542,15 @@ serve(async (req) => {
         });
 
         // Step 5: Filter women by availability (no language/country restrictions)
+        // Also exclude women already in chat with this man
         const eligibleWomen: any[] = [];
         
         for (const woman of womenProfiles) {
+          // Skip women already chatting with this man
+          if (allExcludedWomen.includes(woman.user_id)) {
+            continue;
+          }
+
           const avail = availabilityMap.get(woman.user_id);
           const maxChats = avail?.max_concurrent_chats || 3;
           const currentChats = avail?.current_chat_count || 0;
@@ -906,15 +924,33 @@ serve(async (req) => {
         const maxChatsForMan = MAX_PARALLEL_CHATS;
 
         // Check man's active chat count
-        const { count: manActiveChats } = await supabase
+        const { data: manActiveChatsData } = await supabase
           .from("active_chat_sessions")
-          .select("*", { count: "exact", head: true })
+          .select("woman_user_id")
           .eq("man_user_id", man_user_id)
           .eq("status", "active");
 
-        if ((manActiveChats || 0) >= maxChatsForMan) {
+        const manActiveChats = manActiveChatsData?.length || 0;
+
+        if (manActiveChats >= maxChatsForMan) {
           return new Response(
             JSON.stringify({ success: false, message: `Maximum ${maxChatsForMan} parallel chats allowed` }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // IMPORTANT: Check if man is already chatting with this specific woman
+        // Each chat window must be with a DIFFERENT woman
+        const alreadyChattingWithWoman = manActiveChatsData?.some(
+          (chat: any) => chat.woman_user_id === woman_user_id
+        );
+
+        if (alreadyChattingWithWoman) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "You already have an active chat with this user. Each chat window must be with a different person."
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -932,6 +968,27 @@ serve(async (req) => {
         if (womanCurrentChats >= womanMaxChats) {
           return new Response(
             JSON.stringify({ success: false, message: "This user is at maximum chat capacity" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Also verify woman is not already chatting with this man (each chat must be with different men)
+        const { data: womanActiveChats } = await supabase
+          .from("active_chat_sessions")
+          .select("man_user_id")
+          .eq("woman_user_id", woman_user_id)
+          .eq("status", "active");
+
+        const alreadyChattingWithMan = womanActiveChats?.some(
+          (chat: any) => chat.man_user_id === man_user_id
+        );
+
+        if (alreadyChattingWithMan) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "This user is already in a chat with you."
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
