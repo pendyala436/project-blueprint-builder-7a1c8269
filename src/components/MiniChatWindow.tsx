@@ -30,6 +30,7 @@ import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicato
 import { 
   processIncomingMessage as dlProcessIncoming, 
   convertToNativeScript,
+  translate,
   isLatinScriptLanguage,
   isLatinScript
 } from "@/lib/dl-translate";
@@ -103,8 +104,8 @@ const MiniChatWindow = ({
   const sessionStartedRef = useRef(false);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Check if user's language needs script conversion (non-Latin script)
-  const needsNativeConversion = !isLatinScriptLanguage(currentUserLanguage);
+  // Only skip conversion if mother tongue is English - all other languages need conversion
+  const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
 
   // Real-time typing indicator with translation
   const {
@@ -135,7 +136,7 @@ const MiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // Real-time transliteration: Convert Latin typing to native script
+  // Real-time transliteration: Convert typing to native language
   useEffect(() => {
     // Skip if no conversion needed or empty input
     if (!needsNativeConversion || !newMessage.trim()) {
@@ -143,8 +144,9 @@ const MiniChatWindow = ({
       return;
     }
 
-    // Skip if already in native script (not Latin)
-    if (!isLatinScript(newMessage)) {
+    // For non-Latin languages, skip if already in native script
+    const isNonLatinLanguage = !isLatinScriptLanguage(currentUserLanguage);
+    if (isNonLatinLanguage && !isLatinScript(newMessage)) {
       setDisplayMessage(newMessage);
       return;
     }
@@ -157,10 +159,18 @@ const MiniChatWindow = ({
     setIsConverting(true);
     transliterationTimeoutRef.current = setTimeout(async () => {
       try {
-        const result = await convertToNativeScript(newMessage, currentUserLanguage);
+        let result;
+        if (isNonLatinLanguage) {
+          // For non-Latin languages (Hindi, Arabic, etc.) - convert script
+          result = await convertToNativeScript(newMessage, currentUserLanguage);
+        } else {
+          // For Latin languages (French, Spanish, etc.) - translate
+          result = await translate(newMessage, 'english', currentUserLanguage);
+        }
+        
         if (result.isTranslated && result.text) {
           setDisplayMessage(result.text);
-          setNewMessage(result.text); // Update input with native script
+          setNewMessage(result.text); // Update input with native language
         }
       } catch (error) {
         console.error('Transliteration error:', error);
