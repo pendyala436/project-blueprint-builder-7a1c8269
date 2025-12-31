@@ -109,38 +109,11 @@ function detectLanguageFromText(text: string): string | null {
   return isLatinScript(text) ? 'english' : null;
 }
 
-// Languages with non-Latin scripts (comprehensive list matching the 200+ server languages)
-// Script-based - these languages use non-Latin writing systems
-const NON_LATIN_LANGUAGES = new Set([
-  // South Asian
-  'hindi', 'bengali', 'telugu', 'marathi', 'tamil', 'gujarati', 'kannada', 'malayalam',
-  'punjabi', 'odia', 'urdu', 'nepali', 'sinhala', 'assamese', 'maithili', 'santali',
-  'kashmiri', 'konkani', 'sindhi', 'dogri', 'manipuri', 'sanskrit', 'bhojpuri', 'dhivehi', 'tibetan',
-  // East Asian
-  'chinese', 'japanese', 'korean', 'mandarin', 'cantonese',
-  // Southeast Asian
-  'thai', 'burmese', 'khmer', 'lao',
-  // Middle Eastern
-  'arabic', 'persian', 'hebrew', 'pashto', 'dari', 'uighur', 'farsi',
-  // European non-Latin
-  'russian', 'ukrainian', 'belarusian', 'bulgarian', 'serbian', 'macedonian', 'kazakh', 'kyrgyz', 'tajik', 'mongolian',
-  'greek', 'georgian', 'armenian',
-  // African non-Latin
-  'amharic', 'tigrinya',
-  // Other
-  'yiddish'
-]);
-
-// Check if language needs script conversion (non-Latin) or translation (Latin but not English)
-function needsScriptConversion(language: string): boolean {
+// For client-side quick checks - the server has the full 200+ language database
+// This is just for optimization to avoid unnecessary server calls for English users
+function isEnglish(language: string): boolean {
   const norm = normalizeLanguage(language);
-  return NON_LATIN_LANGUAGES.has(norm);
-}
-
-// Check if language is NOT English (needs translation even if Latin script)
-function needsAnyConversion(language: string): boolean {
-  const norm = normalizeLanguage(language);
-  return norm !== 'english';
+  return norm === 'english' || norm === 'en';
 }
 
 export function useServerTranslation(options: UseServerTranslationOptions): UseServerTranslationReturn {
@@ -351,7 +324,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     const normUser = normalizeLanguage(userLanguage);
     
     // If user's language is English, no conversion needed - show as-is
-    if (normUser === 'english') {
+    if (isEnglish(normUser)) {
       setLivePreview(trimmed);
       return;
     }
@@ -392,12 +365,12 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return { text, originalText: text, isTranslated: false, source: normUser, target: normUser, mode: 'passthrough' };
     }
 
-    // If user's language uses Latin script, no conversion needed
-    if (!needsScriptConversion(normUser)) {
+    // If user's language is English, no conversion needed
+    if (isEnglish(normUser)) {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normUser, target: normUser, mode: 'passthrough' };
     }
 
-    // If typing Latin, convert to native script
+    // If typing Latin, convert to native script (server handles all 200+ languages)
     if (isLatinScript(trimmed)) {
       return convertToNative(trimmed, normUser);
     }
