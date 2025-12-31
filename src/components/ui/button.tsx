@@ -27,9 +27,9 @@ const buttonVariants = cva(
         // Link - text only
         link: "text-primary underline-offset-4 hover:underline shadow-none",
         
-        // Gradient buttons - always visible
-        gradient: "gradient-primary text-primary-foreground hover:opacity-90 active:opacity-80 shadow-md border border-primary/20",
-        hero: "gradient-primary text-primary-foreground font-display font-bold text-base hover:opacity-90 active:opacity-80 shadow-lg border border-primary/20",
+        // Gradient buttons - always visible with white text
+        gradient: "gradient-primary text-white hover:opacity-90 active:opacity-80 shadow-md border border-primary/20",
+        hero: "gradient-primary text-white font-display font-bold text-base hover:opacity-90 active:opacity-80 shadow-lg border border-primary/20",
         
         // Semantic status variants
         success: "bg-success text-success-foreground hover:bg-success/90 active:bg-success/80 shadow-md border border-success",
@@ -37,12 +37,12 @@ const buttonVariants = cva(
         warning: "bg-warning text-warning-foreground hover:bg-warning/90 active:bg-warning/80 shadow-md border border-warning",
         info: "bg-info text-info-foreground hover:bg-info/90 active:bg-info/80 shadow-md border border-info",
         
-        // Aurora themed variants - fully visible
-        aurora: "gradient-aurora text-primary-foreground aurora-glow hover:opacity-95 active:opacity-85 shadow-lg border border-primary/20",
-        auroraOutline: "border-2 border-primary bg-background text-primary hover:bg-primary hover:text-primary-foreground active:bg-primary/90 shadow-sm",
+        // Aurora themed variants - fully visible with white text
+        aurora: "gradient-aurora text-white aurora-glow hover:opacity-95 active:opacity-85 shadow-lg border border-primary/20",
+        auroraOutline: "border-2 border-primary bg-background text-primary hover:bg-primary hover:text-white active:bg-primary/90 shadow-sm",
         auroraGhost: "bg-primary/15 text-primary hover:bg-primary/25 active:bg-primary/35 border border-primary/30 shadow-sm",
         auroraSoft: "bg-primary/25 text-primary border-2 border-primary/40 hover:bg-primary/35 active:bg-primary/45 shadow-sm",
-        auroraHero: "gradient-aurora text-primary-foreground aurora-glow font-display font-bold hover:opacity-95 active:opacity-85 shadow-xl border border-primary/20",
+        auroraHero: "gradient-aurora text-white aurora-glow font-display font-bold hover:opacity-95 active:opacity-85 shadow-xl border border-primary/20",
       },
       size: {
         default: "h-11 px-6 py-2 min-h-[44px]",
