@@ -1,11 +1,11 @@
 /**
- * DL-Translate inspired TypeScript Translation Types
+ * DL-Translate TypeScript Translation Types
+ * Server-side translation via Edge Function
  * Based on: https://github.com/xhluca/dl-translate
- * Uses NLLB-200 model via Hugging Face Inference API
  */
 
-// Supported language codes (NLLB-200 format)
-export type NLLBLanguageCode = string;
+// Language code type (flexible string for 200+ languages)
+export type LanguageCode = string;
 
 // Translation result
 export interface TranslationResult {
@@ -13,17 +13,13 @@ export interface TranslationResult {
   originalText: string;
   sourceLanguage: string;
   targetLanguage: string;
-  sourceCode: NLLBLanguageCode;
-  targetCode: NLLBLanguageCode;
   isTranslated: boolean;
-  model: 'nllb-200' | 'm2m-100';
   mode: 'translate' | 'convert' | 'same_language';
 }
 
 // Language detection result
 export interface LanguageDetectionResult {
   language: string;
-  nllbCode: NLLBLanguageCode;
   isLatin: boolean;
   confidence: number;
 }
@@ -33,7 +29,6 @@ export interface TranslationOptions {
   sourceLanguage?: string;
   targetLanguage: string;
   mode?: 'auto' | 'translate' | 'convert';
-  maxLength?: number;
 }
 
 // Batch translation item
@@ -51,7 +46,6 @@ export interface BatchTranslationResult {
 
 // Translator configuration
 export interface TranslatorConfig {
-  model?: 'nllb-200' | 'm2m-100';
   cacheEnabled?: boolean;
   cacheTTL?: number;
   maxRetries?: number;
@@ -62,6 +56,5 @@ export interface TranslatorConfig {
 export interface ScriptPattern {
   regex: RegExp;
   language: string;
-  nllbCode: NLLBLanguageCode;
   script: string;
 }
