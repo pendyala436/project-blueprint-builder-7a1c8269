@@ -776,7 +776,7 @@ const DraggableMiniChatWindow = ({
   const MAX_MESSAGE_LENGTH = 2000;
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || isSending) return;
+    if (!newMessage.trim() || isSending || isBlocked) return;
 
     const trimmedInput = newMessage.trim();
     // Capture displayMessage BEFORE clearing state
@@ -1287,7 +1287,7 @@ const DraggableMiniChatWindow = ({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    disabled={isUploading}
+                    disabled={isUploading || isBlocked}
                   >
                     {isUploading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1335,7 +1335,7 @@ const DraggableMiniChatWindow = ({
                 currentUserId={currentUserId}
                 partnerId={partnerId}
                 onMessageSent={() => setLastActivityTime(Date.now())}
-                disabled={isSending}
+                disabled={isSending || isBlocked}
                 className="h-8 w-8 shrink-0"
               />
 
@@ -1349,7 +1349,7 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder={needsNativeConversion ? "Type in English..." : "Type your message..."}
+                  placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
@@ -1357,7 +1357,7 @@ const DraggableMiniChatWindow = ({
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs pr-6"
-                  disabled={isSending || isUploading}
+                  disabled={isSending || isUploading || isBlocked}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1369,7 +1369,7 @@ const DraggableMiniChatWindow = ({
                 size="icon"
                 className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending}
+                disabled={!newMessage.trim() || isSending || isBlocked}
               >
                 {isSending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
