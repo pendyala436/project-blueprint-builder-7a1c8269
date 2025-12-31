@@ -1,10 +1,10 @@
 /**
  * DL-Translate Inspired TypeScript Translator
  * 
- * A TypeScript implementation inspired by the dl-translate Python library
- * https://github.com/xhluca/dl-translate
+ * Server-side translation via Supabase Edge Function
+ * Based on: https://github.com/xhluca/dl-translate
  * 
- * Uses NLLB-200 model via Hugging Face Inference API for 200+ language support
+ * Supports 200+ languages with auto-detection
  */
 
 import type { 
@@ -14,7 +14,7 @@ import type {
   BatchTranslationResult,
   BatchTranslationItem 
 } from './types';
-import { getNLLBCode, isIndianLanguage } from './language-codes';
+import { normalizeLanguage, isLanguageSupported } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,13 +24,13 @@ const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * DL-Translate inspired Translator class
+ * Uses server-side translation via Edge Function
  */
 export class Translator {
-  private config: Required<TranslatorConfig>;
+  private config: Required<Omit<TranslatorConfig, 'model'>>;
 
   constructor(config: TranslatorConfig = {}) {
     this.config = {
-      model: config.model || 'nllb-200',
       cacheEnabled: config.cacheEnabled ?? true,
       cacheTTL: config.cacheTTL || DEFAULT_CACHE_TTL,
       maxRetries: config.maxRetries || 2,
@@ -46,7 +46,7 @@ export class Translator {
     text: string,
     options: TranslationOptions
   ): Promise<TranslationResult> {
-    const { sourceLanguage, targetLanguage, mode = 'auto', maxLength = 512 } = options;
+    const { sourceLanguage, targetLanguage, mode = 'auto' } = options;
 
     // Check cache
     if (this.config.cacheEnabled) {
@@ -57,30 +57,25 @@ export class Translator {
     // Detect source language if not provided
     const detected = detectLanguage(text);
     const effectiveSourceLang = sourceLanguage || detected.language;
-    const sourceCode = getNLLBCode(effectiveSourceLang) || detected.nllbCode;
-    const targetCode = getNLLBCode(targetLanguage);
-
-    if (!targetCode) {
-      return this.createResult(text, text, effectiveSourceLang, targetLanguage, sourceCode, targetCode || '', false, 'translate');
-    }
+    const normalizedTarget = normalizeLanguage(targetLanguage);
 
     // Check if same language
-    if (isSameLanguage(effectiveSourceLang, targetLanguage) || sourceCode === targetCode) {
-      const result = this.createResult(text, text, effectiveSourceLang, targetLanguage, sourceCode, targetCode, false, 'same_language');
+    if (isSameLanguage(effectiveSourceLang, targetLanguage)) {
+      const result = this.createResult(text, text, effectiveSourceLang, targetLanguage, false, 'same_language');
       this.addToCache(text, targetLanguage, sourceLanguage, result);
       return result;
     }
 
     // Determine if conversion mode (Latin input to non-Latin target)
     const shouldConvert = mode === 'convert' || 
-      (mode === 'auto' && isLatinScript(text) && !targetCode.endsWith('_Latn'));
+      (mode === 'auto' && isLatinScript(text) && !this.isLatinLanguage(normalizedTarget));
 
-    // Call translation API
+    // Call translation API (Edge Function)
     const translatedText = await this.callTranslationAPI(
       text, 
-      shouldConvert ? 'eng_Latn' : sourceCode, 
-      targetCode,
-      maxLength
+      shouldConvert ? 'english' : effectiveSourceLang, 
+      normalizedTarget,
+      shouldConvert ? 'convert' : 'translate'
     );
 
     const result = this.createResult(
@@ -88,8 +83,6 @@ export class Translator {
       translatedText,
       effectiveSourceLang,
       targetLanguage,
-      sourceCode,
-      targetCode,
       translatedText !== text,
       shouldConvert ? 'convert' : 'translate'
     );
@@ -124,7 +117,7 @@ export class Translator {
           successCount++;
         } else {
           failureCount++;
-          results.push(this.createResult('', '', 'unknown', '', '', '', false, 'translate'));
+          results.push(this.createResult('', '', 'unknown', '', false, 'translate'));
         }
       }
     }
@@ -178,19 +171,29 @@ export class Translator {
 
   // Private methods
 
+  private isLatinLanguage(lang: string): boolean {
+    const latinLanguages = [
+      'english', 'spanish', 'french', 'german', 'portuguese', 'italian',
+      'dutch', 'polish', 'vietnamese', 'indonesian', 'malay', 'tagalog',
+      'turkish', 'swahili', 'czech', 'romanian', 'hungarian', 'swedish',
+      'danish', 'finnish', 'norwegian'
+    ];
+    return latinLanguages.includes(lang.toLowerCase());
+  }
+
   private async callTranslationAPI(
     text: string,
-    sourceCode: string,
-    targetCode: string,
-    maxLength: number
+    sourceLanguage: string,
+    targetLanguage: string,
+    mode: string
   ): Promise<string> {
     try {
       const { data, error } = await supabase.functions.invoke('translate-message', {
         body: {
           message: text,
-          sourceLanguage: this.getLanguageFromCode(sourceCode),
-          targetLanguage: this.getLanguageFromCode(targetCode),
-          mode: 'translate'
+          sourceLanguage,
+          targetLanguage,
+          mode
         }
       });
 
@@ -204,33 +207,6 @@ export class Translator {
       console.error('[Translator] Translation failed:', err);
       return text;
     }
-  }
-
-  private getLanguageFromCode(code: string): string {
-    // Reverse lookup from NLLB code to language name
-    const codeToLang: Record<string, string> = {
-      'eng_Latn': 'english',
-      'hin_Deva': 'hindi',
-      'ben_Beng': 'bengali',
-      'tam_Taml': 'tamil',
-      'tel_Telu': 'telugu',
-      'mar_Deva': 'marathi',
-      'guj_Gujr': 'gujarati',
-      'kan_Knda': 'kannada',
-      'mal_Mlym': 'malayalam',
-      'pan_Guru': 'punjabi',
-      'ory_Orya': 'odia',
-      'urd_Arab': 'urdu',
-      'spa_Latn': 'spanish',
-      'fra_Latn': 'french',
-      'deu_Latn': 'german',
-      'zho_Hans': 'chinese',
-      'jpn_Jpan': 'japanese',
-      'kor_Hang': 'korean',
-      'arb_Arab': 'arabic',
-      'rus_Cyrl': 'russian',
-    };
-    return codeToLang[code] || 'english';
   }
 
   private getCacheKey(text: string, target: string, source?: string): string {
@@ -268,8 +244,6 @@ export class Translator {
     translated: string,
     sourceLang: string,
     targetLang: string,
-    sourceCode: string,
-    targetCode: string,
     isTranslated: boolean,
     mode: 'translate' | 'convert' | 'same_language'
   ): TranslationResult {
@@ -278,10 +252,7 @@ export class Translator {
       originalText: original,
       sourceLanguage: sourceLang,
       targetLanguage: targetLang,
-      sourceCode,
-      targetCode,
       isTranslated,
-      model: this.config.model,
       mode
     };
   }

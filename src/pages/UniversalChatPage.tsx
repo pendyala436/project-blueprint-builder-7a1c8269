@@ -2,12 +2,11 @@
  * Universal Chat Page - Single Page Multilingual Chat
  * 
  * Features:
- * - 200+ NLLB-200 language support via Supabase Edge Function
+ * - 200+ language support via dl-translate Edge Function
  * - Auto-detect source language
  * - Auto-transliterate Romanized input → native script
  * - Translate to target language in native script
- * - "Translated from X" indicator (Tinder-style)
- * - Full Unicode support with IME
+ * - "Translated from X" indicator
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -31,7 +30,7 @@ import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Chec
 import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useTranslationService } from '@/hooks/useTranslationService';
+import { useServerTranslation } from '@/hooks/useServerTranslation';
 
 // ============= TYPES =============
 
@@ -45,8 +44,6 @@ interface Message {
   showOriginal: boolean;
   sender: 'user' | 'partner';
   timestamp: Date;
-  model?: string;
-  usedPivot?: boolean;
 }
 
 // ============= CONSTANTS =============
@@ -61,11 +58,9 @@ const POPULAR_LANGUAGES = [
 
 const TranslatedFromBadge: React.FC<{
   sourceLanguage: string;
-  model?: string;
-  usedPivot?: boolean;
   onClick: () => void;
   showOriginal: boolean;
-}> = ({ sourceLanguage, model, usedPivot, onClick, showOriginal }) => (
+}> = ({ sourceLanguage, onClick, showOriginal }) => (
   <button
     onClick={onClick}
     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
@@ -74,16 +69,6 @@ const TranslatedFromBadge: React.FC<{
     <span>
       {showOriginal ? 'Show translation' : `Translated from ${sourceLanguage}`}
     </span>
-    {usedPivot && (
-      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-        via English
-      </Badge>
-    )}
-    {model && (
-      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
-        {model.includes('fallback') ? 'local' : 'NLLB'}
-      </Badge>
-    )}
     {showOriginal ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
   </button>
 );
@@ -113,12 +98,10 @@ const MessageBubble: React.FC<{
         </p>
       </div>
       
-      {/* Tinder-style "Translated from X" indicator */}
+      {/* "Translated from X" indicator */}
       {needsTranslation && !isUser && (
         <TranslatedFromBadge
           sourceLanguage={message.sourceLanguage}
-          model={message.model}
-          usedPivot={message.usedPivot}
           onClick={onToggleOriginal}
           showOriginal={message.showOriginal}
         />
@@ -196,10 +179,10 @@ const UniversalChatPage: React.FC = () => {
   // Server-side translator via edge function
   const {
     translate,
-    convertToNativeScript,
+    convertToNative,
     isTranslating,
     error: translationError,
-  } = useTranslationService();
+  } = useServerTranslation({ userLanguage: 'English' });
   
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -227,9 +210,9 @@ const UniversalChatPage: React.FC = () => {
     
     const timer = setTimeout(async () => {
       try {
-        const result = await convertToNativeScript(input, userLanguage);
-        if (result.isConverted && result.converted !== input) {
-          setLivePreview(result.converted);
+        const result = await convertToNative(input, userLanguage);
+        if (result.isTranslated && result.text !== input) {
+          setLivePreview(result.text);
         } else {
           setLivePreview('');
         }
@@ -239,7 +222,7 @@ const UniversalChatPage: React.FC = () => {
     }, 500);
     
     return () => clearTimeout(timer);
-  }, [input, userLanguage, autoTransliterate, isComposing, convertToNativeScript]);
+  }, [input, userLanguage, autoTransliterate, isComposing, convertToNative]);
   
   // Send message
   const handleSend = useCallback(async () => {
@@ -279,22 +262,19 @@ const UniversalChatPage: React.FC = () => {
         // Translate partner message for user via edge function
         const translatedForUser = await translate(
           partnerText,
-          partnerLanguage,
           userLanguage
         );
         
         const partnerMessage: Message = {
           id: `partner-${Date.now()}`,
           text: partnerText,
-          translatedText: translatedForUser.translatedText,
+          translatedText: translatedForUser.text,
           sourceLanguage: partnerLanguage,
           targetLanguage: userLanguage,
           isTranslated: translatedForUser.isTranslated,
           showOriginal: false,
           sender: 'partner',
           timestamp: new Date(),
-          model: translatedForUser.model,
-          usedPivot: translatedForUser.usedPivot,
         };
         
         setMessages(prev => [...prev, partnerMessage]);
@@ -346,7 +326,7 @@ const UniversalChatPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium">Translation Ready</span>
-              <Badge variant="outline" className="text-xs">NLLB-200 via Server</Badge>
+              <Badge variant="outline" className="text-xs">dl-translate</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               200+ languages supported with auto-detection and transliteration
@@ -394,7 +374,7 @@ const UniversalChatPage: React.FC = () => {
                 <Globe className="h-12 w-12 mb-3 opacity-50" />
                 <p className="text-sm">Start a conversation in any language!</p>
                 <p className="text-xs mt-1">
-                  Messages are translated using NLLB-200 via server
+                  Messages are translated via dl-translate server
                 </p>
               </div>
             ) : (
@@ -459,7 +439,7 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by NLLB-200 • {ALL_NLLB200_LANGUAGES.length}+ languages supported
+              Powered by dl-translate • {ALL_NLLB200_LANGUAGES.length}+ languages supported
             </p>
           </div>
         </CardContent>
