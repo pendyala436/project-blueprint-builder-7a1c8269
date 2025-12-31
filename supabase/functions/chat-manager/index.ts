@@ -10,7 +10,8 @@ const corsHeaders = {
 let PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
 let CHAT_INACTIVITY_TIMEOUT_SECONDS = 120; // 2 minutes - chat auto-stops if inactive
 let USER_IDLE_TIMEOUT_SECONDS = 600; // 10 minutes - user auto-logged out if idle
-let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
+let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user (configurable)
+let MAX_PARALLEL_CALLS = 1; // Maximum parallel video calls per user
 let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
@@ -80,6 +81,8 @@ async function loadAdminSettings(supabase: any): Promise<void> {
       .in("setting_key", [
         "auto_disconnect_timer",
         "max_parallel_connections",
+        "max_concurrent_chats",
+        "max_concurrent_calls",
         "reconnect_attempts",
         "heartbeat_interval",
         "priority_wait_threshold"
@@ -99,7 +102,11 @@ async function loadAdminSettings(supabase: any): Promise<void> {
             USER_IDLE_TIMEOUT_SECONDS = value;
             break;
           case "max_parallel_connections":
+          case "max_concurrent_chats":
             MAX_PARALLEL_CHATS = value;
+            break;
+          case "max_concurrent_calls":
+            MAX_PARALLEL_CALLS = value;
             break;
           case "reconnect_attempts":
             RECONNECT_ATTEMPTS = value;
@@ -113,7 +120,7 @@ async function loadAdminSettings(supabase: any): Promise<void> {
         }
       }
     }
-    console.log(`[CONFIG] Loaded settings: chatInactivity=${CHAT_INACTIVITY_TIMEOUT_SECONDS}s, userIdle=${USER_IDLE_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
+    console.log(`[CONFIG] Loaded settings: chatInactivity=${CHAT_INACTIVITY_TIMEOUT_SECONDS}s, userIdle=${USER_IDLE_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, maxCalls=${MAX_PARALLEL_CALLS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
   } catch (error) {
     console.error("[CONFIG] Error loading admin settings, using defaults:", error);
   }
@@ -895,30 +902,34 @@ serve(async (req) => {
           );
         }
 
-        const MAX_PARALLEL_CHATS = 3;
+        // Use configurable max parallel chats from admin settings
+        const maxChatsForMan = MAX_PARALLEL_CHATS;
 
-        // Check man's active chat count (max 3 parallel sessions)
+        // Check man's active chat count
         const { count: manActiveChats } = await supabase
           .from("active_chat_sessions")
           .select("*", { count: "exact", head: true })
           .eq("man_user_id", man_user_id)
           .eq("status", "active");
 
-        if ((manActiveChats || 0) >= MAX_PARALLEL_CHATS) {
+        if ((manActiveChats || 0) >= maxChatsForMan) {
           return new Response(
-            JSON.stringify({ success: false, message: `Maximum ${MAX_PARALLEL_CHATS} parallel chats allowed` }),
+            JSON.stringify({ success: false, message: `Maximum ${maxChatsForMan} parallel chats allowed` }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Check woman's active chat count (max 3 parallel sessions)
-        const { count: womanActiveChats } = await supabase
-          .from("active_chat_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("woman_user_id", woman_user_id)
-          .eq("status", "active");
+        // Get woman's max capacity from her availability settings
+        const { data: womanAvail } = await supabase
+          .from("women_availability")
+          .select("current_chat_count, max_concurrent_chats")
+          .eq("user_id", woman_user_id)
+          .maybeSingle();
 
-        if ((womanActiveChats || 0) >= MAX_PARALLEL_CHATS) {
+        const womanMaxChats = womanAvail?.max_concurrent_chats || MAX_PARALLEL_CHATS;
+        const womanCurrentChats = womanAvail?.current_chat_count || 0;
+
+        if (womanCurrentChats >= womanMaxChats) {
           return new Response(
             JSON.stringify({ success: false, message: "This user is at maximum chat capacity" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
