@@ -272,13 +272,23 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language using dl-translate
-  const translateMessage = useCallback(async (text: string): Promise<{
+  // Skip translation entirely if both users have the same native language
+  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
+    // Same language - no translation needed, just display native language
+    const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
+    const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
+    
+    if (senderLang.toLowerCase() === receiverLang.toLowerCase()) {
+      // Same native language - display as-is
+      return { translatedMessage: text, isTranslated: false };
+    }
+    
     try {
-      // Use dl-translate to process incoming message
+      // Different languages - use dl-translate to process incoming message
       const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
       return {
         translatedMessage: result.text,
@@ -289,7 +299,7 @@ const MiniChatWindow = ({
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -303,8 +313,8 @@ const MiniChatWindow = ({
       // Translate ALL messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
-          // Translate to current user's language
-          const translation = await translateMessage(m.message);
+          // Translate to current user's language (pass sender_id to check if same language)
+          const translation = await translateMessage(m.message, m.sender_id);
           return {
             id: m.id,
             senderId: m.sender_id,
@@ -334,8 +344,8 @@ const MiniChatWindow = ({
         async (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate message for display
-          const translation = await translateMessage(newMsg.message);
+          // Translate message for display (pass sender_id to check if same language)
+          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
