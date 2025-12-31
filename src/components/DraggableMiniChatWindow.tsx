@@ -38,7 +38,12 @@ import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { processIncomingMessage as dlProcessIncoming } from "@/lib/dl-translate";
+import { 
+  processIncomingMessage as dlProcessIncoming, 
+  convertToNativeScript,
+  isLatinScriptLanguage,
+  isLatinScript
+} from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -93,6 +98,7 @@ const DraggableMiniChatWindow = ({
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -107,8 +113,12 @@ const DraggableMiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Translation happens automatically - no UI needed
+  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Check if user's language needs script conversion (non-Latin script)
+  const needsNativeConversion = !isLatinScriptLanguage(currentUserLanguage);
 
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
@@ -151,6 +161,47 @@ const DraggableMiniChatWindow = ({
       handleClose();
     }
   }, [isBlocked]);
+
+  // Real-time transliteration: Convert Latin typing to native script
+  useEffect(() => {
+    // Skip if no conversion needed or empty input
+    if (!needsNativeConversion || !newMessage.trim()) {
+      setDisplayMessage(newMessage);
+      return;
+    }
+
+    // Skip if already in native script (not Latin)
+    if (!isLatinScript(newMessage)) {
+      setDisplayMessage(newMessage);
+      return;
+    }
+
+    // Debounce the conversion
+    if (transliterationTimeoutRef.current) {
+      clearTimeout(transliterationTimeoutRef.current);
+    }
+
+    setIsConverting(true);
+    transliterationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await convertToNativeScript(newMessage, currentUserLanguage);
+        if (result.isTranslated && result.text) {
+          setDisplayMessage(result.text);
+          setNewMessage(result.text); // Update input with native script
+        }
+      } catch (error) {
+        console.error('Transliteration error:', error);
+      } finally {
+        setIsConverting(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (transliterationTimeoutRef.current) {
+        clearTimeout(transliterationTimeoutRef.current);
+      }
+    };
+  }, [newMessage, needsNativeConversion, currentUserLanguage]);
 
   // Dragging handlers - supports both mouse and touch
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -1170,18 +1221,23 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input - clean, no translation UI */}
-              <Input
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
-                }}
-                onKeyDown={handleKeyPress}
-                className="h-8 text-xs flex-1"
-                disabled={isSending || isUploading}
-              />
+              {/* Text input - with real-time native script conversion */}
+              <div className="relative flex-1">
+                <Input
+                  placeholder={needsNativeConversion ? "Type in English..." : "Type your message..."}
+                  value={newMessage}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    handleTyping();
+                  }}
+                  onKeyDown={handleKeyPress}
+                  className="h-8 text-xs pr-6"
+                  disabled={isSending || isUploading}
+                />
+                {isConverting && (
+                  <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                )}
+              </div>
 
               {/* Send button */}
               <Button

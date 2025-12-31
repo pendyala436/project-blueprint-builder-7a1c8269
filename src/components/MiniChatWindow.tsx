@@ -27,7 +27,12 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { processIncomingMessage as dlProcessIncoming } from "@/lib/dl-translate";
+import { 
+  processIncomingMessage as dlProcessIncoming, 
+  convertToNativeScript,
+  isLatinScriptLanguage,
+  isLatinScript
+} from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -77,6 +82,7 @@ const MiniChatWindow = ({
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -89,12 +95,16 @@ const MiniChatWindow = ({
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
-  // Translation happens automatically - no UI needed
+  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Check if user's language needs script conversion (non-Latin script)
+  const needsNativeConversion = !isLatinScriptLanguage(currentUserLanguage);
 
   // Real-time typing indicator with translation
   const {
@@ -124,6 +134,47 @@ const MiniChatWindow = ({
       handleClose();
     }
   }, [isBlocked]);
+
+  // Real-time transliteration: Convert Latin typing to native script
+  useEffect(() => {
+    // Skip if no conversion needed or empty input
+    if (!needsNativeConversion || !newMessage.trim()) {
+      setDisplayMessage(newMessage);
+      return;
+    }
+
+    // Skip if already in native script (not Latin)
+    if (!isLatinScript(newMessage)) {
+      setDisplayMessage(newMessage);
+      return;
+    }
+
+    // Debounce the conversion
+    if (transliterationTimeoutRef.current) {
+      clearTimeout(transliterationTimeoutRef.current);
+    }
+
+    setIsConverting(true);
+    transliterationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await convertToNativeScript(newMessage, currentUserLanguage);
+        if (result.isTranslated && result.text) {
+          setDisplayMessage(result.text);
+          setNewMessage(result.text); // Update input with native script
+        }
+      } catch (error) {
+        console.error('Transliteration error:', error);
+      } finally {
+        setIsConverting(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (transliterationTimeoutRef.current) {
+        clearTimeout(transliterationTimeoutRef.current);
+      }
+    };
+  }, [newMessage, needsNativeConversion, currentUserLanguage]);
 
   // Load initial data (wallet, earnings, pricing)
   useEffect(() => {
@@ -675,20 +726,25 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area - clean, no translation UI */}
+          {/* Input area - with real-time native script conversion */}
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
-              <Input
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
-                }}
-                onKeyDown={handleKeyPress}
-                className="h-7 text-[11px]"
-                disabled={isSending}
-              />
+              <div className="relative flex-1">
+                <Input
+                  placeholder={needsNativeConversion ? "Type in English..." : "Type your message..."}
+                  value={newMessage}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    handleTyping();
+                  }}
+                  onKeyDown={handleKeyPress}
+                  className="h-7 text-[11px] pr-6"
+                  disabled={isSending}
+                />
+                {isConverting && (
+                  <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                )}
+              </div>
               <Button
                 size="icon"
                 className="h-7 w-7"
