@@ -109,16 +109,38 @@ function detectLanguageFromText(text: string): string | null {
   return isLatinScript(text) ? 'english' : null;
 }
 
-// Non-Latin script languages
+// Languages with non-Latin scripts (comprehensive list matching the 200+ server languages)
+// Script-based - these languages use non-Latin writing systems
 const NON_LATIN_LANGUAGES = new Set([
+  // South Asian
   'hindi', 'bengali', 'telugu', 'marathi', 'tamil', 'gujarati', 'kannada', 'malayalam',
-  'punjabi', 'odia', 'urdu', 'nepali', 'sinhala', 'assamese', 'arabic', 'persian',
-  'hebrew', 'chinese', 'japanese', 'korean', 'thai', 'burmese', 'khmer', 'lao',
-  'russian', 'ukrainian', 'greek', 'georgian', 'armenian', 'amharic', 'tigrinya'
+  'punjabi', 'odia', 'urdu', 'nepali', 'sinhala', 'assamese', 'maithili', 'santali',
+  'kashmiri', 'konkani', 'sindhi', 'dogri', 'manipuri', 'sanskrit', 'bhojpuri', 'dhivehi', 'tibetan',
+  // East Asian
+  'chinese', 'japanese', 'korean', 'mandarin', 'cantonese',
+  // Southeast Asian
+  'thai', 'burmese', 'khmer', 'lao',
+  // Middle Eastern
+  'arabic', 'persian', 'hebrew', 'pashto', 'dari', 'uighur', 'farsi',
+  // European non-Latin
+  'russian', 'ukrainian', 'belarusian', 'bulgarian', 'serbian', 'macedonian', 'kazakh', 'kyrgyz', 'tajik', 'mongolian',
+  'greek', 'georgian', 'armenian',
+  // African non-Latin
+  'amharic', 'tigrinya',
+  // Other
+  'yiddish'
 ]);
 
+// Check if language needs script conversion (non-Latin) or translation (Latin but not English)
 function needsScriptConversion(language: string): boolean {
-  return NON_LATIN_LANGUAGES.has(normalizeLanguage(language));
+  const norm = normalizeLanguage(language);
+  return NON_LATIN_LANGUAGES.has(norm);
+}
+
+// Check if language is NOT English (needs translation even if Latin script)
+function needsAnyConversion(language: string): boolean {
+  const norm = normalizeLanguage(language);
+  return norm !== 'english';
 }
 
 export function useServerTranslation(options: UseServerTranslationOptions): UseServerTranslationReturn {
@@ -342,9 +364,9 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return;
     }
 
-    // For non-Latin languages: convert script (e.g., "namaste" → "नमस्ते")
-    // For Latin languages (Spanish, French): translate (e.g., "hello" → "hola")
-    // Both are handled by the edge function's 'convert' mode
+    // For ALL non-English languages:
+    // - Non-Latin languages: convert script (e.g., "namaste" → "नमस्ते")
+    // - Latin languages (Spanish, French, etc.): translate (e.g., "hello" → "hola")
     debounceRef.current = setTimeout(async () => {
       try {
         const result = await convertToNative(trimmed, userLanguage);
