@@ -311,11 +311,11 @@ async function distributeWomanForChat(supabase: any, data: any) {
   );
 }
 
-// AI distribution for video call - STRICT: same language + online + available + not on another call
+// AI distribution for video call - same language + online + available + not on another call
 async function distributeWomanForCall(supabase: any, data: any) {
   const { language, excludeUserIds = [] } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
-  console.log(`[VideoCall] Finding SAME-LANGUAGE woman for video call: ${normalizedLanguage}`);
+  console.log(`[VideoCall] Finding woman for video call, language: ${normalizedLanguage}`);
   console.log(`[VideoCall] Excluded users: ${excludeUserIds.length}`);
 
   // Step 1: Get ONLY online users
@@ -343,19 +343,23 @@ async function distributeWomanForCall(supabase: any, data: any) {
   const womenOnCalls = activeVideoSessions?.map((s: any) => s.woman_user_id) || [];
   console.log(`[VideoCall] Women currently on calls: ${womenOnCalls.length}`);
 
-  // Step 3: Get women available for calls with capacity (must be online and not on a call)
+  // Step 3: Get women available for calls (must be online)
+  // Relaxed: just check is_available OR is_available_for_calls, and not at max call count
   const { data: availableWomen, error } = await supabase
     .from('women_availability')
     .select('user_id, current_call_count, max_concurrent_calls, is_available, is_available_for_calls')
-    .eq('is_available', true)
-    .eq('is_available_for_calls', true)
-    .eq('current_call_count', 0) // Not on any call (free)
+    .or('is_available.eq.true,is_available_for_calls.eq.true')
+    .lt('current_call_count', 1) // Not on any call (free for calls)
     .in('user_id', onlineUserIds); // MUST be online
 
-  if (error || !availableWomen?.length) {
+  if (error) {
+    console.log('[VideoCall] Error fetching women availability:', error);
+  }
+
+  if (!availableWomen?.length) {
     console.log('[VideoCall] No online women available for calls');
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No free user available of the same language.' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No free user available for video calls.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -369,12 +373,28 @@ async function distributeWomanForCall(supabase: any, data: any) {
   if (userIds.length === 0) {
     console.log('[VideoCall] All available women are excluded or on calls');
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No free user available of the same language. All users are busy.' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No free user available. All users are busy.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  // Step 4: Get user languages from user_languages table
+  // Step 4: Get profiles for these women (with primary_language)
+  const { data: womenProfiles } = await supabase
+    .from('female_profiles')
+    .select('user_id, full_name, photo_url, primary_language, preferred_language, age')
+    .in('user_id', userIds)
+    .eq('approval_status', 'approved')
+    .eq('account_status', 'active')
+    .not('photo_url', 'is', null);
+
+  if (!womenProfiles?.length) {
+    return new Response(
+      JSON.stringify({ success: false, woman: null, reason: 'No approved users available.' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Step 5: Also get user_languages as secondary source
   const { data: userLanguages } = await supabase
     .from('user_languages')
     .select('user_id, language_name')
@@ -385,47 +405,31 @@ async function distributeWomanForCall(supabase: any, data: any) {
     languageMap.set(l.user_id, (l.language_name || '').toLowerCase().trim());
   });
 
-  // Step 5: Get profiles for these women
-  const { data: womenProfiles } = await supabase
-    .from('female_profiles')
-    .select('user_id, full_name, photo_url, primary_language, age')
-    .in('user_id', userIds)
-    .eq('approval_status', 'approved')
-    .eq('account_status', 'active')
-    .not('photo_url', 'is', null);
-
-  if (!womenProfiles?.length) {
-    return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No free user available of the same language.' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Step 6: Filter STRICTLY by same language (no translation for video calls)
+  // Step 6: Filter by same language - check BOTH primary_language AND user_languages
   const sameLanguageWomen = womenProfiles.filter((w: any) => {
-    const womanLanguage = (
-      languageMap.get(w.user_id) || 
-      w.primary_language || 
-      ''
-    ).toLowerCase().trim();
-    return womanLanguage === normalizedLanguage;
+    const profileLang = (w.primary_language || '').toLowerCase().trim();
+    const preferredLang = (w.preferred_language || '').toLowerCase().trim();
+    const userLang = languageMap.get(w.user_id) || '';
+    
+    // Match if ANY of the language fields match
+    return profileLang === normalizedLanguage || 
+           preferredLang === normalizedLanguage || 
+           userLang === normalizedLanguage;
   });
 
-  if (sameLanguageWomen.length === 0) {
-    console.log(`[VideoCall] No women available for calls in language: ${normalizedLanguage}`);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        woman: null, 
-        reason: `No free user available of the same language (${language}). Video calls require same language.` 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  console.log(`[VideoCall] Found ${sameLanguageWomen.length} same-language women out of ${womenProfiles.length} total`);
+
+  // If no same language match, return all available (with warning)
+  const candidates = sameLanguageWomen.length > 0 ? sameLanguageWomen : womenProfiles;
+  const isSameLanguage = sameLanguageWomen.length > 0;
+
+  if (!isSameLanguage) {
+    console.log(`[VideoCall] No exact language match for ${normalizedLanguage}, returning any available`);
   }
 
   // Step 7: Sort by load (lowest first) for fair distribution
   const availabilityMap = new Map<string, any>(availableWomen.map((w: any) => [w.user_id, w]));
-  sameLanguageWomen.sort((a: any, b: any) => {
+  candidates.sort((a: any, b: any) => {
     const availA = availabilityMap.get(a.user_id);
     const availB = availabilityMap.get(b.user_id);
     const loadA = availA?.current_call_count || 0;
@@ -433,16 +437,16 @@ async function distributeWomanForCall(supabase: any, data: any) {
     return loadA - loadB;
   });
 
-  const selectedWoman = sameLanguageWomen[0];
-  console.log(`[VideoCall] Selected: ${selectedWoman.full_name} (language: ${selectedWoman.primary_language})`);
+  const selectedWoman = candidates[0];
+  console.log(`[VideoCall] Selected: ${selectedWoman.full_name} (primary_language: ${selectedWoman.primary_language})`);
 
   return new Response(
     JSON.stringify({ 
       success: true, 
       woman: selectedWoman,
-      same_language: true,
+      same_language: isSameLanguage,
       language: normalizedLanguage,
-      available_count: sameLanguageWomen.length
+      available_count: candidates.length
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
