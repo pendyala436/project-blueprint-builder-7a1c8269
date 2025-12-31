@@ -11,6 +11,7 @@ interface VideoCallState {
     womanUserId: string;
     womanName: string;
     womanPhoto: string | null;
+    ratePerMinute: number;
   } | null;
   error: string | null;
   attemptCount: number;
@@ -21,6 +22,11 @@ interface UseVideoCallWithFailoverProps {
   userLanguage: string;
   walletBalance: number;
   maxRetries?: number;
+}
+
+interface ChatPricing {
+  videoRatePerMinute: number;
+  videoWomenEarningRate: number;
 }
 
 export const useVideoCallWithFailover = ({
@@ -39,9 +45,40 @@ export const useVideoCallWithFailover = ({
     attemptCount: 0
   });
   
+  const [pricing, setPricing] = useState<ChatPricing>({
+    videoRatePerMinute: 10,
+    videoWomenEarningRate: 5
+  });
+  
   const excludedUsersRef = useRef<string[]>([]);
   const callChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const isRetryingRef = useRef(false);
+
+  // Fetch admin-set pricing on mount
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('chat_pricing')
+          .select('video_rate_per_minute, video_women_earning_rate')
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data) {
+          setPricing({
+            videoRatePerMinute: Number(data.video_rate_per_minute) || 10,
+            videoWomenEarningRate: Number(data.video_women_earning_rate) || 5
+          });
+        }
+      } catch (err) {
+        console.error('[VideoCall] Error fetching pricing:', err);
+      }
+    };
+
+    fetchPricing();
+  }, []);
 
   // Clean up channel on unmount
   useEffect(() => {
@@ -184,7 +221,7 @@ export const useVideoCallWithFailover = ({
         return;
       }
 
-      // Create video call session with ringing status
+      // Create video call session with ringing status using admin-set rate
       const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
       
       const { error: sessionError } = await supabase
@@ -194,7 +231,7 @@ export const useVideoCallWithFailover = ({
           man_user_id: currentUserId,
           woman_user_id: result.woman.user_id,
           status: 'ringing',
-          rate_per_minute: 5.00
+          rate_per_minute: pricing.videoRatePerMinute
         });
 
       if (sessionError) throw sessionError;
@@ -210,7 +247,8 @@ export const useVideoCallWithFailover = ({
           callId,
           womanUserId: result.woman.user_id,
           womanName: result.woman.full_name || 'User',
-          womanPhoto: result.woman.photo_url
+          womanPhoto: result.woman.photo_url,
+          ratePerMinute: pricing.videoRatePerMinute
         },
         error: null
       }));
@@ -284,24 +322,26 @@ export const useVideoCallWithFailover = ({
     const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
 
     if (!isSuperUser) {
-      const minBalance = 16;
+      // Calculate minimum balance needed for at least 1 minute of video call
+      // Using admin-set video rate
+      const minBalance = Math.ceil(pricing.videoRatePerMinute);
+      
+      if (walletBalance <= 0) {
+        const errorMsg = "Your wallet balance is ₹0. Recharge is mandatory to start video calls.";
+        setState(prev => ({ ...prev, error: errorMsg }));
+        return { needsRecharge: true, message: errorMsg };
+      }
+      
       if (walletBalance < minBalance) {
-        setState(prev => ({
-          ...prev,
-          error: walletBalance <= 0 
-            ? "Your wallet balance is ₹0. Recharge is mandatory to start video calls."
-            : `You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}.`
-        }));
-        return { needsRecharge: true, message: walletBalance <= 0 
-          ? "Your wallet balance is ₹0. Recharge is mandatory to start video calls."
-          : `You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}.`
-        };
+        const errorMsg = `You need at least ₹${minBalance} (1 minute @ ₹${pricing.videoRatePerMinute}/min) to start a video call. Your current balance is ₹${walletBalance}.`;
+        setState(prev => ({ ...prev, error: errorMsg }));
+        return { needsRecharge: true, message: errorMsg };
       }
     }
 
     await tryNextAvailableWoman();
     return { needsRecharge: false };
-  }, [walletBalance, tryNextAvailableWoman]);
+  }, [walletBalance, pricing.videoRatePerMinute, tryNextAvailableWoman]);
 
   // End the current call
   const endCall = useCallback(async () => {
