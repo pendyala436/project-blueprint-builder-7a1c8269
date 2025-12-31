@@ -1117,53 +1117,6 @@ const WomenDashboardScreen = () => {
             ))}
           </div>
         </div>
-
-        {/* Section 7: Recent Notifications */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
-            <button className="text-sm text-primary hover:underline flex items-center gap-1">
-              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {notifications.length > 0 ? (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <Card 
-                  key={notification.id}
-                  className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
-                >
-                  <div className={`p-2 rounded-full ${
-                    notification.type === "match" ? "bg-rose-500/10 text-rose-500" :
-                    notification.type === "message" ? "bg-blue-500/10 text-blue-500" :
-                    "bg-primary/10 text-primary"
-                  }`}>
-                    {notification.type === "match" ? <Heart className="w-5 h-5" /> :
-                     notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
-                     <Bell className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{notification.title}</p>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
-                  </div>
-                  {!notification.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  )}
-                </Card>
-              ))}
-            </div>
-          ) : (
-          <Card className="p-8 text-center">
-              <Bell className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">No new activity yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Activity notifications will appear here
-              </p>
-            </Card>
-          )}
-        </div>
-
         {/* Section 8: Shift CTA Card */}
         <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.32s" }}>
           <div className="flex items-center justify-between">
