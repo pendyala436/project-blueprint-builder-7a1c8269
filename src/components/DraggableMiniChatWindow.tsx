@@ -981,6 +981,10 @@ const DraggableMiniChatWindow = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
+              {/* Partner's language badge */}
+              <Badge variant="secondary" className="h-3.5 text-[8px] px-1 bg-primary/10 text-primary">
+                {partnerLanguage}
+              </Badge>
               {userGender === "male" && walletBalance > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
                   <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(0)}
