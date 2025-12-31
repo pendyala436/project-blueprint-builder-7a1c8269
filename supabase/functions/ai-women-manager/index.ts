@@ -264,8 +264,11 @@ async function suspendInactiveWomen(supabase: any) {
   );
 }
 
-// DYNAMIC DISTRIBUTION FOR CHAT - Cross-language allowed with auto-translation
-// Prioritizes same language, falls back to any available woman
+// DYNAMIC DISTRIBUTION FOR CHAT
+// - Same language OR different language women allowed
+// - Maximum 3 parallel chats per woman (configurable via admin_settings)
+// - Cross-language chats use auto-translation
+// - Prioritizes same language, falls back to different language with translation
 async function distributeWomanForChat(supabase: any, data: any) {
   const { language, excludeUserIds = [] } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
@@ -411,7 +414,10 @@ async function distributeWomanForChat(supabase: any, data: any) {
   );
 }
 
-// DYNAMIC DISTRIBUTION FOR VIDEO CALL - Same language ONLY (no translation for video)
+// DYNAMIC DISTRIBUTION FOR VIDEO CALL
+// - 1-to-1 connection only (max 1 concurrent call per woman)
+// - SAME LANGUAGE ONLY - no cross-language video calls
+// - No translation for video calls
 async function distributeWomanForCall(supabase: any, data: any) {
   const { language, excludeUserIds = [] } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
