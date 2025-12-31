@@ -181,8 +181,8 @@ const MiniChatWindow = ({
         const result = await convertToNative(newMessage, currentUserLanguage);
         
         if (result.isTranslated && result.text && result.text !== newMessage) {
-          setDisplayMessage(result.text);
-          setNewMessage(result.text); // Update input with native script
+          setDisplayMessage(result.text); // Only update preview, NOT the input
+          // Don't update newMessage - keep Latin input, convert only on send
         }
       } catch (error) {
         console.error('Transliteration error:', error);
@@ -497,7 +497,10 @@ const MiniChatWindow = ({
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
-    const messageText = newMessage.trim();
+    // Use displayMessage (native script preview) if available, otherwise use newMessage
+    const messageText = (displayMessage && displayMessage.trim() && displayMessage !== newMessage) 
+      ? displayMessage.trim() 
+      : newMessage.trim();
     
     // SECURITY: Validate message length to prevent database abuse
     if (messageText.length > MAX_MESSAGE_LENGTH) {
@@ -515,6 +518,7 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
+    setDisplayMessage(""); // Clear preview too
     stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
