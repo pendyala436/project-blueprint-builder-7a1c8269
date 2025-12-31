@@ -142,17 +142,18 @@ const IncomingVideoCallWindow = ({
     if (isAnswered) return;
 
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          handleDecline();
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeRemaining(prev => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [isAnswered]);
+
+  // Auto-decline when timer reaches 0
+  useEffect(() => {
+    if (timeRemaining <= 0 && !isAnswered) {
+      handleDecline();
+    }
+  }, [timeRemaining, isAnswered]);
 
   const handleAnswer = async () => {
     // Stop ringtone and vibration
