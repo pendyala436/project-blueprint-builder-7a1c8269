@@ -140,6 +140,29 @@ const DraggableVideoCallWindow = ({
     }
   }, [currentUserId, remoteUserId]);
 
+  // Subscribe to real-time relationship changes
+  useEffect(() => {
+    if (!currentUserId || !remoteUserId) return;
+
+    const channel = supabase
+      .channel(`video-call-relationships-${currentUserId}-${remoteUserId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_blocks' },
+        () => loadRelationshipStatus()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_friends' },
+        () => loadRelationshipStatus()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, remoteUserId]);
+
   const loadRelationshipStatus = async () => {
     try {
       // Check if blocked by me
