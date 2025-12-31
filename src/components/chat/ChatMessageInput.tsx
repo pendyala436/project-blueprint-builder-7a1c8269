@@ -45,12 +45,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const lastLatinInputRef = useRef<string>('');
 
-  // Server translation for send-time conversion
+  // Server translation for send-time conversion and live preview
   const { 
     clearLivePreview, 
     convertToNative,
     isSameLanguage,
-    needsTranslation 
+    needsTranslation,
+    livePreview,
+    updateLivePreview
   } = useServerTranslation({
     userLanguage: senderLanguage,
     partnerLanguage: receiverLanguage,
@@ -95,22 +97,30 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     // Track Latin input for potential conversion on send
     if (isLatinScript(value)) {
       lastLatinInputRef.current = value;
+      // Update live preview for non-English languages
+      if (!isSameLanguage(senderLanguage, 'english')) {
+        updateLivePreview(value);
+      }
     } else {
       // User is typing in native script directly - clear Latin reference
       lastLatinInputRef.current = '';
+      clearLivePreview();
     }
-  }, [handleTyping, isLatinScript]);
+  }, [handleTyping, isLatinScript, isSameLanguage, senderLanguage, updateLivePreview, clearLivePreview]);
 
-  // Handle send - convert Latin to native if needed, then send
+  // Handle send - use live preview if available, otherwise convert on send
   const handleSend = useCallback(async () => {
     if (!message.trim() || disabled || isComposing) return;
     
     const trimmedMessage = message.trim();
     const originalLatin = lastLatinInputRef.current;
     
-    // If user typed in Latin and their language is not English, convert before sending
-    if (originalLatin && isLatinScript(trimmedMessage) && !isSameLanguage(senderLanguage, 'english')) {
-      // Convert Latin to native script on send (non-blocking during typing)
+    // Use livePreview (native script) if available, otherwise use original message
+    if (livePreview && livePreview !== trimmedMessage && !isSameLanguage(senderLanguage, 'english')) {
+      // Send the pre-converted native script from live preview
+      onSendMessage(livePreview, originalLatin || trimmedMessage);
+    } else if (originalLatin && isLatinScript(trimmedMessage) && !isSameLanguage(senderLanguage, 'english')) {
+      // Fallback: convert Latin to native script on send if no live preview
       try {
         const result = await convertToNative(trimmedMessage, senderLanguage);
         onSendMessage(result.text, originalLatin);
@@ -128,7 +138,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     clearLivePreview();
     onTyping?.(false);
     textareaRef.current?.focus();
-  }, [message, disabled, isComposing, onSendMessage, onTyping, clearLivePreview, isLatinScript, isSameLanguage, senderLanguage, convertToNative]);
+  }, [message, disabled, isComposing, onSendMessage, onTyping, clearLivePreview, isLatinScript, isSameLanguage, senderLanguage, convertToNative, livePreview]);
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -186,6 +196,13 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
       <div className="p-3 flex items-end gap-2">
         {/* Message input */}
         <div className="flex-1 relative">
+          {/* Native script preview - shown above input when converting */}
+          {livePreview && livePreview !== message && !isSameLanguage(senderLanguage, 'english') && (
+            <div className="absolute -top-8 left-0 right-0 p-1.5 bg-primary/10 rounded text-xs text-muted-foreground border border-primary/20 z-10">
+              <span className="text-[10px] text-muted-foreground/70">Preview: </span>
+              <span className="text-foreground font-medium">{livePreview}</span>
+            </div>
+          )}
           <Textarea
             ref={textareaRef}
             value={message}
