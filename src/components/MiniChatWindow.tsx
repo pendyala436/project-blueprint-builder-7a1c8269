@@ -20,22 +20,14 @@ import {
   ChevronUp,
   TrendingUp,
   Wallet,
-  AlertTriangle,
-  Languages
+  AlertTriangle
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { 
-  translate, 
-  convertToNativeScript, 
-  processIncomingMessage as dlProcessIncoming,
-  isSameLanguage,
-  isLatinScript,
-  isLatinScriptLanguage
-} from "@/lib/dl-translate";
+import { processIncomingMessage as dlProcessIncoming } from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -102,13 +94,7 @@ const MiniChatWindow = ({
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
-  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Check if translation is needed
-  const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
-  const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
+  // Translation happens automatically - no UI needed
 
   // Real-time typing indicator with translation
   const {
@@ -432,33 +418,19 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
-    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
 
     try {
-      // Convert to user's native script using dl-translate
-      let processedMessage = messageText;
-      
-      // If user types in Latin and their language uses non-Latin script, convert
-      if (transliterationEnabled && needsScriptConversion && isLatinScript(messageText)) {
-        try {
-          const converted = await convertToNativeScript(messageText, currentUserLanguage);
-          processedMessage = converted.text || messageText;
-          console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
-        } catch (err) {
-          console.error('[MiniChatWindow] Script conversion error:', err);
-        }
-      }
-      
+      // Store message as-is - translation happens on receiver's end automatically
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: processedMessage // Store in sender's native script
+          message: messageText
         });
 
       if (error) throw error;
@@ -670,22 +642,8 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Show translated message in current user's language */}
-                    {msg.translatedMessage ? (
-                      <div className="space-y-0.5">
-                        <p>{msg.translatedMessage}</p>
-                        {msg.isTranslated && msg.message !== msg.translatedMessage && (
-                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                            {msg.message}
-                            {msg.detectedLanguage && (
-                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      msg.message
-                    )}
+                    {/* Display message in user's native language - translation is invisible */}
+                    {msg.translatedMessage || msg.message}
                   </div>
                 </div>
               ))}
@@ -707,63 +665,15 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area with live translation preview */}
-          <div className="p-1.5 border-t space-y-1">
-            {/* Live translation preview - shows text in user's native language */}
-            {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-              <div className="px-2 py-1 bg-primary/5 rounded text-[10px] text-primary/80 border border-primary/10">
-                <div className="flex items-center gap-1">
-                  <Languages className="h-3 w-3 shrink-0" />
-                  <span className="font-medium">{currentUserLanguage}:</span>
-                </div>
-                <p className="mt-0.5 pl-4">{livePreview.text}</p>
-                {livePreview.isLoading && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
-              </div>
-            )}
-            {/* Same language indicator */}
-            {!needsTranslation && newMessage.trim() && (
-              <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
-                Same language - no translation needed
-              </div>
-            )}
+          {/* Input area - clean, no translation UI */}
+          <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
-              {/* Transliteration toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-7 w-7 shrink-0",
-                  transliterationEnabled ? "text-primary" : "text-muted-foreground"
-                )}
-                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
-                title={transliterationEnabled ? "Disable auto-conversion" : "Enable auto-conversion"}
-              >
-                <Languages className="h-3 w-3" />
-              </Button>
               <Input
-                placeholder="Type in any language..."
+                placeholder="Type your message..."
                 value={newMessage}
-              onChange={(e) => {
-                  const val = e.target.value;
-                  setNewMessage(val);
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
                   handleTyping();
-                  // Update live preview with debounce
-                  if (previewTimeoutRef.current) {
-                    clearTimeout(previewTimeoutRef.current);
-                  }
-                  if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
-                    setLivePreview({ text: '', isLoading: true });
-                    previewTimeoutRef.current = setTimeout(async () => {
-                      try {
-                        const result = await convertToNativeScript(val, currentUserLanguage);
-                        setLivePreview({ text: result.text || val, isLoading: false });
-                      } catch {
-                        setLivePreview({ text: '', isLoading: false });
-                      }
-                    }, 300);
-                  } else {
-                    setLivePreview({ text: '', isLoading: false });
-                  }
                 }}
                 onKeyDown={handleKeyPress}
                 className="h-7 text-[11px]"
