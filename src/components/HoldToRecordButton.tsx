@@ -14,10 +14,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface HoldToRecordButtonProps {
-  chatId: string;
-  currentUserId: string;
-  partnerId: string;
+  // For direct chat message sending
+  chatId?: string;
+  currentUserId?: string;
+  partnerId?: string;
   onMessageSent?: () => void;
+  // For custom handling (e.g., community chat)
+  onRecordingComplete?: (audioBlob: Blob) => void | Promise<void>;
   disabled?: boolean;
   className?: string;
 }
@@ -27,6 +30,7 @@ export const HoldToRecordButton = ({
   currentUserId,
   partnerId,
   onMessageSent,
+  onRecordingComplete,
   disabled = false,
   className
 }: HoldToRecordButtonProps) => {
@@ -154,7 +158,37 @@ export const HoldToRecordButton = ({
           return;
         }
 
-        // Send the voice message
+        // If custom callback provided, use it instead
+        if (onRecordingComplete) {
+          setIsSending(true);
+          try {
+            await onRecordingComplete(blob);
+          } catch (error) {
+            console.error('Failed to process voice message:', error);
+            toast({
+              title: 'Failed to send',
+              description: 'Could not send voice message. Please try again.',
+              variant: 'destructive'
+            });
+          } finally {
+            setIsSending(false);
+            setRecordingDuration(0);
+          }
+          resolve();
+          return;
+        }
+
+        // Default behavior: Send to chat_messages
+        if (!chatId || !currentUserId || !partnerId) {
+          toast({
+            title: 'Configuration error',
+            description: 'Missing chat details',
+            variant: 'destructive'
+          });
+          resolve();
+          return;
+        }
+
         setIsSending(true);
         try {
           const fileName = `${currentUserId}/${chatId}/${Date.now()}.webm`;
@@ -209,7 +243,7 @@ export const HoldToRecordButton = ({
 
       mediaRecorder.stop();
     });
-  }, [isRecording, recordingDuration, chatId, currentUserId, partnerId, toast, onMessageSent]);
+  }, [isRecording, recordingDuration, chatId, currentUserId, partnerId, toast, onMessageSent, onRecordingComplete]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
