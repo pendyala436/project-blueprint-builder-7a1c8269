@@ -62,45 +62,45 @@ const VideoCallMiniButton = ({
   const getButtonContent = () => {
     if (isSearching) {
       return (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Finding... {attemptCount > 1 ? `(${attemptCount})` : ''}
-        </>
+        <span className="flex items-center gap-2 text-white font-medium">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Finding... {attemptCount > 1 ? `(${attemptCount})` : ''}</span>
+        </span>
       );
     }
     if (isRinging) {
       return (
-        <>
-          <Phone className="w-4 h-4 animate-pulse" />
-          Ringing...
-        </>
+        <span className="flex items-center gap-2 text-white font-medium">
+          <Phone className="w-5 h-5 animate-pulse" />
+          <span>Ringing...</span>
+        </span>
       );
     }
     if (isConnected) {
       return (
-        <>
-          <Video className="w-4 h-4" />
-          In Call
-        </>
+        <span className="flex items-center gap-2 text-white font-medium">
+          <Video className="w-5 h-5" />
+          <span>In Call</span>
+        </span>
       );
     }
     return (
-      <>
-        <Video className="w-4 h-4" />
-        Video Call
-      </>
+      <span className="flex items-center gap-2 text-white font-medium">
+        <Video className="w-5 h-5" />
+        <span>Video Call</span>
+      </span>
     );
   };
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <Button
           onClick={handleStartCall}
           disabled={isActive}
           variant="aurora"
           size="lg"
-          className="gap-2"
+          className="gap-2 min-w-[140px] px-5 py-3 shadow-lg"
         >
           {getButtonContent()}
         </Button>
@@ -108,11 +108,11 @@ const VideoCallMiniButton = ({
         {(isSearching || isRinging) && (
           <Button
             onClick={cancelSearch}
-            variant="ghost"
+            variant="destructive"
             size="icon"
-            className="h-10 w-10 rounded-full hover:bg-destructive/20"
+            className="h-11 w-11 rounded-full shadow-md"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </Button>
         )}
       </div>

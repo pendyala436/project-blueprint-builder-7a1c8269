@@ -260,23 +260,23 @@ const IncomingVideoCallWindow = ({
         <p className="text-gray-400 text-sm mb-1">wants to video call you</p>
         <p className="text-xs text-gray-500 mb-4">Auto-decline in {timeRemaining}s</p>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <Button
             variant="destructive"
             size="lg"
-            className="rounded-full w-14 h-14"
+            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform"
             onClick={handleDecline}
           >
-            <PhoneOff className="w-6 h-6" />
+            <PhoneOff className="w-7 h-7" />
           </Button>
 
           <Button
             variant="success"
             size="lg"
-            className="rounded-full w-14 h-14"
+            className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform bg-success hover:bg-success/90"
             onClick={handleAnswer}
           >
-            <Phone className="w-6 h-6" />
+            <Phone className="w-7 h-7 text-white" />
           </Button>
         </div>
       </div>
