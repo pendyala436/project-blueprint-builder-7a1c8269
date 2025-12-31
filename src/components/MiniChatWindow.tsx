@@ -497,7 +497,7 @@ const MiniChatWindow = ({
   const MAX_MESSAGE_LENGTH = 2000;
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || isSending) return;
+    if (!newMessage.trim() || isSending || isBlocked) return;
 
     const trimmedInput = newMessage.trim();
     // Capture displayMessage BEFORE clearing state
@@ -846,8 +846,8 @@ const MiniChatWindow = ({
             )}
             <div className="flex items-center gap-1">
               <div className="relative flex-1">
-                <Input
-                  placeholder={needsNativeConversion ? "Type in English..." : "Type your message..."}
+              <Input
+                  placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
@@ -855,7 +855,7 @@ const MiniChatWindow = ({
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-7 text-[11px] pr-6"
-                  disabled={isSending}
+                  disabled={isSending || isBlocked}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -865,7 +865,7 @@ const MiniChatWindow = ({
                 size="icon"
                 className="h-7 w-7"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending}
+                disabled={!newMessage.trim() || isSending || isBlocked}
               >
                 {isSending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
