@@ -777,6 +777,8 @@ const DraggableMiniChatWindow = ({
     if (!newMessage.trim() || isSending) return;
 
     const trimmedInput = newMessage.trim();
+    // Capture displayMessage BEFORE clearing state
+    const currentPreview = displayMessage?.trim() || '';
     
     if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
       toast({
@@ -794,14 +796,14 @@ const DraggableMiniChatWindow = ({
 
     try {
       // Determine final message text:
-      // 1. Use displayMessage (native preview) if available and different
+      // 1. Use captured preview (native) if available and different from input
       // 2. Otherwise, convert Latin to native on send for non-English languages
       // 3. Or just use original text
       let messageText = trimmedInput;
       
-      if (displayMessage && displayMessage.trim() && displayMessage !== trimmedInput) {
+      if (currentPreview && currentPreview !== trimmedInput) {
         // Use pre-converted preview
-        messageText = displayMessage.trim();
+        messageText = currentPreview;
       } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
         // Convert now if preview wasn't ready
         try {
