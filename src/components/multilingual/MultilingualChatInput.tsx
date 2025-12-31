@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LivePreview } from '@/hooks/useMultilingualChatSystem';
-import { getLanguageInfo, isLatinScriptLanguage, isLatinScript, convertToNativeScript } from '@/lib/dl-translate';
+import { getLanguageInfo, isLatinScriptLanguage, isLatinScript, convertToNativeScript, translate } from '@/lib/dl-translate';
 
 interface MultilingualChatInputProps {
   inputText: string;
@@ -38,17 +38,19 @@ export function MultilingualChatInput({
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const languageInfo = getLanguageInfo(userLanguage);
-  const needsNativeConversion = !isLatinScriptLanguage(userLanguage);
+  // Only skip conversion if mother tongue is English - all other languages need conversion
+  const needsNativeConversion = userLanguage.toLowerCase() !== 'english' && userLanguage.toLowerCase() !== 'en';
 
-  // Real-time transliteration: Convert Latin typing to native script
+  // Real-time transliteration: Convert typing to native language
   useEffect(() => {
     // Skip if no conversion needed or empty input
     if (!needsNativeConversion || !inputText.trim()) {
       return;
     }
 
-    // Skip if already in native script (not Latin)
-    if (!isLatinScript(inputText)) {
+    // For non-Latin languages, skip if already in native script
+    const isNonLatinLanguage = !isLatinScriptLanguage(userLanguage);
+    if (isNonLatinLanguage && !isLatinScript(inputText)) {
       return;
     }
 
@@ -60,9 +62,17 @@ export function MultilingualChatInput({
     setIsConverting(true);
     transliterationTimeoutRef.current = setTimeout(async () => {
       try {
-        const result = await convertToNativeScript(inputText, userLanguage);
+        let result;
+        if (isNonLatinLanguage) {
+          // For non-Latin languages (Hindi, Arabic, etc.) - convert script
+          result = await convertToNativeScript(inputText, userLanguage);
+        } else {
+          // For Latin languages (French, Spanish, etc.) - translate
+          result = await translate(inputText, 'english', userLanguage);
+        }
+        
         if (result.isTranslated && result.text) {
-          onInputChange(result.text); // Update input with native script
+          onInputChange(result.text); // Update input with native language
         }
       } catch (error) {
         console.error('Transliteration error:', error);
