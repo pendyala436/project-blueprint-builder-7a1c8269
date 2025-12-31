@@ -248,7 +248,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
   }, [userLanguage, partnerLanguage, isSameLanguage]);
 
-  // Convert Latin text to native script with auto-detection
+  // Convert Latin text to native script OR translate to Latin-script language
   const convertToNative = useCallback(async (
     text: string,
     targetLanguage?: string
@@ -262,8 +262,8 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return { text, originalText: text, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
     }
 
-    // If target is Latin script language, no conversion needed
-    if (!needsScriptConversion(normTarget)) {
+    // If target is English, no conversion/translation needed
+    if (normTarget === 'english') {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
     }
 
@@ -276,11 +276,15 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
+      // For non-Latin languages: use 'convert' mode (transliteration)
+      // For Latin languages (Spanish, French, etc.): use 'translate' mode
+      const mode = needsScriptConversion(normTarget) ? 'convert' : 'translate';
+      
       const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
         body: {
           text: trimmed,
           targetLanguage: normTarget,
-          mode: 'convert'
+          mode: mode
           // sourceLanguage omitted - edge function will auto-detect as Latin/English
         }
       });
@@ -296,7 +300,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
         isTranslated: data?.isTranslated || false,
         source: data?.detectedLanguage || 'english',
         target: normTarget,
-        mode: 'convert'
+        mode: mode
       };
     } catch (err) {
       console.error('[ServerTranslation] Convert error:', err);
@@ -307,7 +311,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
   }, [userLanguage]);
 
-  // Update live preview with debounce (Latin → Native script)
+  // Update live preview with debounce (Latin → Native script OR Latin → Latin language)
   const updateLivePreview = useCallback((text: string) => {
     // Clear previous debounce
     if (debounceRef.current) {
@@ -324,19 +328,23 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return;
     }
 
-    // If user's language doesn't need conversion, show as-is
-    if (!needsScriptConversion(userLanguage)) {
+    const normUser = normalizeLanguage(userLanguage);
+    
+    // If user's language is English, no conversion needed - show as-is
+    if (normUser === 'english') {
       setLivePreview(trimmed);
       return;
     }
 
-    // If already non-Latin, show as-is
+    // If already non-Latin script, show as-is (already in native)
     if (!isLatinScript(trimmed)) {
       setLivePreview(trimmed);
       return;
     }
 
-    // Debounce the conversion
+    // For non-Latin languages: convert script (e.g., "namaste" → "नमस्ते")
+    // For Latin languages (Spanish, French): translate (e.g., "hello" → "hola")
+    // Both are handled by the edge function's 'convert' mode
     debounceRef.current = setTimeout(async () => {
       try {
         const result = await convertToNative(trimmed, userLanguage);
