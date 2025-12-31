@@ -489,8 +489,89 @@ function cleanTranslatedText(text: string, targetLanguage: string): string {
 }
 
 /**
- * Transliterate Latin text to native script
+ * Transliterate Latin text to native script using Lovable AI
  * Converts romanized input like "bagunnava" to native script "బాగున్నావా"
+ */
+async function transliterateWithAI(
+  latinText: string,
+  targetLanguage: string
+): Promise<{ text: string; success: boolean }> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log(`[dl-translate] No LOVABLE_API_KEY, skipping AI transliteration`);
+    return { text: latinText, success: false };
+  }
+  
+  const langInfo = languageByName.get(targetLanguage.toLowerCase());
+  const nativeScript = langInfo?.native || targetLanguage;
+  const scriptName = langInfo?.script || 'native';
+  
+  try {
+    console.log(`[dl-translate] Using AI for transliteration to ${targetLanguage} (${scriptName})`);
+    
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `You are a transliteration engine. Convert romanized/Latin text to ${targetLanguage} ${scriptName} script. 
+RULES:
+- Output ONLY the transliterated text in ${scriptName} script
+- Do NOT translate meaning - convert sounds phonetically
+- Do NOT add any explanations, prefixes, or language names
+- If input is already in ${scriptName} script, return it as-is
+- Preserve numbers and punctuation
+
+Example for Telugu: "bagunnava" → "బాగున్నావా"
+Example for Hindi: "namaste" → "नमस्ते"`
+          },
+          {
+            role: "user",
+            content: latinText
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.1
+      }),
+    });
+
+    if (!response.ok) {
+      console.log(`[dl-translate] AI transliteration failed: ${response.status}`);
+      return { text: latinText, success: false };
+    }
+
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content?.trim();
+    
+    if (result) {
+      // Verify result is in native script
+      const detected = detectScriptFromText(result);
+      if (!detected.isLatin) {
+        // Clean any unwanted prefixes/suffixes
+        const cleaned = cleanTranslatedText(result, targetLanguage);
+        console.log(`[dl-translate] AI transliteration success: "${latinText}" -> "${cleaned}"`);
+        return { text: cleaned, success: true };
+      }
+    }
+    
+    console.log(`[dl-translate] AI returned Latin text, keeping original`);
+    return { text: latinText, success: false };
+  } catch (error) {
+    console.error(`[dl-translate] AI transliteration error:`, error);
+    return { text: latinText, success: false };
+  }
+}
+
+/**
+ * Transliterate Latin text to native script
+ * Tries AI first, then falls back to translation APIs
  */
 async function transliterateToNative(
   latinText: string,
@@ -500,7 +581,13 @@ async function transliterateToNative(
   
   console.log(`[dl-translate] Transliterating to ${targetLanguage} (${targetCode})`);
   
-  // Use translation from English to target language for transliteration
+  // Try AI transliteration first (best quality)
+  const aiResult = await transliterateWithAI(latinText, targetLanguage);
+  if (aiResult.success) {
+    return aiResult;
+  }
+  
+  // Fallback: Use translation APIs
   let result = await translateWithLibre(latinText, 'en', targetCode);
   
   if (!result.success) {
@@ -511,7 +598,6 @@ async function transliterateToNative(
   if (result.success) {
     const detected = detectScriptFromText(result.translatedText);
     if (!detected.isLatin) {
-      // Clean any language prefixes/suffixes
       const cleanedText = cleanTranslatedText(result.translatedText, targetLanguage);
       console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${cleanedText}"`);
       return { text: cleanedText, success: true };
