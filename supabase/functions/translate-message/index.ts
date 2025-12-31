@@ -410,13 +410,15 @@ async function translateText(
   // Try direct translation first
   let result = await translateWithLibre(text, sourceCode, targetCode);
   if (result.success) {
-    return { ...result, pivotUsed: false };
+    const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
+    return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
   // Try MyMemory fallback for direct translation
   result = await translateWithMyMemory(text, sourceCode, targetCode);
   if (result.success) {
-    return { ...result, pivotUsed: false };
+    const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
+    return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
   // If direct translation failed and neither language is English, use English pivot
@@ -437,8 +439,9 @@ async function translateText(
       }
 
       if (finalResult.success) {
+        const cleaned = cleanTranslatedText(finalResult.translatedText, targetLanguage);
         console.log('[dl-translate] English pivot translation success');
-        return { translatedText: finalResult.translatedText, success: true, pivotUsed: true };
+        return { translatedText: cleaned, success: true, pivotUsed: true };
       }
     }
   }
@@ -446,6 +449,43 @@ async function translateText(
   // All translation attempts failed
   console.log('[dl-translate] All translation attempts failed, returning original text');
   return { translatedText: text, success: false, pivotUsed: false };
+}
+
+/**
+ * Clean translated text by removing language name prefixes/suffixes
+ * Some translation APIs add things like "(Telugu)" or "Telugu:" to output
+ */
+function cleanTranslatedText(text: string, targetLanguage: string): string {
+  if (!text) return text;
+  
+  let cleaned = text.trim();
+  
+  // Get language info for pattern matching
+  const langInfo = languageByName.get(targetLanguage.toLowerCase());
+  const langName = langInfo?.name || targetLanguage;
+  const nativeName = langInfo?.native || '';
+  
+  // Common patterns to remove (case insensitive)
+  const patterns = [
+    // Prefix patterns: "Telugu:", "Telugu -", "(Telugu)", "[Telugu]"
+    new RegExp(`^\\s*\\(?\\[?${langName}\\]?\\)?\\s*[-:]?\\s*`, 'i'),
+    new RegExp(`^\\s*\\(?\\[?${nativeName}\\]?\\)?\\s*[-:]?\\s*`, 'i'),
+    // Suffix patterns: "(Telugu)", "[Telugu]", "- Telugu"
+    new RegExp(`\\s*[-]?\\s*\\(?\\[?${langName}\\]?\\)?\\s*$`, 'i'),
+    new RegExp(`\\s*[-]?\\s*\\(?\\[?${nativeName}\\]?\\)?\\s*$`, 'i'),
+    // Generic language tag patterns
+    /^\s*\[.*?\]\s*[-:]?\s*/,
+    /\s*\[.*?\]\s*$/,
+    // Remove "Translation:" prefix
+    /^translation\s*[-:]?\s*/i,
+    /^translated\s*[-:]?\s*/i,
+  ];
+  
+  for (const pattern of patterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  return cleaned.trim();
 }
 
 /**
@@ -471,8 +511,10 @@ async function transliterateToNative(
   if (result.success) {
     const detected = detectScriptFromText(result.translatedText);
     if (!detected.isLatin) {
-      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${result.translatedText}"`);
-      return { text: result.translatedText, success: true };
+      // Clean any language prefixes/suffixes
+      const cleanedText = cleanTranslatedText(result.translatedText, targetLanguage);
+      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${cleanedText}"`);
+      return { text: cleanedText, success: true };
     }
   }
   
