@@ -95,17 +95,24 @@ export function useRealtimeTranslation({
         try {
           const { data, error } = await supabase.functions.invoke('translate-message', {
             body: {
-              message: text,
+              text: text,
               sourceLanguage: senderLanguage,
               targetLanguage: currentUserLanguage,
               mode: 'translate'
             }
           });
 
-          if (!error && data?.translatedMessage) {
+          if (!error && data?.translatedText) {
             setPartnerTyping(prev => prev ? {
               ...prev,
-              translatedText: data.translatedMessage,
+              translatedText: data.translatedText,
+              isTranslating: false
+            } : null);
+          } else {
+            // Fallback if no translation
+            setPartnerTyping(prev => prev ? {
+              ...prev,
+              translatedText: text,
               isTranslating: false
             } : null);
           }
