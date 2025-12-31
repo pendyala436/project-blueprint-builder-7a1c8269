@@ -609,19 +609,25 @@ const DraggableVideoCallWindow = ({
             )}
 
             {/* Close/End Call button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                console.log('[VideoCall] Close button clicked');
-                await handleEndCall();
-              }}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-7 px-2 gap-1 text-white font-medium"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log('[VideoCall] Close button clicked');
+                    await handleEndCall();
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                  <span className="text-xs">Close</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-black text-white border-gray-700">Close & End Call</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -713,8 +719,8 @@ const DraggableVideoCallWindow = ({
                   <TooltipTrigger asChild>
                     <Button
                       variant="destructive"
-                      size="sm"
-                      className="rounded-full w-14 h-14 shadow-lg"
+                      size="lg"
+                      className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform flex flex-col items-center justify-center gap-0.5"
                       onClick={async (e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -723,9 +729,10 @@ const DraggableVideoCallWindow = ({
                       }}
                     >
                       <PhoneOff className="w-6 h-6" />
+                      <span className="text-[10px] font-medium">Stop</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-black text-white border-gray-700">End Call</TooltipContent>
+                  <TooltipContent side="top" className="bg-black text-white border-gray-700">Stop & End Call</TooltipContent>
                 </Tooltip>
 
                 {/* Gift Button */}
