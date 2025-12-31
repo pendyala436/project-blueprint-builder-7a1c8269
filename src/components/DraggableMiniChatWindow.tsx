@@ -776,12 +776,9 @@ const DraggableMiniChatWindow = ({
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
-    // Use displayMessage (native script preview) if available, otherwise use newMessage
-    const messageText = (displayMessage && displayMessage.trim() && displayMessage !== newMessage) 
-      ? displayMessage.trim() 
-      : newMessage.trim();
+    const trimmedInput = newMessage.trim();
     
-    if (messageText.length > MAX_MESSAGE_LENGTH) {
+    if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
@@ -796,7 +793,29 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     try {
-      // Store message as-is - translation happens on receiver's end automatically
+      // Determine final message text:
+      // 1. Use displayMessage (native preview) if available and different
+      // 2. Otherwise, convert Latin to native on send for non-English languages
+      // 3. Or just use original text
+      let messageText = trimmedInput;
+      
+      if (displayMessage && displayMessage.trim() && displayMessage !== trimmedInput) {
+        // Use pre-converted preview
+        messageText = displayMessage.trim();
+      } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
+        // Convert now if preview wasn't ready
+        try {
+          const result = await convertToNative(trimmedInput, currentUserLanguage);
+          if (result.isTranslated && result.text) {
+            messageText = result.text;
+          }
+        } catch (err) {
+          console.error('Conversion on send failed:', err);
+          // Keep original text
+        }
+      }
+
+      // Store message
       const { error } = await supabase
         .from("chat_messages")
         .insert({
@@ -809,7 +828,7 @@ const DraggableMiniChatWindow = ({
       if (error) throw error;
     } catch (error) {
       console.error("Error sending message:", error);
-      setNewMessage(messageText);
+      setNewMessage(trimmedInput);
       toast({
         title: "Error",
         description: "Failed to send message",
