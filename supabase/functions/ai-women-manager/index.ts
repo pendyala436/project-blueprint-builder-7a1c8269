@@ -575,9 +575,16 @@ async function distributeWomanForCall(supabase: any, data: any) {
     const preferredLang = (w.preferred_language || '').toLowerCase().trim();
     const userLang = languageMap.get(w.user_id) || '';
     
-    return profileLang === normalizedLanguage || 
-           preferredLang === normalizedLanguage || 
-           userLang === normalizedLanguage;
+    // Check if any of the woman's language fields match the requested language
+    const matchesProfile = profileLang.includes(normalizedLanguage) || normalizedLanguage.includes(profileLang);
+    const matchesPreferred = preferredLang.includes(normalizedLanguage) || normalizedLanguage.includes(preferredLang);
+    const matchesUserLang = userLang.includes(normalizedLanguage) || normalizedLanguage.includes(userLang);
+    
+    const isMatch = matchesProfile || matchesPreferred || matchesUserLang;
+    
+    console.log(`[VideoCall] Checking ${w.full_name}: profile=${profileLang}, preferred=${preferredLang}, userLang=${userLang}, match=${isMatch}`);
+    
+    return isMatch;
   });
 
   console.log(`[VideoCall] Found ${sameLanguageWomen.length} same-language women out of ${womenProfiles.length} total`);
