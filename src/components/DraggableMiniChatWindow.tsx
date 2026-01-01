@@ -27,7 +27,9 @@ import {
   Image,
   Video,
   FileText,
-  MoreVertical
+  MoreVertical,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import {
   Popover,
@@ -1250,7 +1252,7 @@ const DraggableMiniChatWindow = ({
             onClick={() => setShowActions(!showActions)}
             title={showActions ? "Hide actions" : "Show actions"}
           >
-            <MoreVertical className="h-2.5 w-2.5" />
+            {showActions ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
           </Button>
           
           {/* Collapsible action buttons */}
