@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
@@ -656,102 +657,62 @@ const WomenDashboardScreen = () => {
     });
   };
 
-  const UserCard = ({ user }: { user: OnlineMan }) => (
-    <Card 
+  // Compact List Item for men - optimized for large user counts
+  const UserListItem = ({ user }: { user: OnlineMan }) => (
+    <div 
       className={cn(
-        "group hover:shadow-lg transition-all duration-300 cursor-pointer",
-        user.isSameLanguage && "ring-2 ring-primary/50",
-        user.walletBalance > 1000 && "border-warning/30 bg-gradient-to-br from-warning/5 to-transparent"
+        "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer group border border-transparent",
+        user.isSameLanguage && "hover:bg-primary/10 hover:border-primary/30",
+        !user.isSameLanguage && "hover:bg-muted/50 hover:border-border",
+        user.walletBalance > 1000 && "bg-gradient-to-r from-warning/5 to-transparent"
       )}
       onClick={() => handleViewProfile(user.userId)}
     >
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-14 w-14 border-2 border-background shadow-md">
-              <AvatarImage src={user.photoUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
-                {user.fullName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            {/* Status indicator: Green=Available, Yellow=1-2 chats, Red=Full */}
-            <div className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
-              (user.activeChatCount || 0) === 0 ? "bg-green-500" :
-              (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
-            )} title={
-              (user.activeChatCount || 0) === 0 ? "Available" :
-              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : `Busy (${user.activeChatCount}/3)`
-            } />
-            {user.walletBalance > 1000 && (
-              <div className="absolute -top-1 -right-1">
-                <Crown className="h-4 w-4 text-amber-500" />
-              </div>
-            )}
-          </div>
+      <div className="relative flex-shrink-0">
+        <Avatar className="h-9 w-9 border border-background shadow-sm">
+          <AvatarImage src={user.photoUrl || undefined} />
+          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-xs">
+            {user.fullName.charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+        {/* Status indicator */}
+        <div className={cn(
+          "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+          (user.activeChatCount || 0) === 0 ? "bg-green-500" :
+          (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+        )} />
+        {user.walletBalance > 1000 && (
+          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-amber-500" />
+        )}
+      </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
-              {user.age && (
-                <Badge variant="outline" className="text-xs font-medium">
-                  {user.age} {t('yearsOld', 'yrs')}
-                </Badge>
-              )}
-              {user.isSameLanguage && (
-                <Badge variant="default" className="text-[10px] bg-primary/90">
-                  {t('sameLanguage', 'Same Language')}
-                </Badge>
-              )}
-            </div>
-            
-            {/* Wallet Balance - Always visible and prominent */}
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                <IndianRupee className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-bold text-green-600">
-                  ₹{user.walletBalance.toFixed(0)}
-                </span>
-              </div>
-              {user.isNllbLanguage && !user.isSameLanguage && (
-                <Badge variant="outline" className="text-[10px]">
-                  <Globe className="h-2.5 w-2.5 mr-1" />
-                  {t('autoTranslateMessages', 'Auto-translate')}
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
-              <div className="flex items-center gap-1">
-                <Languages className="h-3 w-3" />
-                <span>{user.motherTongue}</span>
-              </div>
-              {(user.state || user.country) && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3" />
-                    {[user.state, user.country].filter(Boolean).join(", ")}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Button 
-              size="sm" 
-              variant="auroraOutline"
-              onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
-              title={t('viewProfile', 'View Profile')}
-            >
-              <User className="h-4 w-4 mr-1" />
-              {t('viewProfile', 'View')}
-            </Button>
-          </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium text-xs text-foreground truncate">{user.fullName}</span>
+          {user.age && <span className="text-[10px] text-muted-foreground">{user.age}y</span>}
+          {user.isSameLanguage && (
+            <span className="px-1 py-0.5 text-[8px] bg-primary/20 text-primary rounded">Same</span>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-green-500/10 text-green-600 font-medium">
+            <IndianRupee className="h-2.5 w-2.5" />
+            <span>₹{user.walletBalance.toFixed(0)}</span>
+          </div>
+          <span>{user.motherTongue}</span>
+          {user.country && <><span>•</span><span className="truncate">{user.country}</span></>}
+        </div>
+      </div>
+
+      <Button 
+        size="sm" 
+        variant="ghost"
+        className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+      >
+        <User className="h-3 w-3" />
+      </Button>
+    </div>
   );
 
   if (isLoading) {
@@ -950,17 +911,13 @@ const WomenDashboardScreen = () => {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {rechargedMen.map((user, index) => (
-                  <div 
-                    key={user.userId}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <UserCard user={user} />
-                  </div>
-                ))}
-              </div>
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-1 pr-2">
+                  {rechargedMen.map((user) => (
+                    <UserListItem key={user.userId} user={user} />
+                  ))}
+                </div>
+              </ScrollArea>
             )}
           </TabsContent>
 
@@ -976,17 +933,13 @@ const WomenDashboardScreen = () => {
                 <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {nonRechargedMen.map((user, index) => (
-                  <div 
-                    key={user.userId}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <UserCard user={user} />
-                  </div>
-                ))}
-              </div>
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-1 pr-2">
+                  {nonRechargedMen.map((user) => (
+                    <UserListItem key={user.userId} user={user} />
+                  ))}
+                </div>
+              </ScrollArea>
             )}
           </TabsContent>
         </Tabs>
