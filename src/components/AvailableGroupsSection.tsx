@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio } from 'lucide-react';
+import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio, Search, Filter, Star, Eye, Globe, X } from 'lucide-react';
 import { GroupChatWindow } from './GroupChatWindow';
 import { GroupVideoCall } from './GroupVideoCall';
+import { languages } from '@/data/languages';
 
 interface PrivateGroup {
   id: string;
@@ -24,6 +28,8 @@ interface PrivateGroup {
   participant_count: number;
   owner_name?: string;
   owner_photo?: string;
+  owner_language?: string;
+  created_at?: string;
 }
 
 interface GiftItem {
@@ -42,6 +48,7 @@ interface AvailableGroupsSectionProps {
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [myMemberships, setMyMemberships] = useState<Map<string, boolean>>(new Map());
+  const [favoriteGroups, setFavoriteGroups] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
@@ -50,11 +57,18 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [isSendingGift, setIsSendingGift] = useState(false);
   const [activeGroupChat, setActiveGroupChat] = useState<PrivateGroup | null>(null);
   const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterLanguage, setFilterLanguage] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'views' | 'favorites' | 'recent'>('views');
 
   useEffect(() => {
     fetchGroups();
     fetchMyMemberships();
     fetchWalletBalance();
+    fetchFavorites();
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -72,12 +86,82 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     };
   }, [currentUserId]);
 
+  const fetchFavorites = () => {
+    // Use localStorage for favorites
+    try {
+      const saved = localStorage.getItem(`group_favorites_${currentUserId}`);
+      if (saved) {
+        setFavoriteGroups(new Set(JSON.parse(saved)));
+      }
+    } catch (error) {
+      // Ignore
+    }
+  };
+
+  const toggleFavorite = (groupId: string) => {
+    setFavoriteGroups(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(groupId)) {
+        newFavorites.delete(groupId);
+      } else {
+        newFavorites.add(groupId);
+      }
+      localStorage.setItem(`group_favorites_${currentUserId}`, JSON.stringify([...newFavorites]));
+      return newFavorites;
+    });
+  };
+
+  // Filter and sort groups
+  const filteredGroups = useMemo(() => {
+    let result = [...groups];
+    
+    // Search by name or owner name
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(g => 
+        g.name.toLowerCase().includes(query) ||
+        g.owner_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Filter by language
+    if (filterLanguage !== 'all') {
+      result = result.filter(g => g.owner_language === filterLanguage);
+    }
+    
+    // Sort
+    if (sortBy === 'views') {
+      result.sort((a, b) => b.participant_count - a.participant_count);
+    } else if (sortBy === 'favorites') {
+      result.sort((a, b) => {
+        const aFav = favoriteGroups.has(a.id) ? 1 : 0;
+        const bFav = favoriteGroups.has(b.id) ? 1 : 0;
+        return bFav - aFav;
+      });
+    } else {
+      result.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    }
+    
+    return result;
+  }, [groups, searchQuery, filterLanguage, sortBy, favoriteGroups]);
+
+  // Get unique languages from groups
+  const availableLanguages = useMemo(() => {
+    const langs = new Set<string>();
+    groups.forEach(g => {
+      if (g.owner_language) langs.add(g.owner_language);
+    });
+    return [...langs].sort();
+  }, [groups]);
+
   const fetchGroups = async () => {
     try {
+      // ONLY fetch LIVE groups for men viewers
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
+        .eq('is_live', true) // Only live groups visible to men
         .neq('owner_id', currentUserId)
         .order('participant_count', { ascending: false })
         .order('created_at', { ascending: false });
@@ -243,31 +327,154 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          Private Rooms
+          <Radio className="h-5 w-5 text-destructive animate-pulse" />
+          Live Rooms
+          <Badge variant="secondary" className="ml-2">{groups.length} Live</Badge>
         </h3>
       </div>
 
-      {groups.length === 0 ? (
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or host..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        
+        <Popover open={showFilters} onOpenChange={setShowFilters}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
+              {(filterLanguage !== 'all' || sortBy !== 'views') && (
+                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full">
+                  {(filterLanguage !== 'all' ? 1 : 0) + (sortBy !== 'views' ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72" align="end">
+            <div className="space-y-4">
+              <h4 className="font-medium">Filter & Sort</h4>
+              
+              {/* Language Filter */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Language
+                </label>
+                <Select value={filterLanguage} onValueChange={setFilterLanguage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All languages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Languages</SelectItem>
+                    {availableLanguages.map(lang => (
+                      <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Sort By */}
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground">Sort By</label>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'views' | 'favorites' | 'recent')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="views">
+                      <span className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" /> Most Viewers
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="favorites">
+                      <span className="flex items-center gap-2">
+                        <Star className="h-4 w-4" /> My Favorites
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="recent">
+                      <span className="flex items-center gap-2">
+                        <Radio className="h-4 w-4" /> Recently Started
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Reset Filters */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  setFilterLanguage('all');
+                  setSortBy('views');
+                }}
+              >
+                Reset Filters
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {filteredGroups.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No private rooms available</p>
-            <p className="text-sm">Check back later!</p>
+            <Radio className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            {groups.length === 0 ? (
+              <>
+                <p>No live rooms right now</p>
+                <p className="text-sm">Check back when hosts go live!</p>
+              </>
+            ) : (
+              <>
+                <p>No rooms match your filters</p>
+                <Button 
+                  variant="link" 
+                  onClick={() => { setSearchQuery(''); setFilterLanguage('all'); }}
+                >
+                  Clear filters
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => {
+          {filteredGroups.map((group) => {
             const unlocked = hasAccess(group.id);
+            const isFavorite = favoriteGroups.has(group.id);
             return (
               <Card key={group.id} className="relative overflow-hidden">
-                {group.is_live && (
-                  <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
-                    <Radio className="h-3 w-3 animate-pulse" />
-                    LIVE
-                  </Badge>
-                )}
+                <Badge variant="destructive" className="absolute top-2 right-12 gap-1 z-10">
+                  <Radio className="h-3 w-3 animate-pulse" />
+                  LIVE
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`absolute top-2 right-2 z-10 h-8 w-8 ${isFavorite ? 'text-yellow-500' : 'text-muted-foreground'}`}
+                  onClick={() => toggleFavorite(group.id)}
+                >
+                  <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+                </Button>
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <Avatar>
@@ -285,6 +492,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
+                    {group.owner_language && (
+                      <Badge variant="outline" className="gap-1">
+                        <Globe className="h-3 w-3" />
+                        {group.owner_language}
+                      </Badge>
+                    )}
                     <Badge variant={unlocked ? 'default' : 'secondary'} className="gap-1">
                       {unlocked ? (
                         <>
@@ -304,8 +517,8 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       )}
                     </Badge>
                     <Badge variant="outline" className="gap-1">
-                      <Users className="h-3 w-3" />
-                      {group.participant_count}
+                      <Eye className="h-3 w-3" />
+                      {group.participant_count} watching
                     </Badge>
                   </div>
 
@@ -328,10 +541,9 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                           variant="default"
                           className="flex-1 gap-2"
                           onClick={() => setActiveGroupVideo(group)}
-                          disabled={!group.is_live}
                         >
                           <Video className="h-4 w-4" />
-                          {group.is_live ? 'Watch' : 'Offline'}
+                          Watch Live
                         </Button>
                       )}
                     </div>
@@ -343,12 +555,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       {group.min_gift_amount === 0 ? (
                         <>
                           <Users className="h-4 w-4" />
-                          Join
+                          Join Free
                         </>
                       ) : (
                         <>
                           <Gift className="h-4 w-4" />
-                          Send Gift to Unlock
+                          Send Gift to Watch
                         </>
                       )}
                     </Button>
