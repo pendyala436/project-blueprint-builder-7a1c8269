@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -1131,8 +1132,8 @@ const DashboardScreen = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Same Language Women */}
-              <div className="space-y-3">
+              {/* Left Column: Same Language Women - List View */}
+              <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
                   <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
@@ -1142,42 +1143,42 @@ const DashboardScreen = () => {
                 </div>
                 
                 {sameLanguageWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {sameLanguageWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                      >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
-                          )} />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-success/20 text-success rounded-full">
-                          {woman.primary_language}
-                        </span>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ScrollArea className="h-[400px] pr-2">
+                    <div className="space-y-1">
+                      {sameLanguageWomen.map((woman) => (
+                        <div
+                          key={woman.id}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-success/10 transition-all cursor-pointer group border border-transparent hover:border-success/30"
+                          onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        >
+                          <div className="relative flex-shrink-0">
+                            <Avatar className="w-9 h-9 border border-background shadow-sm">
+                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-xs">
+                                {woman.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={cn(
+                              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs text-foreground truncate">
+                              {woman.full_name || "Anonymous"}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              {woman.age && <span>{woman.age}y</span>}
+                              {woman.country && <><span>•</span><span className="truncate">{woman.country}</span></>}
+                            </div>
+                          </div>
                           <Button
-                            variant="aurora"
+                            variant="ghost"
                             size="sm"
                             className={cn(
-                              "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                              "h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1185,13 +1186,13 @@ const DashboardScreen = () => {
                               handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                             }}
                           >
-                            <MessageCircle className="w-3 h-3" />
+                            <MessageCircle className="w-3 h-3 mr-1" />
                             {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                           </Button>
                         </div>
-                      </Card>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
@@ -1200,8 +1201,8 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
-              <div className="space-y-3">
+              {/* Right Column: All NLLB-200 Women with Auto-Translation - List View */}
+              <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
                   <span className="px-2 py-0.5 text-xs bg-info/20 text-info rounded-full flex items-center gap-1">
@@ -1212,48 +1213,44 @@ const DashboardScreen = () => {
                 </div>
                 
                 {indianTranslatedWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
-                    {indianTranslatedWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                      >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
-                          )} />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-info/20 text-info rounded-full">
-                            {woman.primary_language}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground">→</span>
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
-                            {userLanguage}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ScrollArea className="h-[400px] pr-2">
+                    <div className="space-y-1">
+                      {indianTranslatedWomen.map((woman) => (
+                        <div
+                          key={woman.id}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-info/10 transition-all cursor-pointer group border border-transparent hover:border-info/30"
+                          onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        >
+                          <div className="relative flex-shrink-0">
+                            <Avatar className="w-9 h-9 border border-background shadow-sm">
+                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-xs">
+                                {woman.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={cn(
+                              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-xs text-foreground truncate">
+                              {woman.full_name || "Anonymous"}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              {woman.age && <span>{woman.age}y</span>}
+                              <span className="px-1 py-0.5 bg-info/10 text-info rounded text-[9px]">
+                                {woman.primary_language} → {userLanguage}
+                              </span>
+                            </div>
+                          </div>
                           <Button
-                            variant="aurora"
+                            variant="ghost"
                             size="sm"
                             className={cn(
-                              "flex-1 gap-1 text-xs h-7",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                              "h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1261,13 +1258,13 @@ const DashboardScreen = () => {
                               handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                             }}
                           >
-                            <MessageCircle className="w-3 h-3" />
+                            <MessageCircle className="w-3 h-3 mr-1" />
                             {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                           </Button>
                         </div>
-                      </Card>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
