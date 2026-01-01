@@ -4,7 +4,7 @@
  * Uses Hugging Face transformers.js with gender classification model
  * for in-browser gender verification from face images.
  * 
- * Model: AjaySharma/genderDetection
+ * Model: rizvandwiki/gender-classification (ONNX compatible)
  */
 
 import { useState, useCallback } from 'react';
@@ -52,11 +52,11 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
 
     loadingPromise = (async () => {
       try {
-        console.log('Loading AjaySharma/genderDetection model...');
+        console.log('Loading rizvandwiki/gender-classification model...');
         
         const classifier = await pipeline(
           'image-classification',
-          'AjaySharma/genderDetection',
+          'rizvandwiki/gender-classification',
           {
             progress_callback: (progress: { progress?: number; status?: string }) => {
               if (progress.progress !== undefined) {
