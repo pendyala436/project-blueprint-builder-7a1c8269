@@ -107,6 +107,7 @@ const MiniChatWindow = ({
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
+  const [billingPaused, setBillingPaused] = useState(false); // Billing paused due to inactivity
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
@@ -310,9 +311,9 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Inactivity check with warning - auto disconnect after 3 mins of no activity
+  // Inactivity check with warning - PAUSE billing after 5 mins, but keep chat window open
   useEffect(() => {
-    if (!billingStarted) return;
+    if (!billingStarted || billingPaused) return;
 
     // Update warning every second
     const warningInterval = setInterval(() => {
@@ -320,7 +321,7 @@ const MiniChatWindow = ({
       
       if (timeSinceActivity >= WARNING_THRESHOLD_MS && timeSinceActivity < INACTIVITY_TIMEOUT_MS) {
         const remainingSecs = Math.ceil((INACTIVITY_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Ends in ${remainingSecs}s`);
+        setInactiveWarning(`Billing pauses in ${remainingSecs}s`);
       } else {
         setInactiveWarning(null);
       }
@@ -331,7 +332,7 @@ const MiniChatWindow = ({
     }
 
     inactivityRef.current = setTimeout(async () => {
-      // Stop the timer and heartbeat
+      // Stop the timer and heartbeat - PAUSE billing, don't close
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -341,33 +342,84 @@ const MiniChatWindow = ({
         heartbeatRef.current = null;
       }
       
+      // Mark billing as paused
+      setBillingPaused(true);
+      setInactiveWarning("Billing paused - send a message to resume");
+      
       toast({
-        title: "Chat Disconnected",
-        description: "No activity for 3 minutes. Chat ended automatically.",
+        title: "Billing Paused",
+        description: "No activity for 5 minutes. Charging/earning stopped. Send a message to resume.",
       });
       
-      // Auto-close the chat session
+      // Update session status to paused (but not ended)
       try {
         await supabase
           .from("active_chat_sessions")
           .update({
-            status: "ended",
-            ended_at: new Date().toISOString(),
-            end_reason: "inactivity_timeout"
+            status: "paused",
+            end_reason: "inactivity_pause"
           })
           .eq("id", sessionId);
       } catch (error) {
-        console.error("Error auto-closing chat:", error);
+        console.error("Error pausing chat session:", error);
       }
       
-      onClose();
+      // DON'T close the chat window - keep it open
     }, INACTIVITY_TIMEOUT_MS);
 
     return () => {
       clearInterval(warningInterval);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
-  }, [lastActivityTime, billingStarted, sessionId, onClose]);
+  }, [lastActivityTime, billingStarted, billingPaused, sessionId]);
+
+  // Resume billing when user sends a message after pause
+  const resumeBilling = useCallback(async () => {
+    if (!billingPaused) return;
+    
+    setBillingPaused(false);
+    setInactiveWarning(null);
+    setLastActivityTime(Date.now());
+    
+    // Restart timer
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    }
+    
+    // Restart heartbeat
+    if (!heartbeatRef.current) {
+      heartbeatRef.current = setInterval(async () => {
+        try {
+          await supabase.functions.invoke("chat-manager", {
+            body: { action: "heartbeat", chat_id: chatId }
+          });
+        } catch (error) {
+          console.error("Heartbeat error:", error);
+        }
+      }, 60000);
+    }
+    
+    // Update session back to active
+    try {
+      await supabase
+        .from("active_chat_sessions")
+        .update({
+          status: "active",
+          end_reason: null,
+          last_activity_at: new Date().toISOString()
+        })
+        .eq("id", sessionId);
+    } catch (error) {
+      console.error("Error resuming chat session:", error);
+    }
+    
+    toast({
+      title: "Billing Resumed",
+      description: "Charging/earning has resumed.",
+    });
+  }, [billingPaused, chatId, sessionId]);
 
   // Auto-translate a message to current user's language using dl-translate
   // Skip translation entirely if both users have the same native language
@@ -540,6 +592,11 @@ const MiniChatWindow = ({
     stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
+    
+    // Resume billing if it was paused
+    if (billingPaused) {
+      resumeBilling();
+    }
 
     try {
       // Determine final message text:
