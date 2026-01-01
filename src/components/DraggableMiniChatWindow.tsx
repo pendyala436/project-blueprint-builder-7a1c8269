@@ -1257,7 +1257,7 @@ const DraggableMiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
           {/* Toggle button to show/hide actions */}
           <Button
             variant="ghost"
