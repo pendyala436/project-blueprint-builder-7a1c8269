@@ -255,7 +255,13 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'active_chat_sessions' },
-        () => { loadActiveChatCount(); }
+        () => { 
+          loadActiveChatCount(); 
+          // Also refresh women list to update their availability status
+          if (userLanguage) {
+            fetchOnlineWomen(userLanguage);
+          }
+        }
       )
       .on(
         'postgres_changes',
