@@ -5,10 +5,10 @@
   "start_url": "/",
   "id": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
   "background_color": "#0a0d14",
   "theme_color": "#1aa39b",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
@@ -42,10 +42,10 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Open Chat",
-      "short_name": "Chat",
-      "description": "Open your conversations",
-      "url": "/chat",
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "Open your dashboard",
+      "url": "/dashboard",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
@@ -60,6 +60,13 @@
       "short_name": "Matches",
       "description": "Discover new matches",
       "url": "/match-discovery",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "App settings",
+      "url": "/settings",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
@@ -92,5 +99,15 @@
   "edge_side_panel": {
     "preferred_width": 400
   },
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "app.lovable.83206b95108442d8a3efe71e72b4dab6"
+    },
+    {
+      "platform": "itunes",
+      "id": "app.lovable.83206b95108442d8a3efe71e72b4dab6"
+    }
+  ]
 }
