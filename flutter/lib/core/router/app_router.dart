@@ -3,80 +3,98 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/auth_screen.dart';
-import '../../features/auth/presentation/screens/forgot_password_screen.dart';
-import '../../features/auth/presentation/screens/password_reset_screen.dart';
-import '../../features/auth/presentation/screens/register/language_country_screen.dart';
-import '../../features/auth/presentation/screens/register/basic_info_screen.dart';
-import '../../features/auth/presentation/screens/register/password_setup_screen.dart';
-import '../../features/auth/presentation/screens/register/photo_upload_screen.dart';
-import '../../features/auth/presentation/screens/register/location_setup_screen.dart';
-import '../../features/auth/presentation/screens/register/language_preferences_screen.dart';
-import '../../features/auth/presentation/screens/register/terms_agreement_screen.dart';
-import '../../features/auth/presentation/screens/register/ai_processing_screen.dart';
-import '../../features/auth/presentation/screens/register/registration_complete_screen.dart';
+import '../../features/auth/presentation/screens/auth_screens.dart';
+import '../../features/auth/presentation/screens/register/registration_screens.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/dashboard/presentation/screens/women_dashboard_screen.dart';
 import '../../features/matching/presentation/screens/matching_screen.dart';
-import '../../features/matching/presentation/screens/match_discovery_screen.dart';
-import '../../features/matching/presentation/screens/online_users_screen.dart';
 import '../../features/profile/presentation/screens/profile_detail_screen.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/wallet/presentation/screens/wallet_screen.dart';
-import '../../features/wallet/presentation/screens/women_wallet_screen.dart';
-import '../../features/wallet/presentation/screens/transaction_history_screen.dart';
 import '../../features/gifts/presentation/screens/gift_sending_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
-import '../../features/shifts/presentation/screens/shift_management_screen.dart';
-import '../../features/shifts/presentation/screens/shift_compliance_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
-import '../../features/admin/presentation/screens/admin_analytics_screen.dart';
-import '../../features/admin/presentation/screens/admin_users_screen.dart';
-import '../../features/admin/presentation/screens/admin_finance_screen.dart';
-import '../../features/admin/presentation/screens/admin_moderation_screen.dart';
-import '../../features/admin/presentation/screens/admin_settings_screen.dart';
-import '../../shared/screens/not_found_screen.dart';
-import '../../shared/screens/approval_pending_screen.dart';
-import '../../shared/screens/welcome_tutorial_screen.dart';
+import '../../features/admin/presentation/screens/admin_screens.dart';
+import '../../shared/screens/placeholder_screens.dart';
 import '../services/auth_service.dart';
 
-/// App Route Names
+/// App Route Names - Synced with React web app (src/App.tsx)
 class AppRoutes {
   AppRoutes._();
 
+  // Auth Routes
   static const String auth = '/';
   static const String forgotPassword = '/forgot-password';
-  static const String passwordReset = '/password-reset';
+  static const String passwordReset = '/reset-password';
+  static const String passwordResetSuccess = '/password-reset-success';
+  
+  // Registration Routes
   static const String register = '/register';
   static const String basicInfo = '/basic-info';
+  static const String personalDetails = '/personal-details';
   static const String passwordSetup = '/password-setup';
   static const String photoUpload = '/photo-upload';
   static const String locationSetup = '/location-setup';
   static const String languagePreferences = '/language-preferences';
   static const String termsAgreement = '/terms-agreement';
   static const String aiProcessing = '/ai-processing';
-  static const String registrationComplete = '/registration-complete';
   static const String welcomeTutorial = '/welcome-tutorial';
+  static const String registrationComplete = '/registration-complete';
   static const String approvalPending = '/approval-pending';
+  
+  // Dashboard Routes
   static const String dashboard = '/dashboard';
   static const String womenDashboard = '/women-dashboard';
   static const String onlineUsers = '/online-users';
+  
+  // Matching Routes
   static const String findMatch = '/find-match';
   static const String matchDiscovery = '/match-discovery';
+  
+  // Profile Routes
   static const String profile = '/profile/:userId';
-  static const String chat = '/chat/:chatId';
+  
+  // Chat Routes (parallel chat windows on dashboard)
+  static const String universalChat = '/universal-chat';
+  
+  // Wallet Routes
   static const String wallet = '/wallet';
   static const String womenWallet = '/women-wallet';
   static const String transactionHistory = '/transaction-history';
+  static const String transactions = '/transactions';
+  
+  // Gift Routes
   static const String sendGift = '/send-gift/:receiverId';
+  
+  // Settings Routes
   static const String settings = '/settings';
+  
+  // Shift Routes (Women)
   static const String shiftManagement = '/shift-management';
   static const String shiftCompliance = '/shift-compliance';
+  
+  // Admin Routes
   static const String admin = '/admin';
   static const String adminAnalytics = '/admin/analytics';
   static const String adminUsers = '/admin/users';
+  static const String adminGifts = '/admin/gifts';
+  static const String adminLanguages = '/admin/languages';
+  static const String adminChatMonitoring = '/admin/chat-monitoring';
   static const String adminFinance = '/admin/finance';
-  static const String adminModeration = '/admin/moderation';
+  static const String adminFinanceReports = '/admin/finance-reports';
+  static const String adminBackups = '/admin/backups';
+  static const String adminLegalDocuments = '/admin/legal-documents';
+  static const String adminChatPricing = '/admin/chat-pricing';
+  static const String adminPerformance = '/admin/performance';
   static const String adminSettings = '/admin/settings';
+  static const String adminAuditLogs = '/admin/audit-logs';
+  static const String adminModeration = '/admin/moderation';
+  static const String adminPolicyAlerts = '/admin/policy-alerts';
+  static const String adminLanguageLimits = '/admin/language-limits';
+  static const String adminTransactions = '/admin/transactions';
+  
+  // PWA Install
+  static const String install = '/install';
 }
 
 /// App Router Provider
@@ -91,15 +109,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthRoute = state.matchedLocation == AppRoutes.auth ||
           state.matchedLocation == AppRoutes.forgotPassword ||
           state.matchedLocation == AppRoutes.passwordReset ||
+          state.matchedLocation == AppRoutes.passwordResetSuccess ||
           state.matchedLocation.startsWith('/register') ||
           state.matchedLocation == AppRoutes.basicInfo ||
+          state.matchedLocation == AppRoutes.personalDetails ||
           state.matchedLocation == AppRoutes.passwordSetup ||
           state.matchedLocation == AppRoutes.photoUpload ||
           state.matchedLocation == AppRoutes.locationSetup ||
           state.matchedLocation == AppRoutes.languagePreferences ||
           state.matchedLocation == AppRoutes.termsAgreement ||
           state.matchedLocation == AppRoutes.aiProcessing ||
-          state.matchedLocation == AppRoutes.registrationComplete;
+          state.matchedLocation == AppRoutes.registrationComplete ||
+          state.matchedLocation == AppRoutes.install;
 
       if (!isLoggedIn && !isAuthRoute) {
         return AppRoutes.auth;
@@ -126,6 +147,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.passwordReset,
         builder: (context, state) => const PasswordResetScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.passwordResetSuccess,
+        builder: (context, state) => const PasswordResetSuccessScreen(),
+      ),
       
       // Registration Routes
       GoRoute(
@@ -135,6 +160,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.basicInfo,
         builder: (context, state) => const BasicInfoScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.personalDetails,
+        builder: (context, state) => const PersonalDetailsScreen(),
       ),
       GoRoute(
         path: AppRoutes.passwordSetup,
@@ -207,10 +236,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       
       // Chat Routes
       GoRoute(
-        path: AppRoutes.chat,
-        builder: (context, state) => ChatScreen(
-          chatId: state.pathParameters['chatId']!,
-        ),
+        path: AppRoutes.universalChat,
+        builder: (context, state) => const UniversalChatScreen(),
       ),
       
       // Wallet Routes
@@ -224,6 +251,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.transactionHistory,
+        builder: (context, state) => const TransactionHistoryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.transactions,
         builder: (context, state) => const TransactionHistoryScreen(),
       ),
       
@@ -258,23 +289,77 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.adminAnalytics,
-        builder: (context, state) => const AdminAnalyticsScreen(),
+        builder: (context, state) => const AdminAnalyticsDashboard(),
       ),
       GoRoute(
         path: AppRoutes.adminUsers,
-        builder: (context, state) => const AdminUsersScreen(),
+        builder: (context, state) => const AdminUserManagement(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminGifts,
+        builder: (context, state) => const AdminGiftPricingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminLanguages,
+        builder: (context, state) => const AdminLanguageGroupsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminChatMonitoring,
+        builder: (context, state) => const AdminChatMonitoringScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminFinance,
-        builder: (context, state) => const AdminFinanceScreen(),
+        builder: (context, state) => const AdminFinanceDashboard(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminFinanceReports,
+        builder: (context, state) => const AdminFinanceReportsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminBackups,
+        builder: (context, state) => const AdminBackupManagementScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminLegalDocuments,
+        builder: (context, state) => const AdminLegalDocumentsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminChatPricing,
+        builder: (context, state) => const AdminChatPricingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminPerformance,
+        builder: (context, state) => const AdminPerformanceScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminSettings,
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminAuditLogs,
+        builder: (context, state) => const AdminAuditLogsScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminModeration,
         builder: (context, state) => const AdminModerationScreen(),
       ),
       GoRoute(
-        path: AppRoutes.adminSettings,
-        builder: (context, state) => const AdminSettingsScreen(),
+        path: AppRoutes.adminPolicyAlerts,
+        builder: (context, state) => const AdminPolicyAlertsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminLanguageLimits,
+        builder: (context, state) => const AdminLanguageLimitsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminTransactions,
+        builder: (context, state) => const AdminTransactionHistoryScreen(),
+      ),
+      
+      // PWA Install
+      GoRoute(
+        path: AppRoutes.install,
+        builder: (context, state) => const InstallAppScreen(),
       ),
     ],
   );
