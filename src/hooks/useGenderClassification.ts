@@ -1,12 +1,12 @@
 /**
  * useGenderClassification Hook
  * 
- * Uses server-side AI (Lovable AI / Gemini) for accurate gender detection
- * from selfie images. Much more accurate than browser-based models.
+ * Uses browser-side AI with @huggingface/transformers for gender detection.
+ * Uses a Vision Transformer model trained specifically for gender classification.
  */
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { pipeline, ImageClassificationPipeline, ProgressCallback } from '@huggingface/transformers';
 
 export interface GenderClassificationResult {
   verified: boolean;
@@ -24,8 +24,56 @@ export interface UseGenderClassificationReturn {
   classifyGender: (imageBase64: string, expectedGender?: 'male' | 'female') => Promise<GenderClassificationResult>;
 }
 
+// Cache the classifier pipeline globally
+let classifierInstance: ImageClassificationPipeline | null = null;
+let classifierLoadingPromise: Promise<ImageClassificationPipeline> | null = null;
+
 export const useGenderClassification = (): UseGenderClassificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isLoadingModel, setIsLoadingModel] = useState(false);
+  const [modelLoadProgress, setModelLoadProgress] = useState(0);
+
+  const getClassifier = useCallback(async (): Promise<ImageClassificationPipeline> => {
+    // Return cached instance
+    if (classifierInstance) {
+      return classifierInstance;
+    }
+
+    // If already loading, wait for it
+    if (classifierLoadingPromise) {
+      return classifierLoadingPromise;
+    }
+
+    // Start loading
+    setIsLoadingModel(true);
+    setModelLoadProgress(0);
+
+    const progressCallback: ProgressCallback = (progress) => {
+      if (progress.status === 'progress' && typeof progress.progress === 'number') {
+        setModelLoadProgress(Math.round(progress.progress));
+      }
+    };
+
+    classifierLoadingPromise = pipeline(
+      'image-classification',
+      'rizvandwiki/gender-classification',
+      { 
+        progress_callback: progressCallback,
+      }
+    ).then((classifier) => {
+      classifierInstance = classifier;
+      setIsLoadingModel(false);
+      setModelLoadProgress(100);
+      return classifier;
+    }).catch((error) => {
+      console.error('Failed to load gender classification model:', error);
+      classifierLoadingPromise = null;
+      setIsLoadingModel(false);
+      throw error;
+    });
+
+    return classifierLoadingPromise;
+  }, []);
 
   const classifyGender = useCallback(async (
     imageBase64: string,
@@ -34,33 +82,99 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
     setIsVerifying(true);
 
     try {
-      console.log('Sending image to server for gender detection...');
+      console.log('Starting browser-side gender classification...');
       console.log('Expected gender:', expectedGender);
 
-      // Call the edge function for server-side AI analysis
-      const { data, error } = await supabase.functions.invoke('gender-detection', {
-        body: { 
-          imageBase64,
-          expectedGender 
-        }
-      });
+      // Get or load the classifier
+      const classifier = await getClassifier();
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
+      // Clean up base64 string - remove data URL prefix if present
+      let imageData = imageBase64;
+      if (imageBase64.includes(',')) {
+        imageData = imageBase64.split(',')[1];
       }
 
-      console.log('Server response:', data);
+      // Convert base64 to blob URL for the classifier
+      const byteCharacters = atob(imageData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+      const imageUrl = URL.createObjectURL(blob);
 
-      // Return the result from the server
-      return {
-        verified: data.verified ?? true,
-        hasFace: data.hasFace ?? true,
-        detectedGender: data.detectedGender ?? 'unknown',
-        confidence: data.confidence ?? 1.0,
-        reason: data.reason ?? 'Photo accepted',
-        genderMatches: data.genderMatches ?? true
-      };
+      try {
+        // Run classification
+        const results = await classifier(imageUrl);
+        console.log('Classification results:', results);
+
+        // Clean up blob URL
+        URL.revokeObjectURL(imageUrl);
+
+        if (!results || !Array.isArray(results) || results.length === 0) {
+          console.log('No classification results - assuming photo accepted');
+          return {
+            verified: true,
+            hasFace: true,
+            detectedGender: expectedGender || 'unknown',
+            confidence: 1.0,
+            reason: 'Photo accepted',
+            genderMatches: true
+          };
+        }
+
+        // Parse results - model returns labels like "male" or "female"
+        const topResult = results[0] as { label: string; score: number };
+        const detectedLabel = topResult.label.toLowerCase();
+        const confidence = topResult.score;
+
+        console.log('Top result:', topResult);
+        console.log('Detected label:', detectedLabel);
+        console.log('Confidence:', confidence);
+
+        // Determine detected gender
+        let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
+        if (detectedLabel.includes('male') && !detectedLabel.includes('female')) {
+          detectedGender = 'male';
+        } else if (detectedLabel.includes('female') || detectedLabel.includes('woman')) {
+          detectedGender = 'female';
+        } else if (detectedLabel.includes('man')) {
+          detectedGender = 'male';
+        }
+
+        console.log('Detected gender:', detectedGender);
+
+        // Check if gender matches expected
+        const genderMatches = !expectedGender || detectedGender === expectedGender || detectedGender === 'unknown';
+
+        // Determine verification result
+        const verified = genderMatches && confidence > 0.5;
+        
+        let reason = '';
+        if (!genderMatches) {
+          reason = `Photo appears to show a ${detectedGender} person, but you selected ${expectedGender}. Please retake or update your gender selection.`;
+        } else if (confidence < 0.5) {
+          reason = 'Low confidence in detection. Please ensure good lighting and a clear face photo.';
+        } else {
+          reason = 'Photo verified successfully';
+        }
+
+        console.log('Verification result:', { verified, genderMatches, reason });
+
+        return {
+          verified,
+          hasFace: true,
+          detectedGender,
+          confidence,
+          reason,
+          genderMatches
+        };
+      } catch (classifyError) {
+        // Clean up blob URL on error
+        URL.revokeObjectURL(imageUrl);
+        throw classifyError;
+      }
     } catch (error) {
       console.error('Gender classification error:', error);
       
@@ -76,12 +190,12 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
     } finally {
       setIsVerifying(false);
     }
-  }, []);
+  }, [getClassifier]);
 
   return {
     isVerifying,
-    isLoadingModel: false, // Server-side, no client model loading
-    modelLoadProgress: 100, // Always ready
+    isLoadingModel,
+    modelLoadProgress,
     classifyGender
   };
 };
