@@ -93,17 +93,18 @@ const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/Inst
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
 // MultilingualChatDemo removed - using server-side translation only
 
-// Ultra-optimized React Query - maximum caching
+// ULTRA-AGGRESSIVE React Query caching - minimize network calls
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 15 * 60 * 1000, // 15 minutes
-      gcTime: 60 * 60 * 1000, // 1 hour gc
+      staleTime: 30 * 60 * 1000, // 30 minutes - data stays fresh longer
+      gcTime: 2 * 60 * 60 * 1000, // 2 hours - keep in memory longer
       retry: 0, // No retries for speed
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-      networkMode: 'offlineFirst',
+      refetchOnWindowFocus: false, // Never refetch on focus
+      refetchOnMount: false, // Never refetch on mount
+      refetchOnReconnect: false, // Never refetch on reconnect
+      networkMode: 'offlineFirst', // Always try cache first
+      structuralSharing: true, // Reduce re-renders
     },
     mutations: {
       retry: 0,
