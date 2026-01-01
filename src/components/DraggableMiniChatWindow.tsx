@@ -288,25 +288,32 @@ const DraggableMiniChatWindow = ({
     };
   }, [isDragging, size]);
 
-  // Resize handlers
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  // Resize handlers - supports both mouse and touch
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     resizeRef.current = {
       startWidth: size.width,
       startHeight: size.height,
-      startX: e.clientX,
-      startY: e.clientY
+      startX: clientX,
+      startY: clientY
     };
   }, [size]);
 
   useEffect(() => {
-    const handleResizeMove = (e: MouseEvent) => {
+    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeRef.current) return;
       
-      const deltaX = e.clientX - resizeRef.current.startX;
-      const deltaY = e.clientY - resizeRef.current.startY;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - resizeRef.current.startX;
+      const deltaY = clientY - resizeRef.current.startY;
       
       setSize({
         width: Math.max(280, Math.min(600, resizeRef.current.startWidth + deltaX)),
@@ -322,11 +329,15 @@ const DraggableMiniChatWindow = ({
     if (isResizing) {
       document.addEventListener("mousemove", handleResizeMove);
       document.addEventListener("mouseup", handleResizeEnd);
+      document.addEventListener("touchmove", handleResizeMove, { passive: false });
+      document.addEventListener("touchend", handleResizeEnd);
     }
 
     return () => {
       document.removeEventListener("mousemove", handleResizeMove);
       document.removeEventListener("mouseup", handleResizeEnd);
+      document.removeEventListener("touchmove", handleResizeMove);
+      document.removeEventListener("touchend", handleResizeEnd);
     };
   }, [isResizing]);
 
@@ -1513,11 +1524,12 @@ const DraggableMiniChatWindow = ({
             </div>
           </div>
 
-          {/* Resize handle */}
+          {/* Resize handle - supports both mouse and touch */}
           {!isMaximized && (
             <div
-              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center"
+              className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-center justify-center touch-none"
               onMouseDown={handleResizeStart}
+              onTouchStart={handleResizeStart}
             >
               <GripVertical className="h-3 w-3 text-muted-foreground rotate-[-45deg]" />
             </div>
