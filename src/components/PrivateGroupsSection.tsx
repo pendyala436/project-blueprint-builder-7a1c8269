@@ -10,8 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, Globe } from 'lucide-react';
 import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
+import { languages } from '@/data/languages';
 
 // Fixed gift amounts available in the app
 const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
@@ -32,6 +33,7 @@ interface PrivateGroup {
   stream_id: string | null;
   participant_count: number;
   created_at: string;
+  owner_language?: string;
 }
 
 interface PrivateGroupsSectionProps {
@@ -47,6 +49,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
   const [activeGroup, setActiveGroup] = useState<PrivateGroup | null>(null);
+  const [userLanguage, setUserLanguage] = useState<string>('');
   
   // Form state
   const [groupName, setGroupName] = useState('');
@@ -54,9 +57,11 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [minGiftAmount, setMinGiftAmount] = useState(0);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
+  const [ownerLanguage, setOwnerLanguage] = useState('');
 
   useEffect(() => {
     fetchGroups();
+    fetchUserLanguage();
     
     // Subscribe to realtime updates
     const channel = supabase
@@ -70,6 +75,20 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
+
+  const fetchUserLanguage = async () => {
+    // Get user's primary language from profile
+    const { data } = await supabase
+      .from('profiles')
+      .select('primary_language')
+      .eq('user_id', currentUserId)
+      .single();
+    
+    if (data?.primary_language) {
+      setUserLanguage(data.primary_language);
+      setOwnerLanguage(data.primary_language);
+    }
+  };
 
   const fetchGroups = async () => {
     try {
@@ -104,6 +123,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       toast.error('Please enable at least chat or video call');
       return;
     }
+    if (!ownerLanguage) {
+      toast.error('Please select your language for the video call');
+      return;
+    }
 
     try {
       const { data: newGroup, error } = await supabase
@@ -114,7 +137,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           description: groupDescription.trim() || null,
           min_gift_amount: minGiftAmount,
           access_type: getAccessType(),
-          participant_count: 1 // Owner is automatically a member
+          participant_count: 1,
+          owner_language: ownerLanguage // Store owner's mother tongue
         })
         .select()
         .single();
@@ -188,6 +212,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     setMinGiftAmount(100);
     setChatEnabled(true);
     setVideoEnabled(true);
+    setOwnerLanguage(userLanguage);
   };
 
   const openUpdateDialog = (group: PrivateGroup) => {
@@ -195,6 +220,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     setMinGiftAmount(group.min_gift_amount);
     setChatEnabled(group.access_type === 'chat' || group.access_type === 'both');
     setVideoEnabled(group.access_type === 'video' || group.access_type === 'both');
+    setOwnerLanguage(group.owner_language || userLanguage);
     setShowUpdateDialog(true);
   };
 
@@ -256,6 +282,27 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Every gift sent is split: 50% to you, 50% to admin.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Your Language (for video call name)
+                </Label>
+                <Select value={ownerLanguage} onValueChange={setOwnerLanguage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.name}>
+                        {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Video calls will start with your language name displayed.
                 </p>
               </div>
               <div className="space-y-3">

@@ -1113,6 +1113,57 @@ export type Database = {
           },
         ]
       }
+      group_video_access: {
+        Row: {
+          access_expires_at: string
+          access_granted_at: string
+          created_at: string
+          gift_amount: number
+          gift_id: string | null
+          group_id: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          access_expires_at?: string
+          access_granted_at?: string
+          created_at?: string
+          gift_amount?: number
+          gift_id?: string | null
+          group_id: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          access_expires_at?: string
+          access_granted_at?: string
+          created_at?: string
+          gift_amount?: number
+          gift_id?: string | null
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_video_access_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "gifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_video_access_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       language_community_groups: {
         Row: {
           created_at: string
@@ -1814,6 +1865,7 @@ export type Database = {
           min_gift_amount: number
           name: string
           owner_id: string
+          owner_language: string | null
           participant_count: number
           stream_id: string | null
           updated_at: string
@@ -1828,6 +1880,7 @@ export type Database = {
           min_gift_amount?: number
           name: string
           owner_id: string
+          owner_language?: string | null
           participant_count?: number
           stream_id?: string | null
           updated_at?: string
@@ -1842,6 +1895,7 @@ export type Database = {
           min_gift_amount?: number
           name?: string
           owner_id?: string
+          owner_language?: string | null
           participant_count?: number
           stream_id?: string | null
           updated_at?: string
@@ -2986,6 +3040,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_group_video_access: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: Json
+      }
       check_message_rate_limit: {
         Args: {
           max_messages?: number
@@ -3000,6 +3058,7 @@ export type Database = {
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
+      expire_group_video_access: { Args: never; Returns: undefined }
       get_current_chat_rate: {
         Args: never
         Returns: {
@@ -3123,6 +3182,10 @@ export type Database = {
         Returns: Json
       }
       process_group_gift: {
+        Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_group_video_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
       }
