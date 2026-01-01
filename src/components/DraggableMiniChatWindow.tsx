@@ -384,12 +384,20 @@ const DraggableMiniChatWindow = ({
     loadInitialData();
   }, [currentUserId, userGender, ratePerMinute, earningRatePerMinute]);
 
-  // Load messages and subscribe
+  // Load messages and subscribe - with retry to catch race conditions
   useEffect(() => {
+    // Load immediately
     loadMessages();
+    
+    // Retry after short delay to catch any messages that arrived during window initialization
+    const retryTimeout = setTimeout(() => {
+      loadMessages();
+    }, 500);
+    
     const unsubscribe = subscribeToMessages();
 
     return () => {
+      clearTimeout(retryTimeout);
       if (timerRef.current) clearInterval(timerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
