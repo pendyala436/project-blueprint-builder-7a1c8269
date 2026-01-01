@@ -93,11 +93,12 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
       const classifier = await getClassifier();
 
       console.log('Classifying gender from image...');
+      console.log('Expected gender:', expectedGender);
 
       // Run classification on the image
       const results = await classifier(imageBase64);
 
-      console.log('Classification results:', results);
+      console.log('Full classification results:', JSON.stringify(results, null, 2));
 
       if (!results || !Array.isArray(results) || results.length === 0) {
         return {
@@ -110,23 +111,39 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
         };
       }
 
-      // Find the top prediction
-      const topResult = results[0] as { label: string; score: number };
-      const label = topResult.label.toLowerCase();
+      // Log all results for debugging
+      results.forEach((r: any, i: number) => {
+        console.log(`Result ${i}: label="${r.label}", score=${r.score}`);
+      });
+
+      // Find the highest scoring result
+      const sortedResults = [...results].sort((a: any, b: any) => b.score - a.score);
+      const topResult = sortedResults[0] as { label: string; score: number };
+      const label = topResult.label.toLowerCase().trim();
       const confidence = topResult.score;
 
-      // Map the label to our gender types
+      console.log('Top result - Label:', label, 'Confidence:', confidence);
+
+      // rizvandwiki/gender-classification uses exact labels: "male" and "female"
       let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
-      if (label.includes('male') && !label.includes('female')) {
+      
+      if (label === 'male') {
+        detectedGender = 'male';
+      } else if (label === 'female') {
+        detectedGender = 'female';
+      } else if (label.includes('male') && !label.includes('female')) {
         detectedGender = 'male';
       } else if (label.includes('female') || label.includes('woman')) {
         detectedGender = 'female';
-      } else if (label.includes('man')) {
+      } else if (label.includes('man') && !label.includes('woman')) {
         detectedGender = 'male';
       }
 
+      console.log('Detected gender:', detectedGender);
+
       // Check if gender matches expected
       const genderMatches = !expectedGender || expectedGender === detectedGender;
+      console.log('Gender matches expected:', genderMatches);
 
       // Determine verification status
       const verified = confidence >= 0.5 && detectedGender !== 'unknown';
@@ -135,14 +152,14 @@ export const useGenderClassification = (): UseGenderClassificationReturn => {
       if (!verified) {
         reason = 'Could not verify gender. Please try a clearer selfie with good lighting.';
       } else if (!genderMatches) {
-        reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender}`;
+        reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
       } else {
         reason = `Gender verified as ${detectedGender} with ${Math.round(confidence * 100)}% confidence`;
       }
 
       return {
         verified,
-        hasFace: true, // If classification succeeded, assume face is present
+        hasFace: true,
         detectedGender,
         confidence,
         reason,
