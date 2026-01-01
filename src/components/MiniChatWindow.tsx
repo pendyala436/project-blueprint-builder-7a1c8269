@@ -591,7 +591,7 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
-  const sendMessage = async () => {
+  const sendMessage = () => {
     if (!newMessage.trim() || isSending || isBlocked) return;
 
     const trimmedInput = newMessage.trim();
@@ -608,9 +608,10 @@ const MiniChatWindow = ({
       return;
     }
 
+    // Clear input IMMEDIATELY - don't block user from typing next message
     setNewMessage("");
-    setDisplayMessage(""); // Clear preview too
-    stopTyping(); // Stop typing indicator on send
+    setDisplayMessage("");
+    stopTyping();
     setIsSending(true);
     setLastActivityTime(Date.now());
     
@@ -619,86 +620,72 @@ const MiniChatWindow = ({
       resumeBilling();
     }
 
-    try {
-      // Determine final message text:
-      // ALWAYS convert Latin input to native script for non-English languages
-      let messageText = trimmedInput;
-      
-      // If user's language is not English and input is Latin, always convert
-      if (needsNativeConversion && isLatinScript(trimmedInput)) {
-        // Use pre-converted preview if available and different
-        if (currentPreview && currentPreview !== trimmedInput && !isLatinScript(currentPreview)) {
-          messageText = currentPreview;
-        } else {
-          // Convert now - always ensure native script on send
-          try {
-            const result = await convertToNative(trimmedInput, currentUserLanguage);
-            if (result.isTranslated && result.text && result.text !== trimmedInput) {
-              messageText = result.text;
-            }
-          } catch (err) {
-            console.error('Conversion on send failed:', err);
-            // Keep original text on error
-          }
-        }
-      } else if (currentPreview && currentPreview !== trimmedInput) {
-        // For other cases, use preview if available
+    // Determine message text synchronously - use preview if available
+    let messageText = trimmedInput;
+    if (needsNativeConversion && isLatinScript(trimmedInput)) {
+      if (currentPreview && currentPreview !== trimmedInput && !isLatinScript(currentPreview)) {
         messageText = currentPreview;
       }
-
-      // Optimistic update - immediately show the message in sender's chat
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        senderId: currentUserId,
-        message: messageText,
-        translatedMessage: messageText, // Sender sees their own message as-is
-        isTranslated: false,
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, optimisticMessage]);
-
-      // Store message
-      const { data: insertedMsg, error } = await supabase
-        .from("chat_messages")
-        .insert({
-          chat_id: chatId,
-          sender_id: currentUserId,
-          receiver_id: partnerId,
-          message: messageText
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Replace optimistic message with real one
-      if (insertedMsg) {
-        setMessages(prev => prev.map(m => 
-          m.id === optimisticMessage.id 
-            ? {
-                id: insertedMsg.id,
-                senderId: insertedMsg.sender_id,
-                message: insertedMsg.message,
-                translatedMessage: insertedMsg.message,
-                isTranslated: false,
-                createdAt: insertedMsg.created_at
-              }
-            : m
-        ));
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')));
-      setNewMessage(trimmedInput);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSending(false);
+      // If no preview, send original - don't block waiting for conversion
+    } else if (currentPreview && currentPreview !== trimmedInput) {
+      messageText = currentPreview;
     }
+
+    // Optimistic update - immediately show the message
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      message: messageText,
+      translatedMessage: messageText,
+      isTranslated: false,
+      createdAt: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    // Send in background - don't await
+    (async () => {
+      try {
+        const { data: insertedMsg, error } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: messageText
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Replace optimistic message with real one
+        if (insertedMsg) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempId 
+              ? {
+                  id: insertedMsg.id,
+                  senderId: insertedMsg.sender_id,
+                  message: insertedMsg.message,
+                  translatedMessage: insertedMsg.message,
+                  isTranslated: false,
+                  createdAt: insertedMsg.created_at
+                }
+              : m
+          ));
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        toast({
+          title: "Error",
+          description: "Failed to send message",
+          variant: "destructive"
+        });
+      } finally {
+        setIsSending(false);
+      }
+    })();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
