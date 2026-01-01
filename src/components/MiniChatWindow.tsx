@@ -658,7 +658,7 @@ const MiniChatWindow = ({
     onClose();
   };
 
-  // File upload handler
+  // File upload handler - with optimistic UI (show immediately to sender)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -678,6 +678,24 @@ const MiniChatWindow = ({
     setIsAttachOpen(false);
     setLastActivityTime(Date.now());
 
+    const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
+    const tempId = `temp-file-${Date.now()}`;
+    
+    // Create local preview URL for immediate display
+    const localPreviewUrl = URL.createObjectURL(file);
+    const optimisticMessage = `${emoji} [${fileType.toUpperCase()}:${localPreviewUrl}] ${file.name}`;
+
+    // Optimistic update - show file immediately to sender
+    const optimisticMsg: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      message: optimisticMessage,
+      translatedMessage: optimisticMessage,
+      isTranslated: false,
+      createdAt: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentUserId}/${chatId}/${Date.now()}.${fileExt}`;
@@ -696,18 +714,39 @@ const MiniChatWindow = ({
         .from(bucket)
         .getPublicUrl(fileName);
 
-      // Send message with file
-      const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
-      const { error: messageError } = await supabase
+      // Send message with actual uploaded file URL
+      const finalMessage = `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`;
+      const { data: insertedMsg, error: messageError } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`
-        });
+          message: finalMessage
+        })
+        .select()
+        .single();
 
       if (messageError) throw messageError;
+
+      // Replace optimistic message with real one (with server URL)
+      if (insertedMsg) {
+        setMessages(prev => prev.map(m => 
+          m.id === tempId 
+            ? {
+                id: insertedMsg.id,
+                senderId: insertedMsg.sender_id,
+                message: insertedMsg.message,
+                translatedMessage: insertedMsg.message,
+                isTranslated: false,
+                createdAt: insertedMsg.created_at
+              }
+            : m
+        ));
+      }
+
+      // Clean up local preview URL
+      URL.revokeObjectURL(localPreviewUrl);
 
       toast({
         title: "File sent",
@@ -715,6 +754,9 @@ const MiniChatWindow = ({
       });
     } catch (error) {
       console.error("Error uploading file:", error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      URL.revokeObjectURL(localPreviewUrl);
       toast({
         title: "Upload failed",
         description: "Failed to send file. Please try again.",
@@ -788,6 +830,24 @@ const MiniChatWindow = ({
 
       stopCamera();
       setIsUploading(true);
+      setLastActivityTime(Date.now());
+
+      const tempId = `temp-selfie-${Date.now()}`;
+      
+      // Create local preview URL for immediate display
+      const localPreviewUrl = URL.createObjectURL(blob);
+      const optimisticMessage = `📷 [IMAGE:${localPreviewUrl}] Selfie`;
+
+      // Optimistic update - show selfie immediately to sender
+      const optimisticMsg: Message = {
+        id: tempId,
+        senderId: currentUserId,
+        message: optimisticMessage,
+        translatedMessage: optimisticMessage,
+        isTranslated: false,
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
 
       try {
         const fileName = `${currentUserId}/${chatId}/selfie_${Date.now()}.jpg`;
@@ -806,24 +866,48 @@ const MiniChatWindow = ({
           .from('profile-photos')
           .getPublicUrl(fileName);
 
-        const { error: messageError } = await supabase
+        const finalMessage = `📷 [IMAGE:${publicUrl}] Selfie`;
+        const { data: insertedMsg, error: messageError } = await supabase
           .from("chat_messages")
           .insert({
             chat_id: chatId,
             sender_id: currentUserId,
             receiver_id: partnerId,
-            message: `📷 [IMAGE:${publicUrl}] Selfie`
-          });
+            message: finalMessage
+          })
+          .select()
+          .single();
 
         if (messageError) throw messageError;
+
+        // Replace optimistic message with real one (with server URL)
+        if (insertedMsg) {
+          setMessages(prev => prev.map(m => 
+            m.id === tempId 
+              ? {
+                  id: insertedMsg.id,
+                  senderId: insertedMsg.sender_id,
+                  message: insertedMsg.message,
+                  translatedMessage: insertedMsg.message,
+                  isTranslated: false,
+                  createdAt: insertedMsg.created_at
+                }
+              : m
+          ));
+        }
+
+        // Clean up local preview URL
+        URL.revokeObjectURL(localPreviewUrl);
 
         toast({
           title: "Selfie sent!",
           description: "Your photo has been shared"
         });
-        setLastActivityTime(Date.now());
       } catch (error) {
         console.error("Error sending selfie:", error);
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        URL.revokeObjectURL(localPreviewUrl);
         toast({
           title: "Failed to send selfie",
           description: "Please try again",
@@ -1160,6 +1244,37 @@ const MiniChatWindow = ({
                 currentUserId={currentUserId}
                 partnerId={partnerId}
                 onMessageSent={() => setLastActivityTime(Date.now())}
+                onOptimisticMessage={(tempId, localBlobUrl, duration) => {
+                  // Show voice message immediately to sender
+                  const optimisticMsg: Message = {
+                    id: tempId,
+                    senderId: currentUserId,
+                    message: `🎤 [VOICE:${localBlobUrl}]`,
+                    translatedMessage: `🎤 [VOICE:${localBlobUrl}]`,
+                    isTranslated: false,
+                    createdAt: new Date().toISOString()
+                  };
+                  setMessages(prev => [...prev, optimisticMsg]);
+                }}
+                onMessageConfirmed={(tempId, serverMessageId, serverUrl) => {
+                  // Replace optimistic message with real one
+                  setMessages(prev => prev.map(m => 
+                    m.id === tempId 
+                      ? {
+                          id: serverMessageId,
+                          senderId: currentUserId,
+                          message: `[VOICE:${serverUrl}]`,
+                          translatedMessage: `[VOICE:${serverUrl}]`,
+                          isTranslated: false,
+                          createdAt: m.createdAt
+                        }
+                      : m
+                  ));
+                }}
+                onMessageFailed={(tempId) => {
+                  // Remove optimistic message on error
+                  setMessages(prev => prev.filter(m => m.id !== tempId));
+                }}
                 disabled={isBlocked}
                 className="h-7 w-7 shrink-0"
               />

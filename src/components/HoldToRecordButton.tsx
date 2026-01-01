@@ -19,6 +19,12 @@ interface HoldToRecordButtonProps {
   currentUserId?: string;
   partnerId?: string;
   onMessageSent?: () => void;
+  // For optimistic UI - called immediately when recording completes with local blob URL
+  onOptimisticMessage?: (tempId: string, localBlobUrl: string, duration: number) => void;
+  // For replacing optimistic message with real server message
+  onMessageConfirmed?: (tempId: string, serverMessageId: string, serverUrl: string) => void;
+  // For removing optimistic message on error
+  onMessageFailed?: (tempId: string) => void;
   // For custom handling (e.g., community chat)
   onRecordingComplete?: (audioBlob: Blob) => void | Promise<void>;
   disabled?: boolean;
@@ -30,6 +36,9 @@ export const HoldToRecordButton = ({
   currentUserId,
   partnerId,
   onMessageSent,
+  onOptimisticMessage,
+  onMessageConfirmed,
+  onMessageFailed,
   onRecordingComplete,
   disabled = false,
   className
@@ -190,6 +199,14 @@ export const HoldToRecordButton = ({
         }
 
         setIsSending(true);
+        
+        // Create local preview for optimistic UI
+        const tempId = `temp-voice-${Date.now()}`;
+        const localBlobUrl = URL.createObjectURL(blob);
+        
+        // Call optimistic message callback immediately (sender sees it right away)
+        onOptimisticMessage?.(tempId, localBlobUrl, recordingDuration);
+        
         try {
           const fileName = `${currentUserId}/${chatId}/${Date.now()}.webm`;
           
@@ -208,7 +225,7 @@ export const HoldToRecordButton = ({
             .getPublicUrl(fileName);
 
           // Insert voice message
-          const { error: messageError } = await supabase
+          const { data: insertedMsg, error: messageError } = await supabase
             .from('chat_messages')
             .insert({
               chat_id: chatId,
@@ -216,9 +233,19 @@ export const HoldToRecordButton = ({
               receiver_id: partnerId,
               message: `[VOICE:${publicUrl}]`,
               is_translated: false
-            });
+            })
+            .select()
+            .single();
 
           if (messageError) throw messageError;
+
+          // Call confirmation callback to replace optimistic message with real one
+          if (insertedMsg) {
+            onMessageConfirmed?.(tempId, insertedMsg.id, publicUrl);
+          }
+
+          // Clean up local blob URL
+          URL.revokeObjectURL(localBlobUrl);
 
           toast({
             title: 'Voice message sent',
@@ -228,6 +255,9 @@ export const HoldToRecordButton = ({
           onMessageSent?.();
         } catch (error) {
           console.error('Failed to send voice message:', error);
+          // Call failure callback to remove optimistic message
+          onMessageFailed?.(tempId);
+          URL.revokeObjectURL(localBlobUrl);
           toast({
             title: 'Failed to send',
             description: 'Could not send voice message. Please try again.',
