@@ -26,7 +26,8 @@ import {
   Camera,
   Image,
   Video,
-  FileText
+  FileText,
+  MoreVertical
 } from "lucide-react";
 import {
   Popover,
@@ -112,6 +113,7 @@ const DraggableMiniChatWindow = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [showActions, setShowActions] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -1240,23 +1242,40 @@ const DraggableMiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
-          {userGender === "male" && (
-            <GiftSendButton
-              senderId={currentUserId}
-              receiverId={partnerId}
-              receiverName={partnerName}
-              disabled={!billingStarted}
-            />
+          {/* Toggle button to show/hide actions */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={() => setShowActions(!showActions)}
+            title={showActions ? "Hide actions" : "Show actions"}
+          >
+            <MoreVertical className="h-2.5 w-2.5" />
+          </Button>
+          
+          {/* Collapsible action buttons */}
+          {showActions && (
+            <>
+              {userGender === "male" && (
+                <GiftSendButton
+                  senderId={currentUserId}
+                  receiverId={partnerId}
+                  receiverName={partnerName}
+                  disabled={!billingStarted}
+                />
+              )}
+              <MiniChatActions
+                currentUserId={currentUserId}
+                targetUserId={partnerId}
+                targetUserName={partnerName}
+                isPartnerOnline={isPartnerOnline}
+                onBlock={handleClose}
+                onStopChat={handleClose}
+                onLogOff={handleClose}
+              />
+            </>
           )}
-          <MiniChatActions
-            currentUserId={currentUserId}
-            targetUserId={partnerId}
-            targetUserName={partnerName}
-            isPartnerOnline={isPartnerOnline}
-            onBlock={handleClose}
-            onStopChat={handleClose}
-            onLogOff={handleClose}
-          />
+          
           <Button
             variant="ghost"
             size="icon"

@@ -31,7 +31,8 @@ import {
   Image,
   Video,
   FileText,
-  Mic
+  Mic,
+  MoreVertical
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
@@ -109,6 +110,7 @@ const MiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [showActions, setShowActions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
@@ -925,23 +927,40 @@ const MiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          {/* Gift Button - only men can send */}
-          {userGender === "male" && (
-            <GiftSendButton
-              senderId={currentUserId}
-              receiverId={partnerId}
-              receiverName={partnerName}
-              disabled={!billingStarted}
-            />
-          )}
-          {/* Relationship Actions (Block/Friend) */}
-          <ChatRelationshipActions
-            currentUserId={currentUserId}
-            targetUserId={partnerId}
-            targetUserName={partnerName}
-            onBlock={handleClose}
+          {/* Toggle button to show/hide actions */}
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-5 w-5"
-          />
+            onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
+            title={showActions ? "Hide actions" : "Show actions"}
+          >
+            <MoreVertical className="h-2.5 w-2.5" />
+          </Button>
+          
+          {/* Collapsible action buttons */}
+          {showActions && (
+            <>
+              {/* Gift Button - only men can send */}
+              {userGender === "male" && (
+                <GiftSendButton
+                  senderId={currentUserId}
+                  receiverId={partnerId}
+                  receiverName={partnerName}
+                  disabled={!billingStarted}
+                />
+              )}
+              {/* Relationship Actions (Block/Friend) */}
+              <ChatRelationshipActions
+                currentUserId={currentUserId}
+                targetUserId={partnerId}
+                targetUserName={partnerName}
+                onBlock={handleClose}
+                className="h-5 w-5"
+              />
+            </>
+          )}
+          
           <Button
             variant="ghost"
             size="icon"
