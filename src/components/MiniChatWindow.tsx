@@ -1373,7 +1373,7 @@ const MiniChatWindow = ({
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-7 text-[11px] pr-6"
-                  disabled={isSending || isBlocked}
+                  disabled={isBlocked}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
