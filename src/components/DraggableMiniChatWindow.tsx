@@ -37,6 +37,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { HoldToRecordButton } from "@/components/HoldToRecordButton";
+import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
@@ -1522,6 +1523,16 @@ const DraggableMiniChatWindow = ({
                 currentUserId={currentUserId}
                 partnerId={partnerId}
                 onMessageSent={() => setLastActivityTime(Date.now())}
+                disabled={isBlocked}
+                className="h-8 w-8 shrink-0"
+              />
+
+              {/* Voice-to-text button */}
+              <VoiceRecordButton
+                onTranscription={(text) => {
+                  setNewMessage(prev => prev ? `${prev} ${text}` : text);
+                  setLastActivityTime(Date.now());
+                }}
                 disabled={isBlocked}
                 className="h-8 w-8 shrink-0"
               />
