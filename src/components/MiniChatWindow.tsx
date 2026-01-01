@@ -39,6 +39,7 @@ import {
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { HoldToRecordButton } from "@/components/HoldToRecordButton";
+import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
@@ -1344,6 +1345,16 @@ const MiniChatWindow = ({
                 onMessageFailed={(tempId) => {
                   // Remove optimistic message on error
                   setMessages(prev => prev.filter(m => m.id !== tempId));
+                }}
+                disabled={isBlocked}
+                className="h-7 w-7 shrink-0"
+              />
+
+              {/* Voice-to-text button */}
+              <VoiceRecordButton
+                onTranscription={(text) => {
+                  setNewMessage(prev => prev ? `${prev} ${text}` : text);
+                  setLastActivityTime(Date.now());
                 }}
                 disabled={isBlocked}
                 className="h-7 w-7 shrink-0"
