@@ -924,21 +924,26 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  const handleClose = async () => {
-    try {
-      await supabase
-        .from("active_chat_sessions")
-        .update({
-          status: "ended",
-          ended_at: new Date().toISOString(),
-          end_reason: "user_closed"
-        })
-        .eq("id", sessionId);
-    } catch (error) {
-      console.error("Error closing chat:", error);
-    }
+  const handleClose = useCallback(() => {
+    // Immediately close the UI (don't wait for database)
     onClose();
-  };
+    
+    // Update database in background
+    (async () => {
+      try {
+        await supabase
+          .from("active_chat_sessions")
+          .update({
+            status: "ended",
+            ended_at: new Date().toISOString(),
+            end_reason: "user_closed"
+          })
+          .eq("id", sessionId);
+      } catch (error) {
+        console.error("Error closing chat:", error);
+      }
+    })();
+  }, [sessionId, onClose]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1298,7 +1303,7 @@ const DraggableMiniChatWindow = ({
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-destructive/20 hover:text-destructive"
-            onClick={handleClose}
+            onClick={(e) => { e.stopPropagation(); handleClose(); }}
           >
             <X className="h-2.5 w-2.5" />
           </Button>

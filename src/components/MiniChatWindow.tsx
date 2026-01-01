@@ -699,21 +699,26 @@ const MiniChatWindow = ({
     setIsMinimized(false);
   };
 
-  const handleClose = async () => {
-    try {
-      await supabase
-        .from("active_chat_sessions")
-        .update({
-          status: "ended",
-          ended_at: new Date().toISOString(),
-          end_reason: "user_closed"
-        })
-        .eq("id", sessionId);
-    } catch (error) {
-      console.error("Error closing chat:", error);
-    }
+  const handleClose = useCallback(() => {
+    // Immediately close the UI (don't wait for database)
     onClose();
-  };
+    
+    // Update database in background
+    (async () => {
+      try {
+        await supabase
+          .from("active_chat_sessions")
+          .update({
+            status: "ended",
+            ended_at: new Date().toISOString(),
+            end_reason: "user_closed"
+          })
+          .eq("id", sessionId);
+      } catch (error) {
+        console.error("Error closing chat:", error);
+      }
+    })();
+  }, [sessionId, onClose]);
 
   // File upload handler - with optimistic UI (show immediately to sender)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
