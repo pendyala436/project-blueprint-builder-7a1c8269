@@ -1082,7 +1082,7 @@ const MiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
           {/* Toggle button to show/hide actions */}
           <Button
             variant="ghost"
