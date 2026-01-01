@@ -44,8 +44,8 @@ import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useDLTranslate } from "@/lib/dl-translate";
 
-const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
-const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
+const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes - auto disconnect per feature requirement
+const WARNING_THRESHOLD_MS = 4 * 60 * 1000; // 4 minutes - show warning
 
 interface Message {
   id: string;
