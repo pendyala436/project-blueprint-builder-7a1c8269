@@ -677,22 +677,35 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // Translate ALL messages to current user's language
-      const translatedMessages = await Promise.all(
-        data.map(async (m) => {
-          const translation = await translateMessage(m.message, m.sender_id);
-          return {
-            id: m.id,
-            senderId: m.sender_id,
-            message: m.message,
-            translatedMessage: translation.translatedMessage,
-            isTranslated: translation.isTranslated,
-            detectedLanguage: translation.detectedLanguage,
-            createdAt: m.created_at
-          };
-        })
-      );
-      setMessages(translatedMessages);
+      // First, show messages immediately without translation (non-blocking)
+      const initialMessages = data.map((m) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        message: m.message,
+        translatedMessage: m.message, // Show original initially
+        isTranslated: false,
+        detectedLanguage: undefined,
+        createdAt: m.created_at
+      }));
+      setMessages(initialMessages);
+
+      // Then translate partner messages in parallel (non-blocking background task)
+      data.forEach(async (m) => {
+        if (m.sender_id !== currentUserId) {
+          try {
+            const translation = await translateMessage(m.message, m.sender_id);
+            if (translation.isTranslated) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === m.id 
+                  ? { ...msg, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
+                  : msg
+              ));
+            }
+          } catch (err) {
+            console.error('Background translation error:', err);
+          }
+        }
+      });
     }
   };
 
@@ -721,18 +734,16 @@ const DraggableMiniChatWindow = ({
             return;
           }
           
-          // Translate to current user's language (server-side)
-          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
-          
+          // Add message immediately (non-blocking) - show original first
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: translation.translatedMessage,
-              isTranslated: translation.isTranslated,
-              detectedLanguage: translation.detectedLanguage,
+              translatedMessage: newMsg.message, // Show original initially
+              isTranslated: false,
+              detectedLanguage: undefined,
               createdAt: newMsg.created_at
             }];
           });
@@ -743,6 +754,17 @@ const DraggableMiniChatWindow = ({
           if (isMinimized) {
             setUnreadCount(prev => prev + 1);
           }
+
+          // Translate in background (parallel, non-blocking)
+          translateMessage(newMsg.message, newMsg.sender_id).then(translation => {
+            if (translation.isTranslated) {
+              setMessages(prev => prev.map(m => 
+                m.id === newMsg.id 
+                  ? { ...m, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
+                  : m
+              ));
+            }
+          }).catch(err => console.error('Background translation error:', err));
         }
       )
       .subscribe((status) => {
