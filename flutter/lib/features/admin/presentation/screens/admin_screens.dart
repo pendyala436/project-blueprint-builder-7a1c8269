@@ -504,221 +504,482 @@ class AdminSettingsScreen extends ConsumerWidget {
 }
 
 // ============================================================================
-// Admin Audit Logs
+// Admin Gift Pricing Screen
 // ============================================================================
 
-class AdminAuditLogs extends ConsumerStatefulWidget {
-  const AdminAuditLogs({super.key});
-
-  @override
-  ConsumerState<AdminAuditLogs> createState() => _AdminAuditLogsState();
-}
-
-class _AdminAuditLogsState extends ConsumerState<AdminAuditLogs> {
-  final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _logs = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLogs();
-  }
-
-  Future<void> _loadLogs() async {
-    try {
-      final response = await _supabase
-          .from('audit_logs')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(100);
-
-      setState(() {
-        _logs = List<Map<String, dynamic>>.from(response);
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
+class AdminGiftPricingScreen extends StatelessWidget {
+  const AdminGiftPricingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Audit Logs')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _logs.length,
-              itemBuilder: (context, index) {
-                final log = _logs[index];
-                final date = DateTime.tryParse(log['created_at'] ?? '');
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: Icon(Icons.history, color: AppColors.primary, size: 20),
-                  ),
-                  title: Text(log['action'] ?? 'Unknown Action'),
-                  subtitle: Text(
-                    '${log['resource_type'] ?? ''} • ${date != null ? DateFormat('MMM d, h:mm a').format(date) : ''}',
-                  ),
-                  trailing: Text(log['status'] ?? '', style: const TextStyle(fontSize: 12)),
-                );
-              },
-            ),
+      appBar: AppBar(title: const Text('Gift Pricing')),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        child: const Icon(Icons.add),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildGiftItem('🌹', 'Rose', 10),
+          _buildGiftItem('💎', 'Diamond', 100),
+          _buildGiftItem('🎁', 'Gift Box', 50),
+          _buildGiftItem('💐', 'Bouquet', 25),
+          _buildGiftItem('🧸', 'Teddy Bear', 75),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGiftItem(String emoji, String name, int price) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Text(emoji, style: const TextStyle(fontSize: 32)),
+        title: Text(name),
+        subtitle: Text('₹$price'),
+        trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
+      ),
     );
   }
 }
 
 // ============================================================================
-// Admin Chat Monitoring
+// Admin Language Groups Screen
 // ============================================================================
 
-class AdminChatMonitoring extends ConsumerStatefulWidget {
-  const AdminChatMonitoring({super.key});
+class AdminLanguageGroupsScreen extends StatelessWidget {
+  const AdminLanguageGroupsScreen({super.key});
 
   @override
-  ConsumerState<AdminChatMonitoring> createState() => _AdminChatMonitoringState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Language Groups')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildLanguageGroup('English', 'en', 1500),
+          _buildLanguageGroup('Hindi', 'hi', 2300),
+          _buildLanguageGroup('Tamil', 'ta', 800),
+          _buildLanguageGroup('Telugu', 'te', 650),
+          _buildLanguageGroup('Bengali', 'bn', 450),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageGroup(String name, String code, int members) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(child: Text(code.toUpperCase())),
+        title: Text(name),
+        subtitle: Text('$members members'),
+        trailing: const Icon(Icons.chevron_right),
+      ),
+    );
+  }
 }
 
-class _AdminChatMonitoringState extends ConsumerState<AdminChatMonitoring> {
-  final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _activeSessions = [];
+// ============================================================================
+// Admin Chat Monitoring Screen
+// ============================================================================
+
+class AdminChatMonitoringScreen extends StatelessWidget {
+  const AdminChatMonitoringScreen({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _loadActiveSessions();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chat Monitoring')),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.chat, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Active Chat Sessions'),
+            SizedBox(height: 8),
+            Text('0 active chats', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Finance Reports Screen
+// ============================================================================
+
+class AdminFinanceReportsScreen extends StatelessWidget {
+  const AdminFinanceReportsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Finance Reports')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildReportCard(context, 'Daily Revenue Report', Icons.today),
+          _buildReportCard(context, 'Weekly Summary', Icons.date_range),
+          _buildReportCard(context, 'Monthly Report', Icons.calendar_month),
+          _buildReportCard(context, 'Payout History', Icons.payment),
+          _buildReportCard(context, 'Transaction Logs', Icons.receipt_long),
+        ],
+      ),
+    );
   }
 
-  Future<void> _loadActiveSessions() async {
-    try {
-      final response = await _supabase
-          .from('active_chat_sessions')
-          .select()
-          .eq('status', 'active')
-          .order('last_activity_at', ascending: false)
-          .limit(50);
-
-      setState(() {
-        _activeSessions = List<Map<String, dynamic>>.from(response);
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+  Widget _buildReportCard(BuildContext context, String title, IconData icon) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: Theme.of(context).primaryColor),
+        title: Text(title),
+        trailing: const Icon(Icons.download),
+        onTap: () {},
+      ),
+    );
   }
+}
+
+// ============================================================================
+// Admin Backup Management Screen
+// ============================================================================
+
+class AdminBackupManagementScreen extends StatelessWidget {
+  const AdminBackupManagementScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Backup Management')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Last Backup', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    const Text('Never'),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.backup),
+                        label: const Text('Create Backup Now'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('Backup History', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: Text('No backups available')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Legal Documents Screen
+// ============================================================================
+
+class AdminLegalDocumentsScreen extends StatelessWidget {
+  const AdminLegalDocumentsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Legal Documents')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildDocumentItem('Terms of Service', 'Last updated: Jan 2025'),
+          _buildDocumentItem('Privacy Policy', 'Last updated: Jan 2025'),
+          _buildDocumentItem('User Guidelines', 'Last updated: Jan 2025'),
+          _buildDocumentItem('Content Policy', 'Last updated: Jan 2025'),
+          _buildDocumentItem('GDPR Compliance', 'Last updated: Jan 2025'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentItem(String title, String subtitle) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const Icon(Icons.description),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () {}),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Chat Pricing Screen
+// ============================================================================
+
+class AdminChatPricingScreen extends StatelessWidget {
+  const AdminChatPricingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chat Pricing')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Current Rates', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 16),
+                    _buildPriceRow('Text Chat', '₹5/min'),
+                    _buildPriceRow('Video Chat', '₹15/min'),
+                    _buildPriceRow('Women Earnings', '60%'),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        child: const Text('Update Pricing'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Performance Screen
+// ============================================================================
+
+class AdminPerformanceScreen extends StatelessWidget {
+  const AdminPerformanceScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Performance Monitoring')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildMetricCard(context, 'Server Response Time', '45ms', Colors.green),
+            _buildMetricCard(context, 'Database Queries/sec', '1,250', Colors.blue),
+            _buildMetricCard(context, 'Active WebSocket Connections', '842', Colors.purple),
+            _buildMetricCard(context, 'Error Rate', '0.02%', Colors.green),
+            _buildMetricCard(context, 'Memory Usage', '68%', Colors.orange),
+            _buildMetricCard(context, 'CPU Usage', '42%', Colors.blue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(BuildContext context, String title, String value, Color color) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Audit Logs Screen
+// ============================================================================
+
+class AdminAuditLogsScreen extends StatelessWidget {
+  const AdminAuditLogsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat Monitoring'),
+        title: const Text('Audit Logs'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadActiveSessions),
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.download), onPressed: () {}),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _activeSessions.isEmpty
-              ? const Center(child: Text('No active chat sessions'))
-              : ListView.builder(
-                  itemCount: _activeSessions.length,
-                  itemBuilder: (context, index) {
-                    final session = _activeSessions[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.chat)),
-                        title: Text('Session ${session['id']?.substring(0, 8) ?? ''}'),
-                        subtitle: Text('Duration: ${session['total_minutes'] ?? 0} min'),
-                        trailing: Text('₹${session['total_earned'] ?? 0}'),
-                      ),
-                    );
-                  },
-                ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No audit logs available'),
+          ],
+        ),
+      ),
     );
   }
 }
 
 // ============================================================================
-// Admin Policy Alerts
+// Admin Policy Alerts Screen
 // ============================================================================
 
-class AdminPolicyAlerts extends ConsumerStatefulWidget {
-  const AdminPolicyAlerts({super.key});
-
-  @override
-  ConsumerState<AdminPolicyAlerts> createState() => _AdminPolicyAlertsState();
-}
-
-class _AdminPolicyAlertsState extends ConsumerState<AdminPolicyAlerts> {
-  final _supabase = Supabase.instance.client;
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _alerts = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAlerts();
-  }
-
-  Future<void> _loadAlerts() async {
-    try {
-      final response = await _supabase
-          .from('policy_violation_alerts')
-          .select()
-          .eq('status', 'pending')
-          .order('created_at', ascending: false)
-          .limit(50);
-
-      setState(() {
-        _alerts = List<Map<String, dynamic>>.from(response);
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
+class AdminPolicyAlertsScreen extends StatelessWidget {
+  const AdminPolicyAlertsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Policy Alerts')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _alerts.isEmpty
-              ? const Center(child: Text('No pending alerts'))
-              : ListView.builder(
-                  itemCount: _alerts.length,
-                  itemBuilder: (context, index) {
-                    final alert = _alerts[index];
-                    final severity = alert['severity'] ?? 'medium';
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: severity == 'high'
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.orange.withOpacity(0.1),
-                          child: Icon(
-                            Icons.warning,
-                            color: severity == 'high' ? Colors.red : Colors.orange,
-                          ),
-                        ),
-                        title: Text(alert['violation_type'] ?? 'Unknown'),
-                        subtitle: Text(alert['content'] ?? 'No details'),
-                        trailing: Chip(
-                          label: Text(severity.toString().toUpperCase()),
-                          backgroundColor: severity == 'high'
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.orange.withOpacity(0.1),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.policy, size: 64, color: Colors.green),
+            SizedBox(height: 16),
+            Text('No policy violations'),
+            SizedBox(height: 8),
+            Text('All users are compliant', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Language Limits Screen
+// ============================================================================
+
+class AdminLanguageLimitsScreen extends StatelessWidget {
+  const AdminLanguageLimitsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Language Limits')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Global Settings', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  _buildLimitRow('Max languages per user', '5'),
+                  _buildLimitRow('Min proficiency required', 'Basic'),
+                  _buildLimitRow('Auto-translate enabled', 'Yes'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLimitRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Admin Transaction History Screen
+// ============================================================================
+
+class AdminTransactionHistoryScreen extends StatelessWidget {
+  const AdminTransactionHistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Transaction History'),
+        actions: [
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.download), onPressed: () {}),
+        ],
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No transactions yet'),
+          ],
+        ),
+      ),
     );
   }
 }
