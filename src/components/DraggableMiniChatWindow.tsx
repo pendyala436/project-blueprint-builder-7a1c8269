@@ -1557,7 +1557,7 @@ const DraggableMiniChatWindow = ({
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs pr-6"
-                  disabled={isSending || isUploading || isBlocked}
+                  disabled={isUploading || isBlocked}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
