@@ -355,25 +355,27 @@ const EnhancedParallelChatsContainer = ({
         </Popover>
       </div>
 
-      {/* Incoming chat popups - fixed position, highest z-index */}
-      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
-        {pendingIncomingChats.map((incoming) => (
-          <IncomingChatPopup
-            key={incoming.sessionId}
-            sessionId={incoming.sessionId}
-            chatId={incoming.chatId}
-            partnerId={incoming.partnerId}
-            partnerName={incoming.partnerName}
-            partnerPhoto={incoming.partnerPhoto}
-            partnerLanguage={incoming.partnerLanguage}
-            ratePerMinute={incoming.ratePerMinute}
-            startedAt={incoming.startedAt}
-            userGender={userGender}
-            onAccept={handleAcceptChat}
-            onReject={handleRejectChat}
-          />
-        ))}
-      </div>
+      {/* Incoming chat popups - ONLY for women (men initiate chats, they don't receive accept/reject popups) */}
+      {userGender === "female" && (
+        <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
+          {pendingIncomingChats.map((incoming) => (
+            <IncomingChatPopup
+              key={incoming.sessionId}
+              sessionId={incoming.sessionId}
+              chatId={incoming.chatId}
+              partnerId={incoming.partnerId}
+              partnerName={incoming.partnerName}
+              partnerPhoto={incoming.partnerPhoto}
+              partnerLanguage={incoming.partnerLanguage}
+              ratePerMinute={incoming.ratePerMinute}
+              startedAt={incoming.startedAt}
+              userGender={userGender}
+              onAccept={handleAcceptChat}
+              onReject={handleRejectChat}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Active chat windows - freely draggable with absolute positioning */}
       {displayedChats.map((chat, index) => (
