@@ -147,18 +147,8 @@ export interface Gift {
   description: string | null;
 }
 
-// ============= Video Call Types =============
-
-export interface VideoCallSession {
-  id: string;
-  callId: string;
-  partnerId: string;
-  partnerName: string;
-  status: 'ringing' | 'active' | 'ended';
-  startedAt: Date | null;
-  endedAt: Date | null;
-  totalMinutes: number;
-}
+// Video Call Types removed - 1-on-1 video calling not supported
+// Group video calls are handled via GroupVideoCall component
 
 // ============= Notification Types =============
 
