@@ -87,6 +87,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const fetchGroups = useCallback(async () => {
     if (!mountedRef.current) return;
     try {
+      // First get all female user IDs
+      const { data: femaleProfiles } = await supabase
+        .from('female_profiles')
+        .select('user_id, full_name, photo_url, primary_language');
+      
+      const femaleUserIds = new Set(femaleProfiles?.map(p => p.user_id) || []);
+      const femaleProfileMap = new Map(
+        femaleProfiles?.map(p => [p.user_id, p]) || []
+      );
+
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
@@ -95,35 +105,24 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         .neq('owner_id', currentUserId)
         .order('participant_count', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(50); // Limit results for performance
+        .limit(50);
 
       if (error) throw error;
       if (!mountedRef.current) return;
 
       if (data && data.length > 0) {
-        const ownerIds = [...new Set(data.map(g => g.owner_id))];
+        // Filter to only show groups owned by female users
+        const femaleOwnedGroups = data.filter(g => femaleUserIds.has(g.owner_id));
         
-        const profilePromises = ownerIds.map(async (ownerId) => {
-          const { data: profileData } = await supabase.rpc('get_group_owner_profile', {
-            owner_user_id: ownerId
-          });
-          return profileData?.[0] || null;
+        const enrichedGroups = femaleOwnedGroups.map(group => {
+          const ownerProfile = femaleProfileMap.get(group.owner_id);
+          return {
+            ...group,
+            owner_name: ownerProfile?.full_name || 'Anonymous',
+            owner_photo: ownerProfile?.photo_url,
+            owner_language: group.owner_language || ownerProfile?.primary_language
+          };
         });
-        
-        const profileResults = await Promise.all(profilePromises);
-        if (!mountedRef.current) return;
-
-        const profileMap = new Map(
-          profileResults
-            .filter(p => p !== null)
-            .map(p => [p.user_id, p])
-        );
-        
-        const enrichedGroups = data.map(group => ({
-          ...group,
-          owner_name: profileMap.get(group.owner_id)?.full_name || 'Anonymous',
-          owner_photo: profileMap.get(group.owner_id)?.photo_url
-        }));
         
         setGroups(enrichedGroups);
       } else {
