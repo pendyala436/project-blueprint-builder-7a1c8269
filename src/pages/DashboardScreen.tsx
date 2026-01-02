@@ -57,7 +57,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
-import { PrivateCallSection } from "@/components/PrivateCallSection";
+import { MenPrivateCallSection } from "@/components/MenPrivateCallSection";
 import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -1413,10 +1413,9 @@ const DashboardScreen = () => {
         {/* Private 1-to-1 Calls Section (Men see invitations from women) */}
         {currentUserId && (
           <div className="animate-fade-in" style={{ animationDelay: "0.27s" }}>
-            <PrivateCallSection
+            <MenPrivateCallSection
               currentUserId={currentUserId}
               currentUserLanguage={userLanguage}
-              userGender="male"
             />
           </div>
         )}

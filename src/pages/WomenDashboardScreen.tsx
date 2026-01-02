@@ -52,7 +52,7 @@ import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
-import { PrivateCallSection } from "@/components/PrivateCallSection";
+import { WomenPrivateCallSection } from "@/components/WomenPrivateCallSection";
 import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 interface Notification {
@@ -1079,10 +1079,9 @@ const WomenDashboardScreen = () => {
         {/* Section 8: Private 1-to-1 Calls Section (Women invite men) */}
         {currentUserId && (
           <div className="animate-fade-in" style={{ animationDelay: "0.33s" }}>
-            <PrivateCallSection
+            <WomenPrivateCallSection
               currentUserId={currentUserId}
               currentUserLanguage={currentWomanLanguage}
-              userGender="female"
             />
           </div>
         )}
