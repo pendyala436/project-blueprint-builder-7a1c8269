@@ -19,6 +19,7 @@ interface SendPrivateCallButtonProps {
   currentUserLanguage: string;
   targetUserId: string;
   targetUserName: string;
+  targetUserLanguage: string;
   onInvitationSent?: (invitationId: string) => void;
 }
 
@@ -27,8 +28,11 @@ export function SendPrivateCallButton({
   currentUserLanguage,
   targetUserId,
   targetUserName,
+  targetUserLanguage,
   onInvitationSent,
 }: SendPrivateCallButtonProps) {
+  // Only allow private calls between same-language users
+  const isSameLanguage = currentUserLanguage.toLowerCase() === targetUserLanguage.toLowerCase();
   const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [minGiftAmount, setMinGiftAmount] = useState(200); // Higher default for 1-to-1
@@ -84,16 +88,21 @@ export function SendPrivateCallButton({
     }
   };
 
+  // Don't render button if languages don't match
+  if (!isSameLanguage) {
+    return null;
+  }
+
   return (
     <>
       <Button 
         variant="outline" 
         size="sm" 
-        className="gap-2"
-        onClick={handleOpenDialog}
+        className="gap-1 h-7 px-2 text-xs"
+        onClick={(e) => { e.stopPropagation(); handleOpenDialog(); }}
       >
-        <Video className="h-4 w-4" />
-        Private Call
+        <Video className="h-3 w-3" />
+        Call
       </Button>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
