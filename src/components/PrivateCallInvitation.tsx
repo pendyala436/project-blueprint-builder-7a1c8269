@@ -159,18 +159,10 @@ export function PrivateCallInvitation({
     }
   };
 
-  const handleAcceptClick = () => {
-    if (gifts.length === 0) {
-      fetchGiftsAndBalance().then(() => {
-        if (gifts.length > 0) {
-          setShowGiftDialog(true);
-        } else {
-          toast.error('No gifts available at this price. Try again later.');
-        }
-      });
-    } else {
-      setShowGiftDialog(true);
-    }
+  const handleAcceptClick = async () => {
+    // Always fetch fresh data first
+    await fetchGiftsAndBalance();
+    setShowGiftDialog(true);
   };
 
   // Inline mode - render as buttons for embedding in sections
