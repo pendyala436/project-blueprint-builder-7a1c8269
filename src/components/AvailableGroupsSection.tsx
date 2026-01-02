@@ -249,6 +249,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       await handleFreeJoin(group);
       return;
     }
+    
+    // For video-only or video+chat groups, skip the gift dialog here
+    // The GroupVideoCall component will handle gift for video access with 30-min timer
+    if (group.access_type === 'video' || group.access_type === 'both') {
+      // For video groups, directly open the video call - gift will be handled there
+      setActiveGroupVideo(group);
+      return;
+    }
+    
+    // For chat-only groups, show gift dialog here
     setSelectedGroup(group);
     await fetchGifts(group.min_gift_amount);
     setShowGiftDialog(true);
@@ -557,10 +567,15 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                           <Users className="h-4 w-4" />
                           Join Free
                         </>
+                      ) : group.access_type === 'video' || group.access_type === 'both' ? (
+                        <>
+                          <Video className="h-4 w-4" />
+                          Watch Live
+                        </>
                       ) : (
                         <>
                           <Gift className="h-4 w-4" />
-                          Send Gift to Watch
+                          Send Gift to Join
                         </>
                       )}
                     </Button>
