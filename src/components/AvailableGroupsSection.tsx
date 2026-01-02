@@ -244,9 +244,9 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   };
 
   const handleUnlockGroup = async (group: PrivateGroup) => {
-    // Check if group is full (max 100 men)
-    if (group.participant_count >= 100) {
-      toast.error('This group is full (100 men limit reached)');
+    // Check if group is full (max 150 men)
+    if (group.participant_count >= 150) {
+      toast.error('This group is full (150 men limit reached)');
       return;
     }
     
@@ -513,7 +513,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline" className="gap-1">
                       <Eye className="h-3 w-3" />
-                      {group.participant_count}/100 watching
+                      {group.participant_count}/150 watching
                     </Badge>
                     <Badge variant={unlocked ? 'default' : 'secondary'} className="gap-1">
                       {unlocked ? (

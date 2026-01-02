@@ -410,7 +410,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
-                    {group.participant_count}/100 members
+                    {group.participant_count}/150 members
                   </Badge>
                   {(group.access_type === 'chat' || group.access_type === 'both') && (
                     <Badge variant="outline" className="gap-1">
