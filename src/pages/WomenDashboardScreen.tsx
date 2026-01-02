@@ -715,6 +715,7 @@ const WomenDashboardScreen = () => {
           currentUserLanguage={currentWomanLanguage}
           targetUserId={user.userId}
           targetUserName={user.fullName}
+          targetUserLanguage={user.motherTongue}
         />
         <Button 
           size="sm" 
