@@ -14,6 +14,14 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, 
 import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
 import { languages } from '@/data/languages';
 
+// Gift item interface for gift selection
+interface GiftOption {
+  id: string;
+  name: string;
+  emoji: string;
+  price: number;
+}
+
 // Helper to format gift amount label
 const getAmountLabel = (amount: number) => {
   if (amount === 0) return 'Free (No Gift Required)';
@@ -56,10 +64,11 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [chatEnabled, setChatEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [ownerLanguage, setOwnerLanguage] = useState('');
-
+  const [availableGifts, setAvailableGifts] = useState<GiftOption[]>([]);
   useEffect(() => {
     fetchGroups();
     fetchUserLanguage();
+    fetchAvailableGifts();
     
     // Subscribe to realtime updates
     const channel = supabase
@@ -73,6 +82,18 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
+
+  const fetchAvailableGifts = async () => {
+    const { data } = await supabase
+      .from('gifts')
+      .select('id, name, emoji, price')
+      .eq('is_active', true)
+      .order('price', { ascending: true });
+    
+    if (data) {
+      setAvailableGifts(data);
+    }
+  };
 
   const fetchUserLanguage = async () => {
     // Get user's primary language from profile
@@ -265,18 +286,24 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 />
               </div>
               <div className="space-y-2">
-                <Label>Minimum Gift Amount (₹)</Label>
-                <Input 
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={minGiftAmount}
-                  onChange={(e) => setMinGiftAmount(Math.max(0, Number(e.target.value) || 0))}
-                  placeholder="Enter any amount (0 for free)"
-                />
+                <Label>Minimum Gift to Join</Label>
+                <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select minimum gift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">
+                      🆓 Free (No Gift Required)
+                    </SelectItem>
+                    {availableGifts.map((gift) => (
+                      <SelectItem key={gift.id} value={String(gift.price)}>
+                        {gift.emoji} {gift.name} - ₹{gift.price}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  Set any amount you prefer. 0 = Free access. Men pay this once for 30 min video access.
-                  <br />Every gift sent is split: 50% to you, 50% to admin.
+                  Men pay this once for 30 min video access. 50% to you, 50% to admin.
                 </p>
               </div>
               <div className="space-y-2">
@@ -423,17 +450,24 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Minimum Gift Amount (₹)</Label>
-              <Input 
-                type="number"
-                min="0"
-                step="1"
-                value={minGiftAmount}
-                onChange={(e) => setMinGiftAmount(Math.max(0, Number(e.target.value) || 0))}
-                placeholder="Enter any amount (0 for free)"
-              />
+              <Label>Minimum Gift to Join</Label>
+              <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select minimum gift" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">
+                    🆓 Free (No Gift Required)
+                  </SelectItem>
+                  {availableGifts.map((gift) => (
+                    <SelectItem key={gift.id} value={String(gift.price)}>
+                      {gift.emoji} {gift.name} - ₹{gift.price}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Set any amount you prefer. Men must send a gift of this amount to join.
+                Men must send a gift of at least this price to join.
               </p>
             </div>
             <div className="space-y-3">
