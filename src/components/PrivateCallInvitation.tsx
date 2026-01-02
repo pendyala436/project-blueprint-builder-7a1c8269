@@ -34,6 +34,7 @@ interface PrivateCallInvitationProps {
   onAccept: (invitationId: string, callId: string) => void;
   onDecline: (invitationId: string) => void;
   onClose: () => void;
+  inline?: boolean; // If true, render as inline buttons instead of dialog
 }
 
 export function PrivateCallInvitation({
@@ -42,6 +43,7 @@ export function PrivateCallInvitation({
   onAccept,
   onDecline,
   onClose,
+  inline = false,
 }: PrivateCallInvitationProps) {
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -140,6 +142,46 @@ export function PrivateCallInvitation({
     }
   };
 
+  // Inline mode - render as buttons for embedding in sections
+  if (inline) {
+    return (
+      <div className="flex gap-2 w-full">
+        <Button
+          variant="default"
+          size="sm"
+          className="flex-1 gap-1"
+          onClick={() => {
+            // Open a mini gift selection
+            const cheapestGift = gifts[0];
+            if (cheapestGift) {
+              handleSendGift(cheapestGift);
+            } else {
+              toast.error('No gifts available. Try again later.');
+            }
+          }}
+          disabled={isSendingGift || walletBalance < invitation.min_gift_amount}
+        >
+          {isSendingGift ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              <Gift className="h-3 w-3" />
+              Accept (₹{invitation.min_gift_amount}+)
+            </>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDecline}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  // Dialog mode - full dialog for standalone use
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-md">

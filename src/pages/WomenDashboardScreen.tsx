@@ -52,7 +52,7 @@ import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
-import { SendPrivateCallButton } from "@/components/SendPrivateCallButton";
+import { PrivateCallSection } from "@/components/PrivateCallSection";
 import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 interface Notification {
@@ -709,23 +709,14 @@ const WomenDashboardScreen = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <SendPrivateCallButton
-          currentUserId={currentUserId}
-          currentUserLanguage={currentWomanLanguage}
-          targetUserId={user.userId}
-          targetUserName={user.fullName}
-          targetUserLanguage={user.motherTongue}
-        />
-        <Button 
-          size="sm" 
-          variant="ghost"
-          className="h-7 px-2 text-xs"
-          onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
-        >
-          <User className="h-3 w-3" />
-        </Button>
-      </div>
+      <Button 
+        size="sm" 
+        variant="ghost"
+        className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+      >
+        <User className="h-3 w-3" />
+      </Button>
     </div>
   );
 
@@ -1085,8 +1076,19 @@ const WomenDashboardScreen = () => {
             ))}
           </div>
         </div>
-        {/* Section 8: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.32s" }}>
+        {/* Section 8: Private 1-to-1 Calls Section (Women invite men) */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.33s" }}>
+            <PrivateCallSection
+              currentUserId={currentUserId}
+              currentUserLanguage={currentWomanLanguage}
+              userGender="female"
+            />
+          </div>
+        )}
+
+        {/* Section 9: Shift CTA Card */}
+        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
