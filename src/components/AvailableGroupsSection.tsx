@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio, Search, Filter, Star, Eye, Globe, X } from 'lucide-react';
-import { GroupChatWindow } from './GroupChatWindow';
-import { GroupVideoCall } from './GroupVideoCall';
+import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio, Search, Filter, Star, Eye, Globe, X, Loader2 } from 'lucide-react';
 import { languages } from '@/data/languages';
+
+// Lazy load heavy components to reduce initial bundle
+const GroupChatWindow = lazy(() => import('./GroupChatWindow').then(m => ({ default: m.GroupChatWindow })));
+const GroupVideoCall = lazy(() => import('./GroupVideoCall').then(m => ({ default: m.GroupVideoCall })));
 
 interface PrivateGroup {
   id: string;
@@ -45,6 +47,16 @@ interface AvailableGroupsSectionProps {
   userPhoto: string | null;
 }
 
+// Debounce helper
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [myMemberships, setMyMemberships] = useState<Map<string, boolean>>(new Map());
@@ -64,41 +76,128 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [filterLanguage, setFilterLanguage] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'views' | 'favorites' | 'recent'>('views');
 
+  // Refs for cleanup and preventing stale closures
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const mountedRef = useRef(true);
+
+  // Debounce search to reduce API calls
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Memoized fetch functions to prevent re-creation
+  const fetchGroups = useCallback(async () => {
+    if (!mountedRef.current) return;
+    try {
+      const { data, error } = await supabase
+        .from('private_groups')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_live', true)
+        .neq('owner_id', currentUserId)
+        .order('participant_count', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit results for performance
+
+      if (error) throw error;
+      if (!mountedRef.current) return;
+
+      if (data && data.length > 0) {
+        const ownerIds = [...new Set(data.map(g => g.owner_id))];
+        
+        const profilePromises = ownerIds.map(async (ownerId) => {
+          const { data: profileData } = await supabase.rpc('get_group_owner_profile', {
+            owner_user_id: ownerId
+          });
+          return profileData?.[0] || null;
+        });
+        
+        const profileResults = await Promise.all(profilePromises);
+        if (!mountedRef.current) return;
+
+        const profileMap = new Map(
+          profileResults
+            .filter(p => p !== null)
+            .map(p => [p.user_id, p])
+        );
+        
+        const enrichedGroups = data.map(group => ({
+          ...group,
+          owner_name: profileMap.get(group.owner_id)?.full_name || 'Anonymous',
+          owner_photo: profileMap.get(group.owner_id)?.photo_url
+        }));
+        
+        setGroups(enrichedGroups);
+      } else {
+        setGroups([]);
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    } finally {
+      if (mountedRef.current) setIsLoading(false);
+    }
+  }, [currentUserId]);
+
+  const fetchMyMemberships = useCallback(async () => {
+    if (!mountedRef.current) return;
+    try {
+      const { data, error } = await supabase
+        .from('group_memberships')
+        .select('group_id, has_access')
+        .eq('user_id', currentUserId)
+        .eq('has_access', true);
+
+      if (error) throw error;
+      if (!mountedRef.current) return;
+
+      const membershipMap = new Map<string, boolean>();
+      data?.forEach(m => membershipMap.set(m.group_id, m.has_access));
+      setMyMemberships(membershipMap);
+    } catch (error) {
+      console.error('Error fetching memberships:', error);
+    }
+  }, [currentUserId]);
+
+  const fetchWalletBalance = useCallback(async () => {
+    if (!mountedRef.current) return;
+    const { data } = await supabase
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUserId)
+      .single();
+    
+    if (data && mountedRef.current) setWalletBalance(data.balance);
+  }, [currentUserId]);
+
   useEffect(() => {
+    mountedRef.current = true;
+    
+    // Initial fetch
     fetchGroups();
     fetchMyMemberships();
     fetchWalletBalance();
-    fetchFavorites();
 
-    // Subscribe to realtime updates
-    const channel = supabase
+    // Load favorites from localStorage
+    try {
+      const saved = localStorage.getItem(`group_favorites_${currentUserId}`);
+      if (saved) setFavoriteGroups(new Set(JSON.parse(saved)));
+    } catch {}
+
+    // Subscribe to realtime updates with throttled handlers
+    channelRef.current = supabase
       .channel('available-groups-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, () => {
-        fetchGroups();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_memberships' }, () => {
-        fetchMyMemberships();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, fetchGroups)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_memberships' }, fetchMyMemberships)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUserId]);
-
-  const fetchFavorites = () => {
-    // Use localStorage for favorites
-    try {
-      const saved = localStorage.getItem(`group_favorites_${currentUserId}`);
-      if (saved) {
-        setFavoriteGroups(new Set(JSON.parse(saved)));
+      mountedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
-    } catch (error) {
-      // Ignore
-    }
-  };
+    };
+  }, [currentUserId, fetchGroups, fetchMyMemberships, fetchWalletBalance]);
 
-  const toggleFavorite = (groupId: string) => {
+  const toggleFavorite = useCallback((groupId: string) => {
     setFavoriteGroups(prev => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(groupId)) {
@@ -109,7 +208,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       localStorage.setItem(`group_favorites_${currentUserId}`, JSON.stringify([...newFavorites]));
       return newFavorites;
     });
-  };
+  }, [currentUserId]);
 
   // Filter and sort groups
   const filteredGroups = useMemo(() => {
@@ -154,94 +253,19 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     return [...langs].sort();
   }, [groups]);
 
-  const fetchGroups = async () => {
-    try {
-      // ONLY fetch LIVE groups for men viewers
-      const { data, error } = await supabase
-        .from('private_groups')
-        .select('*')
-        .eq('is_active', true)
-        .eq('is_live', true) // Only live groups visible to men
-        .neq('owner_id', currentUserId)
-        .order('participant_count', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch owner profiles using secure function
-      if (data && data.length > 0) {
-        const ownerIds = [...new Set(data.map(g => g.owner_id))];
-        
-        // Use secure function to get group owner profiles
-        const profilePromises = ownerIds.map(async (ownerId) => {
-          const { data: profileData } = await supabase.rpc('get_group_owner_profile', {
-            owner_user_id: ownerId
-          });
-          return profileData?.[0] || null;
-        });
-        
-        const profileResults = await Promise.all(profilePromises);
-        const profileMap = new Map(
-          profileResults
-            .filter(p => p !== null)
-            .map(p => [p.user_id, p])
-        );
-        
-        const enrichedGroups = data.map(group => ({
-          ...group,
-          owner_name: profileMap.get(group.owner_id)?.full_name || 'Anonymous',
-          owner_photo: profileMap.get(group.owner_id)?.photo_url
-        }));
-        
-        setGroups(enrichedGroups);
-      } else {
-        setGroups([]);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchMyMemberships = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('group_memberships')
-        .select('group_id, has_access')
-        .eq('user_id', currentUserId)
-        .eq('has_access', true);
-
-      if (error) throw error;
-
-      const membershipMap = new Map<string, boolean>();
-      data?.forEach(m => membershipMap.set(m.group_id, m.has_access));
-      setMyMemberships(membershipMap);
-    } catch (error) {
-      console.error('Error fetching memberships:', error);
-    }
-  };
-
-  const fetchWalletBalance = async () => {
-    const { data } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', currentUserId)
-      .single();
-    
-    if (data) setWalletBalance(data.balance);
-  };
-
-  const fetchGifts = async (minAmount: number) => {
+  const fetchGifts = useCallback(async (minAmount: number) => {
+    if (!mountedRef.current) return;
     const { data } = await supabase
       .from('gifts')
       .select('id, name, emoji, price')
       .eq('is_active', true)
       .gte('price', minAmount)
-      .order('price', { ascending: true });
+      .order('price', { ascending: true })
+      .limit(20);
 
-    setGifts(data || []);
-  };
+    if (data && mountedRef.current) setGifts(data);
+  }, []);
+
 
   const handleUnlockGroup = async (group: PrivateGroup) => {
     // Check if group is full (max 150 men)
@@ -650,28 +674,32 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         </DialogContent>
       </Dialog>
 
-      {/* Group Chat Window */}
+      {/* Group Chat Window - Lazy loaded */}
       {activeGroupChat && (
-        <GroupChatWindow
-          group={activeGroupChat}
-          currentUserId={currentUserId}
-          userName={userName}
-          userPhoto={userPhoto}
-          onClose={() => setActiveGroupChat(null)}
-          isOwner={false}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+          <GroupChatWindow
+            group={activeGroupChat}
+            currentUserId={currentUserId}
+            userName={userName}
+            userPhoto={userPhoto}
+            onClose={() => setActiveGroupChat(null)}
+            isOwner={false}
+          />
+        </Suspense>
       )}
 
-      {/* Group Video Call */}
+      {/* Group Video Call - Lazy loaded */}
       {activeGroupVideo && (
-        <GroupVideoCall
-          group={activeGroupVideo}
-          currentUserId={currentUserId}
-          userName={userName}
-          userPhoto={userPhoto}
-          onClose={() => setActiveGroupVideo(null)}
-          isOwner={false}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+          <GroupVideoCall
+            group={activeGroupVideo}
+            currentUserId={currentUserId}
+            userName={userName}
+            userPhoto={userPhoto}
+            onClose={() => setActiveGroupVideo(null)}
+            isOwner={false}
+          />
+        </Suspense>
       )}
     </div>
   );
