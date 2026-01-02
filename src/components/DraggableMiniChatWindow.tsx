@@ -1165,9 +1165,13 @@ const DraggableMiniChatWindow = ({
   return (
     <Card 
       ref={windowRef}
-      style={windowStyle}
+      style={{
+        ...windowStyle,
+        willChange: isDragging ? 'transform' : 'auto'
+      }}
       className={cn(
-        "flex flex-col shadow-2xl border-2 transition-all duration-200",
+        "flex flex-col shadow-2xl border-2",
+        "transition-[border-color,box-shadow,opacity] duration-200",
         isPartnerOnline ? "border-primary/30" : "border-muted",
         isDragging && "opacity-90",
         isMaximized && "rounded-none"
@@ -1272,7 +1276,7 @@ const DraggableMiniChatWindow = ({
           
           {/* Collapsible action buttons */}
           {showActions && (
-            <>
+            <div className="flex items-center gap-0.5">
               {userGender === "male" && (
                 <GiftSendButton
                   senderId={currentUserId}
@@ -1290,7 +1294,7 @@ const DraggableMiniChatWindow = ({
                 onStopChat={handleClose}
                 onLogOff={handleClose}
               />
-            </>
+            </div>
           )}
           
           <Button

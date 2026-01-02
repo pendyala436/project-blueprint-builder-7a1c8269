@@ -1002,7 +1002,8 @@ const MiniChatWindow = ({
   return (
     <Card 
       className={cn(
-        "flex flex-col shadow-xl border-2 transition-all duration-200",
+        "flex flex-col shadow-xl border-2",
+        "transition-[border-color,box-shadow,width,height] duration-200",
         isMinimized ? "w-56 h-12" : `${windowWidthClass} h-80`,
         isPartnerOnline ? "border-primary/30" : "border-muted"
       )}
@@ -1097,7 +1098,7 @@ const MiniChatWindow = ({
           
           {/* Collapsible action buttons */}
           {showActions && (
-            <>
+            <div className="flex items-center gap-0.5">
               {/* Gift Button - only men can send */}
               {userGender === "male" && (
                 <GiftSendButton
@@ -1115,7 +1116,7 @@ const MiniChatWindow = ({
                 onBlock={handleClose}
                 className="h-5 w-5"
               />
-            </>
+            </div>
           )}
           
           <Button
