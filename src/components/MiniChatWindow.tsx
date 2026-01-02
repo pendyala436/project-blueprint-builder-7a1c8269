@@ -163,9 +163,15 @@ const MiniChatWindow = ({
 
   // Real-time transliteration: Convert typing to native language (ONCE only)
   useEffect(() => {
-    // Skip if no conversion needed or empty input
-    if (!needsNativeConversion || !newMessage.trim()) {
+    // Skip if no conversion needed
+    if (!needsNativeConversion) {
       setDisplayMessage(newMessage);
+      return;
+    }
+    
+    // Empty input - clear display
+    if (!newMessage.trim()) {
+      setDisplayMessage('');
       lastLatinInputRef.current = '';
       return;
     }
@@ -173,6 +179,7 @@ const MiniChatWindow = ({
     // Skip if already in native script (not Latin) - prevents double conversion
     if (!isLatinScript(newMessage)) {
       setDisplayMessage(newMessage);
+      lastLatinInputRef.current = '';
       return;
     }
 
@@ -193,30 +200,36 @@ const MiniChatWindow = ({
 
     setIsConverting(true);
     transliterationTimeoutRef.current = setTimeout(async () => {
-      // Double-check we're still dealing with Latin input
-      if (!isLatinScript(newMessage)) {
+      // Double-check we're still dealing with Latin input and message hasn't changed
+      const currentMessage = newMessage;
+      if (!isLatinScript(currentMessage) || !currentMessage.trim()) {
         setIsConverting(false);
         return;
       }
 
       try {
         isConvertingRef.current = true;
-        lastLatinInputRef.current = newMessage; // Mark this input as processed
+        lastLatinInputRef.current = currentMessage; // Mark this input as processed
         
         // Use convertToNative for non-Latin languages
-        const result = await convertToNative(newMessage, currentUserLanguage);
+        const result = await convertToNative(currentMessage, currentUserLanguage);
         
-        if (result.isTranslated && result.text && result.text !== newMessage) {
-          setDisplayMessage(result.text); // Only update preview, NOT the input
-          // Don't update newMessage - keep Latin input, convert only on send
+        if (result.isTranslated && result.text && result.text !== currentMessage) {
+          // Only update display if the message hasn't changed while we were converting
+          setDisplayMessage(result.text);
+        } else {
+          // No conversion available, keep input as display
+          setDisplayMessage(currentMessage);
         }
       } catch (error) {
         console.error('Transliteration error:', error);
+        // On error, display the input as-is
+        setDisplayMessage(newMessage);
       } finally {
         setIsConverting(false);
         isConvertingRef.current = false;
       }
-    }, 500); // 500ms debounce
+    }, 300); // Reduced to 300ms for faster response
 
     return () => {
       if (transliterationTimeoutRef.current) {
@@ -596,7 +609,7 @@ const MiniChatWindow = ({
     if (!newMessage.trim() || isSending || isBlocked) return;
 
     const trimmedInput = newMessage.trim();
-    // Capture displayMessage BEFORE clearing state
+    // Capture displayMessage BEFORE clearing state - this is the native script preview
     const currentPreview = displayMessage?.trim() || '';
     
     // SECURITY: Validate message length to prevent database abuse
@@ -612,6 +625,7 @@ const MiniChatWindow = ({
     // Clear input IMMEDIATELY - don't block user from typing next message
     setNewMessage("");
     setDisplayMessage("");
+    lastLatinInputRef.current = ''; // Reset Latin input tracking
     stopTyping();
     setIsSending(true);
     setLastActivityTime(Date.now());
@@ -621,22 +635,26 @@ const MiniChatWindow = ({
       resumeBilling();
     }
 
-    // Determine message text - use preview if available, otherwise flag for background conversion
+    // Determine message text - prioritize the native script preview if available
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
     // Check if we have a valid native script preview ready
+    // Valid means: preview exists, is different from input, and is NOT in Latin script
     const hasValidPreview = currentPreview && 
+                           currentPreview.length > 0 &&
                            currentPreview !== trimmedInput && 
                            !isLatinScript(currentPreview);
     
     if (hasValidPreview) {
-      // Use the pre-converted preview
+      // Use the pre-converted native script preview
       messageText = currentPreview;
-    } else if (needsNativeConversion && !isSameLanguage(currentUserLanguage, 'english')) {
-      // No preview ready - always flag for background conversion when sender isn't English
+      console.log('[MiniChatWindow] Using preview:', messageText);
+    } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
+      // Input is in Latin script and user's language needs conversion
+      // Flag for background conversion
       needsBackgroundConversion = true;
-      console.log('[MiniChatWindow] No preview ready, will convert in background');
+      console.log('[MiniChatWindow] No preview ready, will convert in background:', trimmedInput);
     }
 
     // Optimistic update - immediately show the message (may be updated after conversion)
