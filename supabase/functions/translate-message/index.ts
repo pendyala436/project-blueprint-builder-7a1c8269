@@ -552,6 +552,10 @@ async function translateWithAI(
   const targetLangInfo = languageByName.get(targetLanguage.toLowerCase());
   const sourceNative = sourceLangInfo?.native || sourceLanguage;
   const targetNative = targetLangInfo?.native || targetLanguage;
+
+  // Dynamic token budget to avoid truncated outputs on longer messages
+  // (truncation was causing users to see "half messages")
+  const maxTokens = Math.min(2048, Math.max(256, Math.ceil(text.length / 2)));
   
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -567,6 +571,7 @@ async function translateWithAI(
             role: "system",
             content: `You are a translation engine. Translate text from ${sourceLanguage} (${sourceNative}) to ${targetLanguage} (${targetNative}).
 RULES:
+- Translate the ENTIRE input. Do NOT omit any sentences.
 - Output ONLY the translated text
 - Preserve the meaning accurately
 - Do NOT add any explanations, prefixes, or language names
@@ -578,7 +583,7 @@ RULES:
             content: text
           }
         ],
-        max_tokens: 500,
+        max_tokens: maxTokens,
       }),
     });
 
