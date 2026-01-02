@@ -497,6 +497,13 @@ export function useSFUGroupCall({
         return false;
       }
 
+      // For men (non-owners): start with mic muted by default
+      if (!isOwner) {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+
       setupSignaling();
 
       safeSetState(prev => ({ 
