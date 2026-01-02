@@ -244,6 +244,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   };
 
   const handleUnlockGroup = async (group: PrivateGroup) => {
+    // Check if group is full (max 100 men)
+    if (group.participant_count >= 100) {
+      toast.error('This group is full (100 men limit reached)');
+      return;
+    }
+    
     // If free group, grant access directly without gift
     if (group.min_gift_amount === 0) {
       await handleFreeJoin(group);
@@ -492,7 +498,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       <AvatarFallback>{group.owner_name?.[0] || '?'}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-base">{group.name}</CardTitle>
+                      <CardTitle className="text-base">
+                        {group.owner_language && <span className="text-primary">{group.owner_language} - </span>}
+                        {group.name}
+                      </CardTitle>
                       <p className="text-sm text-muted-foreground">{group.owner_name}</p>
                     </div>
                   </div>
@@ -502,12 +511,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {group.owner_language && (
-                      <Badge variant="outline" className="gap-1">
-                        <Globe className="h-3 w-3" />
-                        {group.owner_language}
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="gap-1">
+                      <Eye className="h-3 w-3" />
+                      {group.participant_count}/100 watching
+                    </Badge>
                     <Badge variant={unlocked ? 'default' : 'secondary'} className="gap-1">
                       {unlocked ? (
                         <>
