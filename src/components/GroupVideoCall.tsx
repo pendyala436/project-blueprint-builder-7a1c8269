@@ -59,8 +59,8 @@ export function GroupVideoCall({
   const [newMessage, setNewMessage] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const participantVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const hostVideoRef = useRef<HTMLVideoElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
-
   // Track video access for men (30 min per gift)
   const {
     hasAccess,
@@ -271,6 +271,21 @@ export function GroupVideoCall({
     });
   }, [participants, currentUserId]);
 
+  // Viewer (men): keep a stable <video ref> and only set srcObject when stream changes.
+  // This avoids flicker caused by inline callback refs re-running on every re-render (e.g., countdown UI).
+  useEffect(() => {
+    if (isOwner) return;
+
+    const host = participants.find(p =>
+      p.id !== currentUserId && (p.isOwner === true || (p.stream && p.stream.getVideoTracks().length > 0))
+    );
+
+    const stream = host?.stream;
+    if (hostVideoRef.current && stream && hostVideoRef.current.srcObject !== stream) {
+      hostVideoRef.current.srcObject = stream;
+    }
+  }, [isOwner, participants, currentUserId]);
+
   const handleGoLive = async () => {
     const success = await goLive();
     if (success) {
@@ -451,11 +466,7 @@ export function GroupVideoCall({
                   {!isOwner && hostParticipant && (
                     <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
                       <video
-                        ref={(el) => {
-                          if (el && hostParticipant.stream) {
-                            el.srcObject = hostParticipant.stream;
-                          }
-                        }}
+                        ref={hostVideoRef}
                         autoPlay
                         playsInline
                         className="w-full h-full object-cover"
