@@ -278,54 +278,103 @@ export function PrivateCallInvitation({
 
   // Dialog mode - full dialog for standalone use
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Video className="h-5 w-5 text-primary" />
-            Private Video Call Invitation
-          </DialogTitle>
-          <DialogDescription>
-            {callerProfile.name} is inviting you to a 1-on-1 private video call
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              Private Video Call Invitation
+            </DialogTitle>
+            <DialogDescription>
+              {callerProfile.name} is inviting you to a 1-on-1 private video call
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Caller info */}
-          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={callerProfile.photo || undefined} />
-              <AvatarFallback className="text-xl">{callerProfile.name[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold text-lg">{callerProfile.name}</p>
-              {invitation.caller_language && (
-                <Badge variant="outline" className="gap-1 mt-1">
-                  <Globe className="h-3 w-3" />
-                  {invitation.caller_language}
-                </Badge>
-              )}
+          <div className="space-y-4 py-4">
+            {/* Caller info */}
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={callerProfile.photo || undefined} />
+                <AvatarFallback className="text-xl">{callerProfile.name[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-lg">{callerProfile.name}</p>
+                {invitation.caller_language && (
+                  <Badge variant="outline" className="gap-1 mt-1">
+                    <Globe className="h-3 w-3" />
+                    {invitation.caller_language}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Info badges */}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="gap-1">
+                <Clock className="h-3 w-3" />
+                30 minutes access
+              </Badge>
+              <Badge variant="secondary" className="gap-1">
+                <Gift className="h-3 w-3" />
+                Min ₹{invitation.min_gift_amount} gift required
+              </Badge>
+            </div>
+
+            {/* Balance info */}
+            <div className="text-sm text-muted-foreground">
+              Your balance: <span className="font-semibold text-foreground">₹{walletBalance.toFixed(0)}</span>
             </div>
           </div>
 
-          {/* Info badges */}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <Clock className="h-3 w-3" />
-              30 minutes access
-            </Badge>
-            <Badge variant="secondary" className="gap-1">
-              <Gift className="h-3 w-3" />
-              Min ₹{invitation.min_gift_amount} gift required
-            </Badge>
-          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="destructive" 
+              onClick={handleDecline} 
+              disabled={isDeclining}
+              className="w-full sm:w-auto"
+            >
+              {isDeclining ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <X className="h-4 w-4 mr-2" />
+              )}
+              Reject
+            </Button>
+            <Button 
+              onClick={handleAcceptClick}
+              disabled={isSendingGift}
+              className="w-full sm:w-auto"
+            >
+              {isSendingGift ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4 mr-2" />
+              )}
+              Accept (₹{invitation.min_gift_amount}+)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {/* Gift selection */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Send a gift to join the call:</p>
-            <p className="text-xs text-muted-foreground">
-              Your balance: ₹{walletBalance.toFixed(2)}
+      {/* Gift selection dialog */}
+      <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Select Gift to Accept Call
+            </DialogTitle>
+            <DialogDescription>
+              Send a gift to join the 30-minute private video call with {callerProfile.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Your balance: <span className="font-semibold text-foreground">₹{walletBalance.toFixed(0)}</span>
             </p>
+            
             <ScrollArea className="h-48">
               <div className="grid grid-cols-2 gap-2 pr-2">
                 {gifts.map((gift) => (
@@ -349,25 +398,27 @@ export function PrivateCallInvitation({
                 ))}
               </div>
             </ScrollArea>
+            
             {gifts.length === 0 && (
               <p className="text-center text-muted-foreground text-sm py-4">
-                No gifts available at this price range
+                No gifts available. Please try again.
+              </p>
+            )}
+            
+            {walletBalance < invitation.min_gift_amount && (
+              <p className="text-center text-destructive text-xs">
+                Insufficient balance. Please recharge your wallet.
               </p>
             )}
           </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleDecline} disabled={isDeclining}>
-            {isDeclining ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <X className="h-4 w-4 mr-2" />
-            )}
-            Decline
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGiftDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
