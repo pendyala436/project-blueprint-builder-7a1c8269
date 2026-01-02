@@ -977,6 +977,7 @@ const ChatScreen = () => {
     try {
       const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
+          text: message,
           message, 
           targetLanguage,
           mode: "convert" // Force conversion mode for outgoing messages
@@ -988,7 +989,11 @@ const ChatScreen = () => {
         return message;
       }
       
-      return data.convertedMessage || data.translatedMessage || message;
+      // Check all possible response fields for the converted text
+      const convertedText = data.translatedText || data.convertedMessage || data.translatedMessage || message;
+      
+      // Only return converted text if it's actually different (conversion worked)
+      return convertedText !== message ? convertedText : message;
     } catch (error) {
       console.error("Conversion failed:", error);
       return message;
