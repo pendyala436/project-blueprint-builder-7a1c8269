@@ -57,6 +57,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
+import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
@@ -113,6 +114,7 @@ const DashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
@@ -408,9 +410,12 @@ const DashboardScreen = () => {
       // First check gender from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Set user photo
+      setUserPhoto(mainProfile?.photo_url || null);
 
       // Redirect women to their dashboard (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female") {
@@ -1633,6 +1638,16 @@ const DashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="male"
           onClose={() => setShowFriendsPanel(false)}
+        />
+      )}
+
+      {/* Private Call Invitation Listener for Men */}
+      {currentUserId && (
+        <PrivateCallInvitationListener
+          currentUserId={currentUserId}
+          userName={userName}
+          userPhoto={userPhoto}
+          userGender="male"
         />
       )}
     </div>
