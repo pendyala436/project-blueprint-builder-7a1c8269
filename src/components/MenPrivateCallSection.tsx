@@ -203,16 +203,15 @@ export function MenPrivateCallSection({
                     30-minute exclusive video call • Send gift to accept
                   </div>
 
-                  <div className="flex gap-2">
-                    <PrivateCallInvitation
-                      invitation={invitation}
-                      currentUserId={currentUserId}
-                      onAccept={handleInvitationAccept}
-                      onDecline={() => handleInvitationDecline(invitation.id)}
-                      onClose={() => {}}
-                      inline
-                    />
-                  </div>
+                  {/* Accept/Reject Buttons */}
+                  <PrivateCallInvitation
+                    invitation={invitation}
+                    currentUserId={currentUserId}
+                    onAccept={handleInvitationAccept}
+                    onDecline={() => handleInvitationDecline(invitation.id)}
+                    onClose={() => {}}
+                    inline
+                  />
                 </div>
               ))}
             </div>

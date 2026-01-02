@@ -195,15 +195,19 @@ export function PrivateCallInvitation({
             )}
           </Button>
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
+            className="gap-1"
             onClick={handleDecline}
             disabled={isDeclining}
           >
             {isDeclining ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
-              <X className="h-3 w-3" />
+              <>
+                <X className="h-3 w-3" />
+                Reject
+              </>
             )}
           </Button>
         </div>
