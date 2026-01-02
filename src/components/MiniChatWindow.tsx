@@ -621,22 +621,25 @@ const MiniChatWindow = ({
       resumeBilling();
     }
 
-    // Determine message text synchronously - use preview if available
+    // Determine message text - use preview if available, otherwise flag for background conversion
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
-    if (needsNativeConversion && isLatinScript(trimmedInput)) {
-      if (currentPreview && currentPreview !== trimmedInput && !isLatinScript(currentPreview)) {
-        messageText = currentPreview;
-      } else {
-        // No preview ready - flag for background conversion after send
-        needsBackgroundConversion = true;
-      }
-    } else if (currentPreview && currentPreview !== trimmedInput) {
+    // Check if we have a valid native script preview ready
+    const hasValidPreview = currentPreview && 
+                           currentPreview !== trimmedInput && 
+                           !isLatinScript(currentPreview);
+    
+    if (hasValidPreview) {
+      // Use the pre-converted preview
       messageText = currentPreview;
+    } else if (needsNativeConversion && !isSameLanguage(currentUserLanguage, 'english')) {
+      // No preview ready - always flag for background conversion when sender isn't English
+      needsBackgroundConversion = true;
+      console.log('[MiniChatWindow] No preview ready, will convert in background');
     }
 
-    // Optimistic update - immediately show the message
+    // Optimistic update - immediately show the message (may be updated after conversion)
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage: Message = {
       id: tempId,
@@ -651,15 +654,17 @@ const MiniChatWindow = ({
     // Send in background - don't await
     (async () => {
       try {
-        // If we need background conversion, do it now before sending
         let finalMessageText = messageText;
+        
+        // If we need background conversion, do it now before sending to DB
         if (needsBackgroundConversion) {
           try {
             console.log('[MiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
             const convertResult = await convertToNative(trimmedInput, currentUserLanguage);
-            if (convertResult.isTranslated && convertResult.text && !isLatinScript(convertResult.text)) {
+            if (convertResult.isTranslated && convertResult.text) {
               finalMessageText = convertResult.text;
-              // Update optimistic message with converted text
+              console.log('[MiniChatWindow] Converted to:', finalMessageText);
+              // Update optimistic message with converted text immediately
               setMessages(prev => prev.map(m => 
                 m.id === tempId 
                   ? { ...m, message: finalMessageText, translatedMessage: finalMessageText }
@@ -685,7 +690,7 @@ const MiniChatWindow = ({
 
         if (error) throw error;
 
-        // Replace optimistic message with real one
+        // Replace optimistic message with real one - keep the converted message text
         if (insertedMsg) {
           setMessages(prev => prev.map(m => 
             m.id === tempId 
