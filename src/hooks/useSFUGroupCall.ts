@@ -205,24 +205,32 @@ export function useSFUGroupCall({
   }, [currentUserId, iceServers, safeSetState, retryConnection]);
 
   const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, fromId: string) => {
+    console.log(`[handleOffer] Processing offer from ${fromId}`);
+    
     let pc = peerConnections.current.get(fromId);
     if (!pc) {
       pc = createPeerConnection(fromId);
     }
 
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'answer',
-      payload: {
-        answer,
-        from: currentUserId,
-        to: fromId,
-      },
-    });
+      console.log(`[handleOffer] Sending answer to ${fromId}`);
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'answer',
+        payload: {
+          answer,
+          from: currentUserId,
+          to: fromId,
+        },
+      });
+    } catch (err) {
+      console.error(`[handleOffer] Error processing offer from ${fromId}:`, err);
+      throw err;
+    }
   }, [createPeerConnection, currentUserId]);
 
   const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit, fromId: string) => {
@@ -240,19 +248,26 @@ export function useSFUGroupCall({
   }, []);
 
   const connectToParticipant = useCallback(async (participantId: string) => {
-    const pc = createPeerConnection(participantId);
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+    console.log(`[connectToParticipant] Creating offer for ${participantId}`);
+    
+    try {
+      const pc = createPeerConnection(participantId);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'offer',
-      payload: {
-        offer,
-        from: currentUserId,
-        to: participantId,
-      },
-    });
+      console.log(`[connectToParticipant] Sending offer to ${participantId}`);
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'offer',
+        payload: {
+          offer,
+          from: currentUserId,
+          to: participantId,
+        },
+      });
+    } catch (err) {
+      console.error(`[connectToParticipant] Error creating offer for ${participantId}:`, err);
+    }
   }, [createPeerConnection, currentUserId]);
 
   const setupSignaling = useCallback(() => {
@@ -269,24 +284,39 @@ export function useSFUGroupCall({
         const presenceState = channel.presenceState();
         const participantIds = Object.keys(presenceState);
         
+        console.log(`[Presence Sync] Total participants: ${participantIds.length}`, participantIds);
+        
+        const newParticipants = participantIds.map(id => {
+          const presenceData = presenceState[id]?.[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
+          return {
+            id,
+            name: presenceData?.name || 'Unknown',
+            photo: presenceData?.photo,
+            isOwner: presenceData?.isOwner || false,
+          };
+        });
+        
         safeSetState(prev => ({
           ...prev,
           viewerCount: participantIds.length,
-          participants: participantIds.map(id => {
-            const existing = prev.participants.find(p => p.id === id);
-            if (existing) return existing;
-            
-            const presenceData = presenceState[id]?.[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
-            return {
-              id,
-              name: presenceData?.name || 'Unknown',
-              photo: presenceData?.photo,
-              isOwner: presenceData?.isOwner || false,
-            };
+          participants: newParticipants.map(newP => {
+            // Preserve existing stream if we have one
+            const existing = prev.participants.find(p => p.id === newP.id);
+            return existing?.stream ? { ...newP, stream: existing.stream } : newP;
           }),
         }));
+        
+        // If we're the host and there are viewers without connections, connect to them
+        if (isOwner && localStream.current) {
+          participantIds.forEach(id => {
+            if (id !== currentUserId && !peerConnections.current.has(id)) {
+              console.log(`[Host Sync] Initiating connection to existing viewer: ${id}`);
+              connectToParticipant(id);
+            }
+          });
+        }
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
         if (!mountedRef.current) return;
         const presence = newPresences[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
         const newParticipant: Participant = {
@@ -296,11 +326,28 @@ export function useSFUGroupCall({
           isOwner: presence?.isOwner || false,
         };
         
+        // Add participant to state immediately
+        safeSetState(prev => {
+          const exists = prev.participants.some(p => p.id === key);
+          if (exists) return prev;
+          return {
+            ...prev,
+            participants: [...prev.participants, newParticipant],
+          };
+        });
+        
         onParticipantJoin?.(newParticipant);
         
-        // If we're the owner or an existing participant, initiate connection
-        if (key !== currentUserId && localStream.current) {
-          connectToParticipant(key);
+        // Only the owner (host) initiates connections to new viewers
+        // This prevents duplicate offers when both sides try to connect
+        if (key !== currentUserId && localStream.current && isOwner) {
+          console.log(`[Host] Initiating connection to viewer: ${key}`);
+          // Small delay to ensure presence is fully synced
+          setTimeout(() => {
+            if (mountedRef.current && localStream.current) {
+              connectToParticipant(key);
+            }
+          }, 500);
         }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
@@ -317,7 +364,12 @@ export function useSFUGroupCall({
       })
       .on('broadcast', { event: 'offer' }, async ({ payload }) => {
         if (payload.to === currentUserId) {
-          await handleOffer(payload.offer, payload.from);
+          console.log(`[${isOwner ? 'Host' : 'Viewer'}] Received offer from: ${payload.from}`);
+          try {
+            await handleOffer(payload.offer, payload.from);
+          } catch (err) {
+            console.error('Error handling offer:', err);
+          }
         }
       })
       .on('broadcast', { event: 'answer' }, async ({ payload }) => {
