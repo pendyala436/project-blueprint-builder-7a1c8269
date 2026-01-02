@@ -157,6 +157,9 @@ export function GroupVideoCall({
     }
   }, [error]);
 
+  // Track if gift dialog has been shown once
+  const [giftDialogShown, setGiftDialogShown] = useState(false);
+
   // Auto-join if owner or has valid access
   useEffect(() => {
     if (accessLoading) return;
@@ -165,12 +168,13 @@ export function GroupVideoCall({
       if (group.is_live && !isConnected && !isConnecting) {
         joinStream();
       }
-    } else if (!isOwner && group.is_live) {
-      // Show gift dialog for men without access
+    } else if (!isOwner && group.is_live && !giftDialogShown) {
+      // Show gift dialog only once for men without access
       fetchGiftsAndBalance();
       setShowGiftDialog(true);
+      setGiftDialogShown(true);
     }
-  }, [isOwner, hasAccess, group.is_live, isConnected, isConnecting, accessLoading]);
+  }, [isOwner, hasAccess, group.is_live, isConnected, isConnecting, accessLoading, giftDialogShown]);
 
   // Set video elements for participants
   useEffect(() => {
