@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Video, Gift, Clock, Globe, Loader2, X } from 'lucide-react';
+import { Video, Gift, Clock, Globe, Loader2, X, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GiftItem {
@@ -24,8 +24,8 @@ interface Invitation {
   caller_language: string | null;
   created_at: string;
   expires_at: string;
-  caller_name?: string;
-  caller_photo?: string;
+  callerName?: string;
+  callerPhoto?: string | null;
 }
 
 interface PrivateCallInvitationProps {
@@ -34,8 +34,11 @@ interface PrivateCallInvitationProps {
   onAccept: (invitationId: string, callId: string) => void;
   onDecline: (invitationId: string) => void;
   onClose: () => void;
-  inline?: boolean; // If true, render as inline buttons instead of dialog
+  inline?: boolean;
 }
+
+// Allowed gift prices for 1-to-1 private calls
+const PRIVATE_CALL_PRICES = [200, 300, 400, 600, 800, 1000];
 
 export function PrivateCallInvitation({
   invitation,
@@ -48,7 +51,9 @@ export function PrivateCallInvitation({
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isSendingGift, setIsSendingGift] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
   const [callerProfile, setCallerProfile] = useState<{name: string; photo: string | null}>({ name: 'User', photo: null });
+  const [showGiftDialog, setShowGiftDialog] = useState(false);
 
   useEffect(() => {
     fetchGiftsAndBalance();
@@ -71,22 +76,25 @@ export function PrivateCallInvitation({
   };
 
   const fetchGiftsAndBalance = async () => {
+    // Filter gifts to allowed prices that meet minimum requirement
+    const allowedPrices = PRIVATE_CALL_PRICES.filter(p => p >= invitation.min_gift_amount);
+    
     const [giftsRes, walletRes] = await Promise.all([
       supabase
         .from('gifts')
         .select('id, name, emoji, price')
         .eq('is_active', true)
-        .gte('price', invitation.min_gift_amount)
+        .in('price', allowedPrices)
         .order('price', { ascending: true }),
       supabase
         .from('wallets')
         .select('balance')
         .eq('user_id', currentUserId)
-        .single()
+        .maybeSingle()
     ]);
 
     if (giftsRes.data) setGifts(giftsRes.data);
-    if (walletRes.data) setWalletBalance(walletRes.data.balance);
+    if (walletRes.data) setWalletBalance(walletRes.data.balance || 0);
   };
 
   const handleSendGift = async (gift: GiftItem) => {
@@ -118,11 +126,13 @@ export function PrivateCallInvitation({
         toast.success(`Gift sent! You have 30 minutes of private video call.`, {
           description: `${result.gift_emoji} ${result.gift_name} - 50% to her, 50% to admin`,
         });
+        setShowGiftDialog(false);
         onAccept(invitation.id, result.call_id);
       } else {
         toast.error(result.error || 'Failed to send gift');
       }
     } catch (error: any) {
+      console.error('Error sending gift:', error);
       toast.error(error.message || 'Failed to send gift');
     } finally {
       setIsSendingGift(false);
@@ -130,54 +140,135 @@ export function PrivateCallInvitation({
   };
 
   const handleDecline = async () => {
+    setIsDeclining(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('private_call_invitations')
         .update({ status: 'declined' })
         .eq('id', invitation.id);
       
+      if (error) throw error;
+      
+      toast.success('Invitation declined');
       onDecline(invitation.id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error declining invitation:', error);
+      toast.error('Failed to decline invitation');
+    } finally {
+      setIsDeclining(false);
+    }
+  };
+
+  const handleAcceptClick = () => {
+    if (gifts.length === 0) {
+      fetchGiftsAndBalance().then(() => {
+        if (gifts.length > 0) {
+          setShowGiftDialog(true);
+        } else {
+          toast.error('No gifts available at this price. Try again later.');
+        }
+      });
+    } else {
+      setShowGiftDialog(true);
     }
   };
 
   // Inline mode - render as buttons for embedding in sections
   if (inline) {
     return (
-      <div className="flex gap-2 w-full">
-        <Button
-          variant="default"
-          size="sm"
-          className="flex-1 gap-1"
-          onClick={() => {
-            // Open a mini gift selection
-            const cheapestGift = gifts[0];
-            if (cheapestGift) {
-              handleSendGift(cheapestGift);
-            } else {
-              toast.error('No gifts available. Try again later.');
-            }
-          }}
-          disabled={isSendingGift || walletBalance < invitation.min_gift_amount}
-        >
-          {isSendingGift ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <>
-              <Gift className="h-3 w-3" />
-              Accept (₹{invitation.min_gift_amount}+)
-            </>
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDecline}
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </div>
+      <>
+        <div className="flex gap-2 w-full">
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1 gap-1"
+            onClick={handleAcceptClick}
+            disabled={isSendingGift}
+          >
+            {isSendingGift ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-3 w-3" />
+                Accept (₹{invitation.min_gift_amount}+)
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDecline}
+            disabled={isDeclining}
+          >
+            {isDeclining ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <X className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
+
+        {/* Gift selection dialog */}
+        <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-primary" />
+                Select Gift to Accept Call
+              </DialogTitle>
+              <DialogDescription>
+                Send a gift to join the 30-minute private video call with {callerProfile.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Your balance: <span className="font-semibold text-foreground">₹{walletBalance.toFixed(0)}</span>
+              </p>
+              
+              <div className="grid grid-cols-2 gap-2">
+                {gifts.map((gift) => (
+                  <Button
+                    key={gift.id}
+                    variant="outline"
+                    className="h-auto py-3 flex-col gap-1"
+                    disabled={isSendingGift || walletBalance < gift.price}
+                    onClick={() => handleSendGift(gift)}
+                  >
+                    {isSendingGift ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="text-2xl">{gift.emoji}</span>
+                        <span className="text-xs font-normal">{gift.name}</span>
+                        <span className="text-xs font-semibold text-primary">₹{gift.price}</span>
+                      </>
+                    )}
+                  </Button>
+                ))}
+              </div>
+              
+              {gifts.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-4">
+                  No gifts available. Please try again.
+                </p>
+              )}
+              
+              {walletBalance < invitation.min_gift_amount && (
+                <p className="text-center text-destructive text-xs">
+                  Insufficient balance. Please recharge your wallet.
+                </p>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowGiftDialog(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
@@ -263,8 +354,12 @@ export function PrivateCallInvitation({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleDecline}>
-            <X className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={handleDecline} disabled={isDeclining}>
+            {isDeclining ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <X className="h-4 w-4 mr-2" />
+            )}
             Decline
           </Button>
         </DialogFooter>
