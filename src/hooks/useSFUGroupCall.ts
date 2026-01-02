@@ -285,26 +285,34 @@ export function useSFUGroupCall({
         const participantIds = Object.keys(presenceState);
         
         console.log(`[Presence Sync] Total participants: ${participantIds.length}`, participantIds);
+        console.log(`[Presence Sync] Full state:`, JSON.stringify(presenceState));
         
         const newParticipants = participantIds.map(id => {
           const presenceData = presenceState[id]?.[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
+          console.log(`[Presence Sync] Participant ${id}:`, presenceData);
           return {
             id,
             name: presenceData?.name || 'Unknown',
             photo: presenceData?.photo,
-            isOwner: presenceData?.isOwner || false,
+            isOwner: presenceData?.isOwner === true,
           };
         });
         
-        safeSetState(prev => ({
-          ...prev,
-          viewerCount: participantIds.length,
-          participants: newParticipants.map(newP => {
+        safeSetState(prev => {
+          const updatedParticipants = newParticipants.map(newP => {
             // Preserve existing stream if we have one
             const existing = prev.participants.find(p => p.id === newP.id);
             return existing?.stream ? { ...newP, stream: existing.stream } : newP;
-          }),
-        }));
+          });
+          
+          console.log(`[Presence Sync] Updated participants:`, updatedParticipants.map(p => ({ id: p.id, isOwner: p.isOwner, hasStream: !!(p as any).stream })));
+          
+          return {
+            ...prev,
+            viewerCount: participantIds.length,
+            participants: updatedParticipants,
+          };
+        });
         
         // If we're the host and there are viewers without connections, connect to them
         if (isOwner && localStream.current) {
