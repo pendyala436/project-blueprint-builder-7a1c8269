@@ -92,12 +92,15 @@ export function GroupVideoCall({
     participants,
     viewerCount,
     error,
+    currentSpeakerId,
     localVideoRef,
     goLive,
     joinStream,
     endStream,
     toggleVideo,
     toggleAudio,
+    requestSpeak,
+    releaseSpeak,
     cleanup,
   } = useSFUGroupCall({
     groupId: group.id,
@@ -306,10 +309,33 @@ export function GroupVideoCall({
   };
 
   const handleToggleAudio = () => {
-    const newState = !isAudioEnabled;
-    setIsAudioEnabled(newState);
-    toggleAudio(newState);
+    if (isOwner) {
+      // Host can always toggle audio
+      const newState = !isAudioEnabled;
+      setIsAudioEnabled(newState);
+      toggleAudio(newState);
+    } else {
+      // Men: only one can speak at a time
+      if (isAudioEnabled) {
+        // Currently speaking, release the slot
+        releaseSpeak();
+        setIsAudioEnabled(false);
+      } else {
+        // Try to speak
+        const canSpeak = requestSpeak();
+        if (canSpeak) {
+          setIsAudioEnabled(true);
+        } else {
+          toast.error('Another user is currently speaking', {
+            description: 'Wait for them to finish before unmuting.',
+          });
+        }
+      }
+    }
   };
+
+  // Check if someone else is speaking (for UI feedback)
+  const someoneElseSpeaking = !isOwner && currentSpeakerId && currentSpeakerId !== currentUserId;
 
   const handleClose = () => {
     cleanup();
@@ -581,16 +607,31 @@ export function GroupVideoCall({
                   </Button>
                 )}
 
-                {/* Audio toggle - for both host and men (men can speak) */}
-                <Button
-                  variant={isAudioEnabled ? 'secondary' : 'destructive'}
-                  size="icon"
-                  onClick={handleToggleAudio}
-                  disabled={isConnecting}
-                  title={isOwner ? "Toggle your microphone" : "Toggle your microphone (audio only)"}
-                >
-                  {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                </Button>
+                {/* Audio toggle - for both host and men (only one man can speak at a time) */}
+                <div className="relative">
+                  <Button
+                    variant={isAudioEnabled ? 'secondary' : someoneElseSpeaking ? 'outline' : 'destructive'}
+                    size="icon"
+                    onClick={handleToggleAudio}
+                    disabled={isConnecting}
+                    title={
+                      isOwner 
+                        ? "Toggle your microphone" 
+                        : someoneElseSpeaking 
+                          ? "Someone else is speaking - wait for them to finish" 
+                          : isAudioEnabled 
+                            ? "Click to mute" 
+                            : "Click to speak"
+                    }
+                  >
+                    {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                  </Button>
+                  {someoneElseSpeaking && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-yellow-900 text-[8px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                      !
+                    </span>
+                  )}
+                </div>
 
                 {/* Chat toggle button with unread badge */}
                 <div className="relative">
