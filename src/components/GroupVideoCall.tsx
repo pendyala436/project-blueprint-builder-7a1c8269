@@ -345,19 +345,7 @@ export function GroupVideoCall({
     ? participants.filter(p => p.id !== currentUserId) 
     : []; // Men don't see other men
 
-  // Debug: Log participants to verify host detection
-  console.log('[GroupVideoCall] Current user:', currentUserId, 'isOwner:', isOwner);
-  console.log('[GroupVideoCall] Participants:', participants.map(p => ({ 
-    id: p.id, 
-    isOwner: p.isOwner, 
-    hasStream: !!p.stream,
-    hasVideoTrack: p.stream ? p.stream.getVideoTracks().length : 0
-  })));
-  console.log('[GroupVideoCall] Host participant:', hostParticipant ? { 
-    id: hostParticipant.id, 
-    isOwner: hostParticipant.isOwner, 
-    hasStream: !!hostParticipant.stream 
-  } : 'Not found');
+  // Debug logging removed to prevent re-render spam
 
   // Display language name in header
   const displayLanguage = groupLanguage || group.owner_language;
