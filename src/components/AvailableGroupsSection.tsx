@@ -474,25 +474,43 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       </div>
 
       {filteredGroups.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <Radio className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            {groups.length === 0 ? (
-              <>
-                <p>No live rooms right now</p>
-                <p className="text-sm">Check back when hosts go live!</p>
-              </>
-            ) : (
-              <>
-                <p>No rooms match your filters</p>
-                <Button 
-                  variant="link" 
-                  onClick={() => { setSearchQuery(''); setFilterLanguage('all'); }}
-                >
-                  Clear filters
-                </Button>
-              </>
-            )}
+        <Card className="border-dashed border-2 bg-muted/30">
+          <CardContent className="py-12 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Video className="h-8 w-8 text-primary" />
+              </div>
+              {groups.length === 0 ? (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-lg text-foreground mb-1">No Live Rooms Available</h4>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                      Women hosts are not live at the moment. Check back soon to join exciting video rooms!
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                    <Radio className="h-3 w-3 animate-pulse text-destructive" />
+                    <span>Rooms appear here when hosts go live</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h4 className="font-semibold text-lg text-foreground mb-1">No Matching Rooms</h4>
+                    <p className="text-muted-foreground text-sm">
+                      Try adjusting your search or filters
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => { setSearchQuery(''); setFilterLanguage('all'); }}
+                  >
+                    Clear All Filters
+                  </Button>
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
