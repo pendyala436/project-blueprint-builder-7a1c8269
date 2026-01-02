@@ -623,11 +623,15 @@ const MiniChatWindow = ({
 
     // Determine message text synchronously - use preview if available
     let messageText = trimmedInput;
+    let needsBackgroundConversion = false;
+    
     if (needsNativeConversion && isLatinScript(trimmedInput)) {
       if (currentPreview && currentPreview !== trimmedInput && !isLatinScript(currentPreview)) {
         messageText = currentPreview;
+      } else {
+        // No preview ready - flag for background conversion after send
+        needsBackgroundConversion = true;
       }
-      // If no preview, send original - don't block waiting for conversion
     } else if (currentPreview && currentPreview !== trimmedInput) {
       messageText = currentPreview;
     }
@@ -647,13 +651,34 @@ const MiniChatWindow = ({
     // Send in background - don't await
     (async () => {
       try {
+        // If we need background conversion, do it now before sending
+        let finalMessageText = messageText;
+        if (needsBackgroundConversion) {
+          try {
+            console.log('[MiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
+            const convertResult = await convertToNative(trimmedInput, currentUserLanguage);
+            if (convertResult.isTranslated && convertResult.text && !isLatinScript(convertResult.text)) {
+              finalMessageText = convertResult.text;
+              // Update optimistic message with converted text
+              setMessages(prev => prev.map(m => 
+                m.id === tempId 
+                  ? { ...m, message: finalMessageText, translatedMessage: finalMessageText }
+                  : m
+              ));
+            }
+          } catch (convErr) {
+            console.error('[MiniChatWindow] Background conversion failed:', convErr);
+            // Continue with original text if conversion fails
+          }
+        }
+
         const { data: insertedMsg, error } = await supabase
           .from("chat_messages")
           .insert({
             chat_id: chatId,
             sender_id: currentUserId,
             receiver_id: partnerId,
-            message: messageText
+            message: finalMessageText
           })
           .select()
           .single();
