@@ -52,6 +52,8 @@ import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
+import { SendPrivateCallButton } from "@/components/SendPrivateCallButton";
+import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 interface Notification {
   id: string;
@@ -101,6 +103,7 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
   // Video calling removed - group private calls still available
 
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
@@ -340,9 +343,12 @@ const WomenDashboardScreen = () => {
       // First check gender and approval from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Set user photo
+      setUserPhoto(mainProfile?.photo_url || null);
 
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
@@ -703,14 +709,22 @@ const WomenDashboardScreen = () => {
         </div>
       </div>
 
-      <Button 
-        size="sm" 
-        variant="ghost"
-        className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
-      >
-        <User className="h-3 w-3" />
-      </Button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <SendPrivateCallButton
+          currentUserId={currentUserId}
+          currentUserLanguage={currentWomanLanguage}
+          targetUserId={user.userId}
+          targetUserName={user.fullName}
+        />
+        <Button 
+          size="sm" 
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+        >
+          <User className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 
@@ -1116,6 +1130,16 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="female"
           onClose={() => setShowFriendsPanel(false)}
+        />
+      )}
+
+      {/* Private Call Invitation Listener for Women */}
+      {currentUserId && (
+        <PrivateCallInvitationListener
+          currentUserId={currentUserId}
+          userName={userName}
+          userPhoto={userPhoto}
+          userGender="female"
         />
       )}
     </div>
