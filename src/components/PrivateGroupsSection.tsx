@@ -375,7 +375,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
             <Card key={group.id} className="relative">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">{group.name}</CardTitle>
+                  <CardTitle className="text-base">
+                    {group.owner_language && <span className="text-primary">{group.owner_language} - </span>}
+                    {group.name}
+                  </CardTitle>
                   <div className="flex gap-1">
                     <Button 
                       variant="ghost" 
@@ -407,7 +410,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
-                    {group.participant_count} members
+                    {group.participant_count}/100 members
                   </Badge>
                   {(group.access_type === 'chat' || group.access_type === 'both') && (
                     <Badge variant="outline" className="gap-1">
