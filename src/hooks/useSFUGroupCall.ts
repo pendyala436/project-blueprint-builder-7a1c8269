@@ -76,20 +76,34 @@ export function useSFUGroupCall({
         throw new Error('Media devices not supported in this browser');
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640, max: 1280 },
-          height: { ideal: 480, max: 720 },
-          frameRate: { ideal: 30, max: 30 },
-          facingMode: 'user',
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 44100,
-        },
-      });
+      // For men (non-owners): only capture audio, no video
+      // For women (owners): capture both video and audio
+      const constraints = isOwner
+        ? {
+            video: {
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 },
+              frameRate: { ideal: 30, max: 30 },
+              facingMode: 'user',
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 44100,
+            },
+          }
+        : {
+            video: false, // Men don't send video
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 44100,
+            },
+          };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (!mountedRef.current) {
         stream.getTracks().forEach(track => track.stop());
@@ -97,21 +111,22 @@ export function useSFUGroupCall({
       }
 
       localStream.current = stream;
-      if (localVideoRef.current) {
+      // Only set video ref for owner (women)
+      if (localVideoRef.current && isOwner) {
         localVideoRef.current.srcObject = stream;
       }
       return stream;
     } catch (error: any) {
       console.error('Error accessing media:', error);
       const errorMessage = error.name === 'NotAllowedError' 
-        ? 'Camera/microphone permission denied' 
+        ? isOwner ? 'Camera/microphone permission denied' : 'Microphone permission denied'
         : error.name === 'NotFoundError'
-        ? 'No camera/microphone found'
-        : 'Could not access camera/microphone';
+        ? isOwner ? 'No camera/microphone found' : 'No microphone found'
+        : isOwner ? 'Could not access camera/microphone' : 'Could not access microphone';
       safeSetState(prev => ({ ...prev, error: errorMessage }));
       return null;
     }
-  }, [safeSetState]);
+  }, [safeSetState, isOwner]);
 
   const retryConnection = useCallback(async (participantId: string) => {
     const retryCount = retryCountRef.current.get(participantId) || 0;
