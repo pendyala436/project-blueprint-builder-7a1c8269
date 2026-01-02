@@ -831,8 +831,6 @@ const DraggableMiniChatWindow = ({
     if (!newMessage.trim() || isSending || isBlocked) return;
 
     const trimmedInput = newMessage.trim();
-    // Capture displayMessage BEFORE clearing state
-    const currentPreview = displayMessage?.trim() || '';
     
     if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
       toast({
@@ -843,28 +841,38 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
+    // Capture displayMessage BEFORE clearing state
+    const currentPreview = displayMessage?.trim() || '';
+    
+    // CRITICAL FIX: Only use preview if it was generated from the EXACT same input
+    // lastLatinInputRef tracks what input the preview was generated from
+    const previewMatchesInput = lastLatinInputRef.current === trimmedInput;
+
     // Clear input IMMEDIATELY - don't block user from typing next message
     setNewMessage("");
     setDisplayMessage("");
+    lastLatinInputRef.current = ''; // Reset Latin input tracking
     setIsSending(true);
     setLastActivityTime(Date.now());
 
-    // Determine message text - use preview if available, otherwise flag for background conversion
+    // Determine message text - use preview if available AND matches input, otherwise flag for background conversion
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
-    // Check if we have a valid native script preview ready
-    const hasValidPreview = currentPreview && 
+    // Check if we have a valid native script preview ready that matches the current input
+    const hasValidPreview = previewMatchesInput &&
+                           currentPreview && 
                            currentPreview !== trimmedInput && 
                            !isLatinScript(currentPreview);
     
     if (hasValidPreview) {
       // Use the pre-converted preview
       messageText = currentPreview;
-    } else if (needsNativeConversion && !isSameLanguage(currentUserLanguage, 'english')) {
-      // No preview ready - always flag for background conversion when sender isn't English
+      console.log('[DraggableMiniChatWindow] Using preview:', messageText);
+    } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
+      // No preview ready or stale - flag for background conversion when sender types Latin
       needsBackgroundConversion = true;
-      console.log('[DraggableMiniChatWindow] No preview ready, will convert in background');
+      console.log('[DraggableMiniChatWindow] Preview not ready/stale, will convert in background:', trimmedInput);
     }
 
     // Optimistic update - immediately show the message (may be updated after conversion)
@@ -872,8 +880,8 @@ const DraggableMiniChatWindow = ({
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: messageText,
-      translatedMessage: messageText,
+      message: needsBackgroundConversion ? trimmedInput : messageText, // Show original while converting
+      translatedMessage: needsBackgroundConversion ? trimmedInput : messageText,
       isTranslated: false,
       createdAt: new Date().toISOString()
     };
