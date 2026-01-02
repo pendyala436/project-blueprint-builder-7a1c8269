@@ -4,11 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2, Gift, Clock, Globe } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2, Gift, Clock, Globe, MessageCircle, Send, X } from 'lucide-react';
 import { useSFUGroupCall } from '@/hooks/useSFUGroupCall';
 import { useGroupVideoAccess } from '@/hooks/useGroupVideoAccess';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface GroupVideoCallProps {
   group: {
@@ -49,7 +51,12 @@ export function GroupVideoCall({
   const [walletBalance, setWalletBalance] = useState(0);
   const [isSendingGift, setIsSendingGift] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{id: string; sender_id: string; message: string; created_at: string; sender_name?: string}>>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const participantVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Track video access for men (30 min per gift)
   const {
@@ -150,6 +157,75 @@ export function GroupVideoCall({
       return () => clearInterval(interval);
     }
   }, [isOwner, currentUserId]);
+
+  // Fetch chat messages and subscribe to new messages
+  useEffect(() => {
+    if (!hasAccess && !isOwner) return;
+
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('group_messages')
+        .select('id, sender_id, message, created_at')
+        .eq('group_id', group.id)
+        .order('created_at', { ascending: true })
+        .limit(100);
+
+      if (!error && data) {
+        setChatMessages(data);
+        scrollChatToBottom();
+      }
+    };
+
+    fetchMessages();
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel(`group-chat-video-${group.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'group_messages',
+        filter: `group_id=eq.${group.id}`
+      }, (payload) => {
+        const newMsg = payload.new as {id: string; sender_id: string; message: string; created_at: string};
+        setChatMessages(prev => [...prev, newMsg]);
+        scrollChatToBottom();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [group.id, hasAccess, isOwner]);
+
+  const scrollChatToBottom = () => {
+    setTimeout(() => {
+      chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleSendChatMessage = async () => {
+    if (!newMessage.trim() || isSendingMessage) return;
+
+    setIsSendingMessage(true);
+    try {
+      const { error } = await supabase
+        .from('group_messages')
+        .insert({
+          group_id: group.id,
+          sender_id: currentUserId,
+          message: newMessage.trim()
+        });
+
+      if (error) throw error;
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   useEffect(() => {
     if (error) {
@@ -326,69 +402,131 @@ export function GroupVideoCall({
               </div>
             )}
 
-            {/* Video Grid - only show if owner or has access */}
+            {/* Video Grid with Chat Panel - only show if owner or has access */}
             {(isOwner || hasAccess) && (
-              <div className="grid gap-2 grid-cols-1">
-                {/* For Host (Woman): Show her own video full screen */}
-                {isOwner && (
-                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                    {!isVideoEnabled && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={userPhoto || undefined} />
-                          <AvatarFallback className="text-2xl">{userName[0]}</AvatarFallback>
-                        </Avatar>
+              <div className={`grid gap-2 ${showChat ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
+                {/* Video section */}
+                <div className={showChat ? 'md:col-span-2' : ''}>
+                  {/* For Host (Woman): Show her own video full screen */}
+                  {isOwner && (
+                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                      {!isVideoEnabled && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src={userPhoto || undefined} />
+                            <AvatarFallback className="text-2xl">{userName[0]}</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                        {userName} (Host)
                       </div>
-                    )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                      {userName} (Host)
-                    </div>
-                    <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                      {viewerCount} viewers watching
-                    </div>
-                  </div>
-                )}
-
-                {/* For Men: Show only the host's video (woman) - full screen */}
-                {!isOwner && hostParticipant && (
-                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                    <video
-                      ref={(el) => {
-                        if (el && hostParticipant.stream) {
-                          el.srcObject = hostParticipant.stream;
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                    {!hostParticipant.stream && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={hostParticipant.photo} />
-                          <AvatarFallback className="text-2xl">{hostParticipant.name[0]}</AvatarFallback>
-                        </Avatar>
+                      <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                        {viewerCount} viewers watching
                       </div>
-                    )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                      {hostParticipant.name} (Host)
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* For Men: Show waiting message if host not streaming yet */}
-                {!isOwner && !hostParticipant && (
-                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                      <p>Waiting for host to start streaming...</p>
+                  {/* For Men: Show only the host's video (woman) - full screen */}
+                  {!isOwner && hostParticipant && (
+                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                      <video
+                        ref={(el) => {
+                          if (el && hostParticipant.stream) {
+                            el.srcObject = hostParticipant.stream;
+                          }
+                        }}
+                        autoPlay
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                      {!hostParticipant.stream && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src={hostParticipant.photo} />
+                            <AvatarFallback className="text-2xl">{hostParticipant.name[0]}</AvatarFallback>
+                          </Avatar>
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                        {hostParticipant.name} (Host)
+                      </div>
+                    </div>
+                  )}
+
+                  {/* For Men: Show waiting message if host not streaming yet */}
+                  {!isOwner && !hostParticipant && (
+                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                        <p>Waiting for host to start streaming...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chat Panel */}
+                {showChat && (
+                  <div className="bg-muted/30 rounded-lg flex flex-col h-64 md:h-auto">
+                    <div className="p-2 border-b flex items-center justify-between">
+                      <span className="text-sm font-medium flex items-center gap-1">
+                        <MessageCircle className="h-4 w-4" />
+                        Group Chat
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowChat(false)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <ScrollArea className="flex-1 p-2">
+                      <div className="space-y-2">
+                        {chatMessages.map((msg) => {
+                          const isOwn = msg.sender_id === currentUserId;
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[85%] px-2 py-1 rounded text-xs ${
+                                  isOwn
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted'
+                                }`}
+                              >
+                                {!isOwn && (
+                                  <p className="text-[10px] font-medium text-muted-foreground mb-0.5">
+                                    {msg.sender_name || 'User'}
+                                  </p>
+                                )}
+                                <p>{msg.message}</p>
+                                <p className="text-[9px] opacity-70 mt-0.5">
+                                  {format(new Date(msg.created_at), 'HH:mm')}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div ref={chatScrollRef} />
+                      </div>
+                    </ScrollArea>
+                    <div className="p-2 border-t flex gap-1">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type..."
+                        className="h-8 text-xs"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendChatMessage()}
+                      />
+                      <Button size="icon" className="h-8 w-8" onClick={handleSendChatMessage} disabled={isSendingMessage}>
+                        <Send className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -428,6 +566,16 @@ export function GroupVideoCall({
                   title={isOwner ? "Toggle your microphone" : "Toggle your microphone (audio only)"}
                 >
                   {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                </Button>
+
+                {/* Chat toggle button */}
+                <Button
+                  variant={showChat ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => setShowChat(!showChat)}
+                  title="Toggle chat"
+                >
+                  <MessageCircle className="h-5 w-5" />
                 </Button>
 
                 {/* Send extra gift button for men (optional, anytime) */}
