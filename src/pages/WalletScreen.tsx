@@ -755,8 +755,8 @@ const WalletScreen = () => {
                       <div className={cn(
                         "p-2 rounded-full",
                         tx.type === "credit" 
-                          ? "bg-green-500/10 text-green-500" 
-                          : "bg-red-500/10 text-red-500"
+                          ? "bg-success/10 text-success" 
+                          : "bg-destructive/10 text-destructive"
                       )}>
                         {tx.type === "credit" ? (
                           <ArrowDownLeft className="h-4 w-4" />
@@ -776,7 +776,7 @@ const WalletScreen = () => {
                     <div className="text-right">
                       <p className={cn(
                         "font-semibold",
-                        tx.type === "credit" ? "text-green-500" : "text-red-500"
+                        tx.type === "credit" ? "text-success" : "text-destructive"
                       )}>
                         {tx.type === "credit" ? "+" : "-"}₹{tx.amount.toFixed(2)}
                       </p>
