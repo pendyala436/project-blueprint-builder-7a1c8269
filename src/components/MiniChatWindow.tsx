@@ -442,25 +442,40 @@ const MiniChatWindow = ({
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Same language - no translation needed, just display native language
+    // Determine sender and receiver languages based on who sent the message
     const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
     const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
     
+    // Same language - no translation needed, just display native language
     if (isSameLanguage(senderLang, receiverLang)) {
-      // Same native language - display as-is
+      return { translatedMessage: text, isTranslated: false };
+    }
+    
+    // For incoming messages from partner - translate to current user's language
+    // For outgoing messages - we don't translate here (sender sees their own message as-is)
+    if (senderId === currentUserId) {
       return { translatedMessage: text, isTranslated: false };
     }
     
     try {
-      // Different languages - use translateForChat
-      const result = await translateForChat(text, { senderLanguage: partnerLanguage, receiverLanguage: currentUserLanguage });
+      // Translate partner's message to current user's language
+      // Use partner's language as source, current user's language as target
+      const result = await translateForChat(text, { 
+        senderLanguage: partnerLanguage, 
+        receiverLanguage: currentUserLanguage 
+      });
+      
+      // Only mark as translated if we actually got a different text
+      const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;
+      
       return {
-        translatedMessage: result.text,
-        isTranslated: result.isTranslated,
+        translatedMessage: wasActuallyTranslated ? result.text : text,
+        isTranslated: wasActuallyTranslated,
         detectedLanguage: result.source
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
+      // On error, show original text without marking as translated
       return { translatedMessage: text, isTranslated: false };
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);

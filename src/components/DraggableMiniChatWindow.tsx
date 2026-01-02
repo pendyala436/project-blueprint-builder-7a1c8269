@@ -654,9 +654,13 @@ const DraggableMiniChatWindow = ({
           senderLanguage: partnerLanguage, 
           receiverLanguage: currentUserLanguage 
         });
+        
+        // Only mark as translated if we actually got a different text
+        const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;
+        
         return {
-          translatedMessage: result.text,
-          isTranslated: result.isTranslated,
+          translatedMessage: wasActuallyTranslated ? result.text : text,
+          isTranslated: wasActuallyTranslated,
           detectedLanguage: result.source
         };
       } catch (error) {

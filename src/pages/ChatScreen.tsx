@@ -348,9 +348,13 @@ const ChatScreen = () => {
           let isTranslated = false;
           
           // Only translate messages from partner (not our own)
-          if (newMsg.sender_id !== currentUserId) {
-            // Translate to current user's preferred language
-            const translation = await translateMessage(newMsg.message, currentUserLanguage);
+          if (newMsg.sender_id !== currentUserId && chatPartner) {
+            // Translate from partner's language to current user's preferred language
+            const translation = await translateMessage(
+              newMsg.message, 
+              currentUserLanguage,
+              chatPartner.preferredLanguage // Partner's language as source
+            );
             translatedMessage = translation.translatedMessage;
             isTranslated = translation.isTranslated;
           }
@@ -913,24 +917,28 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Call Supabase Edge Function for NLLB-200 translation
+      // Call Supabase Edge Function for translation
       const { data, error } = await supabase.functions.invoke("translate-message", {
         body: { 
+          text: message,
           message, 
           targetLanguage,
-          sourceLanguage: sourceLanguage || currentUserLanguage // Use current user's language as source
+          sourceLanguage: sourceLanguage, // Let edge function auto-detect if not provided
+          mode: 'chat' // Use chat mode for better translation context
         }
       });
 
       if (error) throw error;
       
-      // Translation completed successfully
+      // Check if translation actually produced different text
+      const translatedText = data.translatedText || data.translatedMessage || message;
+      const wasActuallyTranslated = data.isTranslated && translatedText && translatedText !== message;
       
       return { 
-        translatedMessage: data.translatedMessage, 
-        isTranslated: data.isTranslated,
-        detectedLanguage: data.detectedLanguage,
-        translationPair: data.translationPair || `${data.detectedLanguage} → ${targetLanguage}`
+        translatedMessage: translatedText, 
+        isTranslated: wasActuallyTranslated,
+        detectedLanguage: data.detectedLanguage || data.sourceLanguage,
+        translationPair: data.translationPair || `${data.detectedLanguage || data.sourceLanguage} → ${targetLanguage}`
       };
     } catch (error) {
       console.error("Translation error:", error);
