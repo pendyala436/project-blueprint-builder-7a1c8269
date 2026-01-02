@@ -48,6 +48,7 @@ export function GroupVideoCall({
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isSendingGift, setIsSendingGift] = useState(false);
+  const [totalEarnings, setTotalEarnings] = useState(0);
   const participantVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
 
   // Track video access for men (30 min per gift)
@@ -125,6 +126,30 @@ export function GroupVideoCall({
     if (giftsRes.data) setGifts(giftsRes.data);
     if (walletRes.data) setWalletBalance(walletRes.data.balance);
   };
+
+  // Fetch total earnings for the group owner (woman)
+  const fetchTotalEarnings = async () => {
+    if (!isOwner) return;
+    
+    const { data } = await supabase
+      .from('women_earnings')
+      .select('amount')
+      .eq('user_id', currentUserId);
+    
+    if (data) {
+      const total = data.reduce((sum, row) => sum + (row.amount || 0), 0);
+      setTotalEarnings(total);
+    }
+  };
+
+  // Fetch earnings on mount and periodically for owner
+  useEffect(() => {
+    if (isOwner) {
+      fetchTotalEarnings();
+      const interval = setInterval(fetchTotalEarnings, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isOwner, currentUserId]);
 
   useEffect(() => {
     if (error) {
@@ -259,10 +284,19 @@ export function GroupVideoCall({
                   {formatTime(remainingSeconds)}
                 </Badge>
               )}
-              <Badge variant="secondary" className="gap-1">
-                <Users className="h-3 w-3" />
-                {viewerCount} {viewerCount === 1 ? 'participant' : 'participants'}
-              </Badge>
+              {/* For women: show user count and earnings */}
+              {isOwner && (
+                <>
+                  <Badge variant="secondary" className="gap-1">
+                    <Users className="h-3 w-3" />
+                    {viewerCount} watching
+                  </Badge>
+                  <Badge variant="default" className="gap-1 bg-green-600">
+                    ₹{totalEarnings.toFixed(2)} earned
+                  </Badge>
+                </>
+              )}
+              {/* For men: just show time remaining */}
             </DialogTitle>
           </DialogHeader>
 
@@ -392,8 +426,8 @@ export function GroupVideoCall({
                   {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                 </Button>
 
-                {/* Extend time button for non-owners */}
-                {!isOwner && hasAccess && remainingSeconds < 300 && (
+                {/* Send extra gift button for men (optional, anytime) */}
+                {!isOwner && hasAccess && (
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -403,7 +437,7 @@ export function GroupVideoCall({
                     className="gap-2"
                   >
                     <Gift className="h-4 w-4" />
-                    Add Time
+                    Send Gift
                   </Button>
                 )}
 
@@ -448,10 +482,10 @@ export function GroupVideoCall({
               </div>
             )}
 
-            {/* Info */}
+            {/* Info - minimal for clean UI */}
             <div className="text-center text-xs text-muted-foreground">
               {displayLanguage && <span className="mr-2">🌐 {displayLanguage}</span>}
-              SFU Group Call • {remoteParticipants.length + 1} connected
+              {isOwner && <span>SFU Group Call</span>}
             </div>
           </div>
         </DialogContent>
@@ -463,13 +497,24 @@ export function GroupVideoCall({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-primary" />
-              Send Gift for Video Access
+              {hasAccess ? 'Send Extra Gift' : 'Send Gift for Video Access'}
             </DialogTitle>
             <DialogDescription>
-              Send a gift of ₹{group.min_gift_amount || minGiftAmount} or more to watch {group.name}'s video call for 30 minutes.
-              <span className="block mt-1 font-medium text-foreground">
-                ✓ One-time payment only - no extra charges
-              </span>
+              {hasAccess ? (
+                <>
+                  Send an optional gift to show your appreciation! 
+                  <span className="block mt-1 text-muted-foreground">
+                    This adds 30 more minutes to your access.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Send a gift of ₹{group.min_gift_amount || minGiftAmount} or more to watch {group.name}'s video call for 30 minutes.
+                  <span className="block mt-1 font-medium text-foreground">
+                    ✓ One-time payment only - no extra charges
+                  </span>
+                </>
+              )}
               {displayLanguage && (
                 <span className="block mt-1 text-primary">
                   🌐 Language: {displayLanguage}
