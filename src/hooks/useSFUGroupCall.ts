@@ -110,6 +110,13 @@ export function useSFUGroupCall({
         return null;
       }
 
+      // Mute audio by default for non-owners (men)
+      if (!isOwner) {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = false;
+        });
+      }
+
       localStream.current = stream;
       // Only set video ref for owner (women)
       if (localVideoRef.current && isOwner) {
