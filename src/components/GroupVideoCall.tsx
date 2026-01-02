@@ -102,13 +102,16 @@ export function GroupVideoCall({
   });
 
   // Fetch gifts and wallet balance for gift dialog
+  // Use the group's min_gift_amount directly from props (more reliable than hook state)
   const fetchGiftsAndBalance = async () => {
+    const groupMinAmount = group.min_gift_amount || 0;
+    
     const [giftsRes, walletRes] = await Promise.all([
       supabase
         .from('gifts')
         .select('id, name, emoji, price')
         .eq('is_active', true)
-        .gte('price', minGiftAmount || 0)
+        .gte('price', groupMinAmount)
         .order('price', { ascending: true }),
       supabase
         .from('wallets')
@@ -262,8 +265,11 @@ export function GroupVideoCall({
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <Gift className="h-8 w-8 mx-auto mb-2 text-primary" />
                 <p className="font-medium">Gift Required to Watch</p>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Send a gift (min ₹{minGiftAmount}) to get 30 minutes of access
+                <p className="text-sm text-muted-foreground mb-1">
+                  Send a gift of ₹{group.min_gift_amount || minGiftAmount} or more
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  ✓ One-time payment • 30 minutes access • No extra charges
                 </p>
                 <Button onClick={() => {
                   fetchGiftsAndBalance();
@@ -440,7 +446,10 @@ export function GroupVideoCall({
               Send Gift for Video Access
             </DialogTitle>
             <DialogDescription>
-              Send a gift (min ₹{minGiftAmount}) to join {group.name}'s video call for 30 minutes.
+              Send a gift of ₹{group.min_gift_amount || minGiftAmount} or more to watch {group.name}'s video call for 30 minutes.
+              <span className="block mt-1 font-medium text-foreground">
+                ✓ One-time payment only - no extra charges
+              </span>
               {displayLanguage && (
                 <span className="block mt-1 text-primary">
                   🌐 Language: {displayLanguage}
