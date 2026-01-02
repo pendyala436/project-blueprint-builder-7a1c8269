@@ -52,8 +52,10 @@ export function GroupVideoCall({
   const [walletBalance, setWalletBalance] = useState(0);
   const [isSendingGift, setIsSendingGift] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
-  const [showChat, setShowChat] = useState(false);
+  // Men have chat open by default since they can only interact via chat/audio
+  const [showChat, setShowChat] = useState(!isOwner);
   const [chatMessages, setChatMessages] = useState<Array<{id: string; sender_id: string; message: string; created_at: string; sender_name?: string}>>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [newMessage, setNewMessage] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const participantVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -190,6 +192,10 @@ export function GroupVideoCall({
       }, (payload) => {
         const newMsg = payload.new as {id: string; sender_id: string; message: string; created_at: string};
         setChatMessages(prev => [...prev, newMsg]);
+        // If chat is closed and message is from someone else, increment unread count
+        if (!showChat && newMsg.sender_id !== currentUserId) {
+          setUnreadCount(prev => prev + 1);
+        }
         scrollChatToBottom();
       })
       .subscribe();
@@ -587,15 +593,25 @@ export function GroupVideoCall({
                   {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                 </Button>
 
-                {/* Chat toggle button */}
-                <Button
-                  variant={showChat ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => setShowChat(!showChat)}
-                  title="Toggle chat"
-                >
-                  <MessageCircle className="h-5 w-5" />
-                </Button>
+                {/* Chat toggle button with unread badge */}
+                <div className="relative">
+                  <Button
+                    variant={showChat ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => {
+                      setShowChat(!showChat);
+                      if (!showChat) setUnreadCount(0); // Clear unread when opening
+                    }}
+                    title="Toggle chat"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                  </Button>
+                  {!showChat && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
 
                 {/* Send extra gift button for men (optional, anytime) */}
                 {!isOwner && hasAccess && (
