@@ -1854,6 +1854,104 @@ export type Database = {
         }
         Relationships: []
       }
+      private_call_invitations: {
+        Row: {
+          caller_id: string
+          caller_language: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          min_gift_amount: number
+          receiver_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          caller_id: string
+          caller_language?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          min_gift_amount?: number
+          receiver_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          caller_id?: string
+          caller_language?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          min_gift_amount?: number
+          receiver_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      private_calls: {
+        Row: {
+          access_expires_at: string | null
+          admin_earnings: number | null
+          call_type: string
+          caller_id: string
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          gift_amount: number | null
+          gift_id: string | null
+          id: string
+          receiver_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          woman_earnings: number | null
+        }
+        Insert: {
+          access_expires_at?: string | null
+          admin_earnings?: number | null
+          call_type?: string
+          caller_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          gift_amount?: number | null
+          gift_id?: string | null
+          id?: string
+          receiver_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          woman_earnings?: number | null
+        }
+        Update: {
+          access_expires_at?: string | null
+          admin_earnings?: number | null
+          call_type?: string
+          caller_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          gift_amount?: number | null
+          gift_id?: string | null
+          id?: string
+          receiver_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          woman_earnings?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "private_calls_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "gifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       private_groups: {
         Row: {
           access_type: string
@@ -3052,6 +3150,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_private_call_access: {
+        Args: { p_call_id: string; p_user_id: string }
+        Returns: Json
+      }
       cleanup_chat_media: { Args: never; Returns: undefined }
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
@@ -3187,6 +3289,15 @@ export type Database = {
       }
       process_group_video_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_private_call_gift: {
+        Args: {
+          p_gift_id: string
+          p_invitation_id?: string
+          p_receiver_id: string
+          p_sender_id: string
+        }
         Returns: Json
       }
       process_recharge: {
