@@ -338,6 +338,15 @@ export function useSFUGroupCall({
             }
           });
         }
+        
+        // If we're a viewer, find the host and connect to them if not already connected
+        if (!isOwner && localStream.current) {
+          const hostId = newParticipants.find(p => p.isOwner === true)?.id;
+          if (hostId && !peerConnections.current.has(hostId)) {
+            console.log(`[Viewer Sync] Initiating connection to host: ${hostId}`);
+            connectToParticipant(hostId);
+          }
+        }
       })
       .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
         if (!mountedRef.current) return;
@@ -361,13 +370,21 @@ export function useSFUGroupCall({
         
         onParticipantJoin?.(newParticipant);
         
-        // Only the owner (host) initiates connections to new viewers
-        // This prevents duplicate offers when both sides try to connect
+        // Host initiates connections to new viewers
         if (key !== currentUserId && localStream.current && isOwner) {
           console.log(`[Host] Initiating connection to viewer: ${key}`);
-          // Small delay to ensure presence is fully synced
           setTimeout(() => {
             if (mountedRef.current && localStream.current) {
+              connectToParticipant(key);
+            }
+          }, 500);
+        }
+        
+        // Viewers: if the host just joined, connect to them
+        if (key !== currentUserId && localStream.current && !isOwner && newParticipant.isOwner) {
+          console.log(`[Viewer] Host joined, initiating connection to host: ${key}`);
+          setTimeout(() => {
+            if (mountedRef.current && localStream.current && !peerConnections.current.has(key)) {
               connectToParticipant(key);
             }
           }, 500);
