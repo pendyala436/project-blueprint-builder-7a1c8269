@@ -822,6 +822,45 @@ serve(async (req) => {
     }
 
     // ================================================================
+    // MODE: CHAT - Same as translate but with explicit sender/receiver context
+    // ================================================================
+    if (mode === "chat") {
+      console.log(`[dl-translate] Chat mode: ${effectiveSource} -> ${effectiveTarget}`);
+      
+      // Same language - no translation
+      if (isSameLanguage(effectiveSource, effectiveTarget)) {
+        console.log('[dl-translate] Chat: Same language, skipping');
+        return new Response(
+          JSON.stringify({
+            translatedText: inputText,
+            translatedMessage: inputText,
+            originalText: inputText,
+            isTranslated: false,
+            sourceLanguage: effectiveSource,
+            targetLanguage: effectiveTarget,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Translate between different languages
+      const result = await translateText(inputText, effectiveSource, effectiveTarget);
+      
+      return new Response(
+        JSON.stringify({
+          translatedText: result.translatedText,
+          translatedMessage: result.translatedText,
+          originalText: inputText,
+          isTranslated: result.success && result.translatedText !== inputText,
+          pivotUsed: result.pivotUsed,
+          sourceLanguage: effectiveSource,
+          targetLanguage: effectiveTarget,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
     // MODE: CONVERT - Convert Latin typing to native script OR translate to Latin language
     // ================================================================
     if (mode === "convert") {

@@ -164,6 +164,14 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
 
       if (fnError) {
         console.error('[ServerTranslation] Error:', fnError);
+        setError(`Translation failed: ${fnError.message || 'Unknown error'}`);
+        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
+      }
+
+      // Handle edge function error response
+      if (data?.error) {
+        console.error('[ServerTranslation] API Error:', data.error);
+        setError(`Translation error: ${data.error}`);
         return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
       }
 
@@ -223,11 +231,19 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
 
       if (fnError) {
         console.error('[ServerTranslation] Chat error:', fnError);
+        setError(`Chat translation failed: ${fnError.message || 'Unknown error'}`);
+        return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
+      }
+
+      // Handle edge function error response
+      if (data?.error) {
+        console.error('[ServerTranslation] Chat API Error:', data.error);
+        setError(`Chat translation error: ${data.error}`);
         return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
       }
 
       return {
-        text: data?.translatedText || trimmed,
+        text: data?.translatedText || data?.translatedMessage || trimmed,
         originalText: trimmed,
         isTranslated: data?.isTranslated || false,
         source: data?.sourceLanguage || normSender,
@@ -284,11 +300,19 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
 
       if (fnError) {
         console.error('[ServerTranslation] Convert error:', fnError);
+        setError(`Conversion failed: ${fnError.message || 'Unknown error'}`);
+        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
+      }
+
+      // Handle edge function error response
+      if (data?.error) {
+        console.error('[ServerTranslation] Convert API Error:', data.error);
+        setError(`Conversion error: ${data.error}`);
         return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
       }
 
       return {
-        text: data?.translatedText || trimmed,
+        text: data?.translatedText || data?.convertedMessage || trimmed,
         originalText: trimmed,
         isTranslated: data?.isTranslated || false,
         source: data?.detectedLanguage || 'english',
