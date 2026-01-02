@@ -14,11 +14,9 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, 
 import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
 import { languages } from '@/data/languages';
 
-// Fixed gift amounts available in the app
-const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
-
+// Helper to format gift amount label
 const getAmountLabel = (amount: number) => {
-  if (amount === 0) return 'Free (Private Call - No Gift Required)';
+  if (amount === 0) return 'Free (No Gift Required)';
   return `₹${amount}`;
 };
 
@@ -268,20 +266,17 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               </div>
               <div className="space-y-2">
                 <Label>Minimum Gift Amount (₹)</Label>
-                <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select amount" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GIFT_AMOUNTS.map((amount) => (
-                      <SelectItem key={amount} value={String(amount)}>
-                        {getAmountLabel(amount)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={minGiftAmount}
+                  onChange={(e) => setMinGiftAmount(Math.max(0, Number(e.target.value) || 0))}
+                  placeholder="Enter any amount (0 for free)"
+                />
                 <p className="text-xs text-muted-foreground">
-                  Every gift sent is split: 50% to you, 50% to admin.
+                  Set any amount you prefer. 0 = Free access. Men pay this once for 30 min video access.
+                  <br />Every gift sent is split: 50% to you, 50% to admin.
                 </p>
               </div>
               <div className="space-y-2">
@@ -429,20 +424,16 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Minimum Gift Amount (₹)</Label>
-              <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select amount" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GIFT_AMOUNTS.map((amount) => (
-                    <SelectItem key={amount} value={String(amount)}>
-                      {getAmountLabel(amount)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input 
+                type="number"
+                min="0"
+                step="1"
+                value={minGiftAmount}
+                onChange={(e) => setMinGiftAmount(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="Enter any amount (0 for free)"
+              />
               <p className="text-xs text-muted-foreground">
-                Men must send gift of this amount to join
+                Set any amount you prefer. Men must send a gift of this amount to join.
               </p>
             </div>
             <div className="space-y-3">
