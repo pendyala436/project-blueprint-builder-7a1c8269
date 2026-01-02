@@ -36,11 +36,14 @@ export function SendPrivateCallButton({
   const [minGiftAmount, setMinGiftAmount] = useState(200); // Higher default for 1-to-1
   const [availableGifts, setAvailableGifts] = useState<GiftOption[]>([]);
 
+  const PRIVATE_CALL_PRICES = [200, 300, 500, 800, 1000];
+
   const fetchAvailableGifts = async () => {
     const { data } = await supabase
       .from('gifts')
       .select('id, name, emoji, price')
       .eq('is_active', true)
+      .in('price', PRIVATE_CALL_PRICES)
       .order('price', { ascending: true });
     
     if (data) {
