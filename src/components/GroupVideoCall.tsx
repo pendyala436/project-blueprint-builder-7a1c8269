@@ -65,10 +65,12 @@ export function GroupVideoCall({
     groupId: group.id,
     userId: currentUserId,
     onAccessExpired: () => {
-      toast.warning('Your video access has expired!', {
-        description: 'Send another gift to continue watching.',
+      toast.warning('Your 30-minute access has expired!', {
+        description: 'You have been removed from the video call.',
       });
       cleanup();
+      // Automatically close the video call dialog
+      onClose();
     },
   });
 
