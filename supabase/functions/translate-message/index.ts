@@ -474,16 +474,16 @@ async function translateText(
 
   console.log(`[dl-translate] Translating: ${sourceCode} -> ${targetCode}`);
 
-  // Try direct translation first
+  // Try direct translation first with LibreTranslate
   let result = await translateWithLibre(text, sourceCode, targetCode);
-  if (result.success) {
+  if (result.success && result.translatedText !== text) {
     const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
     return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
   // Try MyMemory fallback for direct translation
   result = await translateWithMyMemory(text, sourceCode, targetCode);
-  if (result.success) {
+  if (result.success && result.translatedText !== text) {
     const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
     return { translatedText: cleaned, success: true, pivotUsed: false };
   }
@@ -494,18 +494,18 @@ async function translateText(
     
     // Step 1: Translate source -> English
     let pivotResult = await translateWithLibre(text, sourceCode, 'en');
-    if (!pivotResult.success) {
+    if (!pivotResult.success || pivotResult.translatedText === text) {
       pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
     }
 
     if (pivotResult.success && pivotResult.translatedText !== text) {
       // Step 2: Translate English -> target
       let finalResult = await translateWithLibre(pivotResult.translatedText, 'en', targetCode);
-      if (!finalResult.success) {
+      if (!finalResult.success || finalResult.translatedText === pivotResult.translatedText) {
         finalResult = await translateWithMyMemory(pivotResult.translatedText, 'en', targetCode);
       }
 
-      if (finalResult.success) {
+      if (finalResult.success && finalResult.translatedText !== pivotResult.translatedText) {
         const cleaned = cleanTranslatedText(finalResult.translatedText, targetLanguage);
         console.log('[dl-translate] English pivot translation success');
         return { translatedText: cleaned, success: true, pivotUsed: true };
@@ -513,9 +513,92 @@ async function translateText(
     }
   }
 
+  // Try AI translation as last resort if available
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (LOVABLE_API_KEY) {
+    try {
+      console.log('[dl-translate] Trying AI translation as fallback');
+      const aiResult = await translateWithAI(text, sourceLanguage, targetLanguage);
+      if (aiResult.success && aiResult.text !== text) {
+        const cleaned = cleanTranslatedText(aiResult.text, targetLanguage);
+        console.log('[dl-translate] AI translation success');
+        return { translatedText: cleaned, success: true, pivotUsed: false };
+      }
+    } catch (aiError) {
+      console.log('[dl-translate] AI translation fallback failed:', aiError);
+    }
+  }
+
   // All translation attempts failed
   console.log('[dl-translate] All translation attempts failed, returning original text');
   return { translatedText: text, success: false, pivotUsed: false };
+}
+
+/**
+ * AI-powered translation fallback using Lovable AI
+ */
+async function translateWithAI(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ text: string; success: boolean }> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    return { text, success: false };
+  }
+  
+  const sourceLangInfo = languageByName.get(sourceLanguage.toLowerCase());
+  const targetLangInfo = languageByName.get(targetLanguage.toLowerCase());
+  const sourceNative = sourceLangInfo?.native || sourceLanguage;
+  const targetNative = targetLangInfo?.native || targetLanguage;
+  
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `You are a translation engine. Translate text from ${sourceLanguage} (${sourceNative}) to ${targetLanguage} (${targetNative}).
+RULES:
+- Output ONLY the translated text
+- Preserve the meaning accurately
+- Do NOT add any explanations, prefixes, or language names
+- Preserve numbers and punctuation
+- If the text is already in ${targetLanguage}, return it as-is`
+          },
+          {
+            role: "user",
+            content: text
+          }
+        ],
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      console.log(`[dl-translate] AI translation failed: ${response.status}`);
+      return { text, success: false };
+    }
+
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content?.trim();
+    
+    if (result && result !== text) {
+      return { text: result, success: true };
+    }
+    
+    return { text, success: false };
+  } catch (error) {
+    console.error(`[dl-translate] AI translation error:`, error);
+    return { text, success: false };
+  }
 }
 
 /**
