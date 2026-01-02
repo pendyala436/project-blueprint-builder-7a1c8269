@@ -107,7 +107,8 @@ export function MenPrivateCallSection({
     fetchPendingInvitations();
   };
 
-  const handleInvitationAccept = () => {
+  const handleInvitationAccept = (invitationId: string, callId: string) => {
+    console.log('Call accepted:', { invitationId, callId });
     fetchPendingInvitations();
   };
 
