@@ -3,10 +3,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Video, VideoOff, Mic, MicOff, PhoneOff, Clock, Globe, Loader2 } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, PhoneOff, Clock, Globe, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { usePrivateVideoCall } from '@/hooks/usePrivateVideoCall';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+
+interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: Date;
+}
 
 interface PrivateVideoCallDialogProps {
   callId: string;
@@ -35,9 +46,16 @@ export function PrivateVideoCallDialog({
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   
+  // In-call chat
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const {
     hasAccess,
@@ -57,7 +75,14 @@ export function PrivateVideoCallDialog({
     },
   });
 
-  // Initialize WebRTC connection
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // Initialize WebRTC connection and chat
   useEffect(() => {
     if (!hasAccess || isLoading) return;
 
@@ -98,7 +123,7 @@ export function PrivateVideoCallDialog({
           }
         };
 
-        // Subscribe to signaling channel
+        // Subscribe to signaling channel (also used for chat)
         const channel = supabase
           .channel(`private-call-${callId}`)
           .on('broadcast', { event: 'offer' }, async ({ payload }) => {
@@ -128,7 +153,21 @@ export function PrivateVideoCallDialog({
               }
             }
           })
+          // Handle in-call chat messages
+          .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+            if (payload.from !== currentUserId) {
+              setChatMessages(prev => [...prev, {
+                id: crypto.randomUUID(),
+                senderId: payload.from,
+                senderName: payload.senderName,
+                text: payload.text,
+                timestamp: new Date(),
+              }]);
+            }
+          })
           .subscribe();
+
+        channelRef.current = channel;
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
@@ -173,6 +212,9 @@ export function PrivateVideoCallDialog({
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
       }
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
     };
   }, [hasAccess, isLoading, callId, currentUserId, isInitiator]);
 
@@ -192,6 +234,34 @@ export function PrivateVideoCallDialog({
       });
       setIsAudioEnabled(!isAudioEnabled);
     }
+  };
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !channelRef.current) return;
+
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      senderId: currentUserId,
+      senderName: userName,
+      text: newMessage.trim(),
+      timestamp: new Date(),
+    };
+
+    // Add to local state
+    setChatMessages(prev => [...prev, message]);
+
+    // Broadcast to partner
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'chat-message',
+      payload: {
+        from: currentUserId,
+        senderName: userName,
+        text: newMessage.trim(),
+      },
+    });
+
+    setNewMessage('');
   };
 
   const handleEndCall = async () => {
@@ -236,7 +306,7 @@ export function PrivateVideoCallDialog({
 
   return (
     <Dialog open onOpenChange={handleEndCall}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             {partnerLanguage && (
@@ -253,51 +323,104 @@ export function PrivateVideoCallDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="relative">
-          {/* Main video (remote) */}
-          <div className="relative bg-black aspect-video">
-            {remoteStream ? (
+        <div className="flex">
+          {/* Video area */}
+          <div className={cn("relative flex-1", showChat && "lg:flex-[2]")}>
+            {/* Main video (remote) */}
+            <div className="relative bg-black aspect-video">
+              {remoteStream ? (
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {isConnecting ? (
+                    <div className="text-center text-white">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                      <p>Connecting...</p>
+                    </div>
+                  ) : (
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={partnerPhoto || undefined} />
+                      <AvatarFallback className="text-3xl">{partnerName[0]}</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Local video (picture-in-picture) */}
+            <div className="absolute bottom-4 right-4 w-32 sm:w-40 aspect-video bg-black rounded-lg overflow-hidden shadow-lg border-2 border-background">
               <video
-                ref={remoteVideoRef}
+                ref={localVideoRef}
                 autoPlay
+                muted
                 playsInline
                 className="w-full h-full object-cover"
               />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                {isConnecting ? (
-                  <div className="text-center text-white">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p>Connecting...</p>
-                  </div>
-                ) : (
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={partnerPhoto || undefined} />
-                    <AvatarFallback className="text-3xl">{partnerName[0]}</AvatarFallback>
+              {!isVideoEnabled && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={userPhoto || undefined} />
+                    <AvatarFallback>{userName[0]}</AvatarFallback>
                   </Avatar>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Local video (picture-in-picture) */}
-          <div className="absolute bottom-4 right-4 w-40 h-30 bg-black rounded-lg overflow-hidden shadow-lg border-2 border-background">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            {!isVideoEnabled && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={userPhoto || undefined} />
-                  <AvatarFallback>{userName[0]}</AvatarFallback>
-                </Avatar>
+          {/* Chat panel */}
+          {showChat && (
+            <div className="w-80 border-l flex flex-col bg-background hidden lg:flex">
+              <div className="p-3 border-b flex items-center justify-between">
+                <span className="font-medium text-sm">Chat</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowChat(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-          </div>
+              <ScrollArea className="flex-1 p-3" ref={chatScrollRef as any}>
+                <div className="space-y-3">
+                  {chatMessages.length === 0 ? (
+                    <p className="text-center text-muted-foreground text-xs py-4">
+                      No messages yet. Start chatting!
+                    </p>
+                  ) : (
+                    chatMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "max-w-[85%] rounded-lg p-2 text-sm",
+                          msg.senderId === currentUserId
+                            ? "ml-auto bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        )}
+                      >
+                        <p>{msg.text}</p>
+                        <p className="text-[10px] opacity-70 mt-1">
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+              <div className="p-3 border-t flex gap-2">
+                <Input
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="text-sm"
+                />
+                <Button size="icon" onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Controls */}
@@ -318,6 +441,15 @@ export function PrivateVideoCallDialog({
             onClick={handleToggleAudio}
           >
             {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+          </Button>
+
+          <Button
+            variant={showChat ? 'default' : 'secondary'}
+            size="lg"
+            className="rounded-full h-12 w-12"
+            onClick={() => setShowChat(!showChat)}
+          >
+            <MessageCircle className="h-5 w-5" />
           </Button>
           
           <Button
