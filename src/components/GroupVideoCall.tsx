@@ -45,7 +45,8 @@ export function GroupVideoCall({
   isOwner
 }: GroupVideoCallProps) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  // Men start with mic muted by default, women (host) start unmuted
+  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
