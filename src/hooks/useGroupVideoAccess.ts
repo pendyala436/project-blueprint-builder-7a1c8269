@@ -110,7 +110,8 @@ export function useGroupVideoAccess({
       }));
       return false;
     }
-  }, [groupId, userId, safeSetState, clearTimers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, userId]);
 
   const startCountdown = useCallback((seconds: number) => {
     // Clear existing timers
@@ -184,7 +185,7 @@ export function useGroupVideoAccess({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  // Initial access check
+  // Initial access check - only run once on mount
   useEffect(() => {
     mountedRef.current = true;
     checkAccess();
@@ -193,7 +194,8 @@ export function useGroupVideoAccess({
       mountedRef.current = false;
       clearTimers();
     };
-  }, [checkAccess, clearTimers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, userId]);
 
   return {
     ...state,
