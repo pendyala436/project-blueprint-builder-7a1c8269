@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Video, Gift, Clock, Globe, Loader2, X, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GiftItem {
@@ -222,12 +223,19 @@ export function PrivateCallInvitation({
                 Your balance: <span className="font-semibold text-foreground">₹{walletBalance.toFixed(0)}</span>
               </p>
               
+              <p className="text-xs text-center text-muted-foreground bg-muted/50 p-2 rounded">
+                Tap a gift below to send it and join the call
+              </p>
+              
               <div className="grid grid-cols-2 gap-2">
                 {gifts.map((gift) => (
                   <Button
                     key={gift.id}
-                    variant="outline"
-                    className="h-auto py-3 flex-col gap-1"
+                    variant={walletBalance >= gift.price ? "default" : "outline"}
+                    className={cn(
+                      "h-auto py-3 flex-col gap-1",
+                      walletBalance >= gift.price && "bg-primary hover:bg-primary/90"
+                    )}
                     disabled={isSendingGift || walletBalance < gift.price}
                     onClick={() => handleSendGift(gift)}
                   >
@@ -237,7 +245,10 @@ export function PrivateCallInvitation({
                       <>
                         <span className="text-2xl">{gift.emoji}</span>
                         <span className="text-xs font-normal">{gift.name}</span>
-                        <span className="text-xs font-semibold text-primary">₹{gift.price}</span>
+                        <span className="text-xs font-semibold">₹{gift.price}</span>
+                        {walletBalance >= gift.price && (
+                          <span className="text-[10px] font-medium mt-1">TAP TO ACCEPT</span>
+                        )}
                       </>
                     )}
                   </Button>
@@ -246,13 +257,13 @@ export function PrivateCallInvitation({
               
               {gifts.length === 0 && (
                 <p className="text-center text-muted-foreground text-sm py-4">
-                  No gifts available. Please try again.
+                  No gifts available at ₹{invitation.min_gift_amount}+ price. Please try again.
                 </p>
               )}
               
               {walletBalance < invitation.min_gift_amount && (
                 <p className="text-center text-destructive text-xs">
-                  Insufficient balance. Please recharge your wallet.
+                  Insufficient balance (₹{walletBalance.toFixed(0)}). Please recharge your wallet.
                 </p>
               )}
             </div>
@@ -367,13 +378,20 @@ export function PrivateCallInvitation({
               Your balance: <span className="font-semibold text-foreground">₹{walletBalance.toFixed(0)}</span>
             </p>
             
+            <p className="text-xs text-center text-muted-foreground bg-muted/50 p-2 rounded">
+              Tap a gift below to send it and join the call
+            </p>
+            
             <ScrollArea className="h-48">
               <div className="grid grid-cols-2 gap-2 pr-2">
                 {gifts.map((gift) => (
                   <Button
                     key={gift.id}
-                    variant="outline"
-                    className="h-auto py-3 flex-col gap-1"
+                    variant={walletBalance >= gift.price ? "default" : "outline"}
+                    className={cn(
+                      "h-auto py-3 flex-col gap-1",
+                      walletBalance >= gift.price && "bg-primary hover:bg-primary/90"
+                    )}
                     disabled={isSendingGift || walletBalance < gift.price}
                     onClick={() => handleSendGift(gift)}
                   >
@@ -383,7 +401,10 @@ export function PrivateCallInvitation({
                       <>
                         <span className="text-2xl">{gift.emoji}</span>
                         <span className="text-xs font-normal">{gift.name}</span>
-                        <span className="text-xs font-semibold text-primary">₹{gift.price}</span>
+                        <span className="text-xs font-semibold">₹{gift.price}</span>
+                        {walletBalance >= gift.price && (
+                          <span className="text-[10px] font-medium mt-1">TAP TO ACCEPT</span>
+                        )}
                       </>
                     )}
                   </Button>
@@ -393,13 +414,13 @@ export function PrivateCallInvitation({
             
             {gifts.length === 0 && (
               <p className="text-center text-muted-foreground text-sm py-4">
-                No gifts available. Please try again.
+                No gifts available at ₹{invitation.min_gift_amount}+ price. Please try again.
               </p>
             )}
             
             {walletBalance < invitation.min_gift_amount && (
               <p className="text-center text-destructive text-xs">
-                Insufficient balance. Please recharge your wallet.
+                Insufficient balance (₹{walletBalance.toFixed(0)}). Please recharge your wallet.
               </p>
             )}
           </div>
