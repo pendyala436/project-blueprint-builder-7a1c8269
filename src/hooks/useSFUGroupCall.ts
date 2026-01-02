@@ -26,6 +26,7 @@ interface SFUGroupCallState {
   participants: Participant[];
   viewerCount: number;
   error: string | null;
+  currentSpeakerId: string | null; // Track who has the mic (besides host)
 }
 
 export function useSFUGroupCall({
@@ -44,6 +45,7 @@ export function useSFUGroupCall({
     participants: [],
     viewerCount: 0,
     error: null,
+    currentSpeakerId: null,
   });
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -431,6 +433,10 @@ export function useSFUGroupCall({
       })
       .on('broadcast', { event: 'stream-ended' }, () => {
         cleanup();
+      })
+      .on('broadcast', { event: 'speaker-changed' }, ({ payload }) => {
+        // Update current speaker
+        safeSetState(prev => ({ ...prev, currentSpeakerId: payload.speakerId }));
       });
 
     channel.subscribe(async (status) => {
@@ -587,6 +593,7 @@ export function useSFUGroupCall({
       participants: [],
       viewerCount: 0,
       error: null,
+      currentSpeakerId: null,
     }));
   }, [safeSetState]);
 
@@ -631,6 +638,55 @@ export function useSFUGroupCall({
     }
   }, []);
 
+  // Request to speak (for non-owners) - only one man can speak at a time
+  const requestSpeak = useCallback(() => {
+    if (isOwner) return true; // Host can always speak
+    
+    // Check if someone else is already speaking
+    if (state.currentSpeakerId && state.currentSpeakerId !== currentUserId) {
+      return false; // Someone else is speaking
+    }
+
+    // Broadcast that we're now the speaker
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'speaker-changed',
+      payload: { speakerId: currentUserId, speakerName: userName },
+    });
+
+    safeSetState(prev => ({ ...prev, currentSpeakerId: currentUserId }));
+
+    // Enable audio
+    if (localStream.current) {
+      localStream.current.getAudioTracks().forEach(track => {
+        track.enabled = true;
+      });
+    }
+
+    return true;
+  }, [isOwner, state.currentSpeakerId, currentUserId, userName, safeSetState]);
+
+  // Release speaking slot
+  const releaseSpeak = useCallback(() => {
+    if (state.currentSpeakerId === currentUserId) {
+      // Broadcast that we're no longer speaking
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'speaker-changed',
+        payload: { speakerId: null, speakerName: null },
+      });
+
+      safeSetState(prev => ({ ...prev, currentSpeakerId: null }));
+    }
+
+    // Disable audio
+    if (localStream.current) {
+      localStream.current.getAudioTracks().forEach(track => {
+        track.enabled = false;
+      });
+    }
+  }, [state.currentSpeakerId, currentUserId, safeSetState]);
+
   // Cleanup on unmount
   useEffect(() => {
     mountedRef.current = true;
@@ -649,6 +705,8 @@ export function useSFUGroupCall({
     endStream,
     toggleVideo,
     toggleAudio,
+    requestSpeak,
+    releaseSpeak,
     cleanup,
   };
 }
