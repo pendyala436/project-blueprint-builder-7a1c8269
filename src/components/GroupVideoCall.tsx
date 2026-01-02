@@ -222,7 +222,12 @@ export function GroupVideoCall({
     }
   };
 
-  const remoteParticipants = participants.filter(p => p.id !== currentUserId);
+  // For men: only show the host (woman). Men cannot see each other.
+  // For host: show all remote participants
+  const hostParticipant = participants.find(p => p.isOwner);
+  const remoteParticipants = isOwner 
+    ? participants.filter(p => p.id !== currentUserId) 
+    : []; // Men don't see other men
 
   // Display language name in header
   const displayLanguage = groupLanguage || group.owner_language;
@@ -285,63 +290,70 @@ export function GroupVideoCall({
 
             {/* Video Grid - only show if owner or has access */}
             {(isOwner || hasAccess) && (
-              <div className={`grid gap-2 ${
-                remoteParticipants.length === 0 ? 'grid-cols-1' :
-                remoteParticipants.length <= 1 ? 'grid-cols-2' :
-                remoteParticipants.length <= 3 ? 'grid-cols-2' :
-                'grid-cols-3'
-              }`}>
-                {/* Local Video (Owner/Self) */}
-                <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                  {!isVideoEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={userPhoto || undefined} />
-                        <AvatarFallback className="text-2xl">{userName[0]}</AvatarFallback>
-                      </Avatar>
+              <div className="grid gap-2 grid-cols-1">
+                {/* For Host (Woman): Show her own video full screen */}
+                {isOwner && (
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    {!isVideoEnabled && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={userPhoto || undefined} />
+                          <AvatarFallback className="text-2xl">{userName[0]}</AvatarFallback>
+                        </Avatar>
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                      {userName} (Host)
                     </div>
-                  )}
-                  <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                    {userName} {isOwner && '(Host)'}
+                    <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                      {viewerCount} viewers watching
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Remote Participants */}
-                {remoteParticipants.map(participant => (
-                  <div key={participant.id} className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                {/* For Men: Show only the host's video (woman) - full screen */}
+                {!isOwner && hostParticipant && (
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
                     <video
                       ref={(el) => {
-                        if (el) {
-                          participantVideosRef.current.set(participant.id, el);
-                          if (participant.stream) {
-                            el.srcObject = participant.stream;
-                          }
+                        if (el && hostParticipant.stream) {
+                          el.srcObject = hostParticipant.stream;
                         }
                       }}
                       autoPlay
                       playsInline
                       className="w-full h-full object-cover"
                     />
-                    {!participant.stream && (
+                    {!hostParticipant.stream && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                         <Avatar className="h-16 w-16">
-                          <AvatarImage src={participant.photo} />
-                          <AvatarFallback className="text-2xl">{participant.name[0]}</AvatarFallback>
+                          <AvatarImage src={hostParticipant.photo} />
+                          <AvatarFallback className="text-2xl">{hostParticipant.name[0]}</AvatarFallback>
                         </Avatar>
                       </div>
                     )}
                     <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                      {participant.name} {participant.isOwner && '(Host)'}
+                      {hostParticipant.name} (Host)
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* For Men: Show waiting message if host not streaming yet */}
+                {!isOwner && !hostParticipant && (
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                      <p>Waiting for host to start streaming...</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -356,20 +368,26 @@ export function GroupVideoCall({
             {/* Controls */}
             {(isOwner || hasAccess) && (
               <div className="flex items-center justify-center gap-4">
-                <Button
-                  variant={isVideoEnabled ? 'secondary' : 'destructive'}
-                  size="icon"
-                  onClick={handleToggleVideo}
-                  disabled={isConnecting}
-                >
-                  {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-                </Button>
+                {/* Video toggle - only for host (women). Men's video is not visible to anyone */}
+                {isOwner && (
+                  <Button
+                    variant={isVideoEnabled ? 'secondary' : 'destructive'}
+                    size="icon"
+                    onClick={handleToggleVideo}
+                    disabled={isConnecting}
+                    title="Toggle your video"
+                  >
+                    {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+                  </Button>
+                )}
 
+                {/* Audio toggle - for both host and men (men can speak) */}
                 <Button
                   variant={isAudioEnabled ? 'secondary' : 'destructive'}
                   size="icon"
                   onClick={handleToggleAudio}
                   disabled={isConnecting}
+                  title={isOwner ? "Toggle your microphone" : "Toggle your microphone (audio only)"}
                 >
                   {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                 </Button>
