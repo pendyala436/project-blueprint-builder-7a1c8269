@@ -329,10 +329,15 @@ export function GroupVideoCall({
 
   // For men: only show the host (woman). Men cannot see each other.
   // For host: show all remote participants
-  const hostParticipant = participants.find(p => p.isOwner);
+  // Find host by isOwner flag OR by having a stream (for men, only host streams video)
+  const hostParticipant = participants.find(p => p.isOwner || p.stream);
   const remoteParticipants = isOwner 
     ? participants.filter(p => p.id !== currentUserId) 
     : []; // Men don't see other men
+
+  // Debug: Log participants to verify host detection
+  console.log('[GroupVideoCall] Participants:', participants.map(p => ({ id: p.id, isOwner: p.isOwner, hasStream: !!p.stream })));
+  console.log('[GroupVideoCall] Host participant:', hostParticipant ? { id: hostParticipant.id, isOwner: hostParticipant.isOwner, hasStream: !!hostParticipant.stream } : 'Not found');
 
   // Display language name in header
   const displayLanguage = groupLanguage || group.owner_language;
