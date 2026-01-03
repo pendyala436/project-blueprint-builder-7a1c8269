@@ -268,6 +268,12 @@ export default {
           DEFAULT: "hsl(var(--live))",
           foreground: "hsl(var(--live-foreground))",
         },
+        // Video/Camera overlay colors - intentionally dark for media display
+        video: {
+          DEFAULT: "hsl(var(--video-bg))",
+          overlay: "hsl(var(--video-overlay))",
+          text: "hsl(var(--video-text))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

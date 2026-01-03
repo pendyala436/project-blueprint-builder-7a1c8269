@@ -1791,12 +1791,12 @@ const ChatScreen = () => {
 
       {/* ============= CAMERA MODAL ============= */}
       {isCameraOpen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        <div className="fixed inset-0 z-50 bg-video flex flex-col">
           <div className="flex items-center justify-between p-4">
-            <button onClick={closeCamera} className="p-2 text-white">
+            <button onClick={closeCamera} className="p-2 text-video-text">
               <X className="w-6 h-6" />
             </button>
-            <span className="text-white font-medium">Take Selfie</span>
+            <span className="text-video-text font-medium">Take Selfie</span>
             <div className="w-10" />
           </div>
           <div className="flex-1 flex items-center justify-center">

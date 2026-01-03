@@ -428,11 +428,11 @@ export function TeamsStyleGroupWindow({
             hasChat ? "w-1/2" : "flex-1"
           )}>
             {/* Video Grid - Only show host (woman) video */}
-            <div className="flex-1 p-2 bg-black min-h-0 overflow-y-auto">
+            <div className="flex-1 p-2 bg-video min-h-0 overflow-y-auto">
               <div className="h-full">
                 {isOwner ? (
                   /* Owner sees their own video */
-                  <div className="relative bg-gray-900 rounded-lg overflow-hidden h-full min-h-[200px]">
+                  <div className="relative bg-video rounded-lg overflow-hidden h-full min-h-[200px]">
                     <video
                       ref={localVideoRef}
                       autoPlay
@@ -441,20 +441,20 @@ export function TeamsStyleGroupWindow({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     {!isVideoEnabled && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                      <div className="absolute inset-0 flex items-center justify-center bg-video">
                         <Avatar className="h-16 w-16">
                           <AvatarImage src={userPhoto || undefined} />
                           <AvatarFallback className="text-xl">{userName[0]}</AvatarFallback>
                         </Avatar>
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
+                    <div className="absolute bottom-2 left-2 bg-video-overlay/60 px-2 py-1 rounded text-video-text text-xs z-10">
                       You (Host)
                     </div>
                   </div>
                 ) : hostParticipant ? (
                   /* Men see only the host (woman) video */
-                  <div className="relative bg-gray-900 rounded-lg overflow-hidden h-full min-h-[200px]">
+                  <div className="relative bg-video rounded-lg overflow-hidden h-full min-h-[200px]">
                     <video
                       ref={(el) => {
                         if (el && hostParticipant.stream) {
@@ -466,20 +466,20 @@ export function TeamsStyleGroupWindow({
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                     {!hostParticipant.stream && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                      <div className="absolute inset-0 flex items-center justify-center bg-video">
                         <Avatar className="h-16 w-16">
                           <AvatarImage src={hostParticipant.photo} />
                           <AvatarFallback className="text-xl">{hostParticipant.name[0]}</AvatarFallback>
                         </Avatar>
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
+                    <div className="absolute bottom-2 left-2 bg-video-overlay/60 px-2 py-1 rounded text-video-text text-xs z-10">
                       {hostParticipant.name} (Host)
                     </div>
                   </div>
                 ) : (
                   /* Waiting for host to go live */
-                  <div className="h-full min-h-[200px] flex items-center justify-center bg-gray-900 rounded-lg">
+                  <div className="h-full min-h-[200px] flex items-center justify-center bg-video rounded-lg">
                     <div className="text-center text-muted-foreground">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                       <p>Waiting for host...</p>
