@@ -160,11 +160,11 @@ export const AIElectionPanel = ({
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Timer className="h-4 w-4 text-blue-500" />
+                <Timer className="h-4 w-4 text-info" />
                 <span className="text-sm font-medium">Voting Period</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+                <Badge variant="outline" className="bg-info/10 border-info/30 text-info">
                   {daysRemaining > 0 ? `${daysRemaining}d ${hoursRemaining}h left` : `${hoursRemaining}h left`}
                 </Badge>
               </div>
@@ -179,18 +179,18 @@ export const AIElectionPanel = ({
       {/* Current Leader */}
       <Card className={cn(
         "border-2",
-        leader ? "border-amber-500/30 bg-amber-500/5" : "border-muted"
+        leader ? "border-crown/30 bg-crown/5" : "border-muted"
       )}>
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-amber-500/20">
-              <Crown className="h-5 w-5 text-amber-500" />
+            <div className="p-2 rounded-full bg-crown/20">
+              <Crown className="h-5 w-5 text-crown" />
             </div>
             {leader ? (
               <div className="flex items-center gap-3 flex-1">
-                <Avatar className="h-10 w-10 border-2 border-amber-500/50">
+                <Avatar className="h-10 w-10 border-2 border-crown/50">
                   <AvatarImage src={leader.photo_url || ""} />
-                  <AvatarFallback className="bg-amber-500/20">{leader.full_name?.[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-crown/20">{leader.full_name?.[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-semibold">{leader.full_name}</p>
@@ -256,7 +256,7 @@ export const AIElectionPanel = ({
       <Card className={cn(
         "border-2",
         hasActiveElection 
-          ? "border-green-500/30 bg-green-500/5" 
+          ? "border-success/30 bg-success/5" 
           : "border-muted"
       )}>
         <CardHeader className="pb-2">
@@ -266,7 +266,7 @@ export const AIElectionPanel = ({
               {hasActiveElection ? "Election in Progress" : "Elections"}
             </div>
             {hasActiveElection && (
-              <Badge className="bg-green-500 animate-pulse">LIVE</Badge>
+              <Badge className="bg-live text-live-foreground animate-pulse">LIVE</Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -314,7 +314,7 @@ export const AIElectionPanel = ({
                                 </AvatarFallback>
                               </Avatar>
                               {isLeading && (
-                                <Award className="h-4 w-4 text-amber-500 absolute -top-1 -right-1" />
+                                <Award className="h-4 w-4 text-crown absolute -top-1 -right-1" />
                               )}
                             </div>
                             <div>
@@ -326,7 +326,7 @@ export const AIElectionPanel = ({
                           </div>
                           <div className="flex items-center gap-2">
                             {isLeading && (
-                              <Badge className="bg-amber-500 text-white text-xs py-0">
+                              <Badge className="bg-crown text-crown-foreground text-xs py-0">
                                 Leading
                               </Badge>
                             )}
@@ -353,7 +353,7 @@ export const AIElectionPanel = ({
                     Cast Your Vote (Anonymous)
                   </Button>
                 ) : (
-                  <Badge variant="outline" className="w-full justify-center py-2 bg-green-500/10 border-green-500/30 text-green-600">
+                  <Badge variant="outline" className="w-full justify-center py-2 bg-success/10 border-success/30 text-success">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     You have voted
                   </Badge>

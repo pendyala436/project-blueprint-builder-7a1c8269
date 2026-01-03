@@ -844,30 +844,30 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
           <div className="grid grid-cols-2 gap-3">
             {/* My Today's Earnings */}
-            <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
+            <Card className="p-4 bg-gradient-to-br from-earnings/10 to-earnings/5 border-earnings/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500/20">
-                  <IndianRupee className="w-5 h-5 text-emerald-600" />
+                <div className="p-2 rounded-xl bg-earnings/20">
+                  <IndianRupee className="w-5 h-5 text-earnings" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-emerald-600">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-earnings">₹{myTodayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
 
             {/* Biggest Earner Today */}
-            <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+            <Card className="p-4 bg-gradient-to-br from-crown/10 to-crown/5 border-crown/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-500/20">
-                  <Crown className="w-5 h-5 text-amber-600" />
+                <div className="p-2 rounded-xl bg-crown/20">
+                  <Crown className="w-5 h-5 text-crown" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
                   {biggestEarner ? (
                     <>
                       <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
-                      <p className="text-lg font-bold text-amber-600">₹{biggestEarner.amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-crown">₹{biggestEarner.amount.toLocaleString()}</p>
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>

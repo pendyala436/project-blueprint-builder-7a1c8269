@@ -662,13 +662,13 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         <div className={cn(
           "flex items-center gap-2 p-3 rounded-lg",
           verificationStatus === 'verified' 
-            ? "bg-green-500/10 border border-green-500/30" 
-            : "bg-yellow-500/10 border border-yellow-500/30"
+            ? "bg-verified/10 border border-verified/30" 
+            : "bg-pending/10 border border-pending/30"
         )}>
           {verificationStatus === 'verified' ? (
-            <ShieldCheck className="w-5 h-5 text-green-500" />
+            <ShieldCheck className="w-5 h-5 text-verified" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-yellow-500" />
+            <AlertCircle className="w-5 h-5 text-pending" />
           )}
           <div className="flex-1">
             <p className="text-sm font-medium">
@@ -681,7 +681,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
             </p>
           </div>
           {verificationStatus === 'verified' && (
-            <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500/30">
+            <Badge variant="outline" className="bg-verified/20 text-verified border-verified/30">
               Verified
             </Badge>
           )}
