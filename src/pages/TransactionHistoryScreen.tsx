@@ -50,21 +50,7 @@ interface ChatSession {
   partner_photo?: string;
 }
 
-interface VideoCallSession {
-  id: string;
-  call_id: string;
-  man_user_id: string;
-  woman_user_id: string;
-  total_earned: number;
-  total_minutes: number;
-  rate_per_minute: number;
-  status: string;
-  started_at: string | null;
-  ended_at: string | null;
-  end_reason: string | null;
-  partner_name?: string;
-  partner_photo?: string;
-}
+// Private calls are gift-based only - no separate video call sessions for men
 
 interface GiftTransaction {
   id: string;
@@ -83,7 +69,7 @@ interface GiftTransaction {
 
 interface UnifiedTransaction {
   id: string;
-  type: 'recharge' | 'chat' | 'video' | 'gift' | 'withdrawal' | 'other';
+  type: 'recharge' | 'chat' | 'gift' | 'private_call' | 'group_call' | 'withdrawal' | 'other';
   amount: number;
   description: string;
   created_at: string;
@@ -91,7 +77,7 @@ interface UnifiedTransaction {
   counterparty?: string;
   balance_after?: number;
   is_credit: boolean;
-  icon: 'wallet' | 'chat' | 'video' | 'gift' | 'arrow';
+  icon: 'wallet' | 'chat' | 'gift' | 'arrow';
   details?: string;
 }
 
@@ -103,7 +89,6 @@ const TransactionHistoryScreen = () => {
   const [currentBalance, setCurrentBalance] = useState<number>(0);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [videoCallSessions, setVideoCallSessions] = useState<VideoCallSession[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
   const [activeTab, setActiveTab] = useState("all");
@@ -256,31 +241,7 @@ const TransactionHistoryScreen = () => {
         setChatSessions(enrichedSessions);
       }
 
-      // Fetch video call sessions for men
-      const { data: videoCalls } = await supabase
-        .from("video_call_sessions")
-        .select("*")
-        .eq("man_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (videoCalls && videoCalls.length > 0) {
-        const partnerIds = videoCalls.map(s => s.woman_user_id);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url")
-          .in("user_id", partnerIds);
-
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-        
-        const enrichedCalls = videoCalls.map(s => ({
-          ...s,
-          partner_name: profileMap.get(s.woman_user_id)?.full_name || "Anonymous",
-          partner_photo: profileMap.get(s.woman_user_id)?.photo_url
-        }));
-
-        setVideoCallSessions(enrichedCalls);
-      }
+      // Private calls are gift-based - no separate video sessions to fetch
 
     } catch (error) {
       console.error("Error loading transaction data:", error);
@@ -299,9 +260,8 @@ const TransactionHistoryScreen = () => {
     walletTx.forEach(tx => {
       const isRecharge = tx.type === 'credit' && tx.description?.toLowerCase().includes('recharge');
       const isWithdrawal = tx.description?.toLowerCase().includes('withdrawal');
-      const isGift = tx.description?.toLowerCase().includes('gift');
+      const isGift = tx.description?.toLowerCase().includes('gift') || tx.description?.toLowerCase().includes('video') || tx.description?.toLowerCase().includes('private');
       const isChat = tx.description?.toLowerCase().includes('chat');
-      const isVideo = tx.description?.toLowerCase().includes('video');
 
       let type: UnifiedTransaction['type'] = 'other';
       let icon: UnifiedTransaction['icon'] = 'arrow';
@@ -310,7 +270,6 @@ const TransactionHistoryScreen = () => {
       else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
       else if (isGift) { type = 'gift'; icon = 'gift'; }
       else if (isChat) { type = 'chat'; icon = 'chat'; }
-      else if (isVideo) { type = 'video'; icon = 'video'; }
 
       unified.push({
         id: tx.id,
@@ -411,12 +370,6 @@ const TransactionHistoryScreen = () => {
             <MessageCircle className={cn("h-4 w-4", colorClass)} />
           </div>
         );
-      case 'video':
-        return (
-          <div className="p-2 rounded-full bg-purple-500/10">
-            <Video className="h-4 w-4 text-purple-500" />
-          </div>
-        );
       case 'gift':
         return (
           <div className="p-2 rounded-full bg-amber-500/10">
@@ -483,17 +436,13 @@ const TransactionHistoryScreen = () => {
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <Card className="p-2 text-center">
             <p className="text-xs text-muted-foreground">Chats</p>
             <p className="text-lg font-bold">{chatSessions.length}</p>
           </Card>
           <Card className="p-2 text-center">
-            <p className="text-xs text-muted-foreground">Video</p>
-            <p className="text-lg font-bold">{videoCallSessions.length}</p>
-          </Card>
-          <Card className="p-2 text-center">
-            <p className="text-xs text-muted-foreground">Gifts</p>
+            <p className="text-xs text-muted-foreground">Gifts Sent</p>
             <p className="text-lg font-bold">{giftTransactions.length}</p>
           </Card>
           <Card className="p-2 text-center">
@@ -504,10 +453,9 @@ const TransactionHistoryScreen = () => {
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
-            <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
             <TabsTrigger value="gifts" className="text-xs">Gifts</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
           </TabsList>
@@ -614,66 +562,6 @@ const TransactionHistoryScreen = () => {
                   <div className="text-center py-12 text-muted-foreground">
                     <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>No chat sessions yet</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Video Call Sessions */}
-          <TabsContent value="video" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3 pr-4">
-                {videoCallSessions.map((session) => (
-                  <Card key={session.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-purple-500/10">
-                          <Video className="h-4 w-4 text-purple-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">
-                                Video with {session.partner_name}
-                              </span>
-                              {getStatusBadge(session.status)}
-                            </div>
-                            <span className="font-semibold text-purple-600 whitespace-nowrap">
-                              -₹{Number(session.total_earned).toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDuration(Number(session.total_minutes))}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <IndianRupee className="h-3 w-3" />
-                              {session.rate_per_minute}/min
-                            </span>
-                            {session.started_at && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {format(new Date(session.started_at), "MMM d, h:mm a")}
-                              </span>
-                            )}
-                          </div>
-                          {session.end_reason && (
-                            <p className="text-xs text-warning mt-1">
-                              {getEndReasonText(session.end_reason)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {videoCallSessions.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Video className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No video calls yet</p>
                   </div>
                 )}
               </div>
