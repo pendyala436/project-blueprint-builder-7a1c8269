@@ -428,15 +428,77 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
   return text;
 }
 
+// Language code mapping for Google Translate API
+const GOOGLE_LANG_CODES: Record<string, string> = {
+  hindi: 'hi', telugu: 'te', tamil: 'ta', bengali: 'bn', marathi: 'mr',
+  gujarati: 'gu', kannada: 'kn', malayalam: 'ml', punjabi: 'pa', odia: 'or',
+  english: 'en', spanish: 'es', french: 'fr', german: 'de', italian: 'it',
+  portuguese: 'pt', russian: 'ru', chinese: 'zh-CN', japanese: 'ja', korean: 'ko',
+  arabic: 'ar', turkish: 'tr', dutch: 'nl', polish: 'pl', vietnamese: 'vi',
+  thai: 'th', indonesian: 'id', malay: 'ms', urdu: 'ur', persian: 'fa',
+};
+
 /**
- * Main translation function - uses browser-based ML with dictionary fallback
+ * Free Google Translate API (no API key required)
+ * Based on: https://github.com/Goutam245/Language-Translator-Web-Application
+ */
+async function translateWithFreeAPI(
+  text: string, 
+  sourceLang: string, 
+  targetLang: string
+): Promise<string | null> {
+  try {
+    const sl = GOOGLE_LANG_CODES[sourceLang] || sourceLang;
+    const tl = GOOGLE_LANG_CODES[targetLang] || targetLang;
+    
+    // Same language - return as is
+    if (sl === tl) {
+      return text;
+    }
+    
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+    
+    console.log('[DL-Translate] Calling free Google API:', { from: sl, to: tl, textLen: text.length });
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      console.log('[DL-Translate] Free API failed:', response.status);
+      return null;
+    }
+    
+    const json = await response.json();
+    // Response format: [[["translated text","original text",null,null,10],...],null,"en",...]
+    if (json && json[0] && Array.isArray(json[0])) {
+      const translated = json[0].map((item: any[]) => item[0]).join('');
+      console.log('[DL-Translate] Free API success:', translated.slice(0, 50));
+      return translated;
+    }
+    
+    return null;
+  } catch (error) {
+    console.log('[DL-Translate] Free API error:', error);
+    return null;
+  }
+}
+
+// Threshold for using free API (word count)
+const FREE_API_THRESHOLD = 4;
+
+/**
+ * Main translation function - uses dictionary + free Google API fallback
  * 
  * Flow:
- * 1. Check cache first (instant)
- * 2. Check phrase dictionary (common phrases)
- * 3. Auto-initialize ML if not ready (background)
- * 4. Use ML translation if ready
- * 5. Fallback to dictionary-based conversion
+ * 1. Same language check → skip translation
+ * 2. Check cache first (instant)
+ * 3. Check phrase dictionary (common phrases)
+ * 4. For short text: use dictionary/phonetic
+ * 5. For long text: use free Google Translate API
  * 
  * Translation is NON-BLOCKING for typing
  */
@@ -465,9 +527,9 @@ export async function translateText(
     isLatin: isLatinScript(trimmed)
   });
   
-  // Same language - no translation needed
+  // Same language - no translation needed (IMPORTANT: skip all processing)
   if (isSameLanguage(normSource, normTarget)) {
-    console.log('[DL-Translate] Same language, skipping');
+    console.log('[DL-Translate] Same language detected, skipping translation');
     return createResult(trimmed, trimmed, normSource, normTarget, false, 'same_language');
   }
   
@@ -501,7 +563,20 @@ export async function translateText(
     }
   }
   
-  // Use pure in-memory dictionary translation (NO ML, NO external APIs)
+  // Check word count for API fallback decision
+  const wordCount = trimmed.split(/\s+/).length;
+  
+  // For long messages, try free Google Translate API first
+  if (wordCount >= FREE_API_THRESHOLD) {
+    console.log('[DL-Translate] Long message detected, using free API');
+    const apiResult = await translateWithFreeAPI(trimmed, normSource, normTarget);
+    if (apiResult && apiResult !== trimmed) {
+      addToCache(cacheKey, apiResult);
+      return createResult(trimmed, apiResult, normSource, normTarget, true, 'translate');
+    }
+  }
+  
+  // Use pure in-memory dictionary translation
   console.log('[DL-Translate] Using in-memory dictionary translation');
   const translated = await translateWithDictionary(trimmed, normSource, normTarget);
   if (translated && translated !== trimmed) {
@@ -516,6 +591,16 @@ export async function translateText(
     console.log('[DL-Translate] Dictionary fallback:', dictResult.slice(0, 50));
     addToCache(cacheKey, dictResult);
     return createResult(trimmed, dictResult, normSource, normTarget, true, 'translate');
+  }
+  
+  // For short messages that failed dictionary, also try free API
+  if (wordCount < FREE_API_THRESHOLD) {
+    console.log('[DL-Translate] Short message dictionary failed, trying free API');
+    const apiResult = await translateWithFreeAPI(trimmed, normSource, normTarget);
+    if (apiResult && apiResult !== trimmed) {
+      addToCache(cacheKey, apiResult);
+      return createResult(trimmed, apiResult, normSource, normTarget, true, 'translate');
+    }
   }
   
   // Try reverse translation (target→source dictionary lookup for receiver)
