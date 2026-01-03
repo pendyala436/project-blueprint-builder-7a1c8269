@@ -1,12 +1,13 @@
 /**
- * Embedded Translation Engine
+ * Embedded Translation Engine (DL-Translate Pattern)
  * 
  * Multi-provider translation using:
- * - Browser-based ML (Transformers.js + NLLB-200) - PRIMARY
+ * - Browser-based ML (Transformers.js + M2M100) - PRIMARY
  * - Embedded dictionaries (common phrases)
  * - Transliteration dictionaries
  * 
- * All logic embedded in client code - NO external API calls
+ * Based on: https://github.com/xhluca/dl-translate
+ * Supports 200+ languages - All embedded in client code - NO external API calls
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -307,7 +308,7 @@ export async function translateText(
     }
   }
   
-  // Use browser-based ML translation (Transformers.js + NLLB-200)
+  // Use browser-based ML translation (Transformers.js + M2M100 / dl-translate)
   let translated = await translateWithML(trimmed, normSource, normTarget);
   
   // Fallback to dictionary if ML fails

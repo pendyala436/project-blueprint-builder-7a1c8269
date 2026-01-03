@@ -1,24 +1,29 @@
 /**
  * DL-Translate Translation Module
  * 
- * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
+ * Browser-based translation using Transformers.js + M2M100 model
  * Based on: https://github.com/xhluca/dl-translate
  * 
- * NO external edge functions - all logic embedded in client code
+ * NO external API calls - all logic embedded in client code
  * 
- * Features:
- * - Real-time typing in sender's native language
- * - Automatic translation for recipient
- * - Skip translation when same language
- * - 200+ language support
+ * Flow:
+ * 1. Typing: Latin letters based on user's mother tongue
+ * 2. Preview: Live transliteration into native script
+ * 3. Send: Translation happens in background
+ * 4. Receiver: Sees message in their mother tongue
+ * 5. Bi-directional: Same flow for both users
+ * 6. Dynamic: Supports 200 languages
+ * 7. Non-blocking: Typing is not affected by translation
  * 
  * @example
  * ```tsx
- * import { translator, translate, useTranslator } from '@/lib/translation';
+ * import { useLiveTranslationChat } from '@/hooks/useLiveTranslationChat';
  * 
- * // Using the Translator class
- * const result = await translator.translate('Hello', { targetLanguage: 'hindi' });
- * console.log(result.translatedText); // "नमस्ते"
+ * const { livePreview, setInput, prepareOutgoing } = useLiveTranslationChat({
+ *   userLanguage: 'hindi',
+ *   partnerLanguage: 'telugu',
+ *   userId: 'user-1'
+ * });
  * ```
  */
 
