@@ -365,14 +365,14 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Shift Summary */}
+        {/* Shift Summary with Timings */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className={`p-2 rounded-lg ${SHIFT_COLORS.A}`}>
             <div className="flex items-center justify-center gap-1">
               {SHIFT_ICONS.A}
               <span className="font-semibold text-sm">A</span>
             </div>
-            <div className="text-xs mt-1">Morning</div>
+            <div className="text-[10px] mt-1">7 AM - 4 PM</div>
             <div className="text-lg font-bold">{scheduleData.shifts.A.women_count}</div>
           </div>
           <div className={`p-2 rounded-lg ${SHIFT_COLORS.B}`}>
@@ -380,7 +380,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
               {SHIFT_ICONS.B}
               <span className="font-semibold text-sm">B</span>
             </div>
-            <div className="text-xs mt-1">Afternoon</div>
+            <div className="text-[10px] mt-1">3 PM - 12 AM</div>
             <div className="text-lg font-bold">{scheduleData.shifts.B.women_count}</div>
           </div>
           <div className={`p-2 rounded-lg ${SHIFT_COLORS.C}`}>
@@ -388,9 +388,19 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
               {SHIFT_ICONS.C}
               <span className="font-semibold text-sm">C</span>
             </div>
-            <div className="text-xs mt-1">Night</div>
+            <div className="text-[10px] mt-1">11 PM - 8 AM</div>
             <div className="text-lg font-bold">{scheduleData.shifts.C.women_count}</div>
           </div>
+        </div>
+
+        {/* Off-Day Rules Notice */}
+        <div className="p-3 rounded-lg bg-muted/50 border border-border text-xs space-y-1">
+          <div className="font-medium text-foreground">Week-Off Rules:</div>
+          <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+            <li>2 off-days per week (can work if you want)</li>
+            <li>Off-days must be consecutive (no single day off)</li>
+            <li>All women of same shift cannot be off on same day</li>
+          </ul>
         </div>
 
         {/* Rotation Notice */}
@@ -402,7 +412,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
             </span>
           </div>
           <p className="text-xs text-warning/70 mt-1">
-            On the 28th of each month: A→B, B→C, C→A
+            On the 28th: A→B, B→C, C→A
           </p>
         </div>
 
@@ -472,19 +482,19 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
           <div className="flex items-center gap-1">
             <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.A}`} />
-            <span>Morning (A)</span>
+            <span>A (7AM-4PM)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.B}`} />
-            <span>Afternoon (B)</span>
+            <span>B (3PM-12AM)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.C}`} />
-            <span>Night (C)</span>
+            <span>C (11PM-8AM)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 rounded bg-muted/40" />
-            <span>Off Day</span>
+            <span>Off</span>
           </div>
           <div className="flex items-center gap-1">
             <Hand className="h-3 w-3" />
