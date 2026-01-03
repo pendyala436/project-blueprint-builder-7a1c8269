@@ -1,15 +1,13 @@
 /**
- * Translation Engine with DL-Translate HuggingFace API
+ * Translation Engine - 100% Local (No External APIs)
  * 
- * Translation Methods:
+ * Translation Methods (200+ languages):
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
- * - DL-Translate HuggingFace API (NLLB model - 200+ languages)
+ * - ML Translation via NLLB-200 model (200+ languages - in-browser)
  * 
- * Based on: 
- * - https://huggingface.co/spaces/kintong3000/dl-translate
- * - https://github.com/xhluca/dl-translate
+ * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -19,8 +17,8 @@ import { translateWithML as translateWithDictionary } from './ml-translation-eng
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
 import { translateWithDLTranslate } from './dl-translate-api';
 
-// Enable DL-Translate API fallback for ML translation
-let enableDLTranslateAPI = true;
+// Enable ML translation fallback
+let enableMLTranslation = true;
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -440,10 +438,10 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
  * 3. Check phrase dictionary (common phrases - instant)
  * 4. Dictionary-based translation (MAIN - instant, word-by-word)
  * 5. Phonetic transliteration (instant)
- * 6. DL-Translate HuggingFace API (FALLBACK - 200+ languages)
+ * 6. ML Translation via NLLB-200 (FALLBACK - 200+ languages in-browser)
  * 
  * Translation is NON-BLOCKING for typing
- * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
+ * Based on: https://github.com/xhluca/dl-translate
  */
 export async function translateText(
   text: string,
@@ -534,18 +532,18 @@ export async function translateText(
     }
   }
   
-  // ========== FALLBACK: DL-Translate HuggingFace API ==========
-  if (enableDLTranslateAPI) {
-    console.log('[DL-Translate] Trying HuggingFace API fallback...');
+  // ========== FALLBACK: ML Translation (NLLB-200 - 200+ languages) ==========
+  if (enableMLTranslation) {
+    console.log('[DL-Translate] Trying ML translation (NLLB-200)...');
     try {
-      const apiResult = await translateWithDLTranslate(trimmed, normSource, normTarget);
-      if (apiResult && apiResult !== trimmed) {
-        console.log('[DL-Translate] API translation result:', apiResult.slice(0, 50));
-        addToCache(cacheKey, apiResult);
-        return createResult(trimmed, apiResult, normSource, normTarget, true, 'translate');
+      const mlResult = await translateWithDLTranslate(trimmed, normSource, normTarget);
+      if (mlResult && mlResult !== trimmed) {
+        console.log('[DL-Translate] ML translation result:', mlResult.slice(0, 50));
+        addToCache(cacheKey, mlResult);
+        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
       }
     } catch (error) {
-      console.warn('[DL-Translate] API fallback failed:', error);
+      console.warn('[DL-Translate] ML translation failed:', error);
     }
   }
   
@@ -555,18 +553,18 @@ export async function translateText(
 }
 
 /**
- * Enable or disable DL-Translate HuggingFace API fallback
+ * Enable or disable ML translation fallback
  */
 export function setEdgeFunctionFallbackEnabled(enabled: boolean): void {
-  enableDLTranslateAPI = enabled;
-  console.log('[DL-Translate] API fallback:', enabled ? 'enabled' : 'disabled');
+  enableMLTranslation = enabled;
+  console.log('[DL-Translate] ML translation:', enabled ? 'enabled' : 'disabled');
 }
 
 /**
- * Check if DL-Translate API fallback is enabled
+ * Check if ML translation fallback is enabled
  */
 export function isEdgeFunctionFallbackEnabled(): boolean {
-  return enableDLTranslateAPI;
+  return enableMLTranslation;
 }
 
 /**

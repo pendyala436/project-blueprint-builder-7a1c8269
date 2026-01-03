@@ -1,8 +1,10 @@
 /**
  * Hook for DL-Translate Chat functionality
  * 
- * Uses DL-Translate HuggingFace API for 200+ languages:
- * https://huggingface.co/spaces/kintong3000/dl-translate
+ * 100% Local - No External API Calls
+ * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 
+ * Based on: https://github.com/xhluca/dl-translate
  * 
  * FEATURES:
  * - Auto-detect source and target language
