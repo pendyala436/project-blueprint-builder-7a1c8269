@@ -116,6 +116,12 @@ serve(async (req) => {
         return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
+      case 'get_full_monthly_schedule': {
+        // Get complete monthly schedule for all women grouped by language
+        const result = await getFullMonthlySchedule(supabase, userId, data?.language);
+        return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), { 
           status: 400, 
@@ -793,5 +799,229 @@ async function assignInitialShift(supabase: any, userId: string) {
       week_off_days: [DAYS_OF_WEEK[offDay1], DAYS_OF_WEEK[offDay2]],
       language_group: language
     }
+  };
+}
+
+// Get complete monthly schedule for all women grouped by language
+async function getFullMonthlySchedule(supabase: any, userId: string, language?: string) {
+  // Get user's language if not provided
+  let targetLanguage = language;
+  if (!targetLanguage) {
+    const { data: userLang } = await supabase
+      .from('user_languages')
+      .select('language_name')
+      .eq('user_id', userId)
+      .limit(1);
+    
+    if (!userLang?.[0]) {
+      const { data: profile } = await supabase
+        .from('female_profiles')
+        .select('primary_language')
+        .eq('user_id', userId)
+        .single();
+      targetLanguage = profile?.primary_language || 'English';
+    } else {
+      targetLanguage = userLang[0].language_name;
+    }
+  }
+
+  // Get current date info
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  // Next month info
+  const nextMonth = currentMonth + 1 > 11 ? 0 : currentMonth + 1;
+  const nextMonthYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
+  const daysInNextMonth = new Date(nextMonthYear, nextMonth + 1, 0).getDate();
+
+  // Get all approved women
+  const { data: allWomen } = await supabase
+    .from('female_profiles')
+    .select(`
+      user_id,
+      full_name,
+      photo_url,
+      country,
+      primary_language
+    `)
+    .eq('approval_status', 'approved')
+    .eq('account_status', 'active');
+
+  // Get user languages
+  const userIds = allWomen?.map((w: any) => w.user_id) || [];
+  const { data: userLanguages } = await supabase
+    .from('user_languages')
+    .select('user_id, language_name')
+    .in('user_id', userIds);
+
+  const languageMap = new Map();
+  userLanguages?.forEach((ul: any) => {
+    languageMap.set(ul.user_id, ul.language_name);
+  });
+
+  // Filter women by target language
+  const filteredWomen = allWomen?.filter((w: any) => {
+    const wLang = languageMap.get(w.user_id) || w.primary_language || 'English';
+    return wLang.toLowerCase() === targetLanguage?.toLowerCase();
+  }) || [];
+
+  // Get assignments for filtered women
+  const filteredUserIds = filteredWomen.map((w: any) => w.user_id);
+  const { data: assignments } = await supabase
+    .from('women_shift_assignments')
+    .select('*, shift_templates(*)')
+    .in('user_id', filteredUserIds)
+    .eq('is_active', true);
+
+  const assignmentMap = new Map();
+  assignments?.forEach((a: any) => {
+    assignmentMap.set(a.user_id, a);
+  });
+
+  // Build complete schedule for each woman
+  const womenSchedules: any[] = [];
+
+  filteredWomen.forEach((woman: any, index: number) => {
+    const assignment = assignmentMap.get(woman.user_id);
+    const shiftCode = assignment?.shift_templates?.shift_code || ['A', 'B', 'C'][index % 3];
+    const weekOffDays = assignment?.week_off_days || [(index * 2) % 7, (index * 2 + 3) % 7];
+    const timezoneOffset = getTimezoneOffset(woman.country || 'India');
+    const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
+    
+    // Determine role based on position
+    const womenInShift = filteredWomen.filter((w: any, i: number) => {
+      const a = assignmentMap.get(w.user_id);
+      return (a?.shift_templates?.shift_code || ['A', 'B', 'C'][i % 3]) === shiftCode;
+    });
+    const positionInShift = womenInShift.findIndex((w: any) => w.user_id === woman.user_id);
+    const roleType = positionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
+
+    // Calculate local times
+    const localStartTime = formatTimeForTimezone(shiftDef.start, timezoneOffset - 330);
+    const localEndTime = formatTimeForTimezone(shiftDef.end, timezoneOffset - 330);
+
+    // Generate daily schedule for remaining days of current month
+    const currentMonthDays: any[] = [];
+    for (let day = today.getDate(); day <= daysInCurrentMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const dayOfWeek = date.getDay();
+      const isWeekOff = weekOffDays.includes(dayOfWeek);
+      const isRotationDay = day === ROTATION_DAY;
+      
+      // After rotation day, shift changes
+      let effectiveShiftCode = shiftCode;
+      let effectiveShiftDef = shiftDef;
+      if (day >= ROTATION_DAY) {
+        effectiveShiftCode = rotateShift(shiftCode);
+        effectiveShiftDef = SHIFTS[effectiveShiftCode as keyof typeof SHIFTS];
+      }
+
+      currentMonthDays.push({
+        date: date.toISOString().split('T')[0],
+        day: day,
+        day_name: DAYS_OF_WEEK[dayOfWeek].substring(0, 3),
+        is_week_off: isWeekOff,
+        is_rotation_day: isRotationDay,
+        shift_code: effectiveShiftCode,
+        local_start_time: isWeekOff ? '-' : formatTimeForTimezone(effectiveShiftDef.start, timezoneOffset - 330),
+        local_end_time: isWeekOff ? '-' : formatTimeForTimezone(effectiveShiftDef.end, timezoneOffset - 330)
+      });
+    }
+
+    // Generate daily schedule for next month (all with rotated shift)
+    const nextMonthDays: any[] = [];
+    const rotatedShiftCode = rotateShift(shiftCode);
+    const rotatedShiftDef = SHIFTS[rotatedShiftCode as keyof typeof SHIFTS];
+    
+    for (let day = 1; day <= daysInNextMonth; day++) {
+      const date = new Date(nextMonthYear, nextMonth, day);
+      const dayOfWeek = date.getDay();
+      const isWeekOff = weekOffDays.includes(dayOfWeek);
+      const isNextRotationDay = day === ROTATION_DAY;
+
+      // After next rotation, shift changes again
+      let effectiveShiftCode = rotatedShiftCode;
+      let effectiveShiftDef = rotatedShiftDef;
+      if (day >= ROTATION_DAY) {
+        effectiveShiftCode = rotateShift(rotatedShiftCode);
+        effectiveShiftDef = SHIFTS[effectiveShiftCode as keyof typeof SHIFTS];
+      }
+
+      nextMonthDays.push({
+        date: date.toISOString().split('T')[0],
+        day: day,
+        day_name: DAYS_OF_WEEK[dayOfWeek].substring(0, 3),
+        is_week_off: isWeekOff,
+        is_rotation_day: isNextRotationDay,
+        shift_code: effectiveShiftCode,
+        local_start_time: isWeekOff ? '-' : formatTimeForTimezone(effectiveShiftDef.start, timezoneOffset - 330),
+        local_end_time: isWeekOff ? '-' : formatTimeForTimezone(effectiveShiftDef.end, timezoneOffset - 330)
+      });
+    }
+
+    womenSchedules.push({
+      user_id: woman.user_id,
+      full_name: woman.full_name || 'Unknown',
+      photo_url: woman.photo_url,
+      country: woman.country || 'India',
+      timezone_offset: timezoneOffset,
+      current_shift: {
+        code: shiftCode,
+        name: shiftDef.name,
+        display: shiftDef.display,
+        local_start_time: localStartTime,
+        local_end_time: localEndTime
+      },
+      role_type: roleType,
+      week_off_days: weekOffDays.map((d: number) => DAYS_OF_WEEK[d]),
+      week_off_day_indices: weekOffDays,
+      current_month: {
+        name: new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
+        days: currentMonthDays
+      },
+      next_month: {
+        name: new Date(nextMonthYear, nextMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
+        days: nextMonthDays
+      }
+    });
+  });
+
+  // Group by shift
+  const byShift = {
+    A: womenSchedules.filter(w => w.current_shift.code === 'A'),
+    B: womenSchedules.filter(w => w.current_shift.code === 'B'),
+    C: womenSchedules.filter(w => w.current_shift.code === 'C')
+  };
+
+  // Rotation info
+  const daysUntilRotation = ROTATION_DAY - today.getDate();
+  
+  return {
+    success: true,
+    language: targetLanguage,
+    total_women: filteredWomen.length,
+    generated_at: new Date().toISOString(),
+    current_month: {
+      name: new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
+      days_remaining: daysInCurrentMonth - today.getDate() + 1
+    },
+    next_month: {
+      name: new Date(nextMonthYear, nextMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
+      total_days: daysInNextMonth
+    },
+    rotation: {
+      next_date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${ROTATION_DAY}`,
+      days_until: daysUntilRotation > 0 ? daysUntilRotation : daysUntilRotation + daysInCurrentMonth,
+      rule: 'On 28th: C→A, A→B, B→C'
+    },
+    shifts: {
+      A: { name: SHIFTS.A.name, display: SHIFTS.A.display, women_count: byShift.A.length },
+      B: { name: SHIFTS.B.name, display: SHIFTS.B.display, women_count: byShift.B.length },
+      C: { name: SHIFTS.C.name, display: SHIFTS.C.display, women_count: byShift.C.length }
+    },
+    women_by_shift: byShift,
+    all_women: womenSchedules
   };
 }

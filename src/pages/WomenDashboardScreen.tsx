@@ -50,6 +50,7 @@ import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
+import LanguageShiftMonthlySchedule from "@/components/LanguageShiftMonthlySchedule";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { WomenPrivateCallSection } from "@/components/WomenPrivateCallSection";
@@ -983,8 +984,16 @@ const WomenDashboardScreen = () => {
           </Card>
         </div>
 
-        {/* Section 2.5: Language Group 24/7 Coverage */}
+        {/* Section 2.5: Language Group Monthly Schedule */}
         <div className="animate-fade-in" style={{ animationDelay: "0.09s" }}>
+          <LanguageShiftMonthlySchedule 
+            userId={currentUserId} 
+            language={currentWomanLanguage}
+          />
+        </div>
+
+        {/* Section 2.6: Language Group 24/7 Coverage */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.10s" }}>
           <LanguageGroupShiftsPanel 
             userId={currentUserId} 
             language={currentWomanLanguage}
