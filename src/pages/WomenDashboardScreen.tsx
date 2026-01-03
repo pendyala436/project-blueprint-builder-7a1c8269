@@ -49,9 +49,9 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
-import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import LanguageShiftMonthlySchedule from "@/components/LanguageShiftMonthlySchedule";
-import { AIElectionPanel } from "@/components/AIElectionPanel";
+import LeaderElectionPanel from "@/components/LeaderElectionPanel";
+import LeaderDashboard from "@/components/LeaderDashboard";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { WomenPrivateCallSection } from "@/components/WomenPrivateCallSection";
 import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
@@ -96,6 +96,34 @@ interface BiggestEarner {
   amount: number;
   photoUrl?: string;
 }
+
+// Leader Dashboard Wrapper - only shows if user is an elected leader
+const LeaderDashboardWrapper = ({ currentUserId, languageCode }: { currentUserId: string; languageCode: string }) => {
+  const [isLeader, setIsLeader] = useState(false);
+
+  useEffect(() => {
+    const checkLeaderStatus = async () => {
+      const { data } = await supabase
+        .from("community_leaders")
+        .select("id")
+        .eq("user_id", currentUserId)
+        .eq("language_code", languageCode)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      setIsLeader(!!data);
+    };
+    checkLeaderStatus();
+  }, [currentUserId, languageCode]);
+
+  if (!isLeader) return null;
+
+  return (
+    <div className="animate-fade-in" style={{ animationDelay: "0.11s" }}>
+      <LeaderDashboard currentUserId={currentUserId} languageCode={languageCode} />
+    </div>
+  );
+};
 
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
@@ -988,6 +1016,24 @@ const WomenDashboardScreen = () => {
             language={currentWomanLanguage}
           />
         </div>
+
+        {/* Leader Election Panel */}
+        {currentWomanLanguage && currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.10s" }}>
+            <LeaderElectionPanel
+              currentUserId={currentUserId}
+              languageCode={currentWomanLanguage}
+            />
+          </div>
+        )}
+
+        {/* Leader Dashboard (only for elected leaders) */}
+        {currentWomanLanguage && currentUserId && (
+          <LeaderDashboardWrapper 
+            currentUserId={currentUserId} 
+            languageCode={currentWomanLanguage} 
+          />
+        )}
 
 
         {/* Transaction History for Women */}

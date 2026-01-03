@@ -631,30 +631,36 @@ export type Database = {
       }
       community_leaders: {
         Row: {
+          activity_status: string | null
           created_at: string
           election_id: string | null
           id: string
           language_code: string
+          last_activity_at: string | null
           status: string
           term_end: string
           term_start: string
           user_id: string
         }
         Insert: {
+          activity_status?: string | null
           created_at?: string
           election_id?: string | null
           id?: string
           language_code: string
+          last_activity_at?: string | null
           status?: string
           term_end: string
           term_start?: string
           user_id: string
         }
         Update: {
+          activity_status?: string | null
           created_at?: string
           election_id?: string | null
           id?: string
           language_code?: string
+          last_activity_at?: string | null
           status?: string
           term_end?: string
           term_start?: string
@@ -1331,6 +1337,39 @@ export type Database = {
           max_call_women?: number
           max_chat_women?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      leader_admin_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          language_code: string
+          leader_id: string
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          language_code: string
+          leader_id: string
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          language_code?: string
+          leader_id?: string
+          message?: string
+          sender_id?: string
+          sender_role?: string
         }
         Relationships: []
       }
