@@ -40,6 +40,8 @@ interface WomanShift {
     endHour: number;
     duration: number;
   };
+  shiftCode?: string;
+  roleType?: string;
 }
 
 interface HourlyCoverage {
@@ -114,24 +116,27 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
             startHour: woman.shift_start_hour || 7,
             endHour: woman.shift_end_hour || 16,
             duration: 9
-          }
+          },
+          shiftCode: woman.shift_code || 'A',
+          roleType: woman.role_type || 'chat'
         }));
 
         setWomenShifts(transformedWomen);
         setTargetLanguage(data.language || language || "");
         setWomenCount(data.total_women || womenData.length);
         
-        // Build 24x7 coverage from women's shift data
+        // Build 24x7 coverage from shifts data (synced with team schedule)
         const coverage: HourlyCoverage[] = [];
+        const shifts = data.shifts || {};
+        
         for (let hour = 0; hour < 24; hour++) {
           const womenOnDuty: string[] = [];
           const shiftCodes: string[] = [];
           
-          womenData.forEach((woman: any) => {
-            if (woman.is_week_off_today) return;
-            
-            const shiftStart = woman.shift_start_hour || 0;
-            const shiftEnd = woman.shift_end_hour || 0;
+          // Check each shift for coverage at this hour
+          Object.entries(shifts).forEach(([code, shift]: [string, any]) => {
+            const shiftStart = shift.start || 0;
+            const shiftEnd = shift.end || 0;
             
             // Handle overnight shifts
             let isOnDuty = false;
@@ -143,10 +148,20 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
             }
             
             if (isOnDuty) {
-              womenOnDuty.push(woman.full_name?.split(' ')[0] || 'User');
-              if (woman.shift_code && !shiftCodes.includes(woman.shift_code)) {
-                shiftCodes.push(woman.shift_code);
+              if (!shiftCodes.includes(code)) {
+                shiftCodes.push(code);
               }
+              // Add women from this shift who are on duty today
+              const chatWomen = shift.chat_support || [];
+              const videoWomen = shift.video_support || [];
+              [...chatWomen, ...videoWomen].forEach((w: any) => {
+                if (!w.is_week_off_today) {
+                  const name = w.full_name?.split(' ')[0] || 'User';
+                  if (!womenOnDuty.includes(name)) {
+                    womenOnDuty.push(name);
+                  }
+                }
+              });
             }
           });
           
@@ -158,10 +173,10 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
           hours: 9,
           changeBuffer: 1,
           weekOffInterval: 2,
-          shifts: data.shifts || {
-            A: { name: 'Shift A (Morning)', start: 7, end: 16, code: 'A', display: '7:00 AM - 4:00 PM' },
-            B: { name: 'Shift B (Evening)', start: 15, end: 24, code: 'B', display: '3:00 PM - 12:00 AM' },
-            C: { name: 'Shift C (Night)', start: 23, end: 8, code: 'C', display: '11:00 PM - 8:00 AM' }
+          shifts: {
+            A: { name: shifts.A?.name || 'Shift A', start: shifts.A?.start || 7, end: shifts.A?.end || 16, code: 'A', display: shifts.A?.display || '7:00 AM - 4:00 PM' },
+            B: { name: shifts.B?.name || 'Shift B', start: shifts.B?.start || 15, end: shifts.B?.end || 24, code: 'B', display: shifts.B?.display || '3:00 PM - 12:00 AM' },
+            C: { name: shifts.C?.name || 'Shift C', start: shifts.C?.start || 23, end: shifts.C?.end || 8, code: 'C', display: shifts.C?.display || '11:00 PM - 8:00 AM' }
           }
         });
       }
@@ -315,10 +330,16 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{woman.fullName}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Globe className="w-3 h-3" />
-                          {woman.country}
-                        </p>
+                          <span>{woman.country}</span>
+                          {woman.shiftCode && (
+                            <Badge variant="outline" className={`text-[10px] ${getShiftBadgeColor(woman.shiftCode)}`}>
+                              {getShiftIcon(woman.shiftCode)}
+                              <span className="ml-1">Shift {woman.shiftCode}</span>
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -330,12 +351,12 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
                         </Badge>
                       ) : woman.todayShift ? (
                         <div>
-                          <Badge variant="default" className="gap-1 bg-success hover:bg-success/80">
+                          <Badge variant="default" className="gap-1 bg-primary hover:bg-primary/80">
                             <Clock className="w-3 h-3" />
-                            {woman.todayShift.startTime.slice(0, 5)} - {woman.todayShift.endTime.slice(0, 5)}
+                            {woman.todayShift.startTime} - {woman.todayShift.endTime}
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {woman.shiftHours.duration}h shift
+                            {woman.shiftHours.duration}h • {woman.roleType || 'chat'}
                           </p>
                         </div>
                       ) : (
@@ -433,8 +454,8 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
               Week Off Pattern
             </h4>
             <p className="text-xs text-muted-foreground">
-              AI assigns week offs every 2 days based on registration date. 
-              Women can optionally work on their week off.
+              AI assigns 2 continuous days off per week (e.g., Mon-Tue, Wed-Thu). 
+              Women can optionally work on their off days.
             </p>
           </div>
         )}
