@@ -433,23 +433,128 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </Button>
         </div>
 
-        {/* Calendar Grid - Full bidirectional scrolling */}
+        {/* Calendar Grid - Full bidirectional scrolling for 150+ users */}
         <div 
-          className="border border-border rounded-lg overflow-auto" 
-          style={{ maxHeight: '400px' }}
+          className="border border-border rounded-lg"
+          style={{ 
+            maxHeight: '500px',
+            overflow: 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}
         >
-          <div style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
-            {renderGridHeader()}
-            <div>
+          <table className="border-collapse" style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
+            <thead className="sticky top-0 z-20 bg-card">
+              <tr className="border-b border-border">
+                <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-card z-30 border-r border-border">
+                  Team Member
+                </th>
+                {monthDates.map((day) => {
+                  const isToday = new Date().toISOString().split('T')[0] === day.date;
+                  return (
+                    <th 
+                      key={day.date} 
+                      className={`w-[40px] p-1 text-center text-xs border-r border-border ${
+                        isToday ? 'bg-primary/10' : ''
+                      }`}
+                    >
+                      <div className="font-semibold">{day.day}</div>
+                      <div className="text-muted-foreground text-[10px] font-normal">{day.day_name.substring(0, 2)}</div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
               {scheduleData.all_women.length > 0 ? (
-                scheduleData.all_women.map(renderWomanRow)
+                scheduleData.all_women.map((woman) => {
+                  const monthData = selectedMonth === 'current' ? woman.current_month : woman.next_month;
+                  const isCurrentUser = woman.user_id === userId;
+                  
+                  return (
+                    <tr 
+                      key={woman.user_id} 
+                      className={`border-b border-border/50 hover:bg-muted/30 ${
+                        isCurrentUser ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <td className="min-w-[120px] w-[120px] p-2 border-r border-border sticky left-0 bg-card z-10">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6 shrink-0">
+                            <AvatarImage src={woman.photo_url || ''} />
+                            <AvatarFallback className="text-[10px] bg-muted">
+                              {woman.full_name?.charAt(0) || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium truncate flex items-center gap-1">
+                              {woman.full_name?.split(' ')[0]}
+                              {isCurrentUser && <Badge variant="outline" className="text-[8px] px-1">You</Badge>}
+                            </div>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[8px] px-1 py-0 ${SHIFT_COLORS[woman.current_shift.code as keyof typeof SHIFT_COLORS]}`}
+                            >
+                              {woman.current_shift.code}
+                            </Badge>
+                          </div>
+                        </div>
+                      </td>
+                      {monthData.days.map((day) => {
+                        const isToday = new Date().toISOString().split('T')[0] === day.date;
+                        const isMyOffDay = isCurrentUser && day.is_week_off;
+                        const hasVolunteered = myVolunteerDates.includes(day.date);
+                        
+                        return (
+                          <td
+                            key={day.date}
+                            className={`w-[40px] p-1 text-center text-[10px] border-r border-border/30 relative group ${
+                              day.is_rotation_day 
+                                ? 'bg-warning/10'
+                                : day.is_week_off 
+                                  ? 'bg-muted/40' 
+                                  : isToday 
+                                    ? 'bg-primary/10'
+                                    : SHIFT_BG_COLORS[day.shift_code as keyof typeof SHIFT_BG_COLORS] || ''
+                            }`}
+                          >
+                            {day.is_week_off ? (
+                              <div className="flex flex-col items-center">
+                                <span className="text-muted-foreground font-medium">OFF</span>
+                                {isMyOffDay && !hasVolunteered && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-primary/80 text-primary-foreground text-[8px] h-full w-full rounded-none"
+                                    onClick={() => handleVolunteerForOffDay(day.date)}
+                                  >
+                                    <Hand className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {hasVolunteered && (
+                                  <CheckCircle className="h-3 w-3 text-primary absolute top-0 right-0" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center">
+                                {SHIFT_ICONS[day.shift_code as keyof typeof SHIFT_ICONS]}
+                                <span className="font-semibold">{day.shift_code}</span>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No team members found
-                </div>
+                <tr>
+                  <td colSpan={monthDates.length + 1} className="text-center py-8 text-muted-foreground">
+                    No team members found
+                  </td>
+                </tr>
               )}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
 
         {/* Off-Day Volunteers Section (Leader View) */}
