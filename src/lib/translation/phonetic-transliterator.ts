@@ -197,7 +197,7 @@ const MALAYALAM_CONSONANTS: Record<string, string> = {
 
 const MALAYALAM_HALANT = '്';
 
-// Language configuration
+// Language configuration - supports both full names and ISO codes
 interface LanguageConfig {
   vowels: Record<string, string>;
   vowelSigns: Record<string, string>;
@@ -206,18 +206,33 @@ interface LanguageConfig {
 }
 
 const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
+  // Telugu
   te: { vowels: TELUGU_VOWELS, vowelSigns: TELUGU_VOWEL_SIGNS, consonants: TELUGU_CONSONANTS, halant: TELUGU_HALANT },
   telugu: { vowels: TELUGU_VOWELS, vowelSigns: TELUGU_VOWEL_SIGNS, consonants: TELUGU_CONSONANTS, halant: TELUGU_HALANT },
+  // Hindi
   hi: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
   hindi: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  // Tamil
   ta: { vowels: TAMIL_VOWELS, vowelSigns: TAMIL_VOWEL_SIGNS, consonants: TAMIL_CONSONANTS, halant: TAMIL_HALANT },
   tamil: { vowels: TAMIL_VOWELS, vowelSigns: TAMIL_VOWEL_SIGNS, consonants: TAMIL_CONSONANTS, halant: TAMIL_HALANT },
+  // Bengali
   bn: { vowels: BENGALI_VOWELS, vowelSigns: BENGALI_VOWEL_SIGNS, consonants: BENGALI_CONSONANTS, halant: BENGALI_HALANT },
   bengali: { vowels: BENGALI_VOWELS, vowelSigns: BENGALI_VOWEL_SIGNS, consonants: BENGALI_CONSONANTS, halant: BENGALI_HALANT },
+  // Kannada
   kn: { vowels: KANNADA_VOWELS, vowelSigns: KANNADA_VOWEL_SIGNS, consonants: KANNADA_CONSONANTS, halant: KANNADA_HALANT },
   kannada: { vowels: KANNADA_VOWELS, vowelSigns: KANNADA_VOWEL_SIGNS, consonants: KANNADA_CONSONANTS, halant: KANNADA_HALANT },
+  // Malayalam
   ml: { vowels: MALAYALAM_VOWELS, vowelSigns: MALAYALAM_VOWEL_SIGNS, consonants: MALAYALAM_CONSONANTS, halant: MALAYALAM_HALANT },
   malayalam: { vowels: MALAYALAM_VOWELS, vowelSigns: MALAYALAM_VOWEL_SIGNS, consonants: MALAYALAM_CONSONANTS, halant: MALAYALAM_HALANT },
+  // Marathi (uses Devanagari like Hindi)
+  mr: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  marathi: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  // Gujarati (similar structure to Hindi)
+  gu: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  gujarati: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  // Punjabi (similar structure to Hindi)
+  pa: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
+  punjabi: { vowels: HINDI_VOWELS, vowelSigns: HINDI_VOWEL_SIGNS, consonants: HINDI_CONSONANTS, halant: HINDI_HALANT },
 };
 
 /**
@@ -383,5 +398,5 @@ export function isPhoneticTransliterationSupported(language: string): boolean {
  * Get list of supported languages for phonetic transliteration
  */
 export function getSupportedPhoneticLanguages(): string[] {
-  return ['telugu', 'hindi', 'tamil', 'bengali', 'kannada', 'malayalam'];
+  return ['telugu', 'hindi', 'tamil', 'bengali', 'kannada', 'malayalam', 'marathi', 'gujarati', 'punjabi'];
 }
