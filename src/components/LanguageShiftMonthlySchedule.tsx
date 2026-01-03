@@ -205,14 +205,32 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
   };
 
   // Get schedule for a specific date from woman's schedule
-  const getScheduleForDate = (woman: WomanSchedule, dateStr: string): WomanDaySchedule | null => {
+  // For months beyond current/next, calculate week-off based on week_off_day_indices
+  const getScheduleForDate = (woman: WomanSchedule, dateStr: string, dayOfWeek: number): WomanDaySchedule | null => {
+    // First check if we have explicit schedule data
     const currentMonthDay = woman.current_month?.days?.find(d => d.date === dateStr);
     if (currentMonthDay) return currentMonthDay;
     
     const nextMonthDay = woman.next_month?.days?.find(d => d.date === dateStr);
     if (nextMonthDay) return nextMonthDay;
     
-    return null;
+    // For future months, generate schedule based on week_off_day_indices
+    // week_off_day_indices contains days of the week (0=Sunday to 6=Saturday) that are off
+    const isWeekOff = woman.week_off_day_indices?.includes(dayOfWeek) ?? false;
+    
+    // Parse date to get day number
+    const [year, month, day] = dateStr.split('-').map(Number);
+    
+    return {
+      date: dateStr,
+      day: day,
+      day_name: DAY_NAMES[dayOfWeek],
+      is_week_off: isWeekOff,
+      is_rotation_day: day === 28, // Rotation happens on 28th of each month
+      shift_code: woman.current_shift.code,
+      local_start_time: woman.current_shift.local_start_time || '',
+      local_end_time: woman.current_shift.local_end_time || ''
+    };
   };
 
   if (isLoading) {
@@ -401,7 +419,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
                         </div>
                       </td>
                       {allDisplayedDays.map((day) => {
-                        const schedule = getScheduleForDate(woman, day.dateStr);
+                        const schedule = getScheduleForDate(woman, day.dateStr, day.dayOfWeek);
                         const isMyOffDay = isCurrentUser && schedule?.is_week_off;
                         const hasVolunteered = myVolunteerDates.includes(day.dateStr);
                         
