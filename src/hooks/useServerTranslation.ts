@@ -31,7 +31,7 @@ export interface TranslationResult {
   isTranslated: boolean;
   source: string;
   target: string;
-  mode: 'translate' | 'convert' | 'passthrough';
+  mode: 'translate' | 'convert' | 'passthrough' | 'dictionary' | 'phonetic' | 'neural' | 'same_language';
 }
 
 export interface UseServerTranslationOptions {
