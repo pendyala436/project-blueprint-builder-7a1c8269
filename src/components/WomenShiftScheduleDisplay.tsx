@@ -27,6 +27,7 @@ import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 interface ShiftAssignment {
   shift_code: string;
   shift_name: string;
+  shift_display: string;
   start_time: string;
   end_time: string;
   local_start_time: string;
@@ -39,16 +40,29 @@ interface ScheduleEntry {
   scheduled_date: string;
   shift_code: string;
   shift_name: string;
+  shift_display: string;
   day_of_week: string;
   is_week_off: boolean;
   local_start_time: string;
   local_end_time: string;
   timezone_name: string;
+  month_label: string;
+  month_name: string;
+  is_rotation_day: boolean;
+}
+
+interface RotationInfo {
+  next_rotation_date: string;
+  days_until_rotation: number;
+  current_shift: string;
+  next_shift: string;
+  rotation_rule: string;
 }
 
 interface GroupShiftData {
   name: string;
   time: string;
+  overlap: string;
   chat_support: WomanInShift[];
   video_support: WomanInShift[];
 }
@@ -87,6 +101,7 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
   const [isLoading, setIsLoading] = useState(true);
   const [myAssignment, setMyAssignment] = useState<ShiftAssignment | null>(null);
   const [mySchedules, setMySchedules] = useState<ScheduleEntry[]>([]);
+  const [rotationInfo, setRotationInfo] = useState<RotationInfo | null>(null);
   const [groupSchedule, setGroupSchedule] = useState<{
     language: string;
     total_women: number;
@@ -94,6 +109,11 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
       A: GroupShiftData;
       B: GroupShiftData;
       C: GroupShiftData;
+    };
+    rotation: {
+      next_rotation_date: string;
+      days_until_rotation: number;
+      rotation_rule: string;
     };
   } | null>(null);
   const [profileInfo, setProfileInfo] = useState<{
@@ -123,8 +143,8 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
         setMyAssignment(myData.assignment);
         setMySchedules(myData.schedules || []);
         setProfileInfo(myData.profile);
+        setRotationInfo(myData.rotation);
       } else if (myData?.assignment === undefined) {
-        // No assignment yet, trigger initial assignment
         await assignInitialShift();
       }
 
@@ -292,7 +312,7 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                       <div>
                         <h3 className="font-semibold">{myAssignment.shift_name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {myAssignment.local_start_time} - {myAssignment.local_end_time}
+                          {myAssignment.shift_display || `${myAssignment.local_start_time} - ${myAssignment.local_end_time}`}
                         </p>
                       </div>
                     </div>
@@ -304,74 +324,124 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                       )}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Globe className="h-3 w-3" />
                       <span>{profileInfo?.country || 'India'}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>{profileInfo?.language}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <CalendarX className="h-3 w-3" />
-                      <span>Weekly off: {myAssignment.week_off_days.join(', ')}</span>
+                      <span>Off: {myAssignment.week_off_days.join(', ')}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Upcoming Schedule */}
+                {/* Rotation Notice */}
+                {rotationInfo && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-start gap-2">
+                      <RefreshCw className="h-4 w-4 text-amber-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-amber-700">Next Rotation: {format(new Date(rotationInfo.next_rotation_date), 'MMM d, yyyy')}</p>
+                        <p className="text-amber-600/80">
+                          {rotationInfo.days_until_rotation} days away • Your shift: {rotationInfo.current_shift} → {rotationInfo.next_shift}
+                        </p>
+                        <p className="text-xs text-amber-600/60 mt-1">Rule: {rotationInfo.rotation_rule}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upcoming Schedule - Grouped by Month */}
                 <div>
                   <h4 className="font-medium mb-3 flex items-center gap-2">
                     <CalendarCheck className="h-4 w-4" />
-                    Upcoming Schedule
+                    Schedule (This Month & Next)
                   </h4>
-                  <ScrollArea className="h-64">
-                    <div className="space-y-2">
-                      {mySchedules.slice(0, 14).map((schedule, index) => {
-                        const scheduleDate = new Date(schedule.scheduled_date);
-                        const isToday = isSameDay(scheduleDate, new Date());
+                  <ScrollArea className="h-72">
+                    <div className="space-y-4">
+                      {/* Group schedules by month */}
+                      {['This Month', 'Next Month'].map((monthLabel) => {
+                        const monthSchedules = mySchedules.filter(s => s.month_label === monthLabel);
+                        if (monthSchedules.length === 0) return null;
                         
                         return (
-                          <div 
-                            key={index}
-                            className={`p-3 rounded-lg border ${
-                              isToday 
-                                ? 'bg-primary/10 border-primary/30' 
-                                : schedule.is_week_off 
-                                  ? 'bg-muted/50 border-border/30' 
-                                  : 'bg-card border-border/50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="text-center min-w-[50px]">
-                                  <div className="text-lg font-bold">
-                                    {format(scheduleDate, 'd')}
+                          <div key={monthLabel}>
+                            <div className="sticky top-0 bg-background/95 backdrop-blur-sm py-2 mb-2 border-b border-border/50">
+                              <Badge variant="outline" className="text-xs">
+                                {monthSchedules[0]?.month_name || monthLabel}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2">
+                              {monthSchedules.map((schedule, index) => {
+                                const scheduleDate = new Date(schedule.scheduled_date);
+                                const isToday = isSameDay(scheduleDate, new Date());
+                                
+                                return (
+                                  <div 
+                                    key={index}
+                                    className={`p-3 rounded-lg border ${
+                                      schedule.is_rotation_day 
+                                        ? 'bg-amber-500/10 border-amber-500/30'
+                                        : isToday 
+                                          ? 'bg-primary/10 border-primary/30' 
+                                          : schedule.is_week_off 
+                                            ? 'bg-muted/50 border-border/30' 
+                                            : 'bg-card border-border/50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="text-center min-w-[50px]">
+                                          <div className="text-lg font-bold">
+                                            {format(scheduleDate, 'd')}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            {format(scheduleDate, 'MMM')}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <div className="font-medium flex items-center gap-2">
+                                            {schedule.day_of_week}
+                                            {isToday && <Badge variant="default" className="text-xs">Today</Badge>}
+                                            {schedule.is_rotation_day && (
+                                              <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
+                                                <RefreshCw className="h-2 w-2 mr-1" />
+                                                Rotation Day
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {schedule.is_week_off ? (
+                                            <span className="text-sm text-muted-foreground">Week Off</span>
+                                          ) : (
+                                            <div className="flex items-center gap-2">
+                                              <Badge variant="outline" className={`text-xs ${SHIFT_COLORS[schedule.shift_code as keyof typeof SHIFT_COLORS]}`}>
+                                                {schedule.shift_code}
+                                              </Badge>
+                                              <span className="text-sm text-muted-foreground">
+                                                {schedule.shift_display || `${schedule.local_start_time} - ${schedule.local_end_time}`}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {schedule.is_week_off && (
+                                        <Button 
+                                          size="sm" 
+                                          variant="outline"
+                                          onClick={() => handleOptInWork(schedule.scheduled_date)}
+                                        >
+                                          Work This Day
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {format(scheduleDate, 'MMM')}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="font-medium flex items-center gap-2">
-                                    {schedule.day_of_week}
-                                    {isToday && <Badge variant="default" className="text-xs">Today</Badge>}
-                                  </div>
-                                  {schedule.is_week_off ? (
-                                    <span className="text-sm text-muted-foreground">Week Off</span>
-                                  ) : (
-                                    <span className="text-sm text-muted-foreground">
-                                      {schedule.local_start_time} - {schedule.local_end_time}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {schedule.is_week_off && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleOptInWork(schedule.scheduled_date)}
-                                >
-                                  Work This Day
-                                </Button>
-                              )}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -405,6 +475,28 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                   <Badge variant="outline">{groupSchedule.total_women} members</Badge>
                 </div>
 
+                {/* Shift Timing Summary */}
+                <div className="p-3 rounded-lg bg-secondary/20 border border-border/50">
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    Shift Timings (9 hours each, 1 hour overlap)
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className={`p-2 rounded ${SHIFT_COLORS.A}`}>
+                      <div className="font-medium">A: Morning</div>
+                      <div>7 AM - 4 PM</div>
+                    </div>
+                    <div className={`p-2 rounded ${SHIFT_COLORS.B}`}>
+                      <div className="font-medium">B: Evening</div>
+                      <div>3 PM - 12 AM</div>
+                    </div>
+                    <div className={`p-2 rounded ${SHIFT_COLORS.C}`}>
+                      <div className="font-medium">C: Night</div>
+                      <div>11 PM - 8 AM</div>
+                    </div>
+                  </div>
+                </div>
+
                 {(['A', 'B', 'C'] as const).map((shiftCode) => {
                   const shift = groupSchedule.shifts[shiftCode];
                   const totalInShift = shift.chat_support.length + shift.video_support.length;
@@ -419,6 +511,9 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                           </div>
                           <span className="text-sm">{shift.time}</span>
                         </div>
+                        {shift.overlap && (
+                          <p className="text-xs mt-1 opacity-75">{shift.overlap}</p>
+                        )}
                       </div>
                       
                       {totalInShift > 0 ? (
@@ -494,14 +589,17 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                   );
                 })}
 
-                {/* Monthly Rotation Notice */}
-                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                {/* Monthly Rotation Notice with Countdown */}
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                   <div className="flex items-start gap-2">
-                    <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <RefreshCw className="h-4 w-4 text-amber-600 mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium">Monthly Rotation</p>
-                      <p className="text-muted-foreground">
-                        Shifts rotate on the 28th: C→A, A→B, B→C
+                      <p className="font-medium text-amber-700">Monthly Rotation on 28th</p>
+                      <p className="text-amber-600/80">
+                        {groupSchedule.rotation?.days_until_rotation} days until next rotation
+                      </p>
+                      <p className="text-xs text-amber-600/60 mt-1">
+                        {groupSchedule.rotation?.rotation_rule}
                       </p>
                     </div>
                   </div>

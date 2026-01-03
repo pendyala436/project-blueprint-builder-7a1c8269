@@ -6,14 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Shift timings in local time (IST)
+// Shift timings in local time - each shift is 9 hours with 1 hour overlap
 const SHIFTS = {
-  A: { name: 'Shift A', start: 7, end: 16, code: 'A' },  // 7 AM - 4 PM
-  B: { name: 'Shift B', start: 15, end: 24, code: 'B' }, // 3 PM - 12 AM
-  C: { name: 'Shift C', start: 23, end: 8, code: 'C' },  // 11 PM - 8 AM (next day)
+  A: { name: 'Shift A (Morning)', start: 7, end: 16, code: 'A', display: '7:00 AM - 4:00 PM' },  // 7 AM - 4 PM
+  B: { name: 'Shift B (Evening)', start: 15, end: 24, code: 'B', display: '3:00 PM - 12:00 AM' }, // 3 PM - 12 AM
+  C: { name: 'Shift C (Night)', start: 23, end: 8, code: 'C', display: '11:00 PM - 8:00 AM' },  // 11 PM - 8 AM (next day)
 };
 
-const HANDOVER_HOURS = 2;
+const SHIFT_OVERLAP_HOURS = 1; // 1 hour overlap between shifts
+const ROTATION_DAY = 28; // Day of month when shifts rotate
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // Country to timezone offset mapping (minutes from UTC)
@@ -346,38 +347,59 @@ async function getMySchedule(supabase: any, userId: string) {
     .eq('is_active', true)
     .single();
 
-  // Get scheduled shifts for next 30 days
+  // Calculate date range: remaining days of current month + all of next month
   const today = new Date();
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + 30);
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  
+  // End date is last day of next month
+  const nextMonth = currentMonth + 1 > 11 ? 0 : currentMonth + 1;
+  const nextMonthYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
+  const lastDayNextMonth = new Date(nextMonthYear, nextMonth + 1, 0);
 
   const { data: scheduledShifts } = await supabase
     .from('scheduled_shifts')
     .select('*')
     .eq('user_id', userId)
     .gte('scheduled_date', today.toISOString().split('T')[0])
-    .lte('scheduled_date', endDate.toISOString().split('T')[0])
+    .lte('scheduled_date', lastDayNextMonth.toISOString().split('T')[0])
     .order('scheduled_date');
 
   const shiftCode = assignment?.shift_templates?.shift_code || 'A';
   const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
   const weekOffDays = assignment?.week_off_days || [0, 6];
 
-  // Build schedule with local times
+  // Calculate next rotation info
+  const daysUntilRotation = ROTATION_DAY - today.getDate();
+  const nextShiftAfterRotation = rotateShift(shiftCode);
+  const rotationDate = new Date(currentYear, currentMonth, ROTATION_DAY);
+  const isRotationThisMonth = daysUntilRotation > 0;
+
+  // Build schedule with local times, grouped by month
   const scheduleWithLocalTime = scheduledShifts?.map((shift: any) => {
     const date = new Date(shift.scheduled_date);
     const dayOfWeek = date.getDay();
     const isWeekOff = weekOffDays.includes(dayOfWeek);
+    const isCurrentMonth = date.getMonth() === currentMonth;
+    const isAfterRotation = date.getDate() >= ROTATION_DAY || date.getMonth() > currentMonth;
+    
+    // After rotation, shift code changes
+    const effectiveShiftCode = isAfterRotation ? nextShiftAfterRotation : shiftCode;
+    const effectiveShiftDef = SHIFTS[effectiveShiftCode as keyof typeof SHIFTS];
 
     return {
       ...shift,
-      shift_code: shiftCode,
-      shift_name: shiftDef.name,
+      shift_code: effectiveShiftCode,
+      shift_name: effectiveShiftDef.name,
+      shift_display: effectiveShiftDef.display,
       day_of_week: DAYS_OF_WEEK[dayOfWeek],
       is_week_off: isWeekOff,
-      local_start_time: formatTimeForTimezone(shiftDef.start, timezoneOffset - 330), // Adjust from IST
-      local_end_time: formatTimeForTimezone(shiftDef.end, timezoneOffset - 330),
-      timezone_name: profile?.country === 'India' ? 'IST' : 'Local'
+      month_label: isCurrentMonth ? 'This Month' : 'Next Month',
+      month_name: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      local_start_time: formatTimeForTimezone(effectiveShiftDef.start, timezoneOffset - 330),
+      local_end_time: formatTimeForTimezone(effectiveShiftDef.end, timezoneOffset - 330),
+      timezone_name: profile?.country === 'India' ? 'IST' : 'Local',
+      is_rotation_day: date.getDate() === ROTATION_DAY && isCurrentMonth
     };
   }) || [];
 
@@ -392,12 +414,20 @@ async function getMySchedule(supabase: any, userId: string) {
     assignment: {
       shift_code: shiftCode,
       shift_name: shiftDef.name,
+      shift_display: shiftDef.display,
       start_time: formatTimeForTimezone(shiftDef.start, 0),
       end_time: formatTimeForTimezone(shiftDef.end, 0),
       local_start_time: formatTimeForTimezone(shiftDef.start, timezoneOffset - 330),
       local_end_time: formatTimeForTimezone(shiftDef.end, timezoneOffset - 330),
       week_off_days: weekOffDays.map((d: number) => DAYS_OF_WEEK[d]),
-      role_type: 'chat' // Default, can be enhanced
+      role_type: 'chat'
+    },
+    rotation: {
+      next_rotation_date: rotationDate.toISOString().split('T')[0],
+      days_until_rotation: isRotationThisMonth ? daysUntilRotation : daysUntilRotation + new Date(currentYear, currentMonth + 1, 0).getDate(),
+      current_shift: shiftCode,
+      next_shift: nextShiftAfterRotation,
+      rotation_rule: 'C→A, A→B, B→C on 28th of each month'
     },
     schedules: scheduleWithLocalTime
   };
@@ -513,6 +543,12 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
     }
   });
 
+  // Calculate rotation info
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const daysUntilRotation = ROTATION_DAY - today.getDate();
+  const rotationDate = new Date(currentYear, currentMonth, ROTATION_DAY);
+
   return {
     success: true,
     language: targetLanguage,
@@ -524,22 +560,30 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
     shifts: {
       A: {
         name: SHIFTS.A.name,
-        time: `${formatTimeForTimezone(SHIFTS.A.start, 0)} - ${formatTimeForTimezone(SHIFTS.A.end, 0)} IST`,
+        time: SHIFTS.A.display,
+        overlap: '1 hour overlap with Shift B (3-4 PM)',
         chat_support: groupSchedule.A.chat,
         video_support: groupSchedule.A.video_call
       },
       B: {
         name: SHIFTS.B.name,
-        time: `${formatTimeForTimezone(SHIFTS.B.start, 0)} - ${formatTimeForTimezone(SHIFTS.B.end, 0)} IST`,
+        time: SHIFTS.B.display,
+        overlap: '1 hour overlap with A (3-4 PM) and C (11 PM-12 AM)',
         chat_support: groupSchedule.B.chat,
         video_support: groupSchedule.B.video_call
       },
       C: {
         name: SHIFTS.C.name,
-        time: `${formatTimeForTimezone(SHIFTS.C.start, 0)} - ${formatTimeForTimezone(SHIFTS.C.end, 0)} IST`,
+        time: SHIFTS.C.display,
+        overlap: '1 hour overlap with Shift B (11 PM-12 AM)',
         chat_support: groupSchedule.C.chat,
         video_support: groupSchedule.C.video_call
       }
+    },
+    rotation: {
+      next_rotation_date: rotationDate.toISOString().split('T')[0],
+      days_until_rotation: daysUntilRotation > 0 ? daysUntilRotation : daysUntilRotation + new Date(currentYear, currentMonth + 1, 0).getDate(),
+      rotation_rule: 'On 28th: C→A, A→B, B→C'
     }
   };
 }
