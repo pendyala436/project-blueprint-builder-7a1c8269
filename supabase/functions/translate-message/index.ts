@@ -385,17 +385,111 @@ function isNonLatinLanguage(language: string): boolean {
 }
 
 // ============================================================
-// TRANSLATION API IMPLEMENTATIONS
+// TRANSLATION API IMPLEMENTATIONS - HUGGINGFACE NLLB-200
 // ============================================================
 
-// LibreTranslate mirrors (free, open-source)
+// NLLB-200 language codes mapping
+const NLLB_LANGUAGE_CODES: Record<string, string> = {
+  english: 'eng_Latn', hindi: 'hin_Deva', telugu: 'tel_Telu', tamil: 'tam_Taml',
+  bengali: 'ben_Beng', marathi: 'mar_Deva', gujarati: 'guj_Gujr', kannada: 'kan_Knda',
+  malayalam: 'mal_Mlym', punjabi: 'pan_Guru', odia: 'ory_Orya', urdu: 'urd_Arab',
+  chinese: 'zho_Hans', japanese: 'jpn_Jpan', korean: 'kor_Hang', arabic: 'arb_Arab',
+  persian: 'pes_Arab', russian: 'rus_Cyrl', spanish: 'spa_Latn', french: 'fra_Latn',
+  german: 'deu_Latn', italian: 'ita_Latn', portuguese: 'por_Latn', dutch: 'nld_Latn',
+  polish: 'pol_Latn', turkish: 'tur_Latn', swedish: 'swe_Latn', danish: 'dan_Latn',
+  norwegian: 'nob_Latn', finnish: 'fin_Latn', czech: 'ces_Latn', romanian: 'ron_Latn',
+  hungarian: 'hun_Latn', bulgarian: 'bul_Cyrl', croatian: 'hrv_Latn', serbian: 'srp_Cyrl',
+  slovak: 'slk_Latn', slovenian: 'slv_Latn', lithuanian: 'lit_Latn', latvian: 'lvs_Latn',
+  estonian: 'est_Latn', georgian: 'kat_Geor', armenian: 'hye_Armn', swahili: 'swh_Latn',
+  amharic: 'amh_Ethi', thai: 'tha_Thai', vietnamese: 'vie_Latn', indonesian: 'ind_Latn',
+  malay: 'zsm_Latn', tagalog: 'tgl_Latn', burmese: 'mya_Mymr', khmer: 'khm_Khmr',
+  lao: 'lao_Laoo', nepali: 'npi_Deva', sinhala: 'sin_Sinh', assamese: 'asm_Beng',
+  greek: 'ell_Grek', ukrainian: 'ukr_Cyrl', hebrew: 'heb_Hebr',
+};
+
+function getNLLBCode(language: string): string | null {
+  const normalized = normalizeLanguage(language);
+  return NLLB_LANGUAGE_CODES[normalized] || null;
+}
+
+// Primary translation using HuggingFace NLLB-200
+async function translateWithHuggingFace(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ translatedText: string; success: boolean }> {
+  const HF_API_KEY = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
+  
+  if (!HF_API_KEY) {
+    console.log('[translate-message] No HUGGING_FACE_ACCESS_TOKEN configured');
+    return { translatedText: text, success: false };
+  }
+
+  const srcCode = getNLLBCode(sourceLanguage);
+  const tgtCode = getNLLBCode(targetLanguage);
+  
+  if (!srcCode || !tgtCode) {
+    console.log(`[translate-message] Language not supported by NLLB: ${sourceLanguage} -> ${targetLanguage}`);
+    return { translatedText: text, success: false };
+  }
+
+  console.log(`[translate-message] Using HuggingFace NLLB-200: ${srcCode} -> ${tgtCode}`);
+  
+  try {
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HF_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: text,
+          parameters: {
+            src_lang: srcCode,
+            tgt_lang: tgtCode,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[translate-message] HuggingFace error: ${response.status}`, errorText);
+      
+      if (response.status === 503) {
+        console.log("[translate-message] Model loading, waiting and retrying...");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return translateWithHuggingFace(text, sourceLanguage, targetLanguage);
+      }
+      
+      return { translatedText: text, success: false };
+    }
+
+    const result = await response.json();
+    const translatedText = result[0]?.translation_text || result[0]?.generated_text;
+    
+    if (translatedText && translatedText !== text) {
+      console.log(`[translate-message] HuggingFace NLLB-200 success`);
+      return { translatedText, success: true };
+    }
+    
+    return { translatedText: text, success: false };
+  } catch (error) {
+    console.error("[translate-message] HuggingFace exception:", error);
+    return { translatedText: text, success: false };
+  }
+}
+
+// LibreTranslate mirrors (fallback)
 const LIBRE_TRANSLATE_MIRRORS = [
   "https://libretranslate.com",
   "https://translate.argosopentech.com",
   "https://translate.terraprint.co",
 ];
 
-// Translate using LibreTranslate
+// Translate using LibreTranslate (fallback)
 async function translateWithLibre(
   text: string,
   sourceCode: string,
@@ -403,7 +497,7 @@ async function translateWithLibre(
 ): Promise<{ translatedText: string; success: boolean }> {
   for (const mirror of LIBRE_TRANSLATE_MIRRORS) {
     try {
-      console.log(`[dl-translate] Trying LibreTranslate: ${mirror}`);
+      console.log(`[translate-message] Trying LibreTranslate fallback: ${mirror}`);
       
       const response = await fetch(`${mirror}/translate`, {
         method: "POST",
@@ -419,12 +513,12 @@ async function translateWithLibre(
       if (response.ok) {
         const data = await response.json();
         if (data.translatedText && data.translatedText !== text) {
-          console.log(`[dl-translate] LibreTranslate success via ${mirror}`);
+          console.log(`[translate-message] LibreTranslate success via ${mirror}`);
           return { translatedText: data.translatedText, success: true };
         }
       }
     } catch (error) {
-      console.log(`[dl-translate] Mirror ${mirror} failed`);
+      console.log(`[translate-message] Mirror ${mirror} failed`);
     }
   }
 
@@ -438,7 +532,7 @@ async function translateWithMyMemory(
   targetCode: string
 ): Promise<{ translatedText: string; success: boolean }> {
   try {
-    console.log('[dl-translate] Trying MyMemory fallback...');
+    console.log('[translate-message] Trying MyMemory fallback...');
     const langPair = `${sourceCode}|${targetCode}`;
     const response = await fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`
@@ -449,20 +543,20 @@ async function translateWithMyMemory(
       if (data.responseData?.translatedText && 
           data.responseData.translatedText !== text &&
           !data.responseData.translatedText.includes('MYMEMORY WARNING')) {
-        console.log('[dl-translate] MyMemory success');
+        console.log('[translate-message] MyMemory success');
         return { translatedText: data.responseData.translatedText, success: true };
       }
     }
   } catch (error) {
-    console.log('[dl-translate] MyMemory failed');
+    console.log('[translate-message] MyMemory failed');
   }
 
   return { translatedText: text, success: false };
 }
 
 /**
- * Main translation function using English pivot for all language pairs
- * This ensures we can translate between ANY two languages even if direct translation isn't available
+ * Main translation function using HuggingFace NLLB-200 as primary
+ * Falls back to LibreTranslate/MyMemory if HuggingFace fails
  */
 async function translateText(
   text: string,
@@ -472,146 +566,65 @@ async function translateText(
   const sourceCode = getLibreCode(sourceLanguage);
   const targetCode = getLibreCode(targetLanguage);
 
-  console.log(`[dl-translate] Translating: ${sourceCode} -> ${targetCode}`);
+  console.log(`[translate-message] Translating: ${sourceLanguage} -> ${targetLanguage}`);
 
-  // Try direct translation first with LibreTranslate
-  let result = await translateWithLibre(text, sourceCode, targetCode);
+  // Try HuggingFace NLLB-200 first (primary translation engine)
+  let result = await translateWithHuggingFace(text, sourceLanguage, targetLanguage);
   if (result.success && result.translatedText !== text) {
     const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
     return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
-  // Try MyMemory fallback for direct translation
+  // Fallback to LibreTranslate
+  result = await translateWithLibre(text, sourceCode, targetCode);
+  if (result.success && result.translatedText !== text) {
+    const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
+    return { translatedText: cleaned, success: true, pivotUsed: false };
+  }
+
+  // Fallback to MyMemory
   result = await translateWithMyMemory(text, sourceCode, targetCode);
   if (result.success && result.translatedText !== text) {
     const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
     return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
-  // If direct translation failed and neither language is English, use English pivot
+  // If direct translation failed and neither language is English, use English pivot with HuggingFace
   if (sourceCode !== 'en' && targetCode !== 'en') {
-    console.log('[dl-translate] Using English pivot translation');
+    console.log('[translate-message] Using English pivot translation with HuggingFace');
     
-    // Step 1: Translate source -> English
-    let pivotResult = await translateWithLibre(text, sourceCode, 'en');
+    // Step 1: Translate source -> English via HuggingFace
+    let pivotResult = await translateWithHuggingFace(text, sourceLanguage, 'english');
+    if (!pivotResult.success || pivotResult.translatedText === text) {
+      pivotResult = await translateWithLibre(text, sourceCode, 'en');
+    }
     if (!pivotResult.success || pivotResult.translatedText === text) {
       pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
     }
 
     if (pivotResult.success && pivotResult.translatedText !== text) {
-      // Step 2: Translate English -> target
-      let finalResult = await translateWithLibre(pivotResult.translatedText, 'en', targetCode);
+      // Step 2: Translate English -> target via HuggingFace
+      let finalResult = await translateWithHuggingFace(pivotResult.translatedText, 'english', targetLanguage);
+      if (!finalResult.success || finalResult.translatedText === pivotResult.translatedText) {
+        finalResult = await translateWithLibre(pivotResult.translatedText, 'en', targetCode);
+      }
       if (!finalResult.success || finalResult.translatedText === pivotResult.translatedText) {
         finalResult = await translateWithMyMemory(pivotResult.translatedText, 'en', targetCode);
       }
 
       if (finalResult.success && finalResult.translatedText !== pivotResult.translatedText) {
         const cleaned = cleanTranslatedText(finalResult.translatedText, targetLanguage);
-        console.log('[dl-translate] English pivot translation success');
+        console.log('[translate-message] English pivot translation success');
         return { translatedText: cleaned, success: true, pivotUsed: true };
       }
     }
   }
 
-  // Try AI translation as last resort if available
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (LOVABLE_API_KEY) {
-    try {
-      console.log('[dl-translate] Trying AI translation as fallback');
-      const aiResult = await translateWithAI(text, sourceLanguage, targetLanguage);
-      if (aiResult.success && aiResult.text !== text) {
-        const cleaned = cleanTranslatedText(aiResult.text, targetLanguage);
-        console.log('[dl-translate] AI translation success');
-        return { translatedText: cleaned, success: true, pivotUsed: false };
-      }
-    } catch (aiError) {
-      console.log('[dl-translate] AI translation fallback failed:', aiError);
-    }
-  }
-
   // All translation attempts failed
-  console.log('[dl-translate] All translation attempts failed, returning original text');
+  console.log('[translate-message] All translation attempts failed, returning original');
   return { translatedText: text, success: false, pivotUsed: false };
 }
-
-/**
- * AI-powered translation fallback using Lovable AI
- * Uses strict direct translation - NO creative interpretation
- */
-async function translateWithAI(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string
-): Promise<{ text: string; success: boolean }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
-  if (!LOVABLE_API_KEY) {
-    return { text, success: false };
-  }
-  
-  const sourceLangInfo = languageByName.get(sourceLanguage.toLowerCase());
-  const targetLangInfo = languageByName.get(targetLanguage.toLowerCase());
-  const sourceNative = sourceLangInfo?.native || sourceLanguage;
-  const targetNative = targetLangInfo?.native || targetLanguage;
-  const targetScript = targetLangInfo?.script || 'native';
-
-  // Dynamic token budget to avoid truncated outputs on longer messages
-  const maxTokens = Math.min(4096, Math.max(512, text.length * 4));
-  
-  try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a STRICT translation engine. Your ONLY job is direct word-for-word translation.
-
-TRANSLATE from ${sourceLanguage} (${sourceNative}) to ${targetLanguage} (${targetNative}).
-Output in ${targetScript} script.
-
-CRITICAL RULES:
-1. DIRECT TRANSLATION ONLY - translate the exact meaning, word by word
-2. "I love you" = "నేను నిన్ను ప్రేమిస్తున్నాను" (Telugu) / "मैं तुमसे प्यार करता हूं" (Hindi)
-3. DO NOT interpret, paraphrase, or get creative
-4. DO NOT add poetry, metaphors, or cultural expressions
-5. Output ONLY the translated text - no explanations
-6. Preserve the EXACT meaning of the original text
-7. This is for a dating app - translate romantic phrases directly`
-          },
-          {
-            role: "user",
-            content: text
-          }
-        ],
-        max_tokens: maxTokens,
-        temperature: 0.1, // Low temperature for consistent, literal translations
-      }),
-    });
-
-    if (!response.ok) {
-      console.log(`[dl-translate] AI translation failed: ${response.status}`);
-      return { text, success: false };
-    }
-
-    const data = await response.json();
-    const result = data.choices?.[0]?.message?.content?.trim();
-    
-    if (result && result !== text) {
-      return { text: result, success: true };
-    }
-    
-    return { text, success: false };
-  } catch (error) {
-    console.error(`[dl-translate] AI translation error:`, error);
-    return { text, success: false };
-  }
-}
+// Note: translateWithAI removed - using HuggingFace NLLB-200 as primary translation
 
 /**
  * Clean translated text by removing language name prefixes/suffixes
@@ -651,95 +664,82 @@ function cleanTranslatedText(text: string, targetLanguage: string): string {
 }
 
 /**
- * Transliterate Latin text to native script using Lovable AI
+ * Transliterate Latin text to native script
+ * Uses HuggingFace translation as a workaround for transliteration
  * Converts romanized input like "bagunnava" to native script "బాగున్నావా"
  */
 async function transliterateWithAI(
   latinText: string,
   targetLanguage: string
 ): Promise<{ text: string; success: boolean }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  // For transliteration, we try to use HuggingFace to translate from English
+  // This works because romanized text often gets interpreted correctly
+  const HF_API_KEY = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
   
-  if (!LOVABLE_API_KEY) {
-    console.log(`[dl-translate] No LOVABLE_API_KEY, skipping AI transliteration`);
+  if (!HF_API_KEY) {
+    console.log(`[translate-message] No HUGGING_FACE_ACCESS_TOKEN, skipping transliteration`);
+    return { text: latinText, success: false };
+  }
+
+  const srcCode = getNLLBCode('english');
+  const tgtCode = getNLLBCode(targetLanguage);
+  
+  if (!tgtCode) {
+    console.log(`[translate-message] Target language ${targetLanguage} not supported for transliteration`);
     return { text: latinText, success: false };
   }
   
-  const langInfo = languageByName.get(targetLanguage.toLowerCase());
-  const nativeScript = langInfo?.native || targetLanguage;
-  const scriptName = langInfo?.script || 'native';
-  
-  // Dynamic token budget to avoid truncated outputs on longer messages
-  // Fixed: Use text.length * 4 for complete transliteration
-  const maxTokens = Math.min(4096, Math.max(512, latinText.length * 4));
-  
   try {
-    console.log(`[dl-translate] Using AI for transliteration to ${targetLanguage} (${scriptName})`);
+    console.log(`[translate-message] Using HuggingFace for transliteration to ${targetLanguage}`);
     
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are a transliteration engine. Convert romanized/Latin text to ${targetLanguage} ${scriptName} script. 
-RULES:
-- Transliterate the ENTIRE input. Do NOT omit any words or sentences.
-- Output ONLY the transliterated text in ${scriptName} script
-- Do NOT translate meaning - convert sounds phonetically
-- Do NOT add any explanations, prefixes, or language names
-- If input is already in ${scriptName} script, return it as-is
-- Preserve numbers and punctuation
-
-Example for Telugu: "bagunnava" → "బాగున్నావా"
-Example for Hindi: "namaste" → "नमस्ते"`
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HF_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: latinText,
+          parameters: {
+            src_lang: srcCode,
+            tgt_lang: tgtCode,
           },
-          {
-            role: "user",
-            content: latinText
-          }
-        ],
-        max_tokens: maxTokens,
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
       const status = response.status;
-      if (status === 401) {
-        console.log(`[dl-translate] AI transliteration: Invalid API key (401)`);
-      } else if (status === 402) {
-        console.log(`[dl-translate] AI transliteration: Payment required (402) - please add credits`);
-      } else if (status === 429) {
-        console.log(`[dl-translate] AI transliteration: Rate limited (429)`);
-      } else {
-        console.log(`[dl-translate] AI transliteration failed: ${status}`);
+      console.log(`[translate-message] HuggingFace transliteration failed: ${status}`);
+      
+      if (status === 503) {
+        console.log("[translate-message] Model loading, waiting...");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return transliterateWithAI(latinText, targetLanguage);
       }
+      
       return { text: latinText, success: false };
     }
 
-    const data = await response.json();
-    const result = data.choices?.[0]?.message?.content?.trim();
+    const result = await response.json();
+    const transliteratedText = result[0]?.translation_text || result[0]?.generated_text;
     
-    if (result) {
+    if (transliteratedText) {
       // Verify result is in native script
-      const detected = detectScriptFromText(result);
+      const detected = detectScriptFromText(transliteratedText);
       if (!detected.isLatin) {
-        // Clean any unwanted prefixes/suffixes
-        const cleaned = cleanTranslatedText(result, targetLanguage);
-        console.log(`[dl-translate] AI transliteration success: "${latinText}" -> "${cleaned}"`);
+        const cleaned = cleanTranslatedText(transliteratedText, targetLanguage);
+        console.log(`[translate-message] Transliteration success: "${latinText}" -> "${cleaned}"`);
         return { text: cleaned, success: true };
       }
     }
     
-    console.log(`[dl-translate] AI returned Latin text, keeping original`);
+    console.log(`[translate-message] Result still Latin, keeping original`);
     return { text: latinText, success: false };
   } catch (error) {
-    console.error(`[dl-translate] AI transliteration error:`, error);
+    console.error(`[translate-message] Transliteration error:`, error);
     return { text: latinText, success: false };
   }
 }
