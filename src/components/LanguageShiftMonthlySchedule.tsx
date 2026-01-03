@@ -23,20 +23,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval, 
-  getDay, 
-  addMonths, 
-  isSameDay,
-  isToday as isDateToday,
-  getDaysInMonth,
-  getDate,
-  getMonth,
-  getYear
-} from "date-fns";
 
 interface WomanDaySchedule {
   date: string;
@@ -141,30 +127,67 @@ const SHIFT_BG_COLORS = {
 };
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 
+                     'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Get days in a month - proper calculation like FullCalendar
+// January = 31, February = 28/29 (leap year), March = 31, etc.
+const getDaysInMonth = (year: number, month: number): number => {
+  // month is 0-indexed (0 = January, 11 = December)
+  // new Date(year, month + 1, 0) gives last day of the month
+  return new Date(year, month + 1, 0).getDate();
+};
+
+// Check if a year is a leap year
+const isLeapYear = (year: number): boolean => {
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+};
+
+// Check if a date is today
+const isToday = (date: Date): boolean => {
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+         date.getMonth() === today.getMonth() &&
+         date.getFullYear() === today.getFullYear();
+};
+
+// Format date as YYYY-MM-DD
+const formatDateStr = (year: number, month: number, day: number): string => {
+  const m = String(month + 1).padStart(2, '0');
+  const d = String(day).padStart(2, '0');
+  return `${year}-${m}-${d}`;
+};
 
 // Generate calendar months using proper date calculations (like FullCalendar)
 const generateCalendarMonths = (baseDate: Date, monthCount: number): CalendarMonth[] => {
   const months: CalendarMonth[] = [];
   
+  let currentYear = baseDate.getFullYear();
+  let currentMonth = baseDate.getMonth();
+  
   for (let i = 0; i < monthCount; i++) {
-    const monthDate = addMonths(baseDate, i);
-    const year = getYear(monthDate);
-    const month = getMonth(monthDate);
-    const monthStart = startOfMonth(monthDate);
-    const monthEnd = endOfMonth(monthDate);
+    // Handle month overflow
+    const year = currentYear + Math.floor((currentMonth + i) / 12);
+    const month = (currentMonth + i) % 12;
     
-    const days = eachDayOfInterval({ start: monthStart, end: monthEnd }).map(date => ({
-      date,
-      dateStr: format(date, 'yyyy-MM-dd'),
-      day: getDate(date),
-      dayName: DAY_NAMES[getDay(date)],
-      isToday: isDateToday(date)
-    }));
+    const daysInMonth = getDaysInMonth(year, month);
+    const days: CalendarDay[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      days.push({
+        date,
+        dateStr: formatDateStr(year, month, day),
+        day,
+        dayName: DAY_NAMES[date.getDay()],
+        isToday: isToday(date)
+      });
+    }
     
     months.push({
       year,
       month,
-      name: format(monthDate, 'MMMM yyyy'),
+      name: `${MONTH_NAMES[month]} ${year}`,
       days
     });
   }
