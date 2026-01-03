@@ -70,6 +70,14 @@ const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
     spanish: '¿Cómo estás?', french: 'Comment allez-vous?', german: 'Wie geht es dir?',
     arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요', english: 'How are you',
   },
+  // Common romanized Hindi input (phonetic)
+  'aap kaise ho': {
+    hindi: 'आप कैसे हो', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்',
+    bengali: 'আপনি কেমন আছেন', marathi: 'तुम्ही कसे आहात', gujarati: 'તમે કેમ છો',
+    kannada: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', malayalam: 'സുഖമാണോ', punjabi: 'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ',
+    spanish: '¿Cómo estás?', french: 'Comment allez-vous?', german: 'Wie geht es dir?',
+    arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요', english: 'How are you',
+  },
   'what is your name': {
     hindi: 'आपका नाम क्या है', telugu: 'మీ పేరు ఏమిటి', tamil: 'உங்கள் பெயர் என்ன',
     bengali: 'আপনার নাম কি', spanish: '¿Cómo te llamas?', french: 'Comment vous appelez-vous?', english: 'What is your name',
