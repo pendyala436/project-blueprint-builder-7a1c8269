@@ -482,135 +482,38 @@ async function translateWithHuggingFace(
   }
 }
 
-// LibreTranslate mirrors (fallback)
-const LIBRE_TRANSLATE_MIRRORS = [
-  "https://libretranslate.com",
-  "https://translate.argosopentech.com",
-  "https://translate.terraprint.co",
-];
-
-// Translate using LibreTranslate (fallback)
-async function translateWithLibre(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  for (const mirror of LIBRE_TRANSLATE_MIRRORS) {
-    try {
-      console.log(`[translate-message] Trying LibreTranslate fallback: ${mirror}`);
-      
-      const response = await fetch(`${mirror}/translate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          q: text,
-          source: sourceCode === "auto" ? "auto" : sourceCode,
-          target: targetCode,
-          format: "text",
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.translatedText && data.translatedText !== text) {
-          console.log(`[translate-message] LibreTranslate success via ${mirror}`);
-          return { translatedText: data.translatedText, success: true };
-        }
-      }
-    } catch (error) {
-      console.log(`[translate-message] Mirror ${mirror} failed`);
-    }
-  }
-
-  return { translatedText: text, success: false };
-}
-
-// Translate using MyMemory (fallback)
-async function translateWithMyMemory(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  try {
-    console.log('[translate-message] Trying MyMemory fallback...');
-    const langPair = `${sourceCode}|${targetCode}`;
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.responseData?.translatedText && 
-          data.responseData.translatedText !== text &&
-          !data.responseData.translatedText.includes('MYMEMORY WARNING')) {
-        console.log('[translate-message] MyMemory success');
-        return { translatedText: data.responseData.translatedText, success: true };
-      }
-    }
-  } catch (error) {
-    console.log('[translate-message] MyMemory failed');
-  }
-
-  return { translatedText: text, success: false };
-}
+// LibreTranslate and MyMemory removed - using HuggingFace NLLB-200 only
 
 /**
- * Main translation function using HuggingFace NLLB-200 as primary
- * Falls back to LibreTranslate/MyMemory if HuggingFace fails
+ * Main translation function using HuggingFace NLLB-200 only
  */
 async function translateText(
   text: string,
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<{ translatedText: string; success: boolean; pivotUsed: boolean }> {
-  const sourceCode = getLibreCode(sourceLanguage);
-  const targetCode = getLibreCode(targetLanguage);
-
   console.log(`[translate-message] Translating: ${sourceLanguage} -> ${targetLanguage}`);
 
-  // Try HuggingFace NLLB-200 first (primary translation engine)
+  // Try HuggingFace NLLB-200 (primary and only translation engine)
   let result = await translateWithHuggingFace(text, sourceLanguage, targetLanguage);
   if (result.success && result.translatedText !== text) {
     const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
     return { translatedText: cleaned, success: true, pivotUsed: false };
   }
 
-  // Fallback to LibreTranslate
-  result = await translateWithLibre(text, sourceCode, targetCode);
-  if (result.success && result.translatedText !== text) {
-    const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
-    return { translatedText: cleaned, success: true, pivotUsed: false };
-  }
-
-  // Fallback to MyMemory
-  result = await translateWithMyMemory(text, sourceCode, targetCode);
-  if (result.success && result.translatedText !== text) {
-    const cleaned = cleanTranslatedText(result.translatedText, targetLanguage);
-    return { translatedText: cleaned, success: true, pivotUsed: false };
-  }
-
   // If direct translation failed and neither language is English, use English pivot with HuggingFace
-  if (sourceCode !== 'en' && targetCode !== 'en') {
+  const sourceNorm = normalizeLanguage(sourceLanguage);
+  const targetNorm = normalizeLanguage(targetLanguage);
+  
+  if (sourceNorm !== 'english' && targetNorm !== 'english') {
     console.log('[translate-message] Using English pivot translation with HuggingFace');
     
     // Step 1: Translate source -> English via HuggingFace
-    let pivotResult = await translateWithHuggingFace(text, sourceLanguage, 'english');
-    if (!pivotResult.success || pivotResult.translatedText === text) {
-      pivotResult = await translateWithLibre(text, sourceCode, 'en');
-    }
-    if (!pivotResult.success || pivotResult.translatedText === text) {
-      pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
-    }
+    const pivotResult = await translateWithHuggingFace(text, sourceLanguage, 'english');
 
     if (pivotResult.success && pivotResult.translatedText !== text) {
       // Step 2: Translate English -> target via HuggingFace
-      let finalResult = await translateWithHuggingFace(pivotResult.translatedText, 'english', targetLanguage);
-      if (!finalResult.success || finalResult.translatedText === pivotResult.translatedText) {
-        finalResult = await translateWithLibre(pivotResult.translatedText, 'en', targetCode);
-      }
-      if (!finalResult.success || finalResult.translatedText === pivotResult.translatedText) {
-        finalResult = await translateWithMyMemory(pivotResult.translatedText, 'en', targetCode);
-      }
+      const finalResult = await translateWithHuggingFace(pivotResult.translatedText, 'english', targetLanguage);
 
       if (finalResult.success && finalResult.translatedText !== pivotResult.translatedText) {
         const cleaned = cleanTranslatedText(finalResult.translatedText, targetLanguage);
@@ -621,7 +524,7 @@ async function translateText(
   }
 
   // All translation attempts failed
-  console.log('[translate-message] All translation attempts failed, returning original');
+  console.log('[translate-message] Translation failed, returning original');
   return { translatedText: text, success: false, pivotUsed: false };
 }
 // Note: translateWithAI removed - using HuggingFace NLLB-200 as primary translation
@@ -800,20 +703,18 @@ async function transliterateWithGoogle(
 
 /**
  * Transliterate Latin text to native script
- * Tries multiple methods: AI -> Google Input Tools -> Translation APIs
+ * Tries multiple methods: HuggingFace -> Google Input Tools
  */
 async function transliterateToNative(
   latinText: string,
   targetLanguage: string
 ): Promise<{ text: string; success: boolean }> {
-  const targetCode = getLibreCode(targetLanguage);
+  console.log(`[translate-message] Transliterating to ${targetLanguage}`);
   
-  console.log(`[dl-translate] Transliterating to ${targetLanguage} (${targetCode})`);
-  
-  // Try AI transliteration first (best quality)
-  const aiResult = await transliterateWithAI(latinText, targetLanguage);
-  if (aiResult.success) {
-    return aiResult;
+  // Try HuggingFace transliteration first (best quality)
+  const hfResult = await transliterateWithAI(latinText, targetLanguage);
+  if (hfResult.success) {
+    return hfResult;
   }
   
   // Try Google Input Tools (reliable for Indic languages)
@@ -822,24 +723,20 @@ async function transliterateToNative(
     return googleResult;
   }
   
-  // Fallback: Use translation APIs (translates meaning, not just script)
-  let result = await translateWithLibre(latinText, 'en', targetCode);
-  
-  if (!result.success) {
-    result = await translateWithMyMemory(latinText, 'en', targetCode);
-  }
+  // Fallback: Use HuggingFace translation (translates meaning, not just script)
+  const result = await translateWithHuggingFace(latinText, 'english', targetLanguage);
   
   // Check if the result is in native script (not Latin)
   if (result.success) {
     const detected = detectScriptFromText(result.translatedText);
     if (!detected.isLatin) {
       const cleanedText = cleanTranslatedText(result.translatedText, targetLanguage);
-      console.log(`[dl-translate] Transliteration via translation: "${latinText}" -> "${cleanedText}"`);
+      console.log(`[translate-message] Transliteration via translation: "${latinText}" -> "${cleanedText}"`);
       return { text: cleanedText, success: true };
     }
   }
   
-  console.log(`[dl-translate] Transliteration failed, keeping original`);
+  console.log(`[translate-message] Transliteration failed, keeping original`);
   return { text: latinText, success: false };
 }
 
