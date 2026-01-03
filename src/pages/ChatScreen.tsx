@@ -83,6 +83,8 @@ import {
 } from "@/components/ui/alert-dialog";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
+// Embedded translation engine (browser-based ML + dictionaries)
+import { translateText, convertToNativeScript, normalizeLanguage } from "@/lib/translation/translation-engine";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
@@ -340,6 +342,11 @@ const ChatScreen = () => {
         async (payload: any) => {
           // Extract new message from payload
           const newMsg = payload.new;
+
+          // Skip own messages - we add them locally on send for reliability
+          if (newMsg?.sender_id === currentUserId) {
+            return;
+          }
           
           // ============= TRANSLATE INCOMING MESSAGES =============
           
@@ -382,7 +389,12 @@ const ChatScreen = () => {
           }
         }
       )
-      .subscribe(); // Start listening
+      .subscribe((status, err) => {
+        console.log(
+          `[RealTime] ChatScreen subscription: ${status}`,
+          err ? `Error: ${err.message}` : ""
+        );
+      }); // Start listening
 
     // Cleanup function: remove channel on unmount
     return () => {
@@ -915,35 +927,50 @@ const ChatScreen = () => {
    * @param sourceLanguage - Optional source language (auto-detected if not provided)
    * @returns Object with translatedMessage, isTranslated flag, and detectedLanguage
    */
-  const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
+  const translateMessage = async (
+    message: string,
+    targetLanguage: string,
+    sourceLanguage?: string
+  ) => {
+    const trimmed = message.trim();
+    if (!trimmed) {
+      return {
+        translatedMessage: message,
+        isTranslated: false,
+        detectedLanguage: "unknown",
+        translationPair: "",
+      };
+    }
+
     try {
-      // Call Supabase Edge Function for translation
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          text: message,
-          message, 
-          targetLanguage,
-          sourceLanguage: sourceLanguage, // Let edge function auto-detect if not provided
-          mode: 'chat' // Use chat mode for better translation context
-        }
+      const normTarget = normalizeLanguage(targetLanguage || "english");
+      const normSource = sourceLanguage ? normalizeLanguage(sourceLanguage) : undefined;
+
+      const result = await translateText(trimmed, {
+        sourceLanguage: normSource,
+        targetLanguage: normTarget,
+        mode: "translate",
       });
 
-      if (error) throw error;
-      
-      // Check if translation actually produced different text
-      const translatedText = data.translatedText || data.translatedMessage || message;
-      const wasActuallyTranslated = data.isTranslated && translatedText && translatedText !== message;
-      
-      return { 
-        translatedMessage: translatedText, 
+      const wasActuallyTranslated =
+        result.isTranslated &&
+        result.translatedText &&
+        result.translatedText !== trimmed;
+
+      return {
+        translatedMessage: result.translatedText,
         isTranslated: wasActuallyTranslated,
-        detectedLanguage: data.detectedLanguage || data.sourceLanguage,
-        translationPair: data.translationPair || `${data.detectedLanguage || data.sourceLanguage} → ${targetLanguage}`
+        detectedLanguage: result.sourceLanguage,
+        translationPair: `${result.sourceLanguage} → ${normTarget}`,
       };
     } catch (error) {
       console.error("Translation error:", error);
-      // Return original message on error
-      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
+      return {
+        translatedMessage: trimmed,
+        isTranslated: false,
+        detectedLanguage: "unknown",
+        translationPair: "",
+      };
     }
   };
 
@@ -973,27 +1000,16 @@ const ChatScreen = () => {
    * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
    * @returns Converted text in target language script
    */
-  const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
+  const convertMessageToTargetLanguage = async (
+    message: string,
+    targetLanguage: string
+  ): Promise<string> => {
     try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          text: message,
-          message, 
-          targetLanguage,
-          mode: "convert" // Force conversion mode for outgoing messages
-        }
-      });
+      const trimmed = message.trim();
+      if (!trimmed) return message;
 
-      if (error) {
-        console.error("Conversion error:", error);
-        return message;
-      }
-      
-      // Check all possible response fields for the converted text
-      const convertedText = data.translatedText || data.convertedMessage || data.translatedMessage || message;
-      
-      // Only return converted text if it's actually different (conversion worked)
-      return convertedText !== message ? convertedText : message;
+      const converted = await convertToNativeScript(trimmed, targetLanguage);
+      return converted || message;
     } catch (error) {
       console.error("Conversion failed:", error);
       return message;
@@ -1012,7 +1028,7 @@ const ChatScreen = () => {
    */
   const handleSendMessage = async () => {
     // ============= VALIDATION =============
-    
+
     // Don't send empty messages or while already sending
     if (!newMessage.trim() || !chatPartner || isSending) return;
 
@@ -1020,7 +1036,7 @@ const ChatScreen = () => {
     if (isBlocked || isBlockedByPartner) {
       toast({
         title: "Cannot Send Message",
-        description: isBlocked 
+        description: isBlocked
           ? "You have blocked this user. Unblock to send messages."
           : "You cannot send messages to this user.",
         variant: "destructive",
@@ -1033,44 +1049,95 @@ const ChatScreen = () => {
     setNewMessage("");
     setIsSending(true);
 
+    // Optimistic update so sender always sees the message immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      message: messageText,
+      translatedMessage: undefined,
+      isTranslated: false,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     try {
       // ============= CONVERT ENGLISH TYPING TO TARGET LANGUAGE =============
-      
-      // First, convert English typing to partner's language script
-      const convertedMessage = await convertMessageToTargetLanguage(messageText, chatPartner.preferredLanguage);
-      
+      const convertedMessage = await convertMessageToTargetLanguage(
+        messageText,
+        chatPartner.preferredLanguage
+      );
+
+      // Update optimistic message with converted text (if any)
+      if (convertedMessage && convertedMessage !== messageText) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, message: convertedMessage } : m))
+        );
+      }
+
       // ============= TRANSLATE FOR RECEIVER =============
-      
-      // Translate message to partner's preferred language (for display)
-      const translation = await translateMessage(convertedMessage, chatPartner.preferredLanguage);
+      const translation = await translateMessage(
+        convertedMessage,
+        chatPartner.preferredLanguage
+      );
       const translatedMessage = translation.translatedMessage;
       const isTranslated = translation.isTranslated;
 
+      // Update optimistic message with translation preview
+      if (translatedMessage) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? { ...m, translatedMessage, isTranslated }
+              : m
+          )
+        );
+      }
+
       // ============= INSERT MESSAGE INTO DATABASE =============
-      
-      const { error } = await supabase
+      const { data: insertedMsg, error } = await supabase
         .from("chat_messages")
         .insert({
-          chat_id: chatId.current,          // Consistent chat identifier
-          sender_id: currentUserId,          // Current user as sender
-          receiver_id: chatPartner.userId,   // Partner as receiver
-          message: convertedMessage,         // Converted message (English typing → target script)
-          translated_message: translatedMessage || null, // Translation if different
-          is_translated: isTranslated,       // Flag if translation occurred
-        });
+          chat_id: chatId.current, // Consistent chat identifier
+          sender_id: currentUserId, // Current user as sender
+          receiver_id: chatPartner.userId, // Partner as receiver
+          message: convertedMessage, // Converted message (English typing → target script)
+          translated_message: translatedMessage || null,
+          is_translated: isTranslated,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Note: Message will appear via realtime subscription
-      
+      if (insertedMsg) {
+        // Replace optimistic temp message with real message row
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  id: insertedMsg.id,
+                  senderId: insertedMsg.sender_id,
+                  message: insertedMsg.message,
+                  translatedMessage: insertedMsg.translated_message || translatedMessage,
+                  isTranslated: Boolean(insertedMsg.is_translated) || isTranslated,
+                  isRead: Boolean(insertedMsg.is_read),
+                  createdAt: insertedMsg.created_at,
+                }
+              : m
+          )
+        );
+      }
     } catch (error) {
       console.error("Error sending message:", error);
+      // Remove optimistic message on failure and restore input
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast({
         title: "Error",
         description: "Failed to send message",
         variant: "destructive",
       });
-      // Restore message to input on failure
       setNewMessage(messageText);
     } finally {
       setIsSending(false);

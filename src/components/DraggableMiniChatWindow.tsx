@@ -717,14 +717,11 @@ const DraggableMiniChatWindow = ({
   };
 
   const subscribeToMessages = () => {
-    // Optimized channel for scalability - unique per chat session
+    console.log(`[RealTime] Setting up draggable subscription for chat: ${chatId}, user: ${currentUserId}`);
+
+    // Simple channel without broadcast/presence config (more reliable)
     const channel = supabase
-      .channel(`realtime-draggable:${chatId}`, {
-        config: {
-          broadcast: { self: false }, // Don't receive own broadcasts
-          presence: { key: currentUserId } // Track presence per user
-        }
-      })
+      .channel(`draggable-chat-messages-${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -733,22 +730,25 @@ const DraggableMiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        async (payload: any) => {
+        (payload: any) => {
           const newMsg = payload.new;
-          
+          console.log(`[RealTime] Draggable received message:`, newMsg?.id, 'from:', newMsg?.sender_id);
+
+          if (!newMsg) return;
+
           // Skip if message is from current user (already added locally)
           if (newMsg.sender_id === currentUserId) {
             return;
           }
-          
-          // Add message immediately (non-blocking) - show original first
+
+          // Add message immediately - show original first
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: newMsg.message, // Show original initially
+              translatedMessage: newMsg.message,
               isTranslated: false,
               detectedLanguage: undefined,
               createdAt: newMsg.created_at
@@ -762,25 +762,26 @@ const DraggableMiniChatWindow = ({
             setUnreadCount(prev => prev + 1);
           }
 
-          // Translate in background (parallel, non-blocking)
-          translateMessage(newMsg.message, newMsg.sender_id).then(translation => {
-            if (translation.isTranslated) {
-              setMessages(prev => prev.map(m => 
-                m.id === newMsg.id 
-                  ? { ...m, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
-                  : m
-              ));
-            }
-          }).catch(err => console.error('Background translation error:', err));
+          // Translate in background
+          translateMessage(newMsg.message, newMsg.sender_id)
+            .then(translation => {
+              if (translation.isTranslated) {
+                setMessages(prev => prev.map(m => 
+                  m.id === newMsg.id
+                    ? { ...m, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
+                    : m
+                ));
+              }
+            })
+            .catch(err => console.error('[RealTime] Draggable translation error:', err));
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[RealTime] Draggable chat subscribed: ${chatId}`);
-        }
+      .subscribe((status, err) => {
+        console.log(`[RealTime] Draggable subscription status: ${status}`, err ? `Error: ${err.message}` : '');
       });
 
     return () => {
+      console.log(`[RealTime] Draggable unsubscribing from chat: ${chatId}`);
       supabase.removeChannel(channel);
     };
   };
