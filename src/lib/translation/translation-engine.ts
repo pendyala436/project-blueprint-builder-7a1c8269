@@ -1,15 +1,15 @@
 /**
  * Embedded Translation Engine (DL-Translate Pattern)
  * 
- * Pure dictionary-based translation using:
- * - Embedded phrase dictionaries (common phrases)
- * - Transliteration dictionaries (phonetic → native script)
+ * Hybrid translation using:
+ * - Embedded phrase dictionaries (common phrases - instant)
+ * - Transliteration dictionaries (phonetic → native script - instant)
+ * - Phonetic transliterator (syllable-based - instant)
+ * - Edge function fallback (Lovable AI - for long/complex messages)
  * 
  * Based on: 
  * - https://github.com/xhluca/dl-translate (API pattern)
  * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
- * 
- * NO ML models - NO external APIs - Pure embedded dictionaries
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -17,10 +17,14 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
+import { supabase } from '@/integrations/supabase/client';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Threshold for using edge function (word count)
+const EDGE_FUNCTION_THRESHOLD = 5; // Use edge function for 5+ word sentences
 
 // Common phrases dictionary for accurate translation (expanded)
 // Bidirectional: Both English key → Native AND Native key → English
@@ -529,8 +533,57 @@ export async function translateText(
     }
   }
   
+  // For long messages (5+ words), use edge function with AI translation
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount >= EDGE_FUNCTION_THRESHOLD) {
+    console.log('[DL-Translate] Long message detected, trying edge function:', wordCount, 'words');
+    const edgeResult = await translateWithEdgeFunction(trimmed, normSource, normTarget);
+    if (edgeResult.success) {
+      addToCache(cacheKey, edgeResult.text);
+      return createResult(trimmed, edgeResult.text, normSource, normTarget, true, 'translate');
+    }
+  }
+  
   console.log('[DL-Translate] No translation available, returning original');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
+}
+
+/**
+ * Translate using edge function (AI-powered)
+ * Used for long/complex messages that dictionary can't handle
+ */
+async function translateWithEdgeFunction(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ text: string; success: boolean }> {
+  try {
+    console.log('[DL-Translate] Calling translate-message edge function');
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        sourceLanguage,
+        targetLanguage,
+        mode: 'chat'
+      }
+    });
+    
+    if (error) {
+      console.error('[DL-Translate] Edge function error:', error);
+      return { text, success: false };
+    }
+    
+    if (data?.translatedText && data.translatedText !== text) {
+      console.log('[DL-Translate] Edge function success:', data.translatedText.slice(0, 50));
+      return { text: data.translatedText, success: true };
+    }
+    
+    return { text, success: false };
+  } catch (err) {
+    console.error('[DL-Translate] Edge function call failed:', err);
+    return { text, success: false };
+  }
 }
 
 /**
