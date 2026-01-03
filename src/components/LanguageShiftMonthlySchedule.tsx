@@ -233,16 +233,16 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
   // Create grid header (dates)
   const renderGridHeader = () => (
     <div className="flex border-b border-border sticky top-0 bg-card z-10">
-      <div className="min-w-[140px] p-2 border-r border-border font-medium text-sm text-muted-foreground">
+      <div className="min-w-[120px] w-[120px] shrink-0 p-2 border-r border-border font-medium text-sm text-muted-foreground sticky left-0 bg-card z-20">
         Team Member
       </div>
-      <div className="flex overflow-x-auto">
+      <div className="flex">
         {monthDates.map((day) => {
           const isToday = new Date().toISOString().split('T')[0] === day.date;
           return (
             <div 
               key={day.date} 
-              className={`min-w-[36px] p-1 text-center text-xs border-r border-border ${
+              className={`w-[40px] shrink-0 p-1 text-center text-xs border-r border-border ${
                 isToday ? 'bg-primary/10' : ''
               }`}
             >
@@ -267,9 +267,9 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           isCurrentUser ? 'bg-primary/5' : ''
         }`}
       >
-        {/* Woman info column */}
-        <div className="min-w-[140px] p-2 border-r border-border flex items-center gap-2">
-          <Avatar className="h-6 w-6">
+        {/* Woman info column - sticky left */}
+        <div className="min-w-[120px] w-[120px] shrink-0 p-2 border-r border-border flex items-center gap-2 sticky left-0 bg-card z-10">
+          <Avatar className="h-6 w-6 shrink-0">
             <AvatarImage src={woman.photo_url || ''} />
             <AvatarFallback className="text-[10px] bg-muted">
               {woman.full_name?.charAt(0) || '?'}
@@ -277,7 +277,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-medium truncate flex items-center gap-1">
-              {woman.full_name}
+              {woman.full_name?.split(' ')[0]}
               {isCurrentUser && <Badge variant="outline" className="text-[8px] px-1">You</Badge>}
             </div>
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -287,13 +287,12 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
               >
                 {woman.current_shift.code}
               </Badge>
-              <span className="truncate">{woman.country?.substring(0, 2)}</span>
             </div>
           </div>
         </div>
 
         {/* Days columns */}
-        <div className="flex overflow-x-auto">
+        <div className="flex">
           {monthData.days.map((day) => {
             const isToday = new Date().toISOString().split('T')[0] === day.date;
             const isMyOffDay = isCurrentUser && day.is_week_off;
@@ -302,7 +301,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
             return (
               <div
                 key={day.date}
-                className={`min-w-[36px] p-1 text-center text-[10px] border-r border-border/30 relative group ${
+                className={`w-[40px] shrink-0 p-1 text-center text-[10px] border-r border-border/30 relative group ${
                   day.is_rotation_day 
                     ? 'bg-warning/10 border-warning/20'
                     : day.is_week_off 
@@ -434,22 +433,26 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </Button>
         </div>
 
-        {/* Calendar Grid */}
+        {/* Calendar Grid - Horizontally scrollable */}
         <div className="border border-border rounded-lg overflow-hidden">
-          <ScrollArea className="h-[350px]">
-            <div className="min-w-max">
-              {renderGridHeader()}
-              <div>
-                {scheduleData.all_women.length > 0 ? (
-                  scheduleData.all_women.map(renderWomanRow)
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No team members found
+          <div className="overflow-x-auto">
+            <div className="min-w-[1400px]">
+              <ScrollArea className="h-[350px]">
+                <div>
+                  {renderGridHeader()}
+                  <div>
+                    {scheduleData.all_women.length > 0 ? (
+                      scheduleData.all_women.map(renderWomanRow)
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No team members found
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              </ScrollArea>
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Off-Day Volunteers Section (Leader View) */}
