@@ -62,6 +62,20 @@ interface ScheduledShift {
   suggested_reason: string | null;
 }
 
+interface TeamShift {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  primary_language: string | null;
+  shift_code: string;
+  shift_name: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  week_off_days: number[];
+}
+
 interface AbsenceRecord {
   id: string;
   absence_date: string;
@@ -84,9 +98,12 @@ const ShiftManagementScreen = () => {
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [scheduledShifts, setScheduledShifts] = useState<ScheduledShift[]>([]);
+  const [teamShifts, setTeamShifts] = useState<TeamShift[]>([]);
+  const [userLanguage, setUserLanguage] = useState<string | null>(null);
   const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
   const [weekOffs, setWeekOffs] = useState<WeekOff[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTeam, setLoadingTeam] = useState(false);
   const [startingShift, setStartingShift] = useState(false);
   const [endingShift, setEndingShift] = useState(false);
   const [bookingShift, setBookingShift] = useState(false);
@@ -215,8 +232,135 @@ const ShiftManagementScreen = () => {
     }
   };
 
+  // Fetch team shifts for same language group
+  const fetchTeamShifts = async () => {
+    setLoadingTeam(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current user's language group
+      const { data: assignment } = await supabase
+        .from("women_shift_assignments")
+        .select("language_group_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!assignment?.language_group_id) {
+        setTeamShifts([]);
+        return;
+      }
+
+      // Get language group info
+      const { data: langGroup } = await supabase
+        .from("language_groups")
+        .select("name, languages")
+        .eq("id", assignment.language_group_id)
+        .single();
+
+      if (langGroup) {
+        setUserLanguage(langGroup.name);
+      }
+
+      // Get all women in the same language group with their shifts
+      const { data: teamAssignments } = await supabase
+        .from("women_shift_assignments")
+        .select(`
+          id,
+          user_id,
+          week_off_days,
+          shift_template_id,
+          language_group_id
+        `)
+        .eq("language_group_id", assignment.language_group_id)
+        .eq("is_active", true);
+
+      if (!teamAssignments || teamAssignments.length === 0) {
+        setTeamShifts([]);
+        return;
+      }
+
+      const userIds = teamAssignments.map(a => a.user_id);
+
+      // Get profiles for all team members
+      const { data: profiles } = await supabase
+        .from("female_profiles")
+        .select("user_id, full_name, primary_language")
+        .in("user_id", userIds);
+
+      // Get scheduled shifts for all team members
+      const todayStr = new Date().toISOString().split("T")[0];
+      const { data: schedules } = await supabase
+        .from("scheduled_shifts")
+        .select("*")
+        .in("user_id", userIds)
+        .gte("scheduled_date", todayStr)
+        .order("scheduled_date", { ascending: true })
+        .limit(100);
+
+      // Get shift templates
+      const { data: templates } = await supabase
+        .from("shift_templates")
+        .select("*")
+        .eq("is_active", true);
+
+      // Map team shifts with shift codes
+      const teamShiftsList: TeamShift[] = (schedules || []).map(sched => {
+        const profile = profiles?.find(p => p.user_id === sched.user_id);
+        const assign = teamAssignments.find(a => a.user_id === sched.user_id);
+        
+        // Determine shift code based on start time
+        let shiftCode = "A";
+        let shiftName = "Morning";
+        const startHour = parseInt(sched.start_time.split(":")[0]);
+        
+        if (startHour >= 0 && startHour < 9) {
+          shiftCode = "C";
+          shiftName = "Night";
+        } else if (startHour >= 9 && startHour < 15) {
+          shiftCode = "A";
+          shiftName = "Morning";
+        } else {
+          shiftCode = "B";
+          shiftName = "Evening";
+        }
+
+        // Check if template exists for more accurate code
+        if (assign?.shift_template_id && templates) {
+          const template = templates.find(t => t.id === assign.shift_template_id);
+          if (template) {
+            shiftCode = template.shift_code || shiftCode;
+            shiftName = template.name || shiftName;
+          }
+        }
+
+        return {
+          id: sched.id,
+          user_id: sched.user_id,
+          full_name: profile?.full_name || "Unknown",
+          primary_language: profile?.primary_language || null,
+          shift_code: shiftCode,
+          shift_name: shiftName,
+          scheduled_date: sched.scheduled_date,
+          start_time: sched.start_time,
+          end_time: sched.end_time,
+          status: sched.status,
+          week_off_days: assign?.week_off_days || []
+        };
+      });
+
+      setTeamShifts(teamShiftsList);
+    } catch (error) {
+      console.error("Error fetching team shifts:", error);
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
+    fetchTeamShifts();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -720,21 +864,154 @@ const ShiftManagementScreen = () => {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="schedule" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="schedule" className="text-sm">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Schedule
+        <Tabs defaultValue="team" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="team" className="text-xs sm:text-sm">
+              <Users className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Team</span>
             </TabsTrigger>
-            <TabsTrigger value="earnings" className="text-sm">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Earnings
+            <TabsTrigger value="schedule" className="text-xs sm:text-sm">
+              <CalendarIcon className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">My</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="text-sm">
-              <Clock className="h-4 w-4 mr-2" />
-              History
+            <TabsTrigger value="earnings" className="text-xs sm:text-sm">
+              <TrendingUp className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">$</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              <Clock className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Log</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Team Shifts Tab */}
+          <TabsContent value="team" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Team Shifts
+                    {userLanguage && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {userLanguage}
+                      </Badge>
+                    )}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={fetchTeamShifts} disabled={loadingTeam}>
+                    <RefreshCw className={cn("h-4 w-4", loadingTeam && "animate-spin")} />
+                  </Button>
+                </CardTitle>
+                <CardDescription>
+                  All women in your language group with shifts A, B, C
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingTeam ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : teamShifts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No team shifts found</p>
+                    <p className="text-sm">Team members will appear when shifts are scheduled</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Group by date */}
+                    {Object.entries(
+                      teamShifts.reduce((acc, shift) => {
+                        const date = shift.scheduled_date;
+                        if (!acc[date]) acc[date] = [];
+                        acc[date].push(shift);
+                        return acc;
+                      }, {} as Record<string, TeamShift[]>)
+                    ).slice(0, 7).map(([date, shifts]) => (
+                      <div key={date} className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted/50 px-3 py-2 flex items-center justify-between">
+                          <span className="font-medium text-sm">
+                            {format(new Date(date), "EEE, MMM dd")}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {shifts.length} {shifts.length === 1 ? "person" : "people"}
+                          </Badge>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {shifts.map((shift) => {
+                            const shiftColors: Record<string, string> = {
+                              A: "bg-amber-500/20 text-amber-600 border-amber-500/30",
+                              B: "bg-blue-500/20 text-blue-600 border-blue-500/30",
+                              C: "bg-purple-500/20 text-purple-600 border-purple-500/30"
+                            };
+                            
+                            return (
+                              <div
+                                key={shift.id}
+                                className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
+                                      shiftColors[shift.shift_code] || "bg-muted"
+                                    )}
+                                  >
+                                    {shift.shift_code}
+                                  </Badge>
+                                  <div>
+                                    <p className="font-medium text-sm">{shift.full_name || "Unknown"}</p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {shift.start_time.slice(0, 5)} - {shift.end_time.slice(0, 5)}
+                                      {shift.primary_language && (
+                                        <span className="ml-2 text-primary">• {shift.primary_language}</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground">{shift.shift_name}</p>
+                                  {shift.week_off_days.includes(new Date(date).getDay()) && (
+                                    <Badge variant="outline" className="text-xs bg-rose-500/10 text-rose-500 border-rose-500/20 mt-1">
+                                      Week Off
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Shift Legend */}
+            <Card className="bg-gradient-to-r from-muted/50 to-muted/30">
+              <CardContent className="py-4">
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-amber-500/20 text-amber-600 border-amber-500/30">A</Badge>
+                    <span className="text-sm">Morning (6AM-3PM)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-blue-500/20 text-blue-600 border-blue-500/30">B</Badge>
+                    <span className="text-sm">Evening (3PM-12AM)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-purple-500/20 text-purple-600 border-purple-500/30">C</Badge>
+                    <span className="text-sm">Night (12AM-9AM)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="space-y-4 mt-4">
