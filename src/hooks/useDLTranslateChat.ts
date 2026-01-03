@@ -1,8 +1,7 @@
 /**
  * Hook for DL-Translate Chat functionality
  * 
- * 100% Local - No External API Calls
- * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 100% Local - No External API Calls, No ML Models
  * 
  * Based on: https://github.com/xhluca/dl-translate
  * 

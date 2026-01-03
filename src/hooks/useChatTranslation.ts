@@ -1,8 +1,7 @@
 /**
  * useChatTranslation - DL-Translate Chat Hook
  * 
- * 100% Local - No External API Calls
- * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 100% Local - No External API Calls, No ML Models
  * 
  * Features:
  * - Auto-detect source/target language from user profiles (mother tongue)

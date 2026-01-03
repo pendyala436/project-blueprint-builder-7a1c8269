@@ -1,27 +1,17 @@
 /**
  * DL-Translate Local Translation Engine
  * 
- * 100% LOCAL - No External API Calls
+ * 100% LOCAL - No External API Calls, No ML Models
  * 
- * Translation methods (in order of preference):
- * 1. Phrase dictionary (instant) - common phrases
+ * Translation methods:
+ * 1. Phrase dictionary (instant) - common phrases in 50+ languages
  * 2. Word-by-word dictionary (instant) - individual words
  * 3. Phonetic transliteration (instant) - Latin → native script
- * 4. ML Translation (neural) - @huggingface/transformers NLLB-200 model
  * 
- * Language support: 200+ languages via NLLB-200 model
  * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
-import { 
-  translateWithML, 
-  isLanguageSupported, 
-  getSupportedLanguages,
-  initializeMLTranslator,
-  isModelLoaded,
-  NLLB_LANGUAGE_CODES
-} from './ml-translator';
 
 // Translation cache
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -560,23 +550,7 @@ export async function translateWithDLTranslate(
     }
   }
   
-  // 4. Try ML translation using NLLB-200 (200+ languages)
-  const sourceLangName = getDLTranslateLanguageName(sourceCode).toLowerCase();
-  if (isLanguageSupported(sourceLangName) && isLanguageSupported(targetLangName)) {
-    try {
-      console.log('[DL-Translate] Trying ML translation (NLLB-200)...');
-      const mlResult = await translateWithML(trimmed, sourceLangName, targetLangName);
-      if (mlResult && mlResult !== trimmed) {
-        console.log('[DL-Translate] ML translation result:', mlResult.slice(0, 50));
-        addToCache(cacheKey, mlResult);
-        return mlResult;
-      }
-    } catch (error) {
-      console.warn('[DL-Translate] ML translation failed:', error);
-    }
-  }
-  
-  // No translation available
+  // No translation available - dictionary/transliteration exhausted
   console.log('[DL-Translate] No translation found, returning original');
   return null;
 }
@@ -599,7 +573,7 @@ function addToCache(key: string, result: string): void {
  */
 export function clearDLTranslateCache(): void {
   translationCache.clear();
-  console.log('[DL-Translate Local] Cache cleared');
+  console.log('[DL-Translate] Cache cleared');
 }
 
 /**
@@ -610,52 +584,20 @@ export function getDLTranslateCacheStats(): { size: number } {
 }
 
 /**
- * Check if a language is supported (200+ languages via NLLB-200)
+ * Check if a language is supported (50+ languages via dictionary)
  */
 export function isDLTranslateLanguageSupported(language: string): boolean {
-  // Check dictionary languages
   const normalized = language.toLowerCase().trim();
-  if (DL_TRANSLATE_LANGUAGES[normalized]) {
-    return true;
-  }
-  // Check NLLB-200 languages
-  return isLanguageSupported(normalized);
+  return !!DL_TRANSLATE_LANGUAGES[normalized];
 }
 
 /**
- * Get all supported languages (200+)
+ * Get all supported languages
  */
 export function getDLTranslateSupportedLanguages(): string[] {
   const languages = new Set<string>();
-  
-  // Add dictionary languages
   Object.values(DL_TRANSLATE_LANGUAGES).forEach(lang => {
     languages.add(lang);
   });
-  
-  // Add NLLB-200 languages
-  getSupportedLanguages().forEach(lang => {
-    languages.add(lang.charAt(0).toUpperCase() + lang.slice(1));
-  });
-  
   return Array.from(languages).sort();
 }
-
-/**
- * Initialize ML translator (optional - auto-initializes on first use)
- */
-export async function initializeDLTranslate(
-  onProgress?: (progress: number) => void
-): Promise<boolean> {
-  return initializeMLTranslator('small', onProgress);
-}
-
-/**
- * Check if ML model is loaded
- */
-export function isDLTranslateModelLoaded(): boolean {
-  return isModelLoaded();
-}
-
-// Re-export NLLB language codes for external use
-export { NLLB_LANGUAGE_CODES } from './ml-translator';
