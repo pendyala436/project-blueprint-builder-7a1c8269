@@ -329,6 +329,8 @@ async function generateMonthlySchedule(supabase: any, targetMonth?: string) {
 }
 
 async function getMySchedule(supabase: any, userId: string) {
+  console.log(`[ShiftAutoScheduler] getMySchedule for user: ${userId}`);
+  
   // Get user's profile and language
   const { data: profile } = await supabase
     .from('female_profiles')
@@ -346,12 +348,12 @@ async function getMySchedule(supabase: any, userId: string) {
   const timezoneOffset = getTimezoneOffset(profile?.country || 'India');
 
   // Get assignment
-  const { data: assignment } = await supabase
+  let { data: assignment } = await supabase
     .from('women_shift_assignments')
     .select('*, shift_templates(*)')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
 
   // Calculate date range: remaining days of current month + all of next month
   const today = new Date();
@@ -363,13 +365,46 @@ async function getMySchedule(supabase: any, userId: string) {
   const nextMonthYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
   const lastDayNextMonth = new Date(nextMonthYear, nextMonth + 1, 0);
 
-  const { data: scheduledShifts } = await supabase
+  // Get scheduled shifts
+  let { data: scheduledShifts } = await supabase
     .from('scheduled_shifts')
     .select('*')
     .eq('user_id', userId)
     .gte('scheduled_date', today.toISOString().split('T')[0])
     .lte('scheduled_date', lastDayNextMonth.toISOString().split('T')[0])
     .order('scheduled_date');
+
+  // AUTO-CREATE SHIFTS IF NONE EXIST
+  if ((!scheduledShifts || scheduledShifts.length === 0) && profile) {
+    console.log(`[ShiftAutoScheduler] No shifts found for ${userId}, auto-creating...`);
+    
+    // Trigger assignInitialShift to create shifts
+    const assignResult = await assignInitialShift(supabase, userId);
+    console.log(`[ShiftAutoScheduler] Auto-assign result:`, assignResult);
+    
+    if (assignResult.success) {
+      // Re-fetch assignment and shifts after creation
+      const { data: newAssignment } = await supabase
+        .from('women_shift_assignments')
+        .select('*, shift_templates(*)')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      assignment = newAssignment;
+      
+      const { data: newShifts } = await supabase
+        .from('scheduled_shifts')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('scheduled_date', today.toISOString().split('T')[0])
+        .lte('scheduled_date', lastDayNextMonth.toISOString().split('T')[0])
+        .order('scheduled_date');
+      
+      scheduledShifts = newShifts;
+      console.log(`[ShiftAutoScheduler] After auto-create: ${scheduledShifts?.length || 0} shifts`);
+    }
+  }
 
   const shiftCode = assignment?.shift_templates?.shift_code || 'A';
   const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
@@ -405,7 +440,9 @@ async function getMySchedule(supabase: any, userId: string) {
       local_start_time: formatTimeForTimezone(effectiveShiftDef.start, timezoneOffset - 330),
       local_end_time: formatTimeForTimezone(effectiveShiftDef.end, timezoneOffset - 330),
       timezone_name: profile?.country === 'India' ? 'IST' : 'Local',
-      is_rotation_day: date.getDate() === ROTATION_DAY && isCurrentMonth
+      is_rotation_day: date.getDate() === ROTATION_DAY && isCurrentMonth,
+      start_hour: effectiveShiftDef.start,
+      end_hour: effectiveShiftDef.end
     };
   }) || [];
 
@@ -426,7 +463,9 @@ async function getMySchedule(supabase: any, userId: string) {
       local_start_time: formatTimeForTimezone(shiftDef.start, timezoneOffset - 330),
       local_end_time: formatTimeForTimezone(shiftDef.end, timezoneOffset - 330),
       week_off_days: weekOffDays.map((d: number) => DAYS_OF_WEEK[d]),
-      role_type: 'chat'
+      role_type: 'chat',
+      start_hour: shiftDef.start,
+      end_hour: shiftDef.end
     },
     rotation: {
       next_rotation_date: rotationDate.toISOString().split('T')[0],
@@ -706,6 +745,8 @@ async function rotateShiftsMonthly(supabase: any) {
 }
 
 async function assignInitialShift(supabase: any, userId: string) {
+  console.log(`[ShiftAutoScheduler] assignInitialShift for user: ${userId}`);
+  
   // Get user's language
   const { data: userLang } = await supabase
     .from('user_languages')
@@ -720,6 +761,7 @@ async function assignInitialShift(supabase: any, userId: string) {
     .single();
 
   const language = userLang?.[0]?.language_name || profile?.primary_language || 'English';
+  console.log(`[ShiftAutoScheduler] User language: ${language}, country: ${profile?.country}`);
 
   // Check existing assignments in this language group to balance shifts
   const { data: existingAssignments } = await supabase
@@ -735,7 +777,7 @@ async function assignInitialShift(supabase: any, userId: string) {
   const { data: assignedLanguages } = await supabase
     .from('user_languages')
     .select('user_id, language_name')
-    .in('user_id', assignedUserIds);
+    .in('user_id', assignedUserIds.length > 0 ? assignedUserIds : ['placeholder']);
 
   const langMap = new Map();
   assignedLanguages?.forEach((ul: any) => {
@@ -752,39 +794,123 @@ async function assignInitialShift(supabase: any, userId: string) {
     }
   });
 
+  console.log(`[ShiftAutoScheduler] Shift counts in ${language} group:`, shiftCounts);
+
   // Assign to shift with fewest women
   const assignedShift = Object.entries(shiftCounts).reduce((a, b) => 
     a[1] <= b[1] ? a : b
   )[0] as 'A' | 'B' | 'C';
+
+  console.log(`[ShiftAutoScheduler] Assigning user to shift: ${assignedShift}`);
 
   // Get shift template
   const { data: shiftTemplate } = await supabase
     .from('shift_templates')
     .select('id')
     .eq('shift_code', assignedShift)
+    .eq('is_active', true)
     .single();
+
+  if (!shiftTemplate) {
+    console.error('[ShiftAutoScheduler] No shift template found for:', assignedShift);
+    return { success: false, error: 'No shift template found' };
+  }
 
   // Calculate week off days based on user count
   const userIndex = (shiftCounts.A + shiftCounts.B + shiftCounts.C);
   const offDay1 = (userIndex * 2) % 7;
   const offDay2 = (userIndex * 2 + 3) % 7;
 
+  console.log(`[ShiftAutoScheduler] Week off days: ${DAYS_OF_WEEK[offDay1]}, ${DAYS_OF_WEEK[offDay2]}`);
+
   // Create assignment
-  const { error } = await supabase
+  const { error: assignError } = await supabase
     .from('women_shift_assignments')
     .upsert({
       user_id: userId,
-      shift_template_id: shiftTemplate?.id,
+      shift_template_id: shiftTemplate.id,
       language_group_id: null,
       week_off_days: [offDay1, offDay2],
       is_active: true
     }, { onConflict: 'user_id' });
 
-  if (error) {
-    return { success: false, error: error.message };
+  if (assignError) {
+    console.error('[ShiftAutoScheduler] Assignment error:', assignError);
+    return { success: false, error: assignError.message };
   }
 
+  // NOW ALSO CREATE SCHEDULED SHIFTS FOR CURRENT AND NEXT MONTH
   const shiftDef = SHIFTS[assignedShift];
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  const scheduledShifts: any[] = [];
+  const startTime = `${String(shiftDef.start).padStart(2, '0')}:00:00`;
+  const endTime = shiftDef.end > shiftDef.start 
+    ? `${String(shiftDef.end).padStart(2, '0')}:00:00`
+    : `${String(shiftDef.end).padStart(2, '0')}:00:00`;
+
+  // Generate shifts for remaining days in current month
+  for (let day = today.getDate(); day <= daysInCurrentMonth; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    const dayOfWeek = date.getDay();
+    const isWeekOff = dayOfWeek === offDay1 || dayOfWeek === offDay2;
+
+    if (!isWeekOff) {
+      scheduledShifts.push({
+        user_id: userId,
+        scheduled_date: date.toISOString().split('T')[0],
+        start_time: startTime,
+        end_time: endTime,
+        timezone: profile?.country === 'India' ? 'IST' : 'UTC',
+        status: 'scheduled',
+        ai_suggested: true,
+        suggested_reason: `AI: Assigned to ${shiftDef.name} in ${language} group`
+      });
+    }
+  }
+
+  // Also generate for next month
+  const nextMonth = currentMonth + 1 > 11 ? 0 : currentMonth + 1;
+  const nextMonthYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
+  const daysInNextMonth = new Date(nextMonthYear, nextMonth + 1, 0).getDate();
+
+  for (let day = 1; day <= daysInNextMonth; day++) {
+    const date = new Date(nextMonthYear, nextMonth, day);
+    const dayOfWeek = date.getDay();
+    const isWeekOff = dayOfWeek === offDay1 || dayOfWeek === offDay2;
+
+    if (!isWeekOff) {
+      scheduledShifts.push({
+        user_id: userId,
+        scheduled_date: date.toISOString().split('T')[0],
+        start_time: startTime,
+        end_time: endTime,
+        timezone: profile?.country === 'India' ? 'IST' : 'UTC',
+        status: 'scheduled',
+        ai_suggested: true,
+        suggested_reason: `AI: Assigned to ${shiftDef.name} in ${language} group`
+      });
+    }
+  }
+
+  console.log(`[ShiftAutoScheduler] Creating ${scheduledShifts.length} scheduled shifts`);
+
+  // Insert scheduled shifts
+  if (scheduledShifts.length > 0) {
+    const { error: shiftsError } = await supabase
+      .from('scheduled_shifts')
+      .upsert(scheduledShifts, { onConflict: 'user_id,scheduled_date' });
+
+    if (shiftsError) {
+      console.error('[ShiftAutoScheduler] Error creating shifts:', shiftsError);
+    } else {
+      console.log(`[ShiftAutoScheduler] Successfully created ${scheduledShifts.length} shifts`);
+    }
+  }
+
   const timezoneOffset = getTimezoneOffset(profile?.country || 'India');
 
   return {
@@ -798,7 +924,8 @@ async function assignInitialShift(supabase: any, userId: string) {
       local_end_time: formatTimeForTimezone(shiftDef.end, timezoneOffset - 330),
       week_off_days: [DAYS_OF_WEEK[offDay1], DAYS_OF_WEEK[offDay2]],
       language_group: language
-    }
+    },
+    scheduled_shifts_count: scheduledShifts.length
   };
 }
 
