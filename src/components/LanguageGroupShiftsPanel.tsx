@@ -83,22 +83,87 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   const fetchLanguageGroupShifts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("shift-scheduler", {
+      // Use shift-auto-scheduler for consistency with monthly schedule
+      const { data, error } = await supabase.functions.invoke("shift-auto-scheduler", {
         body: { 
+          action: "get_language_group_schedule",
           userId, 
-          action: "get_language_group_shifts",
-          language: language || undefined
+          data: { language: language || undefined }
         }
       });
 
       if (error) throw error;
 
       if (data?.success) {
-        setWomenShifts(data.womenShifts || []);
-        setCoverage24x7(data.coverage24x7 || []);
+        // Transform data from shift-auto-scheduler format
+        const womenData = data.women || [];
+        const transformedWomen: WomanShift[] = womenData.map((woman: any) => ({
+          userId: woman.user_id,
+          fullName: woman.full_name || 'Unknown',
+          photoUrl: woman.photo_url,
+          country: woman.country || 'Unknown',
+          language: data.language || language || 'Unknown',
+          todayShift: woman.today_on_duty ? {
+            startTime: woman.local_start_time || '00:00',
+            endTime: woman.local_end_time || '00:00',
+            status: 'scheduled'
+          } : null,
+          isWeekOff: woman.is_week_off_today || false,
+          weekOffDays: woman.week_off_days || [],
+          shiftHours: {
+            startHour: woman.shift_start_hour || 7,
+            endHour: woman.shift_end_hour || 16,
+            duration: 9
+          }
+        }));
+
+        setWomenShifts(transformedWomen);
         setTargetLanguage(data.language || language || "");
-        setWomenCount(data.womenCount || 0);
-        setShiftConfig(data.shiftConfig || null);
+        setWomenCount(data.total_women || womenData.length);
+        
+        // Build 24x7 coverage from women's shift data
+        const coverage: HourlyCoverage[] = [];
+        for (let hour = 0; hour < 24; hour++) {
+          const womenOnDuty: string[] = [];
+          const shiftCodes: string[] = [];
+          
+          womenData.forEach((woman: any) => {
+            if (woman.is_week_off_today) return;
+            
+            const shiftStart = woman.shift_start_hour || 0;
+            const shiftEnd = woman.shift_end_hour || 0;
+            
+            // Handle overnight shifts
+            let isOnDuty = false;
+            if (shiftEnd < shiftStart) {
+              // Overnight shift (e.g., 23-8)
+              isOnDuty = hour >= shiftStart || hour < shiftEnd;
+            } else {
+              isOnDuty = hour >= shiftStart && hour < shiftEnd;
+            }
+            
+            if (isOnDuty) {
+              womenOnDuty.push(woman.full_name?.split(' ')[0] || 'User');
+              if (woman.shift_code && !shiftCodes.includes(woman.shift_code)) {
+                shiftCodes.push(woman.shift_code);
+              }
+            }
+          });
+          
+          coverage.push({ hour, womenOnDuty, shiftCodes });
+        }
+        
+        setCoverage24x7(coverage);
+        setShiftConfig({
+          hours: 9,
+          changeBuffer: 1,
+          weekOffInterval: 2,
+          shifts: data.shifts || {
+            A: { name: 'Shift A (Morning)', start: 7, end: 16, code: 'A', display: '7:00 AM - 4:00 PM' },
+            B: { name: 'Shift B (Evening)', start: 15, end: 24, code: 'B', display: '3:00 PM - 12:00 AM' },
+            C: { name: 'Shift C (Night)', start: 23, end: 8, code: 'C', display: '11:00 PM - 8:00 AM' }
+          }
+        });
       }
     } catch (error) {
       console.error("Error fetching language group shifts:", error);
