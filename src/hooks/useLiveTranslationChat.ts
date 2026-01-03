@@ -1,5 +1,5 @@
 /**
- * Live Translation Chat Hook (DL-Translate Pattern)
+ * Live Translation Chat Hook (DL-Translate + M2M100)
  * 
  * Flow:
  * 1. Typing: User types in Latin letters (phonetic input)
@@ -7,7 +7,7 @@
  * 3. Send: Translation happens in background, sender sees native text
  * 4. Receiver: Sees message in their mother tongue
  * 5. Bi-directional: Same flow for both users
- * 6. Dynamic: Supports 200 languages (embedded dl-translate)
+ * 6. Dynamic: Supports 200 languages (DL-Translate + M2M100)
  * 7. Non-blocking: Typing is never affected by translation
  */
 
@@ -22,8 +22,8 @@ import {
 } from '@/lib/translation/translation-engine';
 import { isLatinScriptLanguage } from '@/lib/translation/language-codes';
 import {
-  getSupportedDLTranslateLanguages,
-  isDLTranslateSupported
+  getSupportedDLM2M100Languages,
+  isDLM2M100Supported
 } from '@/lib/translation/ml-translation-engine';
 
 // ============ Types ============
@@ -324,11 +324,11 @@ export function useLiveTranslationChat(
   // ============ Utilities ============
 
   const getSupportedLanguages = useCallback(() => {
-    return getSupportedDLTranslateLanguages();
+    return getSupportedDLM2M100Languages();
   }, []);
 
   const isLanguageSupported = useCallback((lang: string) => {
-    return isDLTranslateSupported(lang);
+    return isDLM2M100Supported(lang);
   }, []);
 
   const isSameLanguage = useCallback((lang1: string, lang2: string) => {

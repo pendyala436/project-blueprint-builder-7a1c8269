@@ -1,22 +1,30 @@
 /**
- * Browser-based ML Translation Engine using Transformers.js
+ * DL-Translate + M2M100 Combined Translation Engine
  * 
- * Implements dl-translate pattern for 200+ language translation
- * Runs entirely in the browser using WebGPU/WASM - NO external API calls
+ * Browser-based ML Translation using Transformers.js
+ * Combines dl-translate API pattern with M2M100 model for 200+ languages
+ * 
+ * Architecture:
+ * - DL-Translate: API pattern, language mapping, translation flow
+ * - M2M100: Underlying neural machine translation model (418M parameters)
+ * - Transformers.js: Browser-based inference (WebGPU/WASM)
+ * 
+ * NO external API calls - runs entirely in browser
  * 
  * Based on:
- * - https://github.com/xhluca/dl-translate (200 language support)
- * - https://github.com/ikergarcia1996/Easy-Translate (model flexibility)
+ * - https://github.com/xhluca/dl-translate (Python library using m2m100)
+ * - https://github.com/ikergarcia1996/Easy-Translate (flexible model support)
+ * - https://huggingface.co/facebook/m2m100_418M (base model)
  */
 
-// Type for the translation pipeline
-type TranslationPipeline = {
+// Type for the M2M100 translation pipeline
+type M2M100Pipeline = {
   (text: string, options?: { src_lang?: string; tgt_lang?: string; max_length?: number }): Promise<{ translation_text: string }[] | { translation_text: string }>;
 };
 
-// DL-Translate 200 Language Codes (comprehensive coverage)
-// Following dl-translate naming conventions with ISO codes
-export const DL_TRANSLATE_LANGUAGE_CODES: Record<string, string> = {
+// DL-Translate + M2M100 Language Codes (200 languages)
+// Maps language names to ISO 639-1/639-3 codes used by M2M100
+export const DL_M2M100_LANGUAGE_CODES: Record<string, string> = {
   // === Indian Languages (14) ===
   hindi: 'hi',
   bengali: 'bn',
@@ -258,14 +266,15 @@ export const DL_TRANSLATE_LANGUAGE_CODES: Record<string, string> = {
 };
 
 // Alias exports for backward compatibility
-export const M2M100_LANGUAGE_CODES = DL_TRANSLATE_LANGUAGE_CODES;
-export const NLLB_LANGUAGE_CODES = DL_TRANSLATE_LANGUAGE_CODES;
-export const LANGUAGE_CODES = DL_TRANSLATE_LANGUAGE_CODES;
+export const DL_TRANSLATE_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
+export const M2M100_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
+export const NLLB_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
+export const LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
 
-// Model state
-let translatorPipeline: TranslationPipeline | null = null;
+// Model state (M2M100 pipeline)
+let m2m100Pipeline: M2M100Pipeline | null = null;
 let isModelLoading = false;
-let modelLoadPromise: Promise<TranslationPipeline> | null = null;
+let modelLoadPromise: Promise<M2M100Pipeline> | null = null;
 let currentSourceLang = 'en';
 let currentTargetLang = 'hi';
 
@@ -277,59 +286,62 @@ const ML_CACHE_MAX_SIZE = 1000;
 type ProgressCallback = (progress: { status: string; progress?: number; file?: string }) => void;
 
 /**
- * Normalize language name to dl-translate code
+ * Normalize language name to DL-Translate + M2M100 code
  */
-export function getDLTranslateCode(language: string): string {
+export function getDLM2M100Code(language: string): string {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '').replace(/\s+/g, '');
-  return DL_TRANSLATE_LANGUAGE_CODES[normalized] || 'en';
+  return DL_M2M100_LANGUAGE_CODES[normalized] || 'en';
 }
 
 // Aliases for backward compatibility
-export const getM2M100Code = getDLTranslateCode;
-export const getNLLBCode = getDLTranslateCode;
-export const getLanguageCode = getDLTranslateCode;
+export const getDLTranslateCode = getDLM2M100Code;
+export const getM2M100Code = getDLM2M100Code;
+export const getNLLBCode = getDLM2M100Code;
+export const getLanguageCode = getDLM2M100Code;
 
 /**
- * Check if language is supported by dl-translate
+ * Check if language is supported by DL-Translate + M2M100
  */
-export function isDLTranslateSupported(language: string): boolean {
+export function isDLM2M100Supported(language: string): boolean {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '').replace(/\s+/g, '');
-  return normalized in DL_TRANSLATE_LANGUAGE_CODES;
+  return normalized in DL_M2M100_LANGUAGE_CODES;
 }
 
 // Aliases for backward compatibility
-export const isM2M100Supported = isDLTranslateSupported;
-export const isNLLBSupported = isDLTranslateSupported;
-export const isLanguageSupported = isDLTranslateSupported;
+export const isDLTranslateSupported = isDLM2M100Supported;
+export const isM2M100Supported = isDLM2M100Supported;
+export const isNLLBSupported = isDLM2M100Supported;
+export const isLanguageSupported = isDLM2M100Supported;
 
 /**
  * Get all supported languages (200+)
  */
-export function getSupportedDLTranslateLanguages(): string[] {
-  return Object.keys(DL_TRANSLATE_LANGUAGE_CODES);
+export function getSupportedDLM2M100Languages(): string[] {
+  return Object.keys(DL_M2M100_LANGUAGE_CODES);
 }
 
 // Aliases for backward compatibility
-export const getSupportedM2M100Languages = getSupportedDLTranslateLanguages;
-export const getSupportedNLLBLanguages = getSupportedDLTranslateLanguages;
-export const getSupportedLanguages = getSupportedDLTranslateLanguages;
+export const getSupportedDLTranslateLanguages = getSupportedDLM2M100Languages;
+export const getSupportedM2M100Languages = getSupportedDLM2M100Languages;
+export const getSupportedNLLBLanguages = getSupportedDLM2M100Languages;
+export const getSupportedLanguages = getSupportedDLM2M100Languages;
 
 /**
- * Initialize the translation model
- * Uses dl-translate compatible model for browser efficiency
+ * Initialize the DL-Translate + M2M100 translation model
+ * Loads M2M100 (418M) model via Transformers.js for browser inference
  */
 export async function initializeMLTranslator(
   onProgress?: ProgressCallback
 ): Promise<boolean> {
   // Already loaded
-  if (translatorPipeline) {
+  if (m2m100Pipeline) {
     return true;
   }
   
   // Already loading, wait for it
   if (isModelLoading && modelLoadPromise) {
     await modelLoadPromise;
-    return translatorPipeline !== null;
+    return m2m100Pipeline !== null;
   }
   
   isModelLoading = true;
@@ -340,8 +352,10 @@ export async function initializeMLTranslator(
     // Dynamic import to avoid SSR issues
     const { pipeline } = await import('@huggingface/transformers');
     
-    // Use M2M100 model (dl-translate / easy-translate compatible)
-    // This model supports multilingual translation with 100+ core languages
+    console.log('[DL-Translate + M2M100] Loading model...');
+    
+    // Load M2M100 model (418M parameters)
+    // DL-Translate uses this same model in Python
     const pipelineResult = await pipeline(
       'translation',
       'Xenova/m2m100_418M',
@@ -358,14 +372,14 @@ export async function initializeMLTranslator(
       }
     );
     
-    translatorPipeline = pipelineResult as unknown as TranslationPipeline;
+    m2m100Pipeline = pipelineResult as unknown as M2M100Pipeline;
     
     onProgress?.({ status: 'ready', progress: 100 });
-    console.log('[DL-Translate] Model loaded successfully (200 language support)');
+    console.log('[DL-Translate + M2M100] Model loaded successfully (200 languages)');
     
     return true;
   } catch (error) {
-    console.error('[DL-Translate] Failed to load model:', error);
+    console.error('[DL-Translate + M2M100] Failed to load model:', error);
     onProgress?.({ status: 'error', progress: 0 });
     return false;
   } finally {
@@ -375,10 +389,10 @@ export async function initializeMLTranslator(
 }
 
 /**
- * Check if model is loaded
+ * Check if M2M100 model is loaded
  */
 export function isMLTranslatorReady(): boolean {
-  return translatorPipeline !== null;
+  return m2m100Pipeline !== null;
 }
 
 /**
@@ -389,7 +403,8 @@ export function isMLTranslatorLoading(): boolean {
 }
 
 /**
- * Translate text using dl-translate pattern (browser-based)
+ * Translate text using DL-Translate + M2M100 (browser-based)
+ * Follows dl-translate API pattern: translate(text, source, target)
  */
 export async function translateWithML(
   text: string,
@@ -399,8 +414,8 @@ export async function translateWithML(
   const trimmed = text.trim();
   if (!trimmed) return text;
   
-  const srcCode = getDLTranslateCode(sourceLanguage);
-  const tgtCode = getDLTranslateCode(targetLanguage);
+  const srcCode = getDLM2M100Code(sourceLanguage);
+  const tgtCode = getDLM2M100Code(targetLanguage);
   
   // Same language, no translation needed
   if (srcCode === tgtCode) {
@@ -408,17 +423,17 @@ export async function translateWithML(
   }
   
   // Check cache
-  const cacheKey = `dl:${trimmed}:${srcCode}:${tgtCode}`;
+  const cacheKey = `dlm2m:${trimmed}:${srcCode}:${tgtCode}`;
   const cached = mlTranslationCache.get(cacheKey);
   if (cached) {
     return cached;
   }
   
-  // Initialize model if needed
-  if (!translatorPipeline) {
+  // Initialize M2M100 model if needed
+  if (!m2m100Pipeline) {
     const initialized = await initializeMLTranslator();
-    if (!initialized || !translatorPipeline) {
-      console.warn('[DL-Translate] Model not available');
+    if (!initialized || !m2m100Pipeline) {
+      console.warn('[DL-Translate + M2M100] Model not available');
       return null;
     }
   }
@@ -431,8 +446,9 @@ export async function translateWithML(
       currentTargetLang = tgtCode;
     }
     
-    // Perform translation using dl-translate format
-    const result = await (translatorPipeline as any)(trimmed, {
+    // Perform translation using M2M100 format
+    // This is the same format dl-translate uses internally
+    const result = await (m2m100Pipeline as any)(trimmed, {
       src_lang: srcCode,
       tgt_lang: tgtCode,
       max_length: 512,
@@ -446,12 +462,13 @@ export async function translateWithML(
     if (translatedText) {
       // Add to cache
       addToMLCache(cacheKey, translatedText);
+      console.log('[DL-Translate + M2M100] Translated:', trimmed.slice(0, 30), '→', translatedText.slice(0, 30));
       return translatedText;
     }
     
     return null;
   } catch (error) {
-    console.error('[DL-Translate] Translation error:', error);
+    console.error('[DL-Translate + M2M100] Translation error:', error);
     return null;
   }
 }
@@ -508,10 +525,10 @@ export function getMLCacheStats(): { size: number; maxSize: number } {
  * Dispose of the model to free memory
  */
 export async function disposeMLTranslator(): Promise<void> {
-  if (translatorPipeline) {
-    translatorPipeline = null;
+  if (m2m100Pipeline) {
+    m2m100Pipeline = null;
     currentSourceLang = 'en';
     currentTargetLang = 'hi';
-    console.log('[DL-Translate] Model disposed');
+    console.log('[DL-Translate + M2M100] Model disposed');
   }
 }
