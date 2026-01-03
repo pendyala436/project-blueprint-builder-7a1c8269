@@ -662,6 +662,9 @@ async function transliterateWithAI(
   const nativeScript = langInfo?.native || targetLanguage;
   const scriptName = langInfo?.script || 'native';
   
+  // Dynamic token budget to avoid truncated outputs on longer messages
+  const maxTokens = Math.min(2048, Math.max(256, Math.ceil(latinText.length / 2)));
+  
   try {
     console.log(`[dl-translate] Using AI for transliteration to ${targetLanguage} (${scriptName})`);
     
@@ -678,6 +681,7 @@ async function transliterateWithAI(
             role: "system",
             content: `You are a transliteration engine. Convert romanized/Latin text to ${targetLanguage} ${scriptName} script. 
 RULES:
+- Transliterate the ENTIRE input. Do NOT omit any words or sentences.
 - Output ONLY the transliterated text in ${scriptName} script
 - Do NOT translate meaning - convert sounds phonetically
 - Do NOT add any explanations, prefixes, or language names
@@ -692,7 +696,7 @@ Example for Hindi: "namaste" → "नमस्ते"`
             content: latinText
           }
         ],
-        max_tokens: 200,
+        max_tokens: maxTokens,
       }),
     });
 
