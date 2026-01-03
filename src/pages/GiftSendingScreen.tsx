@@ -20,7 +20,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, 
   Search, 
   Gift, 
   Sparkles,
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
+import NavigationHeader from "@/components/NavigationHeader";
 
 interface GiftItem {
   id: string;
@@ -220,29 +220,24 @@ const GiftSendingScreen = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <Gift className="h-5 w-5 text-primary" />
-                  Send a Gift
-                </h1>
-                {receiverProfile && (
-                  <p className="text-sm text-muted-foreground">
-                    To: {receiverProfile.full_name || "Someone special"}
-                  </p>
-                )}
+        <div className="max-w-2xl mx-auto px-4 py-2">
+          <NavigationHeader
+            title="Send a Gift"
+            showBack={true}
+            showHome={true}
+            showForward={false}
+            rightContent={
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full">
+                <Wallet className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-primary">₹{walletBalance.toFixed(0)}</span>
               </div>
-            </div>
-            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full">
-              <Wallet className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-primary">₹{walletBalance.toFixed(0)}</span>
-            </div>
-          </div>
+            }
+          />
+          {receiverProfile && (
+            <p className="text-sm text-muted-foreground ml-12 -mt-1">
+              To: {receiverProfile.full_name || "Someone special"}
+            </p>
+          )}
         </div>
       </div>
 

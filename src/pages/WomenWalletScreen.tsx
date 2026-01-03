@@ -18,7 +18,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { 
-  ArrowLeft, 
   IndianRupee, 
   Wallet,
   TrendingUp,
@@ -37,6 +36,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
+import NavigationHeader from "@/components/NavigationHeader";
 
 interface PayoutMethod {
   id: string;
@@ -319,25 +319,25 @@ const WomenWalletScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">{t('myWallet', 'My Wallet')}</h1>
-              <p className="text-sm text-muted-foreground">{t('earnings', 'Earnings')} & {t('withdrawals', 'Withdrawals')}</p>
-            </div>
-          </div>
-          <Button
-            variant="auroraOutline"
-            size="sm"
-            onClick={() => navigate("/transaction-history")}
-            className="gap-2"
-          >
-            <History className="h-4 w-4" />
-            History
-          </Button>
+        <div className="max-w-4xl mx-auto px-6 py-2">
+          <NavigationHeader
+            title={t('myWallet', 'My Wallet')}
+            showBack={true}
+            showHome={true}
+            showForward={false}
+            homePath="/women-dashboard"
+            rightContent={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/transaction-history")}
+                className="gap-2"
+              >
+                <History className="h-4 w-4" />
+                History
+              </Button>
+            }
+          />
         </div>
       </header>
 

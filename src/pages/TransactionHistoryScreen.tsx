@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  ArrowLeft, 
   ArrowUpRight, 
   ArrowDownLeft,
   MessageCircle,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import NavigationHeader from "@/components/NavigationHeader";
 
 interface WalletTransaction {
   id: string;
@@ -569,38 +569,30 @@ const TransactionHistoryScreen = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="auroraGhost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold">Transaction History</h1>
-              <p className="text-xs text-muted-foreground">
-                {isMale ? "Your spending & activity" : "Your earnings & activity"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Balance</p>
-              <p className="font-semibold text-primary">₹{currentBalance.toFixed(2)}</p>
-            </div>
-            <Button
-              variant="auroraGhost"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="rounded-full"
-            >
-              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
-            </Button>
-          </div>
+        <div className="max-w-2xl mx-auto px-4 py-2">
+          <NavigationHeader
+            title="Transaction History"
+            showBack={true}
+            showHome={true}
+            showForward={false}
+            rightContent={
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className="font-semibold text-primary">₹{currentBalance.toFixed(2)}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="rounded-full"
+                >
+                  <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+                </Button>
+              </div>
+            }
+          />
         </div>
       </div>
 

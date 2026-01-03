@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { 
-  ArrowLeft,
   Clock, 
   Play, 
   Square, 
@@ -40,6 +39,7 @@ import {
 import { format, formatDistanceToNow, differenceInMinutes, differenceInHours, addDays, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
+import NavigationHeader from "@/components/NavigationHeader";
 
 interface Shift {
   id: string;
@@ -639,22 +639,22 @@ const ShiftManagementScreen = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="auroraGhost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Shift Management
-              </h1>
-              <p className="text-xs text-muted-foreground">{userTimezone}</p>
-            </div>
-          </div>
-          <Badge variant={activeShift ? "default" : "secondary"} className={activeShift ? "bg-green-500" : ""}>
-            {activeShift ? "On Shift" : "Off Duty"}
-          </Badge>
+        <div className="max-w-2xl mx-auto px-4 py-2">
+          <NavigationHeader
+            title="Shift Management"
+            showBack={true}
+            showHome={true}
+            showForward={false}
+            homePath="/women-dashboard"
+            rightContent={
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden sm:inline">{userTimezone}</span>
+                <Badge variant={activeShift ? "default" : "secondary"} className={activeShift ? "bg-green-500" : ""}>
+                  {activeShift ? "On Shift" : "Off Duty"}
+                </Badge>
+              </div>
+            }
+          />
         </div>
       </div>
 

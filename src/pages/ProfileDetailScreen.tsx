@@ -6,7 +6,6 @@ import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Heart, 
-  ArrowLeft,
   Languages,
   MapPin,
   MessageCircle,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
+import NavigationHeader from "@/components/NavigationHeader";
 
 interface ProfileData {
   userId: string;
@@ -332,18 +332,14 @@ const ProfileDetailScreen = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">{t('back', 'Back')}</span>
-          </button>
-          
-          <MeowLogo size="sm" />
-          
-          <div className="w-20" /> {/* Spacer for centering */}
+        <div className="max-w-4xl mx-auto px-6 py-2">
+          <NavigationHeader
+            title={profile.fullName}
+            showBack={true}
+            showHome={true}
+            showForward={false}
+            rightContent={<MeowLogo size="sm" />}
+          />
         </div>
       </header>
 
