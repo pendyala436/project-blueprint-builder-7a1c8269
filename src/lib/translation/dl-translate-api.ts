@@ -1,17 +1,28 @@
 /**
- * DL-Translate Local Translation Engine
+ * DL-Translate Translation Engine
  * 
- * 100% LOCAL - No External API Calls, No ML Models
+ * Full dl-translate implementation with M2M100 model (100+ languages)
  * 
- * Translation methods:
- * 1. Phrase dictionary (instant) - common phrases in 50+ languages
+ * Translation methods (in order of priority):
+ * 1. Phrase dictionary (instant) - common phrases
  * 2. Word-by-word dictionary (instant) - individual words
  * 3. Phonetic transliteration (instant) - Latin → native script
+ * 4. M2M100 Neural Translation (100+ languages) - same model as dl-translate
  * 
  * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
+import {
+  translateWithM2M100,
+  isM2M100Supported,
+  getM2M100SupportedLanguages,
+  initializeM2M100,
+  isM2M100Loaded,
+  isM2M100Loading,
+  getM2M100Code,
+  M2M100_LANGUAGES,
+} from './dl-translate-model';
 
 // Translation cache
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -479,13 +490,13 @@ function translateWordByWord(
 }
 
 /**
- * Translate text using LOCAL dictionary, transliteration, and ML models
+ * Translate text using DL-Translate (dictionary + M2M100 neural model)
  * 
  * Translation priority:
  * 1. Phrase dictionary (instant)
  * 2. Word-by-word dictionary (instant)
  * 3. Phonetic transliteration (instant)
- * 4. ML Translation via NLLB-200 (200+ languages)
+ * 4. M2M100 Neural Translation (100+ languages)
  * 
  * @param text - Text to translate
  * @param fromLang - Source language (code or name)
@@ -550,7 +561,25 @@ export async function translateWithDLTranslate(
     }
   }
   
-  // No translation available - dictionary/transliteration exhausted
+  // 4. Try M2M100 neural translation (100+ languages)
+  const sourceLangName = getDLTranslateLanguageName(sourceCode).toLowerCase();
+  if (isM2M100Supported(sourceLangName) || isM2M100Supported(sourceCode)) {
+    if (isM2M100Supported(targetLangName) || isM2M100Supported(targetCode)) {
+      try {
+        console.log('[DL-Translate] Using M2M100 neural translation...');
+        const m2m100Result = await translateWithM2M100(trimmed, sourceCode, targetCode);
+        if (m2m100Result && m2m100Result !== trimmed) {
+          console.log('[DL-Translate] M2M100 result:', m2m100Result.slice(0, 50));
+          addToCache(cacheKey, m2m100Result);
+          return m2m100Result;
+        }
+      } catch (error) {
+        console.warn('[DL-Translate] M2M100 translation failed:', error);
+      }
+    }
+  }
+  
+  // No translation available
   console.log('[DL-Translate] No translation found, returning original');
   return null;
 }
@@ -584,20 +613,60 @@ export function getDLTranslateCacheStats(): { size: number } {
 }
 
 /**
- * Check if a language is supported (50+ languages via dictionary)
+ * Check if a language is supported (100+ languages via M2M100)
  */
 export function isDLTranslateLanguageSupported(language: string): boolean {
   const normalized = language.toLowerCase().trim();
-  return !!DL_TRANSLATE_LANGUAGES[normalized];
+  // Check dictionary languages first
+  if (DL_TRANSLATE_LANGUAGES[normalized]) {
+    return true;
+  }
+  // Check M2M100 model languages
+  return isM2M100Supported(normalized);
 }
 
 /**
- * Get all supported languages
+ * Get all supported languages (100+ from M2M100)
  */
 export function getDLTranslateSupportedLanguages(): string[] {
   const languages = new Set<string>();
+  
+  // Add dictionary languages
   Object.values(DL_TRANSLATE_LANGUAGES).forEach(lang => {
     languages.add(lang);
   });
+  
+  // Add M2M100 languages (100+)
+  getM2M100SupportedLanguages().forEach(lang => {
+    languages.add(lang);
+  });
+  
   return Array.from(languages).sort();
 }
+
+/**
+ * Initialize DL-Translate M2M100 model
+ * Call this to pre-load the model for faster first translation
+ */
+export async function initializeDLTranslate(
+  onProgress?: (progress: number) => void
+): Promise<boolean> {
+  return initializeM2M100(onProgress);
+}
+
+/**
+ * Check if M2M100 model is loaded
+ */
+export function isDLTranslateModelLoaded(): boolean {
+  return isM2M100Loaded();
+}
+
+/**
+ * Check if M2M100 model is currently loading
+ */
+export function isDLTranslateModelLoading(): boolean {
+  return isM2M100Loading();
+}
+
+// Re-export M2M100 language codes
+export { M2M100_LANGUAGES } from './dl-translate-model';

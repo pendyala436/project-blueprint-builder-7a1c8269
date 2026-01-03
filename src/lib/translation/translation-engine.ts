@@ -1,10 +1,11 @@
 /**
- * Translation Engine - 100% Local (No External APIs, No ML Models)
+ * Translation Engine with DL-Translate M2M100 Model
  * 
- * Translation Methods:
+ * Translation Methods (100+ languages):
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
+ * - M2M100 Neural Translation (100+ languages - in-browser)
  * 
  * Based on: https://github.com/xhluca/dl-translate
  */
@@ -429,15 +430,15 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
 }
 
 /**
- * Main translation function - Dictionary + Phonetic Transliteration
+ * Main translation function - Dictionary + M2M100 Neural Translation
  * 
  * Flow:
  * 1. Same language check → skip all processing
  * 2. Check cache first (instant)
  * 3. Check phrase dictionary (common phrases - instant)
- * 4. Dictionary-based translation (MAIN - instant, word-by-word)
+ * 4. Dictionary-based translation (instant, word-by-word)
  * 5. Phonetic transliteration (instant)
- * 6. DL-Translate dictionary fallback
+ * 6. DL-Translate M2M100 (100+ languages - in-browser neural model)
  * 
  * Translation is NON-BLOCKING for typing
  * Based on: https://github.com/xhluca/dl-translate

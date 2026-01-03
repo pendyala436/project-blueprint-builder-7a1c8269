@@ -1,7 +1,7 @@
 /**
  * useChatTranslation - DL-Translate Chat Hook
  * 
- * 100% Local - No External API Calls, No ML Models
+ * Uses M2M100 model for 100+ language translation (same as dl-translate)
  * 
  * Features:
  * - Auto-detect source/target language from user profiles (mother tongue)

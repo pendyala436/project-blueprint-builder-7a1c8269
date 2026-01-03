@@ -1,9 +1,10 @@
 /**
- * DL-Translate Inspired TypeScript Translator
+ * DL-Translate TypeScript Translator
  * 
- * Translation methods:
- * 1. Dictionary Translation (main) - instant common phrases
- * 2. Phonetic Transliteration (fallback) - Latin → native script
+ * Translation methods (100+ languages):
+ * 1. Dictionary Translation (instant) - common phrases
+ * 2. Phonetic Transliteration (instant) - Latin → native script
+ * 3. M2M100 Neural Translation (fallback) - 100+ languages in-browser
  * 
  * Based on: https://github.com/xhluca/dl-translate
  */

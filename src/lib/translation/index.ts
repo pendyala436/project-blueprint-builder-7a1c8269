@@ -1,9 +1,12 @@
 /**
  * Translation Module - Unified Export
  * 
- * Multi-tier translation (50+ languages):
+ * DL-Translate implementation with M2M100 model (100+ languages)
+ * 
+ * Translation methods:
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
+ * 3. M2M100 Neural Translation (100+ languages, in-browser)
  * 
  * Flow:
  * - Typing: Latin letters → Live preview in native script
@@ -96,7 +99,7 @@ export {
 } from './ml-translation-engine';
 
 // ============================================================================
-// DL-Translate API (Dictionary + Phonetic Transliteration)
+// DL-Translate (Dictionary + M2M100 Neural Model - 100+ languages)
 // ============================================================================
 export {
   translateWithDLTranslate,
@@ -106,8 +109,27 @@ export {
   getDLTranslateCacheStats,
   isDLTranslateLanguageSupported,
   getDLTranslateSupportedLanguages,
+  initializeDLTranslate,
+  isDLTranslateModelLoaded,
+  isDLTranslateModelLoading,
   DL_TRANSLATE_LANGUAGES,
+  M2M100_LANGUAGES,
 } from './dl-translate-api';
+
+// ============================================================================
+// DL-Translate M2M100 Model (direct access)
+// ============================================================================
+export {
+  translateWithM2M100,
+  initializeM2M100,
+  isM2M100Supported,
+  getM2M100SupportedLanguages,
+  isM2M100Loaded,
+  isM2M100Loading,
+  unloadM2M100,
+  getM2M100Code,
+  getM2M100LanguageName,
+} from './dl-translate-model';
 
 // ============================================================================
 // React Hooks

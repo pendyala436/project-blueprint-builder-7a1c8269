@@ -1,13 +1,14 @@
 /**
  * React Hook for DL-Translate
  * 
- * 100% Local - No External API Calls, No ML Models
+ * Uses M2M100 model for 100+ language translation
+ * Same model as the Python dl-translate library
  * 
  * Based on: https://github.com/xhluca/dl-translate
  * 
  * Translation methods:
- * 1. Dictionary Translation + Phonetic Transliteration (instant, browser)
- * 2. DL-Translate HuggingFace API (fallback) - 200+ languages
+ * 1. Dictionary Translation + Phonetic Transliteration (instant)
+ * 2. M2M100 Neural Translation (100+ languages, in-browser)
  */
 
 import { useState, useCallback } from 'react';
