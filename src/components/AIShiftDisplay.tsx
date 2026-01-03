@@ -67,13 +67,11 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
 
   const triggerAutoSchedule = async () => {
     try {
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
-      await supabase.functions.invoke("shift-scheduler", {
+      // Use shift-auto-scheduler for consistency with monthly schedule
+      await supabase.functions.invoke("shift-auto-scheduler", {
         body: { 
-          userId, 
-          timezone: userTimezone, 
-          action: "ai_auto_schedule" 
+          action: "assign_initial_shift",
+          userId 
         }
       });
       
@@ -87,21 +85,70 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
   const fetchShiftData = async () => {
     try {
       setLoading(true);
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      const { data, error } = await supabase.functions.invoke("shift-scheduler", {
-        body: { userId, timezone: userTimezone, action: "get_shift_status" }
+      // Use shift-auto-scheduler for consistency with monthly schedule  
+      const { data, error } = await supabase.functions.invoke("shift-auto-scheduler", {
+        body: { action: "get_my_schedule", userId }
       });
 
       if (error) throw error;
 
-      setTodayShift(data.todayShift || null);
-      setUpcomingShifts(data.upcomingShifts || []);
-      setWeekOffDays(data.weekOffDays || []);
-      setShiftConfig(data.shiftConfig || null);
-      setCountry(data.country || "");
-      setLanguage(data.language || "");
-      setHasActiveShift(data.hasActiveShift || false);
+      // Transform data from shift-auto-scheduler format
+      const schedules = data.schedules || [];
+      const today = new Date().toISOString().split('T')[0];
+      
+      const todaySchedule = schedules.find((s: any) => s.scheduled_date === today && !s.is_week_off);
+      const upcoming = schedules.filter((s: any) => s.scheduled_date > today && !s.is_week_off).slice(0, 7);
+      
+      setTodayShift(todaySchedule ? {
+        id: todaySchedule.id || '',
+        scheduled_date: todaySchedule.scheduled_date,
+        start_time: todaySchedule.start_time || `${String(todaySchedule.start_hour || 7).padStart(2, '0')}:00:00`,
+        end_time: todaySchedule.end_time || `${String(todaySchedule.end_hour || 16).padStart(2, '0')}:00:00`,
+        status: todaySchedule.status || 'scheduled',
+        ai_suggested: true,
+        suggested_reason: todaySchedule.suggested_reason || `AI: ${todaySchedule.shift_name}`
+      } : null);
+      
+      setUpcomingShifts(upcoming.map((s: any) => ({
+        id: s.id || '',
+        scheduled_date: s.scheduled_date,
+        start_time: s.start_time || `${String(s.start_hour || 7).padStart(2, '0')}:00:00`,
+        end_time: s.end_time || `${String(s.end_hour || 16).padStart(2, '0')}:00:00`,
+        status: s.status || 'scheduled',
+        ai_suggested: true,
+        suggested_reason: s.suggested_reason || `AI: ${s.shift_name}`
+      })));
+      
+      // Get week off days from assignment
+      const weekOffDaysData = data.assignment?.week_off_days || [];
+      const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      setWeekOffDays(weekOffDaysData.map((day: string, idx: number) => ({
+        index: DAYS_OF_WEEK.indexOf(day),
+        name: day
+      })).filter((d: any) => d.index >= 0));
+      
+      setShiftConfig({
+        hours: 9,
+        changeBuffer: 1,
+        weekOffInterval: 2,
+        startHour: data.assignment?.start_hour || 7,
+        endHour: data.assignment?.end_hour || 16
+      });
+      
+      setCountry(data.profile?.country || "");
+      setLanguage(data.profile?.language || "");
+      setHasActiveShift(false); // Will be updated by active shift check
+      
+      // Check for active shift
+      const { data: activeShift } = await supabase
+        .from("shifts")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      setHasActiveShift(!!activeShift);
     } catch (error) {
       console.error("Error fetching shift data:", error);
     } finally {
@@ -112,14 +159,13 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
   const workOnWeekOff = async (date: string) => {
     try {
       setScheduling(true);
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      const { data, error } = await supabase.functions.invoke("shift-scheduler", {
+      // Use shift-auto-scheduler for consistency
+      const { data, error } = await supabase.functions.invoke("shift-auto-scheduler", {
         body: { 
+          action: "opt_in_work_on_off_day",
           userId, 
-          timezone: userTimezone, 
-          action: "work_on_week_off",
-          workOnWeekOff: { date }
+          data: { date }
         }
       });
 
@@ -168,9 +214,9 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
   };
 
   const getShiftStatus = () => {
-    if (hasActiveShift) return { label: "On Shift", color: "bg-green-500", icon: Play };
-    if (isCurrentlyInShift()) return { label: "Shift Active", color: "bg-green-500", icon: CheckCircle2 };
-    if (todayShift) return { label: "Scheduled", color: "bg-blue-500", icon: Clock };
+    if (hasActiveShift) return { label: "On Shift", color: "bg-online", icon: Play };
+    if (isCurrentlyInShift()) return { label: "Shift Active", color: "bg-online", icon: CheckCircle2 };
+    if (todayShift) return { label: "Scheduled", color: "bg-info", icon: Clock };
     return { label: "Off Today", color: "bg-muted", icon: Calendar };
   };
 
@@ -195,7 +241,7 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
       <Card className={cn(
         "relative overflow-hidden transition-all",
         hasActiveShift || isCurrentlyInShift() 
-          ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30" 
+          ? "bg-gradient-to-br from-online/10 to-online/5 border-online/30" 
           : "bg-gradient-aurora"
       )}>
         <CardContent className="p-4">
@@ -269,9 +315,9 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
         <div className={cn(
           "p-4 rounded-xl border transition-all",
           hasActiveShift || isCurrentlyInShift()
-            ? "bg-green-500/10 border-green-500/30"
+            ? "bg-online/10 border-online/30"
             : todayShift
-            ? "bg-blue-500/10 border-blue-500/30"
+            ? "bg-info/10 border-info/30"
             : "bg-muted/50 border-muted"
         )}>
           <div className="flex items-center justify-between">
@@ -291,7 +337,7 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
               </div>
             </div>
             {isCurrentlyInShift() && (
-              <Badge className="bg-green-500 animate-pulse">LIVE</Badge>
+              <Badge className="bg-online animate-pulse">LIVE</Badge>
             )}
           </div>
         </div>
