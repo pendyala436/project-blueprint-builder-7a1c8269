@@ -433,13 +433,15 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </Button>
         </div>
 
-        {/* Calendar Grid - Full bidirectional scrolling for 150+ users */}
+        {/* Calendar Grid - Full bidirectional scrolling for 200+ users */}
         <div 
           className="border border-border rounded-lg"
           style={{ 
-            maxHeight: '500px',
+            maxHeight: '60vh',
+            minHeight: '300px',
             overflow: 'auto',
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin'
           }}
         >
           <table className="border-collapse" style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
