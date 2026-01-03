@@ -130,6 +130,15 @@ const MiniChatWindow = ({
   // Only skip conversion if mother tongue is English - all other languages need conversion
   const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
 
+  // Debug: Log initialization
+  console.log('[MiniChatWindow] Initialized:', {
+    currentUserLanguage,
+    partnerLanguage,
+    needsNativeConversion,
+    currentUserId: currentUserId?.slice(0, 8),
+    partnerId: partnerId?.slice(0, 8)
+  });
+
   // Real-time typing indicator with translation
   const {
     sendTypingIndicator,
@@ -165,7 +174,14 @@ const MiniChatWindow = ({
 
   // Real-time transliteration: Convert typing to native language (ONCE only)
   useEffect(() => {
-    // Skip if no conversion needed
+    console.log('[MiniChatWindow] Transliteration effect:', {
+      newMessage: newMessage.slice(0, 20),
+      needsNativeConversion,
+      currentUserLanguage,
+      isLatin: newMessage ? isLatinScript(newMessage) : 'empty'
+    });
+
+    // Skip if no conversion needed (user's language is English)
     if (!needsNativeConversion) {
       setDisplayMessage(newMessage);
       return;
@@ -180,6 +196,7 @@ const MiniChatWindow = ({
 
     // Skip if already in native script (not Latin) - prevents double conversion
     if (!isLatinScript(newMessage)) {
+      console.log('[MiniChatWindow] Already non-Latin, skipping conversion');
       setDisplayMessage(newMessage);
       lastLatinInputRef.current = '';
       return;
@@ -213,8 +230,16 @@ const MiniChatWindow = ({
         isConvertingRef.current = true;
         lastLatinInputRef.current = currentMessage; // Mark this input as processed
         
+        console.log('[MiniChatWindow] Converting:', currentMessage, 'to', currentUserLanguage);
+        
         // Use convertToNative for non-Latin languages
         const result = await convertToNative(currentMessage, currentUserLanguage);
+        
+        console.log('[MiniChatWindow] Conversion result:', {
+          original: currentMessage,
+          converted: result.text,
+          isTranslated: result.isTranslated
+        });
         
         if (result.isTranslated && result.text && result.text !== currentMessage) {
           // Only update display if the message hasn't changed while we were converting
@@ -224,7 +249,7 @@ const MiniChatWindow = ({
           setDisplayMessage(currentMessage);
         }
       } catch (error) {
-        console.error('Transliteration error:', error);
+        console.error('[MiniChatWindow] Transliteration error:', error);
         // On error, display the input as-is
         setDisplayMessage(newMessage);
       } finally {
