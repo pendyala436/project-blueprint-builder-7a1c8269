@@ -236,10 +236,11 @@ async function generateMonthlySchedule(supabase: any, targetMonth?: string) {
       const halfPoint = Math.ceil(womenPerShift / 2);
       const roleType = positionInShift < halfPoint ? 'chat' : 'video_call';
 
-      // Calculate week off days (2 per week, distributed)
-      // Use user index to distribute off days across the week
-      const offDay1 = (index * 2) % 7;
-      const offDay2 = (index * 2 + 3) % 7;
+      // Calculate week off days (2 continuous days per week)
+      // Pairs: Sun-Mon(0,1), Mon-Tue(1,2), Tue-Wed(2,3), Wed-Thu(3,4), Thu-Fri(4,5), Fri-Sat(5,6), Sat-Sun(6,0)
+      const offDayPairIndex = index % 7;
+      const offDay1 = offDayPairIndex;
+      const offDay2 = (offDayPairIndex + 1) % 7;
 
       // Create or update assignment
       assignments.push({
@@ -558,7 +559,10 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
   filteredWomen.forEach((woman: any, index: number) => {
     const assignment = assignmentMap.get(woman.user_id);
     const shiftCode = assignment?.shift_templates?.shift_code || ['A', 'B', 'C'][index % 3];
-    const weekOffDays = assignment?.week_off_days || [0, 6];
+    // Default to 2 continuous off days if not assigned
+    const offDayPairIndex = index % 7;
+    const defaultOffDays = [offDayPairIndex, (offDayPairIndex + 1) % 7];
+    const weekOffDays = assignment?.week_off_days || defaultOffDays;
     const isWeekOff = weekOffDays.includes(dayOfWeek);
     const timezoneOffset = getTimezoneOffset(woman.country || 'India');
     
@@ -816,12 +820,14 @@ async function assignInitialShift(supabase: any, userId: string) {
     return { success: false, error: 'No shift template found' };
   }
 
-  // Calculate week off days based on user count
+  // Calculate week off days - 2 continuous days per week
+  // Pairs: Sun-Mon(0,1), Mon-Tue(1,2), Tue-Wed(2,3), Wed-Thu(3,4), Thu-Fri(4,5), Fri-Sat(5,6), Sat-Sun(6,0)
   const userIndex = (shiftCounts.A + shiftCounts.B + shiftCounts.C);
-  const offDay1 = (userIndex * 2) % 7;
-  const offDay2 = (userIndex * 2 + 3) % 7;
+  const offDayPairIndex = userIndex % 7;
+  const offDay1 = offDayPairIndex;
+  const offDay2 = (offDayPairIndex + 1) % 7;
 
-  console.log(`[ShiftAutoScheduler] Week off days: ${DAYS_OF_WEEK[offDay1]}, ${DAYS_OF_WEEK[offDay2]}`);
+  console.log(`[ShiftAutoScheduler] Week off days (continuous): ${DAYS_OF_WEEK[offDay1]}, ${DAYS_OF_WEEK[offDay2]}`);
 
   // Create assignment
   const { error: assignError } = await supabase
@@ -1013,7 +1019,10 @@ async function getFullMonthlySchedule(supabase: any, userId: string, language?: 
   filteredWomen.forEach((woman: any, index: number) => {
     const assignment = assignmentMap.get(woman.user_id);
     const shiftCode = assignment?.shift_templates?.shift_code || ['A', 'B', 'C'][index % 3];
-    const weekOffDays = assignment?.week_off_days || [(index * 2) % 7, (index * 2 + 3) % 7];
+    // Default to 2 continuous off days if not assigned
+    const offDayPairIndex = index % 7;
+    const defaultOffDays = [offDayPairIndex, (offDayPairIndex + 1) % 7];
+    const weekOffDays = assignment?.week_off_days || defaultOffDays;
     const timezoneOffset = getTimezoneOffset(woman.country || 'India');
     const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
     
