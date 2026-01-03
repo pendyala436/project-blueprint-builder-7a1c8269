@@ -1,14 +1,13 @@
 /**
  * Embedded Translation Engine (DL-Translate Pattern)
  * 
- * MAIN: Dictionary-based translation (instant, browser-based):
- * - Embedded phrase dictionaries (common phrases - instant)
- * - Transliteration dictionaries (phonetic → native script - instant)
- * - Phonetic transliterator (syllable-based - instant)
+ * 100% LOCAL BROWSER-BASED TRANSLATION - No External API Calls
  * 
- * FALLBACK: Hugging Face NLLB-200 via Edge Function
- * - Uses same model as Python dl-translate library
- * - Requires HUGGING_FACE_ACCESS_TOKEN
+ * Translation Methods (all instant, in-browser):
+ * - Embedded phrase dictionaries (common phrases)
+ * - Transliteration dictionaries (phonetic → native script)
+ * - Phonetic transliterator (syllable-based)
+ * - Dictionary-based ML translation
  * 
  * Based on: 
  * - https://github.com/xhluca/dl-translate (API pattern)
