@@ -1,10 +1,10 @@
 /**
  * DL-Translate Inspired TypeScript Translator
  * 
- * Server-side translation via Supabase Edge Function
+ * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
  * Based on: https://github.com/xhluca/dl-translate
  * 
- * Supports 200+ languages with auto-detection
+ * NO external edge functions - all logic embedded in client code
  */
 
 import type { 
@@ -14,17 +14,18 @@ import type {
   BatchTranslationResult,
   BatchTranslationItem 
 } from './types';
-import { normalizeLanguage, isLanguageSupported } from './language-codes';
+import { normalizeLanguage, isLatinScriptLanguage } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
-import { supabase } from '@/integrations/supabase/client';
-
-// Translation cache
-const translationCache = new Map<string, { result: TranslationResult; timestamp: number }>();
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { 
+  translateText, 
+  convertToNativeScript, 
+  translateBatch as batchTranslate,
+  clearTranslationCache 
+} from './translation-engine';
 
 /**
  * DL-Translate inspired Translator class
- * Uses server-side translation via Edge Function
+ * Uses embedded translation engine - NO edge functions
  */
 export class Translator {
   private config: Required<Omit<TranslatorConfig, 'model'>>;
@@ -32,7 +33,7 @@ export class Translator {
   constructor(config: TranslatorConfig = {}) {
     this.config = {
       cacheEnabled: config.cacheEnabled ?? true,
-      cacheTTL: config.cacheTTL || DEFAULT_CACHE_TTL,
+      cacheTTL: config.cacheTTL || 5 * 60 * 1000,
       maxRetries: config.maxRetries || 2,
       timeout: config.timeout || 30000,
     };
@@ -48,12 +49,6 @@ export class Translator {
   ): Promise<TranslationResult> {
     const { sourceLanguage, targetLanguage, mode = 'auto' } = options;
 
-    // Check cache
-    if (this.config.cacheEnabled) {
-      const cached = this.getFromCache(text, targetLanguage, sourceLanguage);
-      if (cached) return cached;
-    }
-
     // Detect source language if not provided
     const detected = detectLanguage(text);
     const effectiveSourceLang = sourceLanguage || detected.language;
@@ -61,36 +56,19 @@ export class Translator {
 
     // Check if same language
     if (isSameLanguage(effectiveSourceLang, targetLanguage)) {
-      const result = this.createResult(text, text, effectiveSourceLang, targetLanguage, false, 'same_language');
-      this.addToCache(text, targetLanguage, sourceLanguage, result);
-      return result;
+      return this.createResult(text, text, effectiveSourceLang, targetLanguage, false, 'same_language');
     }
 
     // Determine if conversion mode (Latin input to non-Latin target)
     const shouldConvert = mode === 'convert' || 
-      (mode === 'auto' && isLatinScript(text) && !this.isLatinLanguage(normalizedTarget));
+      (mode === 'auto' && isLatinScript(text) && !isLatinScriptLanguage(normalizedTarget));
 
-    // Call translation API (Edge Function)
-    const translatedText = await this.callTranslationAPI(
-      text, 
-      shouldConvert ? 'english' : effectiveSourceLang, 
-      normalizedTarget,
-      shouldConvert ? 'convert' : 'translate'
-    );
-
-    const result = this.createResult(
-      text,
-      translatedText,
-      effectiveSourceLang,
-      targetLanguage,
-      translatedText !== text,
-      shouldConvert ? 'convert' : 'translate'
-    );
-
-    // Cache result
-    if (this.config.cacheEnabled) {
-      this.addToCache(text, targetLanguage, sourceLanguage, result);
-    }
+    // Use embedded translation engine
+    const result = await translateText(text, {
+      sourceLanguage: shouldConvert ? 'english' : effectiveSourceLang,
+      targetLanguage: normalizedTarget,
+      mode: shouldConvert ? 'convert' : 'translate'
+    });
 
     return result;
   }
@@ -99,30 +77,19 @@ export class Translator {
    * Batch translate multiple texts
    */
   async translateBatch(items: BatchTranslationItem[]): Promise<BatchTranslationResult> {
-    const results: TranslationResult[] = [];
-    let successCount = 0;
-    let failureCount = 0;
+    const batchItems = items.map(item => ({
+      text: item.text,
+      targetLanguage: item.options.targetLanguage,
+      sourceLanguage: item.options.sourceLanguage,
+    }));
 
-    // Process in parallel with concurrency limit
-    const batchSize = 5;
-    for (let i = 0; i < items.length; i += batchSize) {
-      const batch = items.slice(i, i + batchSize);
-      const batchResults = await Promise.allSettled(
-        batch.map(item => this.translate(item.text, item.options))
-      );
-
-      for (const result of batchResults) {
-        if (result.status === 'fulfilled') {
-          results.push(result.value);
-          successCount++;
-        } else {
-          failureCount++;
-          results.push(this.createResult('', '', 'unknown', '', false, 'translate'));
-        }
-      }
-    }
-
-    return { results, successCount, failureCount };
+    const results = await batchTranslate(batchItems);
+    
+    return {
+      results,
+      successCount: results.filter(r => r.isTranslated).length,
+      failureCount: results.filter(r => !r.isTranslated && r.mode !== 'same_language').length
+    };
   }
 
   /**
@@ -130,12 +97,7 @@ export class Translator {
    * Useful for typing in English keyboard and getting native script
    */
   async convertScript(text: string, targetLanguage: string): Promise<string> {
-    const result = await this.translate(text, { 
-      targetLanguage, 
-      sourceLanguage: 'english',
-      mode: 'convert' 
-    });
-    return result.translatedText;
+    return convertToNativeScript(text, targetLanguage);
   }
 
   /**
@@ -156,7 +118,7 @@ export class Translator {
    * Clear translation cache
    */
   clearCache(): void {
-    translationCache.clear();
+    clearTranslationCache();
   }
 
   /**
@@ -164,81 +126,12 @@ export class Translator {
    */
   getCacheStats(): { size: number; hitRate: number } {
     return {
-      size: translationCache.size,
-      hitRate: 0 // Would need to track hits/misses for accurate rate
+      size: 0, // Would need to track
+      hitRate: 0
     };
   }
 
   // Private methods
-
-  private isLatinLanguage(lang: string): boolean {
-    const latinLanguages = [
-      'english', 'spanish', 'french', 'german', 'portuguese', 'italian',
-      'dutch', 'polish', 'vietnamese', 'indonesian', 'malay', 'tagalog',
-      'turkish', 'swahili', 'czech', 'romanian', 'hungarian', 'swedish',
-      'danish', 'finnish', 'norwegian'
-    ];
-    return latinLanguages.includes(lang.toLowerCase());
-  }
-
-  private async callTranslationAPI(
-    text: string,
-    sourceLanguage: string,
-    targetLanguage: string,
-    mode: string
-  ): Promise<string> {
-    try {
-      const { data, error } = await supabase.functions.invoke('translate-message', {
-        body: {
-          message: text,
-          sourceLanguage,
-          targetLanguage,
-          mode
-        }
-      });
-
-      if (error) {
-        console.error('[Translator] API error:', error);
-        return text;
-      }
-
-      return data?.translatedMessage || data?.convertedMessage || text;
-    } catch (err) {
-      console.error('[Translator] Translation failed:', err);
-      return text;
-    }
-  }
-
-  private getCacheKey(text: string, target: string, source?: string): string {
-    return `${text}|${target}|${source || 'auto'}`;
-  }
-
-  private getFromCache(text: string, target: string, source?: string): TranslationResult | null {
-    const key = this.getCacheKey(text, target, source);
-    const cached = translationCache.get(key);
-    
-    if (cached && Date.now() - cached.timestamp < this.config.cacheTTL) {
-      return cached.result;
-    }
-    
-    if (cached) {
-      translationCache.delete(key);
-    }
-    
-    return null;
-  }
-
-  private addToCache(text: string, target: string, source: string | undefined, result: TranslationResult): void {
-    const key = this.getCacheKey(text, target, source);
-    translationCache.set(key, { result, timestamp: Date.now() });
-    
-    // Limit cache size
-    if (translationCache.size > 1000) {
-      const firstKey = translationCache.keys().next().value;
-      if (firstKey) translationCache.delete(firstKey);
-    }
-  }
-
   private createResult(
     original: string,
     translated: string,

@@ -1,7 +1,8 @@
 /**
- * DL-Translate - Server-Side Only
- * ================================
- * All translation via Edge Function (translate-message)
+ * DL-Translate - Embedded Translation
+ * ====================================
+ * All translation using LibreTranslate, MyMemory, Google Input Tools
+ * NO external edge functions - all logic embedded in client code
  * 
  * Features:
  * 1. Auto-detect source language
@@ -33,10 +34,23 @@ export type {
   ChatTranslationOptions,
 } from './useDLTranslate';
 
-// React hook (server-side translation)
+// React hook (embedded translation)
 export { useDLTranslate } from './useDLTranslate';
 export { useDLTranslate as default } from './useDLTranslate';
 
-// Re-export server translation hook
+// Re-export embedded translation hook
 export { useServerTranslation } from '@/hooks/useServerTranslation';
 export type { UseServerTranslationOptions, UseServerTranslationReturn } from '@/hooks/useServerTranslation';
+
+// Re-export translation engine functions
+export {
+  translateText,
+  convertToNativeScript,
+  translateBatch,
+  clearTranslationCache,
+  getCacheStats,
+  detectLanguage,
+  isLatinScript,
+  isSameLanguage,
+  normalizeLanguage,
+} from '@/lib/translation/translation-engine';

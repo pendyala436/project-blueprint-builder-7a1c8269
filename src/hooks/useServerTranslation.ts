@@ -1,16 +1,26 @@
 /**
- * Server-Side Translation Hook (DL-Translate)
+ * Translation Hook (DL-Translate)
  * 
- * Pure server-side translation via Edge Function
+ * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
+ * NO edge functions - all logic in client code
+ * 
+ * Features:
  * - Translation between sender/receiver based on mother tongue
  * - Skip translation if same language
  * - Latin to native script conversion when typing
- * 
- * NO client-side translation - all via translate-message edge function
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  translateText,
+  convertToNativeScript,
+  clearTranslationCache,
+  detectLanguage as detectLang,
+  isLatinScript,
+  isSameLanguage as isSameLang,
+  normalizeLanguage
+} from '@/lib/translation/translation-engine';
+import { isLatinScriptLanguage } from '@/lib/translation/language-codes';
 
 // Types
 export interface TranslationResult {
@@ -55,62 +65,7 @@ export interface UseServerTranslationReturn {
   error: string | null;
 }
 
-// Language normalization
-function normalizeLanguage(lang: string): string {
-  if (!lang) return 'english';
-  const lower = lang.toLowerCase().trim();
-  
-  // Handle aliases
-  const aliases: Record<string, string> = {
-    bangla: 'bengali',
-    oriya: 'odia',
-    farsi: 'persian',
-    mandarin: 'chinese',
-  };
-  
-  return aliases[lower] || lower;
-}
-
-// Check if Latin script
-function isLatinScript(text: string): boolean {
-  if (!text) return true;
-  const latinPattern = /^[\u0000-\u007F\u0080-\u00FF\u0100-\u017F\u0180-\u024F\s\d\p{P}]+$/u;
-  return latinPattern.test(text.trim());
-}
-
-// Script detection patterns for auto-detection
-const scriptPatterns: Array<{ regex: RegExp; language: string }> = [
-  { regex: /[\u0900-\u097F]/, language: 'hindi' },
-  { regex: /[\u0980-\u09FF]/, language: 'bengali' },
-  { regex: /[\u0B80-\u0BFF]/, language: 'tamil' },
-  { regex: /[\u0C00-\u0C7F]/, language: 'telugu' },
-  { regex: /[\u0C80-\u0CFF]/, language: 'kannada' },
-  { regex: /[\u0D00-\u0D7F]/, language: 'malayalam' },
-  { regex: /[\u0A80-\u0AFF]/, language: 'gujarati' },
-  { regex: /[\u0A00-\u0A7F]/, language: 'punjabi' },
-  { regex: /[\u0B00-\u0B7F]/, language: 'odia' },
-  { regex: /[\u0600-\u06FF]/, language: 'arabic' },
-  { regex: /[\u0590-\u05FF]/, language: 'hebrew' },
-  { regex: /[\u4E00-\u9FFF]/, language: 'chinese' },
-  { regex: /[\u3040-\u30FF]/, language: 'japanese' },
-  { regex: /[\uAC00-\uD7AF]/, language: 'korean' },
-  { regex: /[\u0400-\u04FF]/, language: 'russian' },
-  { regex: /[\u0E00-\u0E7F]/, language: 'thai' },
-];
-
-// Auto-detect language from text
-function detectLanguageFromText(text: string): string | null {
-  if (!text) return null;
-  for (const { regex, language } of scriptPatterns) {
-    if (regex.test(text)) {
-      return language;
-    }
-  }
-  return isLatinScript(text) ? 'english' : null;
-}
-
-// For client-side quick checks - the server has the full 200+ language database
-// This is just for optimization to avoid unnecessary server calls for English users
+// For client-side quick checks
 function isEnglish(language: string): boolean {
   const norm = normalizeLanguage(language);
   return norm === 'english' || norm === 'en';
@@ -124,25 +79,23 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
   const [livePreview, setLivePreview] = useState('');
   
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   // Check if same language (no translation needed)
   const isSameLanguage = useCallback((lang1: string, lang2: string): boolean => {
-    return normalizeLanguage(lang1) === normalizeLanguage(lang2);
+    return isSameLang(lang1, lang2);
   }, []);
 
   // Check if translation needed between two languages
   const needsTranslation = useCallback((senderLang: string, receiverLang: string): boolean => {
-    return !isSameLanguage(senderLang, receiverLang);
-  }, [isSameLanguage]);
+    return !isSameLang(senderLang, receiverLang);
+  }, []);
 
-  // Core translation via edge function with auto-detection
+  // Core translation with auto-detection
   const translate = useCallback(async (
     text: string,
     targetLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    // Auto-detect target language if not provided - use user's language
     const effectiveTarget = targetLanguage || userLanguage;
     
     if (!trimmed) {
@@ -153,38 +106,21 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
-        body: {
-          text: trimmed,
-          targetLanguage: normalizeLanguage(effectiveTarget),
-          mode: 'translate'
-          // sourceLanguage omitted - edge function will auto-detect
-        }
+      const result = await translateText(trimmed, {
+        targetLanguage: normalizeLanguage(effectiveTarget),
+        mode: 'translate'
       });
 
-      if (fnError) {
-        console.error('[ServerTranslation] Error:', fnError);
-        setError(`Translation failed: ${fnError.message || 'Unknown error'}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
-      }
-
-      // Handle edge function error response
-      if (data?.error) {
-        console.error('[ServerTranslation] API Error:', data.error);
-        setError(`Translation error: ${data.error}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
-      }
-
       return {
-        text: data?.translatedText || trimmed,
-        originalText: trimmed,
-        isTranslated: data?.isTranslated || false,
-        source: data?.sourceLanguage || data?.detectedLanguage || 'auto',
-        target: data?.targetLanguage || effectiveTarget,
-        mode: 'translate'
+        text: result.translatedText,
+        originalText: result.originalText,
+        isTranslated: result.isTranslated,
+        source: result.sourceLanguage,
+        target: result.targetLanguage,
+        mode: result.mode === 'same_language' ? 'passthrough' : result.mode
       };
     } catch (err) {
-      console.error('[ServerTranslation] Error:', err);
+      console.error('[Translation] Error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
     } finally {
@@ -199,9 +135,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     receiverLang?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    // Auto-detect sender from text if not provided
-    const detectedSender = senderLang || detectLanguageFromText(trimmed) || 'english';
-    // Use partner language or user language as receiver
+    const detectedSender = senderLang || detectLang(trimmed).language;
     const effectiveReceiver = receiverLang || partnerLanguage || userLanguage;
     
     const normSender = normalizeLanguage(detectedSender);
@@ -212,7 +146,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
 
     // Same language - no translation needed
-    if (isSameLanguage(normSender, normReceiver)) {
+    if (isSameLang(normSender, normReceiver)) {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
     }
 
@@ -220,44 +154,28 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
-        body: {
-          text: trimmed,
-          sourceLanguage: normSender,
-          targetLanguage: normReceiver,
-          mode: 'chat'
-        }
+      const result = await translateText(trimmed, {
+        sourceLanguage: normSender,
+        targetLanguage: normReceiver,
+        mode: 'translate'
       });
 
-      if (fnError) {
-        console.error('[ServerTranslation] Chat error:', fnError);
-        setError(`Chat translation failed: ${fnError.message || 'Unknown error'}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
-      }
-
-      // Handle edge function error response
-      if (data?.error) {
-        console.error('[ServerTranslation] Chat API Error:', data.error);
-        setError(`Chat translation error: ${data.error}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
-      }
-
       return {
-        text: data?.translatedText || data?.translatedMessage || trimmed,
-        originalText: trimmed,
-        isTranslated: data?.isTranslated || false,
-        source: data?.sourceLanguage || normSender,
-        target: data?.targetLanguage || normReceiver,
-        mode: 'translate'
+        text: result.translatedText,
+        originalText: result.originalText,
+        isTranslated: result.isTranslated,
+        source: result.sourceLanguage,
+        target: result.targetLanguage,
+        mode: result.mode === 'same_language' ? 'passthrough' : result.mode
       };
     } catch (err) {
-      console.error('[ServerTranslation] Chat error:', err);
+      console.error('[Translation] Chat error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
     } finally {
       setIsTranslating(false);
     }
-  }, [userLanguage, partnerLanguage, isSameLanguage]);
+  }, [userLanguage, partnerLanguage]);
 
   // Convert Latin text to native script OR translate to Latin-script language
   const convertToNative = useCallback(async (
@@ -265,7 +183,6 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     targetLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    // Auto-detect target from user's language if not provided
     const effectiveTarget = targetLanguage || userLanguage;
     const normTarget = normalizeLanguage(effectiveTarget);
 
@@ -273,7 +190,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return { text, originalText: text, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
     }
 
-    // If target is English, no conversion/translation needed
+    // If target is English, no conversion needed
     if (normTarget === 'english') {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
     }
@@ -287,40 +204,18 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      // Always use 'convert' mode - the edge function handles:
-      // - Non-Latin languages: transliteration (e.g., "namaste" → "नमस्ते")
-      // - Latin languages: translation (e.g., "hello" → "hola")
-      const { data, error: fnError } = await supabase.functions.invoke('translate-message', {
-        body: {
-          text: trimmed,
-          targetLanguage: normTarget,
-          mode: 'convert'
-        }
-      });
-
-      if (fnError) {
-        console.error('[ServerTranslation] Convert error:', fnError);
-        setError(`Conversion failed: ${fnError.message || 'Unknown error'}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
-      }
-
-      // Handle edge function error response
-      if (data?.error) {
-        console.error('[ServerTranslation] Convert API Error:', data.error);
-        setError(`Conversion error: ${data.error}`);
-        return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
-      }
-
+      const converted = await convertToNativeScript(trimmed, normTarget);
+      
       return {
-        text: data?.translatedText || data?.convertedMessage || trimmed,
+        text: converted,
         originalText: trimmed,
-        isTranslated: data?.isTranslated || false,
-        source: data?.detectedLanguage || 'english',
+        isTranslated: converted !== trimmed,
+        source: 'english',
         target: normTarget,
         mode: 'convert'
       };
     } catch (err) {
-      console.error('[ServerTranslation] Convert error:', err);
+      console.error('[Translation] Convert error:', err);
       setError(err instanceof Error ? err.message : 'Conversion failed');
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
     } finally {
@@ -334,10 +229,6 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    
-    // Cancel previous request
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
 
     const trimmed = text.trim();
     if (!trimmed) {
@@ -360,17 +251,17 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
 
     // For ALL non-English languages:
-    // - Non-Latin languages: convert script (e.g., "namaste" → "नमस्ते")
-    // - Latin languages (Spanish, French, etc.): translate (e.g., "hello" → "hola")
+    // - Non-Latin languages: convert script
+    // - Latin languages: translate
     debounceRef.current = setTimeout(async () => {
       try {
-        const result = await convertToNative(trimmed, userLanguage);
-        setLivePreview(result.text);
+        const converted = await convertToNativeScript(trimmed, userLanguage);
+        setLivePreview(converted);
       } catch {
         setLivePreview(trimmed);
       }
     }, debounceMs);
-  }, [userLanguage, debounceMs, convertToNative]);
+  }, [userLanguage, debounceMs]);
 
   // Clear live preview
   const clearLivePreview = useCallback(() => {
@@ -394,7 +285,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normUser, target: normUser, mode: 'passthrough' };
     }
 
-    // If typing Latin, convert to native script (server handles all 200+ languages)
+    // If typing Latin, convert to native script
     if (isLatinScript(trimmed)) {
       return convertToNative(trimmed, normUser);
     }
@@ -409,8 +300,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     senderLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    // Auto-detect sender language if not provided
-    const detectedSender = senderLanguage || detectLanguageFromText(trimmed) || 'english';
+    const detectedSender = senderLanguage || detectLang(trimmed).language;
     const normSender = normalizeLanguage(detectedSender);
     const normUser = normalizeLanguage(userLanguage);
 
@@ -419,17 +309,18 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
 
     // Same language - no translation needed
-    if (isSameLanguage(normSender, normUser)) {
+    if (isSameLang(normSender, normUser)) {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normSender, target: normUser, mode: 'passthrough' };
     }
 
     // Translate to user's language
     return translateForChat(trimmed, normSender, normUser);
-  }, [userLanguage, isSameLanguage, translateForChat]);
+  }, [userLanguage, translateForChat]);
 
   // Expose detectLanguage utility
   const detectLanguage = useCallback((text: string): string | null => {
-    return detectLanguageFromText(text);
+    const result = detectLang(text);
+    return result.language;
   }, []);
 
   return {

@@ -5,11 +5,15 @@
  * - Sender sees their message converted to native script
  * - Recipient sees partial typing translated to their language
  * - Skips translation when same language
+ * 
+ * Uses embedded translation engine (LibreTranslate, MyMemory)
+ * NO edge functions - all logic in client code
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { isSameLanguage } from './language-detector';
+import { translateText } from './translation-engine';
 
 export interface TypingIndicator {
   userId: string;
@@ -91,21 +95,18 @@ export function useRealtimeTranslation({
           timestamp: Date.now()
         });
 
-        // Translate to recipient's language
+        // Translate to recipient's language using embedded engine
         try {
-          const { data, error } = await supabase.functions.invoke('translate-message', {
-            body: {
-              text: text,
-              sourceLanguage: senderLanguage,
-              targetLanguage: currentUserLanguage,
-              mode: 'translate'
-            }
+          const result = await translateText(text, {
+            sourceLanguage: senderLanguage,
+            targetLanguage: currentUserLanguage,
+            mode: 'translate'
           });
 
-          if (!error && data?.translatedText) {
+          if (result.isTranslated && result.translatedText) {
             setPartnerTyping(prev => prev ? {
               ...prev,
-              translatedText: data.translatedText,
+              translatedText: result.translatedText,
               isTranslating: false
             } : null);
           } else {
