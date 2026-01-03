@@ -2287,6 +2287,33 @@ export type Database = {
           },
         ]
       }
+      shift_rotations: {
+        Row: {
+          affected_users: number | null
+          created_at: string | null
+          executed_at: string | null
+          id: string
+          notes: string | null
+          rotation_date: string
+        }
+        Insert: {
+          affected_users?: number | null
+          created_at?: string | null
+          executed_at?: string | null
+          id?: string
+          notes?: string | null
+          rotation_date: string
+        }
+        Update: {
+          affected_users?: number | null
+          created_at?: string | null
+          executed_at?: string | null
+          id?: string
+          notes?: string | null
+          rotation_date?: string
+        }
+        Relationships: []
+      }
       shift_templates: {
         Row: {
           break_hours: number
@@ -2296,6 +2323,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          rotation_order: number | null
           shift_code: string
           start_time: string
           updated_at: string
@@ -2309,6 +2337,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          rotation_order?: number | null
           shift_code: string
           start_time: string
           updated_at?: string
@@ -2322,6 +2351,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          rotation_order?: number | null
           shift_code?: string
           start_time?: string
           updated_at?: string
@@ -3332,6 +3362,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rotate_monthly_shifts: { Args: never; Returns: undefined }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
     }
