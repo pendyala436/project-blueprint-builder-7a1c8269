@@ -536,6 +536,7 @@ async function translateText(
 
 /**
  * AI-powered translation fallback using Lovable AI
+ * Uses strict direct translation - NO creative interpretation
  */
 async function translateWithAI(
   text: string,
@@ -552,9 +553,9 @@ async function translateWithAI(
   const targetLangInfo = languageByName.get(targetLanguage.toLowerCase());
   const sourceNative = sourceLangInfo?.native || sourceLanguage;
   const targetNative = targetLangInfo?.native || targetLanguage;
+  const targetScript = targetLangInfo?.script || 'native';
 
   // Dynamic token budget to avoid truncated outputs on longer messages
-  // Fixed: Use text.length * 4 to ensure complete translation (4 tokens per character max for complex scripts)
   const maxTokens = Math.min(4096, Math.max(512, text.length * 4));
   
   try {
@@ -569,14 +570,19 @@ async function translateWithAI(
         messages: [
           {
             role: "system",
-            content: `You are a translation engine. Translate text from ${sourceLanguage} (${sourceNative}) to ${targetLanguage} (${targetNative}).
-RULES:
-- Translate the ENTIRE input. Do NOT omit any sentences.
-- Output ONLY the translated text
-- Preserve the meaning accurately
-- Do NOT add any explanations, prefixes, or language names
-- Preserve numbers and punctuation
-- If the text is already in ${targetLanguage}, return it as-is`
+            content: `You are a STRICT translation engine. Your ONLY job is direct word-for-word translation.
+
+TRANSLATE from ${sourceLanguage} (${sourceNative}) to ${targetLanguage} (${targetNative}).
+Output in ${targetScript} script.
+
+CRITICAL RULES:
+1. DIRECT TRANSLATION ONLY - translate the exact meaning, word by word
+2. "I love you" = "నేను నిన్ను ప్రేమిస్తున్నాను" (Telugu) / "मैं तुमसे प्यार करता हूं" (Hindi)
+3. DO NOT interpret, paraphrase, or get creative
+4. DO NOT add poetry, metaphors, or cultural expressions
+5. Output ONLY the translated text - no explanations
+6. Preserve the EXACT meaning of the original text
+7. This is for a dating app - translate romantic phrases directly`
           },
           {
             role: "user",
@@ -584,6 +590,7 @@ RULES:
           }
         ],
         max_tokens: maxTokens,
+        temperature: 0.1, // Low temperature for consistent, literal translations
       }),
     });
 
