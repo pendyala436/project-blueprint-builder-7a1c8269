@@ -283,11 +283,34 @@ const ShiftManagementScreen = () => {
 
       const userIds = teamAssignments.map(a => a.user_id);
 
-      // Get profiles for all team members
-      const { data: profiles } = await supabase
-        .from("female_profiles")
-        .select("user_id, full_name, primary_language")
-        .in("user_id", userIds);
+      // Get profiles for all team members - try both female_profiles and profiles tables
+      const [femaleProfilesRes, profilesRes] = await Promise.all([
+        supabase
+          .from("female_profiles")
+          .select("user_id, full_name, primary_language")
+          .in("user_id", userIds),
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, primary_language")
+          .in("user_id", userIds)
+      ]);
+
+      // Combine profiles, preferring female_profiles data
+      const profilesMap = new Map<string, { full_name: string | null; primary_language: string | null }>();
+      
+      // Add from profiles table first
+      (profilesRes.data || []).forEach(p => {
+        if (p.full_name) {
+          profilesMap.set(p.user_id, { full_name: p.full_name, primary_language: p.primary_language });
+        }
+      });
+      
+      // Override with female_profiles data (preferred)
+      (femaleProfilesRes.data || []).forEach(p => {
+        if (p.full_name) {
+          profilesMap.set(p.user_id, { full_name: p.full_name, primary_language: p.primary_language });
+        }
+      });
 
       // Get scheduled shifts for all team members
       const todayStr = new Date().toISOString().split("T")[0];
@@ -307,7 +330,7 @@ const ShiftManagementScreen = () => {
 
       // Map team shifts with shift codes
       const teamShiftsList: TeamShift[] = (schedules || []).map(sched => {
-        const profile = profiles?.find(p => p.user_id === sched.user_id);
+        const profileData = profilesMap.get(sched.user_id);
         const assign = teamAssignments.find(a => a.user_id === sched.user_id);
         
         // Determine shift code based on start time
@@ -338,8 +361,8 @@ const ShiftManagementScreen = () => {
         return {
           id: sched.id,
           user_id: sched.user_id,
-          full_name: profile?.full_name || "Unknown",
-          primary_language: profile?.primary_language || null,
+          full_name: profileData?.full_name || "Team Member",
+          primary_language: profileData?.primary_language || null,
           shift_code: shiftCode,
           shift_name: shiftName,
           scheduled_date: sched.scheduled_date,
