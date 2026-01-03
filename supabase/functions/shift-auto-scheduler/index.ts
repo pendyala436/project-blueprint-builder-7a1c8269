@@ -225,20 +225,28 @@ async function generateMonthlySchedule(supabase: any, targetMonth?: string) {
     const shiftsPerGroup = ['A', 'B', 'C'];
     const womenPerShift = Math.ceil(womenInGroup.length / 3);
 
+    // Track position within each shift for off day distribution
+    const shiftPositionCounters = { A: 0, B: 0, C: 0 };
+
     womenInGroup.forEach((woman, index) => {
       // Determine shift based on index (round-robin)
       const shiftIndex = Math.floor(index / womenPerShift) % 3;
-      const shiftCode = shiftsPerGroup[shiftIndex];
+      const shiftCode = shiftsPerGroup[shiftIndex] as 'A' | 'B' | 'C';
       const shiftTemplate = shiftMap[shiftCode];
 
+      // Get position within this shift (for staggered off days)
+      const positionInShift = shiftPositionCounters[shiftCode];
+      shiftPositionCounters[shiftCode]++;
+
       // Determine role: first half = chat, second half = video_call
-      const positionInShift = index % womenPerShift;
       const halfPoint = Math.ceil(womenPerShift / 2);
       const roleType = positionInShift < halfPoint ? 'chat' : 'video_call';
 
-      // Calculate week off days (2 continuous days per week)
+      // Calculate week off days - STAGGERED WITHIN EACH SHIFT
+      // Each woman in a shift gets different continuous off day pairs
+      // This ensures at least some women are always on duty for each shift
       // Pairs: Sun-Mon(0,1), Mon-Tue(1,2), Tue-Wed(2,3), Wed-Thu(3,4), Thu-Fri(4,5), Fri-Sat(5,6), Sat-Sun(6,0)
-      const offDayPairIndex = index % 7;
+      const offDayPairIndex = positionInShift % 7;
       const offDay1 = offDayPairIndex;
       const offDay2 = (offDayPairIndex + 1) % 7;
 
@@ -556,11 +564,19 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
     C: { chat: [] as any[], video_call: [] as any[] }
   };
 
+  // Track position within each shift for staggered off days
+  const shiftPositionCounters: Record<string, number> = { A: 0, B: 0, C: 0 };
+
   filteredWomen.forEach((woman: any, index: number) => {
     const assignment = assignmentMap.get(woman.user_id);
     const shiftCode = assignment?.shift_templates?.shift_code || ['A', 'B', 'C'][index % 3];
-    // Default to 2 continuous off days if not assigned
-    const offDayPairIndex = index % 7;
+    
+    // Get position within this shift (for staggered off days)
+    const positionInShift = shiftPositionCounters[shiftCode] || 0;
+    shiftPositionCounters[shiftCode] = positionInShift + 1;
+    
+    // Default to staggered off days within each shift if not assigned
+    const offDayPairIndex = positionInShift % 7;
     const defaultOffDays = [offDayPairIndex, (offDayPairIndex + 1) % 7];
     const weekOffDays = assignment?.week_off_days || defaultOffDays;
     const isWeekOff = weekOffDays.includes(dayOfWeek);
@@ -571,8 +587,8 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
       const a = assignmentMap.get(w.user_id);
       return (a?.shift_templates?.shift_code || ['A', 'B', 'C'][i % 3]) === shiftCode;
     });
-    const positionInShift = womenInShift.findIndex((w: any) => w.user_id === woman.user_id);
-    const roleType = positionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
+    const womanPositionInShift = womenInShift.findIndex((w: any) => w.user_id === woman.user_id);
+    const roleType = womanPositionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
 
     const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
     const localStartTime = formatTimeForTimezone(shiftDef.start, timezoneOffset - 330);
@@ -854,14 +870,14 @@ async function assignInitialShift(supabase: any, userId: string) {
     return { success: false, error: 'No shift template found' };
   }
 
-  // Calculate week off days - 2 continuous days per week
-  // Pairs: Sun-Mon(0,1), Mon-Tue(1,2), Tue-Wed(2,3), Wed-Thu(3,4), Thu-Fri(4,5), Fri-Sat(5,6), Sat-Sun(6,0)
-  const userIndex = (shiftCounts.A + shiftCounts.B + shiftCounts.C);
-  const offDayPairIndex = userIndex % 7;
+  // Calculate week off days - STAGGERED WITHIN THE ASSIGNED SHIFT
+  // Use position within the shift (not total count) to ensure different off days within same shift
+  const positionInShift = shiftCounts[assignedShift]; // This woman's position in her shift
+  const offDayPairIndex = positionInShift % 7;
   const offDay1 = offDayPairIndex;
   const offDay2 = (offDayPairIndex + 1) % 7;
 
-  console.log(`[ShiftAutoScheduler] Week off days (continuous): ${DAYS_OF_WEEK[offDay1]}, ${DAYS_OF_WEEK[offDay2]}`);
+  console.log(`[ShiftAutoScheduler] Week off days (staggered in shift ${assignedShift}): ${DAYS_OF_WEEK[offDay1]}, ${DAYS_OF_WEEK[offDay2]}`);
 
   // Create assignment
   const { error: assignError } = await supabase
@@ -1049,12 +1065,20 @@ async function getFullMonthlySchedule(supabase: any, userId: string, language?: 
 
   // Build complete schedule for each woman
   const womenSchedules: any[] = [];
+  
+  // Track position within each shift for staggered off days
+  const shiftPositionCounters: Record<string, number> = { A: 0, B: 0, C: 0 };
 
   filteredWomen.forEach((woman: any, index: number) => {
     const assignment = assignmentMap.get(woman.user_id);
     const shiftCode = assignment?.shift_templates?.shift_code || ['A', 'B', 'C'][index % 3];
-    // Default to 2 continuous off days if not assigned
-    const offDayPairIndex = index % 7;
+    
+    // Get position within this shift (for staggered off days)
+    const positionInShift = shiftPositionCounters[shiftCode] || 0;
+    shiftPositionCounters[shiftCode] = positionInShift + 1;
+    
+    // Default to staggered off days within each shift if not assigned
+    const offDayPairIndex = positionInShift % 7;
     const defaultOffDays = [offDayPairIndex, (offDayPairIndex + 1) % 7];
     const weekOffDays = assignment?.week_off_days || defaultOffDays;
     const timezoneOffset = getTimezoneOffset(woman.country || 'India');
@@ -1065,8 +1089,8 @@ async function getFullMonthlySchedule(supabase: any, userId: string, language?: 
       const a = assignmentMap.get(w.user_id);
       return (a?.shift_templates?.shift_code || ['A', 'B', 'C'][i % 3]) === shiftCode;
     });
-    const positionInShift = womenInShift.findIndex((w: any) => w.user_id === woman.user_id);
-    const roleType = positionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
+    const womanPositionInShift = womenInShift.findIndex((w: any) => w.user_id === woman.user_id);
+    const roleType = womanPositionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
 
     // Calculate local times
     const localStartTime = formatTimeForTimezone(shiftDef.start, timezoneOffset - 330);
