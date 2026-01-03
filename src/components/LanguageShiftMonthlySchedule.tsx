@@ -208,8 +208,32 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
     }
   };
 
+  // Rotate shift code based on number of rotations: A→C, C→B, B→A
+  const rotateShiftCode = (shiftCode: string, rotations: number): string => {
+    let current = shiftCode;
+    for (let i = 0; i < rotations; i++) {
+      switch (current) {
+        case 'A': current = 'C'; break;
+        case 'C': current = 'B'; break;
+        case 'B': current = 'A'; break;
+        default: current = 'A';
+      }
+    }
+    return current;
+  };
+
+  // Get shift timings for a shift code
+  const getShiftTimings = (shiftCode: string): { start: string; end: string } => {
+    switch (shiftCode) {
+      case 'A': return { start: '7:00 AM', end: '4:00 PM' };
+      case 'B': return { start: '3:00 PM', end: '12:00 AM' };
+      case 'C': return { start: '11:00 PM', end: '8:00 AM' };
+      default: return { start: '7:00 AM', end: '4:00 PM' };
+    }
+  };
+
   // Get schedule for a specific date from woman's schedule
-  // For months beyond current/next, calculate week-off based on week_off_day_indices
+  // For months beyond current/next, calculate week-off and shift rotation
   const getScheduleForDate = (woman: WomanSchedule, dateStr: string, dayOfWeek: number): WomanDaySchedule | null => {
     // First check if we have explicit schedule data
     const currentMonthDay = woman.current_month?.days?.find(d => d.date === dateStr);
@@ -219,21 +243,52 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
     if (nextMonthDay) return nextMonthDay;
     
     // For future months, generate schedule based on week_off_day_indices
-    // week_off_day_indices contains days of the week (0=Sunday to 6=Saturday) that are off
     const isWeekOff = woman.week_off_day_indices?.includes(dayOfWeek) ?? false;
     
-    // Parse date to get day number
+    // Parse date to get day and calculate rotations
     const [year, month, day] = dateStr.split('-').map(Number);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-indexed
+    
+    // Calculate number of rotations from current month to target date
+    // Rotation happens on 28th of each month
+    let rotations = 0;
+    let tempYear = currentYear;
+    let tempMonth = currentMonth;
+    
+    while (tempYear < year || (tempYear === year && tempMonth < month)) {
+      rotations++;
+      tempMonth++;
+      if (tempMonth > 12) {
+        tempMonth = 1;
+        tempYear++;
+      }
+    }
+    
+    // If we're past the 28th in current month, add one more rotation
+    if (today.getDate() >= 28) {
+      rotations = Math.max(0, rotations - 1);
+    }
+    
+    // If target day is >= 28, it's after that month's rotation
+    if (day >= 28) {
+      rotations++;
+    }
+    
+    // Calculate rotated shift code
+    const rotatedShiftCode = rotateShiftCode(woman.current_shift.code, rotations);
+    const timings = getShiftTimings(rotatedShiftCode);
     
     return {
       date: dateStr,
       day: day,
       day_name: DAY_NAMES[dayOfWeek],
       is_week_off: isWeekOff,
-      is_rotation_day: day === 28, // Rotation happens on 28th of each month
-      shift_code: woman.current_shift.code,
-      local_start_time: woman.current_shift.local_start_time || '',
-      local_end_time: woman.current_shift.local_end_time || ''
+      is_rotation_day: day === 28,
+      shift_code: rotatedShiftCode,
+      local_start_time: timings.start,
+      local_end_time: timings.end
     };
   };
 
