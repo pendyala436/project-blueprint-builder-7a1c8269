@@ -1285,10 +1285,10 @@ const DashboardScreen = () => {
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
+          <Card className="p-5 bg-gradient-to-br from-online/10 to-online/5 border-online/20 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/20">
-                <Users className="w-6 h-6 text-emerald-500" />
+              <div className="p-3 rounded-xl bg-online/20">
+                <Users className="w-6 h-6 text-online" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.onlineUsersCount}</p>
