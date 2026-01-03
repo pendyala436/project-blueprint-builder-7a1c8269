@@ -318,14 +318,23 @@ function addToCache(key: string, result: string): void {
  * Convert Latin text to native script using embedded dictionary
  */
 function convertWithDictionary(text: string, targetLanguage: string): string {
+  console.log('[DL-Translate] convertWithDictionary:', { text: text.slice(0, 30), target: targetLanguage });
+  
   // First check transliteration dictionary
   const dictResult = checkTransliterationDictionary(text, targetLanguage);
-  if (dictResult) return dictResult;
+  if (dictResult) {
+    console.log('[DL-Translate] Transliteration match:', dictResult);
+    return dictResult;
+  }
   
   // Check phrase dictionary
   const phraseResult = checkPhraseDictionary(text, targetLanguage);
-  if (phraseResult) return phraseResult;
+  if (phraseResult) {
+    console.log('[DL-Translate] Phrase match:', phraseResult);
+    return phraseResult;
+  }
   
+  console.log('[DL-Translate] No dictionary match found');
   return text;
 }
 
@@ -358,7 +367,13 @@ export async function translateText(
   const normSource = normalizeLanguage(effectiveSource);
   const normTarget = normalizeLanguage(targetLanguage);
   
-  console.log('[DL-Translate] Translating:', { text: trimmed.slice(0, 50), from: normSource, to: normTarget });
+  console.log('[DL-Translate] translateText called:', { 
+    text: trimmed.slice(0, 50), 
+    from: normSource, 
+    to: normTarget,
+    mode,
+    isLatin: isLatinScript(trimmed)
+  });
   
   // Same language - no translation needed
   if (isSameLanguage(normSource, normTarget)) {
@@ -439,10 +454,20 @@ export async function convertToNativeScript(
   const trimmed = text.trim();
   if (!trimmed) return text;
   
+  console.log('[DL-Translate] convertToNativeScript called:', {
+    text: trimmed.slice(0, 50),
+    target: targetLanguage,
+    isLatin: isLatinScript(trimmed)
+  });
+  
   // Already non-Latin, no conversion needed
-  if (!isLatinScript(trimmed)) return trimmed;
+  if (!isLatinScript(trimmed)) {
+    console.log('[DL-Translate] Already non-Latin, returning as-is');
+    return trimmed;
+  }
   
   const normTarget = normalizeLanguage(targetLanguage);
+  console.log('[DL-Translate] Normalized target:', normTarget);
   
   // If target uses Latin script, translate instead
   if (isLatinScriptLanguage(normTarget)) {

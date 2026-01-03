@@ -1636,7 +1636,8 @@ const DashboardScreen = () => {
         <EnhancedParallelChatsContainer
           currentUserId={currentUserId}
           userGender="male"
-          currentUserLanguage={userLanguage}
+          currentUserLanguage={userLanguage || "English"}
+          currentUserName={userName || "User"}
         />
       )}
 

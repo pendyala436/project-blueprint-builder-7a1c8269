@@ -1134,6 +1134,7 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="female"
           currentUserLanguage={currentWomanLanguage || "English"}
+          currentUserName={userName || "User"}
         />
       )}
 
