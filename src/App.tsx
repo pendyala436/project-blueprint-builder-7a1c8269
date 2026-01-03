@@ -88,6 +88,7 @@ const AdminLanguageLimits = lazy(() => import(/* webpackChunkName: "admin" */ ".
 const PasswordResetScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetScreen"));
 const PasswordResetSuccessScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetSuccessScreen"));
 const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminTransactionHistory"));
+const AdminLeadersScreen = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminLeadersScreen"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
@@ -217,6 +218,7 @@ const App = () => (
             <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
             <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
             <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
+            <Route path="/admin/leaders" element={<LazyRoute component={AdminLeadersScreen} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
             {/* Multilingual chat demo removed - using server-side translation */}
