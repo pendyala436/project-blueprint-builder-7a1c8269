@@ -554,8 +554,8 @@ async function translateWithAI(
   const targetNative = targetLangInfo?.native || targetLanguage;
 
   // Dynamic token budget to avoid truncated outputs on longer messages
-  // (truncation was causing users to see "half messages")
-  const maxTokens = Math.min(2048, Math.max(256, Math.ceil(text.length / 2)));
+  // Fixed: Use text.length * 4 to ensure complete translation (4 tokens per character max for complex scripts)
+  const maxTokens = Math.min(4096, Math.max(512, text.length * 4));
   
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -663,7 +663,8 @@ async function transliterateWithAI(
   const scriptName = langInfo?.script || 'native';
   
   // Dynamic token budget to avoid truncated outputs on longer messages
-  const maxTokens = Math.min(2048, Math.max(256, Math.ceil(latinText.length / 2)));
+  // Fixed: Use text.length * 4 for complete transliteration
+  const maxTokens = Math.min(4096, Math.max(512, latinText.length * 4));
   
   try {
     console.log(`[dl-translate] Using AI for transliteration to ${targetLanguage} (${scriptName})`);
