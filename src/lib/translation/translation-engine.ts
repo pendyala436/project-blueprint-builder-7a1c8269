@@ -438,13 +438,13 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
  * Flow:
  * 1. Same language check → skip all processing
  * 2. Check cache first (instant)
- * 3. Check phrase dictionary (common phrases)
- * 4. NLLB-200 ML Model (MAIN - 200+ languages, browser-based)
- * 5. Dictionary translation (FALLBACK)
- * 6. Phonetic transliteration (FALLBACK)
+ * 3. Check phrase dictionary (common phrases - instant)
+ * 4. DL-Translate Dictionary (MAIN - instant, word-by-word)
+ * 5. Phonetic transliteration (instant)
+ * 6. NLLB-200 ML Model (FALLBACK - 200+ languages, lazy-loaded)
  * 
  * Translation is NON-BLOCKING for typing
- * Based on: https://github.com/sioaeko/NLLB_translator
+ * Based on: https://github.com/Goutam245/Language-Translator-Web-Application
  */
 export async function translateText(
   text: string,
@@ -472,7 +472,6 @@ export async function translateText(
   });
   
   // ========== SAME LANGUAGE CHECK (CRITICAL) ==========
-  // If sender and receiver have the same language, NO translation needed
   if (isSameLanguage(normSource, normTarget)) {
     console.log('[DL-Translate] ✓ Same language detected - skipping translation');
     return createResult(trimmed, trimmed, normSource, normTarget, false, 'same_language');
@@ -486,7 +485,7 @@ export async function translateText(
     return createResult(trimmed, cached, normSource, normTarget, true, 'translate');
   }
   
-  // Check phrase dictionary first (for accuracy on common phrases - instant)
+  // ========== MAIN: Phrase Dictionary (instant) ==========
   const phraseResult = checkPhraseDictionary(trimmed, normTarget);
   if (phraseResult) {
     console.log('[DL-Translate] Phrase dictionary match:', phraseResult);
@@ -499,7 +498,7 @@ export async function translateText(
     (mode === 'auto' && isLatinScript(trimmed) && !isLatinScriptLanguage(normTarget));
   
   if (isConvertMode) {
-    // For conversion, use dictionary-based transliteration first (instant)
+    // For conversion, use dictionary-based transliteration (instant)
     const converted = convertWithDictionary(trimmed, normTarget);
     if (converted !== trimmed) {
       console.log('[DL-Translate] Dictionary conversion:', converted);
@@ -508,24 +507,8 @@ export async function translateText(
     }
   }
   
-  // ========== MAIN: NLLB-200 ML MODEL (200+ languages) ==========
-  // Browser-based ML translation - downloads once, works offline
-  if (enableMLFallback && isMLLanguageSupported(normSource) && isMLLanguageSupported(normTarget)) {
-    console.log('[DL-Translate] Using NLLB-200 ML model (main translator)...');
-    try {
-      const mlResult = await translateWithBrowserML(trimmed, normSource, normTarget);
-      if (mlResult && mlResult !== trimmed) {
-        console.log('[DL-Translate] ML translation success:', mlResult.slice(0, 50));
-        addToCache(cacheKey, mlResult);
-        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
-      }
-    } catch (error) {
-      console.log('[DL-Translate] ML translation failed, trying dictionary fallback:', error);
-    }
-  }
-  
-  // ========== FALLBACK: Dictionary Translation ==========
-  console.log('[DL-Translate] Fallback: Using dictionary translation');
+  // ========== MAIN: DL-Translate Dictionary Translation (instant) ==========
+  console.log('[DL-Translate] Using dictionary translation (main)...');
   const translated = await translateWithDictionary(trimmed, normSource, normTarget);
   if (translated && translated !== trimmed) {
     console.log('[DL-Translate] Dictionary translation result:', translated.slice(0, 50));
@@ -533,15 +516,15 @@ export async function translateText(
     return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
   }
   
-  // ========== FALLBACK: Dictionary-based Conversion ==========
+  // ========== Dictionary-based Conversion ==========
   const dictResult = convertWithDictionary(trimmed, normTarget);
   if (dictResult !== trimmed) {
-    console.log('[DL-Translate] Dictionary conversion fallback:', dictResult.slice(0, 50));
+    console.log('[DL-Translate] Dictionary conversion:', dictResult.slice(0, 50));
     addToCache(cacheKey, dictResult);
     return createResult(trimmed, dictResult, normSource, normTarget, true, 'translate');
   }
   
-  // ========== FALLBACK: Reverse Dictionary Lookup ==========
+  // ========== Reverse Dictionary Lookup ==========
   const reversePhraseResult = checkPhraseDictionary(trimmed, normSource);
   if (reversePhraseResult) {
     const targetPhrase = checkPhraseDictionary(reversePhraseResult.toLowerCase(), normTarget);
@@ -549,6 +532,22 @@ export async function translateText(
       console.log('[DL-Translate] Reverse dictionary match:', targetPhrase);
       addToCache(cacheKey, targetPhrase);
       return createResult(trimmed, targetPhrase, normSource, normTarget, true, 'translate');
+    }
+  }
+  
+  // ========== FALLBACK: NLLB-200 ML Model (200+ languages) ==========
+  // Only used when dictionary fails - downloads ~300MB model on first use
+  if (enableMLFallback && isMLLanguageSupported(normSource) && isMLLanguageSupported(normTarget)) {
+    console.log('[DL-Translate] Fallback: Using NLLB-200 ML model...');
+    try {
+      const mlResult = await translateWithBrowserML(trimmed, normSource, normTarget);
+      if (mlResult && mlResult !== trimmed) {
+        console.log('[DL-Translate] ML fallback success:', mlResult.slice(0, 50));
+        addToCache(cacheKey, mlResult);
+        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
+      }
+    } catch (error) {
+      console.log('[DL-Translate] ML fallback failed:', error);
     }
   }
   
