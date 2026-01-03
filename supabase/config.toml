@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.dl-translate]
 verify_jwt = false
+
+[functions.community-chat-cleanup]
+verify_jwt = false
+
+[functions.shift-auto-scheduler]
+verify_jwt = false
