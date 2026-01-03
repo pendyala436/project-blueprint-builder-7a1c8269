@@ -71,6 +71,7 @@ const WomenTransactionHistoryScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [totalEarnings, setTotalEarnings] = useState<number>(0);
+  const [womenEarningRate, setWomenEarningRate] = useState<number>(2); // Default ₹2/min
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
@@ -117,7 +118,18 @@ const WomenTransactionHistoryScreen = () => {
       }
       setUserId(user.id);
 
-      // Fetch gift transactions received
+      // Fetch women's earning rate from chat_pricing
+      const { data: pricingData } = await supabase
+        .from("chat_pricing")
+        .select("women_earning_rate")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (pricingData?.women_earning_rate) {
+        setWomenEarningRate(Number(pricingData.women_earning_rate));
+      }
       const { data: giftsData } = await supabase
         .from("gift_transactions")
         .select("*")
@@ -432,7 +444,7 @@ const WomenTransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              {session.rate_per_minute}/min
+                              ₹{womenEarningRate}/min
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
