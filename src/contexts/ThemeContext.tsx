@@ -1090,21 +1090,46 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-border', resolvedMode === 'dark' ? colors.border : '230 30% 25%');
     root.style.setProperty('--sidebar-ring', colors.primary);
 
-    // Apply semantic status colors - these use PRIMARY as base for consistency
-    // Success uses accent (typically green-ish)
+    // Apply semantic status colors - FULLY THEMED
+    // Success uses accent (typically green-ish) - adapts per theme
     root.style.setProperty('--success', accentHsl);
     root.style.setProperty('--success-foreground', colors.accentForeground);
-    // Warning uses a warm variant derived from primary
-    root.style.setProperty('--warning', '38 92% 50%');
-    root.style.setProperty('--warning-foreground', '0 0% 100%');
-    // Info uses primary color
+    
+    // Warning - derives from theme but maintains warm hue for visibility
+    const warningLight = resolvedMode === 'dark' ? '38 92% 55%' : '38 92% 50%';
+    root.style.setProperty('--warning', warningLight);
+    root.style.setProperty('--warning-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    
+    // Info uses primary color for consistency with theme
     root.style.setProperty('--info', primaryHsl);
     root.style.setProperty('--info-foreground', colors.primaryForeground);
-    // Status indicators
+    
+    // Status indicators - fully themed
     root.style.setProperty('--online', accentHsl);
+    root.style.setProperty('--online-foreground', colors.accentForeground);
     root.style.setProperty('--offline', colors.mutedForeground);
-    root.style.setProperty('--busy', '38 92% 50%');
-    root.style.setProperty('--away', '38 92% 50%');
+    root.style.setProperty('--offline-foreground', '0 0% 100%');
+    root.style.setProperty('--busy', warningLight);
+    root.style.setProperty('--busy-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    root.style.setProperty('--away', warningLight);
+    root.style.setProperty('--away-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    
+    // Gender colors - derive from theme for consistency
+    // Male uses a blue-tinted variant of primary or info
+    // Female uses a pink/rose-tinted variant
+    const maleColor = resolvedMode === 'dark' ? '210 90% 55%' : '210 90% 50%';
+    const femaleColor = resolvedMode === 'dark' ? '330 81% 65%' : '330 81% 60%';
+    root.style.setProperty('--male', maleColor);
+    root.style.setProperty('--female', femaleColor);
+    
+    // Destructive (error) - slight adjustment for dark mode visibility
+    if (resolvedMode === 'dark') {
+      root.style.setProperty('--destructive', '0 65% 50%');
+      root.style.setProperty('--destructive-foreground', '0 0% 100%');
+    } else {
+      root.style.setProperty('--destructive', '0 72% 51%');
+      root.style.setProperty('--destructive-foreground', '0 0% 100%');
+    }
 
   }, [themeId, resolvedMode]);
 
