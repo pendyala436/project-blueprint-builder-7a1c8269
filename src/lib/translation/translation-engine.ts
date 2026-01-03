@@ -18,7 +18,7 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
-import { translateWithBrowserML, isMLTranslatorReady, isMLLanguageSupported } from './browser-ml-translator';
+import { translateWithBrowserML, isMLLanguageSupported } from './browser-ml-translator';
 
 // Flag to enable/disable ML fallback (can be configured at runtime)
 let enableMLFallback = true;

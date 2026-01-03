@@ -79,6 +79,16 @@ export {
   LANGUAGE_CODES,
 } from './ml-translation-engine';
 
+// Browser-based NLLB-200 ML Translation (fallback for dictionary)
+export {
+  translateWithBrowserML,
+  initMLTranslator,
+  isMLLanguageSupported,
+  getMLLoadProgress,
+  getSupportedLanguageCount,
+  NLLB_LANGUAGE_CODES,
+} from './browser-ml-translator';
+
 // Language utilities
 export {
   isIndianLanguage,
