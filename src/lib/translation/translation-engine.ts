@@ -2,58 +2,17 @@
  * Embedded Translation Engine
  * 
  * Multi-provider translation using:
- * - LibreTranslate (free API)
- * - MyMemory API (free tier)
- * - Google Input Tools (transliteration)
+ * - Browser-based ML (Transformers.js + NLLB-200) - PRIMARY
+ * - Embedded dictionaries (common phrases)
+ * - Transliteration dictionaries
  * 
- * All logic embedded in client code - NO external edge functions
+ * All logic embedded in client code - NO external API calls
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
-
-// Language code mappings for different APIs
-const LIBRE_LANGUAGE_CODES: Record<string, string> = {
-  english: 'en', hindi: 'hi', bengali: 'bn', telugu: 'te', tamil: 'ta',
-  marathi: 'mr', gujarati: 'gu', kannada: 'kn', malayalam: 'ml', punjabi: 'pa',
-  odia: 'or', urdu: 'ur', arabic: 'ar', spanish: 'es', french: 'fr',
-  german: 'de', portuguese: 'pt', italian: 'it', dutch: 'nl', russian: 'ru',
-  polish: 'pl', ukrainian: 'uk', chinese: 'zh', japanese: 'ja', korean: 'ko',
-  vietnamese: 'vi', thai: 'th', indonesian: 'id', malay: 'ms', turkish: 'tr',
-  hebrew: 'he', persian: 'fa', greek: 'el', czech: 'cs', romanian: 'ro',
-  hungarian: 'hu', swedish: 'sv', danish: 'da', finnish: 'fi', norwegian: 'no',
-  swahili: 'sw', afrikaans: 'af', nepali: 'ne', sinhala: 'si', khmer: 'km',
-  lao: 'lo', burmese: 'my', georgian: 'ka', armenian: 'hy', mongolian: 'mn',
-  tibetan: 'bo', amharic: 'am', yoruba: 'yo', igbo: 'ig', zulu: 'zu',
-  xhosa: 'xh', somali: 'so', hausa: 'ha', azerbaijani: 'az', kazakh: 'kk',
-  uzbek: 'uz', tajik: 'tg', kyrgyz: 'ky', turkmen: 'tk', pashto: 'ps',
-  kurdish: 'ku', catalan: 'ca', croatian: 'hr', serbian: 'sr', bosnian: 'bs',
-  slovak: 'sk', slovenian: 'sl', bulgarian: 'bg', lithuanian: 'lt', latvian: 'lv',
-  estonian: 'et', icelandic: 'is', tagalog: 'tl', cebuano: 'ceb', javanese: 'jw',
-  sundanese: 'su', malagasy: 'mg', samoan: 'sm', hawaiian: 'haw', assamese: 'as',
-};
-
-// MyMemory language codes (ISO 639-1)
-const MYMEMORY_LANGUAGE_CODES: Record<string, string> = {
-  ...LIBRE_LANGUAGE_CODES,
-  // Additional mappings for MyMemory
-  bangla: 'bn', oriya: 'or', farsi: 'fa', mandarin: 'zh',
-};
-
-// Google Input Tools language codes for transliteration
-const GOOGLE_ITRANS_CODES: Record<string, string> = {
-  hindi: 'hi-t-i0-und', bengali: 'bn-t-i0-und', telugu: 'te-t-i0-und',
-  tamil: 'ta-t-i0-und', marathi: 'mr-t-i0-und', gujarati: 'gu-t-i0-und',
-  kannada: 'kn-t-i0-und', malayalam: 'ml-t-i0-und', punjabi: 'pa-t-i0-und',
-  odia: 'or-t-i0-und', urdu: 'ur-t-i0-und', nepali: 'ne-t-i0-und',
-  sinhala: 'si-t-i0-und', arabic: 'ar-t-i0-und', persian: 'fa-t-i0-und',
-  russian: 'ru-t-i0-und', greek: 'el-t-i0-und', hebrew: 'he-t-i0-und',
-  thai: 'th-t-i0-und', burmese: 'my-t-i0-und', khmer: 'km-t-i0-und',
-  lao: 'lo-t-i0-und', chinese: 'zh-t-i0-pinyin', japanese: 'ja-t-i0-und',
-  korean: 'ko-t-i0-und', georgian: 'ka-t-i0-und', armenian: 'hy-t-i0-und',
-  amharic: 'am-t-i0-und', tibetan: 'bo-t-i0-und',
-};
+import { translateWithML, isMLTranslatorReady, initializeMLTranslator } from './ml-translation-engine';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -192,22 +151,6 @@ const TRANSLITERATION_MAP: Record<string, Record<string, string>> = {
 };
 
 /**
- * Get language code for LibreTranslate API
- */
-function getLibreCode(language: string): string {
-  const norm = normalizeLanguage(language);
-  return LIBRE_LANGUAGE_CODES[norm] || 'en';
-}
-
-/**
- * Get language code for MyMemory API
- */
-function getMyMemoryCode(language: string): string {
-  const norm = normalizeLanguage(language);
-  return MYMEMORY_LANGUAGE_CODES[norm] || 'en';
-}
-
-/**
  * Check and return phrase from dictionary
  */
 function checkPhraseDictionary(text: string, targetLanguage: string): string | null {
@@ -275,92 +218,7 @@ function addToCache(key: string, result: string): void {
 }
 
 /**
- * Translate using LibreTranslate (free API)
- * Public instance: https://libretranslate.com
- */
-async function translateWithLibre(
-  text: string,
-  sourceLang: string,
-  targetLang: string
-): Promise<string | null> {
-  const sourceCode = getLibreCode(sourceLang);
-  const targetCode = getLibreCode(targetLang);
-  
-  // Skip if same language
-  if (sourceCode === targetCode) return text;
-  
-  try {
-    // Use public LibreTranslate instance
-    const response = await fetch('https://libretranslate.com/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: text,
-        source: sourceCode,
-        target: targetCode,
-        format: 'text',
-      }),
-    });
-    
-    if (!response.ok) {
-      console.warn('[LibreTranslate] API error:', response.status);
-      return null;
-    }
-    
-    const data = await response.json();
-    return data.translatedText || null;
-  } catch (error) {
-    console.warn('[LibreTranslate] Error:', error);
-    return null;
-  }
-}
-
-/**
- * Translate using MyMemory API (free tier: 1000 words/day)
- */
-async function translateWithMyMemory(
-  text: string,
-  sourceLang: string,
-  targetLang: string
-): Promise<string | null> {
-  const sourceCode = getMyMemoryCode(sourceLang);
-  const targetCode = getMyMemoryCode(targetLang);
-  
-  // Skip if same language
-  if (sourceCode === targetCode) return text;
-  
-  try {
-    const langPair = `${sourceCode}|${targetCode}`;
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.warn('[MyMemory] API error:', response.status);
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (data.responseStatus === 200 && data.responseData?.translatedText) {
-      const translated = data.responseData.translatedText;
-      // MyMemory sometimes returns in uppercase or with issues
-      if (translated.toUpperCase() === translated && text.toUpperCase() !== text) {
-        return null; // Skip all-caps responses
-      }
-      return translated;
-    }
-    
-    return null;
-  } catch (error) {
-    console.warn('[MyMemory] Error:', error);
-    return null;
-  }
-}
-
-/**
  * Convert Latin text to native script using embedded dictionary
- * Fallback for Google Input Tools when API is unavailable
  */
 function convertWithDictionary(text: string, targetLanguage: string): string {
   // First check transliteration dictionary
@@ -375,7 +233,7 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
 }
 
 /**
- * Main translation function - uses multiple providers with fallback
+ * Main translation function - uses browser-based ML with dictionary fallback
  */
 export async function translateText(
   text: string,
@@ -418,7 +276,7 @@ export async function translateText(
     (mode === 'auto' && isLatinScript(trimmed) && !isLatinScriptLanguage(normTarget));
   
   if (isConvertMode) {
-    // For conversion, use dictionary-based transliteration
+    // For conversion, use dictionary-based transliteration first
     const converted = convertWithDictionary(trimmed, normTarget);
     if (converted !== trimmed) {
       addToCache(cacheKey, converted);
@@ -426,15 +284,10 @@ export async function translateText(
     }
   }
   
-  // Try MyMemory first (more reliable, free)
-  let translated = await translateWithMyMemory(trimmed, normSource, normTarget);
+  // Use browser-based ML translation (Transformers.js + NLLB-200)
+  let translated = await translateWithML(trimmed, normSource, normTarget);
   
-  // Fallback to LibreTranslate
-  if (!translated) {
-    translated = await translateWithLibre(trimmed, normSource, normTarget);
-  }
-  
-  // Fallback to dictionary if APIs fail
+  // Fallback to dictionary if ML fails
   if (!translated) {
     translated = convertWithDictionary(trimmed, normTarget);
   }

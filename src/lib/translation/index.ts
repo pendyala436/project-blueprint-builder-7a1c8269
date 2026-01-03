@@ -54,6 +54,22 @@ export {
   getCacheStats,
 } from './translation-engine';
 
+// Browser-based ML translation (Transformers.js + NLLB-200)
+export {
+  translateWithML,
+  translateBatchWithML,
+  initializeMLTranslator,
+  isMLTranslatorReady,
+  isMLTranslatorLoading,
+  disposeMLTranslator,
+  clearMLCache,
+  getMLCacheStats,
+  getNLLBCode,
+  isNLLBSupported,
+  getSupportedNLLBLanguages,
+  NLLB_LANGUAGE_CODES,
+} from './ml-translation-engine';
+
 // Language utilities
 export {
   isIndianLanguage,

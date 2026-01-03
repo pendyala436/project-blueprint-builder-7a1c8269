@@ -54,3 +54,22 @@ export {
   isSameLanguage,
   normalizeLanguage,
 } from '@/lib/translation/translation-engine';
+
+// Re-export browser-based ML translation
+export {
+  translateWithML,
+  translateBatchWithML,
+  initializeMLTranslator,
+  isMLTranslatorReady,
+  isMLTranslatorLoading,
+  disposeMLTranslator,
+  clearMLCache,
+  getMLCacheStats,
+  getNLLBCode,
+  isNLLBSupported,
+  getSupportedNLLBLanguages,
+} from '@/lib/translation/ml-translation-engine';
+
+// Re-export ML translation hook
+export { useMLTranslation } from '@/hooks/useMLTranslation';
+export type { UseMLTranslationOptions, UseMLTranslationReturn, MLTranslationProgress } from '@/hooks/useMLTranslation';
