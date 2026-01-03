@@ -58,10 +58,11 @@ function getWeekStartDate(date: Date): Date {
 }
 
 function rotateShift(currentShift: string): string {
+  // Rotation: A→C, C→B, B→A
   switch (currentShift) {
-    case 'C': return 'A';
-    case 'A': return 'B';
-    case 'B': return 'C';
+    case 'A': return 'C';
+    case 'C': return 'B';
+    case 'B': return 'A';
     default: return 'A';
   }
 }
@@ -481,7 +482,7 @@ async function getMySchedule(supabase: any, userId: string) {
       days_until_rotation: isRotationThisMonth ? daysUntilRotation : daysUntilRotation + new Date(currentYear, currentMonth + 1, 0).getDate(),
       current_shift: shiftCode,
       next_shift: nextShiftAfterRotation,
-      rotation_rule: 'C→A, A→B, B→C on 28th of each month'
+      rotation_rule: 'A→C, C→B, B→A on 28th of each month'
     },
     schedules: scheduleWithLocalTime
   };
@@ -682,7 +683,7 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
     rotation: {
       next_rotation_date: rotationDate.toISOString().split('T')[0],
       days_until_rotation: daysUntilRotation > 0 ? daysUntilRotation : daysUntilRotation + new Date(currentYear, currentMonth + 1, 0).getDate(),
-      rotation_rule: 'On 28th: C→A, A→B, B→C'
+      rotation_rule: 'On 28th: A→C, C→B, B→A'
     }
   };
 }
@@ -1208,7 +1209,7 @@ async function getFullMonthlySchedule(supabase: any, userId: string, language?: 
     rotation: {
       next_date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${ROTATION_DAY}`,
       days_until: daysUntilRotation > 0 ? daysUntilRotation : daysUntilRotation + daysInCurrentMonth,
-      rule: 'On 28th: C→A, A→B, B→C'
+      rule: 'On 28th: A→C, C→B, B→A'
     },
     shifts: {
       A: { name: SHIFTS.A.name, display: SHIFTS.A.display, women_count: byShift.A.length },
