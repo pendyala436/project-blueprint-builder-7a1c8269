@@ -99,6 +99,7 @@ const DraggableMiniChatWindow = ({
   const { convertToNative, translate, translateForChat, isLatinScript, isSameLanguage } = useDLTranslate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
   const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -118,6 +119,7 @@ const DraggableMiniChatWindow = ({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -828,9 +830,12 @@ const DraggableMiniChatWindow = ({
   const MAX_MESSAGE_LENGTH = 2000;
 
   const sendMessage = () => {
-    if (!newMessage.trim() || isSending || isBlocked) return;
+    if (isComposing || isSending || isBlocked) return;
 
-    const trimmedInput = newMessage.trim();
+    const rawInput = (messageInputRef.current?.value ?? newMessage);
+    if (!rawInput.trim()) return;
+
+    const trimmedInput = rawInput.trim();
     
     if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
       toast({
@@ -956,6 +961,7 @@ const DraggableMiniChatWindow = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -1593,6 +1599,7 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
+                  ref={messageInputRef}
                   placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
                   onChange={(e) => {
@@ -1600,6 +1607,8 @@ const DraggableMiniChatWindow = ({
                     handleTyping();
                   }}
                   onKeyDown={handleKeyPress}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={() => setIsComposing(false)}
                   className="h-8 text-xs pr-6"
                   disabled={isUploading || isBlocked}
                 />
@@ -1613,7 +1622,7 @@ const DraggableMiniChatWindow = ({
                 size="icon"
                 className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending || isBlocked}
+                disabled={!newMessage.trim() || isSending || isBlocked || isComposing}
               >
                 {isSending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />

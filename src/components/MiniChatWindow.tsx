@@ -96,6 +96,7 @@ const MiniChatWindow = ({
   const { convertToNative, translate, translateForChat, isLatinScript, isSameLanguage } = useDLTranslate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
   const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -122,6 +123,7 @@ const MiniChatWindow = ({
   const sessionStartedRef = useRef(false);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -620,9 +622,12 @@ const MiniChatWindow = ({
   const MAX_MESSAGE_LENGTH = 2000;
 
   const sendMessage = () => {
-    if (!newMessage.trim() || isSending || isBlocked) return;
+    if (isComposing || isSending || isBlocked) return;
 
-    const trimmedInput = newMessage.trim();
+    const rawInput = (messageInputRef.current?.value ?? newMessage);
+    if (!rawInput.trim()) return;
+
+    const trimmedInput = rawInput.trim();
     
     // SECURITY: Validate message length to prevent database abuse
     if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
@@ -758,6 +763,7 @@ const MiniChatWindow = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -1432,6 +1438,7 @@ const MiniChatWindow = ({
               {/* Text input */}
               <div className="relative flex-1">
                 <Input
+                  ref={messageInputRef}
                   placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
                   value={newMessage}
                   onChange={(e) => {
@@ -1439,6 +1446,8 @@ const MiniChatWindow = ({
                     handleTyping();
                   }}
                   onKeyDown={handleKeyPress}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={() => setIsComposing(false)}
                   className="h-7 text-[11px] pr-6"
                   disabled={isBlocked}
                 />
@@ -1452,7 +1461,7 @@ const MiniChatWindow = ({
                 size="icon"
                 className="h-7 w-7 shrink-0"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending || isBlocked}
+                disabled={!newMessage.trim() || isSending || isBlocked || isComposing}
               >
                 {isSending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

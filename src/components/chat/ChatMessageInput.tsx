@@ -108,37 +108,38 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
   }, [handleTyping, isLatinScript, isSameLanguage, senderLanguage, updateLivePreview, clearLivePreview]);
 
-  // Handle send - use live preview if available, otherwise convert on send
+  // Handle send - always convert on-send (do not trust debounced livePreview for sending)
   const handleSend = useCallback(async () => {
-    if (!message.trim() || disabled || isComposing) return;
-    
-    const trimmedMessage = message.trim();
+    if (disabled || isComposing) return;
+
+    const rawValue = textareaRef.current?.value ?? message;
+    if (!rawValue.trim()) return;
+
+    const trimmedMessage = rawValue.trim();
     const originalLatin = lastLatinInputRef.current;
-    
-    // Use livePreview (native script) if available, otherwise use original message
-    if (livePreview && livePreview !== trimmedMessage && !isSameLanguage(senderLanguage, 'english')) {
-      // Send the pre-converted native script from live preview
-      onSendMessage(livePreview, originalLatin || trimmedMessage);
-    } else if (originalLatin && isLatinScript(trimmedMessage) && !isSameLanguage(senderLanguage, 'english')) {
-      // Fallback: convert Latin to native script on send if no live preview
-      try {
-        const result = await convertToNative(trimmedMessage, senderLanguage);
-        onSendMessage(result.text, originalLatin);
-      } catch {
-        // Fallback: send as-is if conversion fails
-        onSendMessage(trimmedMessage, originalLatin);
-      }
-    } else {
-      // Already in native script or English - send directly
-      onSendMessage(trimmedMessage, originalLatin || trimmedMessage);
-    }
-    
+
+    // Clear UI immediately so fast typers aren't blocked
     setMessage('');
     lastLatinInputRef.current = '';
     clearLivePreview();
     onTyping?.(false);
     textareaRef.current?.focus();
-  }, [message, disabled, isComposing, onSendMessage, onTyping, clearLivePreview, isLatinScript, isSameLanguage, senderLanguage, convertToNative, livePreview]);
+
+    // If user typed Latin script but their mother tongue is non-English, convert on send
+    if (isLatinScript(trimmedMessage) && !isSameLanguage(senderLanguage, 'english')) {
+      try {
+        const result = await convertToNative(trimmedMessage, senderLanguage);
+        const finalText = result?.text || trimmedMessage;
+        onSendMessage(finalText, originalLatin || trimmedMessage);
+      } catch {
+        onSendMessage(trimmedMessage, originalLatin || trimmedMessage);
+      }
+      return;
+    }
+
+    // English or already-native script
+    onSendMessage(trimmedMessage, originalLatin || trimmedMessage);
+  }, [disabled, isComposing, message, clearLivePreview, onTyping, isLatinScript, isSameLanguage, senderLanguage, convertToNative, onSendMessage]);
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
