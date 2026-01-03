@@ -1,69 +1,86 @@
 /**
- * DL-Translate Translation Module
+ * Translation Module - Unified Export
  * 
- * Browser-based translation using pure JavaScript dictionaries
- * Based on: https://github.com/xhluca/dl-translate
- * 
- * NO external API calls - all logic embedded in client code
+ * Multi-model neural translation with embedded fallbacks:
+ * 1. Dictionary translation (instant, browser-based)
+ * 2. Phonetic transliteration (Latin → Native script)
+ * 3. Edge Function fallback (NLLB-200, SeamlessM4T, M2M100, mBART-50)
  * 
  * Flow:
- * 1. Typing: Latin letters based on user's mother tongue
- * 2. Preview: Live transliteration into native script
- * 3. Send: Translation happens in background
- * 4. Receiver: Sees message in their mother tongue
- * 5. Bi-directional: Same flow for both users
- * 6. Dynamic: Supports 200 languages
- * 7. Non-blocking: Typing is not affected by translation
- * 
- * @example
- * ```tsx
- * import { useLiveTranslationChat } from '@/hooks/useLiveTranslationChat';
- * 
- * const { livePreview, setInput, prepareOutgoing } = useLiveTranslationChat({
- *   userLanguage: 'hindi',
- *   partnerLanguage: 'telugu',
- *   userId: 'user-1'
- * });
- * ```
+ * - Typing: Latin letters → Live preview in native script
+ * - Send: Background translation (non-blocking)
+ * - Receive: Auto-translate to receiver's language
+ * - Bi-directional: Works both ways
  */
 
+// ============================================================================
 // Types
+// ============================================================================
 export type {
+  LanguageCode,
   TranslationResult,
   TranslationOptions,
   TranslatorConfig,
   LanguageDetectionResult,
   BatchTranslationItem,
   BatchTranslationResult,
-  LanguageCode,
   ScriptPattern,
+  LivePreviewState,
+  ChatTranslationOptions,
+  ProcessedMessage,
+  TranslatedMessage,
 } from './types';
 
-// Translator class and functions
+// ============================================================================
+// Language Utilities
+// ============================================================================
 export {
-  Translator,
-  translator,
-  translate,
-  convertScript,
-} from './translator';
+  normalizeLanguage,
+  isIndianLanguage,
+  isLatinScriptLanguage,
+  isLanguageSupported,
+  getSupportedLanguages,
+  SCRIPT_PATTERNS,
+  SUPPORTED_LANGUAGES,
+  INDIAN_LANGUAGES,
+  LATIN_SCRIPT_LANGUAGES,
+} from './language-codes';
 
-// Embedded translation engine
+// ============================================================================
+// Language Detection
+// ============================================================================
 export {
-  translateText,
-  convertToNativeScript,
-  translateBatch,
-  clearTranslationCache,
-  getCacheStats,
-} from './translation-engine';
+  detectLanguage,
+  isLatinScript,
+  isSameLanguage,
+  detectPhoneticIndianLanguage,
+} from './language-detector';
 
-// Phonetic transliterator (Latin → Native script)
+// ============================================================================
+// Phonetic Transliteration
+// ============================================================================
 export {
   phoneticTransliterate,
   isPhoneticTransliterationSupported,
   getSupportedPhoneticLanguages,
 } from './phonetic-transliterator';
 
-// Browser-based DL-Translate dictionary translation
+// ============================================================================
+// Translation Engine
+// ============================================================================
+export {
+  translateText,
+  convertToNativeScript,
+  translateBatch,
+  clearTranslationCache,
+  getCacheStats,
+  setEdgeFunctionFallbackEnabled,
+  isEdgeFunctionFallbackEnabled,
+} from './translation-engine';
+
+// ============================================================================
+// Dictionary Translation (ML Engine)
+// ============================================================================
 export {
   translateWithML,
   translateBatchWithML,
@@ -74,40 +91,11 @@ export {
   clearMLCache,
   getMLCacheStats,
   getLanguageCode,
-  isLanguageSupported,
-  getSupportedLanguages,
   LANGUAGE_CODES,
 } from './ml-translation-engine';
 
-// Browser-based NLLB-200 ML Translation (fallback for dictionary)
-export {
-  translateWithBrowserML,
-  initMLTranslator,
-  isMLLanguageSupported,
-  getMLLoadProgress,
-  getSupportedLanguageCount,
-  NLLB_LANGUAGE_CODES,
-} from './browser-ml-translator';
-
-// Language utilities
-export {
-  isIndianLanguage,
-  isLatinScriptLanguage,
-  normalizeLanguage,
-  SCRIPT_PATTERNS,
-  INDIAN_LANGUAGES,
-  LATIN_SCRIPT_LANGUAGES,
-  SUPPORTED_LANGUAGES,
-} from './language-codes';
-
-// Language detection (single source of truth)
-export {
-  detectLanguage,
-  isLatinScript,
-  isSameLanguage,
-  detectPhoneticIndianLanguage,
-} from './language-detector';
-
-// React hooks
+// ============================================================================
+// React Hooks
+// ============================================================================
 export { useTranslator } from './useTranslator';
 export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';

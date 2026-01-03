@@ -1,51 +1,68 @@
 /**
- * DL-Translate TypeScript Translation Types
- * Server-side translation via Edge Function
- * Based on: https://github.com/xhluca/dl-translate
+ * Translation Types - Unified TypeScript interfaces
+ * For embedded translation system with multi-model fallback
  */
 
-// Language code type (flexible string for 200+ languages)
+// ============================================================================
+// Language Types
+// ============================================================================
+
 export type LanguageCode = string;
 
-// Translation result
+export interface ScriptPattern {
+  regex: RegExp;
+  language: string;
+  script: string;
+}
+
+// ============================================================================
+// Translation Types
+// ============================================================================
+
+export interface TranslationOptions {
+  sourceLanguage?: string;
+  targetLanguage: string;
+  mode?: 'auto' | 'translate' | 'convert';
+  preferredModel?: 'nllb' | 'seamless' | 'm2m' | 'mbart';
+}
+
 export interface TranslationResult {
   translatedText: string;
   originalText: string;
   sourceLanguage: string;
   targetLanguage: string;
   isTranslated: boolean;
-  mode: 'translate' | 'convert' | 'same_language';
+  mode: 'translate' | 'convert' | 'same_language' | 'dictionary' | 'phonetic' | 'neural';
+  model?: string | null;
 }
 
-// Language detection result
-export interface LanguageDetectionResult {
-  language: string;
-  isLatin: boolean;
-  confidence: number;
-  isPhonetic?: boolean; // True if Latin text detected as phonetic Indian language input
-}
-
-// Translation options
-export interface TranslationOptions {
-  sourceLanguage?: string;
-  targetLanguage: string;
-  mode?: 'auto' | 'translate' | 'convert';
-}
-
-// Batch translation item
 export interface BatchTranslationItem {
   text: string;
   options: TranslationOptions;
 }
 
-// Batch translation result
 export interface BatchTranslationResult {
   results: TranslationResult[];
   successCount: number;
   failureCount: number;
 }
 
-// Translator configuration
+// ============================================================================
+// Detection Types
+// ============================================================================
+
+export interface LanguageDetectionResult {
+  language: string;
+  isLatin: boolean;
+  confidence: number;
+  isPhonetic?: boolean;
+  script?: string;
+}
+
+// ============================================================================
+// Config Types
+// ============================================================================
+
 export interface TranslatorConfig {
   cacheEnabled?: boolean;
   cacheTTL?: number;
@@ -53,9 +70,38 @@ export interface TranslatorConfig {
   timeout?: number;
 }
 
-// Script detection pattern
-export interface ScriptPattern {
-  regex: RegExp;
-  language: string;
-  script: string;
+// ============================================================================
+// Hook Types
+// ============================================================================
+
+export interface LivePreviewState {
+  latinInput: string;
+  nativePreview: string;
+  isConverting: boolean;
+}
+
+export interface ChatTranslationOptions {
+  currentUserId: string;
+  currentUserLanguage: string;
+  partnerId: string;
+  partnerLanguage: string;
+  debounceMs?: number;
+}
+
+export interface ProcessedMessage {
+  nativeText: string;
+  originalLatin: string;
+}
+
+export interface TranslatedMessage {
+  id: string;
+  senderId: string;
+  originalText: string;
+  senderNativeText: string;
+  receiverNativeText: string;
+  displayText: string;
+  isTranslated: boolean;
+  senderLanguage: string;
+  receiverLanguage: string;
+  createdAt: string;
 }

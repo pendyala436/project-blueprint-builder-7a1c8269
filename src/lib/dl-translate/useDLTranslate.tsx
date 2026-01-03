@@ -26,7 +26,7 @@ export interface TranslationResult {
   source: string;
   target: string;
   isTranslated: boolean;
-  mode: 'translate' | 'convert' | 'passthrough';
+  mode: 'translate' | 'convert' | 'passthrough' | 'dictionary' | 'phonetic' | 'neural' | 'same_language';
 }
 
 export interface ChatTranslationOptions {

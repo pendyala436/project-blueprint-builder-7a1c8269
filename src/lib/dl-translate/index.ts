@@ -1,61 +1,29 @@
 /**
- * DL-Translate - Fully Embedded Translation
- * ==========================================
- * Based on: https://github.com/xhluca/dl-translate (API pattern)
- * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * DL-Translate Module - Unified Translation API
  * 
- * NO external APIs for main translation - instant browser-based:
+ * Multi-model neural translation:
+ * - NLLB-200 (200 languages, primary)
+ * - SeamlessM4T (100 languages, multimodal)
+ * - M2M100 (100 languages, many-to-many)
+ * - mBART-50 (50 languages, European)
  * 
- * MAIN: DL-Translate Dictionary + Phonetic Transliteration
- * - Instant common phrases
- * - Latin → native script conversion
- * - Zero download, works immediately
- * 
- * FALLBACK: Hugging Face NLLB-200 via Edge Function
- * - Same model as Python dl-translate library
- * - Uses facebook/nllb-200-distilled-600M
- * - Requires HUGGING_FACE_ACCESS_TOKEN
- * 
- * Features:
- * 1. Auto-detect source language
- * 2. Translate between any language pair (200+ languages)
- * 3. Convert Latin typing to native script
- * 4. Same language optimization (no translation needed)
- * 5. Non-blocking translation (doesn't affect typing)
- * 
- * @example
+ * Usage:
  * ```tsx
  * import { useDLTranslate } from '@/lib/dl-translate';
  * 
  * const { translate, translateForChat, convertToNative } = useDLTranslate();
- * 
- * // Translate text
  * const result = await translate('Hello', 'english', 'hindi');
- * console.log(result.text); // "नमस्ते"
- * 
- * // Chat translation
- * const chatResult = await translateForChat('How are you?', {
- *   senderLanguage: 'english',
- *   receiverLanguage: 'hindi'
- * });
  * ```
  */
 
 // Types
-export type {
-  TranslationResult,
-  ChatTranslationOptions,
-} from './useDLTranslate';
+export type { TranslationResult, ChatTranslationOptions } from './useDLTranslate';
 
-// React hook (embedded translation)
+// Main hook
 export { useDLTranslate } from './useDLTranslate';
 export { useDLTranslate as default } from './useDLTranslate';
 
-// Re-export embedded translation hook
-export { useServerTranslation } from '@/hooks/useServerTranslation';
-export type { UseServerTranslationOptions, UseServerTranslationReturn } from '@/hooks/useServerTranslation';
-
-// Re-export translation engine functions
+// Re-export core translation functions
 export {
   translateText,
   convertToNativeScript,
@@ -70,7 +38,7 @@ export {
   isEdgeFunctionFallbackEnabled,
 } from '@/lib/translation/translation-engine';
 
-// Re-export browser-based DL-Translate dictionary translation
+// Re-export dictionary translation
 export {
   translateWithML,
   translateBatchWithML,
@@ -85,10 +53,16 @@ export {
   getSupportedLanguages,
 } from '@/lib/translation/ml-translation-engine';
 
-// Re-export ML translation hook
-export { 
-  useMLTranslation,
-  type UseMLTranslationOptions, 
-  type UseMLTranslationReturn, 
-  type MLTranslationProgress 
-} from '@/hooks/useMLTranslation';
+// Re-export phonetic transliteration
+export {
+  phoneticTransliterate,
+  isPhoneticTransliterationSupported,
+  getSupportedPhoneticLanguages,
+} from '@/lib/translation/phonetic-transliterator';
+
+// Re-export hooks
+export { useServerTranslation } from '@/hooks/useServerTranslation';
+export type { UseServerTranslationOptions, UseServerTranslationReturn } from '@/hooks/useServerTranslation';
+
+export { useChatTranslation } from '@/hooks/useChatTranslation';
+export type { UseChatTranslationOptions, UseChatTranslationReturn } from '@/hooks/useChatTranslation';
