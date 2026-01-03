@@ -60,5 +60,3 @@ verify_jwt = false
 [functions.shift-auto-scheduler]
 verify_jwt = false
 
-[functions.seamlessm4t-speech]
-verify_jwt = false

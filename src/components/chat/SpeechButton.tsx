@@ -56,6 +56,8 @@ export const SpeechButton: React.FC<SpeechButtonProps> = memo(({
   const {
     isRecording,
     isProcessing,
+    isLoadingModel,
+    modelLoadProgress,
     recordingDuration,
     startRecording,
     stopRecording,
@@ -150,7 +152,7 @@ export const SpeechButton: React.FC<SpeechButtonProps> = memo(({
     lg: 'h-6 w-6'
   };
 
-  const isLoading = isProcessing;
+  const isLoading = isProcessing || isLoadingModel;
   const isSpeechToSpeech = mode === 'speech-to-speech';
 
   return (
@@ -169,7 +171,11 @@ export const SpeechButton: React.FC<SpeechButtonProps> = memo(({
             {/* Processing indicator */}
             {isLoading && (
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap z-10">
-                {isSpeechToSpeech ? 'Translating...' : 'Processing...'}
+                {isLoadingModel 
+                  ? `Loading model... ${modelLoadProgress}%`
+                  : isSpeechToSpeech 
+                    ? 'Translating...' 
+                    : 'Processing...'}
               </div>
             )}
 
