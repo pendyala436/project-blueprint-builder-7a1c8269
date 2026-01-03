@@ -983,25 +983,25 @@ const DashboardScreen = () => {
     { 
       icon: <Search className="w-6 h-6" />, 
       label: t('findMatch', 'Find Match'), 
-      color: "from-primary to-rose-400",
+      color: "from-primary to-accent",
       action: () => navigate("/find-match")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: t('messages', 'Messages'), 
-      color: "from-blue-500 to-blue-400",
+      color: "from-info to-info/80",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-rose-500 to-pink-400",
+      color: "from-female to-gift",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-violet-500 to-purple-400",
+      color: "from-secondary to-secondary/80",
       action: () => setProfileEditOpen(true)
     },
   ];
