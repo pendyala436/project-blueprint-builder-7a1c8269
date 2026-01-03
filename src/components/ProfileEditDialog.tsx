@@ -33,7 +33,7 @@ import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { ALL_LANGUAGES, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES } from "@/data/dlTranslateLanguages";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -352,7 +352,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       // Each profile type has its own language stored independently
       if (data && data.primary_language) {
         // Find the language in our list to get the code
-        const foundLang = ALL_NLLB200_LANGUAGES.find(l => l.name === data.primary_language);
+        const foundLang = ALL_LANGUAGES.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = {
             language_name: foundLang.name,
@@ -730,7 +730,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       
                       {/* Indian Languages */}
                       <CommandGroup heading="🇮🇳 Indian Languages">
-                        {INDIAN_NLLB200_LANGUAGES
+                        {INDIAN_LANGUAGES
                           .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
                           .map((lang) => (
                             <CommandItem
@@ -755,7 +755,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
 
                       {/* International Languages */}
                       <CommandGroup heading="🌍 International Languages">
-                        {NON_INDIAN_NLLB200_LANGUAGES
+                        {NON_INDIAN_LANGUAGES
                           .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
                           .slice(0, 30)
                           .map((lang) => (

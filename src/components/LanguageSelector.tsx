@@ -14,12 +14,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Languages, Search, Check, ChevronDown, Globe, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
-  ALL_NLLB200_LANGUAGES, 
-  INDIAN_NLLB200_LANGUAGES, 
-  NON_INDIAN_NLLB200_LANGUAGES,
-  NLLB200Language,
+  ALL_LANGUAGES, 
+  INDIAN_LANGUAGES, 
+  NON_INDIAN_LANGUAGES,
+  DLTranslateLanguage,
   getTotalLanguageCount
-} from "@/data/nllb200Languages";
+} from "@/data/dlTranslateLanguages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,11 +46,11 @@ export const LanguageSelector = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<NLLB200Language | null>(null);
+  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<DLTranslateLanguage | null>(null);
 
   // All languages - Indian + World
   const languages = useMemo(() => {
-    return [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
+    return [...INDIAN_LANGUAGES, ...NON_INDIAN_LANGUAGES];
   }, []);
 
   // Filter languages based on search
@@ -83,7 +83,7 @@ export const LanguageSelector = ({
     setTempSelectedLanguage(currentLang || null);
   };
 
-  const handleSelectLanguage = (lang: NLLB200Language) => {
+  const handleSelectLanguage = (lang: DLTranslateLanguage) => {
     setTempSelectedLanguage(lang);
   };
 
@@ -162,7 +162,7 @@ export const LanguageSelector = ({
     setSearchQuery("");
   };
 
-  const LanguageItem = ({ lang }: { lang: NLLB200Language }) => {
+  const LanguageItem = ({ lang }: { lang: DLTranslateLanguage }) => {
     const isSelected = tempSelectedLanguage?.code === lang.code;
     const isCurrent = selectedLanguage === lang.name;
     
@@ -220,11 +220,11 @@ export const LanguageSelector = ({
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
             <p className="text-xs text-muted-foreground">
-              {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.script || "Choose your language"}
+              {ALL_LANGUAGES.find(l => l.name === selectedLanguage)?.script || "Choose your language"}
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
-            {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
+            {ALL_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
           </Badge>
         </div>
         
@@ -273,7 +273,7 @@ export const LanguageSelector = ({
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {getTotalLanguageCount()} languages ({INDIAN_NLLB200_LANGUAGES.length} Indian + {NON_INDIAN_NLLB200_LANGUAGES.length} World)
+              Choose from {getTotalLanguageCount()} languages ({INDIAN_LANGUAGES.length} Indian + {NON_INDIAN_LANGUAGES.length} World)
             </p>
           </DialogHeader>
           

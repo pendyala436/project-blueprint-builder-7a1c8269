@@ -59,7 +59,7 @@ export {
   getCacheStats,
 } from './translation-engine';
 
-// Browser-based ML translation (Transformers.js + NLLB-200)
+// Browser-based DL-Translate dictionary translation
 export {
   translateWithML,
   translateBatchWithML,
@@ -69,18 +69,16 @@ export {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getNLLBCode,
-  isNLLBSupported,
-  getSupportedNLLBLanguages,
-  NLLB_LANGUAGE_CODES,
+  getDLM2M100Code as getLanguageCode,
+  isDLM2M100Supported as isLanguageSupported,
+  getSupportedDLM2M100Languages as getSupportedLanguages,
+  LANGUAGE_CODES,
 } from './ml-translation-engine';
 
 // Language utilities
 export {
   isIndianLanguage,
   isLatinScriptLanguage,
-  getSupportedLanguages,
-  isLanguageSupported,
   normalizeLanguage,
   SCRIPT_PATTERNS,
   INDIAN_LANGUAGES,

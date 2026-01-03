@@ -6,7 +6,7 @@
  * 2. Live native script preview while typing
  * 3. On Send: message displays in sender's native script
  * 4. Receiver sees message in their native language
- * 5. Background translation using NLLB-200 (200+ languages)
+ * 5. Background translation using DL-Translate (200+ languages)
  * 6. No partial/half messages ever sent
  */
 
@@ -22,7 +22,7 @@ import { Send, Loader2, Languages, Eye, EyeOff, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useServerTranslation } from '@/hooks/useServerTranslation';
 import { useMLTranslation } from '@/hooks/useMLTranslation';
-import { ALL_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
+import { ALL_LANGUAGES } from '@/data/dlTranslateLanguages';
 
 // Message interface
 interface ChatMessage {
@@ -87,7 +87,7 @@ const LanguageSelector = memo(({
         ))}
         <Separator className="my-1" />
         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">All Languages</div>
-        {ALL_NLLB200_LANGUAGES.slice(0, 50).map(lang => (
+        {ALL_LANGUAGES.slice(0, 50).map(lang => (
           <SelectItem key={lang.code} value={lang.name.toLowerCase()} className="text-sm">
             {lang.name}
           </SelectItem>
@@ -298,7 +298,7 @@ export function MultilingualChatDemo() {
             variant={isMLReady ? "default" : isMLLoading ? "secondary" : "outline"}
             className="text-xs"
           >
-            {isMLLoading ? (
+          {isMLLoading ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
                 {mlProgress.status === 'downloading' ? `${Math.round(mlProgress.progress)}%` : 'Loading...'}
@@ -306,11 +306,11 @@ export function MultilingualChatDemo() {
             ) : isMLReady ? (
               <>
                 <Globe className="h-3 w-3 mr-1" />
-                NLLB-200 Ready
+                DL-Translate Ready
               </>
             ) : (
               <button onClick={initializeML} className="hover:underline">
-                Load NLLB-200
+                Load Translator
               </button>
             )}
           </Badge>
@@ -405,7 +405,7 @@ export function MultilingualChatDemo() {
         </div>
 
         <p className="text-[10px] text-muted-foreground text-center">
-          🔒 No partial messages sent • Background translation • 200+ languages via NLLB-200
+          🔒 No partial messages sent • Background translation • 200+ languages via DL-Translate
         </p>
       </div>
     </Card>

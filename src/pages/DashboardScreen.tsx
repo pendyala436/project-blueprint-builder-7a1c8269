@@ -61,7 +61,7 @@ import { MenPrivateCallSection } from "@/components/MenPrivateCallSection";
 import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 import { useTranslation } from "@/contexts/TranslationContext";
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/dlTranslateLanguages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";

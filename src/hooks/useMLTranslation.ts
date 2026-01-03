@@ -6,7 +6,7 @@
  * 
  * Based on:
  * - https://github.com/xhluca/dl-translate (API pattern)
- * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS dictionary)
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -19,9 +19,9 @@ import {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getNLLBCode,
-  isNLLBSupported,
-  getSupportedNLLBLanguages,
+  getDLM2M100Code,
+  isDLM2M100Supported,
+  getSupportedDLM2M100Languages,
 } from '@/lib/translation/ml-translation-engine';
 
 export interface MLTranslationProgress {
@@ -166,9 +166,9 @@ export function useMLTranslation(
     // Utilities
     clearCache: clearMLCache,
     getCacheStats: getMLCacheStats,
-    isSupported: isNLLBSupported,
-    getLanguageCode: getNLLBCode,
-    getSupportedLanguages: getSupportedNLLBLanguages,
+    isSupported: isDLM2M100Supported,
+    getLanguageCode: getDLM2M100Code,
+    getSupportedLanguages: getSupportedDLM2M100Languages,
   };
 }
 

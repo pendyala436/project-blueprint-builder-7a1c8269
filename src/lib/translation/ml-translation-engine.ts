@@ -65,9 +65,7 @@ export const DL_M2M100_LANGUAGE_CODES: Record<string, string> = {
 // Aliases for backward compatibility
 export const DL_TRANSLATE_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
 export const M2M100_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
-export const NLLB_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
 export const LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
-export const NLLB200_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
 
 // ================== COMPREHENSIVE TRANSLATION DICTIONARY ==================
 // Based on Language-Translator-Web-Application pure JS pattern
@@ -501,7 +499,6 @@ export function isDLM2M100Supported(language: string): boolean {
 
 export const isDLTranslateSupported = isDLM2M100Supported;
 export const isM2M100Supported = isDLM2M100Supported;
-export const isNLLBSupported = isDLM2M100Supported;
 export const isLanguageSupported = isDLM2M100Supported;
 
 export function getSupportedDLM2M100Languages(): string[] {
@@ -510,7 +507,6 @@ export function getSupportedDLM2M100Languages(): string[] {
 
 export const getSupportedDLTranslateLanguages = getSupportedDLM2M100Languages;
 export const getSupportedM2M100Languages = getSupportedDLM2M100Languages;
-export const getSupportedNLLBLanguages = getSupportedDLM2M100Languages;
 export const getSupportedLanguages = getSupportedDLM2M100Languages;
 
 // ================== PROXY-BASED DICTIONARY (Language-Translator-Web-Application pattern) ==================
