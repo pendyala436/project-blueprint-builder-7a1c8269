@@ -677,18 +677,18 @@ const WomenDashboardScreen = () => {
       <div className="relative flex-shrink-0">
         <Avatar className="h-9 w-9 border border-background shadow-sm">
           <AvatarImage src={user.photoUrl || undefined} />
-          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-xs">
+          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
             {user.fullName.charAt(0)}
           </AvatarFallback>
         </Avatar>
         {/* Status indicator */}
         <div className={cn(
           "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-          (user.activeChatCount || 0) === 0 ? "bg-green-500" :
-          (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+          (user.activeChatCount || 0) === 0 ? "bg-online" :
+          (user.activeChatCount || 0) >= 3 ? "bg-destructive" : "bg-busy"
         )} />
         {user.walletBalance > 1000 && (
-          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-amber-500" />
+          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-warning" />
         )}
       </div>
 
@@ -701,7 +701,7 @@ const WomenDashboardScreen = () => {
           )}
         </div>
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-green-500/10 text-green-600 font-medium">
+          <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-success/10 text-success font-medium">
             <IndianRupee className="h-2.5 w-2.5" />
             <span>₹{user.walletBalance.toFixed(0)}</span>
           </div>
@@ -810,17 +810,17 @@ const WomenDashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-emerald-500"
+                    className="data-[state=checked]:bg-success"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-emerald-500" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
                   <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-green-300" : 
-                    activeChatCount >= 3 ? "bg-red-300" : "bg-amber-300"
+                    activeChatCount === 0 ? "bg-online-foreground/60" : 
+                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-busy-foreground/60"
                   )} />
                   {getStatusText()}
                 </Badge>
@@ -1077,7 +1077,7 @@ const WomenDashboardScreen = () => {
                 onClick={action.action}
                 className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
                   {action.icon}
                 </div>
                 <p className="text-sm font-medium text-foreground">{action.label}</p>

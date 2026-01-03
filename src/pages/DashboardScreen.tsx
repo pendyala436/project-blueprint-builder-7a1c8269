@@ -1083,16 +1083,16 @@ const DashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-emerald-500"
+                    className="data-[state=checked]:bg-success"
                   />
                   <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
                   <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-online/60" : 
+                    activeChatCount === 0 ? "bg-online-foreground/60" : 
                     activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-warning-foreground/60"
                   )} />
                   {getStatusText()}
@@ -1160,7 +1160,7 @@ const DashboardScreen = () => {
                           <div className="relative flex-shrink-0">
                             <Avatar className="w-9 h-9 border border-background shadow-sm">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-xs">
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
@@ -1230,7 +1230,7 @@ const DashboardScreen = () => {
                           <div className="relative flex-shrink-0">
                             <Avatar className="w-9 h-9 border border-background shadow-sm">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-xs">
+                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-primary-foreground text-xs">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
@@ -1376,7 +1376,7 @@ const DashboardScreen = () => {
                 onClick={action.action}
                 className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
                   {action.icon}
                 </div>
                 <p className="text-sm font-medium text-foreground">{action.label}</p>
@@ -1469,7 +1469,7 @@ const DashboardScreen = () => {
         {/* Section 8: CTA Banner */}
         <Card className="p-6 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-white">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-primary-foreground">
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">
@@ -1525,9 +1525,9 @@ const DashboardScreen = () => {
                       htmlFor={`gateway-${gateway.id}`}
                       className={cn(
                         "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20",
+                        "hover:border-primary/50 hover:bg-primary/5",
                         selectedGateway === gateway.id
-                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
+                          ? "border-primary bg-primary/10"
                           : "border-border"
                       )}
                     >
@@ -1535,7 +1535,7 @@ const DashboardScreen = () => {
                       <span className="font-semibold text-sm">{gateway.name}</span>
                       <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
                       {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-orange-500" />
+                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
                       )}
                     </Label>
                   </div>
