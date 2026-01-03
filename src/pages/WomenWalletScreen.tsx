@@ -330,7 +330,7 @@ const WomenWalletScreen = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate("/transaction-history")}
+                onClick={() => navigate("/women-transactions")}
                 className="gap-2"
               >
                 <History className="h-4 w-4" />
