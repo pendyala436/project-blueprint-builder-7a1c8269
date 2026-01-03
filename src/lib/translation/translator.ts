@@ -1,12 +1,12 @@
 /**
  * DL-Translate Inspired TypeScript Translator
  * 
- * NO external APIs - All translation happens in browser:
- * 1. NLLB-200 ML Model (main) - 200+ languages
- * 2. Dictionary Translation (fallback) - instant common phrases
- * 3. Phonetic Transliteration (fallback) - Latin → native script
+ * Translation methods:
+ * 1. Dictionary Translation (main) - instant common phrases
+ * 2. Phonetic Transliteration (fallback) - Latin → native script
+ * 3. DL-Translate HuggingFace API (fallback) - 200+ languages
  * 
- * Based on: https://github.com/xhluca/dl-translate
+ * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
  */
 
 import type { 

@@ -1,11 +1,13 @@
 /**
  * DL-Translate Module - Unified Translation API
  * 
- * Multi-model neural translation:
- * - NLLB-200 (200 languages, primary)
- * - SeamlessM4T (100 languages, multimodal)
- * - M2M100 (100 languages, many-to-many)
- * - mBART-50 (50 languages, European)
+ * Uses DL-Translate HuggingFace Space for ML translation:
+ * https://huggingface.co/spaces/kintong3000/dl-translate
+ * 
+ * Translation Flow:
+ * 1. Dictionary translation (instant, browser-based)
+ * 2. Phonetic transliteration (Latin → Native script)
+ * 3. DL-Translate HuggingFace API (200+ languages)
  * 
  * Usage:
  * ```tsx
@@ -59,6 +61,16 @@ export {
   isPhoneticTransliterationSupported,
   getSupportedPhoneticLanguages,
 } from '@/lib/translation/phonetic-transliterator';
+
+// Re-export DL-Translate HuggingFace API
+export {
+  translateWithDLTranslate,
+  getDLTranslateLanguageName,
+  isDLTranslateSupported,
+  clearDLTranslateCache,
+  getDLTranslateCacheStats,
+  DL_TRANSLATE_LANGUAGES,
+} from '@/lib/translation/dl-translate-api';
 
 // Re-export hooks
 export { useServerTranslation } from '@/hooks/useServerTranslation';

@@ -1,11 +1,11 @@
 /**
- * React Hook for DL-Translate (Fully Embedded)
+ * React Hook for DL-Translate
  * 
- * Based on: https://github.com/xhluca/dl-translate
- * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application
+ * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
  * 
- * MAIN: Dictionary Translation + Phonetic Transliteration (instant, browser)
- * FALLBACK: Hugging Face NLLB-200 via Edge Function (same model as dl-translate)
+ * Translation methods:
+ * 1. Dictionary Translation + Phonetic Transliteration (instant, browser)
+ * 2. DL-Translate HuggingFace API (fallback) - 200+ languages
  */
 
 import { useState, useCallback } from 'react';

@@ -1,18 +1,15 @@
 /**
- * DL-Translate + Pure JavaScript Translation Engine
+ * Dictionary-Based Translation Engine
  * 
- * Combined approach from:
- * - https://github.com/xhluca/dl-translate (API pattern, language mapping)
- * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS, no APIs)
- * 
- * Features:
- * - Pure browser-based - NO external APIs, NO ML models
- * - Proxy-based dictionary with automatic fallback
+ * Pure browser-based translation:
  * - Comprehensive bidirectional translation dictionaries
  * - Character-level transliteration for native scripts
  * - Phonetic transliteration for long messages
  * - Instant translations (no loading required)
  * - 200+ language codes supported
+ * 
+ * For ML translation, see: src/lib/translation/dl-translate-api.ts
+ * (Uses HuggingFace DL-Translate Space)
  */
 
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
