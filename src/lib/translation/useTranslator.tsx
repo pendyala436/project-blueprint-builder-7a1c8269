@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { translator, detectLanguage, isSameLanguage, isLatinScript } from './translator';
+import { translator } from './translator';
+import { detectLanguage, isSameLanguage, isLatinScript } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
 
 interface LivePreview {
