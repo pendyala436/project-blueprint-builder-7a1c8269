@@ -463,7 +463,7 @@ export function GroupVideoCall({
                 <div className={showChat ? 'md:col-span-2' : ''}>
                   {/* For Host (Woman): Show her own video full screen */}
                   {isOwner && (
-                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                    <div className="relative bg-muted rounded-lg overflow-hidden aspect-video">
                       <video
                         ref={localVideoRef}
                         autoPlay
@@ -472,17 +472,17 @@ export function GroupVideoCall({
                         className="w-full h-full object-cover"
                       />
                       {!isVideoEnabled && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
                           <Avatar className="h-16 w-16">
                             <AvatarImage src={userPhoto || undefined} />
                             <AvatarFallback className="text-2xl">{userName[0]}</AvatarFallback>
                           </Avatar>
                         </div>
                       )}
-                      <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                      <div className="absolute bottom-2 left-2 bg-background/60 px-2 py-1 rounded text-foreground text-xs">
                         {userName} (Host)
                       </div>
-                      <div className="absolute top-2 right-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                      <div className="absolute top-2 right-2 bg-background/60 px-2 py-1 rounded text-foreground text-xs">
                         {viewerCount} viewers watching
                       </div>
                     </div>
@@ -490,7 +490,7 @@ export function GroupVideoCall({
 
                   {/* For Men: Show only the host's video (woman) - full screen */}
                   {!isOwner && hostParticipant && (
-                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                    <div className="relative bg-muted rounded-lg overflow-hidden aspect-video">
                       <video
                         ref={hostVideoRef}
                         autoPlay
@@ -498,14 +498,14 @@ export function GroupVideoCall({
                         className="w-full h-full object-cover"
                       />
                       {!hostParticipant.stream && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
                           <Avatar className="h-16 w-16">
                             <AvatarImage src={hostParticipant.photo} />
                             <AvatarFallback className="text-2xl">{hostParticipant.name[0]}</AvatarFallback>
                           </Avatar>
                         </div>
                       )}
-                      <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
+                      <div className="absolute bottom-2 left-2 bg-background/60 px-2 py-1 rounded text-foreground text-xs">
                         {hostParticipant.name} (Host)
                       </div>
                     </div>
@@ -513,8 +513,8 @@ export function GroupVideoCall({
 
                   {/* For Men: Show waiting message if host not streaming yet */}
                   {!isOwner && !hostParticipant && (
-                    <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
-                      <div className="text-center text-white">
+                    <div className="relative bg-muted rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                      <div className="text-center text-foreground">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                         <p>Waiting for host to start streaming...</p>
                       </div>

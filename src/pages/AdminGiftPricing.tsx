@@ -624,7 +624,7 @@ const AdminGiftPricing = () => {
                               {getCurrencySymbol(gift.currency)}
                             </span>
                             {savingId === gift.id && (
-                              <Check className="h-4 w-4 text-emerald-500 animate-pulse" />
+                              <Check className="h-4 w-4 text-success animate-pulse" />
                             )}
                           </div>
                         </TableCell>

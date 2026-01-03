@@ -342,15 +342,15 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
 
                 {/* Rotation Notice */}
                 {rotationInfo && (
-                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
                     <div className="flex items-start gap-2">
-                      <RefreshCw className="h-4 w-4 text-amber-600 mt-0.5" />
+                      <RefreshCw className="h-4 w-4 text-warning mt-0.5" />
                       <div className="text-sm">
-                        <p className="font-medium text-amber-700">Next Rotation: {format(new Date(rotationInfo.next_rotation_date), 'MMM d, yyyy')}</p>
-                        <p className="text-amber-600/80">
+                        <p className="font-medium text-warning">Next Rotation: {format(new Date(rotationInfo.next_rotation_date), 'MMM d, yyyy')}</p>
+                        <p className="text-warning/80">
                           {rotationInfo.days_until_rotation} days away • Your shift: {rotationInfo.current_shift} → {rotationInfo.next_shift}
                         </p>
-                        <p className="text-xs text-amber-600/60 mt-1">Rule: {rotationInfo.rotation_rule}</p>
+                        <p className="text-xs text-warning/60 mt-1">Rule: {rotationInfo.rotation_rule}</p>
                       </div>
                     </div>
                   </div>
@@ -386,7 +386,7 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                                     key={index}
                                     className={`p-3 rounded-lg border ${
                                       schedule.is_rotation_day 
-                                        ? 'bg-amber-500/10 border-amber-500/30'
+                                        ? 'bg-warning/10 border-warning/30'
                                         : isToday 
                                           ? 'bg-primary/10 border-primary/30' 
                                           : schedule.is_week_off 
@@ -409,7 +409,7 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                                             {schedule.day_of_week}
                                             {isToday && <Badge variant="default" className="text-xs">Today</Badge>}
                                             {schedule.is_rotation_day && (
-                                              <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
+                                              <Badge variant="outline" className="text-xs bg-warning/20 text-warning border-warning/30">
                                                 <RefreshCw className="h-2 w-2 mr-1" />
                                                 Rotation Day
                                               </Badge>
@@ -590,15 +590,15 @@ export default function WomenShiftScheduleDisplay({ userId, compact = false }: W
                 })}
 
                 {/* Monthly Rotation Notice with Countdown */}
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
                   <div className="flex items-start gap-2">
-                    <RefreshCw className="h-4 w-4 text-amber-600 mt-0.5" />
+                    <RefreshCw className="h-4 w-4 text-warning mt-0.5" />
                     <div className="text-sm">
-                      <p className="font-medium text-amber-700">Monthly Rotation on 28th</p>
-                      <p className="text-amber-600/80">
+                      <p className="font-medium text-warning">Monthly Rotation on 28th</p>
+                      <p className="text-warning/80">
                         {groupSchedule.rotation?.days_until_rotation} days until next rotation
                       </p>
-                      <p className="text-xs text-amber-600/60 mt-1">
+                      <p className="text-xs text-warning/60 mt-1">
                         {groupSchedule.rotation?.rotation_rule}
                       </p>
                     </div>

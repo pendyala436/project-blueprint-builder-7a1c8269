@@ -119,33 +119,33 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   };
 
   const getTimeIcon = (hour: number) => {
-    if (hour >= 6 && hour < 12) return <Sunrise className="w-3 h-3 text-amber-500" />;
-    if (hour >= 12 && hour < 18) return <Sun className="w-3 h-3 text-yellow-500" />;
-    if (hour >= 18 && hour < 21) return <Sunset className="w-3 h-3 text-orange-500" />;
-    return <Moon className="w-3 h-3 text-indigo-400" />;
+    if (hour >= 6 && hour < 12) return <Sunrise className="w-3 h-3 text-warning" />;
+    if (hour >= 12 && hour < 18) return <Sun className="w-3 h-3 text-crown" />;
+    if (hour >= 18 && hour < 21) return <Sunset className="w-3 h-3 text-warning" />;
+    return <Moon className="w-3 h-3 text-info" />;
   };
 
   const getCoverageColor = (count: number, shiftCodes?: string[]) => {
     if (count === 0) return "bg-destructive/20 text-destructive";
-    if (count === 1) return "bg-amber-500/20 text-amber-600";
+    if (count === 1) return "bg-warning/20 text-warning";
     if (count === 2) return "bg-success/20 text-success";
     return "bg-primary/20 text-primary";
   };
 
   const getShiftBadgeColor = (shiftCode: string) => {
     switch (shiftCode) {
-      case 'A': return "bg-blue-500/20 text-blue-600 border-blue-300";
-      case 'B': return "bg-orange-500/20 text-orange-600 border-orange-300";
-      case 'C': return "bg-purple-500/20 text-purple-600 border-purple-300";
+      case 'A': return "bg-info/20 text-info border-info/30";
+      case 'B': return "bg-warning/20 text-warning border-warning/30";
+      case 'C': return "bg-secondary/20 text-secondary-foreground border-secondary/30";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getShiftIcon = (shiftCode: string) => {
     switch (shiftCode) {
-      case 'A': return <Sunrise className="w-3 h-3 text-blue-500" />;
-      case 'B': return <Sunset className="w-3 h-3 text-orange-500" />;
-      case 'C': return <Moon className="w-3 h-3 text-purple-500" />;
+      case 'A': return <Sunrise className="w-3 h-3 text-info" />;
+      case 'B': return <Sunset className="w-3 h-3 text-warning" />;
+      case 'C': return <Moon className="w-3 h-3 text-secondary-foreground" />;
       default: return <Clock className="w-3 h-3" />;
     }
   };

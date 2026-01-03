@@ -156,7 +156,7 @@ export const AIElectionPanel = ({
 
       {/* Voting Period Timer */}
       {hasActiveElection && votingEndsAt && (
-        <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
+        <Card className="bg-gradient-to-r from-info/10 to-secondary/10 border-info/30">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

@@ -65,7 +65,7 @@ const PAYOUT_METHODS: PayoutMethod[] = [
     icon: <Zap className="h-5 w-5" />,
     features: ["Best exchange rates", "Fast transfers", "Transparent fees"],
     regions: "Worldwide",
-    color: "from-green-500/10 to-green-500/5 border-green-500/20"
+    color: "from-success/10 to-success/5 border-success/20"
   },
   {
     id: "cashfree",
@@ -74,7 +74,7 @@ const PAYOUT_METHODS: PayoutMethod[] = [
     icon: <Building2 className="h-5 w-5" />,
     features: ["Instant UPI", "Bank transfer", "IMPS/NEFT"],
     regions: "India Only",
-    color: "from-purple-500/10 to-purple-500/5 border-purple-500/20"
+    color: "from-secondary/10 to-secondary/5 border-secondary/20"
   }
 ];
 

@@ -233,14 +233,14 @@ const ShiftComplianceScreen = () => {
     switch (status) {
       case "compliant":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1 animate-in fade-in">
+          <Badge className="bg-success/10 text-success border-success/20 gap-1 animate-in fade-in">
             <CheckCircle className="h-3 w-3" />
             Compliant
           </Badge>
         );
       case "partial":
         return (
-          <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
+          <Badge className="bg-warning/10 text-warning border-warning/20 gap-1">
             <AlertTriangle className="h-3 w-3" />
             Partial
           </Badge>
@@ -322,7 +322,7 @@ const ShiftComplianceScreen = () => {
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                         <Zap className="h-6 w-6 text-primary" />
                       </div>
-                      <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
+                      <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-success border-2 border-background animate-pulse" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">Shift In Progress</h3>

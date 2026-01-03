@@ -93,9 +93,9 @@ const SHIFT_ICONS = {
 };
 
 const SHIFT_COLORS = {
-  A: "bg-amber-500/20 text-amber-700 border-amber-500/30",
-  B: "bg-orange-500/20 text-orange-700 border-orange-500/30",
-  C: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30"
+  A: "bg-warning/20 text-warning border-warning/30",
+  B: "bg-info/20 text-info border-info/30",
+  C: "bg-secondary/20 text-secondary-foreground border-secondary/30"
 };
 
 export default function LanguageShiftMonthlySchedule({ userId, language }: LanguageShiftMonthlyScheduleProps) {
@@ -184,7 +184,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
         key={day.date}
         className={`p-1 text-center text-xs rounded ${
           day.is_rotation_day 
-            ? 'bg-amber-500/20 border border-amber-500/30'
+            ? 'bg-warning/20 border border-warning/30'
             : day.is_week_off 
               ? 'bg-muted/50 text-muted-foreground' 
               : isToday 
@@ -315,13 +315,13 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
         </div>
 
         {/* Rotation Notice */}
-        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+        <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
           <div className="flex items-center gap-2 text-sm">
-            <RefreshCw className="h-4 w-4 text-amber-600" />
-            <span className="font-medium text-amber-700">
+            <RefreshCw className="h-4 w-4 text-warning" />
+            <span className="font-medium text-warning">
               Next Rotation: {scheduleData.rotation.days_until} days
             </span>
-            <span className="text-amber-600/80">({scheduleData.rotation.rule})</span>
+            <span className="text-warning/80">({scheduleData.rotation.rule})</span>
           </div>
         </div>
 
