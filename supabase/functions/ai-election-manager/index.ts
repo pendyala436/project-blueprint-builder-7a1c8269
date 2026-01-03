@@ -6,11 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LEADER_TERM_YEARS = 1; // 1 year term
-const ELECTION_DURATION_DAYS = 7; // Election runs for 7 days
+// Election Configuration
+const LEADER_TERM_MONTHS = 12; // 12 months term (can be 6-12)
+const NOMINATION_DURATION_DAYS = 5; // Nomination phase lasts 5 days
+const VOTING_DURATION_DAYS = 2; // Voting phase lasts 2 days after nomination ends
+const MIN_WOMEN_FOR_ELECTION = 50; // Minimum 50 women required to start election
 const SHIFT_HOURS = 9;
 const SHIFT_CHANGE_BUFFER = 1;
-const WEEK_OFF_INTERVAL = 2; // Week off every 2 days
+const WEEK_OFF_INTERVAL = 2;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -154,7 +157,10 @@ serve(async (req) => {
           totalVotes,
           needsNewElection,
           votingExpired,
-          termYears: LEADER_TERM_YEARS,
+          termMonths: LEADER_TERM_MONTHS,
+          minWomenRequired: MIN_WOMEN_FOR_ELECTION,
+          nominationDays: NOMINATION_DURATION_DAYS,
+          votingDays: VOTING_DURATION_DAYS,
           shiftConfig: { hours: SHIFT_HOURS, buffer: SHIFT_CHANGE_BUFFER, weekOffInterval: WEEK_OFF_INTERVAL }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -216,9 +222,9 @@ serve(async (req) => {
             const winner = expiredCandidates[0];
             const totalVotesExpired = expiredCandidates.reduce((sum, c) => sum + c.vote_count, 0);
 
-            // Calculate term end (1 year from now)
+            // Calculate term end (12 months from now)
             const termEnd = new Date(now);
-            termEnd.setFullYear(termEnd.getFullYear() + LEADER_TERM_YEARS);
+            termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
 
             // End current leader if exists
             await supabase
@@ -267,7 +273,7 @@ serve(async (req) => {
       }
 
       // Create new election (AI manages it)
-      const electionEnd = new Date(now.getTime() + ELECTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+      const electionEnd = new Date(now.getTime() + (NOMINATION_DURATION_DAYS + VOTING_DURATION_DAYS) * 24 * 60 * 60 * 1000);
       
       const { data: election, error } = await supabase
         .from("community_elections")
@@ -290,7 +296,7 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           election,
-          message: `Election started for ${languageCode} speakers. Voting ends in ${ELECTION_DURATION_DAYS} days.`
+          message: `Election started for ${languageCode} speakers. Nomination: ${NOMINATION_DURATION_DAYS} days, Voting: ${VOTING_DURATION_DAYS} days.`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -567,8 +573,9 @@ serve(async (req) => {
           })
           .eq("id", election.id);
 
-        // Create new leader with 1-year term
-        const termEnd = new Date(now.getTime() + LEADER_TERM_YEARS * 365 * 24 * 60 * 60 * 1000);
+        // Create new leader with term
+        const termEnd = new Date(now);
+        termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
         
         await supabase
           .from("community_leaders")
@@ -593,7 +600,7 @@ serve(async (req) => {
             winner: randomWinner,
             totalVotes,
             tiebroken: true,
-            message: `Election completed! AI broke the tie. Leader term: ${LEADER_TERM_YEARS} year(s)`
+            message: `Election completed! AI broke the tie. Leader term: ${LEADER_TERM_MONTHS} month(s)`
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -611,8 +618,9 @@ serve(async (req) => {
         })
         .eq("id", election.id);
 
-      // Create new leader with 1-year term
-      const termEnd = new Date(now.getTime() + LEADER_TERM_YEARS * 365 * 24 * 60 * 60 * 1000);
+      // Create new leader with term
+      const termEnd = new Date(now);
+      termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
 
       await supabase
         .from("community_leaders")
@@ -639,7 +647,7 @@ serve(async (req) => {
           winner,
           totalVotes,
           termEnd: termEnd.toISOString(),
-          message: `Election completed! New leader for ${LEADER_TERM_YEARS} year(s).`
+          message: `Election completed! New leader for ${LEADER_TERM_MONTHS} month(s).`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -668,7 +676,7 @@ serve(async (req) => {
 
         if (!existing) {
           // Create new election
-          const electionEnd = new Date(now.getTime() + ELECTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+          const electionEnd = new Date(now.getTime() + (NOMINATION_DURATION_DAYS + VOTING_DURATION_DAYS) * 24 * 60 * 60 * 1000);
           
           const { error } = await supabase
             .from("community_elections")
