@@ -1,10 +1,12 @@
 /**
  * Browser-based ML Translation Engine using Transformers.js
  * 
- * Uses Facebook's NLLB-200 model for 200+ language translation
+ * Uses m2m100 model (dl-translate / easy-translate pattern) for 100+ language translation
  * Runs entirely in the browser using WebGPU/WASM - NO external API calls
  * 
- * Based on: https://github.com/KhaledSaeed18/multilingual-translation-Transformers.js
+ * Based on:
+ * - https://github.com/xhluca/dl-translate (m2m100 support)
+ * - https://github.com/ikergarcia1996/Easy-Translate (m2m100 support)
  */
 
 // Type for the translation pipeline
@@ -12,114 +14,124 @@ type TranslationPipeline = {
   (text: string, options?: { src_lang?: string; tgt_lang?: string; max_length?: number }): Promise<{ translation_text: string }[] | { translation_text: string }>;
 };
 
-// NLLB-200 language codes (Flores-200 format)
-export const NLLB_LANGUAGE_CODES: Record<string, string> = {
+// M2M100 language codes (ISO 639-1/3 format) - 100 languages
+// Based on dl-translate and easy-translate language support
+export const M2M100_LANGUAGE_CODES: Record<string, string> = {
   // Indian Languages
-  hindi: 'hin_Deva',
-  bengali: 'ben_Beng',
-  telugu: 'tel_Telu',
-  tamil: 'tam_Taml',
-  marathi: 'mar_Deva',
-  gujarati: 'guj_Gujr',
-  kannada: 'kan_Knda',
-  malayalam: 'mal_Mlym',
-  punjabi: 'pan_Guru',
-  odia: 'ory_Orya',
-  urdu: 'urd_Arab',
-  assamese: 'asm_Beng',
-  nepali: 'npi_Deva',
-  sinhala: 'sin_Sinh',
+  hindi: 'hi',
+  bengali: 'bn',
+  telugu: 'te',
+  tamil: 'ta',
+  marathi: 'mr',
+  gujarati: 'gu',
+  kannada: 'kn',
+  malayalam: 'ml',
+  punjabi: 'pa',
+  odia: 'or',
+  urdu: 'ur',
+  assamese: 'as',
+  nepali: 'ne',
+  sinhala: 'si',
   
   // European Languages
-  english: 'eng_Latn',
-  spanish: 'spa_Latn',
-  french: 'fra_Latn',
-  german: 'deu_Latn',
-  portuguese: 'por_Latn',
-  italian: 'ita_Latn',
-  dutch: 'nld_Latn',
-  russian: 'rus_Cyrl',
-  polish: 'pol_Latn',
-  ukrainian: 'ukr_Cyrl',
-  greek: 'ell_Grek',
-  czech: 'ces_Latn',
-  romanian: 'ron_Latn',
-  hungarian: 'hun_Latn',
-  swedish: 'swe_Latn',
-  danish: 'dan_Latn',
-  finnish: 'fin_Latn',
-  norwegian: 'nob_Latn',
-  croatian: 'hrv_Latn',
-  serbian: 'srp_Cyrl',
-  bosnian: 'bos_Latn',
-  slovak: 'slk_Latn',
-  slovenian: 'slv_Latn',
-  bulgarian: 'bul_Cyrl',
-  lithuanian: 'lit_Latn',
-  latvian: 'lvs_Latn',
-  estonian: 'est_Latn',
-  icelandic: 'isl_Latn',
-  catalan: 'cat_Latn',
+  english: 'en',
+  spanish: 'es',
+  french: 'fr',
+  german: 'de',
+  portuguese: 'pt',
+  italian: 'it',
+  dutch: 'nl',
+  russian: 'ru',
+  polish: 'pl',
+  ukrainian: 'uk',
+  greek: 'el',
+  czech: 'cs',
+  romanian: 'ro',
+  hungarian: 'hu',
+  swedish: 'sv',
+  danish: 'da',
+  finnish: 'fi',
+  norwegian: 'no',
+  croatian: 'hr',
+  serbian: 'sr',
+  bosnian: 'bs',
+  slovak: 'sk',
+  slovenian: 'sl',
+  bulgarian: 'bg',
+  lithuanian: 'lt',
+  latvian: 'lv',
+  estonian: 'et',
+  icelandic: 'is',
+  catalan: 'ca',
+  galician: 'gl',
+  basque: 'eu',
+  welsh: 'cy',
+  irish: 'ga',
+  albanian: 'sq',
+  macedonian: 'mk',
   
   // Asian Languages
-  chinese: 'zho_Hans',
-  mandarin: 'zho_Hans',
-  japanese: 'jpn_Jpan',
-  korean: 'kor_Hang',
-  vietnamese: 'vie_Latn',
-  thai: 'tha_Thai',
-  indonesian: 'ind_Latn',
-  malay: 'zsm_Latn',
-  tagalog: 'tgl_Latn',
-  burmese: 'mya_Mymr',
-  khmer: 'khm_Khmr',
-  lao: 'lao_Laoo',
+  chinese: 'zh',
+  mandarin: 'zh',
+  japanese: 'ja',
+  korean: 'ko',
+  vietnamese: 'vi',
+  thai: 'th',
+  indonesian: 'id',
+  malay: 'ms',
+  tagalog: 'tl',
+  burmese: 'my',
+  khmer: 'km',
+  lao: 'lo',
   
   // Middle Eastern Languages
-  arabic: 'arb_Arab',
-  hebrew: 'heb_Hebr',
-  persian: 'pes_Arab',
-  turkish: 'tur_Latn',
-  pashto: 'pbt_Arab',
-  kurdish: 'ckb_Arab',
+  arabic: 'ar',
+  hebrew: 'he',
+  persian: 'fa',
+  turkish: 'tr',
+  pashto: 'ps',
   
   // African Languages
-  swahili: 'swh_Latn',
-  afrikaans: 'afr_Latn',
-  amharic: 'amh_Ethi',
-  yoruba: 'yor_Latn',
-  igbo: 'ibo_Latn',
-  zulu: 'zul_Latn',
-  xhosa: 'xho_Latn',
-  somali: 'som_Latn',
-  hausa: 'hau_Latn',
+  swahili: 'sw',
+  afrikaans: 'af',
+  amharic: 'am',
+  yoruba: 'yo',
+  igbo: 'ig',
+  zulu: 'zu',
+  xhosa: 'xh',
+  somali: 'so',
+  hausa: 'ha',
   
   // Central Asian Languages
-  azerbaijani: 'azj_Latn',
-  kazakh: 'kaz_Cyrl',
-  uzbek: 'uzn_Latn',
-  tajik: 'tgk_Cyrl',
-  kyrgyz: 'kir_Cyrl',
-  turkmen: 'tuk_Latn',
-  mongolian: 'khk_Cyrl',
+  azerbaijani: 'az',
+  kazakh: 'kk',
+  uzbek: 'uz',
+  tajik: 'tg',
+  kyrgyz: 'ky',
+  mongolian: 'mn',
   
   // Caucasian Languages
-  georgian: 'kat_Geor',
-  armenian: 'hye_Armn',
+  georgian: 'ka',
+  armenian: 'hy',
   
   // Other Languages
-  javanese: 'jav_Latn',
-  sundanese: 'sun_Latn',
-  cebuano: 'ceb_Latn',
-  malagasy: 'plt_Latn',
+  javanese: 'jv',
+  cebuano: 'ceb',
+  malagasy: 'mg',
+  luxembourgish: 'lb',
+  maltese: 'mt',
+  belarusian: 'be',
 };
+
+// Alias exports for backward compatibility
+export const NLLB_LANGUAGE_CODES = M2M100_LANGUAGE_CODES;
 
 // Model state
 let translatorPipeline: TranslationPipeline | null = null;
 let isModelLoading = false;
 let modelLoadPromise: Promise<TranslationPipeline> | null = null;
-let currentSourceLang = 'eng_Latn';
-let currentTargetLang = 'hin_Deva';
+let currentSourceLang = 'en';
+let currentTargetLang = 'hi';
 
 // Cache for translations
 const mlTranslationCache = new Map<string, string>();
@@ -129,31 +141,40 @@ const ML_CACHE_MAX_SIZE = 1000;
 type ProgressCallback = (progress: { status: string; progress?: number; file?: string }) => void;
 
 /**
- * Normalize language name to NLLB code
+ * Normalize language name to M2M100 code (dl-translate pattern)
  */
-export function getNLLBCode(language: string): string {
+export function getM2M100Code(language: string): string {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '');
-  return NLLB_LANGUAGE_CODES[normalized] || 'eng_Latn';
+  return M2M100_LANGUAGE_CODES[normalized] || 'en';
 }
 
+// Alias for backward compatibility
+export const getNLLBCode = getM2M100Code;
+
 /**
- * Check if language is supported by NLLB
+ * Check if language is supported by M2M100
  */
-export function isNLLBSupported(language: string): boolean {
+export function isM2M100Supported(language: string): boolean {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '');
-  return normalized in NLLB_LANGUAGE_CODES;
+  return normalized in M2M100_LANGUAGE_CODES;
 }
+
+// Alias for backward compatibility
+export const isNLLBSupported = isM2M100Supported;
 
 /**
  * Get all supported languages
  */
-export function getSupportedNLLBLanguages(): string[] {
-  return Object.keys(NLLB_LANGUAGE_CODES);
+export function getSupportedM2M100Languages(): string[] {
+  return Object.keys(M2M100_LANGUAGE_CODES);
 }
+
+// Alias for backward compatibility
+export const getSupportedNLLBLanguages = getSupportedM2M100Languages;
 
 /**
  * Initialize the translation model
- * Uses NLLB-200 distilled model for browser efficiency
+ * Uses M2M100 model (dl-translate / easy-translate pattern) for browser efficiency
  */
 export async function initializeMLTranslator(
   onProgress?: ProgressCallback
@@ -177,10 +198,11 @@ export async function initializeMLTranslator(
     // Dynamic import to avoid SSR issues
     const { pipeline } = await import('@huggingface/transformers');
     
-    // Use a smaller distilled NLLB model for browser
+    // Use M2M100 model (dl-translate / easy-translate pattern)
+    // Xenova/m2m100_418M is optimized for browser usage
     const pipelineResult = await pipeline(
       'translation',
-      'Xenova/nllb-200-distilled-600M',
+      'Xenova/m2m100_418M',
       {
         progress_callback: (data: { status: string; progress?: number; file?: string }) => {
           if (data.status === 'progress' && data.progress !== undefined) {
@@ -197,11 +219,11 @@ export async function initializeMLTranslator(
     translatorPipeline = pipelineResult as unknown as TranslationPipeline;
     
     onProgress?.({ status: 'ready', progress: 100 });
-    console.log('[ML Translation] Model loaded successfully');
+    console.log('[ML Translation] M2M100 model loaded successfully (dl-translate pattern)');
     
     return true;
   } catch (error) {
-    console.error('[ML Translation] Failed to load model:', error);
+    console.error('[ML Translation] Failed to load M2M100 model:', error);
     onProgress?.({ status: 'error', progress: 0 });
     return false;
   } finally {
@@ -225,7 +247,7 @@ export function isMLTranslatorLoading(): boolean {
 }
 
 /**
- * Translate text using browser-based ML model
+ * Translate text using browser-based M2M100 model (dl-translate pattern)
  */
 export async function translateWithML(
   text: string,
@@ -235,8 +257,8 @@ export async function translateWithML(
   const trimmed = text.trim();
   if (!trimmed) return text;
   
-  const srcCode = getNLLBCode(sourceLanguage);
-  const tgtCode = getNLLBCode(targetLanguage);
+  const srcCode = getM2M100Code(sourceLanguage);
+  const tgtCode = getM2M100Code(targetLanguage);
   
   // Same language, no translation needed
   if (srcCode === tgtCode) {
@@ -254,7 +276,7 @@ export async function translateWithML(
   if (!translatorPipeline) {
     const initialized = await initializeMLTranslator();
     if (!initialized || !translatorPipeline) {
-      console.warn('[ML Translation] Model not available');
+      console.warn('[ML Translation] M2M100 model not available');
       return null;
     }
   }
@@ -267,7 +289,7 @@ export async function translateWithML(
       currentTargetLang = tgtCode;
     }
     
-    // Perform translation
+    // Perform translation using M2M100 format
     const result = await (translatorPipeline as any)(trimmed, {
       src_lang: srcCode,
       tgt_lang: tgtCode,
@@ -293,7 +315,7 @@ export async function translateWithML(
 }
 
 /**
- * Batch translate multiple texts
+ * Batch translate multiple texts (easy-translate pattern)
  */
 export async function translateBatchWithML(
   texts: string[],
@@ -345,11 +367,17 @@ export function getMLCacheStats(): { size: number; maxSize: number } {
  */
 export async function disposeMLTranslator(): Promise<void> {
   if (translatorPipeline) {
-    // The pipeline doesn't have a direct dispose method,
-    // but we can null the reference to allow garbage collection
     translatorPipeline = null;
-    currentSourceLang = 'eng_Latn';
-    currentTargetLang = 'hin_Deva';
-    console.log('[ML Translation] Model disposed');
+    currentSourceLang = 'en';
+    currentTargetLang = 'hi';
+    console.log('[ML Translation] M2M100 model disposed');
   }
 }
+
+// Export M2M100 specific functions with clear naming
+export {
+  getM2M100Code as getLanguageCode,
+  isM2M100Supported as isLanguageSupported,
+  getSupportedM2M100Languages as getSupportedLanguages,
+  M2M100_LANGUAGE_CODES as LANGUAGE_CODES,
+};
