@@ -1,16 +1,16 @@
 /**
  * Embedded Translation Engine (DL-Translate Pattern)
  * 
- * Pure dictionary-based translation using:
+ * Pure dictionary-based translation with optional ML fallback:
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
- * 
- * NO external APIs - NO ML models - Pure embedded dictionaries
+ * - Browser ML fallback (200+ languages, lazy-loaded, offline after first use)
  * 
  * Based on: 
  * - https://github.com/xhluca/dl-translate (API pattern)
  * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * - @huggingface/transformers (browser ML fallback)
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -18,6 +18,10 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
+import { translateWithBrowserML, isMLTranslatorReady, isMLLanguageSupported } from './browser-ml-translator';
+
+// Flag to enable/disable ML fallback (can be configured at runtime)
+let enableMLFallback = true;
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -532,8 +536,41 @@ export async function translateText(
     }
   }
   
+  // ========== ML FALLBACK (OPTIONAL) ==========
+  // Only used when dictionary fails and ML is enabled
+  // Downloads ~300MB model on first use, then works offline
+  if (enableMLFallback && isMLLanguageSupported(normSource) && isMLLanguageSupported(normTarget)) {
+    console.log('[DL-Translate] Trying browser ML fallback...');
+    try {
+      const mlResult = await translateWithBrowserML(trimmed, normSource, normTarget);
+      if (mlResult && mlResult !== trimmed) {
+        console.log('[DL-Translate] ML translation success:', mlResult.slice(0, 50));
+        addToCache(cacheKey, mlResult);
+        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
+      }
+    } catch (error) {
+      console.log('[DL-Translate] ML fallback failed:', error);
+    }
+  }
+  
   console.log('[DL-Translate] No translation available, returning original');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
+}
+
+/**
+ * Enable or disable ML fallback translation
+ * ML fallback downloads a ~300MB model on first use
+ */
+export function setMLFallbackEnabled(enabled: boolean): void {
+  enableMLFallback = enabled;
+  console.log(`[DL-Translate] ML fallback ${enabled ? 'enabled' : 'disabled'}`);
+}
+
+/**
+ * Check if ML fallback is enabled
+ */
+export function isMLFallbackEnabled(): boolean {
+  return enableMLFallback;
 }
 
 /**
