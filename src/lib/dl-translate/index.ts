@@ -6,13 +6,14 @@
  * 
  * NO external APIs - All translation happens in browser:
  * 
- * MAIN: NLLB-200 ML Model (200+ languages)
- * - Browser-based transformer model
- * - Downloads once (~300MB), works offline after
- * 
- * FALLBACK: Dictionary + Phonetic Transliteration
+ * MAIN: DL-Translate Dictionary + Phonetic Transliteration
  * - Instant common phrases
  * - Latin → native script conversion
+ * - Zero download, works immediately
+ * 
+ * FALLBACK: NLLB-200 ML Model (200+ languages)
+ * - Browser-based transformer model
+ * - Downloads once (~300MB), works offline after
  * 
  * Features:
  * 1. Auto-detect source language
