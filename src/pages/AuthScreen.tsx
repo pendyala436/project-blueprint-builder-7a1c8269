@@ -43,7 +43,7 @@ const EmailInput = memo(({
   placeholder: string;
 }) => (
   <div className="space-y-2">
-    <Label htmlFor="email" className="text-sm font-semibold">
+    <Label htmlFor="email" className="text-sm font-semibold text-primary">
       {placeholder}
     </Label>
     <div className="relative">
@@ -82,7 +82,7 @@ const PasswordInput = memo(({
   onToggleShow: () => void;
 }) => (
   <div className="space-y-2">
-    <Label htmlFor="password" className="text-sm font-semibold">
+    <Label htmlFor="password" className="text-sm font-semibold text-primary">
       {placeholder}
     </Label>
     <div className="relative">
