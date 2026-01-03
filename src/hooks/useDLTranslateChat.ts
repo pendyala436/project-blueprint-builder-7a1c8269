@@ -1,16 +1,17 @@
 /**
- * Hook for DL-Translate Chat functionality (Fully Embedded)
+ * Hook for DL-Translate Chat functionality
+ * 
+ * Uses DL-Translate HuggingFace API for 200+ languages:
+ * https://huggingface.co/spaces/kintong3000/dl-translate
  * 
  * FEATURES:
  * - Auto-detect source and target language
  * - Typing: Latin letters based on mother tongue
- * - Preview: Live transliteration to native script
+ * - Preview: Live transliteration to native script (non-blocking)
  * - Send: Background translation, sender sees native text
  * - Receiver: Sees message in their mother tongue
  * - Bi-directional: Both users see messages in their own language
  * - Non-blocking: Typing not affected by translation
- * 
- * NO external APIs - all embedded in browser
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';

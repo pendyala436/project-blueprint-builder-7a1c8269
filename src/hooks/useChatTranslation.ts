@@ -1,18 +1,20 @@
 /**
- * useChatTranslation - Comprehensive Chat Translation Hook
+ * useChatTranslation - DL-Translate Chat Hook
  * 
  * Features:
  * - Auto-detect source/target language from user profiles (mother tongue)
- * - Type in Latin letters → Live preview in native script
+ * - Type in Latin letters → Live preview in native script (non-blocking)
  * - Send: Translation happens in background (non-blocking)
- * - Sender sees: Their message in their native language
+ * - Sender sees: Their message in their native language in chat
  * - Receiver sees: Message translated to their native language
  * - Bi-directional: Works both ways
  * - Non-blocking: Typing is never affected by translation
+ * 
+ * Uses DL-Translate HuggingFace API for 200+ language support:
+ * https://huggingface.co/spaces/kintong3000/dl-translate
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import {
   translateText,
   convertToNativeScript,
@@ -22,18 +24,20 @@ import {
   normalizeLanguage
 } from '@/lib/translation/translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from '@/lib/translation/phonetic-transliterator';
+import { translateWithDLTranslate, getDLTranslateLanguageName } from '@/lib/translation/dl-translate-api';
 
 // Types
 export interface TranslatedMessage {
   id: string;
   senderId: string;
-  originalText: string;           // Original text as sent
-  senderNativeText: string;       // Text in sender's native script
-  receiverNativeText: string;     // Text translated to receiver's language
+  originalText: string;           // Original text as sent (Latin input)
+  senderNativeText: string;       // Text in sender's native script (what sender sees)
+  receiverNativeText: string;     // Text translated to receiver's language (what receiver sees)
   displayText: string;            // What current user should see
   isTranslated: boolean;
   senderLanguage: string;
   receiverLanguage: string;
+  detectedLanguage?: string;      // Auto-detected language
   createdAt: string;
 }
 
@@ -49,6 +53,7 @@ export interface UseChatTranslationOptions {
   partnerId: string;
   partnerLanguage: string;        // Partner's mother tongue
   debounceMs?: number;
+  autoDetectLanguage?: boolean;   // Auto-detect language from text
 }
 
 export interface UseChatTranslationReturn {
@@ -61,6 +66,7 @@ export interface UseChatTranslationReturn {
   processOutgoingMessage: (text: string) => Promise<{
     nativeText: string;
     originalLatin: string;
+    translatedForReceiver: string;
   }>;
   processIncomingMessage: (
     text: string, 
@@ -74,6 +80,9 @@ export interface UseChatTranslationReturn {
     senderLang: string, 
     receiverLang: string
   ) => Promise<string>;
+  
+  // Auto-detection
+  autoDetectLanguage: (text: string) => string;
   
   // Utilities
   isLatinScript: (text: string) => boolean;
@@ -220,64 +229,95 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
 
   /**
    * Process outgoing message before sending
-   * Converts Latin to sender's native script
-   * Returns immediately with best available result
+   * 1. Converts Latin to sender's native script (for sender display)
+   * 2. Translates to receiver's language (background, non-blocking)
    */
   const processOutgoingMessage = useCallback(async (text: string): Promise<{
     nativeText: string;
     originalLatin: string;
+    translatedForReceiver: string;
   }> => {
     const trimmed = text.trim();
     
     if (!trimmed) {
-      return { nativeText: '', originalLatin: '' };
+      return { nativeText: '', originalLatin: '', translatedForReceiver: '' };
     }
 
-    // If user's language is English, no conversion needed
-    if (!needsNativeConversion) {
-      return { nativeText: trimmed, originalLatin: trimmed };
-    }
+    let nativeText = trimmed;
+    const originalLatin = checkIsLatinScript(trimmed) ? trimmed : '';
 
-    // If already non-Latin, it's already in native script
-    if (!checkIsLatinScript(trimmed)) {
-      return { nativeText: trimmed, originalLatin: '' };
-    }
-
-    // Check if we have a ready preview that matches
-    if (livePreview.nativePreview && 
-        livePreview.latinInput.trim() === trimmed &&
-        !checkIsLatinScript(livePreview.nativePreview)) {
-      return { 
-        nativeText: livePreview.nativePreview, 
-        originalLatin: trimmed 
-      };
-    }
-
-    // Need to convert now
-    try {
-      // First try fast phonetic
-      if (isPhoneticTransliterationSupported(myLanguage)) {
-        const phoneticResult = phoneticTransliterate(trimmed, myLanguage);
-        if (phoneticResult && phoneticResult !== trimmed) {
-          return { nativeText: phoneticResult, originalLatin: trimmed };
+    // Step 1: Convert to sender's native script (if needed)
+    if (needsNativeConversion && checkIsLatinScript(trimmed)) {
+      // Check if we have a ready preview that matches
+      if (livePreview.nativePreview && 
+          livePreview.latinInput.trim() === trimmed &&
+          !checkIsLatinScript(livePreview.nativePreview)) {
+        nativeText = livePreview.nativePreview;
+      } else {
+        // Need to convert now
+        try {
+          // First try fast phonetic
+          if (isPhoneticTransliterationSupported(myLanguage)) {
+            const phoneticResult = phoneticTransliterate(trimmed, myLanguage);
+            if (phoneticResult && phoneticResult !== trimmed) {
+              nativeText = phoneticResult;
+            }
+          }
+          
+          // Fallback to full conversion
+          if (nativeText === trimmed) {
+            const converted = await convertToNativeScript(trimmed, myLanguage);
+            nativeText = converted || trimmed;
+          }
+        } catch (err) {
+          console.error('[ChatTranslation] Outgoing conversion error:', err);
         }
       }
-
-      // Full conversion
-      const converted = await convertToNativeScript(trimmed, myLanguage);
-      return { 
-        nativeText: converted || trimmed, 
-        originalLatin: trimmed 
-      };
-    } catch (err) {
-      console.error('[ChatTranslation] Outgoing conversion error:', err);
-      return { nativeText: trimmed, originalLatin: trimmed };
     }
-  }, [myLanguage, needsNativeConversion, livePreview]);
+
+    // Step 2: Translate for receiver (background, non-blocking)
+    let translatedForReceiver = nativeText;
+    if (needsTranslation) {
+      try {
+        console.log('[ChatTranslation] Translating for receiver:', myLanguage, '→', theirLanguage);
+        
+        // Try DL-Translate API first for accurate ML translation
+        const apiResult = await translateWithDLTranslate(
+          nativeText, 
+          getDLTranslateLanguageName(myLanguage), 
+          getDLTranslateLanguageName(theirLanguage)
+        );
+        
+        if (apiResult && apiResult !== nativeText) {
+          translatedForReceiver = apiResult;
+          console.log('[ChatTranslation] DL-Translate API result:', translatedForReceiver.slice(0, 50));
+        } else {
+          // Fallback to local translation engine
+          const result = await translateText(nativeText, {
+            sourceLanguage: myLanguage,
+            targetLanguage: theirLanguage,
+            mode: 'translate'
+          });
+          if (result.isTranslated) {
+            translatedForReceiver = result.translatedText;
+          }
+        }
+      } catch (err) {
+        console.error('[ChatTranslation] Translation for receiver error:', err);
+        // Keep original on error
+      }
+    }
+
+    return { 
+      nativeText, 
+      originalLatin,
+      translatedForReceiver
+    };
+  }, [myLanguage, theirLanguage, needsNativeConversion, needsTranslation, livePreview]);
 
   /**
    * Translate text from sender's language to receiver's language
-   * Used for background translation when message is received
+   * Uses DL-Translate HuggingFace API with local fallback
    */
   const translateForReceiver = useCallback(async (
     text: string,
@@ -294,6 +334,21 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
 
     try {
       setIsTranslating(true);
+      console.log('[ChatTranslation] Translating:', normSender, '→', normReceiver);
+      
+      // Try DL-Translate API first (200+ languages)
+      const apiResult = await translateWithDLTranslate(
+        text,
+        getDLTranslateLanguageName(normSender),
+        getDLTranslateLanguageName(normReceiver)
+      );
+      
+      if (apiResult && apiResult !== text) {
+        console.log('[ChatTranslation] DL-Translate API success');
+        return apiResult;
+      }
+      
+      // Fallback to local translation engine
       const result = await translateText(text, {
         sourceLanguage: normSender,
         targetLanguage: normReceiver,
@@ -368,6 +423,16 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
     }
   }, [currentUserId, myLanguage, theirLanguage, translateForReceiver]);
 
+  /**
+   * Auto-detect language from text
+   * Uses embedded language detector
+   */
+  const autoDetectLang = useCallback((text: string): string => {
+    if (!text.trim()) return myLanguage;
+    const result = detectLanguage(text);
+    return result.language || myLanguage;
+  }, [myLanguage]);
+
   return {
     livePreview,
     updateLivePreview,
@@ -375,6 +440,7 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
     processOutgoingMessage,
     processIncomingMessage,
     translateForReceiver,
+    autoDetectLanguage: autoDetectLang,
     isLatinScript: checkIsLatinScript,
     isSameLanguage: checkSameLanguage,
     needsTranslation,
