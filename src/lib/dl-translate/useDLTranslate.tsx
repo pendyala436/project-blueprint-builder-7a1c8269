@@ -1,8 +1,13 @@
 /**
- * React Hook for DL-Translate
+ * React Hook for DL-Translate (Fully Embedded)
  * 
- * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
- * NO edge functions - all logic in client code
+ * Based on: https://github.com/xhluca/dl-translate
+ * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application
+ * 
+ * NO external APIs - All translation happens in browser:
+ * 1. NLLB-200 ML Model (main) - 200+ languages
+ * 2. Dictionary Translation (fallback) - instant common phrases
+ * 3. Phonetic Transliteration (fallback) - Latin → native script
  */
 
 import { useState, useCallback } from 'react';

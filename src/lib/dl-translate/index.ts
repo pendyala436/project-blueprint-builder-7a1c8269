@@ -1,14 +1,25 @@
 /**
- * DL-Translate - Embedded Translation
- * ====================================
- * All translation using LibreTranslate, MyMemory, Google Input Tools
- * NO external edge functions - all logic embedded in client code
+ * DL-Translate - Fully Embedded Translation
+ * ==========================================
+ * Based on: https://github.com/xhluca/dl-translate (API pattern)
+ * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * 
+ * NO external APIs - All translation happens in browser:
+ * 
+ * MAIN: NLLB-200 ML Model (200+ languages)
+ * - Browser-based transformer model
+ * - Downloads once (~300MB), works offline after
+ * 
+ * FALLBACK: Dictionary + Phonetic Transliteration
+ * - Instant common phrases
+ * - Latin → native script conversion
  * 
  * Features:
  * 1. Auto-detect source language
  * 2. Translate between any language pair (200+ languages)
  * 3. Convert Latin typing to native script
  * 4. Same language optimization (no translation needed)
+ * 5. Non-blocking translation (doesn't affect typing)
  * 
  * @example
  * ```tsx
