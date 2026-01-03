@@ -989,13 +989,6 @@ const WomenDashboardScreen = () => {
           />
         </div>
 
-        {/* Section 2.6: Language Group 24/7 Coverage */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.10s" }}>
-          <LanguageGroupShiftsPanel 
-            userId={currentUserId} 
-            language={currentWomanLanguage}
-          />
-        </div>
 
         {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
