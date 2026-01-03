@@ -523,14 +523,11 @@ const MiniChatWindow = ({
   };
 
   const subscribeToMessages = () => {
-    // Unique channel per chat session for scalability (supports lakhs of users)
+    console.log(`[RealTime] Setting up subscription for chat: ${chatId}, user: ${currentUserId}`);
+    
+    // Simple channel without broadcast config - just listen for postgres changes
     const channel = supabase
-      .channel(`realtime-chat:${chatId}`, {
-        config: {
-          broadcast: { self: false }, // Don't receive own broadcasts
-          presence: { key: currentUserId } // Track presence per user
-        }
-      })
+      .channel(`chat-messages-${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -539,22 +536,34 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        async (payload: any) => {
+        (payload: any) => {
+          console.log(`[RealTime] Received message:`, payload.new?.id, 'from:', payload.new?.sender_id);
           const newMsg = payload.new;
           
-          // Skip if message is from current user (already added locally)
-          if (newMsg.sender_id === currentUserId) {
+          if (!newMsg) {
+            console.warn('[RealTime] Empty payload received');
             return;
           }
           
-          // Add message immediately (non-blocking) - show original first
+          // Skip if message is from current user (already added via optimistic update)
+          if (newMsg.sender_id === currentUserId) {
+            console.log('[RealTime] Skipping own message');
+            return;
+          }
+          
+          // Add message immediately - show original first
           setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
+            // Check if message already exists (prevent duplicates)
+            if (prev.some(m => m.id === newMsg.id)) {
+              console.log('[RealTime] Message already exists, skipping');
+              return prev;
+            }
+            console.log('[RealTime] Adding new message to state');
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: newMsg.message, // Show original initially
+              translatedMessage: newMsg.message,
               isTranslated: false,
               detectedLanguage: undefined,
               createdAt: newMsg.created_at
@@ -569,7 +578,7 @@ const MiniChatWindow = ({
             setUnreadCount(prev => prev + 1);
           }
 
-          // Translate in background (parallel, non-blocking)
+          // Translate in background
           translateMessage(newMsg.message, newMsg.sender_id).then(translation => {
             if (translation.isTranslated) {
               setMessages(prev => prev.map(m => 
@@ -578,16 +587,15 @@ const MiniChatWindow = ({
                   : m
               ));
             }
-          }).catch(err => console.error('Background translation error:', err));
+          }).catch(err => console.error('[RealTime] Translation error:', err));
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[RealTime] Subscribed to chat: ${chatId}`);
-        }
+      .subscribe((status, err) => {
+        console.log(`[RealTime] Subscription status: ${status}`, err ? `Error: ${err.message}` : '');
       });
 
     return () => {
+      console.log(`[RealTime] Unsubscribing from chat: ${chatId}`);
       supabase.removeChannel(channel);
     };
   };
