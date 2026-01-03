@@ -15,7 +15,7 @@
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
-import { translateWithML } from './ml-translation-engine';
+import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -489,9 +489,9 @@ export async function translateText(
     }
   }
   
-  // Use dictionary-based translation (pure browser, no ML model)
-  console.log('[DL-Translate] Using dictionary-based translation');
-  const translated = await translateWithML(trimmed, normSource, normTarget);
+  // Use pure in-memory dictionary translation (NO ML, NO external APIs)
+  console.log('[DL-Translate] Using in-memory dictionary translation');
+  const translated = await translateWithDictionary(trimmed, normSource, normTarget);
   if (translated && translated !== trimmed) {
     console.log('[DL-Translate] Translation result:', translated.slice(0, 50));
     addToCache(cacheKey, translated);
