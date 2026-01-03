@@ -1,7 +1,7 @@
 /**
  * Hook for DL-Translate Chat functionality
  * 
- * 100% Local - No External API Calls, No ML Models
+ * Uses M2M100 model for 100+ language translation (same as dl-translate)
  * 
  * Based on: https://github.com/xhluca/dl-translate
  * 

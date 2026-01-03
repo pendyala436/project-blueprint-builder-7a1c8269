@@ -1,11 +1,13 @@
 /**
  * DL-Translate Module - Unified Translation API
  * 
- * 100% Local - No External API Calls, No ML Models
+ * Full dl-translate implementation with M2M100 model (100+ languages)
+ * Same model as the Python dl-translate library
  * 
  * Translation Flow:
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
+ * 3. M2M100 Neural Translation (100+ languages, in-browser)
  * 
  * Based on: https://github.com/xhluca/dl-translate
  * 
