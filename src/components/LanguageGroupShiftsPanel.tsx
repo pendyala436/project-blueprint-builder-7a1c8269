@@ -454,8 +454,8 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
               Week Off Pattern
             </h4>
             <p className="text-xs text-muted-foreground">
-              AI assigns 2 continuous days off per week (e.g., Mon-Tue, Wed-Thu). 
-              Women can optionally work on their off days.
+              AI staggers 2 continuous off days within each shift to ensure coverage. 
+              Women in the same shift have different off days for 24/7 availability.
             </p>
           </div>
         )}
