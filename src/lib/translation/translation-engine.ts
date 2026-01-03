@@ -23,6 +23,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 let mlInitAttempted = false;
 
 // Common phrases dictionary for accurate translation (expanded)
+// Bidirectional: Both English key → Native AND Native key → English
 const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
   // Greetings
   'hello': {
@@ -30,37 +31,37 @@ const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
     marathi: 'नमस्कार', gujarati: 'નમસ્તે', kannada: 'ನಮಸ್ಕಾರ', malayalam: 'ഹലോ',
     punjabi: 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ', spanish: 'Hola', french: 'Bonjour', german: 'Hallo',
     arabic: 'مرحبا', chinese: '你好', japanese: 'こんにちは', korean: '안녕하세요',
-    russian: 'Привет', portuguese: 'Olá', italian: 'Ciao',
+    russian: 'Привет', portuguese: 'Olá', italian: 'Ciao', english: 'Hello',
   },
   'hi': {
     hindi: 'हाय', telugu: 'హాయ్', tamil: 'ஹாய்', bengali: 'হাই',
     marathi: 'हाय', gujarati: 'હાય', kannada: 'ಹಾಯ್', malayalam: 'ഹായ്',
-    spanish: 'Hola', french: 'Salut', german: 'Hi', chinese: '嗨', japanese: 'やあ',
+    spanish: 'Hola', french: 'Salut', german: 'Hi', chinese: '嗨', japanese: 'やあ', english: 'Hi',
   },
   'good morning': {
     hindi: 'सुप्रभात', telugu: 'శుభోదయం', tamil: 'காலை வணக்கம்', bengali: 'সুপ্রভাত',
     marathi: 'शुभ प्रभात', gujarati: 'શુભ સવાર', kannada: 'ಶುಭೋದಯ', malayalam: 'സുപ്രഭാതം',
     punjabi: 'ਸ਼ੁਭ ਸਵੇਰ', spanish: 'Buenos días', french: 'Bonjour', german: 'Guten Morgen',
-    arabic: 'صباح الخير', chinese: '早上好', japanese: 'おはようございます', korean: '좋은 아침',
+    arabic: 'صباح الخير', chinese: '早上好', japanese: 'おはようございます', korean: '좋은 아침', english: 'Good morning',
   },
   'good night': {
     hindi: 'शुभ रात्रि', telugu: 'శుభ రాత్రి', tamil: 'இனிய இரவு', bengali: 'শুভ রাত্রি',
     marathi: 'शुभ रात्री', gujarati: 'શુભ રાત્રિ', kannada: 'ಶುಭ ರಾತ್ರಿ', malayalam: 'ശുഭ രാത്രി',
     spanish: 'Buenas noches', french: 'Bonne nuit', german: 'Gute Nacht',
-    arabic: 'تصبح على خير', chinese: '晚安', japanese: 'おやすみなさい', korean: '잘 자',
+    arabic: 'تصبح على خير', chinese: '晚安', japanese: 'おやすみなさい', korean: '잘 자', english: 'Good night',
   },
   'good evening': {
     hindi: 'शुभ संध्या', telugu: 'శుభ సాయంత్రం', tamil: 'மாலை வணக்கம்', bengali: 'শুভ সন্ধ্যা',
-    spanish: 'Buenas tardes', french: 'Bonsoir', german: 'Guten Abend',
+    spanish: 'Buenas tardes', french: 'Bonsoir', german: 'Guten Abend', english: 'Good evening',
   },
   'goodbye': {
     hindi: 'अलविदा', telugu: 'వీడ్కోలు', tamil: 'பிரியாவிடை', bengali: 'বিদায়',
     spanish: 'Adiós', french: 'Au revoir', german: 'Auf Wiedersehen',
-    chinese: '再见', japanese: 'さようなら', korean: '안녕히 가세요',
+    chinese: '再见', japanese: 'さようなら', korean: '안녕히 가세요', english: 'Goodbye',
   },
   'bye': {
     hindi: 'बाय', telugu: 'బై', tamil: 'பை', bengali: 'বাই',
-    spanish: 'Adiós', french: 'Salut', german: 'Tschüss',
+    spanish: 'Adiós', french: 'Salut', german: 'Tschüss', english: 'Bye',
   },
   // Common questions
   'how are you': {
@@ -68,53 +69,53 @@ const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
     bengali: 'আপনি কেমন আছেন', marathi: 'तुम्ही कसे आहात', gujarati: 'તમે કેમ છો',
     kannada: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', malayalam: 'സുഖമാണോ', punjabi: 'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ',
     spanish: '¿Cómo estás?', french: 'Comment allez-vous?', german: 'Wie geht es dir?',
-    arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요',
+    arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요', english: 'How are you',
   },
   'what is your name': {
     hindi: 'आपका नाम क्या है', telugu: 'మీ పేరు ఏమిటి', tamil: 'உங்கள் பெயர் என்ன',
-    bengali: 'আপনার নাম কি', spanish: '¿Cómo te llamas?', french: 'Comment vous appelez-vous?',
+    bengali: 'আপনার নাম কি', spanish: '¿Cómo te llamas?', french: 'Comment vous appelez-vous?', english: 'What is your name',
   },
   'where are you from': {
     hindi: 'आप कहाँ से हैं', telugu: 'మీరు ఎక్కడ నుండి వచ్చారు', tamil: 'நீங்கள் எங்கிருந்து வருகிறீர்கள்',
-    spanish: '¿De dónde eres?', french: 'D\'où venez-vous?',
+    spanish: '¿De dónde eres?', french: 'D\'où venez-vous?', english: 'Where are you from',
   },
   // Responses
   'i am fine': {
     hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்',
-    bengali: 'আমি ভালো আছি', spanish: 'Estoy bien', french: 'Je vais bien',
+    bengali: 'আমি ভালো আছি', spanish: 'Estoy bien', french: 'Je vais bien', english: 'I am fine',
   },
   'thank you': {
     hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி', bengali: 'ধন্যবাদ',
     marathi: 'धन्यवाद', gujarati: 'આભાર', kannada: 'ಧನ್ಯವಾದ', malayalam: 'നന്ദി',
     punjabi: 'ਧੰਨਵਾਦ', spanish: 'Gracias', french: 'Merci', german: 'Danke',
-    arabic: 'شكرا', chinese: '谢谢', japanese: 'ありがとう', korean: '감사합니다',
+    arabic: 'شكرا', chinese: '谢谢', japanese: 'ありがとう', korean: '감사합니다', english: 'Thank you',
   },
   'thanks': {
     hindi: 'धन्यवाद', telugu: 'థాంక్స్', tamil: 'நன்றி', bengali: 'ধন্যবাদ',
-    spanish: 'Gracias', french: 'Merci', german: 'Danke',
+    spanish: 'Gracias', french: 'Merci', german: 'Danke', english: 'Thanks',
   },
   'yes': {
     hindi: 'हाँ', telugu: 'అవును', tamil: 'ஆம்', bengali: 'হ্যাঁ',
     marathi: 'होय', gujarati: 'હા', kannada: 'ಹೌದು', malayalam: 'അതെ',
-    spanish: 'Sí', french: 'Oui', german: 'Ja', arabic: 'نعم', chinese: '是', japanese: 'はい',
+    spanish: 'Sí', french: 'Oui', german: 'Ja', arabic: 'نعم', chinese: '是', japanese: 'はい', english: 'Yes',
   },
   'no': {
     hindi: 'नहीं', telugu: 'లేదు', tamil: 'இல்லை', bengali: 'না',
     marathi: 'नाही', gujarati: 'ના', kannada: 'ಇಲ್ಲ', malayalam: 'ഇല്ല',
-    spanish: 'No', french: 'Non', german: 'Nein', arabic: 'لا', chinese: '不', japanese: 'いいえ',
+    spanish: 'No', french: 'Non', german: 'Nein', arabic: 'لا', chinese: '不', japanese: 'いいえ', english: 'No',
   },
   'ok': {
     hindi: 'ठीक है', telugu: 'సరే', tamil: 'சரி', bengali: 'ঠিক আছে',
-    marathi: 'ठीक आहे', gujarati: 'ઠીક છે', spanish: 'Vale', french: "D'accord",
+    marathi: 'ठीक आहे', gujarati: 'ઠીક છે', spanish: 'Vale', french: "D'accord", english: 'OK',
   },
   'sorry': {
     hindi: 'माफ़ कीजिए', telugu: 'క్షమించండి', tamil: 'மன்னிக்கவும்', bengali: 'দুঃখিত',
     spanish: 'Lo siento', french: 'Désolé', german: 'Entschuldigung',
-    arabic: 'آسف', chinese: '对不起', japanese: 'ごめんなさい',
+    arabic: 'آسف', chinese: '对不起', japanese: 'ごめんなさい', english: 'Sorry',
   },
   'please': {
     hindi: 'कृपया', telugu: 'దయచేసి', tamil: 'தயவுசெய்து', bengali: 'অনুগ্রহ করে',
-    spanish: 'Por favor', french: "S'il vous plaît", german: 'Bitte',
+    spanish: 'Por favor', french: "S'il vous plaît", german: 'Bitte', english: 'Please',
   },
   // Love & emotions
   'i love you': {
@@ -125,40 +126,57 @@ const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
     punjabi: 'ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ', spanish: 'Te amo', french: "Je t'aime",
     german: 'Ich liebe dich', arabic: 'أنا أحبك', chinese: '我爱你',
     japanese: '愛してる', korean: '사랑해', russian: 'Я тебя люблю',
-    portuguese: 'Eu te amo', italian: 'Ti amo',
+    portuguese: 'Eu te amo', italian: 'Ti amo', english: 'I love you',
   },
   'i miss you': {
     hindi: 'मुझे तुम्हारी याद आती है', telugu: 'నీవు లేకుండా నాకు బాధగా ఉంది',
     tamil: 'உன்னை நினைக்கிறேன்', bengali: 'তোমার জন্য মন খারাপ',
     spanish: 'Te extraño', french: 'Tu me manques', german: 'Ich vermisse dich',
-    chinese: '我想你', japanese: '会いたい', korean: '보고 싶어',
+    chinese: '我想你', japanese: '会いたい', korean: '보고 싶어', english: 'I miss you',
   },
   'i like you': {
     hindi: 'मुझे तुम पसंद हो', telugu: 'నాకు నువ్వు ఇష్టం', tamil: 'நான் உன்னை விரும்புகிறேன்',
-    spanish: 'Me gustas', french: 'Je t\'aime bien', chinese: '我喜欢你',
+    spanish: 'Me gustas', french: 'Je t\'aime bien', chinese: '我喜欢你', english: 'I like you',
   },
   // Common chat phrases
   'what are you doing': {
     hindi: 'तुम क्या कर रहे हो', telugu: 'ఏం చేస్తున్నావ్', tamil: 'என்ன செய்கிறாய்',
-    bengali: 'তুমি কি করছ', spanish: '¿Qué estás haciendo?', french: 'Que fais-tu?',
+    bengali: 'তুমি কি করছ', spanish: '¿Qué estás haciendo?', french: 'Que fais-tu?', english: 'What are you doing',
   },
   'where are you': {
     hindi: 'तुम कहाँ हो', telugu: 'నువ్వు ఎక్కడ ఉన్నావ్', tamil: 'நீ எங்கே இருக்கிறாய்',
-    spanish: '¿Dónde estás?', french: 'Où es-tu?',
+    spanish: '¿Dónde estás?', french: 'Où es-tu?', english: 'Where are you',
   },
   'see you later': {
     hindi: 'फिर मिलते हैं', telugu: 'తర్వాత కలుద్దాం', tamil: 'பிறகு சந்திப்போம்',
-    spanish: 'Hasta luego', french: 'À plus tard', german: 'Bis später',
+    spanish: 'Hasta luego', french: 'À plus tard', german: 'Bis später', english: 'See you later',
   },
   'take care': {
     hindi: 'अपना ख्याल रखना', telugu: 'జాగ్రత్తగా ఉండు', tamil: 'கவனமாக இரு',
-    spanish: 'Cuídate', french: 'Prends soin de toi',
+    spanish: 'Cuídate', french: 'Prends soin de toi', english: 'Take care',
   },
   'nice to meet you': {
     hindi: 'आपसे मिलकर अच्छा लगा', telugu: 'మిమ్మల్ని కలిసినందుకు సంతోషం',
     tamil: 'உங்களை சந்தித்ததில் மகிழ்ச்சி', spanish: 'Encantado de conocerte',
-    french: 'Enchanté', german: 'Freut mich',
+    french: 'Enchanté', german: 'Freut mich', english: 'Nice to meet you',
   },
+  // Native script keys for reverse lookup (receiver translation)
+  'नमस्ते': { english: 'Hello', hindi: 'नमस्ते', telugu: 'హలో', tamil: 'வணக்கம்' },
+  'హలో': { english: 'Hello', hindi: 'नमस्ते', telugu: 'హలో', tamil: 'வணக்கம்' },
+  'வணக்கம்': { english: 'Hello', hindi: 'नमस्ते', telugu: 'హలో', tamil: 'வணக்கம்' },
+  'धन्यवाद': { english: 'Thank you', hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி' },
+  'ధన్యవాదాలు': { english: 'Thank you', hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி' },
+  'நன்றி': { english: 'Thank you', hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி' },
+  'आप कैसे हैं': { english: 'How are you', hindi: 'आप कैसे हैं', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'మీరు ఎలా ఉన్నారు': { english: 'How are you', hindi: 'आप कैसे हैं', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'मैं ठीक हूं': { english: 'I am fine', hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்' },
+  'నేను బాగున్నాను': { english: 'I am fine', hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்' },
+  'हाँ': { english: 'Yes', hindi: 'हाँ', telugu: 'అవును', tamil: 'ஆம்' },
+  'అవును': { english: 'Yes', hindi: 'हाँ', telugu: 'అవును', tamil: 'ஆம்' },
+  'नहीं': { english: 'No', hindi: 'नहीं', telugu: 'లేదు', tamil: 'இல்லை' },
+  'లేదు': { english: 'No', hindi: 'नहीं', telugu: 'లేదు', tamil: 'இல்லை' },
+  'ठीक है': { english: 'OK', hindi: 'ठीक है', telugu: 'సరే', tamil: 'சரி' },
+  'సరే': { english: 'OK', hindi: 'ठीक है', telugu: 'సరే', tamil: 'சரி' },
 };
 
 // Transliteration dictionary for common words
@@ -223,14 +241,23 @@ const TRANSLITERATION_MAP: Record<string, Record<string, string>> = {
 
 /**
  * Check and return phrase from dictionary
+ * Supports both lowercase English and native script keys
  */
 function checkPhraseDictionary(text: string, targetLanguage: string): string | null {
-  const lowerText = text.toLowerCase().trim();
+  const trimmed = text.trim();
+  const lowerText = trimmed.toLowerCase();
   const normTarget = normalizeLanguage(targetLanguage);
   
+  // Check lowercase first (for English phrases)
   if (ROMANTIC_PHRASES[lowerText]?.[normTarget]) {
     return ROMANTIC_PHRASES[lowerText][normTarget];
   }
+  
+  // Check exact match (for native script keys)
+  if (ROMANTIC_PHRASES[trimmed]?.[normTarget]) {
+    return ROMANTIC_PHRASES[trimmed][normTarget];
+  }
+  
   return null;
 }
 
@@ -305,6 +332,15 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
 
 /**
  * Main translation function - uses browser-based ML with dictionary fallback
+ * 
+ * Flow:
+ * 1. Check cache first (instant)
+ * 2. Check phrase dictionary (common phrases)
+ * 3. Auto-initialize ML if not ready (background)
+ * 4. Use ML translation if ready
+ * 5. Fallback to dictionary-based conversion
+ * 
+ * Translation is NON-BLOCKING for typing
  */
 export async function translateText(
   text: string,
@@ -339,7 +375,7 @@ export async function translateText(
     return createResult(trimmed, cached, normSource, normTarget, true, 'translate');
   }
   
-  // Check phrase dictionary first (for accuracy)
+  // Check phrase dictionary first (for accuracy on common phrases)
   const phraseResult = checkPhraseDictionary(trimmed, normTarget);
   if (phraseResult) {
     console.log('[DL-Translate] Phrase dictionary match:', phraseResult);
@@ -374,26 +410,35 @@ export async function translateText(
   // Try ML translation if ready
   let translated: string | null = null;
   if (isMLTranslatorReady()) {
-    console.log('[DL-Translate] Using ML translation');
+    console.log('[DL-Translate] Using ML translation (M2M100)');
     translated = await translateWithML(trimmed, normSource, normTarget);
-    if (translated) {
+    if (translated && translated !== trimmed) {
       console.log('[DL-Translate] ML result:', translated.slice(0, 50));
+      addToCache(cacheKey, translated);
+      return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
     }
   } else {
     console.log('[DL-Translate] ML not ready, using dictionary fallback');
   }
   
   // Fallback to dictionary if ML fails or not ready
-  if (!translated) {
-    translated = convertWithDictionary(trimmed, normTarget);
-    if (translated !== trimmed) {
-      console.log('[DL-Translate] Dictionary fallback:', translated.slice(0, 50));
-    }
+  const dictResult = convertWithDictionary(trimmed, normTarget);
+  if (dictResult !== trimmed) {
+    console.log('[DL-Translate] Dictionary fallback:', dictResult.slice(0, 50));
+    addToCache(cacheKey, dictResult);
+    return createResult(trimmed, dictResult, normSource, normTarget, true, 'translate');
   }
   
-  if (translated && translated !== trimmed) {
-    addToCache(cacheKey, translated);
-    return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
+  // Try reverse translation (target→source dictionary lookup for receiver)
+  const reversePhraseResult = checkPhraseDictionary(trimmed, normSource);
+  if (reversePhraseResult) {
+    // Found source phrase, now find target
+    const targetPhrase = checkPhraseDictionary(reversePhraseResult.toLowerCase(), normTarget);
+    if (targetPhrase) {
+      console.log('[DL-Translate] Reverse dictionary match:', targetPhrase);
+      addToCache(cacheKey, targetPhrase);
+      return createResult(trimmed, targetPhrase, normSource, normTarget, true, 'translate');
+    }
   }
   
   console.log('[DL-Translate] No translation available, returning original');

@@ -106,11 +106,18 @@ export function useDLTranslate(): UseDLTranslateReturn {
     const { senderLanguage, receiverLanguage } = options;
     const trimmed = text.trim();
 
+    console.log('[useDLTranslate] translateForChat:', { 
+      text: trimmed.slice(0, 30), 
+      from: senderLanguage, 
+      to: receiverLanguage 
+    });
+
     if (!trimmed) {
       return { text, originalText: text, source: senderLanguage, target: receiverLanguage, isTranslated: false, mode: 'passthrough' };
     }
 
     if (isSameLanguageFn(senderLanguage, receiverLanguage)) {
+      console.log('[useDLTranslate] Same language, passthrough');
       return { text: trimmed, originalText: trimmed, source: senderLanguage, target: receiverLanguage, isTranslated: false, mode: 'passthrough' };
     }
 
@@ -124,6 +131,13 @@ export function useDLTranslate(): UseDLTranslateReturn {
         mode: 'translate'
       });
 
+      console.log('[useDLTranslate] Translation result:', {
+        original: result.originalText?.slice(0, 30),
+        translated: result.translatedText?.slice(0, 30),
+        isTranslated: result.isTranslated,
+        mode: result.mode
+      });
+
       return {
         text: result.translatedText,
         originalText: result.originalText,
@@ -133,6 +147,7 @@ export function useDLTranslate(): UseDLTranslateReturn {
         mode: result.mode === 'same_language' ? 'passthrough' : result.mode
       };
     } catch (err) {
+      console.error('[useDLTranslate] Translation error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
       return { text: trimmed, originalText: trimmed, source: senderLanguage, target: receiverLanguage, isTranslated: false, mode: 'passthrough' };
     } finally {

@@ -438,7 +438,8 @@ const MiniChatWindow = ({
   }, [billingPaused, chatId, sessionId]);
 
   // Auto-translate a message to current user's language using dl-translate
-  // Skip translation entirely if both users have the same native language
+  // This enables receiver to see messages in their native language
+  // Flow: Partner types in Latin → converts to partner's native → translates to receiver's native
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -448,26 +449,45 @@ const MiniChatWindow = ({
     const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
     const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
     
-    // Same language - no translation needed, just display native language
+    console.log('[MiniChatWindow] Translate request:', { 
+      text: text.slice(0, 30), 
+      senderId: senderId.slice(0, 8),
+      senderLang, 
+      receiverLang,
+      isMine: senderId === currentUserId
+    });
+    
+    // Same language - no translation needed
     if (isSameLanguage(senderLang, receiverLang)) {
+      console.log('[MiniChatWindow] Same language, skipping translation');
       return { translatedMessage: text, isTranslated: false };
     }
     
-    // For outgoing messages - we don't translate here (sender sees their own message as-is)
+    // For outgoing messages - sender sees their own message as-is (already in native script)
     if (senderId === currentUserId) {
+      console.log('[MiniChatWindow] Own message, skipping translation');
       return { translatedMessage: text, isTranslated: false };
     }
     
     try {
       // Translate partner's message to current user's language
-      // Use partner's language as source, current user's language as target
+      // Partner's native text → Current user's native text
+      console.log('[MiniChatWindow] Translating from', partnerLanguage, 'to', currentUserLanguage);
+      
       const result = await translateForChat(text, { 
         senderLanguage: partnerLanguage, 
         receiverLanguage: currentUserLanguage 
       });
       
-      // Only mark as translated if we actually got a different text
+      // Check if translation actually happened
       const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;
+      
+      console.log('[MiniChatWindow] Translation result:', {
+        original: text.slice(0, 30),
+        translated: result.text?.slice(0, 30),
+        wasTranslated: wasActuallyTranslated,
+        mode: result.mode
+      });
       
       return {
         translatedMessage: wasActuallyTranslated ? result.text : text,
@@ -476,7 +496,6 @@ const MiniChatWindow = ({
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
-      // On error, show original text without marking as translated
       return { translatedMessage: text, isTranslated: false };
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);
