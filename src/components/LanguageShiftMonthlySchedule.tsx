@@ -332,7 +332,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
             </span>
           </div>
           <p className="text-xs text-warning/70 mt-1">
-            On the 28th: A→B, B→C, C→A
+            On the 28th: A→C, C→B, B→A
           </p>
         </div>
 
