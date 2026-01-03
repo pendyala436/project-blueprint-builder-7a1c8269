@@ -198,14 +198,71 @@ serve(async (req) => {
           console.log(`[AI Election] Cancelled expired election ${existing.id} with no candidates`);
         } else if (!votingExpired) {
           return new Response(
-            JSON.stringify({ error: "Election already in progress for this year" }),
+            JSON.stringify({ error: "Election already in progress for this year", requiresEndFirst: false }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         } else {
-          return new Response(
-            JSON.stringify({ error: "Election has candidates. End the election first to declare a winner." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          // Expired election with candidates - auto-end it and declare winner
+          console.log(`[AI Election] Auto-ending expired election ${existing.id} with ${candidateCount} candidates`);
+          
+          // Get candidates sorted by votes
+          const { data: expiredCandidates } = await supabase
+            .from("election_candidates")
+            .select("*")
+            .eq("election_id", existing.id)
+            .order("vote_count", { ascending: false });
+
+          if (expiredCandidates && expiredCandidates.length > 0) {
+            const winner = expiredCandidates[0];
+            const totalVotesExpired = expiredCandidates.reduce((sum, c) => sum + c.vote_count, 0);
+
+            // Calculate term end (1 year from now)
+            const termEnd = new Date(now);
+            termEnd.setFullYear(termEnd.getFullYear() + LEADER_TERM_YEARS);
+
+            // End current leader if exists
+            await supabase
+              .from("community_leaders")
+              .update({ status: "ended" })
+              .eq("language_code", languageCode)
+              .eq("status", "active");
+
+            // Create new leader
+            await supabase
+              .from("community_leaders")
+              .insert({
+                language_code: languageCode,
+                user_id: winner.user_id,
+                election_id: existing.id,
+                term_start: now.toISOString(),
+                term_end: termEnd.toISOString(),
+                status: "active"
+              });
+
+            // Update election as completed
+            await supabase
+              .from("community_elections")
+              .update({
+                status: "completed",
+                winner_id: winner.user_id,
+                ended_at: now.toISOString(),
+                total_votes: totalVotesExpired,
+                election_results: {
+                  winner_id: winner.user_id,
+                  total_votes: totalVotesExpired,
+                  candidates_count: expiredCandidates.length,
+                  final_standings: expiredCandidates.map((c, i) => ({
+                    rank: i + 1,
+                    user_id: c.user_id,
+                    votes: c.vote_count
+                  }))
+                }
+              })
+              .eq("id", existing.id);
+
+            console.log(`[AI Election] Auto-declared winner ${winner.user_id} from expired election`);
+          }
+          // After auto-ending, continue to create a new election below
         }
       }
 
