@@ -93,7 +93,7 @@ const AdminLeadersScreen = lazy(() => import(/* webpackChunkName: "admin" */ "./
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
-// MultilingualChatDemo removed - using server-side translation only
+const MultilingualChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/MultilingualChatPage"));
 
 // ULTRA-AGGRESSIVE React Query caching - minimize network calls
 const queryClient = new QueryClient({
@@ -223,7 +223,7 @@ const App = () => (
             <Route path="/admin/leaders" element={<LazyRoute component={AdminLeadersScreen} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
-            {/* Multilingual chat demo removed - using server-side translation */}
+            <Route path="/multilingual-chat" element={<LazyRoute component={MultilingualChatPage} />} />
             <Route path="*" element={<LazyRoute component={NotFound} />} />
           </Routes>
         </AutoLogoutWrapper>
