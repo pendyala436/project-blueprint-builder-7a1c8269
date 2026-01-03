@@ -121,25 +121,19 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [monthOffset, setMonthOffset] = useState(0);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
   const [offDayVolunteers, setOffDayVolunteers] = useState<OffDayVolunteer[]>([]);
   const [myVolunteerDates, setMyVolunteerDates] = useState<string[]>([]);
 
-  // Generate 3 months at a time using proper calendar date calculations
-  // This continues infinitely - supports years 1 to 9999
-  const calendarMonths = useMemo(() => {
-    // Generate current month + next many months (enough for navigation)
-    // We generate 12 months ahead to allow smooth navigation
-    const allMonths = generateCalendarMonthsFromNow(36); // 3 years ahead
-    return allMonths;
+  // Generate 3 months for selection (current + next 2)
+  const availableMonths = useMemo(() => {
+    return generateCalendarMonthsFromNow(3); // Current month + 2 more
   }, []);
 
-  // Get the three months to display based on current offset
-  const displayedMonths = useMemo(() => {
-    const startIdx = monthOffset;
-    const endIdx = Math.min(startIdx + 3, calendarMonths.length);
-    return calendarMonths.slice(startIdx, endIdx);
-  }, [calendarMonths, monthOffset]);
+  // Get the single selected month to display
+  const selectedMonth = useMemo(() => {
+    return availableMonths[selectedMonthIndex] || availableMonths[0];
+  }, [availableMonths, selectedMonthIndex]);
 
   useEffect(() => {
     if (userId) {
@@ -249,8 +243,8 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
     );
   }
 
-  // Combine all days from displayed months
-  const allDisplayedDays = displayedMonths.flatMap(m => m.days);
+  // Get days from selected month only
+  const allDisplayedDays = selectedMonth.days;
 
   return (
     <Card className="bg-background border-border">
@@ -320,38 +314,28 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </p>
         </div>
 
-        {/* Month Navigation - Shows 3 months at a time */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMonthOffset(Math.max(0, monthOffset - 1))}
-            disabled={monthOffset === 0}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex gap-2 flex-wrap justify-center">
-            {displayedMonths.map((month, idx) => (
-              <Badge 
-                key={`${month.year}-${month.month}`} 
-                variant={idx === 0 ? "default" : "secondary"}
-                className="text-sm px-3 py-1"
-              >
-                {month.name}
-              </Badge>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMonthOffset(Math.min(calendarMonths.length - 3, monthOffset + 1))}
-            disabled={monthOffset >= calendarMonths.length - 3}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        {/* Month Selector - Click to select which month to view */}
+        <div className="flex items-center justify-center gap-2">
+          {availableMonths.map((month, idx) => (
+            <Button
+              key={`${month.year}-${month.month}`}
+              variant={selectedMonthIndex === idx ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedMonthIndex(idx)}
+              className="text-sm px-4 py-2"
+            >
+              {month.monthName}
+            </Button>
+          ))}
         </div>
 
-        {/* Calendar Grid - 3 months side by side */}
+        {/* Selected Month Header */}
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-foreground">{selectedMonth.name}</h3>
+          <p className="text-sm text-muted-foreground">{selectedMonth.daysCount} days</p>
+        </div>
+
+        {/* Calendar Grid - Single month */}
         <div 
           className="border border-border rounded-lg"
           style={{ 
@@ -364,21 +348,6 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
         >
           <table className="border-collapse w-full" style={{ minWidth: `${120 + (allDisplayedDays.length * 36)}px` }}>
             <thead className="sticky top-0 z-20 bg-background">
-              {/* Month headers row */}
-              <tr className="border-b border-border">
-                <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-background z-30 border-r border-border">
-                  &nbsp;
-                </th>
-                {displayedMonths.map(month => (
-                  <th 
-                    key={`header-${month.year}-${month.month}`}
-                    colSpan={month.days.length}
-                    className="p-2 text-center text-sm font-bold border-r border-border bg-primary/5"
-                  >
-                    {month.name}
-                  </th>
-                ))}
-              </tr>
               {/* Day numbers row */}
               <tr className="border-b border-border">
                 <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-background z-30 border-r border-border">
