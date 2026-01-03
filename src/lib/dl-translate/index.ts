@@ -71,5 +71,9 @@ export {
 } from '@/lib/translation/ml-translation-engine';
 
 // Re-export ML translation hook
-export { useMLTranslation } from '@/hooks/useMLTranslation';
-export type { UseMLTranslationOptions, UseMLTranslationReturn, MLTranslationProgress } from '@/hooks/useMLTranslation';
+export { 
+  useMLTranslation,
+  type UseMLTranslationOptions, 
+  type UseMLTranslationReturn, 
+  type MLTranslationProgress 
+} from '@/hooks/useMLTranslation';
