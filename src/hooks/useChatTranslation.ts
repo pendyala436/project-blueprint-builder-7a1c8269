@@ -1,6 +1,9 @@
 /**
  * useChatTranslation - DL-Translate Chat Hook
  * 
+ * 100% Local - No External API Calls
+ * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 
  * Features:
  * - Auto-detect source/target language from user profiles (mother tongue)
  * - Type in Latin letters → Live preview in native script (non-blocking)
@@ -10,8 +13,7 @@
  * - Bi-directional: Works both ways
  * - Non-blocking: Typing is never affected by translation
  * 
- * Uses DL-Translate HuggingFace API for 200+ language support:
- * https://huggingface.co/spaces/kintong3000/dl-translate
+ * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';

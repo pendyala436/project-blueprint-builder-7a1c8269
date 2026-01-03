@@ -3,16 +3,25 @@
  * 
  * 100% LOCAL - No External API Calls
  * 
- * Replaces HuggingFace Space API with comprehensive local translation:
- * - Bidirectional phrase dictionaries (200+ common phrases)
- * - Word-by-word translation with fallback
- * - Phonetic transliteration for native scripts
- * - Caching for performance
+ * Translation methods (in order of preference):
+ * 1. Phrase dictionary (instant) - common phrases
+ * 2. Word-by-word dictionary (instant) - individual words
+ * 3. Phonetic transliteration (instant) - Latin → native script
+ * 4. ML Translation (neural) - @huggingface/transformers NLLB-200 model
  * 
- * Language support: 50+ languages via local dictionaries
+ * Language support: 200+ languages via NLLB-200 model
+ * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
+import { 
+  translateWithML, 
+  isLanguageSupported, 
+  getSupportedLanguages,
+  initializeMLTranslator,
+  isModelLoaded,
+  NLLB_LANGUAGE_CODES
+} from './ml-translator';
 
 // Translation cache
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -480,8 +489,13 @@ function translateWordByWord(
 }
 
 /**
- * Translate text using LOCAL dictionary and transliteration
- * NO EXTERNAL API CALLS
+ * Translate text using LOCAL dictionary, transliteration, and ML models
+ * 
+ * Translation priority:
+ * 1. Phrase dictionary (instant)
+ * 2. Word-by-word dictionary (instant)
+ * 3. Phonetic transliteration (instant)
+ * 4. ML Translation via NLLB-200 (200+ languages)
  * 
  * @param text - Text to translate
  * @param fromLang - Source language (code or name)
@@ -509,45 +523,61 @@ export async function translateWithDLTranslate(
   const cacheKey = `${trimmed}|${sourceCode}|${targetCode}`;
   const cached = translationCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log('[DL-Translate Local] Cache hit');
+    console.log('[DL-Translate] Cache hit');
     return cached.result;
   }
   
-  console.log('[DL-Translate Local] Translating:', { 
+  console.log('[DL-Translate] Translating:', { 
     text: trimmed.slice(0, 50), 
     from: sourceCode, 
     to: targetCode 
   });
   
-  // Try full phrase translation first
+  // 1. Try full phrase translation first (instant)
   const phraseResult = translateWithDictionary(trimmed, sourceCode, targetCode);
   if (phraseResult) {
-    console.log('[DL-Translate Local] Phrase match:', phraseResult);
+    console.log('[DL-Translate] Phrase match:', phraseResult);
     addToCache(cacheKey, phraseResult);
     return phraseResult;
   }
   
-  // Try word-by-word translation
+  // 2. Try word-by-word translation (instant)
   const wordResult = translateWordByWord(trimmed, sourceCode, targetCode);
   if (wordResult && wordResult !== trimmed) {
-    console.log('[DL-Translate Local] Word-by-word result:', wordResult.slice(0, 50));
+    console.log('[DL-Translate] Word-by-word result:', wordResult.slice(0, 50));
     addToCache(cacheKey, wordResult);
     return wordResult;
   }
   
-  // Try phonetic transliteration for native script conversion
+  // 3. Try phonetic transliteration for native script conversion (instant)
   const targetLangName = getDLTranslateLanguageName(targetCode).toLowerCase();
   if (isPhoneticTransliterationSupported(targetLangName)) {
     const phoneticResult = phoneticTransliterate(trimmed, targetLangName);
     if (phoneticResult && phoneticResult !== trimmed) {
-      console.log('[DL-Translate Local] Phonetic transliteration:', phoneticResult.slice(0, 50));
+      console.log('[DL-Translate] Phonetic transliteration:', phoneticResult.slice(0, 50));
       addToCache(cacheKey, phoneticResult);
       return phoneticResult;
     }
   }
   
+  // 4. Try ML translation using NLLB-200 (200+ languages)
+  const sourceLangName = getDLTranslateLanguageName(sourceCode).toLowerCase();
+  if (isLanguageSupported(sourceLangName) && isLanguageSupported(targetLangName)) {
+    try {
+      console.log('[DL-Translate] Trying ML translation (NLLB-200)...');
+      const mlResult = await translateWithML(trimmed, sourceLangName, targetLangName);
+      if (mlResult && mlResult !== trimmed) {
+        console.log('[DL-Translate] ML translation result:', mlResult.slice(0, 50));
+        addToCache(cacheKey, mlResult);
+        return mlResult;
+      }
+    } catch (error) {
+      console.warn('[DL-Translate] ML translation failed:', error);
+    }
+  }
+  
   // No translation available
-  console.log('[DL-Translate Local] No translation found, returning original');
+  console.log('[DL-Translate] No translation found, returning original');
   return null;
 }
 
@@ -578,3 +608,54 @@ export function clearDLTranslateCache(): void {
 export function getDLTranslateCacheStats(): { size: number } {
   return { size: translationCache.size };
 }
+
+/**
+ * Check if a language is supported (200+ languages via NLLB-200)
+ */
+export function isDLTranslateLanguageSupported(language: string): boolean {
+  // Check dictionary languages
+  const normalized = language.toLowerCase().trim();
+  if (DL_TRANSLATE_LANGUAGES[normalized]) {
+    return true;
+  }
+  // Check NLLB-200 languages
+  return isLanguageSupported(normalized);
+}
+
+/**
+ * Get all supported languages (200+)
+ */
+export function getDLTranslateSupportedLanguages(): string[] {
+  const languages = new Set<string>();
+  
+  // Add dictionary languages
+  Object.values(DL_TRANSLATE_LANGUAGES).forEach(lang => {
+    languages.add(lang);
+  });
+  
+  // Add NLLB-200 languages
+  getSupportedLanguages().forEach(lang => {
+    languages.add(lang.charAt(0).toUpperCase() + lang.slice(1));
+  });
+  
+  return Array.from(languages).sort();
+}
+
+/**
+ * Initialize ML translator (optional - auto-initializes on first use)
+ */
+export async function initializeDLTranslate(
+  onProgress?: (progress: number) => void
+): Promise<boolean> {
+  return initializeMLTranslator('small', onProgress);
+}
+
+/**
+ * Check if ML model is loaded
+ */
+export function isDLTranslateModelLoaded(): boolean {
+  return isModelLoaded();
+}
+
+// Re-export NLLB language codes for external use
+export { NLLB_LANGUAGE_CODES } from './ml-translator';

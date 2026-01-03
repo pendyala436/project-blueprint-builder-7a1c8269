@@ -1,10 +1,10 @@
 /**
  * Translation Module - Unified Export
  * 
- * Multi-tier translation:
+ * Multi-tier translation (200+ languages):
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
- * 3. DL-Translate HuggingFace API (200+ languages via NLLB model)
+ * 3. ML Translation via NLLB-200 model (200+ languages, in-browser)
  * 
  * Flow:
  * - Typing: Latin letters → Live preview in native script
@@ -12,7 +12,8 @@
  * - Receive: Auto-translate to receiver's language
  * - Bi-directional: Works both ways
  * 
- * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
+ * Based on: https://github.com/xhluca/dl-translate
+ * Model: NLLB-200 via @huggingface/transformers
  */
 
 // ============================================================================
@@ -97,7 +98,7 @@ export {
 } from './ml-translation-engine';
 
 // ============================================================================
-// DL-Translate HuggingFace API
+// DL-Translate API (200+ languages via NLLB-200)
 // ============================================================================
 export {
   translateWithDLTranslate,
@@ -105,8 +106,28 @@ export {
   isDLTranslateSupported,
   clearDLTranslateCache,
   getDLTranslateCacheStats,
+  isDLTranslateLanguageSupported,
+  getDLTranslateSupportedLanguages,
+  initializeDLTranslate,
+  isDLTranslateModelLoaded,
   DL_TRANSLATE_LANGUAGES,
+  NLLB_LANGUAGE_CODES,
 } from './dl-translate-api';
+
+// ============================================================================
+// ML Translator (NLLB-200 model)
+// ============================================================================
+export {
+  translateWithML as translateWithNLLB,
+  initializeMLTranslator as initializeNLLBTranslator,
+  isLanguageSupported as isNLLBLanguageSupported,
+  getSupportedLanguages as getNLLBSupportedLanguages,
+  isModelLoaded as isNLLBModelLoaded,
+  isModelCurrentlyLoading as isNLLBModelLoading,
+  getModelInfo as getNLLBModelInfo,
+  unloadModel as unloadNLLBModel,
+  getNLLBCode,
+} from './ml-translator';
 
 // ============================================================================
 // React Hooks

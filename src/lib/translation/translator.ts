@@ -1,12 +1,12 @@
 /**
  * DL-Translate Inspired TypeScript Translator
  * 
- * Translation methods:
+ * Translation methods (200+ languages):
  * 1. Dictionary Translation (main) - instant common phrases
  * 2. Phonetic Transliteration (fallback) - Latin → native script
- * 3. DL-Translate HuggingFace API (fallback) - 200+ languages
+ * 3. ML Translation via NLLB-200 (fallback) - 200+ languages in-browser
  * 
- * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
+ * Based on: https://github.com/xhluca/dl-translate
  */
 
 import type { 

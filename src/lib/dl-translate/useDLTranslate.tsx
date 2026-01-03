@@ -1,7 +1,10 @@
 /**
  * React Hook for DL-Translate
  * 
- * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
+ * 100% Local - No External API Calls
+ * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 
+ * Based on: https://github.com/xhluca/dl-translate
  * 
  * Translation methods:
  * 1. Dictionary Translation + Phonetic Transliteration (instant, browser)
