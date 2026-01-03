@@ -327,7 +327,7 @@ export function PrivateVideoCallDialog({
           {/* Video area */}
           <div className={cn("relative flex-1", showChat && "lg:flex-[2]")}>
             {/* Main video (remote) */}
-            <div className="relative bg-black aspect-video">
+            <div className="relative bg-video aspect-video">
               {remoteStream ? (
                 <video
                   ref={remoteVideoRef}
@@ -338,7 +338,7 @@ export function PrivateVideoCallDialog({
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   {isConnecting ? (
-                    <div className="text-center text-white">
+                    <div className="text-center text-video-text">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                       <p>Connecting...</p>
                     </div>
@@ -353,7 +353,7 @@ export function PrivateVideoCallDialog({
             </div>
 
             {/* Local video (picture-in-picture) */}
-            <div className="absolute bottom-4 right-4 w-32 sm:w-40 aspect-video bg-black rounded-lg overflow-hidden shadow-lg border-2 border-background">
+            <div className="absolute bottom-4 right-4 w-32 sm:w-40 aspect-video bg-video rounded-lg overflow-hidden shadow-lg border-2 border-background">
               <video
                 ref={localVideoRef}
                 autoPlay
@@ -362,7 +362,7 @@ export function PrivateVideoCallDialog({
                 className="w-full h-full object-cover"
               />
               {!isVideoEnabled && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                <div className="absolute inset-0 flex items-center justify-center bg-video-overlay/80">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={userPhoto || undefined} />
                     <AvatarFallback>{userName[0]}</AvatarFallback>

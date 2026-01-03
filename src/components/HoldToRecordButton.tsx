@@ -330,7 +330,7 @@ export const HoldToRecordButton = ({
           "rounded-full flex items-center justify-center transition-all duration-200",
           "h-8 w-8 select-none touch-none",
           isRecording 
-            ? "bg-green-500 hover:bg-green-600 text-white scale-110 animate-pulse shadow-lg shadow-green-500/50" 
+            ? "bg-live hover:bg-live/90 text-live-foreground scale-110 animate-pulse shadow-lg shadow-live/50" 
             : "bg-destructive hover:bg-destructive/90 text-destructive-foreground",
           disabled && "opacity-50 cursor-not-allowed",
           className
@@ -342,7 +342,7 @@ export const HoldToRecordButton = ({
       
       {/* Recording duration indicator */}
       {isRecording && (
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap shadow-lg">
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-live text-live-foreground text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap shadow-lg">
           {formatDuration(recordingDuration)}
         </div>
       )}

@@ -202,7 +202,7 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn("p-2 rounded-full", shiftStatus.color)}>
-                <StatusIcon className="h-4 w-4 text-white" />
+                <StatusIcon className="h-4 w-4 text-primary-foreground" />
               </div>
               <div>
                 <p className="font-medium text-sm">{shiftStatus.label}</p>
@@ -233,7 +233,7 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
   return (
     <Card className="relative overflow-hidden">
       <div className="absolute top-0 right-0 p-2">
-        <Badge className="bg-gradient-to-r from-primary to-accent text-white">
+        <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
           <Sparkles className="h-3 w-3 mr-1" />
           AI Scheduled
         </Badge>
@@ -277,7 +277,7 @@ const AIShiftDisplay = ({ userId, compact = false }: AIShiftDisplayProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn("p-2 rounded-full", shiftStatus.color)}>
-                <StatusIcon className="h-5 w-5 text-white" />
+                <StatusIcon className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
                 <p className="font-semibold">{shiftStatus.label}</p>

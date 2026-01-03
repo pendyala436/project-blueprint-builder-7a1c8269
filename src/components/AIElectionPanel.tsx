@@ -145,7 +145,7 @@ export const AIElectionPanel = ({
     <div className="space-y-4">
       {/* AI Badge */}
       <div className="flex items-center justify-between">
-        <Badge className="bg-gradient-to-r from-primary to-accent text-white">
+        <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
           <Sparkles className="h-3 w-3 mr-1" />
           AI-Managed Elections
         </Badge>

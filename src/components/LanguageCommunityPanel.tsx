@@ -1468,7 +1468,7 @@ export const LanguageCommunityPanel = ({
                         <DialogHeader>
                           <DialogTitle>{t('takeSelfie', 'Take a Selfie')}</DialogTitle>
                         </DialogHeader>
-                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                        <div className="relative aspect-video bg-video rounded-lg overflow-hidden">
                           <video 
                             ref={videoRef}
                             autoPlay 
