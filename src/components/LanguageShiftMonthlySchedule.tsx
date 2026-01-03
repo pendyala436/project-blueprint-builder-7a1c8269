@@ -433,24 +433,23 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </Button>
         </div>
 
-        {/* Calendar Grid - Scroll both directions */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          <ScrollArea className="h-[400px]">
-            <div className="overflow-x-auto">
-              <div style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
-                {renderGridHeader()}
-                <div>
-                  {scheduleData.all_women.length > 0 ? (
-                    scheduleData.all_women.map(renderWomanRow)
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No team members found
-                    </div>
-                  )}
+        {/* Calendar Grid - Full bidirectional scrolling */}
+        <div 
+          className="border border-border rounded-lg overflow-auto" 
+          style={{ maxHeight: '400px' }}
+        >
+          <div style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
+            {renderGridHeader()}
+            <div>
+              {scheduleData.all_women.length > 0 ? (
+                scheduleData.all_women.map(renderWomanRow)
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No team members found
                 </div>
-              </div>
+              )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Off-Day Volunteers Section (Leader View) */}
