@@ -36,7 +36,10 @@ export interface AIElectionStatus {
   totalVotes: number;
   needsNewElection: boolean;
   votingExpired: boolean;
-  termYears: number;
+  termMonths: number;
+  minWomenRequired: number;
+  nominationDays: number;
+  votingDays: number;
   shiftConfig: {
     hours: number;
     buffer: number;
@@ -370,6 +373,10 @@ export const useAIElectionSystem = (
     hasActiveElection,
     hasVoted,
     votingExpired,
+    minWomenRequired: status?.minWomenRequired || 50,
+    nominationDays: status?.nominationDays || 5,
+    votingDays: status?.votingDays || 2,
+    termMonths: status?.termMonths || 12,
     loadStatus,
     startElection,
     nominateCandidate,

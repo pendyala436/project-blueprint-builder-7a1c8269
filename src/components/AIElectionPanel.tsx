@@ -64,12 +64,20 @@ export const AIElectionPanel = ({
     hasActiveElection,
     hasVoted,
     votingExpired,
+    minWomenRequired,
+    nominationDays,
+    votingDays,
+    termMonths,
     startElection,
     nominateCandidate,
     castVote,
     endElection,
     sendAnnouncement
   } = useAIElectionSystem(languageCode, currentUserId);
+
+  // Count women members
+  const womenCount = members.length;
+  const canStartElection = womenCount >= minWomenRequired;
 
   const [showNominateDialog, setShowNominateDialog] = useState(false);
   const [showSelfNominateDialog, setShowSelfNominateDialog] = useState(false);
@@ -151,7 +159,7 @@ export const AIElectionPanel = ({
           AI-Managed Elections
         </Badge>
         <Badge variant="outline" className="text-xs">
-          {status.termYears} year term
+          {status.termMonths || 12} month term
         </Badge>
       </div>
 
@@ -229,23 +237,28 @@ export const AIElectionPanel = ({
         </CardContent>
       </Card>
 
-      {/* Leader Responsibilities */}
+      {/* Leader Responsibilities - Full Dashboard for Leaders */}
       {leader && (
-        <Card className="bg-muted/50">
+        <Card className={cn("bg-muted/50", isLeader && "border-primary/30 border-2")}>
           <CardContent className="p-3">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Leader Responsibilities:</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              {isLeader ? "Your Leader Responsibilities:" : "Leader Responsibilities:"}
+            </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" /> Coordinate shifts
+                <Users className="h-3 w-3 text-primary" /> Manage {womenCount} women
               </div>
               <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" /> Schedule management
+                <Shield className="h-3 w-3 text-primary" /> Solve issues
               </div>
               <div className="flex items-center gap-1">
-                <Users className="h-3 w-3" /> Assist new users
+                <Clock className="h-3 w-3 text-primary" /> Coordinate shifts
               </div>
               <div className="flex items-center gap-1">
-                <Shield className="h-3 w-3" /> Resolve disputes
+                <Calendar className="h-3 w-3 text-primary" /> Build teams
+              </div>
+              <div className="flex items-center gap-1 col-span-2">
+                <Megaphone className="h-3 w-3 text-primary" /> Communicate with Admin & post announcements
               </div>
             </div>
           </CardContent>
@@ -444,18 +457,45 @@ export const AIElectionPanel = ({
             </>
           ) : (
             <>
+              {/* Minimum Women Requirement */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Women in Group:</span>
+                  <Badge variant={canStartElection ? "default" : "destructive"}>
+                    {womenCount} / {minWomenRequired} required
+                  </Badge>
+                </div>
+                {!canStartElection && (
+                  <p className="text-xs text-destructive">
+                    Need at least {minWomenRequired} women to start an election. 
+                    Currently {minWomenRequired - womenCount} more needed.
+                  </p>
+                )}
+              </div>
+              
               <p className="text-sm text-muted-foreground">
                 {needsNewElection 
                   ? "The leader's term has ended. Start a new election!"
-                  : "No active election. Any member can start one."}
+                  : "No active election. Any eligible woman can start one."}
               </p>
+              
+              {/* Election Timeline Info */}
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 space-y-1">
+                <p><strong>Nomination Phase:</strong> {nominationDays} days</p>
+                <p><strong>Voting Phase:</strong> {votingDays} days</p>
+                <p><strong>Leader Term:</strong> {termMonths} months</p>
+              </div>
+              
               <Button 
                 className="w-full" 
                 onClick={startElection}
-                disabled={isProcessing}
+                disabled={isProcessing || !canStartElection}
               >
                 <Play className="h-4 w-4 mr-2" />
-                Start New Election (7-day voting)
+                {canStartElection 
+                  ? `Start Election (${nominationDays + votingDays} days total)`
+                  : `Need ${minWomenRequired - womenCount} more women`
+                }
               </Button>
             </>
           )}
