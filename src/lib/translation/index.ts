@@ -1,7 +1,7 @@
 /**
  * DL-Translate Translation Module
  * 
- * Browser-based translation using Transformers.js + M2M100 model
+ * Browser-based translation using pure JavaScript dictionaries
  * Based on: https://github.com/xhluca/dl-translate
  * 
  * NO external API calls - all logic embedded in client code
@@ -69,9 +69,9 @@ export {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getDLM2M100Code as getLanguageCode,
-  isDLM2M100Supported as isLanguageSupported,
-  getSupportedDLM2M100Languages as getSupportedLanguages,
+  getLanguageCode,
+  isLanguageSupported,
+  getSupportedLanguages,
   LANGUAGE_CODES,
 } from './ml-translation-engine';
 

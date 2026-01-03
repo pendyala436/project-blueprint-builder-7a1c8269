@@ -1,5 +1,5 @@
 /**
- * Live Translation Chat Hook (DL-Translate + M2M100)
+ * Live Translation Chat Hook (DL-Translate)
  * 
  * Flow:
  * 1. Typing: User types in Latin letters (phonetic input)
@@ -7,7 +7,7 @@
  * 3. Send: Translation happens in background, sender sees native text
  * 4. Receiver: Sees message in their mother tongue
  * 5. Bi-directional: Same flow for both users
- * 6. Dynamic: Supports 200 languages (DL-Translate + M2M100)
+ * 6. Dynamic: Supports 200 languages (DL-Translate)
  * 7. Non-blocking: Typing is never affected by translation
  */
 
@@ -22,8 +22,8 @@ import {
 } from '@/lib/translation/translation-engine';
 import { isLatinScriptLanguage } from '@/lib/translation/language-codes';
 import {
-  getSupportedDLM2M100Languages,
-  isDLM2M100Supported
+  getSupportedLanguages,
+  isLanguageSupported
 } from '@/lib/translation/ml-translation-engine';
 
 // ============ Types ============
@@ -323,12 +323,12 @@ export function useLiveTranslationChat(
 
   // ============ Utilities ============
 
-  const getSupportedLanguages = useCallback(() => {
-    return getSupportedDLM2M100Languages();
+  const getAvailableLanguages = useCallback(() => {
+    return getSupportedLanguages();
   }, []);
 
-  const isLanguageSupported = useCallback((lang: string) => {
-    return isDLM2M100Supported(lang);
+  const checkLanguageSupported = useCallback((lang: string) => {
+    return isLanguageSupported(lang);
   }, []);
 
   const isSameLanguage = useCallback((lang1: string, lang2: string) => {
@@ -348,8 +348,8 @@ export function useLiveTranslationChat(
     prepareOutgoing,
     translateForReceiver,
     processIncoming,
-    getSupportedLanguages,
-    isLanguageSupported,
+    getSupportedLanguages: getAvailableLanguages,
+    isLanguageSupported: checkLanguageSupported,
     isSameLanguage,
     detectLanguage,
     isTranslating

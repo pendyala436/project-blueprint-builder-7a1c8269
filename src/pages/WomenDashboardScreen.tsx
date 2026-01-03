@@ -78,7 +78,7 @@ interface OnlineMan {
   hasRecharged: boolean;
   lastSeen: string;
   isSameLanguage: boolean;
-  isNllbLanguage: boolean;
+  isTranslationSupported: boolean;
   activeChatCount?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
@@ -488,7 +488,7 @@ const WomenDashboardScreen = () => {
           hasRecharged,
           lastSeen: man.last_seen || new Date().toISOString(),
           isSameLanguage,
-          isNllbLanguage: true, // All languages supported with translation
+          isTranslationSupported: true, // All languages supported with translation
           activeChatCount: man.active_chat_count || 0
         };
       });

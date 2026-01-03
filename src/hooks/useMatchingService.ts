@@ -86,7 +86,7 @@ export const useMatchingService = () => {
 
   /**
    * Fetch available women for male dashboard
-   * Implements: Language matching + NLLB fallback for non-Indian men
+   * Implements: Language matching + translation fallback for non-Indian men
    */
   const fetchMatchableWomen = useCallback(async (config: MatchingConfig): Promise<MatchingResult> => {
     setIsLoading(true);

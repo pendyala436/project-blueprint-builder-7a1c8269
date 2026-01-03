@@ -154,7 +154,7 @@ const PERSONALITY_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ
 interface MatchFiltersPanelProps {
   filters: MatchFilters;
   onFiltersChange: (filters: MatchFilters) => void;
-  userCountry?: string; // User's country for showing NLLB-200 feature (India only)
+  userCountry?: string; // User's country for showing translation feature (India only)
 }
 
 export function MatchFiltersPanel({
@@ -162,7 +162,7 @@ export function MatchFiltersPanel({
   onFiltersChange,
   userCountry = "",
 }: MatchFiltersPanelProps) {
-  // Check if user is from India to show NLLB-200 language feature
+  // Check if user is from India to show DL-Translate language feature
   const isIndianUser = userCountry.toLowerCase() === "india";
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<MatchFilters>(filters);

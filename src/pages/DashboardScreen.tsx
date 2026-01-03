@@ -117,15 +117,15 @@ const DashboardScreen = () => {
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState("IN");
-  const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
+  const [userCountryName, setUserCountryName] = useState(""); // Full country name for translation feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
-  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // NLLB-200 language code
+  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // DL-Translate language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
-  const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
+  const [isNonIndianTranslationUser, setIsNonIndianTranslationUser] = useState(false); // Is man's language non-Indian but translation supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -464,7 +464,7 @@ const DashboardScreen = () => {
       // Use country from main profiles table
       const userCountryValue = mainProfile?.country;
       if (userCountryValue) {
-        setUserCountryName(userCountryValue); // Store full country name for NLLB feature
+        setUserCountryName(userCountryValue); // Store full country name for translation feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -1204,7 +1204,7 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: All NLLB-200 Women with Auto-Translation - List View */}
+              {/* Right Column: All Women with Auto-Translation - List View */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-primary/80">{t('otherLanguages', 'Other Languages')}</span>

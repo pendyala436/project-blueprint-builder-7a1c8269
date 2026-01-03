@@ -1,4 +1,4 @@
-// Complete language list including ISO 639-1, NLLB-200, and all Indian languages
+// Complete language list including ISO 639-1, DL-Translate, and all Indian languages
 export const languages = [
   // Major World Languages (ISO 639-1)
   { code: "aa", name: "Afar", nativeName: "Afaraf" },
@@ -232,7 +232,7 @@ export const languages = [
   { code: "rhg", name: "Rohingya", nativeName: "Ruáingga" },
   { code: "dcc", name: "Deccan", nativeName: "دکنی" },
 
-  // NLLB-200 Additional Languages (African)
+  // DL-Translate Additional Languages (African)
   { code: "ace", name: "Acehnese", nativeName: "Acèh" },
   { code: "acm", name: "Mesopotamian Arabic", nativeName: "عراقي" },
   { code: "acq", name: "Ta'izzi-Adeni Arabic", nativeName: "عربي" },

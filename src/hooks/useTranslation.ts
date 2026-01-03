@@ -10,7 +10,7 @@ export const useTranslation = () => {
     setLanguage: context.setLanguage,
     isChangingLanguage: context.isLoading,
     staticLanguages: ['English'],
-    getNLLBLanguage: () => undefined,
+    getTranslationLanguage: () => undefined,
   };
 };
 

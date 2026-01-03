@@ -6,7 +6,7 @@
  * 
  * KEY FEATURES:
  * - Tinder-style card swiping interface
- * - Language-based matching algorithm (NLLB-200)
+ * - Language-based matching algorithm (DL-Translate)
  * - Advanced filtering (age, location, lifestyle, etc.)
  * - Real-time match score calculation
  * - Integration with Supabase for data persistence
@@ -124,7 +124,7 @@ const MatchDiscoveryScreen = () => {
   // Current user's gender (used for opposite gender matching)
   const [currentUserGender, setCurrentUserGender] = useState<string>("");
   
-  // Current user's country (used for NLLB-200 feature visibility)
+  // Current user's country (used for translation feature visibility)
   const [currentUserCountry, setCurrentUserCountry] = useState<string>("");
   
   // Current user's ID for relationship actions
@@ -429,7 +429,7 @@ const MatchDiscoveryScreen = () => {
             theirLanguages.forEach(l => languagesSet.add(l));
             if (profile.country) countriesSet.add(profile.country);
 
-            // ============= LANGUAGE MATCHING ALGORITHM (NLLB-200 BASED) =============
+            // ============= LANGUAGE MATCHING ALGORITHM (DL-TRANSLATE BASED) =============
             
             // Find common languages between current user and this profile
             const commonLanguages = userLanguages.filter(lang => 

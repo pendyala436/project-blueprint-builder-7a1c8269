@@ -65,7 +65,7 @@ By creating an account or using Meow Meow, you agree to these Terms of Service. 
 • No video calls
 • No audio calls
 • No media sharing (temporary only, auto-deleted)
-• Auto-translation using NLLB-200
+• Auto-translation using DL-Translate
 • Only online users are visible
 • Matching based on gender + language rules
 
@@ -350,7 +350,7 @@ All users must verify their age before accessing the platform.`
     content: `MEOW MEOW – AI USAGE DISCLOSURE
 
 AI is used for:
-• Auto-translation (NLLB-200)
+• Auto-translation (DL-Translate)
 • Gender verification
 • Fraud prevention
 • Content moderation

@@ -19,9 +19,9 @@ import {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getDLM2M100Code,
-  isDLM2M100Supported,
-  getSupportedDLM2M100Languages,
+  getLanguageCode,
+  isLanguageSupported,
+  getSupportedLanguages,
 } from '@/lib/translation/ml-translation-engine';
 
 export interface MLTranslationProgress {
@@ -166,9 +166,9 @@ export function useMLTranslation(
     // Utilities
     clearCache: clearMLCache,
     getCacheStats: getMLCacheStats,
-    isSupported: isDLM2M100Supported,
-    getLanguageCode: getDLM2M100Code,
-    getSupportedLanguages: getSupportedDLM2M100Languages,
+    isSupported: isLanguageSupported,
+    getLanguageCode: getLanguageCode,
+    getSupportedLanguages: getSupportedLanguages,
   };
 }
 
