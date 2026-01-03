@@ -1,10 +1,13 @@
 /**
  * ChatMessageInput - Multilingual Chat Input with Auto Script Conversion
  * 
- * Features:
- * - Type in English/Latin → displays in native script (based on sender's mother tongue)
- * - Auto-detect source language
- * - Translation happens only when sender/receiver have different languages
+ * Flow:
+ * 1. User types in Latin letters based on their mother tongue
+ * 2. Live transliteration preview shows text in native script
+ * 3. On send: Text is converted to sender's native script (non-blocking)
+ * 4. Receiver sees message translated to their mother tongue
+ * 5. Bi-directional: Works both ways seamlessly
+ * 6. Non-blocking: Typing is never affected by translation
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
@@ -12,9 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Languages } from 'lucide-react';
+import { Send, Smile, Languages, Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
-import { useServerTranslation } from '@/hooks/useServerTranslation';
+import { useChatTranslation } from '@/hooks/useChatTranslation';
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string, originalMessage?: string) => void;
@@ -22,8 +25,12 @@ interface ChatMessageInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  /** Current user ID */
+  currentUserId?: string;
   /** Sender's mother tongue (user's language) */
   senderLanguage?: string;
+  /** Partner's user ID */
+  partnerId?: string;
   /** Receiver's mother tongue (partner's language) */
   receiverLanguage?: string;
 }
@@ -34,33 +41,39 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   disabled = false,
   placeholder,
   className,
+  currentUserId = '',
   senderLanguage = 'english',
+  partnerId = '',
   receiverLanguage = 'english',
 }) => {
   const { t } = useTranslation();
   const { isRTL } = useI18n();
   const [message, setMessage] = useState('');
   const [isComposing, setIsComposing] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastLatinInputRef = useRef<string>('');
 
-  // Server translation for send-time conversion and live preview
+  // Chat translation hook with live preview
   const { 
-    clearLivePreview, 
-    convertToNative,
+    livePreview,
+    updateLivePreview,
+    clearLivePreview,
+    processOutgoingMessage,
+    isLatinScript,
     isSameLanguage,
     needsTranslation,
-    livePreview,
-    updateLivePreview
-  } = useServerTranslation({
-    userLanguage: senderLanguage,
+    needsNativeConversion
+  } = useChatTranslation({
+    currentUserId,
+    currentUserLanguage: senderLanguage,
+    partnerId,
     partnerLanguage: receiverLanguage,
-    debounceMs: 300
+    debounceMs: 150
   });
 
   // Check if translation will be needed when message is sent
-  const willNeedTranslation = needsTranslation(senderLanguage, receiverLanguage);
+  const willNeedTranslation = needsTranslation;
 
   // Handle typing indicator
   const handleTyping = useCallback((value: string) => {
@@ -79,13 +92,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
   }, [onTyping]);
 
-  // Check if text is Latin script
-  const isLatinScript = useCallback((text: string): boolean => {
-    if (!text) return true;
-    const latinPattern = /^[\u0000-\u007F\u0080-\u00FF\u0100-\u017F\u0180-\u024F\s\d\p{P}]+$/u;
-    return latinPattern.test(text.trim());
-  }, []);
-
   // Handle message change - allow all typing without blocking
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -94,52 +100,42 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setMessage(value);
     handleTyping(value);
     
-    // Track Latin input for potential conversion on send
-    if (isLatinScript(value)) {
-      lastLatinInputRef.current = value;
-      // Update live preview for non-English languages
-      if (!isSameLanguage(senderLanguage, 'english')) {
-        updateLivePreview(value);
-      }
+    // Update live preview for transliteration
+    if (needsNativeConversion && isLatinScript(value)) {
+      updateLivePreview(value);
     } else {
-      // User is typing in native script directly - clear Latin reference
-      lastLatinInputRef.current = '';
+      // User is typing in native script directly or is English speaker
       clearLivePreview();
     }
-  }, [handleTyping, isLatinScript, isSameLanguage, senderLanguage, updateLivePreview, clearLivePreview]);
+  }, [handleTyping, isLatinScript, needsNativeConversion, updateLivePreview, clearLivePreview]);
 
-  // Handle send - always convert on-send (do not trust debounced livePreview for sending)
+  // Handle send - convert on-send in background
   const handleSend = useCallback(async () => {
-    if (disabled || isComposing) return;
+    if (disabled || isComposing || isSending) return;
 
     const rawValue = textareaRef.current?.value ?? message;
     if (!rawValue.trim()) return;
 
     const trimmedMessage = rawValue.trim();
-    const originalLatin = lastLatinInputRef.current;
 
     // Clear UI immediately so fast typers aren't blocked
     setMessage('');
-    lastLatinInputRef.current = '';
     clearLivePreview();
     onTyping?.(false);
     textareaRef.current?.focus();
+    setIsSending(true);
 
-    // If user typed Latin script but their mother tongue is non-English, convert on send
-    if (isLatinScript(trimmedMessage) && !isSameLanguage(senderLanguage, 'english')) {
-      try {
-        const result = await convertToNative(trimmedMessage, senderLanguage);
-        const finalText = result?.text || trimmedMessage;
-        onSendMessage(finalText, originalLatin || trimmedMessage);
-      } catch {
-        onSendMessage(trimmedMessage, originalLatin || trimmedMessage);
-      }
-      return;
+    try {
+      // Process outgoing message - converts to native script if needed
+      const { nativeText, originalLatin } = await processOutgoingMessage(trimmedMessage);
+      onSendMessage(nativeText, originalLatin || trimmedMessage);
+    } catch {
+      // On error, send original message
+      onSendMessage(trimmedMessage, trimmedMessage);
+    } finally {
+      setIsSending(false);
     }
-
-    // English or already-native script
-    onSendMessage(trimmedMessage, originalLatin || trimmedMessage);
-  }, [disabled, isComposing, message, clearLivePreview, onTyping, isLatinScript, isSameLanguage, senderLanguage, convertToNative, onSendMessage]);
+  }, [disabled, isComposing, isSending, message, clearLivePreview, onTyping, processOutgoingMessage, onSendMessage]);
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -178,6 +174,11 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [message]);
 
   const defaultPlaceholder = t('chat.typeMessage', 'Type a message...');
+  
+  // Show native preview if available and different from input
+  const showPreview = livePreview.nativePreview && 
+                      livePreview.nativePreview !== message && 
+                      needsNativeConversion;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
@@ -198,10 +199,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         {/* Message input */}
         <div className="flex-1 relative">
           {/* Native script preview - shown above input when converting */}
-          {livePreview && livePreview !== message && !isSameLanguage(senderLanguage, 'english') && (
+          {showPreview && (
             <div className="absolute -top-8 left-0 right-0 p-1.5 bg-primary/10 rounded text-xs text-muted-foreground border border-primary/20 z-10">
-              <span className="text-[10px] text-muted-foreground/70">Preview: </span>
-              <span className="text-foreground font-medium">{livePreview}</span>
+              <span className="text-[10px] text-muted-foreground/70">
+                {livePreview.isConverting ? (
+                  <Loader2 className="h-3 w-3 inline animate-spin mr-1" />
+                ) : 'Preview: '}
+              </span>
+              <span className="text-foreground font-medium">{livePreview.nativePreview}</span>
             </div>
           )}
           <Textarea
@@ -212,7 +217,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || defaultPlaceholder}
-            disabled={disabled}
+            disabled={disabled || isSending}
             lang={senderLanguage}
             dir="auto"
             className={cn(
@@ -224,7 +229,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             )}
             aria-label={t('chat.typeMessage')}
           />
-
 
           {/* Emoji button */}
           <Button
@@ -241,7 +245,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         {/* Send button */}
         <Button
           onClick={handleSend}
-          disabled={!message.trim() || disabled}
+          disabled={!message.trim() || disabled || isSending}
           size="icon"
           className={cn(
             'h-11 w-11 rounded-full flex-shrink-0',
@@ -251,7 +255,11 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
           )}
           aria-label={t('chat.send')}
         >
-          <Send className="h-5 w-5" />
+          {isSending ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Send className="h-5 w-5" />
+          )}
         </Button>
       </div>
     </div>

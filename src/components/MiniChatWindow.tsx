@@ -43,7 +43,7 @@ import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { useDLTranslate } from "@/lib/dl-translate";
+import { useChatTranslation } from "@/hooks/useChatTranslation";
 
 const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 4 * 60 * 1000; // 4 minutes - show warning
@@ -93,11 +93,30 @@ const MiniChatWindow = ({
 }: MiniChatWindowProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { convertToNative, translate, translateForChat, isLatinScript, isSameLanguage } = useDLTranslate();
+  
+  // Chat translation hook - handles all translation logic
+  const { 
+    livePreview,
+    updateLivePreview,
+    clearLivePreview,
+    processOutgoingMessage,
+    processIncomingMessage,
+    translateForReceiver,
+    isLatinScript,
+    isSameLanguage,
+    needsTranslation,
+    needsNativeConversion
+  } = useChatTranslation({
+    currentUserId,
+    currentUserLanguage,
+    partnerId,
+    partnerLanguage,
+    debounceMs: 150
+  });
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isComposing, setIsComposing] = useState(false);
-  const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -111,7 +130,6 @@ const MiniChatWindow = ({
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [billingPaused, setBillingPaused] = useState(false); // Billing paused due to inactivity
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -121,20 +139,17 @@ const MiniChatWindow = ({
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
-  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  // Only skip conversion if mother tongue is English - all other languages need conversion
-  const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
 
   // Debug: Log initialization
   console.log('[MiniChatWindow] Initialized:', {
     currentUserLanguage,
     partnerLanguage,
     needsNativeConversion,
+    needsTranslation,
     currentUserId: currentUserId?.slice(0, 8),
     partnerId: partnerId?.slice(0, 8)
   });
@@ -170,9 +185,8 @@ const MiniChatWindow = ({
 
   // Track Latin input separately to avoid double conversion
   const lastLatinInputRef = useRef<string>('');
-  const isConvertingRef = useRef(false);
 
-  // Real-time transliteration: Convert typing to native language (ONCE only)
+  // Real-time transliteration: Update live preview as user types
   useEffect(() => {
     console.log('[MiniChatWindow] Transliteration effect:', {
       newMessage: newMessage.slice(0, 20),
@@ -181,89 +195,15 @@ const MiniChatWindow = ({
       isLatin: newMessage ? isLatinScript(newMessage) : 'empty'
     });
 
-    // Skip if no conversion needed (user's language is English)
-    if (!needsNativeConversion) {
-      setDisplayMessage(newMessage);
-      return;
-    }
-    
-    // Empty input - clear display
-    if (!newMessage.trim()) {
-      setDisplayMessage('');
+    // Update live preview with the new message
+    if (newMessage.trim() && needsNativeConversion && isLatinScript(newMessage)) {
+      lastLatinInputRef.current = newMessage;
+      updateLivePreview(newMessage);
+    } else {
       lastLatinInputRef.current = '';
-      return;
+      clearLivePreview();
     }
-
-    // Skip if already in native script (not Latin) - prevents double conversion
-    if (!isLatinScript(newMessage)) {
-      console.log('[MiniChatWindow] Already non-Latin, skipping conversion');
-      setDisplayMessage(newMessage);
-      lastLatinInputRef.current = '';
-      return;
-    }
-
-    // Skip if we're currently converting (prevents re-entry)
-    if (isConvertingRef.current) {
-      return;
-    }
-
-    // Skip if this is the same input we already processed
-    if (lastLatinInputRef.current === newMessage) {
-      return;
-    }
-
-    // Debounce the conversion
-    if (transliterationTimeoutRef.current) {
-      clearTimeout(transliterationTimeoutRef.current);
-    }
-
-    setIsConverting(true);
-    transliterationTimeoutRef.current = setTimeout(async () => {
-      // Double-check we're still dealing with Latin input and message hasn't changed
-      const currentMessage = newMessage;
-      if (!isLatinScript(currentMessage) || !currentMessage.trim()) {
-        setIsConverting(false);
-        return;
-      }
-
-      try {
-        isConvertingRef.current = true;
-        lastLatinInputRef.current = currentMessage; // Mark this input as processed
-        
-        console.log('[MiniChatWindow] Converting:', currentMessage, 'to', currentUserLanguage);
-        
-        // Use convertToNative for non-Latin languages
-        const result = await convertToNative(currentMessage, currentUserLanguage);
-        
-        console.log('[MiniChatWindow] Conversion result:', {
-          original: currentMessage,
-          converted: result.text,
-          isTranslated: result.isTranslated
-        });
-        
-        if (result.isTranslated && result.text && result.text !== currentMessage) {
-          // Only update display if the message hasn't changed while we were converting
-          setDisplayMessage(result.text);
-        } else {
-          // No conversion available, keep input as display
-          setDisplayMessage(currentMessage);
-        }
-      } catch (error) {
-        console.error('[MiniChatWindow] Transliteration error:', error);
-        // On error, display the input as-is
-        setDisplayMessage(newMessage);
-      } finally {
-        setIsConverting(false);
-        isConvertingRef.current = false;
-      }
-    }, 150); // Reduced to 150ms for faster response
-
-    return () => {
-      if (transliterationTimeoutRef.current) {
-        clearTimeout(transliterationTimeoutRef.current);
-      }
-    };
-  }, [newMessage, needsNativeConversion, currentUserLanguage, isLatinScript, convertToNative]);
+  }, [newMessage, needsNativeConversion, currentUserLanguage, isLatinScript, updateLivePreview, clearLivePreview]);
 
   // Load initial data (wallet, earnings, pricing)
   useEffect(() => {
@@ -499,31 +439,27 @@ const MiniChatWindow = ({
       // Partner's native text → Current user's native text
       console.log('[MiniChatWindow] Translating from', partnerLanguage, 'to', currentUserLanguage);
       
-      const result = await translateForChat(text, { 
-        senderLanguage: partnerLanguage, 
-        receiverLanguage: currentUserLanguage 
-      });
+      const translated = await translateForReceiver(text, partnerLanguage, currentUserLanguage);
       
       // Check if translation actually happened
-      const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;
+      const wasActuallyTranslated = translated !== text;
       
       console.log('[MiniChatWindow] Translation result:', {
         original: text.slice(0, 30),
-        translated: result.text?.slice(0, 30),
-        wasTranslated: wasActuallyTranslated,
-        mode: result.mode
+        translated: translated.slice(0, 30),
+        wasTranslated: wasActuallyTranslated
       });
       
       return {
-        translatedMessage: wasActuallyTranslated ? result.text : text,
+        translatedMessage: wasActuallyTranslated ? translated : text,
         isTranslated: wasActuallyTranslated,
-        detectedLanguage: result.source
+        detectedLanguage: partnerLanguage
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForReceiver]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -691,16 +627,12 @@ const MiniChatWindow = ({
       return;
     }
 
-    // Capture displayMessage BEFORE clearing state - this is the native script preview
-    const currentPreview = displayMessage?.trim() || '';
-    
-    // CRITICAL FIX: Only use preview if it was generated from the EXACT same input
-    // lastLatinInputRef tracks what input the preview was generated from
-    const previewMatchesInput = lastLatinInputRef.current === trimmedInput;
+    // Capture live preview BEFORE clearing state - this is the native script preview
+    const currentPreview = livePreview.nativePreview?.trim() || '';
     
     // Clear input IMMEDIATELY - don't block user from typing next message
     setNewMessage("");
-    setDisplayMessage("");
+    clearLivePreview();
     lastLatinInputRef.current = ''; // Reset Latin input tracking
     stopTyping();
     setIsSending(true);
@@ -711,13 +643,12 @@ const MiniChatWindow = ({
       resumeBilling();
     }
 
-    // Determine message text - prioritize the native script preview if available AND matches input
+    // Determine message text - prioritize the native script preview if available
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
     // Check if we have a valid native script preview ready
     // Valid means: preview exists, is different from input, and is NOT in Latin script
-    // Don't require exact input match - just check if preview is native script and non-empty
     const hasValidPreview = currentPreview && 
                            currentPreview.length > 0 &&
                            currentPreview !== trimmedInput && 
@@ -756,9 +687,9 @@ const MiniChatWindow = ({
         if (needsBackgroundConversion) {
           try {
             console.log('[MiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
-            const convertResult = await convertToNative(trimmedInput, currentUserLanguage);
-            if (convertResult.isTranslated && convertResult.text) {
-              finalMessageText = convertResult.text;
+            const { nativeText } = await processOutgoingMessage(trimmedInput);
+            if (nativeText && nativeText !== trimmedInput) {
+              finalMessageText = nativeText;
               console.log('[MiniChatWindow] Converted to:', finalMessageText);
               // Update optimistic message with converted text immediately
               setMessages(prev => prev.map(m => 
@@ -1371,10 +1302,12 @@ const MiniChatWindow = ({
           {/* Input area - with real-time native script conversion */}
           <div className="p-1.5 border-t">
             {/* Native script preview - shown above input when user types in Latin and needs conversion */}
-            {displayMessage && displayMessage !== newMessage && needsNativeConversion && !isLatinScript(displayMessage) && (
+            {livePreview.nativePreview && livePreview.nativePreview !== newMessage && needsNativeConversion && !isLatinScript(livePreview.nativePreview) && (
               <div className="mb-1.5 p-1.5 bg-primary/10 rounded text-[10px] border border-primary/20">
-                <span className="text-[9px] text-muted-foreground/70 mr-1">Native:</span>
-                <span className="text-foreground font-medium" dir="auto">{displayMessage}</span>
+                <span className="text-[9px] text-muted-foreground/70 mr-1">
+                  {livePreview.isConverting ? <Loader2 className="h-2 w-2 inline animate-spin mr-0.5" /> : 'Native:'}
+                </span>
+                <span className="text-foreground font-medium" dir="auto">{livePreview.nativePreview}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -1503,9 +1436,9 @@ const MiniChatWindow = ({
                   onCompositionEnd={() => setIsComposing(false)}
                   className="h-7 text-[11px] pr-6"
                   disabled={isBlocked}
-                  dir={needsNativeConversion && displayMessage && !isLatinScript(displayMessage) ? 'auto' : 'ltr'}
+                  dir={needsNativeConversion && livePreview.nativePreview && !isLatinScript(livePreview.nativePreview) ? 'auto' : 'ltr'}
                 />
-                {isConverting && (
+                {livePreview.isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 )}
               </div>
