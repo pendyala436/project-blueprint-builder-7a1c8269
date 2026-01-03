@@ -1,13 +1,11 @@
 /**
  * DL-Translate Module - Unified Translation API
  * 
- * 100% Local - No External API Calls
- * Uses NLLB-200 model via @huggingface/transformers for 200+ languages
+ * 100% Local - No External API Calls, No ML Models
  * 
  * Translation Flow:
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
- * 3. ML Translation via NLLB-200 (200+ languages, in-browser)
  * 
  * Based on: https://github.com/xhluca/dl-translate
  * 
