@@ -338,6 +338,30 @@ serve(async (req) => {
         );
       }
 
+      // Ensure user is registered in voter registry (required by RLS)
+      const { data: existingRegistry } = await supabase
+        .from("voter_registry")
+        .select("id")
+        .eq("election_id", election.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!existingRegistry) {
+        // Register the voter
+        const { error: regError } = await supabase
+          .from("voter_registry")
+          .insert({
+            election_id: election.id,
+            user_id: userId,
+            registered_by: userId,
+            is_eligible: true
+          });
+        
+        if (regError) {
+          console.error("[AI Election] Failed to register voter:", regError);
+        }
+      }
+
       // Cast vote (anonymous - only stores election_id, candidate_id, voter_id for uniqueness)
       const { error: voteError } = await supabase
         .from("election_votes")
