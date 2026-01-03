@@ -1,16 +1,18 @@
 /**
  * Translation Module - Unified Export
  * 
- * Multi-model neural translation with embedded fallbacks:
+ * Multi-tier translation:
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
- * 3. Edge Function fallback (NLLB-200, SeamlessM4T, M2M100, mBART-50)
+ * 3. DL-Translate HuggingFace API (200+ languages via NLLB model)
  * 
  * Flow:
  * - Typing: Latin letters → Live preview in native script
  * - Send: Background translation (non-blocking)
  * - Receive: Auto-translate to receiver's language
  * - Bi-directional: Works both ways
+ * 
+ * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
  */
 
 // ============================================================================
@@ -93,6 +95,18 @@ export {
   getLanguageCode,
   LANGUAGE_CODES,
 } from './ml-translation-engine';
+
+// ============================================================================
+// DL-Translate HuggingFace API
+// ============================================================================
+export {
+  translateWithDLTranslate,
+  getDLTranslateLanguageName,
+  isDLTranslateSupported,
+  clearDLTranslateCache,
+  getDLTranslateCacheStats,
+  DL_TRANSLATE_LANGUAGES,
+} from './dl-translate-api';
 
 // ============================================================================
 // React Hooks

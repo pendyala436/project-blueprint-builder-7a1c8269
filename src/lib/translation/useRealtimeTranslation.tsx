@@ -1,9 +1,9 @@
 /**
- * Real-Time Translation Hook (Fully Embedded)
+ * Real-Time Translation Hook
  * 
- * NO external APIs - All translation in browser:
- * - NLLB-200 ML Model (main) - 200+ languages
- * - Dictionary Translation (fallback)
+ * Translation methods:
+ * 1. Dictionary Translation (main) - instant
+ * 2. DL-Translate HuggingFace API (fallback) - 200+ languages
  * 
  * Features:
  * - Sender sees their message converted to native script

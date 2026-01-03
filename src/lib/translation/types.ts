@@ -23,7 +23,7 @@ export interface TranslationOptions {
   sourceLanguage?: string;
   targetLanguage: string;
   mode?: 'auto' | 'translate' | 'convert';
-  preferredModel?: 'nllb' | 'seamless' | 'm2m' | 'mbart';
+  preferredModel?: 'dictionary' | 'api';  // dictionary = local, api = DL-Translate HuggingFace
 }
 
 export interface TranslationResult {

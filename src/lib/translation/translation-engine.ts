@@ -1,17 +1,15 @@
 /**
- * Embedded Translation Engine (DL-Translate Pattern)
+ * Translation Engine with DL-Translate HuggingFace API
  * 
- * 100% LOCAL BROWSER-BASED TRANSLATION - No External API Calls
- * 
- * Translation Methods (all instant, in-browser):
- * - Embedded phrase dictionaries (common phrases)
- * - Transliteration dictionaries (phonetic → native script)
- * - Phonetic transliterator (syllable-based)
- * - Dictionary-based ML translation
+ * Translation Methods:
+ * - Embedded phrase dictionaries (common phrases - instant)
+ * - Transliteration dictionaries (phonetic → native script - instant)
+ * - Phonetic transliterator (syllable-based - instant)
+ * - DL-Translate HuggingFace API (NLLB model - 200+ languages)
  * 
  * Based on: 
- * - https://github.com/xhluca/dl-translate (API pattern)
- * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * - https://huggingface.co/spaces/kintong3000/dl-translate
+ * - https://github.com/xhluca/dl-translate
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -19,9 +17,10 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
+import { translateWithDLTranslate } from './dl-translate-api';
 
-// Edge Function fallback is DISABLED - all translation is local
-const enableEdgeFunctionFallback = false;
+// Enable DL-Translate API fallback for ML translation
+let enableDLTranslateAPI = true;
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -433,18 +432,18 @@ function convertWithDictionary(text: string, targetLanguage: string): string {
 }
 
 /**
- * Main translation function - FULLY EMBEDDED (NO external APIs)
+ * Main translation function - Dictionary + DL-Translate API fallback
  * 
  * Flow:
  * 1. Same language check → skip all processing
  * 2. Check cache first (instant)
  * 3. Check phrase dictionary (common phrases - instant)
- * 4. DL-Translate Dictionary (MAIN - instant, word-by-word)
+ * 4. Dictionary-based translation (MAIN - instant, word-by-word)
  * 5. Phonetic transliteration (instant)
- * 6. NLLB-200 ML Model (FALLBACK - 200+ languages, lazy-loaded)
+ * 6. DL-Translate HuggingFace API (FALLBACK - 200+ languages)
  * 
  * Translation is NON-BLOCKING for typing
- * Based on: https://github.com/Goutam245/Language-Translator-Web-Application
+ * Based on: https://huggingface.co/spaces/kintong3000/dl-translate
  */
 export async function translateText(
   text: string,
@@ -535,26 +534,39 @@ export async function translateText(
     }
   }
   
-  // Local translation complete - no external API fallback
-  console.log('[DL-Translate] Local translation complete, returning result');
+  // ========== FALLBACK: DL-Translate HuggingFace API ==========
+  if (enableDLTranslateAPI) {
+    console.log('[DL-Translate] Trying HuggingFace API fallback...');
+    try {
+      const apiResult = await translateWithDLTranslate(trimmed, normSource, normTarget);
+      if (apiResult && apiResult !== trimmed) {
+        console.log('[DL-Translate] API translation result:', apiResult.slice(0, 50));
+        addToCache(cacheKey, apiResult);
+        return createResult(trimmed, apiResult, normSource, normTarget, true, 'translate');
+      }
+    } catch (error) {
+      console.warn('[DL-Translate] API fallback failed:', error);
+    }
+  }
+  
+  // Local translation complete - no translation found
+  console.log('[DL-Translate] No translation available, returning original');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
 }
 
 /**
- * Enable or disable Edge Function fallback translation
- * NOTE: Edge Function fallback is permanently disabled - all translation is local
- * @deprecated This function has no effect - kept for API compatibility
+ * Enable or disable DL-Translate HuggingFace API fallback
  */
-export function setEdgeFunctionFallbackEnabled(_enabled: boolean): void {
-  console.log('[DL-Translate] Edge Function fallback is permanently disabled - all translation is local');
+export function setEdgeFunctionFallbackEnabled(enabled: boolean): void {
+  enableDLTranslateAPI = enabled;
+  console.log('[DL-Translate] API fallback:', enabled ? 'enabled' : 'disabled');
 }
 
 /**
- * Check if Edge Function fallback is enabled
- * NOTE: Always returns false - all translation is local
+ * Check if DL-Translate API fallback is enabled
  */
 export function isEdgeFunctionFallbackEnabled(): boolean {
-  return false;
+  return enableDLTranslateAPI;
 }
 
 /**
