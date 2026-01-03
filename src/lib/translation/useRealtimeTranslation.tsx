@@ -1,13 +1,14 @@
 /**
- * Real-Time Translation Hook
+ * Real-Time Translation Hook (Fully Embedded)
  * 
- * Provides live translation for typing indicators:
+ * NO external APIs - All translation in browser:
+ * - NLLB-200 ML Model (main) - 200+ languages
+ * - Dictionary Translation (fallback)
+ * 
+ * Features:
  * - Sender sees their message converted to native script
  * - Recipient sees partial typing translated to their language
  * - Skips translation when same language
- * 
- * Uses embedded translation engine (LibreTranslate, MyMemory)
- * NO edge functions - all logic in client code
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';

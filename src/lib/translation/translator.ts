@@ -1,10 +1,12 @@
 /**
  * DL-Translate Inspired TypeScript Translator
  * 
- * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
- * Based on: https://github.com/xhluca/dl-translate
+ * NO external APIs - All translation happens in browser:
+ * 1. NLLB-200 ML Model (main) - 200+ languages
+ * 2. Dictionary Translation (fallback) - instant common phrases
+ * 3. Phonetic Transliteration (fallback) - Latin → native script
  * 
- * NO external edge functions - all logic embedded in client code
+ * Based on: https://github.com/xhluca/dl-translate
  */
 
 import type { 

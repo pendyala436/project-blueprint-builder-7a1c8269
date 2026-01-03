@@ -16,13 +16,15 @@ interface UseRealTimeTransliterationOptions {
 }
 
 /**
- * Hook for real-time transliteration of English/Latin text to native scripts.
- * Uses embedded translation engine (LibreTranslate, MyMemory, dictionaries)
- * NO edge functions - all logic in client code
+ * Hook for real-time transliteration of Latin text to native scripts.
+ * 
+ * NO external APIs - All translation in browser:
+ * - Dictionary-based transliteration (instant)
+ * - Phonetic transliteration (syllable-based)
  * 
  * Features:
- * - Debounced API calls to reduce load
- * - Caches converted text to avoid duplicate requests
+ * - Debounced calls to reduce load
+ * - Caches converted text to avoid duplicate work
  * - Shows original text while converting
  * - Falls back gracefully on errors
  */
