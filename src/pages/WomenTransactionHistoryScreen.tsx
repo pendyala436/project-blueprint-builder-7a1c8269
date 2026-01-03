@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  ArrowUpRight, 
   ArrowDownLeft,
   MessageCircle,
   Clock,
@@ -22,17 +21,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import NavigationHeader from "@/components/NavigationHeader";
-
-interface WalletTransaction {
-  id: string;
-  type: string;
-  amount: number;
-  description: string | null;
-  status: string;
-  created_at: string;
-  reference_id: string | null;
-  balance_after?: number;
-}
 
 interface ChatSession {
   id: string;
@@ -66,6 +54,16 @@ interface VideoCallSession {
   partner_photo?: string;
 }
 
+interface WomenEarning {
+  id: string;
+  amount: number;
+  earning_type: string;
+  description: string | null;
+  created_at: string;
+  chat_session_id: string | null;
+  partner_name?: string;
+}
+
 interface GiftTransaction {
   id: string;
   sender_id: string;
@@ -81,31 +79,16 @@ interface GiftTransaction {
   partner_name?: string;
 }
 
-interface UnifiedTransaction {
-  id: string;
-  type: 'recharge' | 'chat' | 'video' | 'gift' | 'withdrawal' | 'other';
-  amount: number;
-  description: string;
-  created_at: string;
-  status: string;
-  counterparty?: string;
-  balance_after?: number;
-  is_credit: boolean;
-  icon: 'wallet' | 'chat' | 'video' | 'gift' | 'arrow';
-  details?: string;
-}
-
-const TransactionHistoryScreen = () => {
+const WomenTransactionHistoryScreen = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [currentBalance, setCurrentBalance] = useState<number>(0);
-  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
+  const [totalEarnings, setTotalEarnings] = useState<number>(0);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [videoCallSessions, setVideoCallSessions] = useState<VideoCallSession[]>([]);
+  const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
-  const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
   const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
@@ -117,12 +100,7 @@ const TransactionHistoryScreen = () => {
     if (!userId) return;
     
     const channel = supabase
-      .channel('men-transaction-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'wallet_transactions' },
-        () => { loadData(); }
-      )
+      .channel('women-transaction-updates')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'active_chat_sessions' },
@@ -131,6 +109,11 @@ const TransactionHistoryScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'video_call_sessions' },
+        () => { loadData(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'women_earnings' },
         () => { loadData(); }
       )
       .on(
@@ -154,52 +137,11 @@ const TransactionHistoryScreen = () => {
       }
       setUserId(user.id);
 
-      // Fetch wallet and current balance
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("id, balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (wallet) {
-        setCurrentBalance(Number(wallet.balance) || 0);
-        
-        const { data: txData } = await supabase
-          .from("wallet_transactions")
-          .select("*")
-          .eq("wallet_id", wallet.id)
-          .order("created_at", { ascending: false })
-          .limit(200);
-
-        // Recalculate balance from oldest to newest
-        const sortedTx = [...(txData || [])].sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-        
-        let calculatedBalance = 0;
-        const balanceMap = new Map<string, number>();
-        sortedTx.forEach(tx => {
-          if (tx.type === 'credit') {
-            calculatedBalance += Number(tx.amount);
-          } else {
-            calculatedBalance -= Number(tx.amount);
-          }
-          balanceMap.set(tx.id, calculatedBalance);
-        });
-
-        const enrichedTx = (txData || []).map(tx => ({
-          ...tx,
-          balance_after: balanceMap.get(tx.id) || 0
-        }));
-
-        setWalletTransactions(enrichedTx);
-      }
-
-      // Fetch gift transactions sent by this user
+      // Fetch gift transactions received
       const { data: giftsData } = await supabase
         .from("gift_transactions")
         .select("*")
-        .eq("sender_id", user.id)
+        .eq("receiver_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -212,34 +154,34 @@ const TransactionHistoryScreen = () => {
         
         const giftMap = new Map(gifts?.map(g => [g.id, g]) || []);
 
-        const receiverIds = [...new Set(giftsData.map(g => g.receiver_id))];
-        const { data: receiverProfiles } = await supabase
+        const senderIds = [...new Set(giftsData.map(g => g.sender_id))];
+        const { data: senderProfiles } = await supabase
           .from("profiles")
           .select("user_id, full_name")
-          .in("user_id", receiverIds);
+          .in("user_id", senderIds);
         
-        const receiverMap = new Map(receiverProfiles?.map(p => [p.user_id, p.full_name]) || []);
+        const senderMap = new Map(senderProfiles?.map(p => [p.user_id, p.full_name]) || []);
 
         const enrichedGifts: GiftTransaction[] = giftsData.map(g => ({
           ...g,
           gift_name: giftMap.get(g.gift_id)?.name || "Gift",
           gift_emoji: giftMap.get(g.gift_id)?.emoji || "🎁",
-          partner_name: receiverMap.get(g.receiver_id) || "Anonymous"
+          partner_name: senderMap.get(g.sender_id) || "Anonymous"
         }));
 
         setGiftTransactions(enrichedGifts);
       }
 
-      // Fetch chat sessions for men
+      // Fetch chat sessions
       const { data: sessions } = await supabase
         .from("active_chat_sessions")
         .select("*")
-        .eq("man_user_id", user.id)
+        .eq("woman_user_id", user.id)
         .order("started_at", { ascending: false })
         .limit(100);
 
       if (sessions && sessions.length > 0) {
-        const partnerIds = sessions.map(s => s.woman_user_id);
+        const partnerIds = sessions.map(s => s.man_user_id);
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, photo_url")
@@ -249,23 +191,23 @@ const TransactionHistoryScreen = () => {
         
         const enrichedSessions = sessions.map(s => ({
           ...s,
-          partner_name: profileMap.get(s.woman_user_id)?.full_name || "Anonymous",
-          partner_photo: profileMap.get(s.woman_user_id)?.photo_url
+          partner_name: profileMap.get(s.man_user_id)?.full_name || "Anonymous",
+          partner_photo: profileMap.get(s.man_user_id)?.photo_url
         }));
 
         setChatSessions(enrichedSessions);
       }
 
-      // Fetch video call sessions for men
+      // Fetch video call sessions
       const { data: videoCalls } = await supabase
         .from("video_call_sessions")
         .select("*")
-        .eq("man_user_id", user.id)
+        .eq("woman_user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (videoCalls && videoCalls.length > 0) {
-        const partnerIds = videoCalls.map(s => s.woman_user_id);
+        const partnerIds = videoCalls.map(s => s.man_user_id);
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, full_name, photo_url")
@@ -275,11 +217,59 @@ const TransactionHistoryScreen = () => {
         
         const enrichedCalls = videoCalls.map(s => ({
           ...s,
-          partner_name: profileMap.get(s.woman_user_id)?.full_name || "Anonymous",
-          partner_photo: profileMap.get(s.woman_user_id)?.photo_url
+          partner_name: profileMap.get(s.man_user_id)?.full_name || "Anonymous",
+          partner_photo: profileMap.get(s.man_user_id)?.photo_url
         }));
 
         setVideoCallSessions(enrichedCalls);
+      }
+
+      // Fetch earnings
+      const { data: earnings } = await supabase
+        .from("women_earnings")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (earnings && earnings.length > 0) {
+        // Calculate total earnings
+        const total = earnings.reduce((sum, e) => sum + Number(e.amount), 0);
+        setTotalEarnings(total);
+
+        const sessionIds = earnings.filter(e => e.chat_session_id).map(e => e.chat_session_id);
+        
+        if (sessionIds.length > 0) {
+          const { data: sessionData } = await supabase
+            .from("active_chat_sessions")
+            .select("id, man_user_id")
+            .in("id", sessionIds);
+
+          if (sessionData && sessionData.length > 0) {
+            const manIds = sessionData.map(s => s.man_user_id);
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", manIds);
+
+            const sessionMap = new Map(sessionData.map(s => [s.id, s.man_user_id]));
+            const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+            const enrichedEarnings = earnings.map(e => {
+              const manId = e.chat_session_id ? sessionMap.get(e.chat_session_id) : null;
+              return {
+                ...e,
+                partner_name: manId ? profileMap.get(manId) || "Anonymous" : undefined
+              };
+            });
+
+            setWomenEarnings(enrichedEarnings);
+          } else {
+            setWomenEarnings(earnings);
+          }
+        } else {
+          setWomenEarnings(earnings);
+        }
       }
 
     } catch (error) {
@@ -288,70 +278,6 @@ const TransactionHistoryScreen = () => {
       setLoading(false);
     }
   };
-
-  const buildUnifiedTransactions = (
-    walletTx: WalletTransaction[],
-    gifts: GiftTransaction[]
-  ) => {
-    const unified: UnifiedTransaction[] = [];
-
-    // Add wallet transactions
-    walletTx.forEach(tx => {
-      const isRecharge = tx.type === 'credit' && tx.description?.toLowerCase().includes('recharge');
-      const isWithdrawal = tx.description?.toLowerCase().includes('withdrawal');
-      const isGift = tx.description?.toLowerCase().includes('gift');
-      const isChat = tx.description?.toLowerCase().includes('chat');
-      const isVideo = tx.description?.toLowerCase().includes('video');
-
-      let type: UnifiedTransaction['type'] = 'other';
-      let icon: UnifiedTransaction['icon'] = 'arrow';
-
-      if (isRecharge) { type = 'recharge'; icon = 'wallet'; }
-      else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
-      else if (isGift) { type = 'gift'; icon = 'gift'; }
-      else if (isChat) { type = 'chat'; icon = 'chat'; }
-      else if (isVideo) { type = 'video'; icon = 'video'; }
-
-      unified.push({
-        id: tx.id,
-        type,
-        amount: Number(tx.amount),
-        description: tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit'),
-        created_at: tx.created_at,
-        status: tx.status,
-        balance_after: tx.balance_after,
-        is_credit: tx.type === 'credit',
-        icon,
-        details: tx.reference_id ? `Ref: ${tx.reference_id}` : undefined
-      });
-    });
-
-    // Add gift transactions (sent by men)
-    gifts.forEach(g => {
-      unified.push({
-        id: `gift-${g.id}`,
-        type: 'gift',
-        amount: Number(g.price_paid),
-        description: `${g.gift_emoji} ${g.gift_name} sent to ${g.partner_name}`,
-        created_at: g.created_at,
-        status: g.status,
-        counterparty: g.partner_name,
-        is_credit: false,
-        icon: 'gift',
-        details: g.message || undefined
-      });
-    });
-
-    // Sort by date descending
-    unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    setUnifiedTransactions(unified);
-  };
-
-  useEffect(() => {
-    if (!loading) {
-      buildUnifiedTransactions(walletTransactions, giftTransactions);
-    }
-  }, [walletTransactions, giftTransactions, loading]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -394,48 +320,6 @@ const TransactionHistoryScreen = () => {
     }
   };
 
-  const getTransactionIcon = (icon: UnifiedTransaction['icon'], isCredit: boolean) => {
-    const colorClass = isCredit ? "text-success" : "text-destructive";
-    const bgClass = isCredit ? "bg-success/10" : "bg-destructive/10";
-    
-    switch (icon) {
-      case 'wallet':
-        return (
-          <div className={cn("p-2 rounded-full", bgClass)}>
-            <Wallet className={cn("h-4 w-4", colorClass)} />
-          </div>
-        );
-      case 'chat':
-        return (
-          <div className={cn("p-2 rounded-full", bgClass)}>
-            <MessageCircle className={cn("h-4 w-4", colorClass)} />
-          </div>
-        );
-      case 'video':
-        return (
-          <div className="p-2 rounded-full bg-purple-500/10">
-            <Video className="h-4 w-4 text-purple-500" />
-          </div>
-        );
-      case 'gift':
-        return (
-          <div className="p-2 rounded-full bg-amber-500/10">
-            <Gift className="h-4 w-4 text-amber-500" />
-          </div>
-        );
-      default:
-        return (
-          <div className={cn("p-2 rounded-full", bgClass)}>
-            {isCredit ? (
-              <ArrowDownLeft className={cn("h-4 w-4", colorClass)} />
-            ) : (
-              <ArrowUpRight className={cn("h-4 w-4", colorClass)} />
-            )}
-          </div>
-        );
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
@@ -456,15 +340,15 @@ const TransactionHistoryScreen = () => {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-2">
           <NavigationHeader
-            title="Transaction History"
+            title="Earnings History"
             showBack={true}
             showHome={true}
             showForward={false}
             rightContent={
               <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Balance</p>
-                  <p className="font-semibold text-primary">₹{currentBalance.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Total Earnings</p>
+                  <p className="font-semibold text-success">₹{totalEarnings.toFixed(2)}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -497,65 +381,70 @@ const TransactionHistoryScreen = () => {
             <p className="text-lg font-bold">{giftTransactions.length}</p>
           </Card>
           <Card className="p-2 text-center">
-            <p className="text-xs text-muted-foreground">Txns</p>
-            <p className="text-lg font-bold">{walletTransactions.length}</p>
+            <p className="text-xs text-muted-foreground">Earnings</p>
+            <p className="text-lg font-bold">{womenEarnings.length}</p>
           </Card>
         </div>
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
             <TabsTrigger value="gifts" className="text-xs">Gifts</TabsTrigger>
-            <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
           </TabsList>
 
-          {/* All Transactions */}
+          {/* All Earnings */}
           <TabsContent value="all" className="space-y-3">
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-3 pr-4">
-                {unifiedTransactions.map((tx) => (
-                  <Card key={tx.id} className="overflow-hidden">
+                {womenEarnings.map((earning) => (
+                  <Card key={earning.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        {getTransactionIcon(tx.icon, tx.is_credit)}
+                        <div className="p-2 rounded-full bg-success/10">
+                          {earning.earning_type === "chat" ? (
+                            <MessageCircle className="h-4 w-4 text-success" />
+                          ) : earning.earning_type === "video_call" ? (
+                            <Video className="h-4 w-4 text-pink-500" />
+                          ) : earning.earning_type === "gift" ? (
+                            <Gift className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <ArrowDownLeft className="h-4 w-4 text-success" />
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium truncate text-sm">
-                              {tx.description}
+                              {earning.earning_type === "chat" ? "Chat Earnings" : 
+                               earning.earning_type === "video_call" ? "Video Call Earnings" :
+                               earning.earning_type === "gift" ? "Gift Received" : 
+                               earning.earning_type === "private_call" ? "Private Call" : earning.earning_type}
+                              {earning.partner_name && ` with ${earning.partner_name}`}
                             </span>
-                            <span className={cn(
-                              "font-semibold whitespace-nowrap",
-                              tx.is_credit ? "text-success" : "text-destructive"
-                            )}>
-                              {tx.is_credit ? "+" : "-"}₹{tx.amount.toFixed(2)}
+                            <span className="font-semibold text-success whitespace-nowrap">
+                              +₹{Number(earning.amount).toFixed(2)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(tx.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          {earning.description && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {earning.description}
                             </p>
-                            {tx.balance_after !== undefined && (
-                              <p className="text-xs text-muted-foreground">
-                                Bal: ₹{tx.balance_after.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                          {tx.details && (
-                            <p className="text-xs text-muted-foreground mt-1">{tx.details}</p>
                           )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(earning.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
 
-                {unifiedTransactions.length === 0 && (
+                {womenEarnings.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No transactions yet</p>
+                    <p>No earnings yet</p>
                   </div>
                 )}
               </div>
@@ -570,8 +459,8 @@ const TransactionHistoryScreen = () => {
                   <Card key={session.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-destructive/10">
-                          <MessageCircle className="h-4 w-4 text-destructive" />
+                        <div className="p-2 rounded-full bg-success/10">
+                          <MessageCircle className="h-4 w-4 text-success" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
@@ -581,8 +470,8 @@ const TransactionHistoryScreen = () => {
                               </span>
                               {getStatusBadge(session.status)}
                             </div>
-                            <span className="font-semibold text-destructive whitespace-nowrap">
-                              -₹{Number(session.total_earned).toFixed(2)}
+                            <span className="font-semibold text-success whitespace-nowrap">
+                              +₹{Number(session.total_earned).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -628,8 +517,8 @@ const TransactionHistoryScreen = () => {
                   <Card key={session.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-purple-500/10">
-                          <Video className="h-4 w-4 text-purple-500" />
+                        <div className="p-2 rounded-full bg-pink-500/10">
+                          <Video className="h-4 w-4 text-pink-500" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
@@ -639,8 +528,8 @@ const TransactionHistoryScreen = () => {
                               </span>
                               {getStatusBadge(session.status)}
                             </div>
-                            <span className="font-semibold text-purple-600 whitespace-nowrap">
-                              -₹{Number(session.total_earned).toFixed(2)}
+                            <span className="font-semibold text-pink-600 whitespace-nowrap">
+                              +₹{Number(session.total_earned).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -695,14 +584,17 @@ const TransactionHistoryScreen = () => {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">
-                                {gift.gift_name} to {gift.partner_name}
+                                {gift.gift_name} from {gift.partner_name}
                               </span>
                               {getStatusBadge(gift.status)}
                             </div>
-                            <span className="font-semibold text-destructive whitespace-nowrap">
-                              -₹{Number(gift.price_paid).toFixed(2)}
+                            <span className="font-semibold text-success whitespace-nowrap">
+                              +₹{(Number(gift.price_paid) * 0.5).toFixed(2)}
                             </span>
                           </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            (50% of ₹{Number(gift.price_paid).toFixed(2)} gift value)
+                          </p>
                           {gift.message && (
                             <p className="text-xs text-muted-foreground mt-1 italic">
                               "{gift.message}"
@@ -720,71 +612,7 @@ const TransactionHistoryScreen = () => {
                 {giftTransactions.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <Gift className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No gift transactions yet</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Wallet Transactions */}
-          <TabsContent value="wallet" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3 pr-4">
-                {walletTransactions.map((tx) => (
-                  <Card key={tx.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className={cn(
-                          "p-2 rounded-full",
-                          tx.type === "credit" ? "bg-success/10" : "bg-destructive/10"
-                        )}>
-                          {tx.type === "credit" ? (
-                            <ArrowDownLeft className="h-4 w-4 text-success" />
-                          ) : (
-                            <ArrowUpRight className="h-4 w-4 text-destructive" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">
-                                {tx.description || (tx.type === "credit" ? "Wallet Recharge" : "Payment")}
-                              </span>
-                              {getStatusBadge(tx.status)}
-                            </div>
-                            <span className={cn(
-                              "font-semibold whitespace-nowrap",
-                              tx.type === "credit" ? "text-success" : "text-destructive"
-                            )}>
-                              {tx.type === "credit" ? "+" : "-"}₹{tx.amount.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(tx.created_at), "MMM d, yyyy 'at' h:mm a")}
-                            </p>
-                            {tx.balance_after !== undefined && (
-                              <p className="text-xs text-muted-foreground">
-                                Balance: ₹{tx.balance_after.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                          {tx.reference_id && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Ref: {tx.reference_id}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {walletTransactions.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <IndianRupee className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No transactions yet</p>
+                    <p>No gifts received yet</p>
                   </div>
                 )}
               </div>
@@ -796,4 +624,4 @@ const TransactionHistoryScreen = () => {
   );
 };
 
-export default TransactionHistoryScreen;
+export default WomenTransactionHistoryScreen;

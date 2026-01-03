@@ -445,7 +445,7 @@ export const TransactionHistoryWidget = ({
           <Button 
             variant="ghost" 
             className="w-full mt-2 text-sm"
-            onClick={() => navigate("/transactions")}
+            onClick={() => navigate(userGender === 'female' ? "/women-transactions" : "/transactions")}
           >
             View All Transactions
             <ChevronRight className="w-4 h-4 ml-1" />
