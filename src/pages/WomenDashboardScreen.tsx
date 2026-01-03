@@ -37,7 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/dlTranslateLanguages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed - Women cannot initiate chats
@@ -413,8 +413,8 @@ const WomenDashboardScreen = () => {
       const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
-      // Set all supported NLLB languages for women
-      setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));
+      // Set all supported languages for women
+      setSupportedLanguages(ALL_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
       await Promise.all([

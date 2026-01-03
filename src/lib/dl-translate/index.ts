@@ -55,7 +55,7 @@ export {
   normalizeLanguage,
 } from '@/lib/translation/translation-engine';
 
-// Re-export browser-based ML translation
+// Re-export browser-based DL-Translate dictionary translation
 export {
   translateWithML,
   translateBatchWithML,
@@ -65,9 +65,9 @@ export {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getNLLBCode,
-  isNLLBSupported,
-  getSupportedNLLBLanguages,
+  getDLM2M100Code as getLanguageCode,
+  isDLM2M100Supported as isLanguageSupported,
+  getSupportedDLM2M100Languages as getSupportedLanguages,
 } from '@/lib/translation/ml-translation-engine';
 
 // Re-export ML translation hook

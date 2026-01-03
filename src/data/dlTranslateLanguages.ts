@@ -1,15 +1,16 @@
-// NLLB-200 Complete Language Data
-// All 200+ languages supported by Facebook's NLLB-200 model
+// DL-Translate Complete Language Data
+// All 200+ languages supported by dictionary-based translation
+// Pattern: https://github.com/xhluca/dl-translate
 
-export interface NLLB200Language {
-  code: string; // NLLB-200 language code (e.g., "eng_Latn")
+export interface DLTranslateLanguage {
+  code: string; // Language code (e.g., "eng_Latn")
   name: string; // Human-readable name
   isIndian: boolean; // Whether this is an Indian language
   script: string; // Script used
 }
 
-// All Indian languages supported by NLLB-200 (22 languages)
-export const INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = [
+// All Indian languages supported (22 languages)
+export const INDIAN_LANGUAGES: DLTranslateLanguage[] = [
   { code: "hin_Deva", name: "Hindi", isIndian: true, script: "Devanagari" },
   { code: "ben_Beng", name: "Bengali", isIndian: true, script: "Bengali" },
   { code: "tel_Telu", name: "Telugu", isIndian: true, script: "Telugu" },
@@ -34,8 +35,8 @@ export const INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = [
   { code: "sin_Sinh", name: "Sinhala", isIndian: true, script: "Sinhala" },
 ];
 
-// All Non-Indian NLLB-200 languages (180+ languages)
-export const NON_INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = [
+// All Non-Indian languages (180+ languages)
+export const NON_INDIAN_LANGUAGES: DLTranslateLanguage[] = [
   // Major World Languages
   { code: "eng_Latn", name: "English", isIndian: false, script: "Latin" },
   { code: "spa_Latn", name: "Spanish", isIndian: false, script: "Latin" },
@@ -210,7 +211,6 @@ export const NON_INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = [
   
   // Additional Asian Languages
   { code: "dzo_Tibt", name: "Dzongkha", isIndian: false, script: "Tibetan" },
-  { code: "mya_Mymr", name: "Myanmar (Burmese)", isIndian: false, script: "Myanmar" },
   { code: "shn_Mymr", name: "Shan", isIndian: false, script: "Myanmar" },
   
   // Nigerian Languages
@@ -232,62 +232,54 @@ export const NON_INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = [
   { code: "hne_Deva", name: "Chhattisgarhi", isIndian: false, script: "Devanagari" },
   { code: "mag_Deva", name: "Magahi", isIndian: false, script: "Devanagari" },
   { code: "lij_Latn", name: "Ligurian", isIndian: false, script: "Latin" },
-  { code: "min_Arab", name: "Minangkabau (Arabic)", isIndian: false, script: "Arabic" },
   { code: "bug_Latn", name: "Buginese", isIndian: false, script: "Latin" },
   { code: "crh_Latn", name: "Crimean Tatar", isIndian: false, script: "Latin" },
   { code: "gaz_Latn", name: "West Central Oromo", isIndian: false, script: "Latin" },
-  { code: "kas_Deva", name: "Kashmiri (Devanagari)", isIndian: false, script: "Devanagari" },
-  { code: "lvs_Latn", name: "Standard Latvian", isIndian: false, script: "Latin" },
-  { code: "mag_Deva", name: "Magahi", isIndian: false, script: "Devanagari" },
-  { code: "mni_Mtei", name: "Manipuri (Meitei)", isIndian: false, script: "Meitei" },
-  { code: "pag_Latn", name: "Pangasinan", isIndian: false, script: "Latin" },
-  { code: "snd_Deva", name: "Sindhi (Devanagari)", isIndian: false, script: "Devanagari" },
-  { code: "taq_Tfng", name: "Tamasheq (Tifinagh)", isIndian: false, script: "Tifinagh" },
   { code: "tzm_Tfng", name: "Central Atlas Tamazight", isIndian: false, script: "Tifinagh" },
   { code: "zgh_Tfng", name: "Standard Moroccan Tamazight", isIndian: false, script: "Tifinagh" },
   { code: "kab_Latn", name: "Kabyle", isIndian: false, script: "Latin" },
 ];
 
-// All NLLB-200 languages combined
-export const ALL_NLLB200_LANGUAGES: NLLB200Language[] = [
-  ...INDIAN_NLLB200_LANGUAGES,
-  ...NON_INDIAN_NLLB200_LANGUAGES,
+// All languages combined
+export const ALL_LANGUAGES: DLTranslateLanguage[] = [
+  ...INDIAN_LANGUAGES,
+  ...NON_INDIAN_LANGUAGES,
 ];
 
 // Helper functions
 export function isIndianLanguage(languageName: string): boolean {
   const normalized = languageName.toLowerCase().trim();
-  return INDIAN_NLLB200_LANGUAGES.some(
+  return INDIAN_LANGUAGES.some(
     lang => lang.name.toLowerCase() === normalized
   );
 }
 
-export function getNLLB200Code(languageName: string): string | null {
+export function getLanguageCode(languageName: string): string | null {
   const normalized = languageName.toLowerCase().trim();
-  const found = ALL_NLLB200_LANGUAGES.find(
+  const found = ALL_LANGUAGES.find(
     lang => lang.name.toLowerCase() === normalized
   );
   return found?.code || null;
 }
 
-export function getLanguageByCode(code: string): NLLB200Language | null {
-  return ALL_NLLB200_LANGUAGES.find(lang => lang.code === code) || null;
+export function getLanguageByCode(code: string): DLTranslateLanguage | null {
+  return ALL_LANGUAGES.find(lang => lang.code === code) || null;
 }
 
 export function getIndianLanguageNames(): string[] {
-  return INDIAN_NLLB200_LANGUAGES.map(lang => lang.name);
+  return INDIAN_LANGUAGES.map(lang => lang.name);
 }
 
 export function getNonIndianLanguageNames(): string[] {
-  return NON_INDIAN_NLLB200_LANGUAGES.map(lang => lang.name);
+  return NON_INDIAN_LANGUAGES.map(lang => lang.name);
 }
 
 // Get total language count
 export function getTotalLanguageCount(): number {
-  return ALL_NLLB200_LANGUAGES.length;
+  return ALL_LANGUAGES.length;
 }
 
-// Map common language name variations to NLLB-200 codes
+// Map common language name variations to codes
 export const LANGUAGE_NAME_ALIASES: Record<string, string> = {
   "mandarin": "zho_Hans",
   "chinese": "zho_Hans",
@@ -298,8 +290,4 @@ export const LANGUAGE_NAME_ALIASES: Record<string, string> = {
   "filipino": "tgl_Latn",
   "norwegian bokmål": "nob_Latn",
   "serbian latin": "srp_Cyrl",
-  "malay standard": "zsm_Latn",
-  "burmese": "mya_Mymr",
-  "persian": "pes_Arab",
-  "kurdish": "kur_Arab",
 };

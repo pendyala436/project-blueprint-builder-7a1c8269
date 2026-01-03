@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { isIndianLanguage } from "@/data/nllb200Languages";
-import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
+import { isIndianLanguage } from "@/data/dlTranslateLanguages";
+import { filterWomenByTranslationRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useTranslationVisibility";
 import {
   Tooltip,
   TooltipContent,
@@ -256,8 +256,8 @@ const MatchingScreen = () => {
       // Apply profile visibility filtering (probability-based)
       const visibilityFilteredWomen = women.filter(w => shouldShowProfile(w.profileVisibility));
 
-      // Apply NLLB-200 visibility rules
-      const visibilityResult = filterWomenByNLLBRules(
+      // Apply translation visibility rules
+      const visibilityResult = filterWomenByTranslationRules(
         visibilityFilteredWomen.map(w => ({
           ...w,
           aiVerified: w.aiVerified,

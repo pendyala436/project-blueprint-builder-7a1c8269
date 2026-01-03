@@ -1,18 +1,18 @@
 /**
- * useNLLBVisibility Hook
+ * useTranslationVisibility Hook
  * 
- * Implements NLLB-200 language-based visibility rules for men viewing women.
+ * Implements language-based visibility rules for men viewing women.
  * 
  * VISIBILITY RULES:
  * 1. Woman must be online
  * 2. Woman must have passed AI verification
  * 3. Woman must be active/in shift
  * 4. Language matching:
- *    - If man selects Indian NLLB language: sees women with same mother tongue
- *    - If man selects non-Indian NLLB language: sees ONLY women with Indian NLLB languages (worldwide)
+ *    - If man selects Indian language: sees women with same mother tongue
+ *    - If man selects non-Indian language: sees ONLY women with Indian languages (worldwide)
  */
 
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_LANGUAGES } from "@/data/dlTranslateLanguages";
 
 export type ProfileVisibility = "low" | "medium" | "high" | "very_high";
 
@@ -68,16 +68,16 @@ export interface VisibilityResult {
 }
 
 /**
- * Filter women based on NLLB-200 visibility rules
+ * Filter women based on translation visibility rules
  */
-export function filterWomenByNLLBRules(
+export function filterWomenByTranslationRules(
   women: WomanProfile[],
   manLanguage: string
 ): VisibilityResult {
   const manHasIndianLanguage = isIndianLanguage(manLanguage);
   
   // Get all Indian language names for comparison
-  const indianLanguageNames = INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase());
+  const indianLanguageNames = INDIAN_LANGUAGES.map(l => l.name.toLowerCase());
   
   // Filter women who meet basic requirements
   const eligibleWomen = women.filter(woman => 
@@ -105,7 +105,7 @@ export function filterWomenByNLLBRules(
     
     visibleWomen = [...sameLanguageWomen, ...otherLanguageWomen];
   } else {
-    // RULE: Man with non-Indian language sees ONLY women with Indian NLLB languages
+    // RULE: Man with non-Indian language sees ONLY women with Indian languages
     // Never sees women with non-Indian languages, even if they share his language
     
     const indianWomen = eligibleWomen.filter(woman =>
@@ -136,7 +136,7 @@ export function filterWomenByNLLBRules(
 }
 
 /**
- * Check if a specific woman is visible to a man based on NLLB rules
+ * Check if a specific woman is visible to a man based on translation rules
  */
 export function isWomanVisibleToMan(
   woman: WomanProfile,
@@ -185,3 +185,6 @@ export function getVisibilityExplanation(manLanguage: string): string {
     return `As a ${manLanguage} speaker, you'll be matched with women who speak Indian languages. They can communicate with you using our auto-translation feature.`;
   }
 }
+
+// Backward compatibility aliases
+export const filterWomenByNLLBRules = filterWomenByTranslationRules;

@@ -27,7 +27,7 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Check } from 'lucide-react';
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
+import { ALL_LANGUAGES, INDIAN_LANGUAGES } from '@/data/dlTranslateLanguages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useServerTranslation } from '@/hooks/useServerTranslation';
@@ -119,11 +119,11 @@ const LanguageSelector: React.FC<{
   onChange: (value: string) => void;
   label: string;
 }> = ({ value, onChange, label }) => {
-  const popularLangs = ALL_NLLB200_LANGUAGES.filter(l => 
+  const popularLangs = ALL_LANGUAGES.filter(l => 
     POPULAR_LANGUAGES.includes(l.name)
   );
-  const indianLangs = INDIAN_NLLB200_LANGUAGES;
-  const otherLangs = ALL_NLLB200_LANGUAGES.filter(l => 
+  const indianLangs = INDIAN_LANGUAGES;
+  const otherLangs = ALL_LANGUAGES.filter(l => 
     !POPULAR_LANGUAGES.includes(l.name) && !l.isIndian
   );
   
@@ -316,7 +316,7 @@ const UniversalChatPage: React.FC = () => {
               <Globe className="h-5 w-5 text-primary" />
               Universal Chat
               <Badge variant="secondary" className="ml-2">
-                {ALL_NLLB200_LANGUAGES.length}+ Languages
+                {ALL_LANGUAGES.length}+ Languages
               </Badge>
             </CardTitle>
           </div>
@@ -439,7 +439,7 @@ const UniversalChatPage: React.FC = () => {
             </div>
             
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by dl-translate • {ALL_NLLB200_LANGUAGES.length}+ languages supported
+              Powered by DL-Translate • {ALL_LANGUAGES.length}+ languages supported
             </p>
           </div>
         </CardContent>
