@@ -228,7 +228,7 @@ const DraggableMiniChatWindow = ({
         setIsConverting(false);
         isConvertingRef.current = false;
       }
-    }, 500); // 500ms debounce
+    }, 150); // Reduced to 150ms for faster response
 
     return () => {
       if (transliterationTimeoutRef.current) {
@@ -865,29 +865,30 @@ const DraggableMiniChatWindow = ({
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
-    // Check if we have a valid native script preview ready that matches the current input
-    const hasValidPreview = previewMatchesInput &&
-                           currentPreview && 
+    // Check if we have a valid native script preview ready
+    // Don't require exact input match - just check if preview is native script and non-empty
+    const hasValidPreview = currentPreview && 
                            currentPreview !== trimmedInput && 
                            !isLatinScript(currentPreview);
     
     if (hasValidPreview) {
       // Use the pre-converted preview
       messageText = currentPreview;
-      console.log('[DraggableMiniChatWindow] Using preview:', messageText);
+      console.log('[DraggableMiniChatWindow] Using native preview:', messageText);
     } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
-      // No preview ready or stale - flag for background conversion when sender types Latin
+      // No preview ready - flag for background conversion when sender types Latin
       needsBackgroundConversion = true;
-      console.log('[DraggableMiniChatWindow] Preview not ready/stale, will convert in background:', trimmedInput);
+      console.log('[DraggableMiniChatWindow] Preview not ready, will convert in background:', trimmedInput);
     }
 
-    // Optimistic update - immediately show the message (may be updated after conversion)
+    // Optimistic update - show native script to sender immediately if available
     const tempId = `temp-${Date.now()}`;
+    const displayText = hasValidPreview ? messageText : trimmedInput;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: needsBackgroundConversion ? trimmedInput : messageText, // Show original while converting
-      translatedMessage: needsBackgroundConversion ? trimmedInput : messageText,
+      message: displayText, // Show native if available, otherwise Latin (will be updated)
+      translatedMessage: displayText,
       isTranslated: false,
       createdAt: new Date().toISOString()
     };
@@ -1592,11 +1593,11 @@ const DraggableMiniChatWindow = ({
 
               {/* Text input - with real-time native script conversion */}
               <div className="relative flex-1">
-                {/* Native script preview - shown above input when converting */}
-                {displayMessage && displayMessage !== newMessage && needsNativeConversion && (
-                  <div className="absolute -top-7 left-0 right-0 p-1 bg-primary/10 rounded text-[10px] text-muted-foreground border border-primary/20 z-10">
-                    <span className="text-[9px] text-muted-foreground/70">Preview: </span>
-                    <span className="text-foreground font-medium">{displayMessage}</span>
+                {/* Native script preview - shown above input when user types in Latin */}
+                {displayMessage && displayMessage !== newMessage && needsNativeConversion && !isLatinScript(displayMessage) && (
+                  <div className="absolute -top-7 left-0 right-0 p-1 bg-primary/10 rounded text-[10px] border border-primary/20 z-10">
+                    <span className="text-[9px] text-muted-foreground/70 mr-1">Native:</span>
+                    <span className="text-foreground font-medium" dir="auto">{displayMessage}</span>
                   </div>
                 )}
                 <Input
@@ -1612,6 +1613,7 @@ const DraggableMiniChatWindow = ({
                   onCompositionEnd={() => setIsComposing(false)}
                   className="h-8 text-xs pr-6"
                   disabled={isUploading || isBlocked}
+                  dir={needsNativeConversion && displayMessage && !isLatinScript(displayMessage) ? 'auto' : 'ltr'}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />

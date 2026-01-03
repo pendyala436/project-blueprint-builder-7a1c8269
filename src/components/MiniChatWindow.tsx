@@ -256,7 +256,7 @@ const MiniChatWindow = ({
         setIsConverting(false);
         isConvertingRef.current = false;
       }
-    }, 300); // Reduced to 300ms for faster response
+    }, 150); // Reduced to 150ms for faster response
 
     return () => {
       if (transliterationTimeoutRef.current) {
@@ -715,10 +715,10 @@ const MiniChatWindow = ({
     let messageText = trimmedInput;
     let needsBackgroundConversion = false;
     
-    // Check if we have a valid native script preview ready that matches the current input
-    // Valid means: preview exists, matches input, is different from input, and is NOT in Latin script
-    const hasValidPreview = previewMatchesInput &&
-                           currentPreview && 
+    // Check if we have a valid native script preview ready
+    // Valid means: preview exists, is different from input, and is NOT in Latin script
+    // Don't require exact input match - just check if preview is native script and non-empty
+    const hasValidPreview = currentPreview && 
                            currentPreview.length > 0 &&
                            currentPreview !== trimmedInput && 
                            !isLatinScript(currentPreview);
@@ -726,21 +726,22 @@ const MiniChatWindow = ({
     if (hasValidPreview) {
       // Use the pre-converted native script preview
       messageText = currentPreview;
-      console.log('[MiniChatWindow] Using preview:', messageText);
+      console.log('[MiniChatWindow] Using native preview:', messageText);
     } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
       // Input is in Latin script and user's language needs conversion
-      // Flag for background conversion since preview doesn't match or isn't ready
+      // Flag for background conversion since preview isn't ready
       needsBackgroundConversion = true;
-      console.log('[MiniChatWindow] Preview not ready/stale, will convert in background:', trimmedInput);
+      console.log('[MiniChatWindow] Preview not ready, will convert in background:', trimmedInput);
     }
 
-    // Optimistic update - immediately show the message (may be updated after conversion)
+    // Optimistic update - show native script to sender immediately if available
     const tempId = `temp-${Date.now()}`;
+    const displayText = hasValidPreview ? messageText : trimmedInput;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: needsBackgroundConversion ? trimmedInput : messageText, // Show original while converting
-      translatedMessage: needsBackgroundConversion ? trimmedInput : messageText,
+      message: displayText, // Show native if available, otherwise Latin (will be updated)
+      translatedMessage: displayText,
       isTranslated: false,
       createdAt: new Date().toISOString()
     };
@@ -1369,11 +1370,11 @@ const MiniChatWindow = ({
 
           {/* Input area - with real-time native script conversion */}
           <div className="p-1.5 border-t">
-            {/* Native script preview - shown above input when converting */}
-            {displayMessage && displayMessage !== newMessage && needsNativeConversion && (
-              <div className="mb-1.5 p-1.5 bg-primary/10 rounded text-[10px] text-muted-foreground border border-primary/20">
-                <span className="text-[9px] text-muted-foreground/70">Preview: </span>
-                <span className="text-foreground font-medium">{displayMessage}</span>
+            {/* Native script preview - shown above input when user types in Latin and needs conversion */}
+            {displayMessage && displayMessage !== newMessage && needsNativeConversion && !isLatinScript(displayMessage) && (
+              <div className="mb-1.5 p-1.5 bg-primary/10 rounded text-[10px] border border-primary/20">
+                <span className="text-[9px] text-muted-foreground/70 mr-1">Native:</span>
+                <span className="text-foreground font-medium" dir="auto">{displayMessage}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -1487,7 +1488,7 @@ const MiniChatWindow = ({
                 className="h-7 w-7 shrink-0"
               />
 
-              {/* Text input */}
+              {/* Text input - shows native script when available */}
               <div className="relative flex-1">
                 <Input
                   ref={messageInputRef}
@@ -1502,6 +1503,7 @@ const MiniChatWindow = ({
                   onCompositionEnd={() => setIsComposing(false)}
                   className="h-7 text-[11px] pr-6"
                   disabled={isBlocked}
+                  dir={needsNativeConversion && displayMessage && !isLatinScript(displayMessage) ? 'auto' : 'ltr'}
                 />
                 {isConverting && (
                   <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
