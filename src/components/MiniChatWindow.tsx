@@ -451,7 +451,6 @@ const MiniChatWindow = ({
       return { translatedMessage: text, isTranslated: false };
     }
     
-    // For incoming messages from partner - translate to current user's language
     // For outgoing messages - we don't translate here (sender sees their own message as-is)
     if (senderId === currentUserId) {
       return { translatedMessage: text, isTranslated: false };
