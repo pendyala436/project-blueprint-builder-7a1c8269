@@ -45,9 +45,6 @@ export {
   translator,
   translate,
   convertScript,
-  detectLanguage,
-  isSameLanguage,
-  isLatinScript,
 } from './translator';
 
 // Embedded translation engine
@@ -92,6 +89,14 @@ export {
   LATIN_SCRIPT_LANGUAGES,
   SUPPORTED_LANGUAGES,
 } from './language-codes';
+
+// Language detection (single source of truth)
+export {
+  detectLanguage,
+  isLatinScript,
+  isSameLanguage,
+  detectPhoneticIndianLanguage,
+} from './language-detector';
 
 // React hooks
 export { useTranslator } from './useTranslator';

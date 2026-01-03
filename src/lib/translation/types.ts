@@ -22,6 +22,7 @@ export interface LanguageDetectionResult {
   language: string;
   isLatin: boolean;
   confidence: number;
+  isPhonetic?: boolean; // True if Latin text detected as phonetic Indian language input
 }
 
 // Translation options

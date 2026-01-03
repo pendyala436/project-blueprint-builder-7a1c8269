@@ -162,5 +162,3 @@ export async function translate(text: string, options: TranslationOptions): Prom
 export async function convertScript(text: string, targetLanguage: string): Promise<string> {
   return translator.convertScript(text, targetLanguage);
 }
-
-export { detectLanguage, isSameLanguage, isLatinScript };
