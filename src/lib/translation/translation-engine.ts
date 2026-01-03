@@ -16,6 +16,7 @@ import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './lan
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
+import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -393,26 +394,36 @@ function addToCache(key: string, result: string): void {
 }
 
 /**
- * Convert Latin text to native script using embedded dictionary
+ * Convert Latin text to native script using embedded dictionary + phonetic fallback
  */
 function convertWithDictionary(text: string, targetLanguage: string): string {
   console.log('[DL-Translate] convertWithDictionary:', { text: text.slice(0, 30), target: targetLanguage });
   
-  // First check transliteration dictionary
+  // First check transliteration dictionary (exact word matches)
   const dictResult = checkTransliterationDictionary(text, targetLanguage);
   if (dictResult) {
     console.log('[DL-Translate] Transliteration match:', dictResult);
     return dictResult;
   }
   
-  // Check phrase dictionary
+  // Check phrase dictionary (common phrases)
   const phraseResult = checkPhraseDictionary(text, targetLanguage);
   if (phraseResult) {
     console.log('[DL-Translate] Phrase match:', phraseResult);
     return phraseResult;
   }
   
-  console.log('[DL-Translate] No dictionary match found');
+  // Fallback to phonetic transliteration for Indian languages
+  // This handles arbitrary text like "emi chesthunnavu" → "ఏమి చేస్తున్నావు"
+  if (isPhoneticTransliterationSupported(targetLanguage)) {
+    const phoneticResult = phoneticTransliterate(text, targetLanguage);
+    if (phoneticResult && phoneticResult !== text) {
+      console.log('[DL-Translate] Phonetic transliteration:', phoneticResult);
+      return phoneticResult;
+    }
+  }
+  
+  console.log('[DL-Translate] No dictionary/phonetic match found');
   return text;
 }
 
@@ -557,9 +568,21 @@ export async function convertToNativeScript(
     return result.translatedText;
   }
   
-  // Check dictionary first
+  // Check dictionary first (common phrases and words)
   const dictResult = convertWithDictionary(trimmed, normTarget);
-  if (dictResult !== trimmed) return dictResult;
+  if (dictResult !== trimmed) {
+    console.log('[DL-Translate] Dictionary/phonetic result:', dictResult);
+    return dictResult;
+  }
+  
+  // As a final fallback, try phonetic transliteration directly
+  if (isPhoneticTransliterationSupported(normTarget)) {
+    const phoneticResult = phoneticTransliterate(trimmed, normTarget);
+    if (phoneticResult && phoneticResult !== trimmed) {
+      console.log('[DL-Translate] Direct phonetic result:', phoneticResult);
+      return phoneticResult;
+    }
+  }
   
   // Try translation APIs for script conversion
   const result = await translateText(trimmed, {
