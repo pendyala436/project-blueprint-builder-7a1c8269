@@ -286,7 +286,7 @@ const AdminSettings = () => {
             <Button 
               onClick={saveSettings} 
               disabled={saving || Object.keys(modifiedSettings).length === 0}
-              className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+              className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-success hover:bg-success/90' : ''}`}
             >
               {saving ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />

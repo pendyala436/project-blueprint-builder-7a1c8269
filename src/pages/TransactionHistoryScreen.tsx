@@ -484,11 +484,11 @@ const TransactionHistoryScreen = () => {
     switch (status.toLowerCase()) {
       case "completed":
       case "ended":
-        return <Badge variant="secondary" className="bg-green-500/20 text-green-700">Completed</Badge>;
+        return <Badge variant="secondary" className="bg-success/20 text-success">Completed</Badge>;
       case "active":
         return <Badge className="bg-primary/20 text-primary">Active</Badge>;
       case "pending":
-        return <Badge variant="outline" className="text-amber-600 border-amber-300">Pending</Badge>;
+        return <Badge variant="outline" className="text-warning border-warning/30">Pending</Badge>;
       case "failed":
         return <Badge variant="destructive">Failed</Badge>;
       default:

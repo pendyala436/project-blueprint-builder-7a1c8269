@@ -718,10 +718,10 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
               alt="Selfie"
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
               <Check className="w-4 h-4" />
             </div>
-            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <div className="absolute inset-0 bg-background/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <Button
                 size="icon"
                 variant="secondary"
@@ -772,7 +772,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
               )}
 
               {verificationStatus === 'verified' && uploadingType !== 'selfie' && (
-                <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-2 animate-in zoom-in duration-300">
+                <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-2 animate-in zoom-in duration-300">
                   <Check className="h-5 w-5" />
                 </div>
               )}
@@ -824,7 +824,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         ) : showCamera ? (
           /* Camera view */
           <div className="space-y-3">
-            <div className="relative w-48 h-36 rounded-xl overflow-hidden border-2 border-primary bg-black">
+            <div className="relative w-48 h-36 rounded-xl overflow-hidden border-2 border-primary bg-muted">
               <video 
                 ref={videoRef} 
                 autoPlay 
@@ -834,7 +834,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
                 style={{ transform: 'scaleX(-1)' }}
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-24 h-24 border-2 border-dashed border-white/50 rounded-full" />
+                <div className="w-24 h-24 border-2 border-dashed border-foreground/50 rounded-full" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Position your face in the circle</p>
@@ -927,7 +927,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
                 alt="Additional"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <div className="absolute inset-0 bg-background/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                 <Button
                   size="icon"
                   variant="secondary"

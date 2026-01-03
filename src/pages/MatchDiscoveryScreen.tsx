@@ -752,7 +752,7 @@ const MatchDiscoveryScreen = () => {
                 )}
                 {/* Online now filter badge */}
                 {filters.onlineNow && (
-                  <Badge variant="secondary" className="gap-1 bg-emerald-500/20 text-emerald-600">
+                  <Badge variant="secondary" className="gap-1 bg-online/20 text-online">
                     Online Now
                   </Badge>
                 )}
@@ -801,10 +801,10 @@ const MatchDiscoveryScreen = () => {
                       )}
                       
                       {/* Gradient overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
                       
                       {/* User info overlay at bottom */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-foreground">
                         {/* Name and badges row */}
                         <div className="flex items-center gap-2 mb-2">
                           <h2 className="text-xl sm:text-2xl font-bold">{currentMatch.fullName}</h2>
@@ -814,11 +814,11 @@ const MatchDiscoveryScreen = () => {
                           )}
                           {/* Verified badge */}
                           {currentMatch.isVerified && (
-                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-verified" />
                           )}
                           {/* Premium badge */}
                           {currentMatch.isPremium && (
-                            <Star className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                            <Star className="w-4 h-4 sm:w-5 sm:h-5 text-crown" />
                           )}
                         </div>
                         
@@ -828,8 +828,8 @@ const MatchDiscoveryScreen = () => {
                           <span>{currentMatch.country}</span>
                           {/* Online status indicator */}
                           {currentMatch.isOnline && (
-                            <span className="flex items-center gap-1 text-emerald-400">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="flex items-center gap-1 text-online">
+                              <span className="w-2 h-2 rounded-full bg-online animate-pulse" />
                               Online
                             </span>
                           )}

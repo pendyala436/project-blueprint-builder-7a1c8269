@@ -352,27 +352,27 @@ const AdminChatPricing = () => {
                 </div>
 
                 {/* Display Mode - Women Rate */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-earnings/5 border border-earnings/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                      <Users className="h-5 w-5 text-emerald-500" />
+                    <div className="p-2 rounded-lg bg-earnings/10">
+                      <Users className="h-5 w-5 text-earnings" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Women Earning Per Minute</p>
-                      <p className="text-2xl font-bold text-emerald-600">₹{parseFloat(formData.women_earning_rate).toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-earnings">₹{parseFloat(formData.women_earning_rate).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Platform Profit */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-info/5 border border-info/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-blue-500/10">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <div className="p-2 rounded-lg bg-info/10">
+                      <TrendingUp className="h-5 w-5 text-info" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Platform Profit Per Minute</p>
-                      <p className="text-2xl font-bold text-blue-600">₹{chatPlatformProfit.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-info">₹{chatPlatformProfit.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -385,8 +385,8 @@ const AdminChatPricing = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-purple-500" />
+            <CardTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-secondary-foreground" />
                 Video Call Pricing Rates
               </CardTitle>
               <CardDescription>

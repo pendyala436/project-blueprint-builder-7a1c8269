@@ -1122,7 +1122,7 @@ const MiniChatWindow = ({
                 </Badge>
               )}
               {userGender === "female" && todayEarnings > 0 && (
-                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
+                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-earnings/30 text-earnings">
                   <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(0)}
                 </Badge>
               )}

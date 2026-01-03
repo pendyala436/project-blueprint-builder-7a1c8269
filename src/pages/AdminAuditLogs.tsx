@@ -254,7 +254,7 @@ const AdminAuditLogs = () => {
             <div className="text-sm text-muted-foreground">Total Logs</div>
           </Card>
           <Card className="p-4">
-            <div className="text-2xl font-bold text-emerald-500">
+            <div className="text-2xl font-bold text-success">
               {logs.filter(l => l.status === "success").length}
             </div>
             <div className="text-sm text-muted-foreground">Successful</div>
@@ -464,7 +464,7 @@ const AdminAuditLogs = () => {
                         </TableCell>
                         <TableCell>
                           {log.status === "success" ? (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1">
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 gap-1">
                               <CheckCircle className="h-3 w-3" />
                               Success
                             </Badge>
