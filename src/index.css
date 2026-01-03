@@ -6,84 +6,84 @@
 
 @layer base {
   :root {
-    /* Aurora Theme - Light Mode */
-    /* Deep cosmic background with aurora-inspired accents */
-    --background: 220 25% 97%;
-    --foreground: 230 25% 18%;
+    /* Default Light Mode - Pure White Background */
+    /* Background is always pure white (#FFFFFF) for accessibility */
+    --background: 0 0% 100%;
+    --foreground: 220 25% 15%;
 
-    /* Cards with subtle aurora tint */
-    --card: 210 30% 98%;
-    --card-foreground: 230 25% 18%;
+    /* Cards - Pure white */
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 230 25% 18%;
+    --popover-foreground: 220 25% 15%;
 
-    /* Primary - Aurora Teal/Cyan */
-    --primary: 174 72% 40%;
+    /* Primary - Aurora Teal (default theme) */
+    --primary: 174 72% 35%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 174 80% 55%;
+    --primary-glow: 174 80% 45%;
 
-    /* Secondary - Aurora Purple */
-    --secondary: 270 50% 94%;
-    --secondary-foreground: 270 60% 35%;
+    /* Secondary - Light tinted */
+    --secondary: 174 40% 95%;
+    --secondary-foreground: 174 60% 25%;
 
-    /* Muted - Soft aurora grey */
-    --muted: 220 20% 94%;
-    --muted-foreground: 220 15% 45%;
+    /* Muted - Soft gray */
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 15% 40%;
 
-    /* Accent - Aurora Green */
-    --accent: 160 70% 42%;
+    /* Accent */
+    --accent: 160 70% 38%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 92%;
-    --ring: 174 72% 40%;
+    --border: 220 15% 88%;
+    --input: 220 15% 92%;
+    --ring: 174 72% 35%;
 
     --radius: 0.75rem;
 
-    /* Semantic Status Colors - Use these instead of hardcoded colors */
-    --success: 142 71% 45%;
+    /* Semantic Status Colors - High contrast for white backgrounds */
+    --success: 142 71% 35%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 92% 42%;
     --warning-foreground: 0 0% 100%;
-    --info: 210 90% 50%;
+    --info: 210 90% 42%;
     --info-foreground: 0 0% 100%;
-    --error: 0 72% 51%;
+    --error: 0 72% 42%;
     --error-foreground: 0 0% 100%;
     
-    /* Status indicators */
-    --online: 142 71% 45%;
+    /* Status indicators - Accessible colors */
+    --online: 142 71% 35%;
     --online-foreground: 0 0% 100%;
-    --offline: 220 15% 60%;
+    --offline: 220 15% 55%;
     --offline-foreground: 0 0% 100%;
-    --busy: 38 92% 50%;
+    --busy: 38 92% 42%;
     --busy-foreground: 0 0% 100%;
-    --away: 38 92% 50%;
+    --away: 38 92% 42%;
     --away-foreground: 0 0% 100%;
-    --pending: 38 92% 50%;
+    --pending: 38 92% 42%;
     --pending-foreground: 0 0% 100%;
-    --verified: 142 71% 45%;
+    --verified: 142 71% 35%;
     --verified-foreground: 0 0% 100%;
     
     /* Gender colors */
-    --male: 210 90% 50%;
+    --male: 210 90% 42%;
     --male-foreground: 0 0% 100%;
-    --female: 330 81% 60%;
+    --female: 330 81% 48%;
     --female-foreground: 0 0% 100%;
     
     /* Feature colors - themed variants */
-    --crown: 45 90% 48%;
-    --crown-foreground: 45 25% 10%;
-    --gift: 330 81% 60%;
+    --crown: 45 90% 42%;
+    --crown-foreground: 45 25% 8%;
+    --gift: 330 81% 48%;
     --gift-foreground: 0 0% 100%;
-    --wallet: 210 90% 50%;
+    --wallet: 210 90% 42%;
     --wallet-foreground: 0 0% 100%;
-    --earnings: 142 71% 45%;
+    --earnings: 142 71% 35%;
     --earnings-foreground: 0 0% 100%;
-    --live: 0 72% 51%;
+    --live: 0 72% 42%;
     --live-foreground: 0 0% 100%;
     
     /* Video/Camera overlay - intentionally dark for media display */
@@ -99,93 +99,92 @@
     --shadow-card: 0 8px 32px -8px hsl(var(--foreground) / 0.1);
     --shadow-glow: 0 0 40px hsl(var(--primary) / 0.25);
 
-    /* Sidebar - Aurora dark theme */
-    --sidebar-background: 230 35% 15%;
-    --sidebar-foreground: 200 50% 95%;
-    --sidebar-primary: 174 72% 50%;
+    /* Sidebar - Dark themed for contrast */
+    --sidebar-background: 220 20% 14%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 174 72% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 40% 25%;
-    --sidebar-accent-foreground: 200 50% 95%;
-    --sidebar-border: 230 30% 25%;
-    --sidebar-ring: 174 72% 50%;
+    --sidebar-accent: 220 15% 22%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 174 72% 45%;
   }
 
   .dark {
-    /* Aurora Theme - Dark Mode */
-    /* Deep cosmic night sky background */
-    --background: 230 35% 8%;
+    /* Dark Mode - For dark theme preference */
+    --background: 220 20% 10%;
     --foreground: 200 50% 95%;
 
-    /* Cards with aurora glow */
-    --card: 230 30% 12%;
+    /* Cards with subtle tint */
+    --card: 220 20% 13%;
     --card-foreground: 200 50% 95%;
 
-    --popover: 230 35% 10%;
+    --popover: 220 20% 11%;
     --popover-foreground: 200 50% 95%;
 
-    /* Primary - Aurora Teal/Cyan (glowing) */
+    /* Primary - Aurora Teal (glowing) */
     --primary: 174 72% 50%;
-    --primary-foreground: 230 35% 8%;
+    --primary-foreground: 220 20% 10%;
     --primary-glow: 174 80% 60%;
 
-    /* Secondary - Aurora Purple */
-    --secondary: 270 45% 20%;
-    --secondary-foreground: 270 60% 80%;
+    /* Secondary */
+    --secondary: 174 30% 20%;
+    --secondary-foreground: 174 60% 80%;
 
-    /* Muted - Deep cosmic grey */
-    --muted: 230 25% 18%;
-    --muted-foreground: 220 20% 65%;
+    /* Muted - Deep gray */
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 15% 65%;
 
-    /* Accent - Aurora Green */
+    /* Accent */
     --accent: 160 70% 45%;
-    --accent-foreground: 230 35% 8%;
+    --accent-foreground: 220 20% 10%;
 
     --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 25% 20%;
-    --input: 230 25% 18%;
+    --border: 220 15% 22%;
+    --input: 220 15% 18%;
     --ring: 174 72% 50%;
 
     /* Semantic Status Colors - Dark mode */
     --success: 142 71% 50%;
-    --success-foreground: 230 35% 8%;
+    --success-foreground: 142 20% 10%;
     --warning: 38 92% 55%;
-    --warning-foreground: 230 35% 8%;
+    --warning-foreground: 38 20% 10%;
     --info: 210 90% 55%;
-    --info-foreground: 230 35% 8%;
+    --info-foreground: 210 20% 10%;
     --error: 0 65% 50%;
     --error-foreground: 0 0% 100%;
     
     /* Status indicators - Dark mode */
     --online: 142 71% 50%;
-    --online-foreground: 230 35% 8%;
-    --offline: 220 20% 50%;
+    --online-foreground: 142 20% 10%;
+    --offline: 220 15% 50%;
     --offline-foreground: 0 0% 100%;
     --busy: 38 92% 55%;
-    --busy-foreground: 230 35% 8%;
+    --busy-foreground: 38 20% 10%;
     --away: 38 92% 55%;
-    --away-foreground: 230 35% 8%;
+    --away-foreground: 38 20% 10%;
     --pending: 38 92% 55%;
-    --pending-foreground: 230 35% 8%;
+    --pending-foreground: 38 20% 10%;
     --verified: 142 71% 50%;
-    --verified-foreground: 230 35% 8%;
+    --verified-foreground: 142 20% 10%;
     
     /* Gender colors - Dark mode */
     --male: 210 90% 55%;
-    --male-foreground: 230 35% 8%;
+    --male-foreground: 210 20% 10%;
     --female: 330 81% 65%;
-    --female-foreground: 230 35% 8%;
+    --female-foreground: 330 20% 10%;
     
     /* Feature colors - themed variants - Dark mode */
     --crown: 45 90% 55%;
-    --crown-foreground: 45 35% 8%;
+    --crown-foreground: 45 20% 10%;
     --gift: 330 81% 65%;
-    --gift-foreground: 330 35% 8%;
+    --gift-foreground: 330 20% 10%;
     --wallet: 210 90% 55%;
-    --wallet-foreground: 210 35% 8%;
+    --wallet-foreground: 210 20% 10%;
     --earnings: 142 71% 50%;
-    --earnings-foreground: 142 35% 8%;
+    --earnings-foreground: 142 20% 10%;
     --live: 0 65% 55%;
     --live-foreground: 0 0% 100%;
     
@@ -202,14 +201,14 @@
     --shadow-card: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
     --shadow-glow: 0 0 40px hsl(var(--primary) / 0.35);
 
-    /* Sidebar - Deep aurora */
-    --sidebar-background: 230 40% 10%;
-    --sidebar-foreground: 200 50% 95%;
+    /* Sidebar - Deep dark */
+    --sidebar-background: 220 20% 12%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 174 72% 50%;
-    --sidebar-primary-foreground: 230 35% 8%;
-    --sidebar-accent: 270 40% 22%;
-    --sidebar-accent-foreground: 200 50% 95%;
-    --sidebar-border: 230 30% 18%;
+    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 20%;
     --sidebar-ring: 174 72% 50%;
   }
 }
