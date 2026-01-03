@@ -4,10 +4,8 @@
  * Based on: https://github.com/xhluca/dl-translate
  * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application
  * 
- * NO external APIs - All translation happens in browser:
- * 1. DL-Translate Dictionary (main) - instant common phrases
- * 2. Phonetic Transliteration (main) - Latin → native script
- * 3. NLLB-200 ML Model (fallback) - 200+ languages
+ * MAIN: Dictionary Translation + Phonetic Transliteration (instant, browser)
+ * FALLBACK: Hugging Face NLLB-200 via Edge Function (same model as dl-translate)
  */
 
 import { useState, useCallback } from 'react';
