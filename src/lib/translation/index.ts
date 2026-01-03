@@ -59,6 +59,13 @@ export {
   getCacheStats,
 } from './translation-engine';
 
+// Phonetic transliterator (Latin → Native script)
+export {
+  phoneticTransliterate,
+  isPhoneticTransliterationSupported,
+  getSupportedPhoneticLanguages,
+} from './phonetic-transliterator';
+
 // Browser-based DL-Translate dictionary translation
 export {
   translateWithML,
