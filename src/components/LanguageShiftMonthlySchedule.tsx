@@ -4,23 +4,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import { 
   Calendar, 
   Clock, 
   Users, 
-  MessageCircle, 
-  Video, 
   Sun, 
   Moon, 
   Sunrise,
   RefreshCw,
   Globe,
-  ChevronDown,
-  ChevronRight,
-  CalendarDays
+  CalendarDays,
+  Hand,
+  Bell,
+  CheckCircle,
+  UserCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -81,29 +80,44 @@ interface ScheduleData {
   all_women: WomanSchedule[];
 }
 
+interface OffDayVolunteer {
+  user_id: string;
+  full_name: string;
+  photo_url: string | null;
+  date: string;
+}
+
 interface LanguageShiftMonthlyScheduleProps {
   userId: string;
   language?: string;
+  isLeader?: boolean;
 }
 
 const SHIFT_ICONS = {
-  A: <Sunrise className="h-4 w-4" />,
-  B: <Sun className="h-4 w-4" />,
-  C: <Moon className="h-4 w-4" />
+  A: <Sunrise className="h-3 w-3" />,
+  B: <Sun className="h-3 w-3" />,
+  C: <Moon className="h-3 w-3" />
 };
 
 const SHIFT_COLORS = {
-  A: "bg-warning/20 text-warning border-warning/30",
-  B: "bg-info/20 text-info border-info/30",
-  C: "bg-secondary/20 text-secondary-foreground border-secondary/30"
+  A: "bg-warning/30 text-warning-foreground border-warning/40",
+  B: "bg-info/30 text-info-foreground border-info/40",
+  C: "bg-secondary/30 text-secondary-foreground border-secondary/40"
 };
 
-export default function LanguageShiftMonthlySchedule({ userId, language }: LanguageShiftMonthlyScheduleProps) {
+const SHIFT_BG_COLORS = {
+  A: "bg-warning/20",
+  B: "bg-info/20",
+  C: "bg-secondary/20"
+};
+
+export default function LanguageShiftMonthlySchedule({ userId, language, isLeader = false }: LanguageShiftMonthlyScheduleProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [expandedWomen, setExpandedWomen] = useState<Set<string>>(new Set());
   const [selectedMonth, setSelectedMonth] = useState<'current' | 'next'>('current');
+  const [offDayVolunteers, setOffDayVolunteers] = useState<OffDayVolunteer[]>([]);
+  const [myVolunteerDates, setMyVolunteerDates] = useState<string[]>([]);
 
   useEffect(() => {
     if (userId) {
@@ -122,6 +136,10 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
 
       if (data?.success) {
         setScheduleData(data);
+        // Load off-day volunteers for leaders
+        if (isLeader) {
+          await loadOffDayVolunteers();
+        }
       }
     } catch (error) {
       console.error('Error loading schedule:', error);
@@ -135,28 +153,53 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
     }
   };
 
-  const toggleWomanExpand = (userId: string) => {
-    setExpandedWomen(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
+  const loadOffDayVolunteers = async () => {
+    // Volunteers are tracked locally for now
+    // In a real implementation, this would query a dedicated volunteers table
+    setOffDayVolunteers([]);
+  };
+
+  const handleVolunteerForOffDay = async (date: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('shift-auto-scheduler', {
+        body: { action: 'opt_in_work_on_off_day', userId, data: { date } }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        setMyVolunteerDates(prev => [...prev, date]);
+        toast({
+          title: "Volunteered!",
+          description: `You've volunteered to work on ${date}`,
+        });
+        loadSchedule();
       } else {
-        newSet.add(userId);
+        toast({
+          title: "Error",
+          description: data?.error || "Failed to volunteer",
+          variant: "destructive"
+        });
       }
-      return newSet;
-    });
+    } catch (error) {
+      console.error('Error volunteering:', error);
+      toast({
+        title: "Error",
+        description: "Failed to volunteer for this day",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {
     return (
-      <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border-border">
         <CardHeader className="pb-3">
           <Skeleton className="h-6 w-64" />
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-[300px] w-full" />
         </CardContent>
       </Card>
     );
@@ -164,7 +207,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
 
   if (!scheduleData) {
     return (
-      <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+      <Card className="bg-card border-border">
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No schedule data available</p>
@@ -176,117 +219,145 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
     );
   }
 
-  const renderDayCell = (day: WomanDaySchedule) => {
-    const isToday = new Date().toISOString().split('T')[0] === day.date;
-    
+  // Get all dates for the selected month
+  const getDatesForMonth = () => {
+    if (!scheduleData.all_women.length) return [];
+    const monthData = selectedMonth === 'current' 
+      ? scheduleData.all_women[0]?.current_month 
+      : scheduleData.all_women[0]?.next_month;
+    return monthData?.days || [];
+  };
+
+  const monthDates = getDatesForMonth();
+
+  // Create grid header (dates)
+  const renderGridHeader = () => (
+    <div className="flex border-b border-border sticky top-0 bg-card z-10">
+      <div className="min-w-[140px] p-2 border-r border-border font-medium text-sm text-muted-foreground">
+        Team Member
+      </div>
+      <div className="flex overflow-x-auto">
+        {monthDates.map((day) => {
+          const isToday = new Date().toISOString().split('T')[0] === day.date;
+          return (
+            <div 
+              key={day.date} 
+              className={`min-w-[36px] p-1 text-center text-xs border-r border-border ${
+                isToday ? 'bg-primary/10' : ''
+              }`}
+            >
+              <div className="font-semibold">{day.day}</div>
+              <div className="text-muted-foreground text-[10px]">{day.day_name.substring(0, 2)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // Render each woman's row
+  const renderWomanRow = (woman: WomanSchedule) => {
+    const monthData = selectedMonth === 'current' ? woman.current_month : woman.next_month;
+    const isCurrentUser = woman.user_id === userId;
+
     return (
-      <div
-        key={day.date}
-        className={`p-1 text-center text-xs rounded ${
-          day.is_rotation_day 
-            ? 'bg-warning/20 border border-warning/30'
-            : day.is_week_off 
-              ? 'bg-muted/50 text-muted-foreground' 
-              : isToday 
-                ? 'bg-primary/20 border border-primary/30'
-                : 'bg-card'
+      <div 
+        key={woman.user_id} 
+        className={`flex border-b border-border/50 hover:bg-muted/30 ${
+          isCurrentUser ? 'bg-primary/5' : ''
         }`}
-        title={`${day.date}: ${day.is_week_off ? 'Week Off' : `${day.local_start_time} - ${day.local_end_time}`}`}
       >
-        <div className="font-medium">{day.day}</div>
-        <div className="text-[10px]">{day.day_name}</div>
-        {day.is_week_off ? (
-          <div className="text-[9px] text-muted-foreground">OFF</div>
-        ) : (
-          <Badge variant="outline" className={`text-[8px] px-0.5 py-0 ${SHIFT_COLORS[day.shift_code as keyof typeof SHIFT_COLORS]}`}>
-            {day.shift_code}
-          </Badge>
-        )}
+        {/* Woman info column */}
+        <div className="min-w-[140px] p-2 border-r border-border flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={woman.photo_url || ''} />
+            <AvatarFallback className="text-[10px] bg-muted">
+              {woman.full_name?.charAt(0) || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium truncate flex items-center gap-1">
+              {woman.full_name}
+              {isCurrentUser && <Badge variant="outline" className="text-[8px] px-1">You</Badge>}
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Badge 
+                variant="outline" 
+                className={`text-[8px] px-1 py-0 ${SHIFT_COLORS[woman.current_shift.code as keyof typeof SHIFT_COLORS]}`}
+              >
+                {woman.current_shift.code}
+              </Badge>
+              <span className="truncate">{woman.country?.substring(0, 2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Days columns */}
+        <div className="flex overflow-x-auto">
+          {monthData.days.map((day) => {
+            const isToday = new Date().toISOString().split('T')[0] === day.date;
+            const isMyOffDay = isCurrentUser && day.is_week_off;
+            const hasVolunteered = myVolunteerDates.includes(day.date);
+
+            return (
+              <div
+                key={day.date}
+                className={`min-w-[36px] p-1 text-center text-[10px] border-r border-border/30 relative group ${
+                  day.is_rotation_day 
+                    ? 'bg-warning/10 border-warning/20'
+                    : day.is_week_off 
+                      ? 'bg-muted/40' 
+                      : isToday 
+                        ? 'bg-primary/10'
+                        : SHIFT_BG_COLORS[day.shift_code as keyof typeof SHIFT_BG_COLORS] || ''
+                }`}
+              >
+                {day.is_week_off ? (
+                  <div className="flex flex-col items-center">
+                    <span className="text-muted-foreground font-medium">OFF</span>
+                    {isMyOffDay && !hasVolunteered && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-primary/80 text-primary-foreground text-[8px] h-full w-full rounded-none"
+                        onClick={() => handleVolunteerForOffDay(day.date)}
+                      >
+                        <Hand className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {hasVolunteered && (
+                      <CheckCircle className="h-3 w-3 text-primary absolute top-0 right-0" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    {SHIFT_ICONS[day.shift_code as keyof typeof SHIFT_ICONS]}
+                    <span className="font-semibold">{day.shift_code}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
 
-  const renderWomanSchedule = (woman: WomanSchedule) => {
-    const isExpanded = expandedWomen.has(woman.user_id);
-    const monthData = selectedMonth === 'current' ? woman.current_month : woman.next_month;
-
-    return (
-      <Collapsible
-        key={woman.user_id}
-        open={isExpanded}
-        onOpenChange={() => toggleWomanExpand(woman.user_id)}
-      >
-        <div className="border rounded-lg overflow-hidden mb-2">
-          <CollapsibleTrigger className="w-full">
-            <div className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={woman.photo_url || ''} />
-                  <AvatarFallback className="text-xs">
-                    {woman.full_name?.charAt(0) || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-left">
-                  <div className="font-medium text-sm">{woman.full_name}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Globe className="h-3 w-3" />
-                    <span>{woman.country}</span>
-                    <Badge variant="outline" className={`text-[10px] ${SHIFT_COLORS[woman.current_shift.code as keyof typeof SHIFT_COLORS]}`}>
-                      {SHIFT_ICONS[woman.current_shift.code as keyof typeof SHIFT_ICONS]}
-                      <span className="ml-1">{woman.current_shift.code}</span>
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {woman.role_type === 'chat' ? <MessageCircle className="h-2 w-2 mr-0.5" /> : <Video className="h-2 w-2 mr-0.5" />}
-                      {woman.role_type}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-right text-xs text-muted-foreground hidden sm:block">
-                  <div>{woman.current_shift.local_start_time} - {woman.current_shift.local_end_time}</div>
-                  <div>Off: {woman.week_off_days.map(d => d.substring(0, 3)).join(', ')}</div>
-                </div>
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </div>
-            </div>
-          </CollapsibleTrigger>
-          
-          <CollapsibleContent>
-            <div className="p-3 pt-0 border-t">
-              {/* Shift Info */}
-              <div className="mb-3 p-2 rounded bg-muted/30 text-xs">
-                <div className="flex flex-wrap gap-2">
-                  <span className="font-medium">{woman.current_shift.name}</span>
-                  <span>•</span>
-                  <span>{woman.current_shift.display}</span>
-                  <span>•</span>
-                  <span>Local: {woman.current_shift.local_start_time} - {woman.current_shift.local_end_time}</span>
-                </div>
-                <div className="mt-1 text-muted-foreground">
-                  Weekly Off: {woman.week_off_days.join(', ')}
-                </div>
-              </div>
-
-              {/* Calendar Grid */}
-              <div className="text-xs font-medium mb-2">{monthData.name}</div>
-              <div className="grid grid-cols-7 gap-1">
-                {monthData.days.map(renderDayCell)}
-              </div>
-            </div>
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
-    );
+  // Count off-day volunteers per date
+  const getVolunteerCountForDate = (date: string) => {
+    return offDayVolunteers.filter(v => v.date === date).length;
   };
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-      <CardHeader>
+    <Card className="bg-card border-border">
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
-            {scheduleData.language} Team Schedule
+            <span>{scheduleData.language} Team Schedule</span>
+            <Badge variant="secondary" className="text-xs">
+              {scheduleData.total_women} members
+            </Badge>
           </div>
           <Button variant="ghost" size="sm" onClick={loadSchedule}>
             <RefreshCw className="h-4 w-4" />
@@ -294,23 +365,31 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="p-3 rounded-lg bg-secondary/20 border border-border/50 text-center">
-            <div className="text-2xl font-bold">{scheduleData.total_women}</div>
-            <div className="text-xs text-muted-foreground">Total Women</div>
+        {/* Shift Summary */}
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className={`p-2 rounded-lg ${SHIFT_COLORS.A}`}>
+            <div className="flex items-center justify-center gap-1">
+              {SHIFT_ICONS.A}
+              <span className="font-semibold text-sm">A</span>
+            </div>
+            <div className="text-xs mt-1">Morning</div>
+            <div className="text-lg font-bold">{scheduleData.shifts.A.women_count}</div>
           </div>
-          <div className={`p-3 rounded-lg ${SHIFT_COLORS.A} text-center`}>
-            <div className="text-2xl font-bold">{scheduleData.shifts.A.women_count}</div>
-            <div className="text-xs">Shift A (7AM-4PM)</div>
+          <div className={`p-2 rounded-lg ${SHIFT_COLORS.B}`}>
+            <div className="flex items-center justify-center gap-1">
+              {SHIFT_ICONS.B}
+              <span className="font-semibold text-sm">B</span>
+            </div>
+            <div className="text-xs mt-1">Afternoon</div>
+            <div className="text-lg font-bold">{scheduleData.shifts.B.women_count}</div>
           </div>
-          <div className={`p-3 rounded-lg ${SHIFT_COLORS.B} text-center`}>
-            <div className="text-2xl font-bold">{scheduleData.shifts.B.women_count}</div>
-            <div className="text-xs">Shift B (3PM-12AM)</div>
-          </div>
-          <div className={`p-3 rounded-lg ${SHIFT_COLORS.C} text-center`}>
-            <div className="text-2xl font-bold">{scheduleData.shifts.C.women_count}</div>
-            <div className="text-xs">Shift C (11PM-8AM)</div>
+          <div className={`p-2 rounded-lg ${SHIFT_COLORS.C}`}>
+            <div className="flex items-center justify-center gap-1">
+              {SHIFT_ICONS.C}
+              <span className="font-semibold text-sm">C</span>
+            </div>
+            <div className="text-xs mt-1">Night</div>
+            <div className="text-lg font-bold">{scheduleData.shifts.C.women_count}</div>
           </div>
         </div>
 
@@ -321,8 +400,10 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
             <span className="font-medium text-warning">
               Next Rotation: {scheduleData.rotation.days_until} days
             </span>
-            <span className="text-warning/80">({scheduleData.rotation.rule})</span>
           </div>
+          <p className="text-xs text-warning/70 mt-1">
+            On the 28th of each month: A→B, B→C, C→A
+          </p>
         </div>
 
         {/* Month Selector */}
@@ -332,7 +413,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
             size="sm"
             onClick={() => setSelectedMonth('current')}
           >
-            {scheduleData.current_month.name} ({scheduleData.current_month.days_remaining} days left)
+            {scheduleData.current_month.name}
           </Button>
           <Button
             variant={selectedMonth === 'next' ? 'default' : 'outline'}
@@ -343,18 +424,73 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
           </Button>
         </div>
 
-        {/* All Women Calendar */}
-        <ScrollArea className="h-[500px]">
-          <div className="space-y-2">
-            {scheduleData.all_women.length > 0 ? (
-              scheduleData.all_women.map(renderWomanSchedule)
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No women in the system
+        {/* Calendar Grid */}
+        <div className="border border-border rounded-lg overflow-hidden">
+          <ScrollArea className="h-[350px]">
+            <div className="min-w-max">
+              {renderGridHeader()}
+              <div>
+                {scheduleData.all_women.length > 0 ? (
+                  scheduleData.all_women.map(renderWomanRow)
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No team members found
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Off-Day Volunteers Section (Leader View) */}
+        {isLeader && offDayVolunteers.length > 0 && (
+          <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Off-Day Volunteers</span>
+              <Badge variant="secondary" className="text-xs">{offDayVolunteers.length}</Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {offDayVolunteers.slice(0, 5).map((volunteer, idx) => (
+                <div key={idx} className="flex items-center gap-1 bg-card rounded-full px-2 py-1 text-xs">
+                  <Avatar className="h-4 w-4">
+                    <AvatarImage src={volunteer.photo_url || ''} />
+                    <AvatarFallback className="text-[8px]">{volunteer.full_name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <span>{volunteer.full_name}</span>
+                  <Badge variant="outline" className="text-[8px]">{volunteer.date}</Badge>
+                </div>
+              ))}
+              {offDayVolunteers.length > 5 && (
+                <Badge variant="secondary" className="text-xs">+{offDayVolunteers.length - 5} more</Badge>
+              )}
+            </div>
           </div>
-        </ScrollArea>
+        )}
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border">
+          <div className="flex items-center gap-1">
+            <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.A}`} />
+            <span>Morning (A)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.B}`} />
+            <span>Afternoon (B)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className={`w-4 h-4 rounded ${SHIFT_BG_COLORS.C}`} />
+            <span>Night (C)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded bg-muted/40" />
+            <span>Off Day</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Hand className="h-3 w-3" />
+            <span>Volunteer</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
