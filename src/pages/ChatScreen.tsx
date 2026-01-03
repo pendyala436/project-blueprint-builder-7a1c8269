@@ -84,7 +84,8 @@ import {
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
 // Embedded translation engine (browser-based ML + dictionaries)
-import { translateText, convertToNativeScript, normalizeLanguage } from "@/lib/translation/translation-engine";
+import { translateText, convertToNativeScript, normalizeLanguage, isLatinScript } from "@/lib/translation/translation-engine";
+import { isLatinScriptLanguage } from "@/lib/translation/language-codes";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
@@ -162,6 +163,11 @@ const ChatScreen = () => {
   
   // Current message being typed
   const [newMessage, setNewMessage] = useState("");
+  
+  // Live preview of native script conversion (e.g., "bagunnava" → "బాగున్నావా")
+  const [livePreview, setLivePreview] = useState("");
+  const [isConverting, setIsConverting] = useState(false);
+  const transliterationDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   // True while message is being sent
   const [isSending, setIsSending] = useState(false);
@@ -990,31 +996,103 @@ const ChatScreen = () => {
   };
 
   /**
-   * convertMessageToTargetLanguage Function
+   * convertToSenderNativeScript Function
    * 
-   * Converts English typing to the target language script.
+   * Converts Latin/English typing to the SENDER's native language script.
+   * This is used when sender types "bagunnava" and their language is Telugu.
    * Example: "bagunnava" → బాగున్నావా (Telugu)
    * Example: "kaise ho" → कैसे हो (Hindi)
    * 
    * @param message - Text typed in English/Latin characters
-   * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
-   * @returns Converted text in target language script
+   * @param senderLanguage - Sender's native language (e.g., "Telugu", "Hindi")
+   * @returns Converted text in sender's native script
    */
-  const convertMessageToTargetLanguage = async (
+  const convertToSenderNativeScript = async (
     message: string,
-    targetLanguage: string
+    senderLanguage: string
   ): Promise<string> => {
     try {
       const trimmed = message.trim();
       if (!trimmed) return message;
 
-      const converted = await convertToNativeScript(trimmed, targetLanguage);
+      const normLang = normalizeLanguage(senderLanguage);
+      
+      // Skip if language uses Latin script or text is already non-Latin
+      if (isLatinScriptLanguage(normLang) || !isLatinScript(trimmed)) {
+        return trimmed;
+      }
+
+      const converted = await convertToNativeScript(trimmed, senderLanguage);
       return converted || message;
     } catch (error) {
-      console.error("Conversion failed:", error);
+      console.error("Conversion to native script failed:", error);
       return message;
     }
   };
+
+  /**
+   * Real-time transliteration effect
+   * 
+   * Converts Latin typing to sender's native script as they type.
+   * Updates livePreview state with the converted text.
+   */
+  useEffect(() => {
+    // Clear previous debounce
+    if (transliterationDebounceRef.current) {
+      clearTimeout(transliterationDebounceRef.current);
+    }
+
+    const trimmed = newMessage.trim();
+    
+    // Skip if empty or very short
+    if (trimmed.length < 2) {
+      setLivePreview("");
+      setIsConverting(false);
+      return;
+    }
+
+    const normLang = normalizeLanguage(currentUserLanguage);
+    
+    // Skip if user's language uses Latin script
+    if (isLatinScriptLanguage(normLang)) {
+      setLivePreview("");
+      setIsConverting(false);
+      return;
+    }
+
+    // Skip if text is already in non-Latin script
+    if (!isLatinScript(trimmed)) {
+      setLivePreview("");
+      setIsConverting(false);
+      return;
+    }
+
+    // Show converting indicator
+    setIsConverting(true);
+
+    // Debounce the conversion
+    transliterationDebounceRef.current = setTimeout(async () => {
+      try {
+        const converted = await convertToNativeScript(trimmed, currentUserLanguage);
+        if (converted && converted !== trimmed) {
+          setLivePreview(converted);
+        } else {
+          setLivePreview("");
+        }
+      } catch (error) {
+        console.error("Live transliteration error:", error);
+        setLivePreview("");
+      } finally {
+        setIsConverting(false);
+      }
+    }, 300);
+
+    return () => {
+      if (transliterationDebounceRef.current) {
+        clearTimeout(transliterationDebounceRef.current);
+      }
+    };
+  }, [newMessage, currentUserLanguage]);
 
   /**
    * handleSendMessage Function
@@ -1063,10 +1141,12 @@ const ChatScreen = () => {
     setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
-      // ============= CONVERT ENGLISH TYPING TO TARGET LANGUAGE =============
-      const convertedMessage = await convertMessageToTargetLanguage(
+      // ============= CONVERT LATIN TYPING TO SENDER'S NATIVE SCRIPT =============
+      // Example: User types "bagunnava" with Telugu as their language
+      // Converts to "బాగున్నావా" (Telugu script)
+      const convertedMessage = await convertToSenderNativeScript(
         messageText,
-        chatPartner.preferredLanguage
+        currentUserLanguage
       );
 
       // Update optimistic message with converted text (if any)
@@ -1076,10 +1156,15 @@ const ChatScreen = () => {
         );
       }
 
+      // Clear live preview after sending
+      setLivePreview("");
+
       // ============= TRANSLATE FOR RECEIVER =============
+      // Translate from sender's language to partner's language
       const translation = await translateMessage(
         convertedMessage,
-        chatPartner.preferredLanguage
+        chatPartner.preferredLanguage,
+        currentUserLanguage // Source is sender's language
       );
       const translatedMessage = translation.translatedMessage;
       const isTranslated = translation.isTranslated;
@@ -1891,6 +1976,20 @@ const ChatScreen = () => {
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 bg-background border-t border-border/50 px-4 py-3">
         <div className="max-w-4xl mx-auto space-y-2">
+          {/* Live transliteration preview (e.g., "bagunnava" → "బాగున్నావా") */}
+          {livePreview && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-accent/50 rounded-lg border border-accent">
+              <Languages className="w-4 h-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">
+                  Will send as ({currentUserLanguage}):
+                </p>
+                <p className="text-sm font-medium text-foreground truncate">{livePreview}</p>
+              </div>
+              {isConverting && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+            </div>
+          )}
+          
           {/* Selected file preview */}
           {selectedFile && (
             <div className="flex items-center gap-3 p-2 bg-muted rounded-lg">
