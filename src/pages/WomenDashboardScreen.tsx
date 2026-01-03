@@ -155,13 +155,13 @@ const WomenDashboardScreen = () => {
     { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Withdraw'), 
-      color: "from-success to-success/80",
+      color: "from-earnings to-earnings/80",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-secondary to-secondary/80",
+      color: "from-female to-female/80",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -742,7 +742,7 @@ const WomenDashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-female/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -952,10 +952,10 @@ const WomenDashboardScreen = () => {
 
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-crown/10 to-crown/5 border-crown/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <Crown className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded-xl bg-crown/20">
+                <Crown className="w-5 h-5 text-crown" />
               </div>
               <div>
                 <p className="text-xl font-bold">{stats.rechargedMen}</p>
@@ -964,10 +964,10 @@ const WomenDashboardScreen = () => {
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-aurora border-accent/30 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-earnings/10 to-earnings/5 border-earnings/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-accent/20">
-                <IndianRupee className="w-5 h-5 text-accent" />
+              <div className="p-2 rounded-xl bg-earnings/20">
+                <IndianRupee className="w-5 h-5 text-earnings" />
               </div>
               <div>
                 <p className="text-xl font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
@@ -977,7 +977,7 @@ const WomenDashboardScreen = () => {
           </Card>
 
           <Card
-            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer col-span-2"
+            className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow cursor-pointer col-span-2"
             onClick={() => navigate("/shift-management")}
           >
             <AIShiftDisplay userId={currentUserId} compact />
@@ -1002,10 +1002,10 @@ const WomenDashboardScreen = () => {
 
         {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
-          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <MessageCircle className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded-xl bg-female/20">
+                <MessageCircle className="w-5 h-5 text-female" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold">{t('chatMode', 'Reply Mode')}</p>
@@ -1072,16 +1072,16 @@ const WomenDashboardScreen = () => {
           <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
-              >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
-                  {action.icon}
-                </div>
-                <p className="text-sm font-medium text-foreground">{action.label}</p>
-              </button>
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="group p-6 rounded-2xl bg-gradient-to-br from-female/5 to-female/10 border border-female/20 hover:border-female/40 hover:shadow-glow transition-all duration-300"
+                >
+                  <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
+                    {action.icon}
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{action.label}</p>
+                </button>
             ))}
           </div>
         </div>
@@ -1096,11 +1096,11 @@ const WomenDashboardScreen = () => {
         )}
 
         {/* Section 9: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/20">
-                <Clock className="h-6 w-6 text-primary" />
+              <div className="p-3 rounded-xl bg-female/20">
+                <Clock className="h-6 w-6 text-female" />
               </div>
               <div>
                 <p className="font-semibold">Start your shift</p>
