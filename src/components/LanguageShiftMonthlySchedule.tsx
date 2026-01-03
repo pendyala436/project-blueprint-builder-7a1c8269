@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { 
   Calendar, 
   Clock, 
@@ -19,10 +17,26 @@ import {
   Hand,
   Bell,
   CheckCircle,
-  UserCheck
+  UserCheck,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  getDay, 
+  addMonths, 
+  isSameDay,
+  isToday as isDateToday,
+  getDaysInMonth,
+  getDate,
+  getMonth,
+  getYear
+} from "date-fns";
 
 interface WomanDaySchedule {
   date: string;
@@ -93,6 +107,21 @@ interface LanguageShiftMonthlyScheduleProps {
   isLeader?: boolean;
 }
 
+interface CalendarDay {
+  date: Date;
+  dateStr: string;
+  day: number;
+  dayName: string;
+  isToday: boolean;
+}
+
+interface CalendarMonth {
+  year: number;
+  month: number;
+  name: string;
+  days: CalendarDay[];
+}
+
 const SHIFT_ICONS = {
   A: <Sunrise className="h-3 w-3" />,
   B: <Sun className="h-3 w-3" />,
@@ -111,13 +140,62 @@ const SHIFT_BG_COLORS = {
   C: "bg-secondary/20"
 };
 
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Generate calendar months using proper date calculations (like FullCalendar)
+const generateCalendarMonths = (baseDate: Date, monthCount: number): CalendarMonth[] => {
+  const months: CalendarMonth[] = [];
+  
+  for (let i = 0; i < monthCount; i++) {
+    const monthDate = addMonths(baseDate, i);
+    const year = getYear(monthDate);
+    const month = getMonth(monthDate);
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd }).map(date => ({
+      date,
+      dateStr: format(date, 'yyyy-MM-dd'),
+      day: getDate(date),
+      dayName: DAY_NAMES[getDay(date)],
+      isToday: isDateToday(date)
+    }));
+    
+    months.push({
+      year,
+      month,
+      name: format(monthDate, 'MMMM yyyy'),
+      days
+    });
+  }
+  
+  return months;
+};
+
 export default function LanguageShiftMonthlySchedule({ userId, language, isLeader = false }: LanguageShiftMonthlyScheduleProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<'current' | 'next'>('current');
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
   const [offDayVolunteers, setOffDayVolunteers] = useState<OffDayVolunteer[]>([]);
   const [myVolunteerDates, setMyVolunteerDates] = useState<string[]>([]);
+
+  // Generate 2 months in advance (current + next 2 = 3 months total visible, show 2 at a time)
+  const calendarMonths = useMemo(() => {
+    const today = new Date();
+    // Always show from current month + 2 months ahead
+    return generateCalendarMonths(today, 3);
+  }, []);
+
+  // Get the two months to display based on selection
+  const displayedMonths = useMemo(() => {
+    // When current month is done, shift the view
+    // This shows selectedMonthIndex and selectedMonthIndex + 1
+    return [
+      calendarMonths[selectedMonthIndex],
+      calendarMonths[selectedMonthIndex + 1]
+    ].filter(Boolean);
+  }, [calendarMonths, selectedMonthIndex]);
 
   useEffect(() => {
     if (userId) {
@@ -136,7 +214,6 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
 
       if (data?.success) {
         setScheduleData(data);
-        // Load off-day volunteers for leaders
         if (isLeader) {
           await loadOffDayVolunteers();
         }
@@ -154,8 +231,6 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
   };
 
   const loadOffDayVolunteers = async () => {
-    // Volunteers are tracked locally for now
-    // In a real implementation, this would query a dedicated volunteers table
     setOffDayVolunteers([]);
   };
 
@@ -191,9 +266,20 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
     }
   };
 
+  // Get schedule for a specific date from woman's schedule
+  const getScheduleForDate = (woman: WomanSchedule, dateStr: string): WomanDaySchedule | null => {
+    const currentMonthDay = woman.current_month?.days?.find(d => d.date === dateStr);
+    if (currentMonthDay) return currentMonthDay;
+    
+    const nextMonthDay = woman.next_month?.days?.find(d => d.date === dateStr);
+    if (nextMonthDay) return nextMonthDay;
+    
+    return null;
+  };
+
   if (isLoading) {
     return (
-      <Card className="bg-card border-border">
+      <Card className="bg-background border-border">
         <CardHeader className="pb-3">
           <Skeleton className="h-6 w-64" />
         </CardHeader>
@@ -207,7 +293,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
 
   if (!scheduleData) {
     return (
-      <Card className="bg-card border-border">
+      <Card className="bg-background border-border">
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>No schedule data available</p>
@@ -219,136 +305,11 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
     );
   }
 
-  // Get all dates for the selected month
-  const getDatesForMonth = () => {
-    if (!scheduleData.all_women.length) return [];
-    const monthData = selectedMonth === 'current' 
-      ? scheduleData.all_women[0]?.current_month 
-      : scheduleData.all_women[0]?.next_month;
-    return monthData?.days || [];
-  };
-
-  const monthDates = getDatesForMonth();
-
-  // Create grid header (dates)
-  const renderGridHeader = () => (
-    <div className="flex border-b border-border sticky top-0 bg-card z-10">
-      <div className="min-w-[120px] w-[120px] shrink-0 p-2 border-r border-border font-medium text-sm text-muted-foreground sticky left-0 bg-card z-20">
-        Team Member
-      </div>
-      <div className="flex">
-        {monthDates.map((day) => {
-          const isToday = new Date().toISOString().split('T')[0] === day.date;
-          return (
-            <div 
-              key={day.date} 
-              className={`w-[40px] shrink-0 p-1 text-center text-xs border-r border-border ${
-                isToday ? 'bg-primary/10' : ''
-              }`}
-            >
-              <div className="font-semibold">{day.day}</div>
-              <div className="text-muted-foreground text-[10px]">{day.day_name.substring(0, 2)}</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // Render each woman's row
-  const renderWomanRow = (woman: WomanSchedule) => {
-    const monthData = selectedMonth === 'current' ? woman.current_month : woman.next_month;
-    const isCurrentUser = woman.user_id === userId;
-
-    return (
-      <div 
-        key={woman.user_id} 
-        className={`flex border-b border-border/50 hover:bg-muted/30 ${
-          isCurrentUser ? 'bg-primary/5' : ''
-        }`}
-      >
-        {/* Woman info column - sticky left */}
-        <div className="min-w-[120px] w-[120px] shrink-0 p-2 border-r border-border flex items-center gap-2 sticky left-0 bg-card z-10">
-          <Avatar className="h-6 w-6 shrink-0">
-            <AvatarImage src={woman.photo_url || ''} />
-            <AvatarFallback className="text-[10px] bg-muted">
-              {woman.full_name?.charAt(0) || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate flex items-center gap-1">
-              {woman.full_name?.split(' ')[0]}
-              {isCurrentUser && <Badge variant="outline" className="text-[8px] px-1">You</Badge>}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Badge 
-                variant="outline" 
-                className={`text-[8px] px-1 py-0 ${SHIFT_COLORS[woman.current_shift.code as keyof typeof SHIFT_COLORS]}`}
-              >
-                {woman.current_shift.code}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* Days columns */}
-        <div className="flex">
-          {monthData.days.map((day) => {
-            const isToday = new Date().toISOString().split('T')[0] === day.date;
-            const isMyOffDay = isCurrentUser && day.is_week_off;
-            const hasVolunteered = myVolunteerDates.includes(day.date);
-
-            return (
-              <div
-                key={day.date}
-                className={`w-[40px] shrink-0 p-1 text-center text-[10px] border-r border-border/30 relative group ${
-                  day.is_rotation_day 
-                    ? 'bg-warning/10 border-warning/20'
-                    : day.is_week_off 
-                      ? 'bg-muted/40' 
-                      : isToday 
-                        ? 'bg-primary/10'
-                        : SHIFT_BG_COLORS[day.shift_code as keyof typeof SHIFT_BG_COLORS] || ''
-                }`}
-              >
-                {day.is_week_off ? (
-                  <div className="flex flex-col items-center">
-                    <span className="text-muted-foreground font-medium">OFF</span>
-                    {isMyOffDay && !hasVolunteered && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-primary/80 text-primary-foreground text-[8px] h-full w-full rounded-none"
-                        onClick={() => handleVolunteerForOffDay(day.date)}
-                      >
-                        <Hand className="h-3 w-3" />
-                      </Button>
-                    )}
-                    {hasVolunteered && (
-                      <CheckCircle className="h-3 w-3 text-primary absolute top-0 right-0" />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    {SHIFT_ICONS[day.shift_code as keyof typeof SHIFT_ICONS]}
-                    <span className="font-semibold">{day.shift_code}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // Count off-day volunteers per date
-  const getVolunteerCountForDate = (date: string) => {
-    return offDayVolunteers.filter(v => v.date === date).length;
-  };
+  // Combine all days from displayed months
+  const allDisplayedDays = displayedMonths.flatMap(m => m.days);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-background border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -415,25 +376,38 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </p>
         </div>
 
-        {/* Month Selector */}
-        <div className="flex gap-2">
+        {/* Month Navigation - Shows 2 months at a time */}
+        <div className="flex items-center justify-between">
           <Button
-            variant={selectedMonth === 'current' ? 'default' : 'outline'}
+            variant="outline"
             size="sm"
-            onClick={() => setSelectedMonth('current')}
+            onClick={() => setSelectedMonthIndex(Math.max(0, selectedMonthIndex - 1))}
+            disabled={selectedMonthIndex === 0}
           >
-            {scheduleData.current_month.name}
+            <ChevronLeft className="h-4 w-4" />
           </Button>
+          <div className="flex gap-2 flex-wrap justify-center">
+            {displayedMonths.map((month, idx) => (
+              <Badge 
+                key={`${month.year}-${month.month}`} 
+                variant={idx === 0 ? "default" : "secondary"}
+                className="text-sm px-3 py-1"
+              >
+                {month.name}
+              </Badge>
+            ))}
+          </div>
           <Button
-            variant={selectedMonth === 'next' ? 'default' : 'outline'}
+            variant="outline"
             size="sm"
-            onClick={() => setSelectedMonth('next')}
+            onClick={() => setSelectedMonthIndex(Math.min(calendarMonths.length - 2, selectedMonthIndex + 1))}
+            disabled={selectedMonthIndex >= calendarMonths.length - 2}
           >
-            {scheduleData.next_month.name}
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Calendar Grid - Full bidirectional scrolling for 200+ users */}
+        {/* Calendar Grid - 2 months side by side */}
         <div 
           className="border border-border rounded-lg"
           style={{ 
@@ -444,32 +418,44 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
             scrollbarWidth: 'thin'
           }}
         >
-          <table className="border-collapse" style={{ minWidth: `${120 + (monthDates.length * 40)}px` }}>
-            <thead className="sticky top-0 z-20 bg-card">
+          <table className="border-collapse w-full" style={{ minWidth: `${120 + (allDisplayedDays.length * 36)}px` }}>
+            <thead className="sticky top-0 z-20 bg-background">
+              {/* Month headers row */}
               <tr className="border-b border-border">
-                <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-card z-30 border-r border-border">
+                <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-background z-30 border-r border-border">
+                  &nbsp;
+                </th>
+                {displayedMonths.map(month => (
+                  <th 
+                    key={`header-${month.year}-${month.month}`}
+                    colSpan={month.days.length}
+                    className="p-2 text-center text-sm font-bold border-r border-border bg-primary/5"
+                  >
+                    {month.name}
+                  </th>
+                ))}
+              </tr>
+              {/* Day numbers row */}
+              <tr className="border-b border-border">
+                <th className="min-w-[120px] w-[120px] p-2 text-left text-sm font-medium text-muted-foreground sticky left-0 bg-background z-30 border-r border-border">
                   Team Member
                 </th>
-                {monthDates.map((day) => {
-                  const isToday = new Date().toISOString().split('T')[0] === day.date;
-                  return (
-                    <th 
-                      key={day.date} 
-                      className={`w-[40px] p-1 text-center text-xs border-r border-border ${
-                        isToday ? 'bg-primary/10' : ''
-                      }`}
-                    >
-                      <div className="font-semibold">{day.day}</div>
-                      <div className="text-muted-foreground text-[10px] font-normal">{day.day_name.substring(0, 2)}</div>
-                    </th>
-                  );
-                })}
+                {allDisplayedDays.map((day) => (
+                  <th 
+                    key={day.dateStr} 
+                    className={`w-[36px] min-w-[36px] p-1 text-center text-xs border-r border-border ${
+                      day.isToday ? 'bg-primary/20' : ''
+                    }`}
+                  >
+                    <div className="font-semibold">{day.day}</div>
+                    <div className="text-muted-foreground text-[9px] font-normal">{day.dayName.substring(0, 2)}</div>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {scheduleData.all_women.length > 0 ? (
                 scheduleData.all_women.map((woman) => {
-                  const monthData = selectedMonth === 'current' ? woman.current_month : woman.next_month;
                   const isCurrentUser = woman.user_id === userId;
                   
                   return (
@@ -479,7 +465,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
                         isCurrentUser ? 'bg-primary/5' : ''
                       }`}
                     >
-                      <td className="min-w-[120px] w-[120px] p-2 border-r border-border sticky left-0 bg-card z-10">
+                      <td className="min-w-[120px] w-[120px] p-2 border-r border-border sticky left-0 bg-background z-10">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6 shrink-0">
                             <AvatarImage src={woman.photo_url || ''} />
@@ -501,33 +487,38 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
                           </div>
                         </div>
                       </td>
-                      {monthData.days.map((day) => {
-                        const isToday = new Date().toISOString().split('T')[0] === day.date;
-                        const isMyOffDay = isCurrentUser && day.is_week_off;
-                        const hasVolunteered = myVolunteerDates.includes(day.date);
+                      {allDisplayedDays.map((day) => {
+                        const schedule = getScheduleForDate(woman, day.dateStr);
+                        const isMyOffDay = isCurrentUser && schedule?.is_week_off;
+                        const hasVolunteered = myVolunteerDates.includes(day.dateStr);
+                        
+                        // If no schedule data, show placeholder based on shift
+                        const shiftCode = schedule?.shift_code || woman.current_shift.code;
+                        const isWeekOff = schedule?.is_week_off ?? false;
+                        const isRotationDay = schedule?.is_rotation_day ?? false;
                         
                         return (
                           <td
-                            key={day.date}
-                            className={`w-[40px] p-1 text-center text-[10px] border-r border-border/30 relative group ${
-                              day.is_rotation_day 
+                            key={day.dateStr}
+                            className={`w-[36px] min-w-[36px] p-1 text-center text-[10px] border-r border-border/30 relative group ${
+                              isRotationDay 
                                 ? 'bg-warning/10'
-                                : day.is_week_off 
+                                : isWeekOff 
                                   ? 'bg-muted/40' 
-                                  : isToday 
+                                  : day.isToday 
                                     ? 'bg-primary/10'
-                                    : SHIFT_BG_COLORS[day.shift_code as keyof typeof SHIFT_BG_COLORS] || ''
+                                    : SHIFT_BG_COLORS[shiftCode as keyof typeof SHIFT_BG_COLORS] || ''
                             }`}
                           >
-                            {day.is_week_off ? (
+                            {isWeekOff ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-muted-foreground font-medium">OFF</span>
+                                <span className="text-muted-foreground font-medium text-[9px]">OFF</span>
                                 {isMyOffDay && !hasVolunteered && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-primary/80 text-primary-foreground text-[8px] h-full w-full rounded-none"
-                                    onClick={() => handleVolunteerForOffDay(day.date)}
+                                    onClick={() => handleVolunteerForOffDay(day.dateStr)}
                                   >
                                     <Hand className="h-3 w-3" />
                                   </Button>
@@ -538,8 +529,8 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
                               </div>
                             ) : (
                               <div className="flex flex-col items-center justify-center">
-                                {SHIFT_ICONS[day.shift_code as keyof typeof SHIFT_ICONS]}
-                                <span className="font-semibold">{day.shift_code}</span>
+                                {SHIFT_ICONS[shiftCode as keyof typeof SHIFT_ICONS]}
+                                <span className="font-semibold text-[9px]">{shiftCode}</span>
                               </div>
                             )}
                           </td>
@@ -550,7 +541,7 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
                 })
               ) : (
                 <tr>
-                  <td colSpan={monthDates.length + 1} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={allDisplayedDays.length + 1} className="text-center py-8 text-muted-foreground">
                     No team members found
                   </td>
                 </tr>
