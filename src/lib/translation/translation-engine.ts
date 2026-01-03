@@ -1,16 +1,18 @@
 /**
  * Embedded Translation Engine (DL-Translate Pattern)
  * 
- * Pure dictionary-based translation with optional ML fallback:
+ * MAIN: Dictionary-based translation (instant, browser-based):
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
- * - Browser ML fallback (200+ languages, lazy-loaded, offline after first use)
+ * 
+ * FALLBACK: Hugging Face NLLB-200 via Edge Function
+ * - Uses same model as Python dl-translate library
+ * - Requires HUGGING_FACE_ACCESS_TOKEN
  * 
  * Based on: 
  * - https://github.com/xhluca/dl-translate (API pattern)
  * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
- * - @huggingface/transformers (browser ML fallback)
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -18,10 +20,9 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
-import { translateWithBrowserML, isMLLanguageSupported } from './browser-ml-translator';
 
-// Flag to enable/disable ML fallback (can be configured at runtime)
-let enableMLFallback = true;
+// Flag to enable/disable Edge Function fallback
+let enableEdgeFunctionFallback = true;
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -535,19 +536,19 @@ export async function translateText(
     }
   }
   
-  // ========== FALLBACK: NLLB-200 ML Model (200+ languages) ==========
-  // Only used when dictionary fails - downloads ~300MB model on first use
-  if (enableMLFallback && isMLLanguageSupported(normSource) && isMLLanguageSupported(normTarget)) {
-    console.log('[DL-Translate] Fallback: Using NLLB-200 ML model...');
+  // ========== FALLBACK: Hugging Face NLLB-200 via Edge Function ==========
+  // Uses same model as Python dl-translate library
+  if (enableEdgeFunctionFallback) {
+    console.log('[DL-Translate] Fallback: Using Hugging Face NLLB-200 Edge Function...');
     try {
-      const mlResult = await translateWithBrowserML(trimmed, normSource, normTarget);
-      if (mlResult && mlResult !== trimmed) {
-        console.log('[DL-Translate] ML fallback success:', mlResult.slice(0, 50));
-        addToCache(cacheKey, mlResult);
-        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
+      const edgeResult = await translateWithEdgeFunction(trimmed, normSource, normTarget);
+      if (edgeResult && edgeResult !== trimmed) {
+        console.log('[DL-Translate] Edge Function success:', edgeResult.slice(0, 50));
+        addToCache(cacheKey, edgeResult);
+        return createResult(trimmed, edgeResult, normSource, normTarget, true, 'translate');
       }
     } catch (error) {
-      console.log('[DL-Translate] ML fallback failed:', error);
+      console.log('[DL-Translate] Edge Function fallback failed:', error);
     }
   }
   
@@ -556,19 +557,51 @@ export async function translateText(
 }
 
 /**
- * Enable or disable ML fallback translation
- * ML fallback downloads a ~300MB model on first use
+ * Translate using Edge Function (Hugging Face NLLB-200)
  */
-export function setMLFallbackEnabled(enabled: boolean): void {
-  enableMLFallback = enabled;
-  console.log(`[DL-Translate] ML fallback ${enabled ? 'enabled' : 'disabled'}`);
+async function translateWithEdgeFunction(text: string, source: string, target: string): Promise<string | null> {
+  try {
+    const response = await fetch('https://tvneohngeracipjajzos.supabase.co/functions/v1/dl-translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        sourceLanguage: source,
+        targetLanguage: target,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[DL-Translate] Edge Function error:', response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.isTranslated && result.translatedText) {
+      return result.translatedText;
+    }
+    return null;
+  } catch (error) {
+    console.error('[DL-Translate] Edge Function request failed:', error);
+    return null;
+  }
 }
 
 /**
- * Check if ML fallback is enabled
+ * Enable or disable Edge Function fallback translation
  */
-export function isMLFallbackEnabled(): boolean {
-  return enableMLFallback;
+export function setEdgeFunctionFallbackEnabled(enabled: boolean): void {
+  enableEdgeFunctionFallback = enabled;
+  console.log(`[DL-Translate] Edge Function fallback ${enabled ? 'enabled' : 'disabled'}`);
+}
+
+/**
+ * Check if Edge Function fallback is enabled
+ */
+export function isEdgeFunctionFallbackEnabled(): boolean {
+  return enableEdgeFunctionFallback;
 }
 
 /**

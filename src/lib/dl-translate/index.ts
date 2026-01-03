@@ -4,16 +4,17 @@
  * Based on: https://github.com/xhluca/dl-translate (API pattern)
  * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
  * 
- * NO external APIs - All translation happens in browser:
+ * NO external APIs for main translation - instant browser-based:
  * 
  * MAIN: DL-Translate Dictionary + Phonetic Transliteration
  * - Instant common phrases
  * - Latin → native script conversion
  * - Zero download, works immediately
  * 
- * FALLBACK: NLLB-200 ML Model (200+ languages)
- * - Browser-based transformer model
- * - Downloads once (~300MB), works offline after
+ * FALLBACK: Hugging Face NLLB-200 via Edge Function
+ * - Same model as Python dl-translate library
+ * - Uses facebook/nllb-200-distilled-600M
+ * - Requires HUGGING_FACE_ACCESS_TOKEN
  * 
  * Features:
  * 1. Auto-detect source language
@@ -65,6 +66,8 @@ export {
   isLatinScript,
   isSameLanguage,
   normalizeLanguage,
+  setEdgeFunctionFallbackEnabled,
+  isEdgeFunctionFallbackEnabled,
 } from '@/lib/translation/translation-engine';
 
 // Re-export browser-based DL-Translate dictionary translation
