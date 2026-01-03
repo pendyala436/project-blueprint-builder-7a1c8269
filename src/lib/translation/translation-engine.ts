@@ -13,104 +13,151 @@
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
-import { translateWithML, isMLTranslatorReady, initializeMLTranslator } from './ml-translation-engine';
+import { translateWithML, isMLTranslatorReady, initializeMLTranslator, isMLTranslatorLoading } from './ml-translation-engine';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Common romantic phrases dictionary for accurate translation
+// Track if ML initialization was attempted
+let mlInitAttempted = false;
+
+// Common phrases dictionary for accurate translation (expanded)
 const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
-  'i love you': {
-    hindi: 'मैं तुमसे प्यार करता हूं',
-    telugu: 'నేను నిన్ను ప్రేమిస్తున్నాను',
-    tamil: 'நான் உன்னை காதலிக்கிறேன்',
-    bengali: 'আমি তোমাকে ভালোবাসি',
-    marathi: 'मी तुझ्यावर प्रेम करतो',
-    gujarati: 'હું તને પ્રેમ કરું છું',
-    kannada: 'ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ',
-    malayalam: 'ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു',
-    punjabi: 'ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ',
-    odia: 'ମୁଁ ତୁମକୁ ଭଲ ପାଏ',
-    urdu: 'میں تم سے پیار کرتا ہوں',
-    arabic: 'أنا أحبك',
-    spanish: 'Te amo',
-    french: "Je t'aime",
-    german: 'Ich liebe dich',
-    portuguese: 'Eu te amo',
-    italian: 'Ti amo',
-    russian: 'Я тебя люблю',
-    chinese: '我爱你',
-    japanese: '愛してる',
-    korean: '사랑해',
+  // Greetings
+  'hello': {
+    hindi: 'नमस्ते', telugu: 'హలో', tamil: 'வணக்கம்', bengali: 'হ্যালো',
+    marathi: 'नमस्कार', gujarati: 'નમસ્તે', kannada: 'ನಮಸ್ಕಾರ', malayalam: 'ഹലോ',
+    punjabi: 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ', spanish: 'Hola', french: 'Bonjour', german: 'Hallo',
+    arabic: 'مرحبا', chinese: '你好', japanese: 'こんにちは', korean: '안녕하세요',
+    russian: 'Привет', portuguese: 'Olá', italian: 'Ciao',
   },
-  'i miss you': {
-    hindi: 'मुझे तुम्हारी याद आती है',
-    telugu: 'నీవు లేకుండా నాకు బాధగా ఉంది',
-    tamil: 'உன்னை நினைக்கிறேன்',
-    bengali: 'তোমার জন্য মন খারাপ',
-    spanish: 'Te extraño',
-    french: 'Tu me manques',
-    german: 'Ich vermisse dich',
+  'hi': {
+    hindi: 'हाय', telugu: 'హాయ్', tamil: 'ஹாய்', bengali: 'হাই',
+    marathi: 'हाय', gujarati: 'હાય', kannada: 'ಹಾಯ್', malayalam: 'ഹായ്',
+    spanish: 'Hola', french: 'Salut', german: 'Hi', chinese: '嗨', japanese: 'やあ',
   },
   'good morning': {
-    hindi: 'सुप्रभात',
-    telugu: 'శుభోదయం',
-    tamil: 'காலை வணக்கம்',
-    bengali: 'সুপ্রভাত',
-    marathi: 'शुभ प्रभात',
-    gujarati: 'શુભ સવાર',
-    kannada: 'ಶುಭೋದಯ',
-    malayalam: 'സുപ്രഭാതം',
-    punjabi: 'ਸ਼ੁਭ ਸਵੇਰ',
-    spanish: 'Buenos días',
-    french: 'Bonjour',
-    german: 'Guten Morgen',
+    hindi: 'सुप्रभात', telugu: 'శుభోదయం', tamil: 'காலை வணக்கம்', bengali: 'সুপ্রভাত',
+    marathi: 'शुभ प्रभात', gujarati: 'શુભ સવાર', kannada: 'ಶುಭೋದಯ', malayalam: 'സുപ്രഭാതം',
+    punjabi: 'ਸ਼ੁਭ ਸਵੇਰ', spanish: 'Buenos días', french: 'Bonjour', german: 'Guten Morgen',
+    arabic: 'صباح الخير', chinese: '早上好', japanese: 'おはようございます', korean: '좋은 아침',
   },
   'good night': {
-    hindi: 'शुभ रात्रि',
-    telugu: 'శుభ రాత్రి',
-    tamil: 'இனிய இரவு',
-    bengali: 'শুভ রাত্রি',
-    spanish: 'Buenas noches',
-    french: 'Bonne nuit',
-    german: 'Gute Nacht',
+    hindi: 'शुभ रात्रि', telugu: 'శుభ రాత్రి', tamil: 'இனிய இரவு', bengali: 'শুভ রাত্রি',
+    marathi: 'शुभ रात्री', gujarati: 'શુભ રાત્રિ', kannada: 'ಶುಭ ರಾತ್ರಿ', malayalam: 'ശുഭ രാത്രി',
+    spanish: 'Buenas noches', french: 'Bonne nuit', german: 'Gute Nacht',
+    arabic: 'تصبح على خير', chinese: '晚安', japanese: 'おやすみなさい', korean: '잘 자',
   },
+  'good evening': {
+    hindi: 'शुभ संध्या', telugu: 'శుభ సాయంత్రం', tamil: 'மாலை வணக்கம்', bengali: 'শুভ সন্ধ্যা',
+    spanish: 'Buenas tardes', french: 'Bonsoir', german: 'Guten Abend',
+  },
+  'goodbye': {
+    hindi: 'अलविदा', telugu: 'వీడ్కోలు', tamil: 'பிரியாவிடை', bengali: 'বিদায়',
+    spanish: 'Adiós', french: 'Au revoir', german: 'Auf Wiedersehen',
+    chinese: '再见', japanese: 'さようなら', korean: '안녕히 가세요',
+  },
+  'bye': {
+    hindi: 'बाय', telugu: 'బై', tamil: 'பை', bengali: 'বাই',
+    spanish: 'Adiós', french: 'Salut', german: 'Tschüss',
+  },
+  // Common questions
   'how are you': {
-    hindi: 'आप कैसे हैं',
-    telugu: 'మీరు ఎలా ఉన్నారు',
-    tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்',
-    bengali: 'আপনি কেমন আছেন',
-    spanish: '¿Cómo estás?',
-    french: 'Comment allez-vous?',
-    german: 'Wie geht es dir?',
+    hindi: 'आप कैसे हैं', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்',
+    bengali: 'আপনি কেমন আছেন', marathi: 'तुम्ही कसे आहात', gujarati: 'તમે કેમ છો',
+    kannada: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', malayalam: 'സുഖമാണോ', punjabi: 'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ',
+    spanish: '¿Cómo estás?', french: 'Comment allez-vous?', german: 'Wie geht es dir?',
+    arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요',
   },
-  'hello': {
-    hindi: 'नमस्ते',
-    telugu: 'హలో',
-    tamil: 'வணக்கம்',
-    bengali: 'হ্যালো',
-    marathi: 'नमस्कार',
-    gujarati: 'નમસ્તે',
-    kannada: 'ನಮಸ್ಕಾರ',
-    malayalam: 'ഹലോ',
-    punjabi: 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ',
-    spanish: 'Hola',
-    french: 'Bonjour',
-    german: 'Hallo',
+  'what is your name': {
+    hindi: 'आपका नाम क्या है', telugu: 'మీ పేరు ఏమిటి', tamil: 'உங்கள் பெயர் என்ன',
+    bengali: 'আপনার নাম কি', spanish: '¿Cómo te llamas?', french: 'Comment vous appelez-vous?',
+  },
+  'where are you from': {
+    hindi: 'आप कहाँ से हैं', telugu: 'మీరు ఎక్కడ నుండి వచ్చారు', tamil: 'நீங்கள் எங்கிருந்து வருகிறீர்கள்',
+    spanish: '¿De dónde eres?', french: 'D\'où venez-vous?',
+  },
+  // Responses
+  'i am fine': {
+    hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்',
+    bengali: 'আমি ভালো আছি', spanish: 'Estoy bien', french: 'Je vais bien',
   },
   'thank you': {
-    hindi: 'धन्यवाद',
-    telugu: 'ధన్యవాదాలు',
-    tamil: 'நன்றி',
-    bengali: 'ধন্যবাদ',
-    marathi: 'धन्यवाद',
-    gujarati: 'આભાર',
-    kannada: 'ಧನ್ಯವಾದ',
-    malayalam: 'നന്ദി',
-    spanish: 'Gracias',
-    french: 'Merci',
-    german: 'Danke',
+    hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி', bengali: 'ধন্যবাদ',
+    marathi: 'धन्यवाद', gujarati: 'આભાર', kannada: 'ಧನ್ಯವಾದ', malayalam: 'നന്ദി',
+    punjabi: 'ਧੰਨਵਾਦ', spanish: 'Gracias', french: 'Merci', german: 'Danke',
+    arabic: 'شكرا', chinese: '谢谢', japanese: 'ありがとう', korean: '감사합니다',
+  },
+  'thanks': {
+    hindi: 'धन्यवाद', telugu: 'థాంక్స్', tamil: 'நன்றி', bengali: 'ধন্যবাদ',
+    spanish: 'Gracias', french: 'Merci', german: 'Danke',
+  },
+  'yes': {
+    hindi: 'हाँ', telugu: 'అవును', tamil: 'ஆம்', bengali: 'হ্যাঁ',
+    marathi: 'होय', gujarati: 'હા', kannada: 'ಹೌದು', malayalam: 'അതെ',
+    spanish: 'Sí', french: 'Oui', german: 'Ja', arabic: 'نعم', chinese: '是', japanese: 'はい',
+  },
+  'no': {
+    hindi: 'नहीं', telugu: 'లేదు', tamil: 'இல்லை', bengali: 'না',
+    marathi: 'नाही', gujarati: 'ના', kannada: 'ಇಲ್ಲ', malayalam: 'ഇല്ല',
+    spanish: 'No', french: 'Non', german: 'Nein', arabic: 'لا', chinese: '不', japanese: 'いいえ',
+  },
+  'ok': {
+    hindi: 'ठीक है', telugu: 'సరే', tamil: 'சரி', bengali: 'ঠিক আছে',
+    marathi: 'ठीक आहे', gujarati: 'ઠીક છે', spanish: 'Vale', french: "D'accord",
+  },
+  'sorry': {
+    hindi: 'माफ़ कीजिए', telugu: 'క్షమించండి', tamil: 'மன்னிக்கவும்', bengali: 'দুঃখিত',
+    spanish: 'Lo siento', french: 'Désolé', german: 'Entschuldigung',
+    arabic: 'آسف', chinese: '对不起', japanese: 'ごめんなさい',
+  },
+  'please': {
+    hindi: 'कृपया', telugu: 'దయచేసి', tamil: 'தயவுசெய்து', bengali: 'অনুগ্রহ করে',
+    spanish: 'Por favor', french: "S'il vous plaît", german: 'Bitte',
+  },
+  // Love & emotions
+  'i love you': {
+    hindi: 'मैं तुमसे प्यार करता हूं', telugu: 'నేను నిన్ను ప్రేమిస్తున్నాను',
+    tamil: 'நான் உன்னை காதலிக்கிறேன்', bengali: 'আমি তোমাকে ভালোবাসি',
+    marathi: 'मी तुझ्यावर प्रेम करतो', gujarati: 'હું તને પ્રેમ કરું છું',
+    kannada: 'ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ', malayalam: 'ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു',
+    punjabi: 'ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ', spanish: 'Te amo', french: "Je t'aime",
+    german: 'Ich liebe dich', arabic: 'أنا أحبك', chinese: '我爱你',
+    japanese: '愛してる', korean: '사랑해', russian: 'Я тебя люблю',
+    portuguese: 'Eu te amo', italian: 'Ti amo',
+  },
+  'i miss you': {
+    hindi: 'मुझे तुम्हारी याद आती है', telugu: 'నీవు లేకుండా నాకు బాధగా ఉంది',
+    tamil: 'உன்னை நினைக்கிறேன்', bengali: 'তোমার জন্য মন খারাপ',
+    spanish: 'Te extraño', french: 'Tu me manques', german: 'Ich vermisse dich',
+    chinese: '我想你', japanese: '会いたい', korean: '보고 싶어',
+  },
+  'i like you': {
+    hindi: 'मुझे तुम पसंद हो', telugu: 'నాకు నువ్వు ఇష్టం', tamil: 'நான் உன்னை விரும்புகிறேன்',
+    spanish: 'Me gustas', french: 'Je t\'aime bien', chinese: '我喜欢你',
+  },
+  // Common chat phrases
+  'what are you doing': {
+    hindi: 'तुम क्या कर रहे हो', telugu: 'ఏం చేస్తున్నావ్', tamil: 'என்ன செய்கிறாய்',
+    bengali: 'তুমি কি করছ', spanish: '¿Qué estás haciendo?', french: 'Que fais-tu?',
+  },
+  'where are you': {
+    hindi: 'तुम कहाँ हो', telugu: 'నువ్వు ఎక్కడ ఉన్నావ్', tamil: 'நீ எங்கே இருக்கிறாய்',
+    spanish: '¿Dónde estás?', french: 'Où es-tu?',
+  },
+  'see you later': {
+    hindi: 'फिर मिलते हैं', telugu: 'తర్వాత కలుద్దాం', tamil: 'பிறகு சந்திப்போம்',
+    spanish: 'Hasta luego', french: 'À plus tard', german: 'Bis später',
+  },
+  'take care': {
+    hindi: 'अपना ख्याल रखना', telugu: 'జాగ్రత్తగా ఉండు', tamil: 'கவனமாக இரு',
+    spanish: 'Cuídate', french: 'Prends soin de toi',
+  },
+  'nice to meet you': {
+    hindi: 'आपसे मिलकर अच्छा लगा', telugu: 'మిమ్మల్ని కలిసినందుకు సంతోషం',
+    tamil: 'உங்களை சந்தித்ததில் மகிழ்ச்சி', spanish: 'Encantado de conocerte',
+    french: 'Enchanté', german: 'Freut mich',
   },
 };
 
@@ -276,8 +323,11 @@ export async function translateText(
   const normSource = normalizeLanguage(effectiveSource);
   const normTarget = normalizeLanguage(targetLanguage);
   
+  console.log('[DL-Translate] Translating:', { text: trimmed.slice(0, 50), from: normSource, to: normTarget });
+  
   // Same language - no translation needed
   if (isSameLanguage(normSource, normTarget)) {
+    console.log('[DL-Translate] Same language, skipping');
     return createResult(trimmed, trimmed, normSource, normTarget, false, 'same_language');
   }
   
@@ -285,12 +335,14 @@ export async function translateText(
   const cacheKey = `${trimmed}|${normSource}|${normTarget}`;
   const cached = getFromCache(cacheKey);
   if (cached) {
+    console.log('[DL-Translate] Cache hit');
     return createResult(trimmed, cached, normSource, normTarget, true, 'translate');
   }
   
   // Check phrase dictionary first (for accuracy)
   const phraseResult = checkPhraseDictionary(trimmed, normTarget);
   if (phraseResult) {
+    console.log('[DL-Translate] Phrase dictionary match:', phraseResult);
     addToCache(cacheKey, phraseResult);
     return createResult(trimmed, phraseResult, normSource, normTarget, true, 'translate');
   }
@@ -303,17 +355,40 @@ export async function translateText(
     // For conversion, use dictionary-based transliteration first
     const converted = convertWithDictionary(trimmed, normTarget);
     if (converted !== trimmed) {
+      console.log('[DL-Translate] Dictionary conversion:', converted);
       addToCache(cacheKey, converted);
       return createResult(trimmed, converted, normSource, normTarget, true, 'convert');
     }
   }
   
-  // Use browser-based ML translation (Transformers.js + M2M100 / dl-translate)
-  let translated = await translateWithML(trimmed, normSource, normTarget);
+  // Auto-initialize ML model if not yet attempted (background, non-blocking)
+  if (!mlInitAttempted && !isMLTranslatorReady() && !isMLTranslatorLoading()) {
+    mlInitAttempted = true;
+    console.log('[DL-Translate] Auto-initializing ML model (M2M100)...');
+    // Start loading in background (don't await)
+    initializeMLTranslator((progress) => {
+      console.log('[DL-Translate] ML loading:', progress.status, progress.progress ? `${progress.progress.toFixed(1)}%` : '');
+    }).catch(err => console.warn('[DL-Translate] ML init failed:', err));
+  }
   
-  // Fallback to dictionary if ML fails
+  // Try ML translation if ready
+  let translated: string | null = null;
+  if (isMLTranslatorReady()) {
+    console.log('[DL-Translate] Using ML translation');
+    translated = await translateWithML(trimmed, normSource, normTarget);
+    if (translated) {
+      console.log('[DL-Translate] ML result:', translated.slice(0, 50));
+    }
+  } else {
+    console.log('[DL-Translate] ML not ready, using dictionary fallback');
+  }
+  
+  // Fallback to dictionary if ML fails or not ready
   if (!translated) {
     translated = convertWithDictionary(trimmed, normTarget);
+    if (translated !== trimmed) {
+      console.log('[DL-Translate] Dictionary fallback:', translated.slice(0, 50));
+    }
   }
   
   if (translated && translated !== trimmed) {
@@ -321,6 +396,7 @@ export async function translateText(
     return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
   }
   
+  console.log('[DL-Translate] No translation available, returning original');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
 }
 
