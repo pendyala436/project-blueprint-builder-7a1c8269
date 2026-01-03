@@ -10,9 +10,12 @@
  * - Proxy-based dictionary with automatic fallback
  * - Comprehensive bidirectional translation dictionaries
  * - Character-level transliteration for native scripts
+ * - Phonetic transliteration for long messages
  * - Instant translations (no loading required)
  * - 200+ language codes supported
  */
+
+import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
 
 // ================== LANGUAGE CODES (DL-TRANSLATE PATTERN) ==================
 export const DL_TRANSLATE_LANGUAGE_CODES: Record<string, string> = {
@@ -616,12 +619,24 @@ export async function translateWithML(
     return result;
   }
   
-  // 4. Try full transliteration for phonetic input
+  // 4. Try full transliteration for phonetic input (dictionary-based first)
   const fullTranslit = transliteratePhrase(trimmed, tgtCode);
   if (fullTranslit !== trimmed) {
     addToCache(cacheKey, fullTranslit);
-    console.log('[DL-Translate] Transliteration:', trimmed, '→', fullTranslit);
+    console.log('[DL-Translate] Dictionary transliteration:', trimmed, '→', fullTranslit);
     return fullTranslit;
+  }
+  
+  // 5. Use phonetic transliterator for any remaining Latin text (handles long messages)
+  // Get the full language name from code for phonetic transliterator
+  const langName = Object.entries(DL_TRANSLATE_LANGUAGE_CODES).find(([name, code]) => code === tgtCode)?.[0] || tgtCode;
+  if (isPhoneticTransliterationSupported(langName)) {
+    const phoneticResult = phoneticTransliterate(trimmed, langName);
+    if (phoneticResult && phoneticResult !== trimmed) {
+      addToCache(cacheKey, phoneticResult);
+      console.log('[DL-Translate] Phonetic transliteration:', trimmed.slice(0, 30), '→', phoneticResult.slice(0, 30));
+      return phoneticResult;
+    }
   }
   
   // Return original if no translation available
@@ -629,7 +644,7 @@ export async function translateWithML(
 }
 
 /**
- * Transliterate a phrase from Latin script to native script
+ * Transliterate a phrase from Latin script to native script (dictionary-based)
  */
 function transliteratePhrase(text: string, targetLangCode: string): string {
   const translitMap = TRANSLITERATION[targetLangCode];
