@@ -65,9 +65,9 @@ export {
   disposeMLTranslator,
   clearMLCache,
   getMLCacheStats,
-  getDLM2M100Code as getLanguageCode,
-  isDLM2M100Supported as isLanguageSupported,
-  getSupportedDLM2M100Languages as getSupportedLanguages,
+  getLanguageCode,
+  isLanguageSupported,
+  getSupportedLanguages,
 } from '@/lib/translation/ml-translation-engine';
 
 // Re-export ML translation hook

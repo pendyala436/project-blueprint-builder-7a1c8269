@@ -15,7 +15,7 @@
  */
 
 // ================== LANGUAGE CODES (DL-TRANSLATE PATTERN) ==================
-export const DL_M2M100_LANGUAGE_CODES: Record<string, string> = {
+export const DL_TRANSLATE_LANGUAGE_CODES: Record<string, string> = {
   // Indian Languages
   hindi: 'hi', bengali: 'bn', telugu: 'te', tamil: 'ta',
   marathi: 'mr', gujarati: 'gu', kannada: 'kn', malayalam: 'ml',
@@ -63,9 +63,7 @@ export const DL_M2M100_LANGUAGE_CODES: Record<string, string> = {
 };
 
 // Aliases for backward compatibility
-export const DL_TRANSLATE_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
-export const M2M100_LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
-export const LANGUAGE_CODES = DL_M2M100_LANGUAGE_CODES;
+export const LANGUAGE_CODES = DL_TRANSLATE_LANGUAGE_CODES;
 
 // ================== COMPREHENSIVE TRANSLATION DICTIONARY ==================
 // Based on Language-Translator-Web-Application pure JS pattern
@@ -482,32 +480,25 @@ let isLoading = false;
 
 // ================== UTILITY FUNCTIONS ==================
 
-export function getDLM2M100Code(language: string): string {
+export function getLanguageCode(language: string): string {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '').replace(/\s+/g, '');
-  return DL_M2M100_LANGUAGE_CODES[normalized] || 'en';
+  return DL_TRANSLATE_LANGUAGE_CODES[normalized] || 'en';
 }
 
-export const getDLTranslateCode = getDLM2M100Code;
-export const getM2M100Code = getDLM2M100Code;
-export const getNLLBCode = getDLM2M100Code;
-export const getLanguageCode = getDLM2M100Code;
+export const getDLTranslateCode = getLanguageCode;
 
-export function isDLM2M100Supported(language: string): boolean {
+export function isLanguageSupported(language: string): boolean {
   const normalized = language.toLowerCase().trim().replace(/[_-]/g, '').replace(/\s+/g, '');
-  return normalized in DL_M2M100_LANGUAGE_CODES;
+  return normalized in DL_TRANSLATE_LANGUAGE_CODES;
 }
 
-export const isDLTranslateSupported = isDLM2M100Supported;
-export const isM2M100Supported = isDLM2M100Supported;
-export const isLanguageSupported = isDLM2M100Supported;
+export const isDLTranslateSupported = isLanguageSupported;
 
-export function getSupportedDLM2M100Languages(): string[] {
-  return Object.keys(DL_M2M100_LANGUAGE_CODES);
+export function getSupportedLanguages(): string[] {
+  return Object.keys(DL_TRANSLATE_LANGUAGE_CODES);
 }
 
-export const getSupportedDLTranslateLanguages = getSupportedDLM2M100Languages;
-export const getSupportedM2M100Languages = getSupportedDLM2M100Languages;
-export const getSupportedLanguages = getSupportedDLM2M100Languages;
+export const getSupportedDLTranslateLanguages = getSupportedLanguages;
 
 // ================== PROXY-BASED DICTIONARY (Language-Translator-Web-Application pattern) ==================
 // Creates a Proxy that returns original text if no translation found
@@ -557,8 +548,8 @@ export async function translateWithML(
   const trimmed = text.trim();
   if (!trimmed) return text;
   
-  const srcCode = getDLM2M100Code(sourceLanguage);
-  const tgtCode = getDLM2M100Code(targetLanguage);
+  const srcCode = getLanguageCode(sourceLanguage);
+  const tgtCode = getLanguageCode(targetLanguage);
   
   // Same language - no translation needed
   if (srcCode === tgtCode) return trimmed;

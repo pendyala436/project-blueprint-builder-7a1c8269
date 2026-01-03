@@ -185,6 +185,3 @@ export function getVisibilityExplanation(manLanguage: string): string {
     return `As a ${manLanguage} speaker, you'll be matched with women who speak Indian languages. They can communicate with you using our auto-translation feature.`;
   }
 }
-
-// Backward compatibility aliases
-export const filterWomenByNLLBRules = filterWomenByTranslationRules;

@@ -4,7 +4,7 @@
  * Browser-based multilingual chat with:
  * - Phonetic typing (Latin → Native script)
  * - Live preview while typing
- * - Background translation (NLLB-200)
+ * - Background translation (DL-Translate)
  * - Sender sees native script
  * - Receiver sees their language
  * - 200+ language support
@@ -34,7 +34,7 @@ export default function MultilingualChatPage() {
             
             <div className="text-center text-xs text-muted-foreground space-y-1 pb-4">
               <p>✅ Exact phonetic transliteration for 45+ Indian & world languages</p>
-              <p>✅ NLLB-200 translation for 200+ languages (browser-based)</p>
+              <p>✅ DL-Translate translation for 200+ languages (browser-based)</p>
               <p>✅ No partial messages • Complete send only</p>
             </div>
           </div>

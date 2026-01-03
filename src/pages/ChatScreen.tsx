@@ -2,7 +2,7 @@
  * ChatScreen.tsx
  * 
  * PURPOSE: Real-time messaging interface between two matched users.
- * Features automatic message translation using NLLB-200 neural translation.
+ * Features automatic message translation using DL-Translate.
  * 
  * KEY FEATURES:
  * - Real-time message updates via Supabase Realtime subscriptions
@@ -17,7 +17,7 @@
  * - user_status: Online/offline tracking
  * 
  * EDGE FUNCTIONS USED:
- * - translate-message: NLLB-200 based neural translation
+ * - translate-message: DL-Translate based translation
  */
 
 // ============= IMPORTS SECTION =============
@@ -926,7 +926,7 @@ const ChatScreen = () => {
    * translateMessage Function
    * 
    * Calls the translate-message edge function to translate text.
-   * Uses NLLB-200 neural machine translation model supporting 200+ languages.
+   * Uses DL-Translate dictionary-based translation supporting 200+ languages.
    * 
    * @param message - Text to translate
    * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
@@ -1764,7 +1764,7 @@ const ChatScreen = () => {
           <div className="flex items-center justify-center gap-2 text-sm text-info">
             <Languages className="w-4 h-4" />
             <span>Auto-translating: <strong>{currentUserLanguage}</strong> ↔ <strong>{chatPartner.preferredLanguage}</strong></span>
-            <span className="text-xs opacity-75">(NLLB-200)</span>
+            <span className="text-xs opacity-75">(DL-Translate)</span>
           </div>
         </div>
       )}
