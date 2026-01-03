@@ -167,6 +167,13 @@ const ROMANTIC_PHRASES: Record<string, Record<string, string>> = {
   'ధన్యవాదాలు': { english: 'Thank you', hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி' },
   'நன்றி': { english: 'Thank you', hindi: 'धन्यवाद', telugu: 'ధన్యవాదాలు', tamil: 'நன்றி' },
   'आप कैसे हैं': { english: 'How are you', hindi: 'आप कैसे हैं', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'आप कैसे हो': {
+    hindi: 'आप कैसे हो', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்',
+    bengali: 'আপনি কেমন আছেন', marathi: 'तुम्ही कसे आहात', gujarati: 'તમે કેમ છો',
+    kannada: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', malayalam: 'സുഖമാണോ', punjabi: 'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ',
+    spanish: '¿Cómo estás?', french: 'Comment allez-vous?', german: 'Wie geht es dir?',
+    arabic: 'كيف حالك', chinese: '你好吗', japanese: 'お元気ですか', korean: '어떻게 지내세요', english: 'How are you',
+  },
   'మీరు ఎలా ఉన్నారు': { english: 'How are you', hindi: 'आप कैसे हैं', telugu: 'మీరు ఎలా ఉన్నారు', tamil: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
   'मैं ठीक हूं': { english: 'I am fine', hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்' },
   'నేను బాగున్నాను': { english: 'I am fine', hindi: 'मैं ठीक हूं', telugu: 'నేను బాగున్నాను', tamil: 'நான் நலமாக இருக்கிறேன்' },
@@ -246,17 +253,27 @@ function checkPhraseDictionary(text: string, targetLanguage: string): string | n
   const trimmed = text.trim();
   const lowerText = trimmed.toLowerCase();
   const normTarget = normalizeLanguage(targetLanguage);
-  
-  // Check lowercase first (for English phrases)
-  if (ROMANTIC_PHRASES[lowerText]?.[normTarget]) {
-    return ROMANTIC_PHRASES[lowerText][normTarget];
+
+  // Also try punctuation-stripped keys so inputs like "how are you?" and "आप कैसे हो?" match.
+  const cleanedLower = lowerText
+    .replace(/[^\p{L}\p{N}\s]+/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const cleanedExact = trimmed
+    .replace(/[^\p{L}\p{N}\s]+/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const candidates: string[] = [lowerText, trimmed];
+  if (cleanedLower && cleanedLower !== lowerText) candidates.push(cleanedLower);
+  if (cleanedExact && cleanedExact !== trimmed) candidates.push(cleanedExact);
+
+  for (const key of candidates) {
+    const entry = ROMANTIC_PHRASES[key];
+    if (entry?.[normTarget]) return entry[normTarget];
   }
-  
-  // Check exact match (for native script keys)
-  if (ROMANTIC_PHRASES[trimmed]?.[normTarget]) {
-    return ROMANTIC_PHRASES[trimmed][normTarget];
-  }
-  
+
   return null;
 }
 
@@ -264,27 +281,80 @@ function checkPhraseDictionary(text: string, targetLanguage: string): string | n
  * Check and return transliteration from dictionary
  */
 function checkTransliterationDictionary(text: string, targetLanguage: string): string | null {
-  const lowerText = text.toLowerCase().trim();
+  const trimmed = text.trim();
+  const lowerText = trimmed.toLowerCase();
   const normTarget = normalizeLanguage(targetLanguage);
   const langMap = TRANSLITERATION_MAP[normTarget];
-  
-  if (langMap) {
-    // Check single word
-    if (langMap[lowerText]) {
-      return langMap[lowerText];
-    }
-    
-    // Check word by word
-    const words = lowerText.split(/\s+/);
-    const transliterated = words.map(word => langMap[word] || word);
-    const hasTransliteration = transliterated.some((t, i) => t !== words[i]);
-    
-    if (hasTransliteration) {
-      return transliterated.join(' ');
-    }
+
+  if (!langMap) return null;
+
+  // Exact match (fast path)
+  if (langMap[lowerText]) {
+    return langMap[lowerText];
   }
-  
-  return null;
+
+  // Whole-string match but ignore punctuation (e.g. "kaise ho?" → "kaise ho")
+  const cleanedWhole = lowerText
+    .replace(/[^\p{L}\p{N}\s]+/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleanedWhole && cleanedWhole !== lowerText && langMap[cleanedWhole]) {
+    const trailing = trimmed.match(/[^\p{L}\p{N}\s]+$/u)?.[0] ?? '';
+    return `${langMap[cleanedWhole]}${trailing}`;
+  }
+
+  // Token-based transliteration with punctuation preservation.
+  // Handles: "Aap kaise ho?" => "आप कैसे हो?"
+  const tokens = trimmed.split(/\s+/).map(t => t.toLowerCase());
+
+  const parsed = tokens.map(tok => {
+    const m = tok.match(/^([^\p{L}\p{N}]*)([\p{L}\p{N}]+)([^\p{L}\p{N}]*)$/u);
+    if (!m) return { prefix: '', core: tok, suffix: '', raw: tok, hasCore: false };
+    return { prefix: m[1], core: m[2], suffix: m[3], raw: tok, hasCore: true };
+  });
+
+  let changed = false;
+  const maxPhraseLen = 3;
+  const out: string[] = [];
+
+  for (let i = 0; i < parsed.length; ) {
+    const current = parsed[i];
+
+    if (!current.hasCore) {
+      out.push(current.raw);
+      i += 1;
+      continue;
+    }
+
+    let matched = false;
+
+    for (let len = Math.min(maxPhraseLen, parsed.length - i); len >= 2; len--) {
+      const window = parsed.slice(i, i + len);
+      if (window.some(w => !w.hasCore)) continue;
+
+      const key = window.map(w => w.core).join(' ');
+      const phrase = langMap[key];
+
+      if (phrase) {
+        out.push(`${window[0].prefix}${phrase}${window[window.length - 1].suffix}`);
+        changed = true;
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+
+    if (matched) continue;
+
+    const mapped = langMap[current.core] || current.core;
+    if (mapped !== current.core) changed = true;
+    out.push(`${current.prefix}${mapped}${current.suffix}`);
+    i += 1;
+  }
+
+  if (!changed) return null;
+  return out.join(' ');
 }
 
 /**
