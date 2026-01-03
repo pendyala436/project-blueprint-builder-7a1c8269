@@ -1,12 +1,22 @@
 /**
- * Hook for DL-Translate Chat functionality (Server-Side Only)
+ * Hook for DL-Translate Chat functionality (Fully Embedded)
  * 
- * All translation via Edge Function - no client-side processing
+ * FEATURES:
+ * - Auto-detect source and target language
+ * - Typing: Latin letters based on mother tongue
+ * - Preview: Live transliteration to native script
+ * - Send: Background translation, sender sees native text
+ * - Receiver: Sees message in their mother tongue
+ * - Bi-directional: Both users see messages in their own language
+ * - Non-blocking: Typing not affected by translation
+ * 
+ * NO external APIs - all embedded in browser
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDLTranslate } from '@/lib/dl-translate';
 import { useDebounce } from '@/hooks/useDebounce';
+import { detectLanguage as detectLang } from '@/lib/translation/translation-engine';
 
 interface TransliterationState {
   input: string;
@@ -38,6 +48,7 @@ interface UseDLTranslateChatReturn {
   getNativeLanguageName: (lang: string) => string;
   isSameLanguage: (lang1: string, lang2: string) => boolean;
   browserLanguage: string;
+  isTranslating: boolean;
 }
 
 export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTranslateChatReturn {
@@ -180,15 +191,23 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
     return getNativeName(lang);
   }, [getNativeName]);
 
+  // Enhanced detectLanguageFromText using embedded language detector
+  const detectLanguageFromText = useCallback((text: string): string => {
+    if (!text.trim()) return userLanguage;
+    const result = detectLang(text);
+    return result.language || userLanguage;
+  }, [userLanguage]);
+
   return {
     transliteration,
     setInputText,
     processOutgoing,
     processIncoming,
-    detectLanguageFromText: detectLanguage,
+    detectLanguageFromText,
     willTranslate,
     getNativeLanguageName,
     isSameLanguage,
-    browserLanguage
+    browserLanguage,
+    isTranslating: transliteration.isProcessing
   };
 }
