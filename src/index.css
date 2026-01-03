@@ -130,7 +130,7 @@
     --info: 210 90% 55%;
     --info-foreground: 230 35% 8%;
     
-    /* Status indicators */
+    /* Status indicators - Dark mode */
     --online: 142 71% 50%;
     --online-foreground: 230 35% 8%;
     --offline: 220 20% 50%;
@@ -140,7 +140,7 @@
     --away: 38 92% 55%;
     --away-foreground: 230 35% 8%;
     
-    /* Gender colors */
+    /* Gender colors - Dark mode */
     --male: 210 90% 55%;
     --female: 330 81% 65%;
 
