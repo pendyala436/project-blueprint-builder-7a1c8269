@@ -575,16 +575,27 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
     const roleType = positionInShift < Math.ceil(womenInShift.length / 2) ? 'chat' : 'video_call';
 
     const shiftDef = SHIFTS[shiftCode as keyof typeof SHIFTS];
+    const localStartTime = formatTimeForTimezone(shiftDef.start, timezoneOffset - 330);
+    const localEndTime = formatTimeForTimezone(shiftDef.end, timezoneOffset - 330);
+    
     const womanData = {
       user_id: woman.user_id,
       full_name: woman.full_name,
       photo_url: woman.photo_url,
       country: woman.country,
-      is_week_off: isWeekOff,
+      shift_code: shiftCode,
+      shift_name: shiftDef.name,
+      shift_display: shiftDef.display,
+      shift_start_hour: shiftDef.start,
+      shift_end_hour: shiftDef.end,
+      is_week_off_today: isWeekOff,
+      today_on_duty: !isWeekOff,
       week_off_days: weekOffDays.map((d: number) => DAYS_OF_WEEK[d]),
-      local_start_time: formatTimeForTimezone(shiftDef.start, timezoneOffset - 330),
-      local_end_time: formatTimeForTimezone(shiftDef.end, timezoneOffset - 330),
-      timezone_name: woman.country === 'India' ? 'IST' : 'Local'
+      week_off_day_indices: weekOffDays,
+      local_start_time: localStartTime,
+      local_end_time: localEndTime,
+      timezone_name: woman.country === 'India' ? 'IST' : 'Local',
+      role_type: roleType
     };
 
     if (groupSchedule[shiftCode as keyof typeof groupSchedule]) {
@@ -598,6 +609,16 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
   const daysUntilRotation = ROTATION_DAY - today.getDate();
   const rotationDate = new Date(currentYear, currentMonth, ROTATION_DAY);
 
+  // Flatten all women data for the component
+  const allWomen = [
+    ...groupSchedule.A.chat,
+    ...groupSchedule.A.video_call,
+    ...groupSchedule.B.chat,
+    ...groupSchedule.B.video_call,
+    ...groupSchedule.C.chat,
+    ...groupSchedule.C.video_call
+  ];
+
   return {
     success: true,
     language: targetLanguage,
@@ -606,27 +627,40 @@ async function getLanguageGroupSchedule(supabase: any, userId: string, language?
       date: today.toISOString().split('T')[0],
       day_of_week: DAYS_OF_WEEK[dayOfWeek]
     },
+    women: allWomen,
     shifts: {
       A: {
         name: SHIFTS.A.name,
-        time: SHIFTS.A.display,
+        display: SHIFTS.A.display,
+        start: SHIFTS.A.start,
+        end: SHIFTS.A.end,
+        code: 'A',
         overlap: '1 hour overlap with Shift B (3-4 PM)',
         chat_support: groupSchedule.A.chat,
-        video_support: groupSchedule.A.video_call
+        video_support: groupSchedule.A.video_call,
+        women_count: groupSchedule.A.chat.length + groupSchedule.A.video_call.length
       },
       B: {
         name: SHIFTS.B.name,
-        time: SHIFTS.B.display,
+        display: SHIFTS.B.display,
+        start: SHIFTS.B.start,
+        end: SHIFTS.B.end,
+        code: 'B',
         overlap: '1 hour overlap with A (3-4 PM) and C (11 PM-12 AM)',
         chat_support: groupSchedule.B.chat,
-        video_support: groupSchedule.B.video_call
+        video_support: groupSchedule.B.video_call,
+        women_count: groupSchedule.B.chat.length + groupSchedule.B.video_call.length
       },
       C: {
         name: SHIFTS.C.name,
-        time: SHIFTS.C.display,
+        display: SHIFTS.C.display,
+        start: SHIFTS.C.start,
+        end: SHIFTS.C.end,
+        code: 'C',
         overlap: '1 hour overlap with Shift B (11 PM-12 AM)',
         chat_support: groupSchedule.C.chat,
-        video_support: groupSchedule.C.video_call
+        video_support: groupSchedule.C.video_call,
+        women_count: groupSchedule.C.chat.length + groupSchedule.C.video_call.length
       }
     },
     rotation: {
