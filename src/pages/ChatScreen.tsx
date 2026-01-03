@@ -1124,15 +1124,21 @@ const ChatScreen = () => {
 
     // Store message and clear input immediately for responsiveness
     const messageText = newMessage.trim();
+    
+    // Use livePreview (native script) if available, otherwise use typed text
+    // This ensures sender immediately sees native script, not Latin
+    const displayMessage = livePreview || messageText;
+    
     setNewMessage("");
+    setLivePreview(""); // Clear preview immediately
     setIsSending(true);
 
-    // Optimistic update so sender always sees the message immediately
+    // Optimistic update - sender sees native script immediately
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: messageText,
+      message: displayMessage, // Show native script immediately
       translatedMessage: undefined,
       isTranslated: false,
       isRead: false,
@@ -1142,24 +1148,21 @@ const ChatScreen = () => {
 
     try {
       // ============= CONVERT LATIN TYPING TO SENDER'S NATIVE SCRIPT =============
+      // If livePreview was available, use it; otherwise convert now
       // Example: User types "bagunnava" with Telugu as their language
       // Converts to "బాగున్నావా" (Telugu script)
-      const convertedMessage = await convertToSenderNativeScript(
-        messageText,
-        currentUserLanguage
-      );
+      const convertedMessage = displayMessage !== messageText 
+        ? displayMessage // Already converted via livePreview
+        : await convertToSenderNativeScript(messageText, currentUserLanguage);
 
-      // Update optimistic message with converted text (if any)
-      if (convertedMessage && convertedMessage !== messageText) {
+      // Update optimistic message if we had to convert now
+      if (convertedMessage !== displayMessage) {
         setMessages((prev) =>
           prev.map((m) => (m.id === tempId ? { ...m, message: convertedMessage } : m))
         );
       }
 
-      // Clear live preview after sending
-      setLivePreview("");
-
-      // ============= TRANSLATE FOR RECEIVER =============
+      // ============= TRANSLATE FOR RECEIVER (Background) =============
       // Translate from sender's language to partner's language
       const translation = await translateMessage(
         convertedMessage,
@@ -1812,6 +1815,11 @@ const ChatScreen = () => {
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
+                
+                // === MESSAGE DISPLAY LOGIC ===
+                // Sender sees: Their native script message only
+                // Receiver sees: Translated message in their language
+                // Original is hidden by default for receiver (can toggle to show)
                 const displayText = !isMine && message.isTranslated && message.translatedMessage 
                   ? extractAttachment(message.translatedMessage).text 
                   : messageText;
@@ -1894,23 +1902,23 @@ const ChatScreen = () => {
                           </div>
                         )}
 
-                        {/* Original message for receiver (when translations shown) */}
+                        {/* Original message for receiver - shown only when toggle is ON */}
                         {showTranslations && !isMine && message.isTranslated && message.translatedMessage && (
                           <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-border/50 rounded-bl-md">
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
-                              Original
+                              Original ({chatPartner?.preferredLanguage || 'Unknown'})
                             </p>
                             <p className="text-sm text-muted-foreground">{messageText}</p>
                           </div>
                         )}
 
-                        {/* Translation preview for sender */}
+                        {/* "They see" preview for sender - shown only when toggle is ON */}
                         {showTranslations && isMine && message.isTranslated && message.translatedMessage && (
                           <div className="px-4 py-2 rounded-2xl bg-info/10 border border-info/20 rounded-br-md">
                             <p className="text-xs text-info flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
-                              They see
+                              {chatPartner?.fullName || 'They'} sees ({chatPartner?.preferredLanguage || 'Unknown'})
                             </p>
                             <p className="text-sm text-foreground">{extractAttachment(message.translatedMessage).text}</p>
                           </div>
@@ -1976,15 +1984,16 @@ const ChatScreen = () => {
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 bg-background border-t border-border/50 px-4 py-3">
         <div className="max-w-4xl mx-auto space-y-2">
-          {/* Live transliteration preview (e.g., "bagunnava" → "బాగున్నావా") */}
+          {/* Live transliteration preview - shows native script while typing */}
+          {/* Example: User types "bagunnava" → Preview shows "బాగున్నావా" */}
           {livePreview && (
             <div className="flex items-center gap-2 px-3 py-2 bg-accent/50 rounded-lg border border-accent">
               <Languages className="w-4 h-4 text-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground mb-0.5">
-                  Will send as ({currentUserLanguage}):
+                  Preview ({currentUserLanguage}):
                 </p>
-                <p className="text-sm font-medium text-foreground truncate">{livePreview}</p>
+                <p className="text-base font-medium text-foreground">{livePreview}</p>
               </div>
               {isConverting && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
             </div>
