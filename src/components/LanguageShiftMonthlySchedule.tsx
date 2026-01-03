@@ -23,6 +23,12 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  generateCalendarMonthsFromNow, 
+  type CalendarMonth, 
+  type CalendarDay,
+  DAY_NAMES 
+} from "@/lib/calendar-date";
 
 interface WomanDaySchedule {
   date: string;
@@ -93,21 +99,6 @@ interface LanguageShiftMonthlyScheduleProps {
   isLeader?: boolean;
 }
 
-interface CalendarDay {
-  date: Date;
-  dateStr: string;
-  day: number;
-  dayName: string;
-  isToday: boolean;
-}
-
-interface CalendarMonth {
-  year: number;
-  month: number;
-  name: string;
-  days: CalendarDay[];
-}
-
 const SHIFT_ICONS = {
   A: <Sunrise className="h-3 w-3" />,
   B: <Sun className="h-3 w-3" />,
@@ -126,99 +117,29 @@ const SHIFT_BG_COLORS = {
   C: "bg-secondary/20"
 };
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 
-                     'July', 'August', 'September', 'October', 'November', 'December'];
-
-// Get days in a month - proper calculation like FullCalendar
-// January = 31, February = 28/29 (leap year), March = 31, etc.
-const getDaysInMonth = (year: number, month: number): number => {
-  // month is 0-indexed (0 = January, 11 = December)
-  // new Date(year, month + 1, 0) gives last day of the month
-  return new Date(year, month + 1, 0).getDate();
-};
-
-// Check if a year is a leap year
-const isLeapYear = (year: number): boolean => {
-  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-};
-
-// Check if a date is today
-const isToday = (date: Date): boolean => {
-  const today = new Date();
-  return date.getDate() === today.getDate() &&
-         date.getMonth() === today.getMonth() &&
-         date.getFullYear() === today.getFullYear();
-};
-
-// Format date as YYYY-MM-DD
-const formatDateStr = (year: number, month: number, day: number): string => {
-  const m = String(month + 1).padStart(2, '0');
-  const d = String(day).padStart(2, '0');
-  return `${year}-${m}-${d}`;
-};
-
-// Generate calendar months using proper date calculations (like FullCalendar)
-const generateCalendarMonths = (baseDate: Date, monthCount: number): CalendarMonth[] => {
-  const months: CalendarMonth[] = [];
-  
-  let currentYear = baseDate.getFullYear();
-  let currentMonth = baseDate.getMonth();
-  
-  for (let i = 0; i < monthCount; i++) {
-    // Handle month overflow
-    const year = currentYear + Math.floor((currentMonth + i) / 12);
-    const month = (currentMonth + i) % 12;
-    
-    const daysInMonth = getDaysInMonth(year, month);
-    const days: CalendarDay[] = [];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      days.push({
-        date,
-        dateStr: formatDateStr(year, month, day),
-        day,
-        dayName: DAY_NAMES[date.getDay()],
-        isToday: isToday(date)
-      });
-    }
-    
-    months.push({
-      year,
-      month,
-      name: `${MONTH_NAMES[month]} ${year}`,
-      days
-    });
-  }
-  
-  return months;
-};
-
 export default function LanguageShiftMonthlySchedule({ userId, language, isLeader = false }: LanguageShiftMonthlyScheduleProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [offDayVolunteers, setOffDayVolunteers] = useState<OffDayVolunteer[]>([]);
   const [myVolunteerDates, setMyVolunteerDates] = useState<string[]>([]);
 
-  // Generate 2 months in advance (current + next 2 = 3 months total visible, show 2 at a time)
+  // Generate 3 months at a time using proper calendar date calculations
+  // This continues infinitely - supports years 1 to 9999
   const calendarMonths = useMemo(() => {
-    const today = new Date();
-    // Always show from current month + 2 months ahead
-    return generateCalendarMonths(today, 3);
+    // Generate current month + next many months (enough for navigation)
+    // We generate 12 months ahead to allow smooth navigation
+    const allMonths = generateCalendarMonthsFromNow(36); // 3 years ahead
+    return allMonths;
   }, []);
 
-  // Get the two months to display based on selection
+  // Get the three months to display based on current offset
   const displayedMonths = useMemo(() => {
-    // When current month is done, shift the view
-    // This shows selectedMonthIndex and selectedMonthIndex + 1
-    return [
-      calendarMonths[selectedMonthIndex],
-      calendarMonths[selectedMonthIndex + 1]
-    ].filter(Boolean);
-  }, [calendarMonths, selectedMonthIndex]);
+    const startIdx = monthOffset;
+    const endIdx = Math.min(startIdx + 3, calendarMonths.length);
+    return calendarMonths.slice(startIdx, endIdx);
+  }, [calendarMonths, monthOffset]);
 
   useEffect(() => {
     if (userId) {
@@ -399,13 +320,13 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </p>
         </div>
 
-        {/* Month Navigation - Shows 2 months at a time */}
+        {/* Month Navigation - Shows 3 months at a time */}
         <div className="flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedMonthIndex(Math.max(0, selectedMonthIndex - 1))}
-            disabled={selectedMonthIndex === 0}
+            onClick={() => setMonthOffset(Math.max(0, monthOffset - 1))}
+            disabled={monthOffset === 0}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -423,14 +344,14 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedMonthIndex(Math.min(calendarMonths.length - 2, selectedMonthIndex + 1))}
-            disabled={selectedMonthIndex >= calendarMonths.length - 2}
+            onClick={() => setMonthOffset(Math.min(calendarMonths.length - 3, monthOffset + 1))}
+            disabled={monthOffset >= calendarMonths.length - 3}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Calendar Grid - 2 months side by side */}
+        {/* Calendar Grid - 3 months side by side */}
         <div 
           className="border border-border rounded-lg"
           style={{ 
