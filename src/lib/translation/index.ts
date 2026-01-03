@@ -1,8 +1,10 @@
 /**
  * DL-Translate Translation Module
  * 
- * Server-side translation via Supabase Edge Function
+ * Embedded translation using LibreTranslate, MyMemory, Google Input Tools
  * Based on: https://github.com/xhluca/dl-translate
+ * 
+ * NO external edge functions - all logic embedded in client code
  * 
  * Features:
  * - Real-time typing in sender's native language
@@ -42,6 +44,15 @@ export {
   isSameLanguage,
   isLatinScript,
 } from './translator';
+
+// Embedded translation engine
+export {
+  translateText,
+  convertToNativeScript,
+  translateBatch,
+  clearTranslationCache,
+  getCacheStats,
+} from './translation-engine';
 
 // Language utilities
 export {
