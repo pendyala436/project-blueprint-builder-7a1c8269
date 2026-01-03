@@ -1,10 +1,8 @@
 /**
- * DL-Translate Edge Function - Lovable AI Translation
+ * DL-Translate Edge Function - HuggingFace Translation
  * 
- * Uses Lovable AI Gateway (Gemini) for high-quality neural translation.
- * No external HuggingFace dependency - all local/Lovable AI.
- * 
- * Supports 200+ languages with automatic language detection.
+ * Uses HuggingFace Inference API for high-quality neural translation.
+ * Supports 200+ languages with NLLB-200 model.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -13,6 +11,25 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+// NLLB-200 language codes mapping
+const NLLB_LANGUAGE_CODES: Record<string, string> = {
+  english: 'eng_Latn', hindi: 'hin_Deva', telugu: 'tel_Telu', tamil: 'tam_Taml',
+  bengali: 'ben_Beng', marathi: 'mar_Deva', gujarati: 'guj_Gujr', kannada: 'kan_Knda',
+  malayalam: 'mal_Mlym', punjabi: 'pan_Guru', odia: 'ory_Orya', urdu: 'urd_Arab',
+  chinese: 'zho_Hans', japanese: 'jpn_Jpan', korean: 'kor_Hang', arabic: 'arb_Arab',
+  persian: 'pes_Arab', russian: 'rus_Cyrl', spanish: 'spa_Latn', french: 'fra_Latn',
+  german: 'deu_Latn', italian: 'ita_Latn', portuguese: 'por_Latn', dutch: 'nld_Latn',
+  polish: 'pol_Latn', turkish: 'tur_Latn', swedish: 'swe_Latn', danish: 'dan_Latn',
+  norwegian: 'nob_Latn', finnish: 'fin_Latn', czech: 'ces_Latn', romanian: 'ron_Latn',
+  hungarian: 'hun_Latn', bulgarian: 'bul_Cyrl', croatian: 'hrv_Latn', serbian: 'srp_Cyrl',
+  slovak: 'slk_Latn', slovenian: 'slv_Latn', lithuanian: 'lit_Latn', latvian: 'lvs_Latn',
+  estonian: 'est_Latn', georgian: 'kat_Geor', armenian: 'hye_Armn', swahili: 'swh_Latn',
+  amharic: 'amh_Ethi', thai: 'tha_Thai', vietnamese: 'vie_Latn', indonesian: 'ind_Latn',
+  malay: 'zsm_Latn', tagalog: 'tgl_Latn', burmese: 'mya_Mymr', khmer: 'khm_Khmr',
+  lao: 'lao_Laoo', nepali: 'npi_Deva', sinhala: 'sin_Sinh', assamese: 'asm_Beng',
+  greek: 'ell_Grek', ukrainian: 'ukr_Cyrl', hebrew: 'heb_Hebr',
 };
 
 // Language name normalization
@@ -38,69 +55,71 @@ function normalizeLanguage(lang: string): string {
   return LANGUAGE_ALIASES[normalized] || normalized;
 }
 
-// Translate using Lovable AI Gateway
-async function translateWithLovableAI(
+function getNLLBCode(language: string): string | null {
+  return NLLB_LANGUAGE_CODES[language] || null;
+}
+
+// Translate using HuggingFace NLLB-200 model
+async function translateWithHuggingFace(
   text: string,
   sourceLang: string,
   targetLang: string,
   apiKey: string
 ): Promise<string | null> {
-  console.log(`[dl-translate] Using Lovable AI: ${sourceLang} -> ${targetLang}`);
+  const srcCode = getNLLBCode(sourceLang);
+  const tgtCode = getNLLBCode(targetLang);
+  
+  if (!srcCode || !tgtCode) {
+    console.log(`[dl-translate] Language not supported: ${sourceLang} -> ${targetLang}`);
+    return null;
+  }
+
+  console.log(`[dl-translate] Using HuggingFace NLLB-200: ${srcCode} -> ${tgtCode}`);
   
   try {
-    const systemPrompt = `You are a professional translator. Translate the following text from ${sourceLang} to ${targetLang}. 
-Rules:
-1. Provide ONLY the translated text, nothing else
-2. Preserve the original meaning, tone, and style
-3. Use natural, fluent ${targetLang}
-4. Do not add explanations, notes, or alternatives
-5. If the text contains names or proper nouns, keep them as-is or transliterate appropriately
-6. Maintain any formatting (line breaks, punctuation) from the original`;
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: text }
-        ],
-        temperature: 0.3,
-        max_tokens: 2048,
-      }),
-    });
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/facebook/nllb-200-distilled-600M",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: text,
+          parameters: {
+            src_lang: srcCode,
+            tgt_lang: tgtCode,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[dl-translate] Lovable AI error: ${response.status}`, errorText);
+      console.error(`[dl-translate] HuggingFace error: ${response.status}`, errorText);
       
-      if (response.status === 429) {
-        console.log("[dl-translate] Rate limited, returning original text");
-        return null;
-      }
-      if (response.status === 402) {
-        console.log("[dl-translate] Payment required");
-        return null;
+      if (response.status === 503) {
+        console.log("[dl-translate] Model loading, retrying...");
+        // Wait and retry once
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return translateWithHuggingFace(text, sourceLang, targetLang, apiKey);
       }
       
       return null;
     }
 
     const result = await response.json();
-    const translatedText = result.choices?.[0]?.message?.content?.trim();
+    const translatedText = result[0]?.translation_text || result[0]?.generated_text;
     
     if (translatedText) {
-      console.log(`[dl-translate] Lovable AI success: "${translatedText.slice(0, 50)}..."`);
+      console.log(`[dl-translate] HuggingFace success: "${translatedText.slice(0, 50)}..."`);
       return translatedText;
     }
     
     return null;
   } catch (error) {
-    console.error("[dl-translate] Lovable AI exception:", error);
+    console.error("[dl-translate] HuggingFace exception:", error);
     return null;
   }
 }
@@ -120,9 +139,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("[dl-translate] LOVABLE_API_KEY not configured");
+    const HF_API_KEY = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
+    if (!HF_API_KEY) {
+      console.error("[dl-translate] HUGGING_FACE_ACCESS_TOKEN not configured");
       return new Response(
         JSON.stringify({ error: "Translation service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -151,8 +170,8 @@ serve(async (req) => {
       );
     }
 
-    // Translate using Lovable AI
-    const translatedText = await translateWithLovableAI(text, sourceLang, targetLang, LOVABLE_API_KEY);
+    // Translate using HuggingFace
+    const translatedText = await translateWithHuggingFace(text, sourceLang, targetLang, HF_API_KEY);
 
     if (!translatedText) {
       console.error("[dl-translate] Translation failed");
@@ -181,7 +200,7 @@ serve(async (req) => {
         targetLanguage: targetLang,
         isTranslated: translatedText !== text,
         mode: 'translate',
-        model: 'lovable-ai'
+        model: 'nllb-200'
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
