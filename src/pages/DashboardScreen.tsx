@@ -382,16 +382,16 @@ const DashboardScreen = () => {
   };
 
   const getStatusColor = () => {
-    // Uses semantic colors: online (green), busy (amber), destructive (red)
-    if (activeChatCount === 0) return "bg-online";
-    if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    // Uses primary theme color with different opacities for states
+    if (activeChatCount === 0) return "bg-primary";
+    if (activeChatCount >= 3) return "bg-primary/40";
+    return "bg-primary/70";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-online";
-    if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    if (activeChatCount === 0) return "bg-primary";
+    if (activeChatCount >= 3) return "bg-primary/40";
+    return "bg-primary/70";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -983,25 +983,25 @@ const DashboardScreen = () => {
     { 
       icon: <Search className="w-6 h-6" />, 
       label: t('findMatch', 'Find Match'), 
-      color: "from-male to-info",
+      color: "from-primary to-primary/80",
       action: () => navigate("/find-match")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: t('messages', 'Messages'), 
-      color: "from-info to-info/80",
+      color: "from-primary/90 to-primary/70",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-primary to-accent",
+      color: "from-primary/80 to-primary/60",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-male to-male/80",
+      color: "from-primary/70 to-primary/50",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -1018,7 +1018,7 @@ const DashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-male/5">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -1041,7 +1041,7 @@ const DashboardScreen = () => {
             >
               <Bell className="w-5 h-5 text-primary" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                   {stats.unreadNotifications > 9 ? "9+" : stats.unreadNotifications}
                 </span>
               )}
@@ -1083,18 +1083,15 @@ const DashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-success"
+                    className="data-[state=checked]:bg-primary"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
                 <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-online-foreground/60" : 
-                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-warning-foreground/60"
-                  )} />
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse bg-primary-foreground/60")} />
                   {getStatusText()}
                 </Badge>
               </div>
@@ -1117,7 +1114,7 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-success" />
+              <Users className="w-5 h-5 text-primary" />
               {t('onlineWomen', 'Women Online')}
             </h2>
             <Button
@@ -1141,8 +1138,8 @@ const DashboardScreen = () => {
               {/* Left Column: Same Language Women - List View */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
+                  <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
                     {userLanguage}
                   </span>
                   <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
@@ -1154,20 +1151,20 @@ const DashboardScreen = () => {
                       {sameLanguageWomen.map((woman) => (
                         <div
                           key={woman.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-success/10 transition-all cursor-pointer group border border-transparent hover:border-success/30"
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-all cursor-pointer group border border-transparent hover:border-primary/30"
                           onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                         >
                           <div className="relative flex-shrink-0">
                             <Avatar className="w-9 h-9 border border-background shadow-sm">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
                             <div className={cn(
                               "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                              (woman.active_chat_count || 0) === 0 ? "bg-primary" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
                             )} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1210,8 +1207,8 @@ const DashboardScreen = () => {
               {/* Right Column: All NLLB-200 Women with Auto-Translation - List View */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-info/20 text-info rounded-full flex items-center gap-1">
+                  <span className="text-sm font-medium text-primary/80">{t('otherLanguages', 'Other Languages')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     {t('autoTranslate', 'Auto-Translate')}
                   </span>
@@ -1224,20 +1221,20 @@ const DashboardScreen = () => {
                       {indianTranslatedWomen.map((woman) => (
                         <div
                           key={woman.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-info/10 transition-all cursor-pointer group border border-transparent hover:border-info/30"
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-all cursor-pointer group border border-transparent hover:border-primary/30"
                           onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                         >
                           <div className="relative flex-shrink-0">
                             <Avatar className="w-9 h-9 border border-background shadow-sm">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-primary-foreground text-xs">
+                              <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary/50 text-primary-foreground text-xs">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
                             <div className={cn(
                               "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                              (woman.active_chat_count || 0) === 0 ? "bg-primary" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
                             )} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1246,7 +1243,7 @@ const DashboardScreen = () => {
                             </p>
                             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               {woman.age && <span>{woman.age}y</span>}
-                              <span className="px-1 py-0.5 bg-info/10 text-info rounded text-[9px]">
+                              <span className="px-1 py-0.5 bg-primary/10 text-primary rounded text-[9px]">
                                 {woman.primary_language} → {userLanguage}
                               </span>
                             </div>
@@ -1285,10 +1282,10 @@ const DashboardScreen = () => {
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-5 bg-gradient-to-br from-online/10 to-online/5 border-online/20 hover:shadow-lg transition-all">
+          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-online/20">
-                <Users className="w-6 h-6 text-online" />
+              <div className="p-3 rounded-xl bg-primary/20">
+                <Users className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.onlineUsersCount}</p>
@@ -1298,7 +1295,7 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Matches */}
-          <Card className="p-5 bg-gradient-aurora border-primary/30 hover:shadow-glow transition-all">
+          <Card className="p-5 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20 hover:shadow-glow transition-all">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
                 <Heart className="w-6 h-6 text-primary" />
@@ -1311,10 +1308,10 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Notifications */}
-          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all col-span-2 md:col-span-1">
+          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-glow transition-all col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-accent/20">
-                <Bell className="w-6 h-6 text-accent" />
+              <div className="p-3 rounded-xl bg-primary/20">
+                <Bell className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.unreadNotifications}</p>
@@ -1437,8 +1434,8 @@ const DashboardScreen = () => {
                   className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className={`p-2 rounded-full ${
-                    notification.type === "match" ? "bg-female/10 text-female" :
-                    notification.type === "message" ? "bg-info/10 text-info" :
+                    notification.type === "match" ? "bg-primary/15 text-primary" :
+                    notification.type === "message" ? "bg-primary/10 text-primary" :
                     "bg-primary/10 text-primary"
                   }`}>
                     {notification.type === "match" ? <Heart className="w-5 h-5" /> :
@@ -1467,9 +1464,9 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-6 bg-gradient-to-br from-male/10 to-male/5 border-male/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-male to-info text-primary-foreground">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">

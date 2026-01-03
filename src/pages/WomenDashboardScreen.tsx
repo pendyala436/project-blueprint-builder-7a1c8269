@@ -155,13 +155,13 @@ const WomenDashboardScreen = () => {
     { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Withdraw'), 
-      color: "from-earnings to-earnings/80",
+      color: "from-primary to-primary/80",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-female to-female/80",
+      color: "from-primary/80 to-primary/60",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -315,16 +315,16 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusColor = () => {
-    // Uses semantic colors: online (green), busy (amber), destructive (red)
-    if (activeChatCount === 0) return "bg-online";
-    if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    // Uses primary theme color with different opacities for states
+    if (activeChatCount === 0) return "bg-primary";
+    if (activeChatCount >= 3) return "bg-primary/40";
+    return "bg-primary/70";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-online";
-    if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    if (activeChatCount === 0) return "bg-primary";
+    if (activeChatCount >= 3) return "bg-primary/40";
+    return "bg-primary/70";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -677,18 +677,18 @@ const WomenDashboardScreen = () => {
       <div className="relative flex-shrink-0">
         <Avatar className="h-9 w-9 border border-background shadow-sm">
           <AvatarImage src={user.photoUrl || undefined} />
-          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-xs">
+          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
             {user.fullName.charAt(0)}
           </AvatarFallback>
         </Avatar>
         {/* Status indicator */}
         <div className={cn(
           "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-          (user.activeChatCount || 0) === 0 ? "bg-online" :
-          (user.activeChatCount || 0) >= 3 ? "bg-destructive" : "bg-busy"
+          (user.activeChatCount || 0) === 0 ? "bg-primary" :
+          (user.activeChatCount || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
         )} />
         {user.walletBalance > 1000 && (
-          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-warning" />
+          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-primary" />
         )}
       </div>
 
@@ -701,7 +701,7 @@ const WomenDashboardScreen = () => {
           )}
         </div>
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-success/10 text-success font-medium">
+              <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-primary/10 text-primary font-medium">
             <IndianRupee className="h-2.5 w-2.5" />
             <span>₹{user.walletBalance.toFixed(0)}</span>
           </div>
@@ -742,7 +742,7 @@ const WomenDashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-female/5">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -771,7 +771,7 @@ const WomenDashboardScreen = () => {
             >
               <Bell className="w-5 h-5 text-primary" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
                   {stats.unreadNotifications > 9 ? "9+" : stats.unreadNotifications}
                 </span>
               )}
@@ -810,18 +810,15 @@ const WomenDashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-success"
+                    className="data-[state=checked]:bg-primary"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
                 <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-online-foreground/60" : 
-                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-busy-foreground/60"
-                  )} />
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse bg-primary-foreground/60")} />
                   {getStatusText()}
                 </Badge>
               </div>
@@ -844,30 +841,30 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
           <div className="grid grid-cols-2 gap-3">
             {/* My Today's Earnings */}
-            <Card className="p-4 bg-gradient-to-br from-earnings/10 to-earnings/5 border-earnings/20">
+            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-earnings/20">
-                  <IndianRupee className="w-5 h-5 text-earnings" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <IndianRupee className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-earnings">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-primary">₹{myTodayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
 
             {/* Biggest Earner Today */}
-            <Card className="p-4 bg-gradient-to-br from-crown/10 to-crown/5 border-crown/20">
+            <Card className="p-4 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-crown/20">
-                  <Crown className="w-5 h-5 text-crown" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <Crown className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
                   {biggestEarner ? (
                     <>
                       <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
-                      <p className="text-lg font-bold text-crown">₹{biggestEarner.amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</p>
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
@@ -952,32 +949,32 @@ const WomenDashboardScreen = () => {
 
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-to-br from-crown/10 to-crown/5 border-crown/20 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-crown/20">
-                <Crown className="w-5 h-5 text-crown" />
+              <div className="p-2 rounded-xl bg-primary/20">
+                <Crown className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold">{stats.rechargedMen}</p>
+                <p className="text-xl font-bold text-foreground">{stats.rechargedMen}</p>
                 <p className="text-xs text-muted-foreground">{t('premiumUsers', 'Premium Men')}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-earnings/10 to-earnings/5 border-earnings/20 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-earnings/20">
-                <IndianRupee className="w-5 h-5 text-earnings" />
+              <div className="p-2 rounded-xl bg-primary/20">
+                <IndianRupee className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
+                <p className="text-xl font-bold text-foreground">₹{stats.todayEarnings.toFixed(0)}</p>
                 <p className="text-xs text-muted-foreground">{t('todayEarnings', "Today's Earnings")}</p>
               </div>
             </div>
           </Card>
 
           <Card
-            className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow cursor-pointer col-span-2"
+            className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow cursor-pointer col-span-2"
             onClick={() => navigate("/shift-management")}
           >
             <AIShiftDisplay userId={currentUserId} compact />
@@ -1002,10 +999,10 @@ const WomenDashboardScreen = () => {
 
         {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
-          <Card className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow">
+          <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-female/20">
-                <MessageCircle className="w-5 h-5 text-female" />
+              <div className="p-2 rounded-xl bg-primary/20">
+                <MessageCircle className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold">{t('chatMode', 'Reply Mode')}</p>
@@ -1075,7 +1072,7 @@ const WomenDashboardScreen = () => {
                 <button
                   key={index}
                   onClick={action.action}
-                  className="group p-6 rounded-2xl bg-gradient-to-br from-female/5 to-female/10 border border-female/20 hover:border-female/40 hover:shadow-glow transition-all duration-300"
+                  className="group p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
                 >
                   <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
                     {action.icon}
@@ -1096,11 +1093,11 @@ const WomenDashboardScreen = () => {
         )}
 
         {/* Section 9: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-to-br from-female/10 to-female/5 border-female/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-female/20">
-                <Clock className="h-6 w-6 text-female" />
+              <div className="p-3 rounded-xl bg-primary/20">
+                <Clock className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="font-semibold">Start your shift</p>
