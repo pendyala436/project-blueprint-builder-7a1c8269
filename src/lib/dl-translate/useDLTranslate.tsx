@@ -5,9 +5,9 @@
  * Combined with: https://github.com/Goutam245/Language-Translator-Web-Application
  * 
  * NO external APIs - All translation happens in browser:
- * 1. NLLB-200 ML Model (main) - 200+ languages
- * 2. Dictionary Translation (fallback) - instant common phrases
- * 3. Phonetic Transliteration (fallback) - Latin → native script
+ * 1. DL-Translate Dictionary (main) - instant common phrases
+ * 2. Phonetic Transliteration (main) - Latin → native script
+ * 3. NLLB-200 ML Model (fallback) - 200+ languages
  */
 
 import { useState, useCallback } from 'react';
