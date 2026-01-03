@@ -1015,18 +1015,6 @@ const WomenDashboardScreen = () => {
           )}
         </div>
 
-        {/* AI Election Panel */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
-          {currentWomanLanguage && currentUserId && (
-            <Card className="p-4">
-              <AIElectionPanel
-                currentUserId={currentUserId}
-                languageCode={currentWomanLanguage}
-                members={[]}
-              />
-            </Card>
-          )}
-        </div>
 
         {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
