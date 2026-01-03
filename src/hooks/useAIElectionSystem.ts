@@ -35,6 +35,7 @@ export interface AIElectionStatus {
   hasVoted: boolean;
   totalVotes: number;
   needsNewElection: boolean;
+  votingExpired: boolean;
   termYears: number;
   shiftConfig: {
     hours: number;
@@ -55,6 +56,7 @@ export const useAIElectionSystem = (
   const isLeader = status?.leader?.user_id === currentUserId;
   const hasActiveElection = status?.election?.status === "active";
   const hasVoted = status?.hasVoted || false;
+  const votingExpired = status?.votingExpired || false;
 
   // Load election status
   const loadStatus = useCallback(async () => {
@@ -367,6 +369,7 @@ export const useAIElectionSystem = (
     isLeader,
     hasActiveElection,
     hasVoted,
+    votingExpired,
     loadStatus,
     startElection,
     nominateCandidate,
