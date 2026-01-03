@@ -121,19 +121,23 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0); // 0 = current month, 1 = next month, etc.
   const [offDayVolunteers, setOffDayVolunteers] = useState<OffDayVolunteer[]>([]);
   const [myVolunteerDates, setMyVolunteerDates] = useState<string[]>([]);
 
-  // Generate 3 months for selection (current + next 2)
-  const availableMonths = useMemo(() => {
-    return generateCalendarMonthsFromNow(3); // Current month + 2 more
-  }, []);
+  // Generate months dynamically - always 3 months visible starting from monthOffset
+  // This continues infinitely into the future (years 1 to 9999)
+  const visibleMonths = useMemo(() => {
+    // Generate 3 months starting from current month + offset
+    return generateCalendarMonthsFromNow(monthOffset + 3).slice(monthOffset, monthOffset + 3);
+  }, [monthOffset]);
 
-  // Get the single selected month to display
+  // Currently selected month (first of the 3 visible)
+  const [selectedVisibleIndex, setSelectedVisibleIndex] = useState(0);
+  
   const selectedMonth = useMemo(() => {
-    return availableMonths[selectedMonthIndex] || availableMonths[0];
-  }, [availableMonths, selectedMonthIndex]);
+    return visibleMonths[selectedVisibleIndex] || visibleMonths[0];
+  }, [visibleMonths, selectedVisibleIndex]);
 
   useEffect(() => {
     if (userId) {
@@ -332,19 +336,46 @@ export default function LanguageShiftMonthlySchedule({ userId, language, isLeade
           </p>
         </div>
 
-        {/* Month Selector - Click to select which month to view */}
-        <div className="flex items-center justify-center gap-2">
-          {availableMonths.map((month, idx) => (
-            <Button
-              key={`${month.year}-${month.month}`}
-              variant={selectedMonthIndex === idx ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedMonthIndex(idx)}
-              className="text-sm px-4 py-2"
-            >
-              {month.monthName}
-            </Button>
-          ))}
+        {/* Month Navigation - Navigate through unlimited future months */}
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (monthOffset > 0) {
+                setMonthOffset(monthOffset - 1);
+                setSelectedVisibleIndex(0);
+              }
+            }}
+            disabled={monthOffset === 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <div className="flex gap-2 flex-wrap justify-center">
+            {visibleMonths.map((month, idx) => (
+              <Button
+                key={`${month.year}-${month.month}`}
+                variant={selectedVisibleIndex === idx ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedVisibleIndex(idx)}
+                className="text-sm px-4 py-2"
+              >
+                {month.monthName} {month.year !== new Date().getFullYear() ? month.year : ''}
+              </Button>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setMonthOffset(monthOffset + 1);
+              setSelectedVisibleIndex(0);
+            }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Selected Month Header */}
