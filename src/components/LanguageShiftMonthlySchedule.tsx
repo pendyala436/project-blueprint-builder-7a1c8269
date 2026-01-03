@@ -343,44 +343,18 @@ export default function LanguageShiftMonthlySchedule({ userId, language }: Langu
           </Button>
         </div>
 
-        {/* Women by Shift */}
-        <Tabs defaultValue="A" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="A" className="text-xs">
-              {SHIFT_ICONS.A}
-              <span className="ml-1">Shift A ({scheduleData.shifts.A.women_count})</span>
-            </TabsTrigger>
-            <TabsTrigger value="B" className="text-xs">
-              {SHIFT_ICONS.B}
-              <span className="ml-1">Shift B ({scheduleData.shifts.B.women_count})</span>
-            </TabsTrigger>
-            <TabsTrigger value="C" className="text-xs">
-              {SHIFT_ICONS.C}
-              <span className="ml-1">Shift C ({scheduleData.shifts.C.women_count})</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {(['A', 'B', 'C'] as const).map((shiftCode) => (
-            <TabsContent key={shiftCode} value={shiftCode} className="mt-4">
-              <div className="mb-3 p-2 rounded-lg bg-muted/30">
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-medium">{scheduleData.shifts[shiftCode].display}</span>
-                  <span className="text-muted-foreground">(9 hours, 1 hour overlap)</span>
-                </div>
+        {/* All Women Calendar */}
+        <ScrollArea className="h-[500px]">
+          <div className="space-y-2">
+            {scheduleData.all_women.length > 0 ? (
+              scheduleData.all_women.map(renderWomanSchedule)
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No women in the system
               </div>
-              <ScrollArea className="h-[400px]">
-                {scheduleData.women_by_shift[shiftCode].length > 0 ? (
-                  scheduleData.women_by_shift[shiftCode].map(renderWomanSchedule)
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No women assigned to this shift
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-          ))}
-        </Tabs>
+            )}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
