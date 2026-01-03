@@ -45,6 +45,18 @@ interface WomanShift {
 interface HourlyCoverage {
   hour: number;
   womenOnDuty: string[];
+  shiftCodes?: string[];
+}
+
+interface ShiftConfig {
+  hours: number;
+  changeBuffer: number;
+  weekOffInterval: number;
+  shifts?: {
+    A: { name: string; start: number; end: number; code: string; display: string };
+    B: { name: string; start: number; end: number; code: string; display: string };
+    C: { name: string; start: number; end: number; code: string; display: string };
+  };
 }
 
 interface LanguageGroupShiftsPanelProps {
@@ -60,6 +72,7 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   const [coverage24x7, setCoverage24x7] = useState<HourlyCoverage[]>([]);
   const [targetLanguage, setTargetLanguage] = useState(language || "");
   const [womenCount, setWomenCount] = useState(0);
+  const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -85,6 +98,7 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
         setCoverage24x7(data.coverage24x7 || []);
         setTargetLanguage(data.language || language || "");
         setWomenCount(data.womenCount || 0);
+        setShiftConfig(data.shiftConfig || null);
       }
     } catch (error) {
       console.error("Error fetching language group shifts:", error);
@@ -111,11 +125,29 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
     return <Moon className="w-3 h-3 text-indigo-400" />;
   };
 
-  const getCoverageColor = (count: number) => {
+  const getCoverageColor = (count: number, shiftCodes?: string[]) => {
     if (count === 0) return "bg-destructive/20 text-destructive";
     if (count === 1) return "bg-amber-500/20 text-amber-600";
     if (count === 2) return "bg-success/20 text-success";
     return "bg-primary/20 text-primary";
+  };
+
+  const getShiftBadgeColor = (shiftCode: string) => {
+    switch (shiftCode) {
+      case 'A': return "bg-blue-500/20 text-blue-600 border-blue-300";
+      case 'B': return "bg-orange-500/20 text-orange-600 border-orange-300";
+      case 'C': return "bg-purple-500/20 text-purple-600 border-purple-300";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getShiftIcon = (shiftCode: string) => {
+    switch (shiftCode) {
+      case 'A': return <Sunrise className="w-3 h-3 text-blue-500" />;
+      case 'B': return <Sunset className="w-3 h-3 text-orange-500" />;
+      case 'C': return <Moon className="w-3 h-3 text-purple-500" />;
+      default: return <Clock className="w-3 h-3" />;
+    }
   };
 
   const currentHour = new Date().getHours();
@@ -254,6 +286,27 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
           </ScrollArea>
         </div>
 
+        {/* Shift Timings Legend */}
+        {shiftConfig?.shifts && (
+          <div className="mb-4 p-3 rounded-lg bg-muted/30">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Shift Timings (9hr shifts with 1hr overlap)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {Object.values(shiftConfig.shifts).map((shift) => (
+                <div key={shift.code} className={`flex items-center gap-2 p-2 rounded-md border ${getShiftBadgeColor(shift.code)}`}>
+                  {getShiftIcon(shift.code)}
+                  <div>
+                    <span className="font-medium text-xs">Shift {shift.code}</span>
+                    <p className="text-[10px] opacity-80">{shift.display}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 24/7 Coverage Timeline */}
         <div>
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
@@ -261,28 +314,33 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
             Today's 24/7 Coverage
           </h4>
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1">
-            {coverage24x7.map(({ hour, womenOnDuty }) => (
+            {coverage24x7.map(({ hour, womenOnDuty, shiftCodes }) => (
               <div 
                 key={hour}
                 className={`
                   relative p-2 rounded-md text-center cursor-default
-                  ${getCoverageColor(womenOnDuty.length)}
+                  ${getCoverageColor(womenOnDuty.length, shiftCodes)}
                   ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}
                 `}
-                title={womenOnDuty.length > 0 
-                  ? `${formatTime(hour)}: ${womenOnDuty.join(", ")}` 
-                  : `${formatTime(hour)}: No coverage`
-                }
+                title={`${formatTime(hour)}${shiftCodes?.length ? ` [${shiftCodes.join('+')}]` : ''}: ${womenOnDuty.length > 0 ? womenOnDuty.join(", ") : "No coverage"}`}
               >
                 <div className="flex flex-col items-center gap-0.5">
-                  {getTimeIcon(hour)}
+                  {shiftCodes && shiftCodes.length > 0 ? (
+                    <div className="flex gap-0.5">
+                      {shiftCodes.map(code => (
+                        <span key={code} className="text-[8px] font-bold">{code}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    getTimeIcon(hour)
+                  )}
                   <span className="text-[10px] font-medium">{hour}</span>
                   <span className="text-[10px]">{womenOnDuty.length}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-destructive/20" />
               <span>No coverage</span>

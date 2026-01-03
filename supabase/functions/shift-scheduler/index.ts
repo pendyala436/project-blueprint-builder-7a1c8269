@@ -11,6 +11,13 @@ const SHIFT_CHANGE_BUFFER = 1; // 1-hour shift change overlap
 const WEEK_OFF_INTERVAL = 2; // Week off every 2 days
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Shift timings - synced with shift-auto-scheduler
+const SHIFTS = {
+  A: { name: 'Shift A (Morning)', start: 7, end: 16, code: 'A', display: '7:00 AM - 4:00 PM' },  // 7 AM - 4 PM
+  B: { name: 'Shift B (Evening)', start: 15, end: 24, code: 'B', display: '3:00 PM - 12:00 AM' }, // 3 PM - 12 AM
+  C: { name: 'Shift C (Night)', start: 23, end: 8, code: 'C', display: '11:00 PM - 8:00 AM' },  // 11 PM - 8 AM (next day)
+};
+
 // Timezone offsets for common countries (UTC offset in hours)
 const COUNTRY_TIMEZONES: Record<string, number> = {
   "India": 5.5,
@@ -637,23 +644,55 @@ serve(async (req) => {
         };
       });
 
-      // Build 24/7 coverage visualization (hour-by-hour for today)
-      const coverage24x7: { hour: number; womenOnDuty: string[] }[] = [];
+      // Build 24/7 coverage visualization using fixed shift timings (synced with shift-auto-scheduler)
+      // Shift A: 7 AM - 4 PM (7-16), Shift B: 3 PM - 12 AM (15-24), Shift C: 11 PM - 8 AM (23-8)
+      const coverage24x7: { hour: number; womenOnDuty: string[]; shiftCodes: string[] }[] = [];
+      
+      // Helper function to check if hour falls within a shift
+      const isHourInShift = (hour: number, shiftCode: string): boolean => {
+        const shift = SHIFTS[shiftCode as keyof typeof SHIFTS];
+        if (!shift) return false;
+        
+        if (shift.end < shift.start) {
+          // Overnight shift (C: 23-8)
+          return hour >= shift.start || hour < shift.end;
+        } else if (shift.end === 24) {
+          // Shift ending at midnight (B: 15-24)
+          return hour >= shift.start && hour < 24;
+        } else {
+          // Normal shift (A: 7-16)
+          return hour >= shift.start && hour < shift.end;
+        }
+      };
+
       for (let hour = 0; hour < 24; hour++) {
         const womenOnDuty: string[] = [];
+        const shiftCodes: string[] = [];
+        
+        // Determine which shifts are active at this hour
+        if (isHourInShift(hour, 'A')) shiftCodes.push('A');
+        if (isHourInShift(hour, 'B')) shiftCodes.push('B');
+        if (isHourInShift(hour, 'C')) shiftCodes.push('C');
         
         womenShifts.forEach(woman => {
-          if (woman.todayShift && !woman.isWeekOff) {
+          if (!woman.isWeekOff && woman.todayShift) {
             const startHour = parseInt(woman.todayShift.startTime.split(":")[0]);
             let endHour = parseInt(woman.todayShift.endTime.split(":")[0]);
             
-            // Handle overnight shifts
-            if (endHour < startHour) {
+            // Handle overnight shifts (Shift C: 23-8)
+            if (endHour < startHour || endHour === 0) {
+              if (endHour === 0) endHour = 24;
               // Shift goes past midnight
-              if (hour >= startHour || hour < endHour) {
+              if (hour >= startHour || hour < (endHour % 24)) {
+                womenOnDuty.push(woman.fullName);
+              }
+            } else if (endHour === 24) {
+              // Shift ending at midnight
+              if (hour >= startHour && hour < 24) {
                 womenOnDuty.push(woman.fullName);
               }
             } else {
+              // Normal daytime shift
               if (hour >= startHour && hour < endHour) {
                 womenOnDuty.push(woman.fullName);
               }
@@ -661,7 +700,7 @@ serve(async (req) => {
           }
         });
         
-        coverage24x7.push({ hour, womenOnDuty });
+        coverage24x7.push({ hour, womenOnDuty, shiftCodes });
       }
 
       console.log(`[AI Scheduler] Found ${womenShifts.length} women in ${targetLanguage} group`);
@@ -676,7 +715,8 @@ serve(async (req) => {
           shiftConfig: {
             hours: SHIFT_HOURS,
             changeBuffer: SHIFT_CHANGE_BUFFER,
-            weekOffInterval: WEEK_OFF_INTERVAL
+            weekOffInterval: WEEK_OFF_INTERVAL,
+            shifts: SHIFTS
           }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
