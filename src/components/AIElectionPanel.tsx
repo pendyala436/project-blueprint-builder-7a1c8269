@@ -63,6 +63,7 @@ export const AIElectionPanel = ({
     isLeader,
     hasActiveElection,
     hasVoted,
+    votingExpired,
     startElection,
     nominateCandidate,
     castVote,
@@ -156,21 +157,35 @@ export const AIElectionPanel = ({
 
       {/* Voting Period Timer */}
       {hasActiveElection && votingEndsAt && (
-        <Card className="bg-gradient-to-r from-info/10 to-secondary/10 border-info/30">
+        <Card className={cn(
+          "border",
+          votingExpired 
+            ? "bg-gradient-to-r from-destructive/10 to-warning/10 border-destructive/30"
+            : "bg-gradient-to-r from-info/10 to-secondary/10 border-info/30"
+        )}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Timer className="h-4 w-4 text-info" />
-                <span className="text-sm font-medium">Voting Period</span>
+                <Timer className={cn("h-4 w-4", votingExpired ? "text-destructive" : "text-info")} />
+                <span className="text-sm font-medium">
+                  {votingExpired ? "Voting Period Ended" : "Voting Period"}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-info/10 border-info/30 text-info">
-                  {daysRemaining > 0 ? `${daysRemaining}d ${hoursRemaining}h left` : `${hoursRemaining}h left`}
-                </Badge>
+                {votingExpired ? (
+                  <Badge variant="destructive">EXPIRED</Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-info/10 border-info/30 text-info">
+                    {daysRemaining > 0 ? `${daysRemaining}d ${hoursRemaining}h left` : `${hoursRemaining}h left`}
+                  </Badge>
+                )}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Ends: {format(votingEndsAt, "MMM d, yyyy 'at' h:mm a")}
+              {votingExpired 
+                ? "Click 'End Election' to declare the winner"
+                : `Ends: ${format(votingEndsAt, "MMM d, yyyy 'at' h:mm a")}`
+              }
             </p>
           </CardContent>
         </Card>
@@ -291,7 +306,10 @@ export const AIElectionPanel = ({
                 {sortedCandidates.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground text-sm">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No candidates yet. Be the first to run!</p>
+                    <p>{votingExpired 
+                      ? "No candidates ran in this election. Start a new one!"
+                      : "No candidates yet. Be the first to run!"
+                    }</p>
                   </div>
                 ) : (
                   sortedCandidates.map((candidate, index) => {
@@ -342,8 +360,32 @@ export const AIElectionPanel = ({
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
-                {/* Vote Button */}
-                {!hasVoted ? (
+                {/* Voting Expired with Candidates - Show End Election Button */}
+                {votingExpired && candidates.length >= 1 && (
+                  <Button 
+                    className="w-full bg-primary"
+                    onClick={endElection}
+                    disabled={isProcessing}
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    End Election & Declare Winner
+                  </Button>
+                )}
+
+                {/* Voting Expired with NO Candidates - Show Start New Election */}
+                {votingExpired && candidates.length === 0 && (
+                  <Button 
+                    className="w-full"
+                    onClick={startElection}
+                    disabled={isProcessing}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Start New Election
+                  </Button>
+                )}
+
+                {/* Vote Button - Only if voting not expired */}
+                {!votingExpired && !hasVoted ? (
                   <Button 
                     className="w-full" 
                     onClick={() => setShowVoteDialog(true)}
@@ -352,15 +394,15 @@ export const AIElectionPanel = ({
                     <Vote className="h-4 w-4 mr-2" />
                     Cast Your Vote (Anonymous)
                   </Button>
-                ) : (
-                  <Badge variant="outline" className="w-full justify-center py-2 bg-success/10 border-success/30 text-success">
+                ) : !votingExpired && hasVoted ? (
+                  <Badge variant="outline" className="w-full justify-center py-2 bg-primary/10 border-primary/30 text-primary">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     You have voted
                   </Badge>
-                )}
+                ) : null}
 
-                {/* Self Nominate */}
-                {!isCurrentUserCandidate && (
+                {/* Self Nominate - Only if voting not expired */}
+                {!votingExpired && !isCurrentUserCandidate && (
                   <Button 
                     variant="secondary" 
                     className="w-full"
@@ -372,28 +414,30 @@ export const AIElectionPanel = ({
                   </Button>
                 )}
 
-                {/* Nominate Others */}
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setShowNominateDialog(true)}
-                  disabled={isProcessing}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Nominate Someone Else
-                </Button>
-
-                {/* End Election (for testing - in prod AI auto-ends) */}
-                {totalVotes > 0 && candidates.length >= 1 && (
+                {/* Nominate Others - Only if voting not expired */}
+                {!votingExpired && (
                   <Button 
-                    variant="destructive" 
+                    variant="outline" 
                     size="sm"
                     className="w-full"
+                    onClick={() => setShowNominateDialog(true)}
+                    disabled={isProcessing}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nominate Someone Else
+                  </Button>
+                )}
+
+                {/* End Election Button - For when voting NOT expired but has votes */}
+                {!votingExpired && totalVotes > 0 && candidates.length >= 1 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
                     onClick={endElection}
                     disabled={isProcessing}
                   >
-                    End Election & Declare Winner
+                    End Election Early
                   </Button>
                 )}
               </div>

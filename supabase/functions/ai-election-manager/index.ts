@@ -45,6 +45,33 @@ serve(async (req) => {
         .eq("election_year", currentYear)
         .maybeSingle();
 
+      // Also check for previous year active elections that should be ended
+      const { data: oldElection } = await supabase
+        .from("community_elections")
+        .select("*")
+        .eq("language_code", languageCode)
+        .eq("status", "active")
+        .lt("election_year", currentYear)
+        .maybeSingle();
+
+      // Auto-end old year elections
+      if (oldElection) {
+        await supabase
+          .from("community_elections")
+          .update({ status: "cancelled", ended_at: now.toISOString() })
+          .eq("id", oldElection.id);
+        console.log(`[AI Election] Auto-cancelled old election ${oldElection.id} from year ${oldElection.election_year}`);
+      }
+
+      // Check if current election's voting period has ended - auto end it
+      if (election && election.status === "active" && election.scheduled_at) {
+        const scheduledEnd = new Date(election.scheduled_at);
+        if (now > scheduledEnd) {
+          console.log(`[AI Election] Voting period ended for ${languageCode}, auto-ending election`);
+          // Don't auto-end here, just mark it as needing attention
+        }
+      }
+
       // Get current leader
       const { data: leader } = await supabase
         .from("community_leaders")
@@ -89,13 +116,20 @@ serve(async (req) => {
         totalVotes = count || 0;
       }
 
-      // Check if new election needed (leader term expired)
+      // Check if new election needed (leader term expired or no leader)
       let needsNewElection = false;
       if (leader) {
         const termEnd = new Date(leader.term_end);
         needsNewElection = now > termEnd;
       } else {
-        needsNewElection = !election || election.status === "completed";
+        needsNewElection = !election || election.status === "completed" || election.status === "cancelled";
+      }
+
+      // Check if voting period expired
+      let votingExpired = false;
+      if (election && election.status === "active" && election.scheduled_at) {
+        const scheduledEnd = new Date(election.scheduled_at);
+        votingExpired = now > scheduledEnd;
       }
 
       return new Response(
@@ -119,6 +153,7 @@ serve(async (req) => {
           hasVoted,
           totalVotes,
           needsNewElection,
+          votingExpired,
           termYears: LEADER_TERM_YEARS,
           shiftConfig: { hours: SHIFT_HOURS, buffer: SHIFT_CHANGE_BUFFER, weekOffInterval: WEEK_OFF_INTERVAL }
         }),
@@ -138,16 +173,40 @@ serve(async (req) => {
       // Check if election already exists for this year
       const { data: existing } = await supabase
         .from("community_elections")
-        .select("id, status")
+        .select("id, status, scheduled_at")
         .eq("language_code", languageCode)
         .eq("election_year", currentYear)
         .maybeSingle();
 
-      if (existing && existing.status !== "completed") {
-        return new Response(
-          JSON.stringify({ error: "Election already in progress for this year" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (existing && existing.status === "active") {
+        // Check if voting period expired - if so, we can cancel and start new
+        const scheduledEnd = existing.scheduled_at ? new Date(existing.scheduled_at) : null;
+        const votingExpired = scheduledEnd && now > scheduledEnd;
+        
+        // Also check if there are any candidates
+        const { count: candidateCount } = await supabase
+          .from("election_candidates")
+          .select("*", { count: "exact", head: true })
+          .eq("election_id", existing.id);
+
+        if (votingExpired && (candidateCount === 0 || candidateCount === null)) {
+          // Cancel the expired election with no candidates
+          await supabase
+            .from("community_elections")
+            .update({ status: "cancelled", ended_at: now.toISOString() })
+            .eq("id", existing.id);
+          console.log(`[AI Election] Cancelled expired election ${existing.id} with no candidates`);
+        } else if (!votingExpired) {
+          return new Response(
+            JSON.stringify({ error: "Election already in progress for this year" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } else {
+          return new Response(
+            JSON.stringify({ error: "Election has candidates. End the election first to declare a winner." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // Create new election (AI manages it)
