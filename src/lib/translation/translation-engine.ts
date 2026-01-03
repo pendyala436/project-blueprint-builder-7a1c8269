@@ -1,26 +1,25 @@
 /**
  * Embedded Translation Engine (DL-Translate Pattern)
  * 
- * Multi-provider translation using:
- * - Browser-based ML (Transformers.js + M2M100) - PRIMARY
- * - Embedded dictionaries (common phrases)
- * - Transliteration dictionaries
+ * Pure dictionary-based translation using:
+ * - Embedded phrase dictionaries (common phrases)
+ * - Transliteration dictionaries (phonetic → native script)
  * 
- * Based on: https://github.com/xhluca/dl-translate
- * Supports 200+ languages - All embedded in client code - NO external API calls
+ * Based on: 
+ * - https://github.com/xhluca/dl-translate (API pattern)
+ * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
+ * 
+ * NO ML models - NO external APIs - Pure embedded dictionaries
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import type { TranslationResult, TranslationOptions } from './types';
-import { translateWithML, isMLTranslatorReady, initializeMLTranslator, isMLTranslatorLoading } from './ml-translation-engine';
+import { translateWithML } from './ml-translation-engine';
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Track if ML initialization was attempted
-let mlInitAttempted = false;
 
 // Common phrases dictionary for accurate translation (expanded)
 // Bidirectional: Both English key → Native AND Native key → English
@@ -397,28 +396,13 @@ export async function translateText(
     }
   }
   
-  // Auto-initialize ML model if not yet attempted (background, non-blocking)
-  if (!mlInitAttempted && !isMLTranslatorReady() && !isMLTranslatorLoading()) {
-    mlInitAttempted = true;
-    console.log('[DL-Translate] Auto-initializing ML model (M2M100)...');
-    // Start loading in background (don't await)
-    initializeMLTranslator((progress) => {
-      console.log('[DL-Translate] ML loading:', progress.status, progress.progress ? `${progress.progress.toFixed(1)}%` : '');
-    }).catch(err => console.warn('[DL-Translate] ML init failed:', err));
-  }
-  
-  // Try ML translation if ready
-  let translated: string | null = null;
-  if (isMLTranslatorReady()) {
-    console.log('[DL-Translate] Using ML translation (M2M100)');
-    translated = await translateWithML(trimmed, normSource, normTarget);
-    if (translated && translated !== trimmed) {
-      console.log('[DL-Translate] ML result:', translated.slice(0, 50));
-      addToCache(cacheKey, translated);
-      return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
-    }
-  } else {
-    console.log('[DL-Translate] ML not ready, using dictionary fallback');
+  // Use dictionary-based translation (pure browser, no ML model)
+  console.log('[DL-Translate] Using dictionary-based translation');
+  const translated = await translateWithML(trimmed, normSource, normTarget);
+  if (translated && translated !== trimmed) {
+    console.log('[DL-Translate] Translation result:', translated.slice(0, 50));
+    addToCache(cacheKey, translated);
+    return createResult(trimmed, translated, normSource, normTarget, true, 'translate');
   }
   
   // Fallback to dictionary if ML fails or not ready
