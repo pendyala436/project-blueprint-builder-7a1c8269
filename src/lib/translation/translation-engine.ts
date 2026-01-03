@@ -21,8 +21,8 @@ import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
 
-// Flag to enable/disable Edge Function fallback
-let enableEdgeFunctionFallback = true;
+// Edge Function fallback is DISABLED - all translation is local
+const enableEdgeFunctionFallback = false;
 
 // Cache for translations
 const translationCache = new Map<string, { result: string; timestamp: number }>();
@@ -536,72 +536,26 @@ export async function translateText(
     }
   }
   
-  // ========== FALLBACK: Hugging Face NLLB-200 via Edge Function ==========
-  // Uses same model as Python dl-translate library
-  if (enableEdgeFunctionFallback) {
-    console.log('[DL-Translate] Fallback: Using Hugging Face NLLB-200 Edge Function...');
-    try {
-      const edgeResult = await translateWithEdgeFunction(trimmed, normSource, normTarget);
-      if (edgeResult && edgeResult !== trimmed) {
-        console.log('[DL-Translate] Edge Function success:', edgeResult.slice(0, 50));
-        addToCache(cacheKey, edgeResult);
-        return createResult(trimmed, edgeResult, normSource, normTarget, true, 'translate');
-      }
-    } catch (error) {
-      console.log('[DL-Translate] Edge Function fallback failed:', error);
-    }
-  }
-  
-  console.log('[DL-Translate] No translation available, returning original');
+  // Local translation complete - no external API fallback
+  console.log('[DL-Translate] Local translation complete, returning result');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
 }
 
 /**
- * Translate using Edge Function (Hugging Face NLLB-200)
- */
-async function translateWithEdgeFunction(text: string, source: string, target: string): Promise<string | null> {
-  try {
-    const response = await fetch('https://tvneohngeracipjajzos.supabase.co/functions/v1/dl-translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        sourceLanguage: source,
-        targetLanguage: target,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('[DL-Translate] Edge Function error:', response.status);
-      return null;
-    }
-
-    const result = await response.json();
-    if (result.isTranslated && result.translatedText) {
-      return result.translatedText;
-    }
-    return null;
-  } catch (error) {
-    console.error('[DL-Translate] Edge Function request failed:', error);
-    return null;
-  }
-}
-
-/**
  * Enable or disable Edge Function fallback translation
+ * NOTE: Edge Function fallback is permanently disabled - all translation is local
+ * @deprecated This function has no effect - kept for API compatibility
  */
-export function setEdgeFunctionFallbackEnabled(enabled: boolean): void {
-  enableEdgeFunctionFallback = enabled;
-  console.log(`[DL-Translate] Edge Function fallback ${enabled ? 'enabled' : 'disabled'}`);
+export function setEdgeFunctionFallbackEnabled(_enabled: boolean): void {
+  console.log('[DL-Translate] Edge Function fallback is permanently disabled - all translation is local');
 }
 
 /**
  * Check if Edge Function fallback is enabled
+ * NOTE: Always returns false - all translation is local
  */
 export function isEdgeFunctionFallbackEnabled(): boolean {
-  return enableEdgeFunctionFallback;
+  return false;
 }
 
 /**
