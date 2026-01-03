@@ -34,23 +34,20 @@ export interface ChatSession {
 export interface ChatPricing {
   ratePerMinute: number;
   womenEarningRate: number;
-  videoRatePerMinute: number;
-  videoWomenEarningRate: number;
   minWithdrawalBalance: number;
   currency: string;
 }
 
 const DEFAULT_PRICING: ChatPricing = {
-  ratePerMinute: 2,
+  ratePerMinute: 5,
   womenEarningRate: 2,
-  videoRatePerMinute: 10,
-  videoWomenEarningRate: 5,
   minWithdrawalBalance: 10000,
   currency: 'INR',
 };
 
 /**
  * Get chat pricing configuration
+ * Note: Video calls are gift-based, not per-minute billing
  */
 export async function getChatPricing(): Promise<ChatPricing> {
   const { data, error } = await supabase
@@ -66,8 +63,6 @@ export async function getChatPricing(): Promise<ChatPricing> {
   return {
     ratePerMinute: data.rate_per_minute || DEFAULT_PRICING.ratePerMinute,
     womenEarningRate: data.women_earning_rate || DEFAULT_PRICING.womenEarningRate,
-    videoRatePerMinute: data.video_rate_per_minute || DEFAULT_PRICING.videoRatePerMinute,
-    videoWomenEarningRate: data.video_women_earning_rate || DEFAULT_PRICING.videoWomenEarningRate,
     minWithdrawalBalance: data.min_withdrawal_balance || DEFAULT_PRICING.minWithdrawalBalance,
     currency: data.currency || DEFAULT_PRICING.currency,
   };

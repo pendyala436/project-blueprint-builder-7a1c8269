@@ -67,14 +67,14 @@ export const TransactionHistoryWidget = ({
   const loadEarningRates = async () => {
     const { data } = await supabase
       .from("chat_pricing")
-      .select("women_earning_rate, video_women_earning_rate")
+      .select("women_earning_rate")
       .eq("is_active", true)
       .maybeSingle();
     
     if (data) {
       setEarningRates({
         chatRate: Number(data.women_earning_rate) || 0,
-        videoRate: Number(data.video_women_earning_rate) || 0
+        videoRate: 0 // Video calls are gift-based, not per-minute
       });
     }
   };

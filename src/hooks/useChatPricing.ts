@@ -3,6 +3,7 @@
  * 
  * Fetches and provides admin-configured chat pricing.
  * Prices are set by admin and used for billing men and paying women.
+ * Note: Video calls are gift-based, not per-minute billing.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,8 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ChatPricing {
   ratePerMinute: number;        // Rate charged to men per minute (INR)
   womenEarningRate: number;     // Rate paid to women per minute (INR)
-  videoRatePerMinute: number;   // Video call rate per minute (INR)
-  videoWomenEarningRate: number; // Video call earning for women (INR)
   minWithdrawalBalance: number; // Minimum balance for women to withdraw
   currency: string;
 }
@@ -20,8 +19,6 @@ export interface ChatPricing {
 const DEFAULT_PRICING: ChatPricing = {
   ratePerMinute: 5,
   womenEarningRate: 2,
-  videoRatePerMinute: 10,
-  videoWomenEarningRate: 5,
   minWithdrawalBalance: 10000,
   currency: 'INR'
 };
@@ -50,8 +47,6 @@ export const useChatPricing = () => {
         setPricing({
           ratePerMinute: Number(data.rate_per_minute) || DEFAULT_PRICING.ratePerMinute,
           womenEarningRate: Number(data.women_earning_rate) || DEFAULT_PRICING.womenEarningRate,
-          videoRatePerMinute: Number(data.video_rate_per_minute) || DEFAULT_PRICING.videoRatePerMinute,
-          videoWomenEarningRate: Number(data.video_women_earning_rate) || DEFAULT_PRICING.videoWomenEarningRate,
           minWithdrawalBalance: Number(data.min_withdrawal_balance) || DEFAULT_PRICING.minWithdrawalBalance,
           currency: data.currency || DEFAULT_PRICING.currency
         });
@@ -87,26 +82,24 @@ export const useChatPricing = () => {
   }, [fetchPricing]);
 
   /**
-   * Calculate cost for a given duration
+   * Calculate cost for chat duration (video calls are gift-based)
    */
-  const calculateCost = useCallback((minutes: number, isVideoCall = false): number => {
-    const rate = isVideoCall ? pricing.videoRatePerMinute : pricing.ratePerMinute;
-    return Math.ceil(minutes * rate);
+  const calculateCost = useCallback((minutes: number): number => {
+    return Math.ceil(minutes * pricing.ratePerMinute);
   }, [pricing]);
 
   /**
-   * Calculate earnings for women for a given duration
+   * Calculate earnings for women for chat duration (video calls are gift-based)
    */
-  const calculateEarnings = useCallback((minutes: number, isVideoCall = false): number => {
-    const rate = isVideoCall ? pricing.videoWomenEarningRate : pricing.womenEarningRate;
-    return Math.ceil(minutes * rate);
+  const calculateEarnings = useCallback((minutes: number): number => {
+    return Math.ceil(minutes * pricing.womenEarningRate);
   }, [pricing]);
 
   /**
    * Check if a user has sufficient balance for chat
    */
-  const hasSufficientBalance = useCallback((balance: number, minutes = 1, isVideoCall = false): boolean => {
-    const cost = calculateCost(minutes, isVideoCall);
+  const hasSufficientBalance = useCallback((balance: number, minutes = 1): boolean => {
+    const cost = calculateCost(minutes);
     return balance >= cost;
   }, [calculateCost]);
 
