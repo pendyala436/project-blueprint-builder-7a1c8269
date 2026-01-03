@@ -983,7 +983,7 @@ const DashboardScreen = () => {
     { 
       icon: <Search className="w-6 h-6" />, 
       label: t('findMatch', 'Find Match'), 
-      color: "from-primary to-accent",
+      color: "from-male to-info",
       action: () => navigate("/find-match")
     },
     { 
@@ -995,13 +995,13 @@ const DashboardScreen = () => {
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-female to-gift",
+      color: "from-primary to-accent",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-secondary to-secondary/80",
+      color: "from-male to-male/80",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -1018,7 +1018,7 @@ const DashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-male/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -1374,9 +1374,9 @@ const DashboardScreen = () => {
               <button
                 key={index}
                 onClick={action.action}
-                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
+                className="group p-6 rounded-2xl bg-gradient-to-br from-male/5 to-male/10 border border-male/20 hover:border-male/40 hover:shadow-glow transition-all duration-300"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
+                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
                   {action.icon}
                 </div>
                 <p className="text-sm font-medium text-foreground">{action.label}</p>
@@ -1467,9 +1467,9 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-6 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-6 bg-gradient-to-br from-male/10 to-male/5 border-male/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-primary-foreground">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-male to-info text-primary-foreground">
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">
