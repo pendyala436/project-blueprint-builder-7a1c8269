@@ -91,9 +91,9 @@ const SHIFT_ICONS = {
 };
 
 const SHIFT_COLORS = {
-  A: "bg-amber-500/20 text-amber-700 border-amber-500/30",
-  B: "bg-orange-500/20 text-orange-700 border-orange-500/30",
-  C: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30"
+  A: "bg-crown/20 text-crown border-crown/30",
+  B: "bg-warning/20 text-warning border-warning/30",
+  C: "bg-info/20 text-info border-info/30"
 };
 
 export default function WomenShiftScheduleDisplay({ userId, compact = false }: WomenShiftScheduleDisplayProps) {

@@ -1104,6 +1104,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--info', primaryHsl);
     root.style.setProperty('--info-foreground', colors.primaryForeground);
     
+    // Error - consistent red for danger states
+    const errorColor = resolvedMode === 'dark' ? '0 65% 50%' : '0 72% 51%';
+    root.style.setProperty('--error', errorColor);
+    root.style.setProperty('--error-foreground', '0 0% 100%');
+    
     // Status indicators - fully themed
     root.style.setProperty('--online', accentHsl);
     root.style.setProperty('--online-foreground', colors.accentForeground);
@@ -1113,23 +1118,35 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--busy-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
     root.style.setProperty('--away', warningLight);
     root.style.setProperty('--away-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    root.style.setProperty('--pending', warningLight);
+    root.style.setProperty('--pending-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    root.style.setProperty('--verified', accentHsl);
+    root.style.setProperty('--verified-foreground', colors.accentForeground);
     
     // Gender colors - derive from theme for consistency
-    // Male uses a blue-tinted variant of primary or info
-    // Female uses a pink/rose-tinted variant
     const maleColor = resolvedMode === 'dark' ? '210 90% 55%' : '210 90% 50%';
     const femaleColor = resolvedMode === 'dark' ? '330 81% 65%' : '330 81% 60%';
     root.style.setProperty('--male', maleColor);
+    root.style.setProperty('--male-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
     root.style.setProperty('--female', femaleColor);
+    root.style.setProperty('--female-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    
+    // Feature colors - crown (gold), gift (pink), wallet (blue), earnings (green)
+    const crownColor = resolvedMode === 'dark' ? '45 90% 55%' : '45 90% 48%';
+    root.style.setProperty('--crown', crownColor);
+    root.style.setProperty('--crown-foreground', resolvedMode === 'dark' ? colors.background : '45 25% 10%');
+    root.style.setProperty('--gift', femaleColor);
+    root.style.setProperty('--gift-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    root.style.setProperty('--wallet', maleColor);
+    root.style.setProperty('--wallet-foreground', resolvedMode === 'dark' ? colors.background : '0 0% 100%');
+    root.style.setProperty('--earnings', accentHsl);
+    root.style.setProperty('--earnings-foreground', colors.accentForeground);
+    root.style.setProperty('--live', errorColor);
+    root.style.setProperty('--live-foreground', '0 0% 100%');
     
     // Destructive (error) - slight adjustment for dark mode visibility
-    if (resolvedMode === 'dark') {
-      root.style.setProperty('--destructive', '0 65% 50%');
-      root.style.setProperty('--destructive-foreground', '0 0% 100%');
-    } else {
-      root.style.setProperty('--destructive', '0 72% 51%');
-      root.style.setProperty('--destructive-foreground', '0 0% 100%');
-    }
+    root.style.setProperty('--destructive', errorColor);
+    root.style.setProperty('--destructive-foreground', '0 0% 100%');
 
   }, [themeId, resolvedMode]);
 

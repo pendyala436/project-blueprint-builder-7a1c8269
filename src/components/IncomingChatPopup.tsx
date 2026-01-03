@@ -212,7 +212,7 @@ const IncomingChatPopup = ({
           </Badge>
         )}
         {userGender === "female" && (
-          <Badge className="text-xs bg-green-500/20 text-green-600 border-green-500/30">
+          <Badge className="text-xs bg-earnings/20 text-earnings border-earnings/30">
             Earn ₹{ratePerMinute}/min
           </Badge>
         )}

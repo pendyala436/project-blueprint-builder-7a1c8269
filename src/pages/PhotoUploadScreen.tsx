@@ -369,7 +369,7 @@ const PhotoUploadScreen = () => {
                 )}
 
                 {verificationState === "verified" && (
-                  <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-2 animate-in zoom-in duration-300">
+                  <div className="absolute top-3 right-3 bg-verified text-verified-foreground rounded-full p-2 animate-in zoom-in duration-300">
                     <Check className="h-5 w-5" />
                   </div>
                 )}
@@ -416,7 +416,7 @@ const PhotoUploadScreen = () => {
                 <div className={`
                   mt-3 p-2 rounded-lg text-xs
                   ${verificationState === "verified" 
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400" 
+                    ? "bg-verified/10 text-verified" 
                     : "bg-destructive/10 text-destructive"
                   }
                 `}>

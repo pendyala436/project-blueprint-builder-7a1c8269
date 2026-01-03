@@ -315,13 +315,13 @@ const AdminFinanceDashboard = () => {
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* System Status Banner */}
         {totalRevenue === 0 && (
-          <Card className="border-amber-500/50 bg-amber-500/5">
+          <Card className="border-warning/50 bg-warning/5">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-amber-500/20">
-                <TrendingUp className="h-5 w-5 text-amber-500" />
+              <div className="p-2 rounded-full bg-warning/20">
+                <TrendingUp className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="font-medium text-amber-600 dark:text-amber-400">System Not Live</p>
+                <p className="font-medium text-warning">System Not Live</p>
                 <p className="text-sm text-muted-foreground">
                   Payment gateways are not connected. All financial stats show real-time data - currently ₹0 as no actual recharges have occurred.
                 </p>
@@ -361,8 +361,8 @@ const AdminFinanceDashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">From gift transactions</p>
                 </div>
-                <div className="p-3 bg-pink-500/10 rounded-full">
-                  <Gift className="h-6 w-6 text-pink-500" />
+                <div className="p-3 bg-gift/10 rounded-full">
+                  <Gift className="h-6 w-6 text-gift" />
                 </div>
               </div>
             </CardContent>
@@ -376,8 +376,8 @@ const AdminFinanceDashboard = () => {
                   <p className="text-2xl font-bold">{totalWallets}</p>
                   <p className="text-xs text-muted-foreground mt-1">User wallet count</p>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-full">
-                  <Wallet className="h-6 w-6 text-blue-500" />
+                <div className="p-3 bg-wallet/10 rounded-full">
+                  <Wallet className="h-6 w-6 text-wallet" />
                 </div>
               </div>
             </CardContent>
@@ -394,8 +394,8 @@ const AdminFinanceDashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">Sum of all wallets</p>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-full">
-                  <CreditCard className="h-6 w-6 text-green-500" />
+                <div className="p-3 bg-earnings/10 rounded-full">
+                  <CreditCard className="h-6 w-6 text-earnings" />
                 </div>
               </div>
             </CardContent>

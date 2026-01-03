@@ -51,6 +51,8 @@
     --warning-foreground: 0 0% 100%;
     --info: 210 90% 50%;
     --info-foreground: 0 0% 100%;
+    --error: 0 72% 51%;
+    --error-foreground: 0 0% 100%;
     
     /* Status indicators */
     --online: 142 71% 45%;
@@ -61,10 +63,28 @@
     --busy-foreground: 0 0% 100%;
     --away: 38 92% 50%;
     --away-foreground: 0 0% 100%;
+    --pending: 38 92% 50%;
+    --pending-foreground: 0 0% 100%;
+    --verified: 142 71% 45%;
+    --verified-foreground: 0 0% 100%;
     
     /* Gender colors */
     --male: 210 90% 50%;
+    --male-foreground: 0 0% 100%;
     --female: 330 81% 60%;
+    --female-foreground: 0 0% 100%;
+    
+    /* Feature colors - themed variants */
+    --crown: 45 90% 48%;
+    --crown-foreground: 45 25% 10%;
+    --gift: 330 81% 60%;
+    --gift-foreground: 0 0% 100%;
+    --wallet: 210 90% 50%;
+    --wallet-foreground: 0 0% 100%;
+    --earnings: 142 71% 45%;
+    --earnings-foreground: 0 0% 100%;
+    --live: 0 72% 51%;
+    --live-foreground: 0 0% 100%;
 
     /* Theme gradients - uses primary color only */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
@@ -129,6 +149,8 @@
     --warning-foreground: 230 35% 8%;
     --info: 210 90% 55%;
     --info-foreground: 230 35% 8%;
+    --error: 0 65% 50%;
+    --error-foreground: 0 0% 100%;
     
     /* Status indicators - Dark mode */
     --online: 142 71% 50%;
@@ -139,10 +161,28 @@
     --busy-foreground: 230 35% 8%;
     --away: 38 92% 55%;
     --away-foreground: 230 35% 8%;
+    --pending: 38 92% 55%;
+    --pending-foreground: 230 35% 8%;
+    --verified: 142 71% 50%;
+    --verified-foreground: 230 35% 8%;
     
     /* Gender colors - Dark mode */
     --male: 210 90% 55%;
+    --male-foreground: 230 35% 8%;
     --female: 330 81% 65%;
+    --female-foreground: 230 35% 8%;
+    
+    /* Feature colors - themed variants - Dark mode */
+    --crown: 45 90% 55%;
+    --crown-foreground: 45 35% 8%;
+    --gift: 330 81% 65%;
+    --gift-foreground: 330 35% 8%;
+    --wallet: 210 90% 55%;
+    --wallet-foreground: 210 35% 8%;
+    --earnings: 142 71% 50%;
+    --earnings-foreground: 142 35% 8%;
+    --live: 0 65% 55%;
+    --live-foreground: 0 0% 100%;
 
     /* Theme gradients - dark mode - uses primary color only */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));

@@ -345,7 +345,7 @@ export const LeaderDashboard = ({
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-amber-500" />
+            <Crown className="w-5 h-5 text-crown" />
             {t('leaderDashboard', 'Leader Dashboard')} - {motherTongue}
           </DialogTitle>
           <DialogDescription>
@@ -448,17 +448,17 @@ export const LeaderDashboard = ({
                 <ScrollArea className="h-[300px]">
                   {pendingDisputes.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50 text-green-500" />
+                      <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50 text-success" />
                       <p>{t('noDisputesPending', 'No pending disputes')}</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {pendingDisputes.map((dispute) => (
-                        <Card key={dispute.id} className="p-3 border-amber-500/30">
+                        <Card key={dispute.id} className="p-3 border-pending/30">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                <AlertTriangle className="w-4 h-4 text-pending" />
                                 <span className="font-medium">{dispute.title}</span>
                                 <Badge variant="outline" className="text-xs">
                                   {dispute.dispute_type}
@@ -502,9 +502,9 @@ export const LeaderDashboard = ({
                   ) : (
                     <div className="space-y-3">
                       {resolvedDisputes.map((dispute) => (
-                        <Card key={dispute.id} className="p-3 border-green-500/30">
+                        <Card key={dispute.id} className="p-3 border-success/30">
                           <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <CheckCircle className="w-4 h-4 text-success" />
                             <span className="font-medium">{dispute.title}</span>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
@@ -542,7 +542,7 @@ export const LeaderDashboard = ({
                           <AvatarFallback>{member.fullName[0]}</AvatarFallback>
                         </Avatar>
                         {member.isOnline && (
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-online rounded-full border-2 border-background" />
                         )}
                       </div>
                       <div className="flex-1">

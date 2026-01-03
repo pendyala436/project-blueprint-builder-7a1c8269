@@ -209,6 +209,10 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        error: {
+          DEFAULT: "hsl(var(--error))",
+          foreground: "hsl(var(--error-foreground))",
+        },
         // Status indicator colors
         online: {
           DEFAULT: "hsl(var(--online))",
@@ -226,9 +230,44 @@ export default {
           DEFAULT: "hsl(var(--away))",
           foreground: "hsl(var(--away-foreground))",
         },
+        pending: {
+          DEFAULT: "hsl(var(--pending))",
+          foreground: "hsl(var(--pending-foreground))",
+        },
+        verified: {
+          DEFAULT: "hsl(var(--verified))",
+          foreground: "hsl(var(--verified-foreground))",
+        },
         // Gender colors
-        male: "hsl(var(--male))",
-        female: "hsl(var(--female))",
+        male: {
+          DEFAULT: "hsl(var(--male))",
+          foreground: "hsl(var(--male-foreground))",
+        },
+        female: {
+          DEFAULT: "hsl(var(--female))",
+          foreground: "hsl(var(--female-foreground))",
+        },
+        // Feature colors
+        crown: {
+          DEFAULT: "hsl(var(--crown))",
+          foreground: "hsl(var(--crown-foreground))",
+        },
+        gift: {
+          DEFAULT: "hsl(var(--gift))",
+          foreground: "hsl(var(--gift-foreground))",
+        },
+        wallet: {
+          DEFAULT: "hsl(var(--wallet))",
+          foreground: "hsl(var(--wallet-foreground))",
+        },
+        earnings: {
+          DEFAULT: "hsl(var(--earnings))",
+          foreground: "hsl(var(--earnings-foreground))",
+        },
+        live: {
+          DEFAULT: "hsl(var(--live))",
+          foreground: "hsl(var(--live-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

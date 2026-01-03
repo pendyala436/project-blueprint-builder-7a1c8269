@@ -390,22 +390,22 @@ export const UserActionButtons = ({
     return (
       <div className="flex items-center gap-1">
         {friendshipStatus.isFriend ? (
-          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
             <Users className="w-3 h-3 mr-1" />
             {t('friend', 'Friend')}
           </Badge>
         ) : friendshipStatus.isPending ? (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+          <Badge variant="outline" className="bg-pending/10 text-pending border-pending/30">
             <Clock className="w-3 h-3 mr-1" />
             {t('pending', 'Pending')}
           </Badge>
         ) : friendshipStatus.isRequested ? (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" onClick={handleAcceptFriendRequest} disabled={isLoading}>
-              <Check className="w-4 h-4 text-green-500" />
+              <Check className="w-4 h-4 text-success" />
             </Button>
             <Button size="sm" variant="ghost" onClick={handleRejectFriendRequest} disabled={isLoading}>
-              <X className="w-4 h-4 text-red-500" />
+              <X className="w-4 h-4 text-destructive" />
             </Button>
           </div>
         ) : !isBlocked ? (
@@ -415,7 +415,7 @@ export const UserActionButtons = ({
         ) : null}
 
         {isBlocked && (
-          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
             <Shield className="w-3 h-3 mr-1" />
             {t('blocked', 'Blocked')}
           </Badge>
@@ -433,7 +433,7 @@ export const UserActionButtons = ({
           size="sm"
           onClick={() => setShowUnfriendDialog(true)}
           disabled={isLoading}
-          className="border-green-500/30 text-green-600"
+          className="border-success/30 text-success"
         >
           <Users className="w-4 h-4 mr-2" />
           {t('friends', 'Friends')}

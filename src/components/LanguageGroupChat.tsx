@@ -334,13 +334,13 @@ export const LanguageGroupChat = ({
   const getFileIcon = (fileType: string | null) => {
     if (!fileType) return <File className="w-5 h-5" />;
     if (fileType.startsWith("image/")) return <Image className="w-5 h-5" />;
-    if (fileType.includes("pdf")) return <FileText className="w-5 h-5 text-red-500" />;
+    if (fileType.includes("pdf")) return <FileText className="w-5 h-5 text-destructive" />;
     if (fileType.includes("word") || fileType.includes("document")) 
-      return <FileText className="w-5 h-5 text-blue-500" />;
+      return <FileText className="w-5 h-5 text-info" />;
     if (fileType.includes("sheet") || fileType.includes("excel"))
-      return <FileText className="w-5 h-5 text-green-500" />;
+      return <FileText className="w-5 h-5 text-success" />;
     if (fileType.includes("presentation") || fileType.includes("powerpoint"))
-      return <FileText className="w-5 h-5 text-orange-500" />;
+      return <FileText className="w-5 h-5 text-warning" />;
     return <File className="w-5 h-5" />;
   };
 
@@ -585,7 +585,7 @@ export const LanguageGroupChat = ({
                         </AvatarFallback>
                       </Avatar>
                       {member.isOnline && (
-                        <Circle className="absolute -bottom-0.5 -right-0.5 w-3 h-3 fill-green-500 text-green-500" />
+                        <Circle className="absolute -bottom-0.5 -right-0.5 w-3 h-3 fill-online text-online" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
