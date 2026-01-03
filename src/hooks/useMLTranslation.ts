@@ -1,8 +1,12 @@
 /**
- * React Hook for Browser-based ML Translation
+ * React Hook for Browser-based Dictionary Translation
  * 
- * Uses Transformers.js with NLLB-200 model for 200+ language support
- * Runs entirely in the browser - NO external API calls
+ * Uses DL-Translate pattern with embedded dictionaries
+ * Runs entirely in the browser - NO external API calls - NO ML models
+ * 
+ * Based on:
+ * - https://github.com/xhluca/dl-translate (API pattern)
+ * - https://github.com/Goutam245/Language-Translator-Web-Application (pure JS)
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -62,11 +66,12 @@ export function useMLTranslation(
     targetLanguage = 'hindi' 
   } = options;
   
-  const [isReady, setIsReady] = useState(isMLTranslatorReady());
-  const [isLoading, setIsLoading] = useState(isMLTranslatorLoading());
+  // Dictionary-based translator is always ready (no model to load)
+  const [isReady, setIsReady] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<MLTranslationProgress>({
-    status: 'idle',
-    progress: 0,
+    status: 'ready',
+    progress: 100,
   });
   const [error, setError] = useState<string | null>(null);
   
@@ -79,14 +84,8 @@ export function useMLTranslation(
     defaultTargetRef.current = targetLanguage;
   }, [sourceLanguage, targetLanguage]);
   
-  // Initialize the model
+  // Initialize (instant for dictionary-based)
   const initialize = useCallback(async (): Promise<boolean> => {
-    if (isMLTranslatorReady()) {
-      setIsReady(true);
-      setProgress({ status: 'ready', progress: 100 });
-      return true;
-    }
-    
     setIsLoading(true);
     setError(null);
     
@@ -94,16 +93,14 @@ export function useMLTranslation(
       const success = await initializeMLTranslator((progressData) => {
         setProgress({
           status: progressData.status as MLTranslationProgress['status'],
-          progress: progressData.progress ?? 0,
+          progress: progressData.progress ?? 100,
           file: progressData.file,
         });
       });
       
       setIsReady(success);
-      if (!success) {
-        setError('Failed to initialize translation model');
-      }
-      
+      setProgress({ status: 'ready', progress: 100 });
+      console.log('[DL-Translate Hook] Dictionary translator ready');
       return success;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -115,9 +112,9 @@ export function useMLTranslation(
     }
   }, []);
   
-  // Auto-load on mount if enabled
+  // Auto-initialize on mount if enabled
   useEffect(() => {
-    if (autoLoad && !isMLTranslatorReady() && !isMLTranslatorLoading()) {
+    if (autoLoad) {
       initialize();
     }
   }, [autoLoad, initialize]);
@@ -131,18 +128,9 @@ export function useMLTranslation(
     const srcLang = source || defaultSourceRef.current;
     const tgtLang = target || defaultTargetRef.current;
     
-    // Initialize if not ready
-    if (!isMLTranslatorReady()) {
-      const success = await initialize();
-      if (!success) {
-        console.warn('[useMLTranslation] Model not available, returning original text');
-        return text;
-      }
-    }
-    
     const result = await translateWithML(text, srcLang, tgtLang);
     return result || text;
-  }, [initialize]);
+  }, []);
   
   // Translate batch
   const translateBatch = useCallback(async (
@@ -153,21 +141,12 @@ export function useMLTranslation(
     const srcLang = source || defaultSourceRef.current;
     const tgtLang = target || defaultTargetRef.current;
     
-    // Initialize if not ready
-    if (!isMLTranslatorReady()) {
-      const success = await initialize();
-      if (!success) {
-        return texts;
-      }
-    }
-    
     return translateBatchWithML(texts, srcLang, tgtLang);
-  }, [initialize]);
+  }, []);
   
-  // Dispose model
+  // Dispose (clear cache)
   const dispose = useCallback(async (): Promise<void> => {
     await disposeMLTranslator();
-    setIsReady(false);
     setProgress({ status: 'idle', progress: 0 });
   }, []);
   
