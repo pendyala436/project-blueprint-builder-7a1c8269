@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { Send, Smile, Languages, Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useChatTranslation } from '@/hooks/useChatTranslation';
+import { SpeechButton } from './SpeechButton';
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string, originalMessage?: string) => void;
@@ -196,6 +197,34 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
       {/* Input area */}
       <div className="p-3 flex items-end gap-2">
+        {/* Speech-to-Text button */}
+        <SpeechButton
+          mode="speech-to-text"
+          sourceLanguage={senderLanguage}
+          onSpeechToText={(text) => {
+            setMessage(prev => prev ? `${prev} ${text}` : text);
+          }}
+          disabled={disabled || isSending}
+          size="sm"
+          className="flex-shrink-0"
+        />
+
+        {/* Speech-to-Speech button */}
+        <SpeechButton
+          mode="speech-to-speech"
+          sourceLanguage={senderLanguage}
+          targetLanguage={receiverLanguage}
+          onSpeechToSpeech={(result) => {
+            // Insert the original text as message
+            if (result.originalText) {
+              setMessage(prev => prev ? `${prev} ${result.originalText}` : result.originalText);
+            }
+          }}
+          disabled={disabled || isSending}
+          size="sm"
+          className="flex-shrink-0"
+        />
+
         {/* Message input */}
         <div className="flex-1 relative">
           {/* Native script preview - shown above input when converting */}
