@@ -10,7 +10,7 @@
  * 6. Non-blocking: Typing is never affected by translation
  */
 
-import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,39 @@ import { Send, Smile, Languages, Loader2 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useChatTranslation } from '@/hooks/useChatTranslation';
 import { SpeechButton } from './SpeechButton';
+import { getKeyboardLayout, type ScriptFamily } from '@/lib/translation/keyboard-layouts';
+
+// Font family mapping by script
+const SCRIPT_FONTS: Record<ScriptFamily | string, string> = {
+  latin: "'Inter', 'Noto Sans', -apple-system, system-ui, sans-serif",
+  cyrillic: "'Noto Sans', 'Arial', -apple-system, system-ui, sans-serif",
+  greek: "'Noto Sans', 'Arial', -apple-system, system-ui, sans-serif",
+  arabic: "'Noto Sans Arabic', 'Noto Naskh Arabic', 'Arabic Typesetting', -apple-system, sans-serif",
+  hebrew: "'Noto Sans Hebrew', 'Arial Hebrew', -apple-system, sans-serif",
+  devanagari: "'Noto Sans Devanagari', 'Mangal', 'Sanskrit Text', -apple-system, sans-serif",
+  bengali: "'Noto Sans Bengali', 'Vrinda', 'Bangla MN', -apple-system, sans-serif",
+  tamil: "'Noto Sans Tamil', 'Latha', 'Tamil MN', -apple-system, sans-serif",
+  telugu: "'Noto Sans Telugu', 'Gautami', 'Telugu MN', -apple-system, sans-serif",
+  malayalam: "'Noto Sans Malayalam', 'Kartika', 'Malayalam MN', -apple-system, sans-serif",
+  kannada: "'Noto Sans Kannada', 'Tunga', 'Kannada MN', -apple-system, sans-serif",
+  gujarati: "'Noto Sans Gujarati', 'Shruti', 'Gujarati MT', -apple-system, sans-serif",
+  gurmukhi: "'Noto Sans Gurmukhi', 'Raavi', 'Gurmukhi MN', -apple-system, sans-serif",
+  odia: "'Noto Sans Oriya', 'Kalinga', 'Oriya MN', -apple-system, sans-serif",
+  sinhala: "'Noto Sans Sinhala', 'Iskoola Pota', 'Sinhala MN', -apple-system, sans-serif",
+  cjk: "'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'PingFang SC', 'Hiragino Sans', -apple-system, sans-serif",
+  thai: "'Noto Sans Thai', 'Tahoma', 'Leelawadee UI', -apple-system, sans-serif",
+  lao: "'Noto Sans Lao', 'DokChampa', -apple-system, sans-serif",
+  khmer: "'Noto Sans Khmer', 'Khmer UI', -apple-system, sans-serif",
+  myanmar: "'Noto Sans Myanmar', 'Myanmar Text', 'Padauk', -apple-system, sans-serif",
+  tibetan: "'Noto Sans Tibetan', 'Microsoft Himalaya', -apple-system, sans-serif",
+  ethiopic: "'Noto Sans Ethiopic', 'Nyala', -apple-system, sans-serif",
+  armenian: "'Noto Sans Armenian', 'Sylfaen', -apple-system, sans-serif",
+  georgian: "'Noto Sans Georgian', 'Sylfaen', -apple-system, sans-serif",
+};
+
+function getFontFamily(script: string): string {
+  return SCRIPT_FONTS[script] || SCRIPT_FONTS.latin;
+}
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string, originalMessage?: string) => void;
@@ -72,6 +105,9 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     partnerLanguage: receiverLanguage,
     debounceMs: 150
   });
+
+  // Get keyboard layout for sender's language
+  const keyboardLayout = useMemo(() => getKeyboardLayout(senderLanguage), [senderLanguage]);
 
   // Check if translation will be needed when message is sent
   const willNeedTranslation = needsTranslation;
@@ -247,12 +283,15 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled || isSending}
-            lang={senderLanguage}
-            dir="auto"
+            lang={keyboardLayout.keyboardTag}
+            dir={keyboardLayout.dir}
             autoComplete="off"
-            autoCorrect="off"
-            spellCheck="false"
-            inputMode="text"
+            autoCorrect="on"
+            autoCapitalize="sentences"
+            spellCheck="true"
+            inputMode={keyboardLayout.inputMode}
+            enterKeyHint={keyboardLayout.enterKeyHint}
+            data-keyboard={keyboardLayout.keyboardTag}
             className={cn(
               'min-h-[44px] max-h-[120px] resize-none',
               'unicode-text',
@@ -260,11 +299,13 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
               'rounded-xl border-muted-foreground/20',
               'focus-visible:ring-primary/50',
               'placeholder:text-muted-foreground/60',
-              isComposing && 'ime-composing'
+              isComposing && 'ime-composing',
+              keyboardLayout.dir === 'rtl' && 'text-right'
             )}
             style={{
-              fontFamily: "'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Malayalam', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans Thai', 'Noto Sans Khmer', 'Noto Sans Myanmar', 'Noto Sans Hebrew', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Sans Ethiopic', -apple-system, system-ui, sans-serif",
-              unicodeBidi: 'plaintext',
+              fontFamily: getFontFamily(keyboardLayout.script),
+              unicodeBidi: keyboardLayout.dir === 'rtl' ? 'embed' : 'plaintext',
+              writingMode: 'horizontal-tb',
             }}
             aria-label={t('chat.typeMessage')}
           />
