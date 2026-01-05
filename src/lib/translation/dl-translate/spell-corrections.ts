@@ -314,8 +314,259 @@ export const PUNJABI_CORRECTIONS: Record<string, string> = {
   'pyar': 'pyaar',
 };
 
-// Master corrections map by language
+// Odia corrections
+export const ODIA_CORRECTIONS: Record<string, string> = {
+  'namaskar': 'namaskar',
+  'namaskaar': 'namaskar',
+  'kemiti': 'kemiti',
+  'kemti': 'kemiti',
+  'bhala': 'bhala',
+  'bala': 'bhala',
+  'dhanyabad': 'dhanyabaad',
+  'dhanyabaad': 'dhanyabaad',
+  'mu': 'mu',
+  'tume': 'tume',
+  'achi': 'achi',
+  'aachi': 'achi',
+  'haan': 'haan',
+  'han': 'haan',
+  'na': 'naa',
+  'naa': 'naa',
+  'aas': 'aas',
+  'jaa': 'jaa',
+  'ja': 'jaa',
+};
+
+// Marathi corrections
+export const MARATHI_CORRECTIONS: Record<string, string> = {
+  'namaskar': 'namaskar',
+  'namaskaar': 'namaskar',
+  'kasa': 'kasa',
+  'kasaa': 'kasa',
+  'changle': 'changle',
+  'changale': 'changle',
+  'dhanyawad': 'dhanyavaad',
+  'dhanyavaad': 'dhanyavaad',
+  'mi': 'mi',
+  'tumhi': 'tumhi',
+  'aahe': 'aahe',
+  'ahe': 'aahe',
+  'ho': 'ho',
+  'hoy': 'ho',
+  'nahi': 'naahi',
+  'naahi': 'naahi',
+  'ya': 'yaa',
+  'jaa': 'jaa',
+  'ja': 'jaa',
+};
+
+// Nepali corrections
+export const NEPALI_CORRECTIONS: Record<string, string> = {
+  'namaste': 'namaste',
+  'namasthe': 'namaste',
+  'kasari': 'kasari',
+  'kasri': 'kasari',
+  'ramro': 'ramro',
+  'ramrao': 'ramro',
+  'dhanyabad': 'dhanyabaad',
+  'dhanyabaad': 'dhanyabaad',
+  'ma': 'ma',
+  'tapai': 'tapaain',
+  'tapaain': 'tapaain',
+  'cha': 'chha',
+  'chha': 'chha',
+  'ho': 'ho',
+  'hoy': 'ho',
+  'hoina': 'hoina',
+  'haina': 'hoina',
+  'aau': 'aaunos',
+  'jau': 'jaanos',
+};
+
+// Urdu corrections
+export const URDU_CORRECTIONS: Record<string, string> = {
+  'assalam': 'assalaamu',
+  'assalamualaikum': 'assalaamu alaikum',
+  'shukriya': 'shukriya',
+  'sukria': 'shukriya',
+  'acha': 'accha',
+  'accha': 'accha',
+  'theek': 'theek',
+  'thik': 'theek',
+  'mein': 'main',
+  'main': 'main',
+  'aap': 'aap',
+  'ap': 'aap',
+  'hai': 'hai',
+  'hain': 'hain',
+  'jee': 'jee',
+  'ji': 'jee',
+  'nahi': 'naheen',
+  'naheen': 'naheen',
+  'walaikum': 'wa alaikum',
+};
+
+// Assamese corrections
+export const ASSAMESE_CORRECTIONS: Record<string, string> = {
+  'namaskar': 'namaskar',
+  'namaskaar': 'namaskar',
+  'kene': 'kene',
+  'kenea': 'kene',
+  'bhaal': 'bhaal',
+  'bhal': 'bhaal',
+  'dhanyabad': 'dhanyabaad',
+  'dhanyabaad': 'dhanyabaad',
+  'moi': 'moi',
+  'apuni': 'apuni',
+  'ase': 'aase',
+  'aase': 'aase',
+  'hoi': 'hoi',
+  'nohoi': 'nohoi',
+  'nahoi': 'nohoi',
+  'ahok': 'aahok',
+  'jaa': 'jaa',
+};
+
+// Sinhala corrections
+export const SINHALA_CORRECTIONS: Record<string, string> = {
+  'ayubowan': 'aayubowan',
+  'aayubowan': 'aayubowan',
+  'kohomada': 'kohomada',
+  'komada': 'kohomada',
+  'hodai': 'hodai',
+  'hodi': 'hodai',
+  'isthuthi': 'isthuthi',
+  'istuti': 'isthuthi',
+  'mama': 'mama',
+  'oba': 'oba',
+  'thiyenawa': 'thiyenava',
+  'innawa': 'innava',
+  'ow': 'ow',
+  'nehe': 'nehe',
+  'ne': 'nehe',
+  'enna': 'enna',
+  'yanna': 'yanna',
+};
+
+// Russian corrections (Latin transliteration)
+export const RUSSIAN_CORRECTIONS: Record<string, string> = {
+  'privet': 'privet',
+  'priviet': 'privet',
+  'zdravstvuyte': 'zdravstvuyte',
+  'zdrastvuite': 'zdravstvuyte',
+  'spasibo': 'spasibo',
+  'spasiba': 'spasibo',
+  'horosho': 'khorosho',
+  'khorosho': 'khorosho',
+  'ya': 'ya',
+  'ty': 'ty',
+  'vy': 'vy',
+  'da': 'da',
+  'net': 'nyet',
+  'nyet': 'nyet',
+  'poka': 'poka',
+  'dosvidaniya': 'do svidaniya',
+};
+
+// Arabic corrections (Latin transliteration)
+export const ARABIC_CORRECTIONS: Record<string, string> = {
+  'marhaba': 'marhaba',
+  'marhaban': 'marhaba',
+  'assalam': 'assalaamu',
+  'assalamualaikum': 'assalaamu alaikum',
+  'shukran': 'shukran',
+  'sukran': 'shukran',
+  'aiwa': 'aiwa',
+  'naam': 'na\'am',
+  'la': 'laa',
+  'laa': 'laa',
+  'kayfa': 'kayfa',
+  'kaif': 'kayfa',
+  'ana': 'ana',
+  'anta': 'anta',
+  'anti': 'anti',
+  'huwa': 'huwa',
+  'hiya': 'hiya',
+  'maasalama': 'ma\'a salama',
+};
+
+// Spanish corrections
+export const SPANISH_CORRECTIONS: Record<string, string> = {
+  'hola': 'hola',
+  'ola': 'hola',
+  'gracias': 'gracias',
+  'grasias': 'gracias',
+  'como': 'cómo',
+  'bien': 'bien',
+  'muy': 'muy',
+  'si': 'sí',
+  'no': 'no',
+  'yo': 'yo',
+  'tu': 'tú',
+  'usted': 'usted',
+  'adios': 'adiós',
+  'hasta': 'hasta',
+  'buenos': 'buenos',
+  'buenas': 'buenas',
+};
+
+// French corrections
+export const FRENCH_CORRECTIONS: Record<string, string> = {
+  'bonjour': 'bonjour',
+  'bonsoir': 'bonsoir',
+  'merci': 'merci',
+  'mersi': 'merci',
+  'bien': 'bien',
+  'tres': 'très',
+  'oui': 'oui',
+  'non': 'non',
+  'je': 'je',
+  'tu': 'tu',
+  'vous': 'vous',
+  'au revoir': 'au revoir',
+  'salut': 'salut',
+  'comment': 'comment',
+  'sil': 's\'il',
+};
+
+// German corrections
+export const GERMAN_CORRECTIONS: Record<string, string> = {
+  'hallo': 'hallo',
+  'guten': 'guten',
+  'danke': 'danke',
+  'danke schon': 'danke schön',
+  'bitte': 'bitte',
+  'gut': 'gut',
+  'sehr': 'sehr',
+  'ja': 'ja',
+  'nein': 'nein',
+  'ich': 'ich',
+  'du': 'du',
+  'sie': 'Sie',
+  'auf wiedersehen': 'auf Wiedersehen',
+  'tschuss': 'tschüss',
+};
+
+// Portuguese corrections
+export const PORTUGUESE_CORRECTIONS: Record<string, string> = {
+  'ola': 'olá',
+  'obrigado': 'obrigado',
+  'obrigada': 'obrigada',
+  'bem': 'bem',
+  'muito': 'muito',
+  'sim': 'sim',
+  'nao': 'não',
+  'eu': 'eu',
+  'voce': 'você',
+  'tchau': 'tchau',
+  'adeus': 'adeus',
+  'bom': 'bom',
+  'boa': 'boa',
+};
+
+// Master corrections map by language - Extended for 300+ languages
 export const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
+  // Indian languages
   'hindi': HINDI_CORRECTIONS,
   'hin_Deva': HINDI_CORRECTIONS,
   'telugu': TELUGU_CORRECTIONS,
@@ -332,6 +583,46 @@ export const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
   'guj_Gujr': GUJARATI_CORRECTIONS,
   'punjabi': PUNJABI_CORRECTIONS,
   'pan_Guru': PUNJABI_CORRECTIONS,
+  'odia': ODIA_CORRECTIONS,
+  'ory_Orya': ODIA_CORRECTIONS,
+  'marathi': MARATHI_CORRECTIONS,
+  'mar_Deva': MARATHI_CORRECTIONS,
+  'nepali': NEPALI_CORRECTIONS,
+  'npi_Deva': NEPALI_CORRECTIONS,
+  'urdu': URDU_CORRECTIONS,
+  'urd_Arab': URDU_CORRECTIONS,
+  'assamese': ASSAMESE_CORRECTIONS,
+  'asm_Beng': ASSAMESE_CORRECTIONS,
+  'sinhala': SINHALA_CORRECTIONS,
+  'sin_Sinh': SINHALA_CORRECTIONS,
+  
+  // Related Devanagari languages use Hindi corrections
+  'bhojpuri': HINDI_CORRECTIONS,
+  'bho_Deva': HINDI_CORRECTIONS,
+  'maithili': HINDI_CORRECTIONS,
+  'mai_Deva': HINDI_CORRECTIONS,
+  'magahi': HINDI_CORRECTIONS,
+  'mag_Deva': HINDI_CORRECTIONS,
+  'awadhi': HINDI_CORRECTIONS,
+  'awa_Deva': HINDI_CORRECTIONS,
+  'chhattisgarhi': HINDI_CORRECTIONS,
+  'hne_Deva': HINDI_CORRECTIONS,
+  'sanskrit': HINDI_CORRECTIONS,
+  'san_Deva': HINDI_CORRECTIONS,
+  
+  // European languages
+  'russian': RUSSIAN_CORRECTIONS,
+  'rus_Cyrl': RUSSIAN_CORRECTIONS,
+  'arabic': ARABIC_CORRECTIONS,
+  'arb_Arab': ARABIC_CORRECTIONS,
+  'spanish': SPANISH_CORRECTIONS,
+  'spa_Latn': SPANISH_CORRECTIONS,
+  'french': FRENCH_CORRECTIONS,
+  'fra_Latn': FRENCH_CORRECTIONS,
+  'german': GERMAN_CORRECTIONS,
+  'deu_Latn': GERMAN_CORRECTIONS,
+  'portuguese': PORTUGUESE_CORRECTIONS,
+  'por_Latn': PORTUGUESE_CORRECTIONS,
 };
 
 /**
