@@ -1,12 +1,13 @@
 /**
  * Multilingual Chat Page
  * 
- * Browser-based multilingual chat with:
+ * Browser-based multilingual chat with NLLB-200:
+ * - Spell correction on Latin input
  * - Phonetic typing (Latin → Native script)
  * - Live preview while typing
- * - Background translation
+ * - Background translation with NLLB-200
  * - Sender sees native script
- * - Receiver sees their language
+ * - Receiver sees their language (200+ languages)
  */
 
 import { MultilingualChatDemo } from '@/components/MultilingualChatDemo';
@@ -21,20 +22,21 @@ export default function MultilingualChatPage() {
           <div className="max-w-4xl mx-auto space-y-4">
             <div className="text-center space-y-2">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Multilingual Chat
+                NLLB-200 Multilingual Chat
               </h1>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 Type in English letters based on your mother tongue. 
-                Messages are automatically converted and translated.
+                Spell correction + transliteration + neural translation.
               </p>
             </div>
             
             <MultilingualChatDemo />
             
             <div className="text-center text-xs text-muted-foreground space-y-1 pb-4">
-              <p>✅ Exact phonetic transliteration for 45+ Indian & world languages</p>
-              <p>✅ Dictionary-based translation</p>
-              <p>✅ No partial messages • Complete send only</p>
+              <p>✅ Spell correction for common typos</p>
+              <p>✅ Phonetic transliteration for 45+ languages</p>
+              <p>✅ NLLB-200 neural translation (200+ languages)</p>
+              <p>✅ Non-blocking • No partial messages</p>
             </div>
           </div>
         </div>

@@ -4,10 +4,11 @@
  * Translation methods:
  * 1. Dictionary translation (instant, browser-based)
  * 2. Phonetic transliteration (Latin → Native script)
+ * 3. NLLB-200 Neural Translation (200+ languages, in-browser)
  * 
  * Flow:
  * - Typing: Latin letters → Live preview in native script
- * - Send: Background translation (non-blocking)
+ * - Send: Background translation with NLLB-200 (non-blocking)
  * - Receive: Auto-translate to receiver's language
  * - Bi-directional: Works both ways
  */
@@ -65,7 +66,16 @@ export {
 } from './phonetic-transliterator';
 
 // ============================================================================
-// Translation Engine
+// Spell Correction
+// ============================================================================
+export {
+  correctSpelling,
+  getSpellingSuggestion,
+  hasSpellingErrors,
+} from './spell-corrector';
+
+// ============================================================================
+// Translation Engine (Dictionary-based)
 // ============================================================================
 export {
   translateText,
@@ -92,6 +102,23 @@ export {
   getLanguageCode,
   LANGUAGE_CODES,
 } from './ml-translation-engine';
+
+// ============================================================================
+// NLLB-200 Neural Translation (200+ languages)
+// ============================================================================
+export {
+  translateWithNLLB,
+  translateBatchWithNLLB,
+  initializeNLLB,
+  isNLLBLoaded,
+  isNLLBLoading,
+  getNLLBLoadingProgress,
+  getNLLBCode,
+  isNLLBSupported,
+  getNLLBSupportedLanguages,
+  unloadNLLB,
+  NLLB_LANGUAGE_CODES,
+} from './nllb-translator';
 
 // ============================================================================
 // React Hooks
