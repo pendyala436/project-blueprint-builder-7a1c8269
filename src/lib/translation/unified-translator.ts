@@ -153,6 +153,7 @@ const DICTIONARY: Record<string, Record<string, string>> = {
 
   // Common Questions
   'how are you': { hi: 'आप कैसे हैं', te: 'మీరు ఎలా ఉన్నారు', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்', bn: 'আপনি কেমন আছেন', mr: 'तुम्ही कसे आहात', gu: 'તમે કેમ છો', kn: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', ml: 'സുഖമാണോ', es: '¿Cómo estás?', fr: 'Comment allez-vous?', de: 'Wie geht es dir?', ar: 'كيف حالك', zh: '你好吗', ja: 'お元気ですか', en: 'How are you' },
+  'bagunnava': { hi: 'आप कैसे हैं', te: 'బాగున్నావా', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்', bn: 'আপনি কেমন আছেন', mr: 'तुम्ही कसे आहात', gu: 'તમે કેમ છો', kn: 'ನೀವು ಹೇಗಿದ್ದೀರಿ', ml: 'സുഖമാണോ', es: '¿Cómo estás?', fr: 'Comment allez-vous?', de: 'Wie geht es dir?', ar: 'كيف حالك', zh: '你好吗', ja: 'お元気ですか', en: 'How are you?' },
   'what is your name': { hi: 'आपका नाम क्या है', te: 'మీ పేరు ఏమిటి', ta: 'உங்கள் பெயர் என்ன', bn: 'আপনার নাম কি', es: '¿Cómo te llamas?', fr: 'Comment vous appelez-vous?', de: 'Wie heißt du?', en: 'What is your name' },
   'where are you from': { hi: 'आप कहाँ से हैं', te: 'మీరు ఎక్కడ నుండి వచ్చారు', ta: 'நீங்கள் எங்கிருந்து வருகிறீர்கள்', es: '¿De dónde eres?', fr: "D'où venez-vous?", en: 'Where are you from' },
 
@@ -321,15 +322,28 @@ function buildReverseDictionary(): void {
       }
     }
   }
-  // From PHONETIC_WORDS
+  // From PHONETIC_WORDS - map native script to English translations
   for (const [lang, words] of Object.entries(PHONETIC_WORDS)) {
     for (const [phonetic, native] of Object.entries(words)) {
-      const key = native.toLowerCase();
-      if (!REVERSE_DICTIONARY[key]) REVERSE_DICTIONARY[key] = {};
+      const nativeKey = native.toLowerCase();
+      const phoneticKey = phonetic.toLowerCase();
+      
+      if (!REVERSE_DICTIONARY[nativeKey]) REVERSE_DICTIONARY[nativeKey] = {};
+      if (!REVERSE_DICTIONARY[phoneticKey]) REVERSE_DICTIONARY[phoneticKey] = {};
+      
       // Find English equivalent from DICTIONARY using phonetic
-      const dictEntry = DICTIONARY[phonetic.toLowerCase()];
-      if (dictEntry?.en) {
-        REVERSE_DICTIONARY[key]['en'] = dictEntry.en;
+      const dictEntry = DICTIONARY[phoneticKey];
+      if (dictEntry) {
+        // Map native script → all languages
+        if (dictEntry.en) {
+          REVERSE_DICTIONARY[nativeKey]['en'] = dictEntry.en;
+          REVERSE_DICTIONARY[phoneticKey]['en'] = dictEntry.en;
+        }
+        // Add cross-language mappings
+        for (const [otherLang, otherNative] of Object.entries(dictEntry)) {
+          REVERSE_DICTIONARY[nativeKey][otherLang] = otherNative;
+          REVERSE_DICTIONARY[phoneticKey][otherLang] = otherNative;
+        }
       }
     }
   }
