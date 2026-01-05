@@ -179,7 +179,7 @@ export function ProductionChatTranslation({
     modelLoadProgress,
     needsTranslation,
     translatorStatus,
-    detectedLanguage,
+    detectedLanguage: hookDetectedLanguage,
     isTypingLatin,
     reset,
   } = useRealtimeChatTranslation({
@@ -318,7 +318,7 @@ export function ProductionChatTranslation({
           <div className="mb-2 p-2 rounded bg-muted/50 text-xs text-muted-foreground">
             <div className="flex gap-4">
               <span>Typing: {isTypingLatin ? 'Latin' : 'Native'}</span>
-              <span>Detected: {detectedLanguage || 'N/A'}</span>
+              <span>Detected: {hookDetectedLanguage || 'N/A'}</span>
               <span>Queue: {translatorStatus.pendingJobs} pending</span>
             </div>
           </div>
