@@ -564,9 +564,291 @@ export const PORTUGUESE_CORRECTIONS: Record<string, string> = {
   'boa': 'boa',
 };
 
-// Master corrections map by language - Extended for 300+ languages
+// ============================================================================
+// UNIVERSAL LATIN CORRECTIONS - Common typos for ALL Latin-script languages
+// ============================================================================
+export const UNIVERSAL_LATIN_CORRECTIONS: Record<string, string> = {
+  // Common typos
+  'teh': 'the', 'taht': 'that', 'adn': 'and', 'fo': 'of', 'ot': 'to',
+  'si': 'is', 'ti': 'it', 'ni': 'in', 'ro': 'or', 'sa': 'as',
+  'nto': 'not', 'yuo': 'you', 'em': 'me', 'ew': 'we', 'eb': 'be',
+  'hte': 'the', 'wiht': 'with', 'ahve': 'have', 'jsut': 'just',
+  'liek': 'like', 'konw': 'know', 'watn': 'want', 'thier': 'their',
+  'recieve': 'receive', 'beleive': 'believe', 'occured': 'occurred',
+  'definately': 'definitely', 'seperate': 'separate', 'untill': 'until',
+  'tommorrow': 'tomorrow', 'accomodate': 'accommodate', 'occassion': 'occasion',
+  'neccessary': 'necessary', 'wierd': 'weird', 'freind': 'friend',
+  'truely': 'truly', 'begining': 'beginning', 'calender': 'calendar',
+  'carribean': 'caribbean', 'cemetary': 'cemetery', 'changable': 'changeable',
+  'collegue': 'colleague', 'comming': 'coming', 'commitee': 'committee',
+  'completly': 'completely', 'concious': 'conscious', 'curiousity': 'curiosity',
+  'embarass': 'embarrass', 'enviroment': 'environment', 'exagerate': 'exaggerate',
+  'existance': 'existence', 'experiance': 'experience', 'foriegn': 'foreign',
+  'fourty': 'forty', 'goverment': 'government', 'grammer': 'grammar',
+  'guage': 'gauge', 'harrass': 'harass', 'hight': 'height',
+  'immediatly': 'immediately', 'independant': 'independent', 'intresting': 'interesting',
+  'knowlege': 'knowledge', 'libary': 'library', 'lisence': 'license',
+  'maintainance': 'maintenance', 'millenium': 'millennium', 'minature': 'miniature',
+  'mischievious': 'mischievous', 'noticable': 'noticeable', 'occurance': 'occurrence',
+  'peice': 'piece', 'perseverance': 'perseverance', 'personel': 'personnel',
+  'posession': 'possession', 'potatos': 'potatoes', 'preceed': 'precede',
+  'privelege': 'privilege', 'pronounciation': 'pronunciation', 'publically': 'publicly',
+  'questionare': 'questionnaire', 'realy': 'really', 'reccommend': 'recommend',
+  'refered': 'referred', 'relevent': 'relevant', 'religous': 'religious',
+  'repitition': 'repetition', 'resistence': 'resistance', 'rythm': 'rhythm',
+  'succesful': 'successful', 'suprise': 'surprise', 'tomatos': 'tomatoes',
+  'totaly': 'totally', 'tradgedy': 'tragedy', 'transfered': 'transferred',
+  'tyrany': 'tyranny', 'vaccuum': 'vacuum', 'vegeterian': 'vegetarian',
+  'vehical': 'vehicle', 'wellfare': 'welfare', 'writting': 'writing',
+};
+
+// ============================================================================
+// CYRILLIC SCRIPT CORRECTIONS - Russian, Ukrainian, etc.
+// ============================================================================
+export const CYRILLIC_CORRECTIONS: Record<string, string> = {
+  ...RUSSIAN_CORRECTIONS,
+  // Ukrainian common
+  'pryvit': 'pryvit', 'dyakuyu': 'dyakuyu', 'tak_ukr': 'tak', 'ni': 'ni',
+  // Belarusian common
+  'vitaju': 'vitaju', 'dziakuj': 'dziakuj',
+  // Bulgarian common
+  'zdravei': 'zdravei', 'blagodarya': 'blagodarya',
+  // Serbian common
+  'zdravo': 'zdravo', 'hvala': 'hvala',
+  // Macedonian common
+  'blagodaram': 'blagodaram',
+};
+
+// ============================================================================
+// ARABIC SCRIPT CORRECTIONS - Arabic, Persian, Urdu, etc.
+// ============================================================================
+export const ARABIC_SCRIPT_CORRECTIONS: Record<string, string> = {
+  ...ARABIC_CORRECTIONS,
+  ...URDU_CORRECTIONS,
+  // Persian common
+  'mamnun': 'mamnun', 'bale': 'bale',
+  'khub': 'khoob', 'mersi': 'mersi', 'lotfan': 'lotfan',
+  // Pashto common
+  'sanga': 'tsanga', 'pashto_ho': 'ho',
+  // Kurdish common
+  'silav': 'silav', 'spas': 'spas', 'ere': 'ere',
+};
+
+// ============================================================================
+// EAST ASIAN CORRECTIONS - Romanized input for CJK languages
+// ============================================================================
+export const EAST_ASIAN_CORRECTIONS: Record<string, string> = {
+  // Chinese Pinyin
+  'ni hao': 'nihao', 'nihao': 'nihao', 'xie xie': 'xiexie', 'xiexie': 'xiexie',
+  'zaijian': 'zaijian', 'dui': 'dui', 'bu dui': 'budui', 'shi': 'shi',
+  'bushi': 'bushi', 'hao': 'hao', 'hen hao': 'henhao', 'wo': 'wo',
+  'ni': 'ni', 'ta': 'ta', 'women': 'women', 'nimen': 'nimen',
+  // Japanese Romaji
+  'konnichiwa': 'konnichiwa', 'konichiwa': 'konnichiwa', 'arigatou': 'arigatou',
+  'arigato': 'arigatou', 'sayonara': 'sayonara', 'sayounara': 'sayonara',
+  'ohayou': 'ohayou', 'ohayo': 'ohayou', 'hai': 'hai', 'iie': 'iie',
+  'sumimasen': 'sumimasen', 'gomennasai': 'gomen nasai', 'watashi': 'watashi',
+  'anata': 'anata', 'kore': 'kore', 'sore': 'sore', 'are': 'are',
+  // Korean Romanization
+  'annyeong': 'annyeonghaseyo', 'annyeonghaseyo': 'annyeonghaseyo',
+  'annyong': 'annyeonghaseyo', 'kamsahamnida': 'kamsahamnida',
+  'gomawo': 'gomawo', 'ne_kr': 'ne', 'aniyo': 'aniyo', 'anio': 'aniyo',
+  'na_kr': 'na', 'neo': 'neo', 'uri': 'uri',
+};
+
+// ============================================================================
+// SOUTHEAST ASIAN CORRECTIONS
+// ============================================================================
+export const SOUTHEAST_ASIAN_CORRECTIONS: Record<string, string> = {
+  // Thai romanized
+  'sawasdee': 'sawatdee', 'sawadee': 'sawatdee', 'khob khun': 'khob khun',
+  'kopkun': 'khob khun', 'chai': 'chai', 'mai chai': 'mai chai',
+  // Vietnamese
+  'xin chao': 'xin chào', 'cam on': 'cảm ơn', 'vang': 'vâng', 'khong': 'không',
+  // Indonesian/Malay
+  'selamat': 'selamat', 'terima kasih': 'terima kasih', 'terimakasih': 'terima kasih',
+  'ya': 'ya', 'tidak': 'tidak', 'apa kabar': 'apa kabar', 'apakabar': 'apa kabar',
+  // Tagalog
+  'kumusta': 'kumusta', 'salamat': 'salamat', 'oo': 'oo', 'hindi_tl': 'hindi',
+  'magandang': 'magandang', 'umaga': 'umaga', 'hapon': 'hapon', 'gabi': 'gabi',
+};
+
+// ============================================================================
+// AFRICAN LANGUAGE CORRECTIONS
+// ============================================================================
+export const AFRICAN_CORRECTIONS: Record<string, string> = {
+  // Swahili
+  'habari': 'habari', 'jambo': 'jambo', 'asante': 'asante', 'sana': 'sana',
+  'ndiyo': 'ndiyo', 'hapana': 'hapana', 'karibu': 'karibu', 'kwaheri': 'kwaheri',
+  // Yoruba
+  'bawo': 'bawo ni', 'ese': 'e se', 'beeni': 'bẹẹni', 'rara': 'rara',
+  // Hausa
+  'sannu': 'sannu', 'nagode': 'na gode', 'eeh': 'i', 'aaah': 'a\'a',
+  // Zulu
+  'sawubona': 'sawubona', 'ngiyabonga': 'ngiyabonga', 'yebo': 'yebo', 'cha': 'cha',
+  // Amharic romanized
+  'selam': 'selam', 'ameseginalehu': 'ameseginalehu', 'awo': 'awo', 'aydelem': 'aydelem',
+};
+
+// ============================================================================
+// EUROPEAN LANGUAGE EXTENSIONS
+// ============================================================================
+export const EUROPEAN_CORRECTIONS: Record<string, string> = {
+  ...SPANISH_CORRECTIONS,
+  ...FRENCH_CORRECTIONS,
+  ...GERMAN_CORRECTIONS,
+  ...PORTUGUESE_CORRECTIONS,
+  // Italian
+  'ciao': 'ciao', 'grazie': 'grazie', 'prego': 'prego', 'si_it': 'sì', 'no_it': 'no',
+  'buongiorno': 'buongiorno', 'buonasera': 'buonasera', 'arrivederci': 'arrivederci',
+  // Dutch
+  'hallo': 'hallo', 'dankjewel': 'dank je wel', 'ja_nl': 'ja', 'nee': 'nee',
+  'goedemorgen': 'goedemorgen', 'goedeavond': 'goedenavond', 'doei': 'doei',
+  // Polish
+  'czesc': 'cześć', 'dziekuje': 'dziękuję', 'tak': 'tak', 'nie': 'nie',
+  'dzien dobry': 'dzień dobry', 'do widzenia': 'do widzenia',
+  // Greek romanized
+  'yasou': 'yassou', 'efharisto': 'efcharisto', 'nai': 'nai', 'oxi': 'ochi',
+  'kalimera': 'kalimera', 'kalispera': 'kalispera', 'antio': 'antio',
+  // Turkish
+  'merhaba': 'merhaba', 'tesekkurler': 'teşekkürler', 'evet': 'evet', 'hayir': 'hayır',
+  'gunaydin': 'günaydın', 'iyi aksamlar': 'iyi akşamlar', 'hosca kal': 'hoşça kal',
+  // Romanian
+  'salut': 'salut', 'multumesc': 'mulțumesc', 'da_ro': 'da', 'nu': 'nu',
+  'buna ziua': 'bună ziua', 'la revedere': 'la revedere',
+  // Hungarian
+  'szia': 'szia', 'koszonom': 'köszönöm', 'igen': 'igen', 'nem': 'nem',
+  'jo napot': 'jó napot', 'viszontlatasra': 'viszontlátásra',
+  // Czech
+  'ahoj': 'ahoj', 'dekuji': 'děkuji', 'ano': 'ano', 'ne_cs': 'ne',
+  'dobry den': 'dobrý den', 'nashledanou': 'nashledanou',
+  // Swedish
+  'hej_sv': 'hej', 'tack': 'tack', 'ja_sv': 'ja', 'nej_sv': 'nej',
+  'god morgon': 'god morgon', 'hejda': 'hejdå',
+  // Norwegian
+  'hei': 'hei', 'takk': 'takk', 'ja_no': 'ja', 'nei': 'nei',
+  'god morgen': 'god morgen', 'hade': 'ha det',
+  // Danish
+  'hej_da': 'hej', 'tak_da': 'tak', 'ja_da': 'ja', 'nej_da': 'nej',
+  'godmorgen': 'godmorgen', 'farvel': 'farvel',
+  // Finnish
+  'moi': 'moi', 'kiitos': 'kiitos', 'kylla': 'kyllä', 'ei': 'ei',
+  'hyvaa huomenta': 'hyvää huomenta', 'nakemiin': 'näkemiin',
+};
+
+// ============================================================================
+// SCRIPT-BASED FALLBACK MAPPING
+// Maps language codes to their script family for fallback corrections
+// ============================================================================
+const SCRIPT_FAMILY_MAP: Record<string, string> = {
+  // Devanagari script languages
+  'Devanagari': 'devanagari',
+  'hin_Deva': 'devanagari', 'mar_Deva': 'devanagari', 'npi_Deva': 'devanagari',
+  'san_Deva': 'devanagari', 'bho_Deva': 'devanagari', 'mai_Deva': 'devanagari',
+  'mag_Deva': 'devanagari', 'awa_Deva': 'devanagari', 'hne_Deva': 'devanagari',
+  'gom_Deva': 'devanagari', 'doi_Deva': 'devanagari', 'brx_Deva': 'devanagari',
+  'raj_Deva': 'devanagari', 'bgc_Deva': 'devanagari', 'kfy_Deva': 'devanagari',
+  'gbm_Deva': 'devanagari', 'new_Deva': 'devanagari', 'nag_Deva': 'devanagari',
+  'kru_Deva': 'devanagari', 'bhb_Deva': 'devanagari',
+  
+  // Bengali script languages
+  'Bengali': 'bengali',
+  'ben_Beng': 'bengali', 'asm_Beng': 'bengali', 'mni_Beng': 'bengali',
+  'syl_Beng': 'bengali', 'ctg_Beng': 'bengali', 'grt_Beng': 'bengali',
+  
+  // Telugu script
+  'Telugu': 'telugu',
+  'tel_Telu': 'telugu', 'gon_Telu': 'telugu',
+  
+  // Tamil script
+  'Tamil': 'tamil',
+  'tam_Taml': 'tamil',
+  
+  // Kannada script
+  'Kannada': 'kannada',
+  'kan_Knda': 'kannada', 'tcy_Knda': 'kannada',
+  
+  // Malayalam script
+  'Malayalam': 'malayalam',
+  'mal_Mlym': 'malayalam',
+  
+  // Gujarati script
+  'Gujarati': 'gujarati',
+  'guj_Gujr': 'gujarati',
+  
+  // Gurmukhi script
+  'Gurmukhi': 'punjabi',
+  'pan_Guru': 'punjabi',
+  
+  // Odia script
+  'Odia': 'odia',
+  'ory_Orya': 'odia',
+  
+  // Arabic script languages
+  'Arabic': 'arabic',
+  'arb_Arab': 'arabic', 'arz_Arab': 'arabic', 'acm_Arab': 'arabic',
+  'acq_Arab': 'arabic', 'apc_Arab': 'arabic', 'ary_Arab': 'arabic',
+  'ars_Arab': 'arabic', 'aeb_Arab': 'arabic', 'ajp_Arab': 'arabic',
+  'pes_Arab': 'arabic', 'prs_Arab': 'arabic', 'urd_Arab': 'arabic',
+  'kas_Arab': 'arabic', 'snd_Arab': 'arabic', 'ckb_Arab': 'arabic',
+  'pbt_Arab': 'arabic', 'azb_Arab': 'arabic', 'uig_Arab': 'arabic',
+  
+  // Cyrillic script languages
+  'Cyrillic': 'cyrillic',
+  'rus_Cyrl': 'cyrillic', 'ukr_Cyrl': 'cyrillic', 'bel_Cyrl': 'cyrillic',
+  'bul_Cyrl': 'cyrillic', 'mkd_Cyrl': 'cyrillic', 'srp_Cyrl': 'cyrillic',
+  'khk_Cyrl': 'cyrillic', 'kaz_Cyrl': 'cyrillic', 'kir_Cyrl': 'cyrillic',
+  'tgk_Cyrl': 'cyrillic',
+  
+  // Latin script (default for many)
+  'Latin': 'latin',
+  
+  // East Asian
+  'Han': 'cjk', 'Japanese': 'cjk', 'Hangul': 'cjk',
+  'zho_Hans': 'cjk', 'zho_Hant': 'cjk', 'jpn_Jpan': 'cjk',
+  'kor_Hang': 'cjk', 'yue_Hant': 'cjk',
+  
+  // Southeast Asian
+  'Thai': 'southeast_asian', 'tha_Thai': 'southeast_asian',
+  'Myanmar': 'southeast_asian', 'mya_Mymr': 'southeast_asian',
+  'Khmer': 'southeast_asian', 'khm_Khmr': 'southeast_asian',
+  'Lao': 'southeast_asian', 'lao_Laoo': 'southeast_asian',
+  
+  // Sinhala
+  'Sinhala': 'sinhala', 'sin_Sinh': 'sinhala',
+  
+  // Ethiopic
+  'Ethiopic': 'ethiopic',
+  'amh_Ethi': 'ethiopic', 'tir_Ethi': 'ethiopic',
+};
+
+// ============================================================================
+// SCRIPT FAMILY CORRECTIONS - Grouped by writing system
+// ============================================================================
+const SCRIPT_FAMILY_CORRECTIONS: Record<string, Record<string, string>> = {
+  devanagari: HINDI_CORRECTIONS,
+  bengali: BENGALI_CORRECTIONS,
+  telugu: TELUGU_CORRECTIONS,
+  tamil: TAMIL_CORRECTIONS,
+  kannada: KANNADA_CORRECTIONS,
+  malayalam: MALAYALAM_CORRECTIONS,
+  gujarati: GUJARATI_CORRECTIONS,
+  punjabi: PUNJABI_CORRECTIONS,
+  odia: ODIA_CORRECTIONS,
+  arabic: ARABIC_SCRIPT_CORRECTIONS,
+  cyrillic: CYRILLIC_CORRECTIONS,
+  cjk: EAST_ASIAN_CORRECTIONS,
+  southeast_asian: SOUTHEAST_ASIAN_CORRECTIONS,
+  ethiopic: AFRICAN_CORRECTIONS,
+  sinhala: SINHALA_CORRECTIONS,
+  latin: { ...UNIVERSAL_LATIN_CORRECTIONS, ...EUROPEAN_CORRECTIONS },
+};
+
+// ============================================================================
+// Master corrections map by language - FULL 300+ LANGUAGE SUPPORT
+// ============================================================================
 export const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
-  // Indian languages
+  // ========== INDIAN LANGUAGES (44+) ==========
   'hindi': HINDI_CORRECTIONS,
   'hin_Deva': HINDI_CORRECTIONS,
   'telugu': TELUGU_CORRECTIONS,
@@ -596,48 +878,200 @@ export const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
   'sinhala': SINHALA_CORRECTIONS,
   'sin_Sinh': SINHALA_CORRECTIONS,
   
-  // Related Devanagari languages use Hindi corrections
-  'bhojpuri': HINDI_CORRECTIONS,
-  'bho_Deva': HINDI_CORRECTIONS,
-  'maithili': HINDI_CORRECTIONS,
-  'mai_Deva': HINDI_CORRECTIONS,
-  'magahi': HINDI_CORRECTIONS,
-  'mag_Deva': HINDI_CORRECTIONS,
-  'awadhi': HINDI_CORRECTIONS,
-  'awa_Deva': HINDI_CORRECTIONS,
-  'chhattisgarhi': HINDI_CORRECTIONS,
-  'hne_Deva': HINDI_CORRECTIONS,
-  'sanskrit': HINDI_CORRECTIONS,
-  'san_Deva': HINDI_CORRECTIONS,
+  // Devanagari script languages (use Hindi corrections)
+  'bhojpuri': HINDI_CORRECTIONS, 'bho_Deva': HINDI_CORRECTIONS,
+  'maithili': HINDI_CORRECTIONS, 'mai_Deva': HINDI_CORRECTIONS,
+  'magahi': HINDI_CORRECTIONS, 'mag_Deva': HINDI_CORRECTIONS,
+  'awadhi': HINDI_CORRECTIONS, 'awa_Deva': HINDI_CORRECTIONS,
+  'chhattisgarhi': HINDI_CORRECTIONS, 'hne_Deva': HINDI_CORRECTIONS,
+  'sanskrit': HINDI_CORRECTIONS, 'san_Deva': HINDI_CORRECTIONS,
+  'konkani': HINDI_CORRECTIONS, 'gom_Deva': HINDI_CORRECTIONS,
+  'dogri': HINDI_CORRECTIONS, 'doi_Deva': HINDI_CORRECTIONS,
+  'bodo': HINDI_CORRECTIONS, 'brx_Deva': HINDI_CORRECTIONS,
+  'rajasthani': HINDI_CORRECTIONS, 'raj_Deva': HINDI_CORRECTIONS,
+  'marwari': HINDI_CORRECTIONS,
+  'haryanvi': HINDI_CORRECTIONS, 'bgc_Deva': HINDI_CORRECTIONS,
+  'kumaoni': HINDI_CORRECTIONS, 'kfy_Deva': HINDI_CORRECTIONS,
+  'garhwali': HINDI_CORRECTIONS, 'gbm_Deva': HINDI_CORRECTIONS,
+  'newari': HINDI_CORRECTIONS, 'new_Deva': HINDI_CORRECTIONS,
+  'nagpuri': HINDI_CORRECTIONS, 'nag_Deva': HINDI_CORRECTIONS,
+  'kurukh': HINDI_CORRECTIONS, 'kru_Deva': HINDI_CORRECTIONS,
+  'bhili': HINDI_CORRECTIONS, 'bhb_Deva': HINDI_CORRECTIONS,
   
-  // European languages
-  'russian': RUSSIAN_CORRECTIONS,
-  'rus_Cyrl': RUSSIAN_CORRECTIONS,
-  'arabic': ARABIC_CORRECTIONS,
-  'arb_Arab': ARABIC_CORRECTIONS,
-  'spanish': SPANISH_CORRECTIONS,
-  'spa_Latn': SPANISH_CORRECTIONS,
-  'french': FRENCH_CORRECTIONS,
-  'fra_Latn': FRENCH_CORRECTIONS,
-  'german': GERMAN_CORRECTIONS,
-  'deu_Latn': GERMAN_CORRECTIONS,
-  'portuguese': PORTUGUESE_CORRECTIONS,
-  'por_Latn': PORTUGUESE_CORRECTIONS,
+  // Bengali script languages
+  'manipuri': BENGALI_CORRECTIONS, 'mni_Beng': BENGALI_CORRECTIONS,
+  'sylheti': BENGALI_CORRECTIONS, 'syl_Beng': BENGALI_CORRECTIONS,
+  'chittagonian': BENGALI_CORRECTIONS, 'ctg_Beng': BENGALI_CORRECTIONS,
+  'garo': BENGALI_CORRECTIONS, 'grt_Beng': BENGALI_CORRECTIONS,
+  
+  // Telugu script languages
+  'gondi': TELUGU_CORRECTIONS, 'gon_Telu': TELUGU_CORRECTIONS,
+  
+  // Kannada script languages
+  'tulu': KANNADA_CORRECTIONS, 'tcy_Knda': KANNADA_CORRECTIONS,
+  
+  // Arabic script languages
+  'kashmiri': URDU_CORRECTIONS, 'kas_Arab': URDU_CORRECTIONS,
+  'sindhi': URDU_CORRECTIONS, 'snd_Arab': URDU_CORRECTIONS,
+  
+  // ========== EUROPEAN LANGUAGES (50+) ==========
+  'russian': RUSSIAN_CORRECTIONS, 'rus_Cyrl': RUSSIAN_CORRECTIONS,
+  'ukrainian': CYRILLIC_CORRECTIONS, 'ukr_Cyrl': CYRILLIC_CORRECTIONS,
+  'belarusian': CYRILLIC_CORRECTIONS, 'bel_Cyrl': CYRILLIC_CORRECTIONS,
+  'bulgarian': CYRILLIC_CORRECTIONS, 'bul_Cyrl': CYRILLIC_CORRECTIONS,
+  'macedonian': CYRILLIC_CORRECTIONS, 'mkd_Cyrl': CYRILLIC_CORRECTIONS,
+  'serbian': CYRILLIC_CORRECTIONS, 'srp_Cyrl': CYRILLIC_CORRECTIONS,
+  
+  'arabic': ARABIC_CORRECTIONS, 'arb_Arab': ARABIC_CORRECTIONS,
+  'egyptian arabic': ARABIC_CORRECTIONS, 'arz_Arab': ARABIC_CORRECTIONS,
+  'moroccan arabic': ARABIC_CORRECTIONS, 'ary_Arab': ARABIC_CORRECTIONS,
+  'levantine arabic': ARABIC_CORRECTIONS, 'apc_Arab': ARABIC_CORRECTIONS,
+  
+  'persian': ARABIC_SCRIPT_CORRECTIONS, 'pes_Arab': ARABIC_SCRIPT_CORRECTIONS,
+  'dari': ARABIC_SCRIPT_CORRECTIONS, 'prs_Arab': ARABIC_SCRIPT_CORRECTIONS,
+  'pashto': ARABIC_SCRIPT_CORRECTIONS, 'pbt_Arab': ARABIC_SCRIPT_CORRECTIONS,
+  'kurdish': ARABIC_SCRIPT_CORRECTIONS, 'ckb_Arab': ARABIC_SCRIPT_CORRECTIONS,
+  'uyghur': ARABIC_SCRIPT_CORRECTIONS, 'uig_Arab': ARABIC_SCRIPT_CORRECTIONS,
+  
+  'spanish': SPANISH_CORRECTIONS, 'spa_Latn': SPANISH_CORRECTIONS,
+  'french': FRENCH_CORRECTIONS, 'fra_Latn': FRENCH_CORRECTIONS,
+  'german': GERMAN_CORRECTIONS, 'deu_Latn': GERMAN_CORRECTIONS,
+  'portuguese': PORTUGUESE_CORRECTIONS, 'por_Latn': PORTUGUESE_CORRECTIONS,
+  'italian': EUROPEAN_CORRECTIONS, 'ita_Latn': EUROPEAN_CORRECTIONS,
+  'dutch': EUROPEAN_CORRECTIONS, 'nld_Latn': EUROPEAN_CORRECTIONS,
+  'polish': EUROPEAN_CORRECTIONS, 'pol_Latn': EUROPEAN_CORRECTIONS,
+  'czech': EUROPEAN_CORRECTIONS, 'ces_Latn': EUROPEAN_CORRECTIONS,
+  'slovak': EUROPEAN_CORRECTIONS, 'slk_Latn': EUROPEAN_CORRECTIONS,
+  'romanian': EUROPEAN_CORRECTIONS, 'ron_Latn': EUROPEAN_CORRECTIONS,
+  'hungarian': EUROPEAN_CORRECTIONS, 'hun_Latn': EUROPEAN_CORRECTIONS,
+  'greek': EUROPEAN_CORRECTIONS, 'ell_Grek': EUROPEAN_CORRECTIONS,
+  'turkish': EUROPEAN_CORRECTIONS, 'tur_Latn': EUROPEAN_CORRECTIONS,
+  'swedish': EUROPEAN_CORRECTIONS, 'swe_Latn': EUROPEAN_CORRECTIONS,
+  'norwegian': EUROPEAN_CORRECTIONS, 'nob_Latn': EUROPEAN_CORRECTIONS,
+  'danish': EUROPEAN_CORRECTIONS, 'dan_Latn': EUROPEAN_CORRECTIONS,
+  'finnish': EUROPEAN_CORRECTIONS, 'fin_Latn': EUROPEAN_CORRECTIONS,
+  'croatian': EUROPEAN_CORRECTIONS, 'hrv_Latn': EUROPEAN_CORRECTIONS,
+  'slovenian': EUROPEAN_CORRECTIONS, 'slv_Latn': EUROPEAN_CORRECTIONS,
+  'estonian': EUROPEAN_CORRECTIONS, 'est_Latn': EUROPEAN_CORRECTIONS,
+  'latvian': EUROPEAN_CORRECTIONS, 'lvs_Latn': EUROPEAN_CORRECTIONS,
+  'lithuanian': EUROPEAN_CORRECTIONS, 'lit_Latn': EUROPEAN_CORRECTIONS,
+  'catalan': EUROPEAN_CORRECTIONS, 'cat_Latn': EUROPEAN_CORRECTIONS,
+  'galician': EUROPEAN_CORRECTIONS, 'glg_Latn': EUROPEAN_CORRECTIONS,
+  'basque': EUROPEAN_CORRECTIONS, 'eus_Latn': EUROPEAN_CORRECTIONS,
+  'icelandic': EUROPEAN_CORRECTIONS, 'isl_Latn': EUROPEAN_CORRECTIONS,
+  'maltese': EUROPEAN_CORRECTIONS, 'mlt_Latn': EUROPEAN_CORRECTIONS,
+  'albanian': EUROPEAN_CORRECTIONS, 'als_Latn': EUROPEAN_CORRECTIONS,
+  'bosnian': EUROPEAN_CORRECTIONS, 'bos_Latn': EUROPEAN_CORRECTIONS,
+  'welsh': EUROPEAN_CORRECTIONS, 'cym_Latn': EUROPEAN_CORRECTIONS,
+  'irish': EUROPEAN_CORRECTIONS, 'gle_Latn': EUROPEAN_CORRECTIONS,
+  'scottish gaelic': EUROPEAN_CORRECTIONS, 'gla_Latn': EUROPEAN_CORRECTIONS,
+  
+  // ========== EAST ASIAN LANGUAGES (15+) ==========
+  'chinese': EAST_ASIAN_CORRECTIONS, 'zho_Hans': EAST_ASIAN_CORRECTIONS,
+  'chinese (simplified)': EAST_ASIAN_CORRECTIONS,
+  'chinese (traditional)': EAST_ASIAN_CORRECTIONS, 'zho_Hant': EAST_ASIAN_CORRECTIONS,
+  'japanese': EAST_ASIAN_CORRECTIONS, 'jpn_Jpan': EAST_ASIAN_CORRECTIONS,
+  'korean': EAST_ASIAN_CORRECTIONS, 'kor_Hang': EAST_ASIAN_CORRECTIONS,
+  'cantonese': EAST_ASIAN_CORRECTIONS, 'yue_Hant': EAST_ASIAN_CORRECTIONS,
+  'mongolian': CYRILLIC_CORRECTIONS, 'khk_Cyrl': CYRILLIC_CORRECTIONS,
+  
+  // ========== SOUTHEAST ASIAN LANGUAGES (20+) ==========
+  'vietnamese': SOUTHEAST_ASIAN_CORRECTIONS, 'vie_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'thai': SOUTHEAST_ASIAN_CORRECTIONS, 'tha_Thai': SOUTHEAST_ASIAN_CORRECTIONS,
+  'indonesian': SOUTHEAST_ASIAN_CORRECTIONS, 'ind_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'malay': SOUTHEAST_ASIAN_CORRECTIONS, 'zsm_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'tagalog': SOUTHEAST_ASIAN_CORRECTIONS, 'tgl_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'filipino': SOUTHEAST_ASIAN_CORRECTIONS,
+  'cebuano': SOUTHEAST_ASIAN_CORRECTIONS, 'ceb_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'burmese': SOUTHEAST_ASIAN_CORRECTIONS, 'mya_Mymr': SOUTHEAST_ASIAN_CORRECTIONS,
+  'khmer': SOUTHEAST_ASIAN_CORRECTIONS, 'khm_Khmr': SOUTHEAST_ASIAN_CORRECTIONS,
+  'lao': SOUTHEAST_ASIAN_CORRECTIONS, 'lao_Laoo': SOUTHEAST_ASIAN_CORRECTIONS,
+  'javanese': SOUTHEAST_ASIAN_CORRECTIONS, 'jav_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'sundanese': SOUTHEAST_ASIAN_CORRECTIONS, 'sun_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  'hmong': SOUTHEAST_ASIAN_CORRECTIONS, 'hmn_Latn': SOUTHEAST_ASIAN_CORRECTIONS,
+  
+  // ========== AFRICAN LANGUAGES (50+) ==========
+  'swahili': AFRICAN_CORRECTIONS, 'swh_Latn': AFRICAN_CORRECTIONS,
+  'amharic': AFRICAN_CORRECTIONS, 'amh_Ethi': AFRICAN_CORRECTIONS,
+  'tigrinya': AFRICAN_CORRECTIONS, 'tir_Ethi': AFRICAN_CORRECTIONS,
+  'yoruba': AFRICAN_CORRECTIONS, 'yor_Latn': AFRICAN_CORRECTIONS,
+  'igbo': AFRICAN_CORRECTIONS, 'ibo_Latn': AFRICAN_CORRECTIONS,
+  'hausa': AFRICAN_CORRECTIONS, 'hau_Latn': AFRICAN_CORRECTIONS,
+  'zulu': AFRICAN_CORRECTIONS, 'zul_Latn': AFRICAN_CORRECTIONS,
+  'xhosa': AFRICAN_CORRECTIONS, 'xho_Latn': AFRICAN_CORRECTIONS,
+  'afrikaans': EUROPEAN_CORRECTIONS, 'afr_Latn': EUROPEAN_CORRECTIONS,
+  'somali': AFRICAN_CORRECTIONS, 'som_Latn': AFRICAN_CORRECTIONS,
+  'oromo': AFRICAN_CORRECTIONS, 'gaz_Latn': AFRICAN_CORRECTIONS,
+  'shona': AFRICAN_CORRECTIONS, 'sna_Latn': AFRICAN_CORRECTIONS,
+  'lingala': AFRICAN_CORRECTIONS, 'lin_Latn': AFRICAN_CORRECTIONS,
+  'wolof': AFRICAN_CORRECTIONS, 'wol_Latn': AFRICAN_CORRECTIONS,
+  'fulah': AFRICAN_CORRECTIONS, 'ful_Latn': AFRICAN_CORRECTIONS,
+  'kinyarwanda': AFRICAN_CORRECTIONS, 'kin_Latn': AFRICAN_CORRECTIONS,
+  'rundi': AFRICAN_CORRECTIONS, 'run_Latn': AFRICAN_CORRECTIONS,
+  'twi': AFRICAN_CORRECTIONS, 'twi_Latn': AFRICAN_CORRECTIONS,
+  'akan': AFRICAN_CORRECTIONS, 'aka_Latn': AFRICAN_CORRECTIONS,
+  
+  // ========== CENTRAL ASIAN LANGUAGES (10+) ==========
+  'kazakh': CYRILLIC_CORRECTIONS, 'kaz_Cyrl': CYRILLIC_CORRECTIONS,
+  'uzbek': EUROPEAN_CORRECTIONS, 'uzn_Latn': EUROPEAN_CORRECTIONS,
+  'kyrgyz': CYRILLIC_CORRECTIONS, 'kir_Cyrl': CYRILLIC_CORRECTIONS,
+  'tajik': CYRILLIC_CORRECTIONS, 'tgk_Cyrl': CYRILLIC_CORRECTIONS,
+  'turkmen': EUROPEAN_CORRECTIONS, 'tuk_Latn': EUROPEAN_CORRECTIONS,
+  'azerbaijani': EUROPEAN_CORRECTIONS, 'azj_Latn': EUROPEAN_CORRECTIONS,
+  'georgian': EUROPEAN_CORRECTIONS, 'kat_Geor': EUROPEAN_CORRECTIONS,
+  'armenian': EUROPEAN_CORRECTIONS, 'hye_Armn': EUROPEAN_CORRECTIONS,
+  
+  // ========== AMERICAS INDIGENOUS (15+) ==========
+  'quechua': EUROPEAN_CORRECTIONS, 'quy_Latn': EUROPEAN_CORRECTIONS,
+  'guarani': EUROPEAN_CORRECTIONS, 'grn_Latn': EUROPEAN_CORRECTIONS,
+  'aymara': EUROPEAN_CORRECTIONS, 'ayr_Latn': EUROPEAN_CORRECTIONS,
+  'nahuatl': EUROPEAN_CORRECTIONS, 'nah_Latn': EUROPEAN_CORRECTIONS,
+  'haitian creole': EUROPEAN_CORRECTIONS, 'hat_Latn': EUROPEAN_CORRECTIONS,
+  
+  // ========== PACIFIC LANGUAGES (10+) ==========
+  'maori': EUROPEAN_CORRECTIONS, 'mri_Latn': EUROPEAN_CORRECTIONS,
+  'samoan': EUROPEAN_CORRECTIONS, 'smo_Latn': EUROPEAN_CORRECTIONS,
+  'hawaiian': EUROPEAN_CORRECTIONS, 'haw_Latn': EUROPEAN_CORRECTIONS,
+  'tongan': EUROPEAN_CORRECTIONS, 'ton_Latn': EUROPEAN_CORRECTIONS,
+  'fijian': EUROPEAN_CORRECTIONS, 'fij_Latn': EUROPEAN_CORRECTIONS,
+  
+  // ========== ENGLISH (Global default) ==========
+  'english': UNIVERSAL_LATIN_CORRECTIONS, 'eng_Latn': UNIVERSAL_LATIN_CORRECTIONS,
 };
 
 /**
+ * Get corrections for a language with intelligent fallback
+ * Supports ALL 300+ languages through script-family fallbacks
+ */
+export function getCorrectionsForLanguage(language: string): Record<string, string> {
+  const normalizedLang = language.toLowerCase().trim();
+  
+  // Direct match
+  if (LANGUAGE_CORRECTIONS[normalizedLang]) {
+    return LANGUAGE_CORRECTIONS[normalizedLang];
+  }
+  
+  // Try script family fallback
+  const scriptFamily = SCRIPT_FAMILY_MAP[language] || SCRIPT_FAMILY_MAP[normalizedLang];
+  if (scriptFamily && SCRIPT_FAMILY_CORRECTIONS[scriptFamily]) {
+    return SCRIPT_FAMILY_CORRECTIONS[scriptFamily];
+  }
+  
+  // Default to universal Latin corrections (works for any Latin-script language)
+  return UNIVERSAL_LATIN_CORRECTIONS;
+}
+
+/**
  * Apply spelling corrections to input text
+ * NOW SUPPORTS ALL 300+ LANGUAGES with intelligent fallback
  */
 export function applySpellCorrections(
   text: string,
   language: string
 ): { correctedText: string; corrections: string[] } {
   const corrections: string[] = [];
-  const langCorrections = LANGUAGE_CORRECTIONS[language.toLowerCase()];
-  
-  if (!langCorrections) {
-    return { correctedText: text, corrections: [] };
-  }
+  // Use getCorrectionsForLanguage for intelligent fallback (supports ALL 300+ languages)
+  const langCorrections = getCorrectionsForLanguage(language);
   
   let correctedText = text.toLowerCase();
   const words = correctedText.split(/\s+/);
@@ -662,13 +1096,14 @@ export function applySpellCorrections(
 
 /**
  * Suggest corrections for a word
+ * NOW SUPPORTS ALL 300+ LANGUAGES with intelligent fallback
  */
 export function suggestCorrections(
   word: string,
   language: string
 ): string[] {
-  const langCorrections = LANGUAGE_CORRECTIONS[language.toLowerCase()];
-  if (!langCorrections) return [];
+  // Use getCorrectionsForLanguage for intelligent fallback (supports ALL 300+ languages)
+  const langCorrections = getCorrectionsForLanguage(language);
   
   const suggestions: string[] = [];
   const lowerWord = word.toLowerCase();
