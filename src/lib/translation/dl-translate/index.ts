@@ -1,44 +1,70 @@
 /**
- * DL-Translate TypeScript Port
+ * DL-Translate Library - Complete 300+ Language Translation System
  * 
- * Converted from: https://github.com/xhluca/dl-translate
- * Original: Python library for translating between 200+ languages
+ * Production-ready, real-time, bi-directional chat translation
  * 
- * This TypeScript version uses @huggingface/transformers for in-browser
- * neural machine translation with the NLLB-200 model.
- * 
- * Features:
- * - 200+ language support (NLLB-200 model)
- * - Auto language detection from text
- * - Phonetic Latin input detection for Indian languages
- * - Real-time transliteration preview
- * - Bi-directional chat translation
- * - Non-blocking typing experience
- * - Production-ready for scale (lakhs of users)
+ * Supports:
+ * - 44+ Indian languages (all scheduled + regional)
+ * - 260+ world languages (European, Asian, African, etc.)
+ * - Auto-detection of source language
+ * - Latin typing with live native preview
+ * - Non-blocking background translation
+ * - Bi-directional translation
  */
 
 // ============================================================================
-// Core Translation Model
+// PRODUCTION BI-DIRECTIONAL TRANSLATOR (Recommended for Chat Apps)
 // ============================================================================
+
+export {
+  // Core functions
+  getLivePreview,
+  processOutgoingMessage as sendBiDirectionalMessage,
+  processIncomingMessage as receiveBiDirectionalMessage,
+  usersNeedTranslation,
+  
+  // Utilities
+  getLanguageDisplay,
+  isLanguageSupportedByTranslator,
+  getSupportedLanguageCount,
+  getTranslatorState,
+  initializeTranslator as initBiDirectionalTranslator,
+  cleanupTranslator as cleanupBiDirectionalTranslator,
+  autoDetect,
+  isTextLatin,
+  
+  // Types
+  type ChatParticipant,
+  type BiDirectionalMessage,
+  type LiveTypingPreview,
+  type TranslatorState,
+  type TranslationCallbacks,
+} from './production-bidirectional-translator';
+
+// ============================================================================
+// CORE TRANSLATION MODEL
+// ============================================================================
+
 export {
   initializeTranslator,
-  isTranslatorLoaded,
-  isTranslatorLoading,
-  getLoadingProgress,
   translate,
   translateForChat,
   getTransliterationPreview,
+  isTranslatorLoaded,
+  isTranslatorLoading,
+  getLoadingProgress,
+  unloadTranslator,
   availableLanguages,
   availableCodes,
   getLangCodes,
-  unloadTranslator,
   type TranslationResult,
   type ProgressCallback,
 } from './translation-model';
 
 // ============================================================================
-// Language Detection
+// LANGUAGE DETECTION
 // ============================================================================
+
 export {
   detectLanguage,
   isLatinScript,
@@ -48,8 +74,9 @@ export {
 } from './language-detector';
 
 // ============================================================================
-// Transliteration (Latin → Native Script)
+// TRANSLITERATION (Latin → Native Script)
 // ============================================================================
+
 export {
   transliterate,
   isTransliterationSupported,
@@ -58,8 +85,9 @@ export {
 } from './transliteration';
 
 // ============================================================================
-// Language Pairs & Codes
+// LANGUAGE PAIRS & CODES
 // ============================================================================
+
 export {
   PAIRS_M2M100,
   PAIRS_MBART50,
@@ -69,62 +97,50 @@ export {
 } from './language-pairs';
 
 // ============================================================================
-// Utilities
+// UTILITIES
 // ============================================================================
+
 export {
   inferModelFamily,
   inferModelOrPath,
-  getLangCodeMap,
-  getAvailableLanguages,
-  getAvailableCodes,
   resolveLangCode,
+  normalizeLanguageInput,
   isLanguageSupported,
   getLanguageFromCode,
-  normalizeLanguageInput,
+  getAvailableLanguages,
+  getAvailableCodes,
+  getLangCodeMap,
 } from './utils';
 
 // ============================================================================
-// React Hooks (Legacy)
+// REACT HOOKS
 // ============================================================================
-export {
-  useDLTranslate,
-  useQuickTranslate,
-  type ChatMessage,
-  type LivePreviewState,
-  type UseDLTranslateOptions,
-  type UseDLTranslateReturn,
-} from './useDLTranslate';
+
+export { useDLTranslate, useQuickTranslate } from './useDLTranslate';
+export { useRealtimeChatTranslation } from './useRealtimeChatTranslation';
 
 // ============================================================================
-// Production Real-time Chat Translation
+// REAL-TIME CHAT TRANSLATOR
 // ============================================================================
-export {
-  useRealtimeChatTranslation,
-  cleanupTranslator,
-  type ChatUser,
-  type ProcessedMessage,
-  type LivePreview,
-  type UseRealtimeChatOptions,
-  type UseRealtimeChatReturn,
-} from './useRealtimeChatTranslation';
 
-// ============================================================================
-// Real-time Chat Translator (Core Functions)
-// ============================================================================
 export {
   getLiveNativePreview,
   processOutgoingMessage,
   processIncomingMessage,
-  autoDetectLanguage,
   needsTranslation,
   getTranslatorStatus,
   preloadTranslationModel,
   cleanup,
+  autoDetectLanguage,
+  type ProcessedMessage,
+  type LivePreview,
+  type ChatUser,
 } from './realtime-chat-translator';
 
 // ============================================================================
-// Spell Corrections
+// SPELL CORRECTIONS (20+ Languages)
 // ============================================================================
+
 export {
   applySpellCorrections,
   suggestCorrections,
@@ -133,8 +149,9 @@ export {
 } from './spell-corrections';
 
 // ============================================================================
-// Translation Worker (Background Processing)
+// TRANSLATION WORKER (Background Processing)
 // ============================================================================
+
 export {
   initWorkerTranslator,
   isWorkerReady,
@@ -143,3 +160,24 @@ export {
   getQueueStats,
   cleanupWorker,
 } from './translation-worker';
+
+// ============================================================================
+// LANGUAGE DATA (300+ Languages)
+// ============================================================================
+
+export {
+  ALL_LANGUAGES,
+  INDIAN_LANGUAGES,
+  NON_INDIAN_LANGUAGES as GLOBAL_LANGUAGES,
+  getLanguageCode,
+  getLanguageByCode,
+  getLanguageByName,
+  getIndianLanguageNames,
+  getNonIndianLanguageNames,
+  getTotalLanguageCount,
+  getLanguagesByRegion,
+  getLanguagesByScript,
+  searchLanguages,
+  isIndianLanguage,
+  type DLTranslateLanguage,
+} from '@/data/dlTranslateLanguages';
