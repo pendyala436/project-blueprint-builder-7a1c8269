@@ -14,6 +14,7 @@
  * - Real-time transliteration preview
  * - Bi-directional chat translation
  * - Non-blocking typing experience
+ * - Production-ready for scale (lakhs of users)
  */
 
 // ============================================================================
@@ -83,7 +84,7 @@ export {
 } from './utils';
 
 // ============================================================================
-// React Hooks
+// React Hooks (Legacy)
 // ============================================================================
 export {
   useDLTranslate,
@@ -93,3 +94,42 @@ export {
   type UseDLTranslateOptions,
   type UseDLTranslateReturn,
 } from './useDLTranslate';
+
+// ============================================================================
+// Production Real-time Chat Translation
+// ============================================================================
+export {
+  useRealtimeChatTranslation,
+  cleanupTranslator,
+  type ChatUser,
+  type ProcessedMessage,
+  type LivePreview,
+  type UseRealtimeChatOptions,
+  type UseRealtimeChatReturn,
+} from './useRealtimeChatTranslation';
+
+// ============================================================================
+// Real-time Chat Translator (Core Functions)
+// ============================================================================
+export {
+  getLiveNativePreview,
+  processOutgoingMessage,
+  processIncomingMessage,
+  autoDetectLanguage,
+  needsTranslation,
+  getTranslatorStatus,
+  preloadTranslationModel,
+  cleanup,
+} from './realtime-chat-translator';
+
+// ============================================================================
+// Translation Worker (Background Processing)
+// ============================================================================
+export {
+  initWorkerTranslator,
+  isWorkerReady,
+  queueTranslation,
+  cancelPendingJobs,
+  getQueueStats,
+  cleanupWorker,
+} from './translation-worker';
