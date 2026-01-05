@@ -6,6 +6,7 @@ import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Heart, 
+  ArrowLeft,
   Languages,
   MapPin,
   MessageCircle,
@@ -17,7 +18,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
-import NavigationHeader from "@/components/NavigationHeader";
 
 interface ProfileData {
   userId: string;
@@ -332,14 +332,18 @@ const ProfileDetailScreen = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-2">
-          <NavigationHeader
-            title={profile.fullName}
-            showBack={true}
-            showHome={true}
-            showForward={false}
-            rightContent={<MeowLogo size="sm" />}
-          />
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <button 
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">{t('back', 'Back')}</span>
+          </button>
+          
+          <MeowLogo size="sm" />
+          
+          <div className="w-20" /> {/* Spacer for centering */}
         </div>
       </header>
 
@@ -367,16 +371,16 @@ const ProfileDetailScreen = () => {
             {/* Online Status Badge */}
             <div className={`absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${
               profile.isOnline 
-                ? "bg-online/20 border border-online/30" 
+                ? "bg-emerald-500/20 border border-emerald-500/30" 
                 : "bg-muted/80"
             }`}>
               <Circle className={`w-3 h-3 ${
                 profile.isOnline 
-                  ? "fill-online text-online animate-pulse" 
+                  ? "fill-emerald-500 text-emerald-500 animate-pulse" 
                   : "fill-muted-foreground text-muted-foreground"
               }`} />
               <span className={`text-sm font-medium ${
-                profile.isOnline ? "text-online" : "text-muted-foreground"
+                profile.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
               }`}>
                 {profile.isOnline ? t('online', 'Online') : `${t('lastSeen', 'Last seen')} ${formatLastSeen(profile.lastSeen)}`}
               </span>
@@ -384,9 +388,9 @@ const ProfileDetailScreen = () => {
 
             {/* Verified Badge */}
             {profile.isVerified && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-verified/20 border border-verified/30 backdrop-blur-sm">
-                <Shield className="w-4 h-4 text-verified" />
-                <span className="text-sm font-medium text-verified">{t('verified', 'Verified')}</span>
+              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 backdrop-blur-sm">
+                <Shield className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('verified', 'Verified')}</span>
               </div>
             )}
           </div>
@@ -483,22 +487,22 @@ const ProfileDetailScreen = () => {
         {/* Online Status Card */}
         <Card className={`p-4 animate-fade-in border-2 transition-colors ${
           profile.isOnline 
-            ? "bg-online/5 border-online/20" 
+            ? "bg-emerald-500/5 border-emerald-500/20" 
             : "bg-muted/50 border-transparent"
         }`} style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center gap-4">
             <div className={`p-3 rounded-full ${
-              profile.isOnline ? "bg-online/20" : "bg-muted"
+              profile.isOnline ? "bg-emerald-500/20" : "bg-muted"
             }`}>
               <Circle className={`w-6 h-6 ${
                 profile.isOnline 
-                  ? "fill-online text-online animate-pulse" 
+                  ? "fill-emerald-500 text-emerald-500 animate-pulse" 
                   : "fill-muted-foreground/50 text-muted-foreground/50"
               }`} />
             </div>
             <div>
               <p className={`font-medium ${
-                profile.isOnline ? "text-online" : "text-muted-foreground"
+                profile.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
               }`}>
                 {profile.isOnline ? t('currentlyOnline', 'Currently Online') : t('currentlyOffline', 'Currently Offline')}
               </p>

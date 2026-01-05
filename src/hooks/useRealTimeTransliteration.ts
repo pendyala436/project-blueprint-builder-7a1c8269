@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { convertToNativeScript, isLatinScript, normalizeLanguage } from '@/lib/translation/translation-engine';
-import { isLatinScriptLanguage } from '@/lib/translation/language-codes';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TransliterationResult {
   original: string;
@@ -16,15 +15,12 @@ interface UseRealTimeTransliterationOptions {
 }
 
 /**
- * Hook for real-time transliteration of Latin text to native scripts.
- * 
- * NO external APIs - All translation in browser:
- * - Dictionary-based transliteration (instant)
- * - Phonetic transliteration (syllable-based)
+ * Hook for real-time transliteration of English/Latin text to native scripts.
+ * Supports 200+ languages via NLLB-200 translation model.
  * 
  * Features:
- * - Debounced calls to reduce load
- * - Caches converted text to avoid duplicate work
+ * - Debounced API calls to reduce load
+ * - Caches converted text to avoid duplicate requests
  * - Shows original text while converting
  * - Falls back gracefully on errors
  */
@@ -43,18 +39,29 @@ export const useRealTimeTransliteration = ({
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const cacheRef = useRef<Map<string, string>>(new Map());
   const lastInputRef = useRef<string>('');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Check if the language uses non-Latin script
   const isNonLatinLanguage = useCallback((lang: string): boolean => {
-    return !isLatinScriptLanguage(normalizeLanguage(lang));
+    const latinLanguages = [
+      'english', 'spanish', 'french', 'german', 'portuguese', 'italian',
+      'dutch', 'polish', 'romanian', 'swedish', 'danish', 'norwegian',
+      'finnish', 'czech', 'hungarian', 'vietnamese', 'indonesian', 'malay',
+      'tagalog', 'filipino', 'swahili', 'turkish', 'croatian', 'slovenian'
+    ];
+    return !latinLanguages.includes(lang.toLowerCase().trim());
   }, []);
 
   // Check if text is primarily Latin script
   const isLatinText = useCallback((text: string): boolean => {
-    return isLatinScript(text);
+    if (!text.trim()) return true;
+    const latinChars = text.match(/[a-zA-Z]/g);
+    const totalChars = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
+    if (!latinChars || !totalChars.length) return true;
+    return (latinChars.length / totalChars.length) > 0.6;
   }, []);
 
-  // Convert text using embedded translation engine
+  // Convert text using the translate-message edge function
   const convertText = useCallback(async (text: string): Promise<string> => {
     // Check cache first
     const cacheKey = `${targetLanguage}:${text}`;
@@ -62,8 +69,27 @@ export const useRealTimeTransliteration = ({
       return cacheRef.current.get(cacheKey)!;
     }
 
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
-      const converted = await convertToNativeScript(text, targetLanguage);
+      const { data, error } = await supabase.functions.invoke('translate-message', {
+        body: {
+          message: text,
+          targetLanguage: targetLanguage,
+          mode: 'convert'
+        }
+      });
+
+      if (error) {
+        console.error('Transliteration error:', error);
+        return text;
+      }
+
+      const converted = data?.convertedMessage || data?.translatedMessage || text;
       
       // Cache the result
       cacheRef.current.set(cacheKey, converted);
@@ -76,6 +102,9 @@ export const useRealTimeTransliteration = ({
 
       return converted;
     } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        return text;
+      }
       console.error('Transliteration failed:', err);
       return text;
     }
@@ -198,6 +227,9 @@ export const useRealTimeTransliteration = ({
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);

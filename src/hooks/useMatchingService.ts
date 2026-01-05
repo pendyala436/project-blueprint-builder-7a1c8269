@@ -2,11 +2,11 @@ import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   isIndianLanguage, 
-  getLanguageCode, 
-  INDIAN_LANGUAGES, 
-  NON_INDIAN_LANGUAGES,
-  ALL_LANGUAGES 
-} from '@/data/dlTranslateLanguages';
+  getNLLB200Code, 
+  INDIAN_NLLB200_LANGUAGES, 
+  NON_INDIAN_NLLB200_LANGUAGES,
+  ALL_NLLB200_LANGUAGES 
+} from '@/data/nllb200Languages';
 
 // Super user balance bypass is handled at the database level via RPC functions
 
@@ -24,7 +24,7 @@ export interface MatchableUser {
   walletBalance: number;
   hasRecharged: boolean;
   isSameLanguage: boolean;
-  isTranslationSupported: boolean;
+  isNllbSupported: boolean;
   requiresTranslation: boolean;
 }
 
@@ -50,20 +50,20 @@ export interface MatchingConfig {
  *    - When a user selects a language, show users speaking same language
  *    - Users must be: Online, Freely available, Load-balanced
  * 2. Fallback for non-Indian users:
- *    - If no same-language users available, auto-connect to Indian users with translation
+ *    - If no same-language users available, auto-connect to NLLB-200 Indian users
  * 3. Auto-Translation:
  *    - If source == target language: No translation
- *    - If source != target: Enable DL-Translate auto-translation
+ *    - If source != target: Enable NLLB-200 auto-translation
  */
 export const useMatchingService = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   /**
-   * Check if a language is supported for translation
+   * Check if a language is supported by NLLB-200
    */
-  const isTranslationSupported = useCallback((languageName: string): boolean => {
+  const isNllbSupported = useCallback((languageName: string): boolean => {
     const normalizedName = languageName.toLowerCase().trim();
-    return ALL_LANGUAGES.some(
+    return ALL_NLLB200_LANGUAGES.some(
       lang => lang.name.toLowerCase() === normalizedName
     );
   }, []);
@@ -86,7 +86,7 @@ export const useMatchingService = () => {
 
   /**
    * Fetch available women for male dashboard
-   * Implements: Language matching + translation fallback for non-Indian men
+   * Implements: Language matching + NLLB fallback for non-Indian men
    */
   const fetchMatchableWomen = useCallback(async (config: MatchingConfig): Promise<MatchingResult> => {
     setIsLoading(true);
@@ -96,12 +96,12 @@ export const useMatchingService = () => {
       const isUserIndian = userCountry.toLowerCase() === 'india';
       const userHasIndianLanguage = isIndianLanguage(userLanguage);
 
-      // Get all language names for filtering
-      const translationLanguageNames = new Set(
-        ALL_LANGUAGES.map(l => l.name.toLowerCase())
+      // Get all NLLB language names for filtering
+      const nllbLanguageNames = new Set(
+        ALL_NLLB200_LANGUAGES.map(l => l.name.toLowerCase())
       );
       const indianLanguageNames = new Set(
-        INDIAN_LANGUAGES.map(l => l.name.toLowerCase())
+        INDIAN_NLLB200_LANGUAGES.map(l => l.name.toLowerCase())
       );
 
       // Fetch online women
@@ -147,7 +147,7 @@ export const useMatchingService = () => {
       for (const profile of femaleProfiles) {
         const langData = languageMap.get(profile.user_id);
         const womanLanguage = langData?.name || profile.primary_language || profile.preferred_language || "Unknown";
-        const languageCode = langData?.code || getLanguageCode(womanLanguage);
+        const languageCode = langData?.code || getNLLB200Code(womanLanguage);
         
         const availability = availabilityMap.get(profile.user_id);
         const walletBalance = walletMap.get(profile.user_id) || 0;
@@ -163,7 +163,7 @@ export const useMatchingService = () => {
 
         // Check language compatibility
         const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
-        const isWomanTranslationSupported = translationLanguageNames.has(womanLanguage.toLowerCase());
+        const isWomanNllbSupported = nllbLanguageNames.has(womanLanguage.toLowerCase());
         const needsTranslation = requiresTranslation(userLanguage, womanLanguage);
 
         const user: MatchableUser = {
@@ -180,7 +180,7 @@ export const useMatchingService = () => {
           walletBalance,
           hasRecharged: walletBalance > 0,
           isSameLanguage,
-          isTranslationSupported: isWomanTranslationSupported,
+          isNllbSupported: isWomanNllbSupported,
           requiresTranslation: needsTranslation,
         };
 
@@ -188,9 +188,9 @@ export const useMatchingService = () => {
           // Priority 1: Same language users
           sameLanguageUsers.push(user);
         } else {
-          // Priority 2: Any other available woman with translation support
+          // Priority 2: Any other available woman with NLLB support for auto-translation
           // Global matching - no country restrictions
-          if (isWomanTranslationSupported) {
+          if (isWomanNllbSupported) {
             translatedUsers.push(user);
           }
         }
@@ -221,7 +221,7 @@ export const useMatchingService = () => {
 
   /**
    * Fetch available men for female dashboard
-   * Shows men who have recharged wallet and speak a supported language
+   * Shows men who have recharged wallet and speak NLLB-200 supported language
    * Uses only real authenticated users from database - no sample/mock data
    */
   const fetchMatchableMen = useCallback(async (config: MatchingConfig): Promise<MatchingResult> => {
@@ -230,9 +230,9 @@ export const useMatchingService = () => {
     try {
       const { userLanguage } = config;
 
-      // Get all translation-supported language names
-      const translationLanguageNames = new Set(
-        ALL_LANGUAGES.map(l => l.name.toLowerCase())
+      // Get all NLLB language names
+      const nllbLanguageNames = new Set(
+        ALL_NLLB200_LANGUAGES.map(l => l.name.toLowerCase())
       );
 
       // Fetch online men from user_status
@@ -279,12 +279,12 @@ export const useMatchingService = () => {
           for (const profile of maleProfiles) {
             const langData = languageMap.get(profile.user_id);
             const manLanguage = langData?.name || profile.primary_language || profile.preferred_language || "Unknown";
-            const languageCode = langData?.code || getLanguageCode(manLanguage);
+            const languageCode = langData?.code || getNLLB200Code(manLanguage);
             const walletBalance = walletMap.get(profile.user_id) || 0;
             const currentChatCount = chatCountMap.get(profile.user_id) || 0;
 
-            // Skip users without translation-supported language
-            if (!translationLanguageNames.has(manLanguage.toLowerCase())) continue;
+            // Skip users without NLLB-200 supported language
+            if (!nllbLanguageNames.has(manLanguage.toLowerCase())) continue;
 
             // Skip users without wallet balance (unless super user - handled on connection)
             // Regular users must have recharged
@@ -310,7 +310,7 @@ export const useMatchingService = () => {
               walletBalance,
               hasRecharged: walletBalance > 0,
               isSameLanguage,
-              isTranslationSupported: translationLanguageNames.has(manLanguage.toLowerCase()),
+              isNllbSupported: nllbLanguageNames.has(manLanguage.toLowerCase()),
               requiresTranslation: requiresTranslation(userLanguage, manLanguage),
             });
           }
@@ -372,7 +372,7 @@ export const useMatchingService = () => {
 
   return {
     isLoading,
-    isTranslationSupported,
+    isNllbSupported,
     requiresTranslation,
     fetchMatchableWomen,
     fetchMatchableMen,

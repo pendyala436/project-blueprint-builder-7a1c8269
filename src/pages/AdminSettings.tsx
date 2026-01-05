@@ -286,7 +286,7 @@ const AdminSettings = () => {
             <Button 
               onClick={saveSettings} 
               disabled={saving || Object.keys(modifiedSettings).length === 0}
-              className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-success hover:bg-success/90' : ''}`}
+              className={`gap-2 transition-all duration-300 ${saveSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
             >
               {saving ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -398,10 +398,10 @@ const AdminSettings = () => {
                           : 'border-border hover:border-primary/50'
                       } ${
                         theme.value === 'dark' 
-                          ? 'bg-background text-foreground' 
+                          ? 'bg-zinc-900 text-white' 
                           : theme.value === 'light' 
-                            ? 'bg-card text-card-foreground' 
-                            : 'bg-gradient-to-br from-card to-background'
+                            ? 'bg-white text-zinc-900' 
+                            : 'bg-gradient-to-br from-white to-zinc-900'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -409,9 +409,9 @@ const AdminSettings = () => {
                         {isSelected && <Check className="h-4 w-4 text-primary" />}
                       </div>
                       <div className="space-y-2">
-                        <div className={`h-2 rounded ${theme.value === 'dark' ? 'bg-muted' : 'bg-muted/50'}`} />
-                        <div className={`h-2 rounded w-3/4 ${theme.value === 'dark' ? 'bg-muted' : 'bg-muted/50'}`} />
-                        <div className={`h-2 rounded w-1/2 ${theme.value === 'dark' ? 'bg-muted' : 'bg-muted/50'}`} />
+                        <div className={`h-2 rounded ${theme.value === 'dark' ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                        <div className={`h-2 rounded w-3/4 ${theme.value === 'dark' ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+                        <div className={`h-2 rounded w-1/2 ${theme.value === 'dark' ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
                       </div>
                     </div>
                   );

@@ -17,15 +17,9 @@ interface ParallelChatsContainerProps {
   currentUserId: string;
   userGender: "male" | "female";
   currentUserLanguage?: string;
-  currentUserName?: string;
 }
 
-const ParallelChatsContainer = ({ 
-  currentUserId, 
-  userGender, 
-  currentUserLanguage = "English",
-  currentUserName = "Me"
-}: ParallelChatsContainerProps) => {
+const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage = "English" }: ParallelChatsContainerProps) => {
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
 
   useEffect(() => {
@@ -96,33 +90,20 @@ const ParallelChatsContainer = ({
   };
 
   const subscribeToChats = () => {
-    // Optimized channel for scalability - filter by user to reduce broadcast load
-    const filterColumn = userGender === "male" ? "man_user_id" : "woman_user_id";
-    
     const channel = supabase
-      .channel(`user-chats:${currentUserId}`, {
-        config: {
-          broadcast: { self: false }
-        }
-      })
+      .channel(`parallel-chats-${currentUserId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions',
-          filter: `${filterColumn}=eq.${currentUserId}`
+          table: 'active_chat_sessions'
         },
-        (payload) => {
-          console.log('[RealTime] Chat session update:', payload.eventType);
+        () => {
           loadActiveChats();
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[RealTime] Subscribed to user chats: ${currentUserId}`);
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -150,7 +131,6 @@ const ParallelChatsContainer = ({
           partnerLanguage={chat.partnerLanguage}
           isPartnerOnline={chat.isPartnerOnline}
           currentUserId={currentUserId}
-          currentUserName={currentUserName}
           currentUserLanguage={currentUserLanguage}
           userGender={userGender}
           ratePerMinute={chat.ratePerMinute}

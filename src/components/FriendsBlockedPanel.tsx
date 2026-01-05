@@ -303,7 +303,7 @@ export const FriendsBlockedPanel = ({
                                 variant="outline" 
                                 className={cn(
                                   "text-xs",
-                                  friend.isOnline ? "border-online/30 text-online" : ""
+                                  friend.isOnline ? "border-green-500/30 text-green-600" : ""
                                 )}
                               >
                                 {friend.isOnline ? "Online" : "Offline"}

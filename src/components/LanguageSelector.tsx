@@ -11,17 +11,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Languages, Search, Check, Globe, Save, X, MapPin } from "lucide-react";
+import { Languages, Search, Check, ChevronDown, Globe, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
-  ALL_LANGUAGES, 
-  INDIAN_LANGUAGES, 
-  NON_INDIAN_LANGUAGES,
-  DLTranslateLanguage,
-  getTotalLanguageCount,
-  searchLanguages,
-  getLanguagesByRegion
-} from "@/data/dlTranslateLanguages";
+  ALL_NLLB200_LANGUAGES, 
+  INDIAN_NLLB200_LANGUAGES, 
+  NON_INDIAN_NLLB200_LANGUAGES,
+  NLLB200Language,
+  getTotalLanguageCount
+} from "@/data/nllb200Languages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,11 +46,11 @@ export const LanguageSelector = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<DLTranslateLanguage | null>(null);
+  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<NLLB200Language | null>(null);
 
   // All languages - Indian + World
   const languages = useMemo(() => {
-    return [...INDIAN_LANGUAGES, ...NON_INDIAN_LANGUAGES];
+    return [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
   }, []);
 
   // Filter languages based on search
@@ -85,7 +83,7 @@ export const LanguageSelector = ({
     setTempSelectedLanguage(currentLang || null);
   };
 
-  const handleSelectLanguage = (lang: DLTranslateLanguage) => {
+  const handleSelectLanguage = (lang: NLLB200Language) => {
     setTempSelectedLanguage(lang);
   };
 
@@ -164,7 +162,7 @@ export const LanguageSelector = ({
     setSearchQuery("");
   };
 
-  const LanguageItem = ({ lang }: { lang: DLTranslateLanguage }) => {
+  const LanguageItem = ({ lang }: { lang: NLLB200Language }) => {
     const isSelected = tempSelectedLanguage?.code === lang.code;
     const isCurrent = selectedLanguage === lang.name;
     
@@ -184,16 +182,11 @@ export const LanguageSelector = ({
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground"
           )}>
-            {lang.nativeName?.charAt(0) || lang.name.charAt(0)}
+            {lang.name.charAt(0)}
           </div>
           <div>
             <p className="font-semibold text-foreground">{lang.name}</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">{lang.nativeName}</p>
-              {lang.region && (
-                <span className="text-xs text-muted-foreground/70">• {lang.region}</span>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground">{lang.script}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -227,11 +220,11 @@ export const LanguageSelector = ({
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
             <p className="text-xs text-muted-foreground">
-              {ALL_LANGUAGES.find(l => l.name === selectedLanguage)?.script || "Choose your language"}
+              {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.script || "Choose your language"}
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
-            {ALL_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
+            {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
           </Badge>
         </div>
         
@@ -275,12 +268,12 @@ export const LanguageSelector = ({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] p-0">
           <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-xl">
               <Languages className="h-5 w-5 text-primary" />
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {getTotalLanguageCount()}+ languages worldwide ({INDIAN_LANGUAGES.length} Indian + {NON_INDIAN_LANGUAGES.length} World)
+              Choose from {getTotalLanguageCount()} languages ({INDIAN_NLLB200_LANGUAGES.length} Indian + {NON_INDIAN_NLLB200_LANGUAGES.length} World)
             </p>
           </DialogHeader>
           

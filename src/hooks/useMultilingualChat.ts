@@ -1,14 +1,16 @@
 /**
  * useMultilingualChat Hook
  * 
- * Server-side translation via dl-translate Edge Function
+ * Refactored to use the dl-translate inspired translation module
  * Provides multilingual chat functionality with:
  * 1. Latin-to-native script conversion
  * 2. Auto-translation between languages
  * 3. Live preview for sender
+ * 
+ * Uses NLLB-200 model via Hugging Face for 200+ language support
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { 
   useTranslator, 
   isSameLanguage as checkSameLanguage,
@@ -20,6 +22,8 @@ interface TranslationResult {
   translatedMessage: string;
   isTranslated: boolean;
   detectedLanguage?: string;
+  sourceLanguageCode?: string;
+  targetLanguageCode?: string;
 }
 
 interface LivePreviewResult {
@@ -44,6 +48,8 @@ interface UseMultilingualChatOptions {
  * - User types in Latin (e.g., "namaste") → Converted to user's native script (e.g., "नमस्ते")
  * - Message stored in sender's language
  * - Receiver sees message translated to their native language
+ * 
+ * Uses facebook/nllb-200-distilled-600M for 200+ language support
  */
 export const useMultilingualChat = ({
   currentUserLanguage,
@@ -51,7 +57,7 @@ export const useMultilingualChat = ({
   enabled = true
 }: UseMultilingualChatOptions) => {
   
-  // Use the translation hook
+  // Use the new translation hook
   const {
     translate,
     convertScript,
@@ -126,6 +132,8 @@ export const useMultilingualChat = ({
         translatedMessage: result.translatedText,
         isTranslated: result.isTranslated,
         detectedLanguage: result.sourceLanguage,
+        sourceLanguageCode: result.sourceCode,
+        targetLanguageCode: result.targetCode
       };
     } catch (err) {
       console.error('[MultilingualChat] Translation error:', err);

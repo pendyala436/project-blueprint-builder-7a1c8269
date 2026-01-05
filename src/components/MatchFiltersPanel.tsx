@@ -66,11 +66,11 @@ import {
 } from "lucide-react";
 import { countries } from "@/data/countries";
 import { 
-  ALL_LANGUAGES, 
-  INDIAN_LANGUAGES, 
-  NON_INDIAN_LANGUAGES,
-  DLTranslateLanguage 
-} from "@/data/dlTranslateLanguages";
+  ALL_NLLB200_LANGUAGES, 
+  INDIAN_NLLB200_LANGUAGES, 
+  NON_INDIAN_NLLB200_LANGUAGES,
+  NLLB200Language 
+} from "@/data/nllb200Languages";
 import { cn } from "@/lib/utils";
 
 export interface MatchFilters {
@@ -154,7 +154,7 @@ const PERSONALITY_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ
 interface MatchFiltersPanelProps {
   filters: MatchFilters;
   onFiltersChange: (filters: MatchFilters) => void;
-  userCountry?: string; // User's country for showing translation feature (India only)
+  userCountry?: string; // User's country for showing NLLB-200 feature (India only)
 }
 
 export function MatchFiltersPanel({
@@ -162,7 +162,7 @@ export function MatchFiltersPanel({
   onFiltersChange,
   userCountry = "",
 }: MatchFiltersPanelProps) {
-  // Check if user is from India to show DL-Translate language feature
+  // Check if user is from India to show NLLB-200 language feature
   const isIndianUser = userCountry.toLowerCase() === "india";
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState<MatchFilters>(filters);
@@ -174,17 +174,17 @@ export function MatchFiltersPanel({
   // All countries
   const allCountries = countries.map(c => ({ name: c.name, flag: c.flag }));
 
-  // DL-Translate supported languages (grouped by Indian/Non-Indian)
-  const allLanguages = ALL_LANGUAGES;
+  // NLLB-200 supported languages (grouped by Indian/Non-Indian)
+  const allNLLB200Languages = ALL_NLLB200_LANGUAGES;
 
   // Filter based on search
   const filteredCountries = allCountries.filter(c =>
     c.name.toLowerCase().includes(countrySearch.toLowerCase())
   );
-  const filteredIndianLanguages = INDIAN_LANGUAGES.filter(l =>
+  const filteredIndianLanguages = INDIAN_NLLB200_LANGUAGES.filter(l =>
     l.name.toLowerCase().includes(languageSearch.toLowerCase())
   );
-  const filteredNonIndianLanguages = NON_INDIAN_LANGUAGES.filter(l =>
+  const filteredNonIndianLanguages = NON_INDIAN_NLLB200_LANGUAGES.filter(l =>
     l.name.toLowerCase().includes(languageSearch.toLowerCase())
   );
 

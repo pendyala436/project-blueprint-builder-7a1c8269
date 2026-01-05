@@ -1,12 +1,12 @@
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { supportedLocales, loadLocale, type SupportedLocale } from '@/i18n';
-import { translateText } from '@/lib/translation/translation-engine';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Enhanced i18n hook that combines:
  * 1. Static UI translations via i18next (fast, pre-translated)
- * 2. Dynamic content translation via local translation engine (for user-generated content like chat messages)
+ * 2. Dynamic content translation via MT backend (for user-generated content like chat messages)
  */
 export const useI18n = () => {
   const { t, i18n } = useI18nextTranslation();
@@ -41,7 +41,7 @@ export const useI18n = () => {
     }
   }, [currentLocale, i18n]);
 
-  // Translate dynamic content (user messages, etc.) via local translation engine
+  // Translate dynamic content (user messages, etc.) via MT backend
   const translateDynamic = useCallback(async (
     text: string,
     targetLanguage?: string
@@ -51,12 +51,16 @@ export const useI18n = () => {
     const target = targetLanguage || currentLocaleInfo.name.toLowerCase();
     
     try {
-      // Use local translation engine instead of Edge Function
-      const result = await translateText(text, {
-        targetLanguage: target
+      const { data, error } = await supabase.functions.invoke('translate-message', {
+        body: { message: text, targetLanguage: target }
       });
       
-      return result.translatedText || text;
+      if (error) {
+        console.error('Translation error:', error);
+        return text;
+      }
+      
+      return data?.translatedMessage || text;
     } catch (error) {
       console.error('Translation failed:', error);
       return text;

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
@@ -37,24 +36,22 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/dlTranslateLanguages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-// Video calling removed - group private calls still available via PrivateGroupsSection
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
-import LanguageShiftMonthlySchedule from "@/components/LanguageShiftMonthlySchedule";
-import LeaderElectionPanel from "@/components/LeaderElectionPanel";
-import LeaderDashboard from "@/components/LeaderDashboard";
+import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
+import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
-import { WomenPrivateCallSection } from "@/components/WomenPrivateCallSection";
-import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 interface Notification {
   id: string;
@@ -78,7 +75,7 @@ interface OnlineMan {
   hasRecharged: boolean;
   lastSeen: string;
   isSameLanguage: boolean;
-  isTranslationSupported: boolean;
+  isNllbLanguage: boolean;
   activeChatCount?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
@@ -97,34 +94,6 @@ interface BiggestEarner {
   photoUrl?: string;
 }
 
-// Leader Dashboard Wrapper - only shows if user is an elected leader
-const LeaderDashboardWrapper = ({ currentUserId, languageCode }: { currentUserId: string; languageCode: string }) => {
-  const [isLeader, setIsLeader] = useState(false);
-
-  useEffect(() => {
-    const checkLeaderStatus = async () => {
-      const { data } = await supabase
-        .from("community_leaders")
-        .select("id")
-        .eq("user_id", currentUserId)
-        .eq("language_code", languageCode)
-        .eq("status", "active")
-        .maybeSingle();
-      
-      setIsLeader(!!data);
-    };
-    checkLeaderStatus();
-  }, [currentUserId, languageCode]);
-
-  if (!isLeader) return null;
-
-  return (
-    <div className="animate-fade-in" style={{ animationDelay: "0.11s" }}>
-      <LeaderDashboard currentUserId={currentUserId} languageCode={languageCode} />
-    </div>
-  );
-};
-
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -132,9 +101,7 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
-  const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  // Video calling removed - group private calls still available
-
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -181,15 +148,27 @@ const WomenDashboardScreen = () => {
 
   const quickActions = [
     { 
+      icon: <MessageCircle className="w-6 h-6" />, 
+      label: t('messages', 'Messages'), 
+      color: "from-primary to-primary/80",
+      action: () => navigate("/match-discovery")
+    },
+    { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Withdraw'), 
-      color: "from-primary to-primary/80",
+      color: "from-success to-success/80",
       action: () => navigate("/women-wallet")
+    },
+    { 
+      icon: <Heart className="w-6 h-6" />, 
+      label: t('matches', 'Matches'), 
+      color: "from-accent to-accent/80",
+      action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-primary/80 to-primary/60",
+      color: "from-secondary to-secondary/80",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -343,16 +322,16 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusColor = () => {
-    // Uses primary theme color with different opacities for states
-    if (activeChatCount === 0) return "bg-primary";
-    if (activeChatCount >= 3) return "bg-primary/40";
-    return "bg-primary/70";
+    // Green = Available, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-primary";
-    if (activeChatCount >= 3) return "bg-primary/40";
-    return "bg-primary/70";
+    if (activeChatCount === 0) return "bg-green-500";
+    if (activeChatCount >= 3) return "bg-red-500";
+    return "bg-amber-500";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -372,12 +351,9 @@ const WomenDashboardScreen = () => {
       // First check gender and approval from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country")
         .eq("user_id", user.id)
         .maybeSingle();
-
-      // Set user photo
-      setUserPhoto(mainProfile?.photo_url || null);
 
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
@@ -413,8 +389,8 @@ const WomenDashboardScreen = () => {
       const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
-      // Set all supported languages for women
-      setSupportedLanguages(ALL_LANGUAGES.map(l => l.name));
+      // Set all supported NLLB languages for women
+      setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
       await Promise.all([
@@ -488,7 +464,7 @@ const WomenDashboardScreen = () => {
           hasRecharged,
           lastSeen: man.last_seen || new Date().toISOString(),
           isSameLanguage,
-          isTranslationSupported: true, // All languages supported with translation
+          isNllbLanguage: true, // All languages supported with translation
           activeChatCount: man.active_chat_count || 0
         };
       });
@@ -691,62 +667,102 @@ const WomenDashboardScreen = () => {
     });
   };
 
-  // Compact List Item for men - optimized for large user counts
-  const UserListItem = ({ user }: { user: OnlineMan }) => (
-    <div 
+  const UserCard = ({ user }: { user: OnlineMan }) => (
+    <Card 
       className={cn(
-        "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer group border border-transparent",
-        user.isSameLanguage && "hover:bg-primary/10 hover:border-primary/30",
-        !user.isSameLanguage && "hover:bg-muted/50 hover:border-border",
-        user.walletBalance > 1000 && "bg-gradient-to-r from-warning/5 to-transparent"
+        "group hover:shadow-lg transition-all duration-300 cursor-pointer",
+        user.isSameLanguage && "ring-2 ring-primary/50",
+        user.walletBalance > 1000 && "border-warning/30 bg-gradient-to-br from-warning/5 to-transparent"
       )}
       onClick={() => handleViewProfile(user.userId)}
     >
-      <div className="relative flex-shrink-0">
-        <Avatar className="h-9 w-9 border border-background shadow-sm">
-          <AvatarImage src={user.photoUrl || undefined} />
-          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
-            {user.fullName.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        {/* Status indicator */}
-        <div className={cn(
-          "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-          (user.activeChatCount || 0) === 0 ? "bg-primary" :
-          (user.activeChatCount || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
-        )} />
-        {user.walletBalance > 1000 && (
-          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-primary" />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-medium text-xs text-foreground truncate">{user.fullName}</span>
-          {user.age && <span className="text-[10px] text-muted-foreground">{user.age}y</span>}
-          {user.isSameLanguage && (
-            <span className="px-1 py-0.5 text-[8px] bg-primary/20 text-primary rounded">Same</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-primary/10 text-primary font-medium">
-            <IndianRupee className="h-2.5 w-2.5" />
-            <span>₹{user.walletBalance.toFixed(0)}</span>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Avatar className="h-14 w-14 border-2 border-background shadow-md">
+              <AvatarImage src={user.photoUrl || undefined} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
+                {user.fullName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Status indicator: Green=Available, Yellow=1-2 chats, Red=Full */}
+            <div className={cn(
+              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
+              (user.activeChatCount || 0) === 0 ? "bg-green-500" :
+              (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+            )} title={
+              (user.activeChatCount || 0) === 0 ? "Available" :
+              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : `Busy (${user.activeChatCount}/3)`
+            } />
+            {user.walletBalance > 1000 && (
+              <div className="absolute -top-1 -right-1">
+                <Crown className="h-4 w-4 text-amber-500" />
+              </div>
+            )}
           </div>
-          <span>{user.motherTongue}</span>
-          {user.country && <><span>•</span><span className="truncate">{user.country}</span></>}
-        </div>
-      </div>
 
-      <Button 
-        size="sm" 
-        variant="ghost"
-        className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
-      >
-        <User className="h-3 w-3" />
-      </Button>
-    </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
+              {user.age && (
+                <Badge variant="outline" className="text-xs font-medium">
+                  {user.age} {t('yearsOld', 'yrs')}
+                </Badge>
+              )}
+              {user.isSameLanguage && (
+                <Badge variant="default" className="text-[10px] bg-primary/90">
+                  {t('sameLanguage', 'Same Language')}
+                </Badge>
+              )}
+            </div>
+            
+            {/* Wallet Balance - Always visible and prominent */}
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                <IndianRupee className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-bold text-green-600">
+                  ₹{user.walletBalance.toFixed(0)}
+                </span>
+              </div>
+              {user.isNllbLanguage && !user.isSameLanguage && (
+                <Badge variant="outline" className="text-[10px]">
+                  <Globe className="h-2.5 w-2.5 mr-1" />
+                  {t('autoTranslateMessages', 'Auto-translate')}
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
+              <div className="flex items-center gap-1">
+                <Languages className="h-3 w-3" />
+                <span>{user.motherTongue}</span>
+              </div>
+              {(user.state || user.country) && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1 truncate">
+                    <MapPin className="h-3 w-3" />
+                    {[user.state, user.country].filter(Boolean).join(", ")}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button 
+              size="sm" 
+              variant="auroraOutline"
+              onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+              title={t('viewProfile', 'View Profile')}
+            >
+              <User className="h-4 w-4 mr-1" />
+              {t('viewProfile', 'View')}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   if (isLoading) {
@@ -770,7 +786,7 @@ const WomenDashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -799,7 +815,7 @@ const WomenDashboardScreen = () => {
             >
               <Bell className="w-5 h-5 text-primary" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
                   {stats.unreadNotifications > 9 ? "9+" : stats.unreadNotifications}
                 </span>
               )}
@@ -838,15 +854,18 @@ const WomenDashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-primary"
+                    className="data-[state=checked]:bg-emerald-500"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-emerald-500" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse bg-primary-foreground/60")} />
+                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
+                    activeChatCount === 0 ? "bg-green-300" : 
+                    activeChatCount >= 3 ? "bg-red-300" : "bg-amber-300"
+                  )} />
                   {getStatusText()}
                 </Badge>
               </div>
@@ -869,30 +888,30 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
           <div className="grid grid-cols-2 gap-3">
             {/* My Today's Earnings */}
-            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <IndianRupee className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-xl bg-emerald-500/20">
+                  <IndianRupee className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-primary">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-emerald-600">₹{myTodayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
 
             {/* Biggest Earner Today */}
-            <Card className="p-4 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20">
+            <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <Crown className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-xl bg-amber-500/20">
+                  <Crown className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
                   {biggestEarner ? (
                     <>
                       <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
-                      <p className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-amber-600">₹{biggestEarner.amount.toLocaleString()}</p>
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
@@ -942,13 +961,17 @@ const WomenDashboardScreen = () => {
                 </p>
               </Card>
             ) : (
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-1 pr-2">
-                  {rechargedMen.map((user) => (
-                    <UserListItem key={user.userId} user={user} />
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="space-y-3">
+                {rechargedMen.map((user, index) => (
+                  <div 
+                    key={user.userId}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <UserCard user={user} />
+                  </div>
+                ))}
+              </div>
             )}
           </TabsContent>
 
@@ -964,77 +987,94 @@ const WomenDashboardScreen = () => {
                 <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
               </Card>
             ) : (
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-1 pr-2">
-                  {nonRechargedMen.map((user) => (
-                    <UserListItem key={user.userId} user={user} />
-                  ))}
-                </div>
-              </ScrollArea>
+              <div className="space-y-3">
+                {nonRechargedMen.map((user, index) => (
+                  <div 
+                    key={user.userId}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <UserCard user={user} />
+                  </div>
+                ))}
+              </div>
             )}
           </TabsContent>
         </Tabs>
 
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow">
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/20">
                 <Crown className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">{stats.rechargedMen}</p>
+                <p className="text-xl font-bold">{stats.rechargedMen}</p>
                 <p className="text-xs text-muted-foreground">{t('premiumUsers', 'Premium Men')}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20 shadow-glow">
+          <Card className="p-4 bg-gradient-aurora border-accent/30 shadow-glow">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/20">
-                <IndianRupee className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded-xl bg-accent/20">
+                <IndianRupee className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">₹{stats.todayEarnings.toFixed(0)}</p>
+                <p className="text-xl font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
                 <p className="text-xs text-muted-foreground">{t('todayEarnings', "Today's Earnings")}</p>
               </div>
             </div>
           </Card>
 
-          <Card
-            className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow cursor-pointer col-span-2"
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/20">
+                <Heart className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xl font-bold">{stats.matchCount}</p>
+                <p className="text-xs text-muted-foreground">{t('matches', 'Matches')}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card 
+            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer col-span-2"
             onClick={() => navigate("/shift-management")}
           >
             <AIShiftDisplay userId={currentUserId} compact />
           </Card>
         </div>
 
-        {/* Section 2.5: Language Group Monthly Schedule */}
+        {/* Section 2.5: Language Group 24/7 Coverage */}
         <div className="animate-fade-in" style={{ animationDelay: "0.09s" }}>
-          <LanguageShiftMonthlySchedule 
+          <LanguageGroupShiftsPanel 
             userId={currentUserId} 
             language={currentWomanLanguage}
           />
         </div>
 
-        {/* Leader Election Panel */}
-        {currentWomanLanguage && currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.10s" }}>
-            <LeaderElectionPanel
-              currentUserId={currentUserId}
-              languageCode={currentWomanLanguage}
-            />
-          </div>
-        )}
+        {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
+          <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/20">
+                <MessageCircle className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">{t('chatMode', 'Reply Mode')}</p>
+                <p className="text-xs text-muted-foreground">{t('womenCanOnlyReply', 'You can reply to messages from men who start chats with you')}</p>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {activeChatCount} {t('activeChats', 'active')}
+              </Badge>
+            </div>
+          </Card>
+        </div>
 
-        {/* Leader Dashboard (only for elected leaders) */}
-        {currentWomanLanguage && currentUserId && (
-          <LeaderDashboardWrapper 
-            currentUserId={currentUserId} 
-            languageCode={currentWomanLanguage} 
-          />
-        )}
-
+        {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
 
         {/* Transaction History for Women */}
         {currentUserId && (
@@ -1061,6 +1101,18 @@ const WomenDashboardScreen = () => {
           )}
         </div>
 
+        {/* AI Election Panel */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
+          {currentWomanLanguage && currentUserId && (
+            <Card className="p-4">
+              <AIElectionPanel
+                currentUserId={currentUserId}
+                languageCode={currentWomanLanguage}
+                members={[]}
+              />
+            </Card>
+          )}
+        </div>
 
         {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
@@ -1076,31 +1128,76 @@ const WomenDashboardScreen = () => {
           <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {quickActions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={action.action}
-                  className="group p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
-                >
-                  <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
-                    {action.icon}
-                  </div>
-                  <p className="text-sm font-medium text-foreground">{action.label}</p>
-                </button>
+              <button
+                key={index}
+                onClick={action.action}
+                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
+              >
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                  {action.icon}
+                </div>
+                <p className="text-sm font-medium text-foreground">{action.label}</p>
+              </button>
             ))}
           </div>
         </div>
-        {/* Section 8: Private 1-to-1 Calls Section (Women invite men) */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.33s" }}>
-            <WomenPrivateCallSection
-              currentUserId={currentUserId}
-              currentUserLanguage={currentWomanLanguage}
-            />
-          </div>
-        )}
 
-        {/* Section 9: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        {/* Section 7: Recent Notifications */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
+            <button className="text-sm text-primary hover:underline flex items-center gap-1">
+              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {notifications.length > 0 ? (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <Card 
+                  key={notification.id}
+                  className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
+                >
+                  <div className={`p-2 rounded-full ${
+                    notification.type === "match" ? "bg-rose-500/10 text-rose-500" :
+                    notification.type === "message" ? "bg-blue-500/10 text-blue-500" :
+                    "bg-primary/10 text-primary"
+                  }`}>
+                    {notification.type === "match" ? <Heart className="w-5 h-5" /> :
+                     notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
+                     <Bell className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{notification.title}</p>
+                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  </div>
+                  {!notification.is_read && (
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  )}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Heart className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground">No new activity yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start chatting to get matches and notifications!
+              </p>
+              <Button 
+                variant="aurora" 
+                className="mt-4"
+                onClick={() => navigate("/online-users")}
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Find Users
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        {/* Section 8: Shift CTA Card */}
+        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.32s" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
@@ -1134,11 +1231,20 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="female"
           currentUserLanguage={currentWomanLanguage || "English"}
-          currentUserName={userName || "User"}
         />
       )}
 
-      {/* Video calling removed - group private calls still available via PrivateGroupsSection */}
+      {/* Incoming Video Call Window - Draggable like mini chat */}
+      {incomingCall && (
+        <IncomingVideoCallWindow
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
+          onClose={clearIncomingCall}
+        />
+      )}
 
       {/* Friends & Blocked Panel */}
       {showFriendsPanel && currentUserId && (
@@ -1146,16 +1252,6 @@ const WomenDashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="female"
           onClose={() => setShowFriendsPanel(false)}
-        />
-      )}
-
-      {/* Private Call Invitation Listener for Women */}
-      {currentUserId && (
-        <PrivateCallInvitationListener
-          currentUserId={currentUserId}
-          userName={userName}
-          userPhoto={userPhoto}
-          userGender="female"
         />
       )}
     </div>

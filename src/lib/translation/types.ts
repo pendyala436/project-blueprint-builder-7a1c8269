@@ -1,107 +1,67 @@
 /**
- * Translation Types - Unified TypeScript interfaces
- * For embedded translation system with multi-model fallback
+ * DL-Translate inspired TypeScript Translation Types
+ * Based on: https://github.com/xhluca/dl-translate
+ * Uses NLLB-200 model via Hugging Face Inference API
  */
 
-// ============================================================================
-// Language Types
-// ============================================================================
+// Supported language codes (NLLB-200 format)
+export type NLLBLanguageCode = string;
 
-export type LanguageCode = string;
-
-export interface ScriptPattern {
-  regex: RegExp;
-  language: string;
-  script: string;
-}
-
-// ============================================================================
-// Translation Types
-// ============================================================================
-
-export interface TranslationOptions {
-  sourceLanguage?: string;
-  targetLanguage: string;
-  mode?: 'auto' | 'translate' | 'convert';
-  preferredModel?: 'dictionary' | 'api';  // dictionary = local, api = DL-Translate HuggingFace
-}
-
+// Translation result
 export interface TranslationResult {
   translatedText: string;
   originalText: string;
   sourceLanguage: string;
   targetLanguage: string;
+  sourceCode: NLLBLanguageCode;
+  targetCode: NLLBLanguageCode;
   isTranslated: boolean;
-  mode: 'translate' | 'convert' | 'same_language' | 'dictionary' | 'phonetic' | 'neural';
-  model?: string | null;
+  model: 'nllb-200' | 'm2m-100';
+  mode: 'translate' | 'convert' | 'same_language';
 }
 
+// Language detection result
+export interface LanguageDetectionResult {
+  language: string;
+  nllbCode: NLLBLanguageCode;
+  isLatin: boolean;
+  confidence: number;
+}
+
+// Translation options
+export interface TranslationOptions {
+  sourceLanguage?: string;
+  targetLanguage: string;
+  mode?: 'auto' | 'translate' | 'convert';
+  maxLength?: number;
+}
+
+// Batch translation item
 export interface BatchTranslationItem {
   text: string;
   options: TranslationOptions;
 }
 
+// Batch translation result
 export interface BatchTranslationResult {
   results: TranslationResult[];
   successCount: number;
   failureCount: number;
 }
 
-// ============================================================================
-// Detection Types
-// ============================================================================
-
-export interface LanguageDetectionResult {
-  language: string;
-  isLatin: boolean;
-  confidence: number;
-  isPhonetic?: boolean;
-  script?: string;
-}
-
-// ============================================================================
-// Config Types
-// ============================================================================
-
+// Translator configuration
 export interface TranslatorConfig {
+  model?: 'nllb-200' | 'm2m-100';
   cacheEnabled?: boolean;
   cacheTTL?: number;
   maxRetries?: number;
   timeout?: number;
 }
 
-// ============================================================================
-// Hook Types
-// ============================================================================
-
-export interface LivePreviewState {
-  latinInput: string;
-  nativePreview: string;
-  isConverting: boolean;
-}
-
-export interface ChatTranslationOptions {
-  currentUserId: string;
-  currentUserLanguage: string;
-  partnerId: string;
-  partnerLanguage: string;
-  debounceMs?: number;
-}
-
-export interface ProcessedMessage {
-  nativeText: string;
-  originalLatin: string;
-}
-
-export interface TranslatedMessage {
-  id: string;
-  senderId: string;
-  originalText: string;
-  senderNativeText: string;
-  receiverNativeText: string;
-  displayText: string;
-  isTranslated: boolean;
-  senderLanguage: string;
-  receiverLanguage: string;
-  createdAt: string;
+// Script detection pattern
+export interface ScriptPattern {
+  regex: RegExp;
+  language: string;
+  nllbCode: NLLBLanguageCode;
+  script: string;
 }

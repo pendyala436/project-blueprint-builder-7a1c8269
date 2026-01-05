@@ -65,7 +65,7 @@ By creating an account or using Meow Meow, you agree to these Terms of Service. 
 • No video calls
 • No audio calls
 • No media sharing (temporary only, auto-deleted)
-• Auto-translation using DL-Translate
+• Auto-translation using NLLB-200
 • Only online users are visible
 • Matching based on gender + language rules
 
@@ -350,7 +350,7 @@ All users must verify their age before accessing the platform.`
     content: `MEOW MEOW – AI USAGE DISCLOSURE
 
 AI is used for:
-• Auto-translation (DL-Translate)
+• Auto-translation (NLLB-200)
 • Gender verification
 • Fraud prevention
 • Content moderation
@@ -782,14 +782,14 @@ const TermsAgreementScreen = () => {
           <label
             className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
               agreeAll
-                ? "border-success bg-success/10"
+                ? "border-emerald-500 bg-emerald-500/10"
                 : "border-border hover:border-primary/50"
             }`}
           >
             <Checkbox
               checked={agreeAll}
               onCheckedChange={handleAgreeAll}
-              className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+              className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
             />
             <div className="flex-1">
               <span className="font-semibold text-foreground">
@@ -800,7 +800,7 @@ const TermsAgreementScreen = () => {
               </p>
             </div>
             {agreeAll && (
-              <CheckCircle2 className="w-5 h-5 text-success" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             )}
           </label>
 
@@ -819,7 +819,7 @@ const TermsAgreementScreen = () => {
                   value={doc.id}
                   className={`border rounded-lg px-4 transition-all ${
                     consents[doc.id] 
-                      ? 'border-success/50 bg-success/5' 
+                      ? 'border-emerald-500/50 bg-emerald-500/5' 
                       : 'border-border bg-card/50'
                   }`}
                 >
@@ -827,7 +827,7 @@ const TermsAgreementScreen = () => {
                     <div className="flex items-center gap-3 flex-1">
                       <div className={`p-2 rounded-lg ${
                         consents[doc.id] 
-                          ? 'bg-success/10 text-success' 
+                          ? 'bg-emerald-500/10 text-emerald-500' 
                           : 'bg-muted text-muted-foreground'
                       }`}>
                         {doc.icon}
@@ -839,7 +839,7 @@ const TermsAgreementScreen = () => {
                         <span className="text-xs text-destructive">*Required</span>
                       )}
                       {consents[doc.id] && (
-                        <Check className="w-4 h-4 text-success ml-auto mr-2" />
+                        <Check className="w-4 h-4 text-emerald-500 ml-auto mr-2" />
                       )}
                     </div>
                   </AccordionTrigger>
@@ -852,14 +852,14 @@ const TermsAgreementScreen = () => {
                     <label
                       className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                         consents[doc.id]
-                          ? "border-success bg-success/10"
+                          ? "border-emerald-500 bg-emerald-500/10"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
                       <Checkbox
                         checked={consents[doc.id] || false}
                         onCheckedChange={() => handleToggleConsent(doc.id)}
-                        className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+                        className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
                       />
                       <span className="text-sm font-medium text-foreground">
                         I have read and agree to the {doc.title}

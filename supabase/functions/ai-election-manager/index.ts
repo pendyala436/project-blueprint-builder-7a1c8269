@@ -6,14 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Election Configuration
-const LEADER_TERM_MONTHS = 12; // 12 months term (can be 6-12)
-const NOMINATION_DURATION_DAYS = 5; // Nomination phase lasts 5 days
-const VOTING_DURATION_DAYS = 2; // Voting phase lasts 2 days after nomination ends
-const MIN_WOMEN_FOR_ELECTION = 50; // Minimum 50 women required to start election
+const LEADER_TERM_YEARS = 1; // 1 year term
+const ELECTION_DURATION_DAYS = 7; // Election runs for 7 days
 const SHIFT_HOURS = 9;
 const SHIFT_CHANGE_BUFFER = 1;
-const WEEK_OFF_INTERVAL = 2;
+const WEEK_OFF_INTERVAL = 2; // Week off every 2 days
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,33 +44,6 @@ serve(async (req) => {
         .eq("language_code", languageCode)
         .eq("election_year", currentYear)
         .maybeSingle();
-
-      // Also check for previous year active elections that should be ended
-      const { data: oldElection } = await supabase
-        .from("community_elections")
-        .select("*")
-        .eq("language_code", languageCode)
-        .eq("status", "active")
-        .lt("election_year", currentYear)
-        .maybeSingle();
-
-      // Auto-end old year elections
-      if (oldElection) {
-        await supabase
-          .from("community_elections")
-          .update({ status: "cancelled", ended_at: now.toISOString() })
-          .eq("id", oldElection.id);
-        console.log(`[AI Election] Auto-cancelled old election ${oldElection.id} from year ${oldElection.election_year}`);
-      }
-
-      // Check if current election's voting period has ended - auto end it
-      if (election && election.status === "active" && election.scheduled_at) {
-        const scheduledEnd = new Date(election.scheduled_at);
-        if (now > scheduledEnd) {
-          console.log(`[AI Election] Voting period ended for ${languageCode}, auto-ending election`);
-          // Don't auto-end here, just mark it as needing attention
-        }
-      }
 
       // Get current leader
       const { data: leader } = await supabase
@@ -119,20 +89,13 @@ serve(async (req) => {
         totalVotes = count || 0;
       }
 
-      // Check if new election needed (leader term expired or no leader)
+      // Check if new election needed (leader term expired)
       let needsNewElection = false;
       if (leader) {
         const termEnd = new Date(leader.term_end);
         needsNewElection = now > termEnd;
       } else {
-        needsNewElection = !election || election.status === "completed" || election.status === "cancelled";
-      }
-
-      // Check if voting period expired
-      let votingExpired = false;
-      if (election && election.status === "active" && election.scheduled_at) {
-        const scheduledEnd = new Date(election.scheduled_at);
-        votingExpired = now > scheduledEnd;
+        needsNewElection = !election || election.status === "completed";
       }
 
       return new Response(
@@ -156,11 +119,7 @@ serve(async (req) => {
           hasVoted,
           totalVotes,
           needsNewElection,
-          votingExpired,
-          termMonths: LEADER_TERM_MONTHS,
-          minWomenRequired: MIN_WOMEN_FOR_ELECTION,
-          nominationDays: NOMINATION_DURATION_DAYS,
-          votingDays: VOTING_DURATION_DAYS,
+          termYears: LEADER_TERM_YEARS,
           shiftConfig: { hours: SHIFT_HOURS, buffer: SHIFT_CHANGE_BUFFER, weekOffInterval: WEEK_OFF_INTERVAL }
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -179,101 +138,20 @@ serve(async (req) => {
       // Check if election already exists for this year
       const { data: existing } = await supabase
         .from("community_elections")
-        .select("id, status, scheduled_at")
+        .select("id, status")
         .eq("language_code", languageCode)
         .eq("election_year", currentYear)
         .maybeSingle();
 
-      if (existing && existing.status === "active") {
-        // Check if voting period expired - if so, we can cancel and start new
-        const scheduledEnd = existing.scheduled_at ? new Date(existing.scheduled_at) : null;
-        const votingExpired = scheduledEnd && now > scheduledEnd;
-        
-        // Also check if there are any candidates
-        const { count: candidateCount } = await supabase
-          .from("election_candidates")
-          .select("*", { count: "exact", head: true })
-          .eq("election_id", existing.id);
-
-        if (votingExpired && (candidateCount === 0 || candidateCount === null)) {
-          // Cancel the expired election with no candidates
-          await supabase
-            .from("community_elections")
-            .update({ status: "cancelled", ended_at: now.toISOString() })
-            .eq("id", existing.id);
-          console.log(`[AI Election] Cancelled expired election ${existing.id} with no candidates`);
-        } else if (!votingExpired) {
-          return new Response(
-            JSON.stringify({ error: "Election already in progress for this year", requiresEndFirst: false }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        } else {
-          // Expired election with candidates - auto-end it and declare winner
-          console.log(`[AI Election] Auto-ending expired election ${existing.id} with ${candidateCount} candidates`);
-          
-          // Get candidates sorted by votes
-          const { data: expiredCandidates } = await supabase
-            .from("election_candidates")
-            .select("*")
-            .eq("election_id", existing.id)
-            .order("vote_count", { ascending: false });
-
-          if (expiredCandidates && expiredCandidates.length > 0) {
-            const winner = expiredCandidates[0];
-            const totalVotesExpired = expiredCandidates.reduce((sum, c) => sum + c.vote_count, 0);
-
-            // Calculate term end (12 months from now)
-            const termEnd = new Date(now);
-            termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
-
-            // End current leader if exists
-            await supabase
-              .from("community_leaders")
-              .update({ status: "ended" })
-              .eq("language_code", languageCode)
-              .eq("status", "active");
-
-            // Create new leader
-            await supabase
-              .from("community_leaders")
-              .insert({
-                language_code: languageCode,
-                user_id: winner.user_id,
-                election_id: existing.id,
-                term_start: now.toISOString(),
-                term_end: termEnd.toISOString(),
-                status: "active"
-              });
-
-            // Update election as completed
-            await supabase
-              .from("community_elections")
-              .update({
-                status: "completed",
-                winner_id: winner.user_id,
-                ended_at: now.toISOString(),
-                total_votes: totalVotesExpired,
-                election_results: {
-                  winner_id: winner.user_id,
-                  total_votes: totalVotesExpired,
-                  candidates_count: expiredCandidates.length,
-                  final_standings: expiredCandidates.map((c, i) => ({
-                    rank: i + 1,
-                    user_id: c.user_id,
-                    votes: c.vote_count
-                  }))
-                }
-              })
-              .eq("id", existing.id);
-
-            console.log(`[AI Election] Auto-declared winner ${winner.user_id} from expired election`);
-          }
-          // After auto-ending, continue to create a new election below
-        }
+      if (existing && existing.status !== "completed") {
+        return new Response(
+          JSON.stringify({ error: "Election already in progress for this year" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       // Create new election (AI manages it)
-      const electionEnd = new Date(now.getTime() + (NOMINATION_DURATION_DAYS + VOTING_DURATION_DAYS) * 24 * 60 * 60 * 1000);
+      const electionEnd = new Date(now.getTime() + ELECTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
       
       const { data: election, error } = await supabase
         .from("community_elections")
@@ -296,7 +174,7 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           election,
-          message: `Election started for ${languageCode} speakers. Nomination: ${NOMINATION_DURATION_DAYS} days, Voting: ${VOTING_DURATION_DAYS} days.`
+          message: `Election started for ${languageCode} speakers. Voting ends in ${ELECTION_DURATION_DAYS} days.`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -460,30 +338,6 @@ serve(async (req) => {
         );
       }
 
-      // Ensure user is registered in voter registry (required by RLS)
-      const { data: existingRegistry } = await supabase
-        .from("voter_registry")
-        .select("id")
-        .eq("election_id", election.id)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (!existingRegistry) {
-        // Register the voter
-        const { error: regError } = await supabase
-          .from("voter_registry")
-          .insert({
-            election_id: election.id,
-            user_id: userId,
-            registered_by: userId,
-            is_eligible: true
-          });
-        
-        if (regError) {
-          console.error("[AI Election] Failed to register voter:", regError);
-        }
-      }
-
       // Cast vote (anonymous - only stores election_id, candidate_id, voter_id for uniqueness)
       const { error: voteError } = await supabase
         .from("election_votes")
@@ -573,9 +427,8 @@ serve(async (req) => {
           })
           .eq("id", election.id);
 
-        // Create new leader with term
-        const termEnd = new Date(now);
-        termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
+        // Create new leader with 1-year term
+        const termEnd = new Date(now.getTime() + LEADER_TERM_YEARS * 365 * 24 * 60 * 60 * 1000);
         
         await supabase
           .from("community_leaders")
@@ -600,7 +453,7 @@ serve(async (req) => {
             winner: randomWinner,
             totalVotes,
             tiebroken: true,
-            message: `Election completed! AI broke the tie. Leader term: ${LEADER_TERM_MONTHS} month(s)`
+            message: `Election completed! AI broke the tie. Leader term: ${LEADER_TERM_YEARS} year(s)`
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -618,9 +471,8 @@ serve(async (req) => {
         })
         .eq("id", election.id);
 
-      // Create new leader with term
-      const termEnd = new Date(now);
-      termEnd.setMonth(termEnd.getMonth() + LEADER_TERM_MONTHS);
+      // Create new leader with 1-year term
+      const termEnd = new Date(now.getTime() + LEADER_TERM_YEARS * 365 * 24 * 60 * 60 * 1000);
 
       await supabase
         .from("community_leaders")
@@ -647,7 +499,7 @@ serve(async (req) => {
           winner,
           totalVotes,
           termEnd: termEnd.toISOString(),
-          message: `Election completed! New leader for ${LEADER_TERM_MONTHS} month(s).`
+          message: `Election completed! New leader for ${LEADER_TERM_YEARS} year(s).`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -676,7 +528,7 @@ serve(async (req) => {
 
         if (!existing) {
           // Create new election
-          const electionEnd = new Date(now.getTime() + (NOMINATION_DURATION_DAYS + VOTING_DURATION_DAYS) * 24 * 60 * 60 * 1000);
+          const electionEnd = new Date(now.getTime() + ELECTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
           
           const { error } = await supabase
             .from("community_elections")

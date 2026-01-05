@@ -60,10 +60,10 @@ const ACTION_TYPE_ICONS: Record<string, any> = {
 };
 
 const ACTION_TYPE_COLORS: Record<string, string> = {
-  create: "bg-success/10 text-success border-success/20",
-  update: "bg-info/10 text-info border-info/20",
+  create: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  update: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   delete: "bg-destructive/10 text-destructive border-destructive/20",
-  auth: "bg-secondary text-secondary-foreground border-secondary",
+  auth: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   view: "bg-muted text-muted-foreground border-muted",
 };
 
@@ -254,7 +254,7 @@ const AdminAuditLogs = () => {
             <div className="text-sm text-muted-foreground">Total Logs</div>
           </Card>
           <Card className="p-4">
-            <div className="text-2xl font-bold text-success">
+            <div className="text-2xl font-bold text-emerald-500">
               {logs.filter(l => l.status === "success").length}
             </div>
             <div className="text-sm text-muted-foreground">Successful</div>
@@ -464,7 +464,7 @@ const AdminAuditLogs = () => {
                         </TableCell>
                         <TableCell>
                           {log.status === "success" ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20 gap-1">
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 gap-1">
                               <CheckCircle className="h-3 w-3" />
                               Success
                             </Badge>

@@ -60,9 +60,9 @@ export default function InstallApp() {
           </div>
         </MobileHeader>
         <MobileContent className="p-4">
-          <Card className="border-success/20 bg-success/10">
+          <Card className="border-green-500/20 bg-green-500/10">
             <CardContent className="flex items-center gap-4 p-6">
-              <CheckCircle2 className="h-12 w-12 text-success" />
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
               <div>
                 <h2 className="text-xl font-bold">Native App</h2>
                 <p className="text-muted-foreground">

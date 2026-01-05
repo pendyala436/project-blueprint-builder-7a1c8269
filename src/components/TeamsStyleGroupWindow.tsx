@@ -40,7 +40,6 @@ interface TeamsStyleGroupWindowProps {
     is_live: boolean;
     stream_id: string | null;
     access_type: string;
-    owner_id?: string;
   };
   currentUserId: string;
   userName: string;
@@ -335,9 +334,8 @@ export function TeamsStyleGroupWindow({
     onClose();
   };
 
-  // Only show the host (owner) in video - men are invisible to everyone
-  const hostParticipant = participants.find(p => p.isOwner);
-  // Men cannot see other men, only the host is visible
+  const remoteParticipants = participants.filter(p => p.id !== currentUserId);
+  const onlineMembers = Array.from(members.entries()).filter(([_, m]) => m.isOnline);
 
   const renderFileMessage = (msg: GroupMessage) => {
     if (!msg.file_url) return null;
@@ -409,7 +407,14 @@ export function TeamsStyleGroupWindow({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          {/* Members list hidden - men should not be visible to anyone */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowMembersList(!showMembersList)}
+            className={showMembersList ? 'bg-muted' : ''}
+          >
+            <Users className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
@@ -427,69 +432,69 @@ export function TeamsStyleGroupWindow({
             "flex flex-col border-r min-h-0",
             hasChat ? "w-1/2" : "flex-1"
           )}>
-            {/* Video Grid - Only show host (woman) video */}
-            <div className="flex-1 p-2 bg-video min-h-0 overflow-y-auto">
-              <div className="h-full">
-                {isOwner ? (
-                  /* Owner sees their own video */
-                  <div className="relative bg-video rounded-lg overflow-hidden h-full min-h-[200px]">
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    {!isVideoEnabled && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-video">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={userPhoto || undefined} />
-                          <AvatarFallback className="text-xl">{userName[0]}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                    )}
-                    <div className="absolute bottom-2 left-2 bg-video-overlay/60 px-2 py-1 rounded text-video-text text-xs z-10">
-                      You (Host)
+            {/* Video Grid */}
+            <div className="flex-1 p-2 bg-black min-h-0 overflow-y-auto">
+              <div className={cn(
+                "grid gap-2 auto-rows-fr h-full",
+                remoteParticipants.length === 0 ? 'grid-cols-1' :
+                remoteParticipants.length <= 1 ? 'grid-cols-1 sm:grid-cols-2' :
+                'grid-cols-2'
+              )}>
+                {/* Local Video */}
+                <div className="relative bg-gray-900 rounded-lg overflow-hidden min-h-[150px]">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {!isVideoEnabled && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={userPhoto || undefined} />
+                        <AvatarFallback>{userName[0]}</AvatarFallback>
+                      </Avatar>
                     </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
+                    You {isOwner && '(Host)'}
                   </div>
-                ) : hostParticipant ? (
-                  /* Men see only the host (woman) video */
-                  <div className="relative bg-video rounded-lg overflow-hidden h-full min-h-[200px]">
+                </div>
+
+                {/* Remote Participants */}
+                {remoteParticipants.map(participant => (
+                  <div key={participant.id} className="relative bg-gray-900 rounded-lg overflow-hidden min-h-[150px]">
                     <video
                       ref={(el) => {
-                        if (el && hostParticipant.stream) {
-                          el.srcObject = hostParticipant.stream;
+                        if (el) {
+                          participantVideosRef.current.set(participant.id, el);
+                          if (participant.stream) {
+                            el.srcObject = participant.stream;
+                          }
                         }
                       }}
                       autoPlay
                       playsInline
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    {!hostParticipant.stream && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-video">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={hostParticipant.photo} />
-                          <AvatarFallback className="text-xl">{hostParticipant.name[0]}</AvatarFallback>
+                    {!participant.stream && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={participant.photo} />
+                          <AvatarFallback>{participant.name[0]}</AvatarFallback>
                         </Avatar>
                       </div>
                     )}
-                    <div className="absolute bottom-2 left-2 bg-video-overlay/60 px-2 py-1 rounded text-video-text text-xs z-10">
-                      {hostParticipant.name} (Host)
+                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs z-10">
+                      {participant.name} {participant.isOwner && '(Host)'}
                     </div>
                   </div>
-                ) : (
-                  /* Waiting for host to go live */
-                  <div className="h-full min-h-[200px] flex items-center justify-center bg-video rounded-lg">
-                    <div className="text-center text-muted-foreground">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                      <p>Waiting for host...</p>
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
             </div>
 
-            {/* Video Controls - Men only have audio, Owner has full controls */}
+            {/* Video Controls */}
             <div className="flex items-center justify-center gap-3 p-3 bg-muted/30 border-t">
               {isConnecting && (
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -498,19 +503,15 @@ export function TeamsStyleGroupWindow({
                 </div>
               )}
               
-              {/* Video toggle - Only for owner (women) */}
-              {isOwner && (
-                <Button
-                  variant={isVideoEnabled ? 'secondary' : 'destructive'}
-                  size="sm"
-                  onClick={handleToggleVideo}
-                  disabled={isConnecting}
-                >
-                  {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-                </Button>
-              )}
+              <Button
+                variant={isVideoEnabled ? 'secondary' : 'destructive'}
+                size="sm"
+                onClick={handleToggleVideo}
+                disabled={isConnecting}
+              >
+                {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              </Button>
 
-              {/* Audio toggle - Available for everyone */}
               <Button
                 variant={isAudioEnabled ? 'secondary' : 'destructive'}
                 size="sm"
@@ -584,29 +585,19 @@ export function TeamsStyleGroupWindow({
                   messages.map((msg) => {
                     const isOwn = msg.sender_id === currentUserId;
                     const sender = getSenderInfo(msg.sender_id);
-                    // Check if sender is the group owner (woman)
-                    const isSenderHost = group.owner_id === msg.sender_id;
-                    
-                    // For men's messages: hide name and photo (show as anonymous)
-                    // Only show name/photo for: your own messages, or if you're the host, or if sender is the host
-                    const showSenderIdentity = isOwn || isOwner || isSenderHost;
-                    
                     return (
                       <div
                         key={msg.id}
                         className={cn("flex gap-2", isOwn ? 'flex-row-reverse' : 'flex-row')}
                       >
-                        {/* Only show avatar for own messages or if sender is the host */}
-                        {showSenderIdentity ? (
-                          <Avatar className="h-7 w-7 flex-shrink-0">
-                            <AvatarImage src={sender.photo || undefined} />
-                            <AvatarFallback className="text-xs">{sender.name[0]}</AvatarFallback>
-                          </Avatar>
-                        ) : (
-                          <div className="h-7 w-7 flex-shrink-0" /> 
-                        )}
+                        <Avatar className="h-7 w-7 flex-shrink-0">
+                          <AvatarImage src={sender.photo || undefined} />
+                          <AvatarFallback className="text-xs">{sender.name[0]}</AvatarFallback>
+                        </Avatar>
                         <div className={cn("max-w-[75%]", isOwn ? 'items-end' : 'items-start')}>
-                          {/* Hide sender name for men - only show for host */}
+                          {!isOwn && (
+                            <p className="text-xs text-muted-foreground mb-1">{sender.name}</p>
+                          )}
                           <div
                             className={cn(
                               "px-3 py-2 rounded-lg text-sm",
@@ -659,7 +650,34 @@ export function TeamsStyleGroupWindow({
           </div>
         )}
 
-        {/* Members Sidebar - Removed: Men should not be visible to anyone */}
+        {/* Members Sidebar */}
+        {showMembersList && (
+          <div className="w-48 border-l p-3 bg-muted/20">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Members ({members.size})
+            </h4>
+            <div className="space-y-2">
+              {Array.from(members.entries()).map(([id, member]) => (
+                <div key={id} className="flex items-center gap-2">
+                  <div className="relative">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={member.photo || undefined} />
+                      <AvatarFallback className="text-xs">{member.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <Circle 
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3",
+                        member.isOnline ? "text-green-500 fill-green-500" : "text-gray-400 fill-gray-400"
+                      )} 
+                    />
+                  </div>
+                  <span className="text-xs truncate flex-1">{member.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

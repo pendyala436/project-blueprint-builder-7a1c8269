@@ -269,7 +269,7 @@ export const AdminTransactionHistoryWidget = () => {
   };
 
   const getIcon = (icon: string, isCredit: boolean) => {
-    const className = cn("w-4 h-4", isCredit ? "text-success" : "text-destructive");
+    const className = cn("w-4 h-4", isCredit ? "text-green-500" : "text-red-500");
     switch (icon) {
       case 'wallet': return <Wallet className={className} />;
       case 'chat': return <MessageCircle className={className} />;
@@ -394,7 +394,7 @@ export const AdminTransactionHistoryWidget = () => {
                   </Avatar>
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                    tx.is_credit ? "bg-success/10" : "bg-destructive/10"
+                    tx.is_credit ? "bg-green-500/10" : "bg-red-500/10"
                   )}>
                     {getIcon(tx.icon, tx.is_credit)}
                   </div>
@@ -410,7 +410,7 @@ export const AdminTransactionHistoryWidget = () => {
                   </div>
                   <div className={cn(
                     "text-sm font-semibold whitespace-nowrap",
-                    tx.is_credit ? "text-success" : "text-destructive"
+                    tx.is_credit ? "text-green-600" : "text-red-600"
                   )}>
                     {tx.is_credit ? "+" : "-"}₹{tx.amount.toLocaleString()}
                   </div>

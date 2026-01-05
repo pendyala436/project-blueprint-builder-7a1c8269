@@ -1225,7 +1225,7 @@ const AdminUserManagement = () => {
                 id="edit-verified"
                 checked={editForm.verification_status}
                 onChange={(e) => setEditForm(prev => ({ ...prev, verification_status: e.target.checked }))}
-                className="h-4 w-4 rounded border-border"
+                className="h-4 w-4 rounded border-gray-300"
               />
               <Label htmlFor="edit-verified">Verified User</Label>
             </div>

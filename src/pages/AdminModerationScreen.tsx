@@ -494,13 +494,13 @@ const AdminModerationScreen = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case 'resolved':
-        return <Badge variant="outline" className="bg-success/10 text-success border-success/20"><CheckCircle className="w-3 h-3 mr-1" />Resolved</Badge>;
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"><CheckCircle className="w-3 h-3 mr-1" />Resolved</Badge>;
       case 'dismissed':
         return <Badge variant="outline" className="bg-muted text-muted-foreground"><XCircle className="w-3 h-3 mr-1" />Dismissed</Badge>;
       case 'cleared':
-        return <Badge variant="outline" className="bg-success/10 text-success border-success/20"><CheckCircle className="w-3 h-3 mr-1" />Cleared</Badge>;
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"><CheckCircle className="w-3 h-3 mr-1" />Cleared</Badge>;
       case 'removed':
         return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20"><XCircle className="w-3 h-3 mr-1" />Removed</Badge>;
       default:
@@ -816,7 +816,7 @@ const AdminModerationScreen = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-success hover:text-success/80"
+                              className="text-emerald-500 hover:text-emerald-600"
                               onClick={() => handleResolveMessage(msg.id, 'cleared')}
                             >
                               <CheckCircle className="w-4 h-4" />

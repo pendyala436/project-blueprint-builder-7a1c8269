@@ -43,7 +43,7 @@ export const useAutoReconnect = (
   }, []);
 
   /**
-   * Find the next available woman based on translation rules
+   * Find the next available woman based on NLLB-200 rules
    * Priority: Same language > Indian language women (for non-Indian men)
    * Load balancing: Prefer women with fewer active chats
    */

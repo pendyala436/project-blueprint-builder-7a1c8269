@@ -26,7 +26,6 @@ interface SFUGroupCallState {
   participants: Participant[];
   viewerCount: number;
   error: string | null;
-  currentSpeakerId: string | null; // Track who has the mic (besides host)
 }
 
 export function useSFUGroupCall({
@@ -45,125 +44,48 @@ export function useSFUGroupCall({
     participants: [],
     viewerCount: 0,
     error: null,
-    currentSpeakerId: null,
   });
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const mountedRef = useRef(true);
-  const retryCountRef = useRef<Map<string, number>>(new Map());
-  const MAX_RETRIES = 3;
 
-  // Safe state setter to prevent updates after unmount
-  const safeSetState = useCallback((updater: (prev: SFUGroupCallState) => SFUGroupCallState) => {
-    if (mountedRef.current) {
-      setState(updater);
-    }
-  }, []);
-
-  // ICE servers for WebRTC with multiple STUN servers
+  // ICE servers for WebRTC
   const iceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
   ];
 
   const initLocalMedia = useCallback(async () => {
     try {
-      // Check if mediaDevices is available
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Media devices not supported in this browser');
-      }
-
-      // For men (non-owners): only capture audio, no video
-      // For women (owners): capture both video and audio
-      const constraints = isOwner
-        ? {
-            video: {
-              width: { ideal: 640, max: 1280 },
-              height: { ideal: 480, max: 720 },
-              frameRate: { ideal: 30, max: 30 },
-              facingMode: 'user',
-            },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 44100,
-            },
-          }
-        : {
-            video: false, // Men don't send video
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 44100,
-            },
-          };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!mountedRef.current) {
-        stream.getTracks().forEach(track => track.stop());
-        return null;
-      }
-
-      // Mute audio by default for non-owners (men)
-      if (!isOwner) {
-        stream.getAudioTracks().forEach(track => {
-          track.enabled = false;
-        });
-      }
-
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: 'user',
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100,
+        },
+      });
       localStream.current = stream;
-      // Only set video ref for owner (women)
-      if (localVideoRef.current && isOwner) {
+      if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
       return stream;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error accessing media:', error);
-      const errorMessage = error.name === 'NotAllowedError' 
-        ? isOwner ? 'Camera/microphone permission denied' : 'Microphone permission denied'
-        : error.name === 'NotFoundError'
-        ? isOwner ? 'No camera/microphone found' : 'No microphone found'
-        : isOwner ? 'Could not access camera/microphone' : 'Could not access microphone';
-      safeSetState(prev => ({ ...prev, error: errorMessage }));
+      setState(prev => ({ ...prev, error: 'Could not access camera/microphone' }));
       return null;
-    }
-  }, [safeSetState, isOwner]);
-
-  const retryConnection = useCallback(async (participantId: string) => {
-    const retryCount = retryCountRef.current.get(participantId) || 0;
-    if (retryCount >= MAX_RETRIES) {
-      console.warn(`Max retries reached for participant ${participantId}`);
-      return;
-    }
-    retryCountRef.current.set(participantId, retryCount + 1);
-    
-    // Close existing connection
-    peerConnections.current.get(participantId)?.close();
-    peerConnections.current.delete(participantId);
-    
-    // Wait a bit before retrying
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (mountedRef.current && localStream.current) {
-      console.log(`Retrying connection to ${participantId} (attempt ${retryCount + 1})`);
     }
   }, []);
 
   const createPeerConnection = useCallback((participantId: string) => {
-    // Close existing connection if any
-    const existingPc = peerConnections.current.get(participantId);
-    if (existingPc) {
-      existingPc.close();
-    }
-
     const pc = new RTCPeerConnection({ iceServers });
 
     // Add local tracks
@@ -175,7 +97,7 @@ export function useSFUGroupCall({
 
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
-      if (event.candidate && channelRef.current && mountedRef.current) {
+      if (event.candidate && channelRef.current) {
         channelRef.current.send({
           type: 'broadcast',
           event: 'ice-candidate',
@@ -188,18 +110,10 @@ export function useSFUGroupCall({
       }
     };
 
-    // Handle ICE connection state changes
-    pc.oniceconnectionstatechange = () => {
-      console.log(`ICE state with ${participantId}:`, pc.iceConnectionState);
-      if (pc.iceConnectionState === 'failed') {
-        retryConnection(participantId);
-      }
-    };
-
     // Handle remote stream
     pc.ontrack = (event) => {
       const [remoteStream] = event.streams;
-      safeSetState(prev => ({
+      setState(prev => ({
         ...prev,
         participants: prev.participants.map(p =>
           p.id === participantId ? { ...p, stream: remoteStream } : p
@@ -209,52 +123,34 @@ export function useSFUGroupCall({
 
     pc.onconnectionstatechange = () => {
       console.log(`Connection state with ${participantId}:`, pc.connectionState);
-      if (pc.connectionState === 'failed') {
-        retryConnection(participantId);
-      } else if (pc.connectionState === 'disconnected') {
-        // Wait a bit before cleaning up - might reconnect
-        setTimeout(() => {
-          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-            peerConnections.current.delete(participantId);
-          }
-        }, 5000);
-      } else if (pc.connectionState === 'connected') {
-        // Reset retry count on successful connection
-        retryCountRef.current.delete(participantId);
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        peerConnections.current.delete(participantId);
       }
     };
 
     peerConnections.current.set(participantId, pc);
     return pc;
-  }, [currentUserId, iceServers, safeSetState, retryConnection]);
+  }, [currentUserId, iceServers]);
 
   const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, fromId: string) => {
-    console.log(`[handleOffer] Processing offer from ${fromId}`);
-    
     let pc = peerConnections.current.get(fromId);
     if (!pc) {
       pc = createPeerConnection(fromId);
     }
 
-    try {
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
 
-      console.log(`[handleOffer] Sending answer to ${fromId}`);
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'answer',
-        payload: {
-          answer,
-          from: currentUserId,
-          to: fromId,
-        },
-      });
-    } catch (err) {
-      console.error(`[handleOffer] Error processing offer from ${fromId}:`, err);
-      throw err;
-    }
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'answer',
+      payload: {
+        answer,
+        from: currentUserId,
+        to: fromId,
+      },
+    });
   }, [createPeerConnection, currentUserId]);
 
   const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit, fromId: string) => {
@@ -272,26 +168,19 @@ export function useSFUGroupCall({
   }, []);
 
   const connectToParticipant = useCallback(async (participantId: string) => {
-    console.log(`[connectToParticipant] Creating offer for ${participantId}`);
-    
-    try {
-      const pc = createPeerConnection(participantId);
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+    const pc = createPeerConnection(participantId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
 
-      console.log(`[connectToParticipant] Sending offer to ${participantId}`);
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'offer',
-        payload: {
-          offer,
-          from: currentUserId,
-          to: participantId,
-        },
-      });
-    } catch (err) {
-      console.error(`[connectToParticipant] Error creating offer for ${participantId}:`, err);
-    }
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'offer',
+      payload: {
+        offer,
+        from: currentUserId,
+        to: participantId,
+      },
+    });
   }, [createPeerConnection, currentUserId]);
 
   const setupSignaling = useCallback(() => {
@@ -304,61 +193,27 @@ export function useSFUGroupCall({
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        if (!mountedRef.current) return;
         const presenceState = channel.presenceState();
         const participantIds = Object.keys(presenceState);
         
-        console.log(`[Presence Sync] Total participants: ${participantIds.length}`, participantIds);
-        console.log(`[Presence Sync] Full state:`, JSON.stringify(presenceState));
-        
-        const newParticipants = participantIds.map(id => {
-          const presenceData = presenceState[id]?.[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
-          console.log(`[Presence Sync] Participant ${id}:`, presenceData);
-          return {
-            id,
-            name: presenceData?.name || 'Unknown',
-            photo: presenceData?.photo,
-            isOwner: presenceData?.isOwner === true,
-          };
-        });
-        
-        safeSetState(prev => {
-          const updatedParticipants = newParticipants.map(newP => {
-            // Preserve existing stream if we have one
-            const existing = prev.participants.find(p => p.id === newP.id);
-            return existing?.stream ? { ...newP, stream: existing.stream } : newP;
-          });
-          
-          console.log(`[Presence Sync] Updated participants:`, updatedParticipants.map(p => ({ id: p.id, isOwner: p.isOwner, hasStream: !!(p as any).stream })));
-          
-          return {
-            ...prev,
-            viewerCount: participantIds.length,
-            participants: updatedParticipants,
-          };
-        });
-        
-        // If we're the host and there are viewers without connections, connect to them
-        if (isOwner && localStream.current) {
-          participantIds.forEach(id => {
-            if (id !== currentUserId && !peerConnections.current.has(id)) {
-              console.log(`[Host Sync] Initiating connection to existing viewer: ${id}`);
-              connectToParticipant(id);
-            }
-          });
-        }
-        
-        // If we're a viewer, find the host and connect to them if not already connected
-        if (!isOwner && localStream.current) {
-          const hostId = newParticipants.find(p => p.isOwner === true)?.id;
-          if (hostId && !peerConnections.current.has(hostId)) {
-            console.log(`[Viewer Sync] Initiating connection to host: ${hostId}`);
-            connectToParticipant(hostId);
-          }
-        }
+        setState(prev => ({
+          ...prev,
+          viewerCount: participantIds.length,
+          participants: participantIds.map(id => {
+            const existing = prev.participants.find(p => p.id === id);
+            if (existing) return existing;
+            
+            const presenceData = presenceState[id]?.[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
+            return {
+              id,
+              name: presenceData?.name || 'Unknown',
+              photo: presenceData?.photo,
+              isOwner: presenceData?.isOwner || false,
+            };
+          }),
+        }));
       })
-      .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
-        if (!mountedRef.current) return;
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         const presence = newPresences[0] as { name?: string; photo?: string; isOwner?: boolean } | undefined;
         const newParticipant: Participant = {
           id: key,
@@ -367,58 +222,26 @@ export function useSFUGroupCall({
           isOwner: presence?.isOwner || false,
         };
         
-        // Add participant to state immediately
-        safeSetState(prev => {
-          const exists = prev.participants.some(p => p.id === key);
-          if (exists) return prev;
-          return {
-            ...prev,
-            participants: [...prev.participants, newParticipant],
-          };
-        });
-        
         onParticipantJoin?.(newParticipant);
         
-        // Host initiates connections to new viewers
-        if (key !== currentUserId && localStream.current && isOwner) {
-          console.log(`[Host] Initiating connection to viewer: ${key}`);
-          setTimeout(() => {
-            if (mountedRef.current && localStream.current) {
-              connectToParticipant(key);
-            }
-          }, 500);
-        }
-        
-        // Viewers: if the host just joined, connect to them
-        if (key !== currentUserId && localStream.current && !isOwner && newParticipant.isOwner) {
-          console.log(`[Viewer] Host joined, initiating connection to host: ${key}`);
-          setTimeout(() => {
-            if (mountedRef.current && localStream.current && !peerConnections.current.has(key)) {
-              connectToParticipant(key);
-            }
-          }, 500);
+        // If we're the owner or an existing participant, initiate connection
+        if (key !== currentUserId && localStream.current) {
+          connectToParticipant(key);
         }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
-        if (!mountedRef.current) return;
         peerConnections.current.get(key)?.close();
         peerConnections.current.delete(key);
-        retryCountRef.current.delete(key);
         onParticipantLeave?.(key);
         
-        safeSetState(prev => ({
+        setState(prev => ({
           ...prev,
           participants: prev.participants.filter(p => p.id !== key),
         }));
       })
       .on('broadcast', { event: 'offer' }, async ({ payload }) => {
         if (payload.to === currentUserId) {
-          console.log(`[${isOwner ? 'Host' : 'Viewer'}] Received offer from: ${payload.from}`);
-          try {
-            await handleOffer(payload.offer, payload.from);
-          } catch (err) {
-            console.error('Error handling offer:', err);
-          }
+          await handleOffer(payload.offer, payload.from);
         }
       })
       .on('broadcast', { event: 'answer' }, async ({ payload }) => {
@@ -433,20 +256,16 @@ export function useSFUGroupCall({
       })
       .on('broadcast', { event: 'stream-ended' }, () => {
         cleanup();
-      })
-      .on('broadcast', { event: 'speaker-changed' }, ({ payload }) => {
-        // Update current speaker
-        safeSetState(prev => ({ ...prev, currentSpeakerId: payload.speakerId }));
       });
 
     channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED' && mountedRef.current) {
+      if (status === 'SUBSCRIBED') {
         await channel.track({
           name: userName,
           photo: userPhoto,
           isOwner,
         });
-        safeSetState(prev => ({ ...prev, isConnected: true }));
+        setState(prev => ({ ...prev, isConnected: true }));
       }
     });
 
@@ -464,23 +283,22 @@ export function useSFUGroupCall({
     handleIceCandidate,
     onParticipantJoin,
     onParticipantLeave,
-    safeSetState,
   ]);
 
   const goLive = useCallback(async () => {
-    safeSetState(prev => ({ ...prev, isConnecting: true, error: null }));
+    setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
       const stream = await initLocalMedia();
-      if (!stream || !mountedRef.current) {
-        safeSetState(prev => ({ ...prev, isConnecting: false }));
+      if (!stream) {
+        setState(prev => ({ ...prev, isConnecting: false }));
         return false;
       }
 
       setupSignaling();
 
       // Update group status in database
-      const { error } = await supabase
+      await supabase
         .from('private_groups')
         .update({ 
           is_live: true, 
@@ -488,11 +306,7 @@ export function useSFUGroupCall({
         })
         .eq('id', groupId);
 
-      if (error) {
-        console.error('Error updating group status:', error);
-      }
-
-      safeSetState(prev => ({ 
+      setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
         isLive: true,
@@ -508,35 +322,28 @@ export function useSFUGroupCall({
       return true;
     } catch (error) {
       console.error('Error going live:', error);
-      safeSetState(prev => ({ 
+      setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
         error: 'Failed to start stream' 
       }));
       return false;
     }
-  }, [groupId, currentUserId, userName, userPhoto, initLocalMedia, setupSignaling, safeSetState]);
+  }, [groupId, currentUserId, userName, userPhoto, initLocalMedia, setupSignaling]);
 
   const joinStream = useCallback(async () => {
-    safeSetState(prev => ({ ...prev, isConnecting: true, error: null }));
+    setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
       const stream = await initLocalMedia();
-      if (!stream || !mountedRef.current) {
-        safeSetState(prev => ({ ...prev, isConnecting: false }));
+      if (!stream) {
+        setState(prev => ({ ...prev, isConnecting: false }));
         return false;
-      }
-
-      // For men (non-owners): start with mic muted by default
-      if (!isOwner) {
-        stream.getAudioTracks().forEach(track => {
-          track.enabled = false;
-        });
       }
 
       setupSignaling();
 
-      safeSetState(prev => ({ 
+      setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
         isConnected: true,
@@ -545,82 +352,31 @@ export function useSFUGroupCall({
       return true;
     } catch (error) {
       console.error('Error joining stream:', error);
-      safeSetState(prev => ({ 
+      setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
         error: 'Failed to join stream' 
       }));
       return false;
     }
-  }, [initLocalMedia, setupSignaling, safeSetState]);
-
-  const cleanup = useCallback(() => {
-    // Stop local tracks
-    if (localStream.current) {
-      localStream.current.getTracks().forEach(track => {
-        track.stop();
-        track.enabled = false;
-      });
-      localStream.current = null;
-    }
-
-    // Clear video element
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null;
-    }
-
-    // Close all peer connections
-    peerConnections.current.forEach(pc => {
-      try {
-        pc.close();
-      } catch (e) {
-        console.warn('Error closing peer connection:', e);
-      }
-    });
-    peerConnections.current.clear();
-    retryCountRef.current.clear();
-
-    // Unsubscribe from channel
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-
-    safeSetState(() => ({
-      isConnecting: false,
-      isConnected: false,
-      isLive: false,
-      participants: [],
-      viewerCount: 0,
-      error: null,
-      currentSpeakerId: null,
-    }));
-  }, [safeSetState]);
+  }, [initLocalMedia, setupSignaling]);
 
   const endStream = useCallback(async () => {
-    try {
-      // Notify all participants
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'stream-ended',
-        payload: {},
-      });
+    // Notify all participants
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'stream-ended',
+      payload: {},
+    });
 
-      // Update database
-      const { error } = await supabase
-        .from('private_groups')
-        .update({ is_live: false, stream_id: null })
-        .eq('id', groupId);
+    // Update database
+    await supabase
+      .from('private_groups')
+      .update({ is_live: false, stream_id: null })
+      .eq('id', groupId);
 
-      if (error) {
-        console.error('Error updating group status:', error);
-      }
-    } catch (error) {
-      console.error('Error ending stream:', error);
-    } finally {
-      cleanup();
-    }
-  }, [groupId, cleanup]);
+    cleanup();
+  }, [groupId]);
 
   const toggleVideo = useCallback((enabled: boolean) => {
     if (localStream.current) {
@@ -638,61 +394,34 @@ export function useSFUGroupCall({
     }
   }, []);
 
-  // Request to speak (for non-owners) - only one man can speak at a time
-  const requestSpeak = useCallback(() => {
-    if (isOwner) return true; // Host can always speak
-    
-    // Check if someone else is already speaking
-    if (state.currentSpeakerId && state.currentSpeakerId !== currentUserId) {
-      return false; // Someone else is speaking
+  const cleanup = useCallback(() => {
+    // Stop local tracks
+    localStream.current?.getTracks().forEach(track => track.stop());
+    localStream.current = null;
+
+    // Close all peer connections
+    peerConnections.current.forEach(pc => pc.close());
+    peerConnections.current.clear();
+
+    // Unsubscribe from channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
-    // Broadcast that we're now the speaker
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'speaker-changed',
-      payload: { speakerId: currentUserId, speakerName: userName },
+    setState({
+      isConnecting: false,
+      isConnected: false,
+      isLive: false,
+      participants: [],
+      viewerCount: 0,
+      error: null,
     });
-
-    safeSetState(prev => ({ ...prev, currentSpeakerId: currentUserId }));
-
-    // Enable audio
-    if (localStream.current) {
-      localStream.current.getAudioTracks().forEach(track => {
-        track.enabled = true;
-      });
-    }
-
-    return true;
-  }, [isOwner, state.currentSpeakerId, currentUserId, userName, safeSetState]);
-
-  // Release speaking slot
-  const releaseSpeak = useCallback(() => {
-    if (state.currentSpeakerId === currentUserId) {
-      // Broadcast that we're no longer speaking
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'speaker-changed',
-        payload: { speakerId: null, speakerName: null },
-      });
-
-      safeSetState(prev => ({ ...prev, currentSpeakerId: null }));
-    }
-
-    // Disable audio
-    if (localStream.current) {
-      localStream.current.getAudioTracks().forEach(track => {
-        track.enabled = false;
-      });
-    }
-  }, [state.currentSpeakerId, currentUserId, safeSetState]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
-    mountedRef.current = true;
-    
     return () => {
-      mountedRef.current = false;
       cleanup();
     };
   }, [cleanup]);
@@ -705,8 +434,6 @@ export function useSFUGroupCall({
     endStream,
     toggleVideo,
     toggleAudio,
-    requestSpeak,
-    releaseSpeak,
     cleanup,
   };
 }

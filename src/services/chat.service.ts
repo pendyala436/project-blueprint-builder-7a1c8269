@@ -34,20 +34,23 @@ export interface ChatSession {
 export interface ChatPricing {
   ratePerMinute: number;
   womenEarningRate: number;
+  videoRatePerMinute: number;
+  videoWomenEarningRate: number;
   minWithdrawalBalance: number;
   currency: string;
 }
 
 const DEFAULT_PRICING: ChatPricing = {
-  ratePerMinute: 5,
+  ratePerMinute: 2,
   womenEarningRate: 2,
+  videoRatePerMinute: 10,
+  videoWomenEarningRate: 5,
   minWithdrawalBalance: 10000,
   currency: 'INR',
 };
 
 /**
  * Get chat pricing configuration
- * Note: Video calls are gift-based, not per-minute billing
  */
 export async function getChatPricing(): Promise<ChatPricing> {
   const { data, error } = await supabase
@@ -63,6 +66,8 @@ export async function getChatPricing(): Promise<ChatPricing> {
   return {
     ratePerMinute: data.rate_per_minute || DEFAULT_PRICING.ratePerMinute,
     womenEarningRate: data.women_earning_rate || DEFAULT_PRICING.womenEarningRate,
+    videoRatePerMinute: data.video_rate_per_minute || DEFAULT_PRICING.videoRatePerMinute,
+    videoWomenEarningRate: data.video_women_earning_rate || DEFAULT_PRICING.videoWomenEarningRate,
     minWithdrawalBalance: data.min_withdrawal_balance || DEFAULT_PRICING.minWithdrawalBalance,
     currency: data.currency || DEFAULT_PRICING.currency,
   };
@@ -180,22 +185,14 @@ export async function endChatSession(
 }
 
 /**
- * Subscribe to new messages (real-time) - optimized for large-scale
- * Supports lakhs of concurrent users with filtered channels
+ * Subscribe to new messages (real-time)
  */
 export function subscribeToMessages(
   chatId: string,
-  currentUserId: string,
   onMessage: (message: ChatMessage) => void
 ) {
-  // Optimized channel with filtering for scalability
-  const channel = supabase
-    .channel(`chat-messages:${chatId}`, {
-      config: {
-        broadcast: { self: false }, // Don't receive own broadcasts
-        presence: { key: currentUserId }
-      }
-    })
+  return supabase
+    .channel(`chat:${chatId}`)
     .on(
       'postgres_changes',
       {
@@ -205,41 +202,7 @@ export function subscribeToMessages(
         filter: `chat_id=eq.${chatId}`,
       },
       (payload) => {
-        const message = payload.new as ChatMessage;
-        // Skip own messages (already handled locally)
-        if (message.sender_id !== currentUserId) {
-          onMessage(message);
-        }
-      }
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`[ChatService] Subscribed to messages: ${chatId}`);
-      }
-    });
-  
-  return channel;
-}
-
-/**
- * Subscribe to chat session changes (real-time)
- */
-export function subscribeToChatSession(
-  sessionId: string,
-  onUpdate: (session: ChatSession) => void
-) {
-  return supabase
-    .channel(`chat-session:${sessionId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'active_chat_sessions',
-        filter: `id=eq.${sessionId}`,
-      },
-      (payload) => {
-        onUpdate(payload.new as ChatSession);
+        onMessage(payload.new as ChatMessage);
       }
     )
     .subscribe();

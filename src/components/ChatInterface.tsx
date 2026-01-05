@@ -85,22 +85,14 @@ export const ChatInterface = ({
   }, [currentUserId]);
 
   const subscribeToChanges = () => {
-    // Optimized real-time subscriptions for large-scale user base
     const channel = supabase
-      .channel(`chat-interface:${currentUserId}`, {
-        config: {
-          broadcast: { self: false }
-        }
-      })
+      .channel('chat-interface-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions',
-          filter: userGender === 'male' 
-            ? `man_user_id=eq.${currentUserId}` 
-            : `woman_user_id=eq.${currentUserId}`
+          table: 'active_chat_sessions'
         },
         () => {
           loadChatData();
@@ -111,8 +103,7 @@ export const ChatInterface = ({
         {
           event: '*',
           schema: 'public',
-          table: 'user_friends',
-          filter: `user_id=eq.${currentUserId}`
+          table: 'user_friends'
         },
         () => {
           loadChatData();
@@ -123,18 +114,13 @@ export const ChatInterface = ({
         {
           event: '*',
           schema: 'public',
-          table: 'user_blocks',
-          filter: `blocked_by=eq.${currentUserId}`
+          table: 'user_blocks'
         },
         () => {
           loadChatData();
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[RealTime] ChatInterface subscribed: ${currentUserId}`);
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -490,10 +476,10 @@ export const ChatInterface = ({
     <div className="space-y-4">
       {/* Pending Chat Requests (for women) */}
       {userGender === "female" && pendingRequests.length > 0 && (
-        <Card className="border-warning/30 bg-gradient-to-br from-warning/5 to-transparent">
+        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Phone className="h-5 w-5 text-warning" />
+              <Phone className="h-5 w-5 text-amber-500" />
               {t('incomingChatRequests', 'Incoming Chat Requests')}
               <Badge variant="destructive" className="ml-2">
                 {pendingRequests.length}
@@ -520,7 +506,7 @@ export const ChatInterface = ({
                   <Button
                     size="sm"
                     variant="default"
-                    className="bg-success hover:bg-success/90 text-success-foreground"
+                    className="bg-green-500 hover:bg-green-600"
                     onClick={() => handleAcceptChat(request)}
                     disabled={isLoading}
                   >
@@ -669,12 +655,12 @@ export const ChatInterface = ({
 
       {/* Start More Chats - Show when under limit */}
       {canStartMoreChats && (
-        <Card className="border-info/30 bg-gradient-to-br from-info/5 to-transparent">
+        <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-info/20">
-                  <Phone className="h-5 w-5 text-info" />
+                <div className="p-2 rounded-xl bg-blue-500/20">
+                  <Phone className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <p className="font-medium text-foreground">
@@ -702,11 +688,11 @@ export const ChatInterface = ({
 
       {/* At Max Capacity Message */}
       {!canStartMoreChats && (
-        <Card className="border-warning/30 bg-gradient-to-br from-warning/5 to-transparent">
+        <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-warning/20">
-                <MessageCircle className="h-5 w-5 text-warning" />
+              <div className="p-2 rounded-xl bg-amber-500/20">
+                <MessageCircle className="h-5 w-5 text-amber-500" />
               </div>
               <div>
                 <p className="font-medium text-foreground">{t('maxChatsReached', 'Max Chats Reached')}</p>

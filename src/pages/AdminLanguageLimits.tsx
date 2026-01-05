@@ -288,7 +288,7 @@ const AdminLanguageLimits = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-secondary-foreground" />
+                <Video className="h-5 w-5 text-purple-500" />
                 <div>
                   <div className="text-2xl font-bold">{currentCallWomen}/{totalCallCapacity}</div>
                   <div className="text-sm text-muted-foreground">Video Women</div>
@@ -304,7 +304,7 @@ const AdminLanguageLimits = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-success">
+              <div className="text-2xl font-bold text-green-600">
                 {limits.filter((l) => l.is_active).length}
               </div>
               <div className="text-sm text-muted-foreground">Active</div>
@@ -368,7 +368,7 @@ const AdminLanguageLimits = () => {
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="bg-secondary/30">
+                        <Badge variant="outline" className="bg-purple-500/5">
                           {limit.max_call_women}
                         </Badge>
                       </TableCell>

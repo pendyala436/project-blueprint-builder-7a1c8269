@@ -17,11 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { 
   Users, 
   Crown, 
@@ -40,15 +35,7 @@ import {
   UserPlus,
   CalendarClock,
   Trophy,
-  LayoutDashboard,
-  Paperclip,
-  Camera,
-  Image,
-  Video,
-  FileText,
-  Mic,
-  MicOff,
-  Loader2
+  LayoutDashboard
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +43,6 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { cn } from "@/lib/utils";
 import { LeaderDashboard } from "@/components/community/LeaderDashboard";
 import { DisputeReportButton } from "@/components/community/DisputeReportButton";
-import { HoldToRecordButton } from "@/components/HoldToRecordButton";
 
 interface CommunityMember {
   userId: string;
@@ -79,9 +65,6 @@ interface CommunityMessage {
   message: string;
   createdAt: string;
   isAnnouncement: boolean;
-  fileUrl?: string | null;
-  fileName?: string | null;
-  fileType?: string | null;
 }
 
 interface ElectionData {
@@ -145,14 +128,6 @@ export const LanguageCommunityPanel = ({
   
   // Leader dashboard
   const [showLeaderDashboard, setShowLeaderDashboard] = useState(false);
-  
-  // File upload and camera state
-  const [isAttachOpen, setIsAttachOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const isElectionOfficer = electionOfficer?.userId === currentUserId;
   const isLeader = currentLeader?.userId === currentUserId;
@@ -374,15 +349,10 @@ export const LanguageCommunityPanel = ({
       .maybeSingle();
 
     if (groupData) {
-      // Only load messages from the last 2 days
-      const twoDaysAgo = new Date();
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
       const { data: messagesData } = await supabase
         .from("group_messages")
-        .select("id, sender_id, message, created_at, file_url, file_name, file_type")
+        .select("id, sender_id, message, created_at")
         .eq("group_id", groupData.id)
-        .gte("created_at", twoDaysAgo.toISOString())
         .order("created_at", { ascending: true })
         .limit(100);
 
@@ -412,16 +382,11 @@ export const LanguageCommunityPanel = ({
             senderId: m.sender_id,
             senderName: femaleProfile?.full_name || mainProfile?.full_name || "Unknown User",
             senderPhoto: femaleProfile?.photo_url || mainProfile?.photo_url || null,
-            message: m.message || '',
+            message: m.message,
             createdAt: m.created_at,
-            isAnnouncement: m.message?.startsWith("[ANNOUNCEMENT]") || false,
-            fileUrl: m.file_url,
-            fileName: m.file_name,
-            fileType: m.file_type
+            isAnnouncement: m.message.startsWith("[ANNOUNCEMENT]")
           };
         }));
-      } else {
-        setMessages([]);
       }
     }
   };
@@ -601,9 +566,8 @@ export const LanguageCommunityPanel = ({
     };
   };
 
-  const sendMessage = async (messageText?: string, fileData?: { url: string; name: string; type: string }) => {
-    const textToSend = messageText || newMessage.trim();
-    if (!textToSend && !fileData) return;
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
 
     try {
       let { data: groupData } = await supabase
@@ -628,21 +592,13 @@ export const LanguageCommunityPanel = ({
       }
 
       if (groupData) {
-        const messageData: any = {
-          group_id: groupData.id,
-          sender_id: currentUserId,
-          message: textToSend || (fileData ? `📎 ${fileData.name}` : '')
-        };
-
-        if (fileData) {
-          messageData.file_url = fileData.url;
-          messageData.file_name = fileData.name;
-          messageData.file_type = fileData.type;
-        }
-
         await supabase
           .from("group_messages")
-          .insert(messageData);
+          .insert({
+            group_id: groupData.id,
+            sender_id: currentUserId,
+            message: newMessage
+          });
 
         setNewMessage("");
       }
@@ -652,180 +608,6 @@ export const LanguageCommunityPanel = ({
         description: t('messageSendFailed', 'Failed to send message'),
         variant: "destructive"
       });
-    }
-  };
-
-  // File upload handler
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (50MB max)
-    if (file.size > 50 * 1024 * 1024) {
-      toast({
-        title: t('error', 'Error'),
-        description: t('fileTooLarge', 'File size must be less than 50MB'),
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    setIsAttachOpen(false);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `community_${motherTongue}_${Date.now()}.${fileExt}`;
-      const filePath = `community-files/${currentUserId}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('chat-attachments')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from('chat-attachments')
-        .getPublicUrl(filePath);
-
-      await sendMessage('', { 
-        url: urlData.publicUrl, 
-        name: file.name, 
-        type: file.type 
-      });
-
-      toast({
-        title: t('fileUploaded', 'File Uploaded'),
-        description: file.name
-      });
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast({
-        title: t('uploadFailed', 'Upload Failed'),
-        description: error.message || t('tryAgain', 'Please try again'),
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  // Camera functions for selfie
-  const startCamera = async () => {
-    try {
-      setIsCameraOpen(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      toast({
-        title: t('cameraError', 'Camera Error'),
-        description: t('cameraAccessDenied', 'Could not access camera'),
-        variant: "destructive"
-      });
-      setIsCameraOpen(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setIsCameraOpen(false);
-  };
-
-  const captureSelfie = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Mirror the image for selfie
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-
-      stopCamera();
-      setIsUploading(true);
-
-      try {
-        const fileName = `selfie_${motherTongue}_${Date.now()}.jpg`;
-        const filePath = `community-files/${currentUserId}/${fileName}`;
-
-        const { error } = await supabase.storage
-          .from('chat-attachments')
-          .upload(filePath, blob, { contentType: 'image/jpeg' });
-
-        if (error) throw error;
-
-        const { data: urlData } = supabase.storage
-          .from('chat-attachments')
-          .getPublicUrl(filePath);
-
-        await sendMessage('', { 
-          url: urlData.publicUrl, 
-          name: 'Selfie.jpg', 
-          type: 'image/jpeg' 
-        });
-
-        toast({ title: t('selfieSent', 'Selfie Sent') });
-      } catch (error: any) {
-        toast({
-          title: t('error', 'Error'),
-          description: error.message,
-          variant: "destructive"
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    }, 'image/jpeg', 0.9);
-  };
-
-  // Voice message handler
-  const handleVoiceSend = async (audioBlob: Blob) => {
-    setIsUploading(true);
-    try {
-      const fileName = `voice_${motherTongue}_${Date.now()}.webm`;
-      const filePath = `community-files/${currentUserId}/${fileName}`;
-
-      const { error } = await supabase.storage
-        .from('chat-attachments')
-        .upload(filePath, audioBlob, { contentType: 'audio/webm' });
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from('chat-attachments')
-        .getPublicUrl(filePath);
-
-      await sendMessage('🎤 Voice message', { 
-        url: urlData.publicUrl, 
-        name: 'Voice Message', 
-        type: 'audio/webm' 
-      });
-
-      toast({ title: t('voiceSent', 'Voice Message Sent') });
-    } catch (error: any) {
-      toast({
-        title: t('error', 'Error'),
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -1273,7 +1055,7 @@ export const LanguageCommunityPanel = ({
 
                 {/* Chat Tab */}
                 <TabsContent value="chat" className="mt-0">
-                  <div className="flex flex-col h-72">
+                  <div className="flex flex-col h-64">
                     <ScrollArea className="flex-1 pr-2">
                       <div className="space-y-3">
                         {messages.length === 0 ? (
@@ -1281,7 +1063,6 @@ export const LanguageCommunityPanel = ({
                             <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p className="text-sm">{t('noMessages', 'No messages yet')}</p>
                             <p className="text-xs">{t('startConversation', 'Start the conversation!')}</p>
-                            <p className="text-xs text-muted-foreground mt-2">{t('chatAutoDeletes', 'Chat history auto-deletes every 2 days')}</p>
                           </div>
                         ) : (
                           messages.map((msg) => (
@@ -1305,27 +1086,7 @@ export const LanguageCommunityPanel = ({
                                     : "bg-muted"
                               )}>
                                 <p className="text-xs font-medium mb-0.5">{msg.senderName}</p>
-                                {msg.fileUrl ? (
-                                  <div className="space-y-1">
-                                    {msg.fileType?.startsWith('image/') ? (
-                                      <img src={msg.fileUrl} alt={msg.fileName || 'Image'} className="max-w-full rounded max-h-40 object-cover" />
-                                    ) : msg.fileType?.startsWith('video/') ? (
-                                      <video src={msg.fileUrl} controls className="max-w-full rounded max-h-40" />
-                                    ) : msg.fileType?.startsWith('audio/') ? (
-                                      <audio src={msg.fileUrl} controls className="w-full" />
-                                    ) : (
-                                      <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm underline">
-                                        <FileText className="w-4 h-4" />
-                                        {msg.fileName || 'Download file'}
-                                      </a>
-                                    )}
-                                    {msg.message && !msg.message.startsWith('📎') && !msg.message.startsWith('🎤') && (
-                                      <p className="text-sm">{msg.message}</p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm">{msg.message.replace("[ANNOUNCEMENT] ", "")}</p>
-                                )}
+                                <p className="text-sm">{msg.message.replace("[ANNOUNCEMENT] ", "")}</p>
                               </div>
                             </div>
                           ))
@@ -1334,161 +1095,19 @@ export const LanguageCommunityPanel = ({
                       </div>
                     </ScrollArea>
                     
-                    {/* Hidden file input */}
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.ods,.odp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const type = file.type.startsWith('image/') ? 'image' : 
-                                       file.type.startsWith('video/') ? 'video' : 'document';
-                          handleFileUpload(e, type);
-                        }
-                      }}
-                    />
-
-                    {/* Hidden canvas for selfie */}
-                    <canvas ref={canvasRef} className="hidden" />
-
-                    {/* Chat Input Area */}
-                    <div className="space-y-2 mt-3">
-                      <div className="flex items-center gap-2">
-                        {/* Attachment Popover */}
-                        <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
-                          <PopoverTrigger asChild>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="shrink-0"
-                              disabled={isUploading}
-                            >
-                              {isUploading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Paperclip className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48 p-2" side="top">
-                            <div className="grid gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="justify-start"
-                                onClick={() => {
-                                  setIsAttachOpen(false);
-                                  startCamera();
-                                }}
-                              >
-                                <Camera className="w-4 h-4 mr-2" />
-                                {t('selfie', 'Selfie')}
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="justify-start"
-                                onClick={() => {
-                                  setIsAttachOpen(false);
-                                  if (fileInputRef.current) {
-                                    fileInputRef.current.accept = 'image/*';
-                                    fileInputRef.current.click();
-                                  }
-                                }}
-                              >
-                                <Image className="w-4 h-4 mr-2" />
-                                {t('photo', 'Photo')}
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="justify-start"
-                                onClick={() => {
-                                  setIsAttachOpen(false);
-                                  if (fileInputRef.current) {
-                                    fileInputRef.current.accept = 'video/*';
-                                    fileInputRef.current.click();
-                                  }
-                                }}
-                              >
-                                <Video className="w-4 h-4 mr-2" />
-                                {t('video', 'Video')}
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="justify-start"
-                                onClick={() => {
-                                  setIsAttachOpen(false);
-                                  if (fileInputRef.current) {
-                                    fileInputRef.current.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.odt,.ods,.odp';
-                                    fileInputRef.current.click();
-                                  }
-                                }}
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                {t('document', 'Document')}
-                              </Button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        <Input
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder={t('typeMessage', 'Type a message...')}
-                          className="flex-1"
-                          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                          disabled={isUploading}
-                        />
-
-                        {/* Voice Record Button */}
-                        <HoldToRecordButton onRecordingComplete={handleVoiceSend} />
-
-                        <Button 
-                          size="icon" 
-                          onClick={() => sendMessage()}
-                          disabled={!newMessage.trim() || isUploading}
-                        >
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground text-center">
-                        {t('chatAutoDeletesNote', 'Messages auto-delete after 2 days')}
-                      </p>
+                    <div className="flex gap-2 mt-3">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder={t('typeMessage', 'Type a message...')}
+                        className="flex-1"
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      />
+                      <Button size="icon" onClick={sendMessage}>
+                        <Send className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Camera Modal for Selfie */}
-                  {isCameraOpen && (
-                    <Dialog open={isCameraOpen} onOpenChange={(open) => !open && stopCamera()}>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>{t('takeSelfie', 'Take a Selfie')}</DialogTitle>
-                        </DialogHeader>
-                        <div className="relative aspect-video bg-video rounded-lg overflow-hidden">
-                          <video 
-                            ref={videoRef}
-                            autoPlay 
-                            playsInline 
-                            muted 
-                            className="w-full h-full object-cover transform scale-x-[-1]" 
-                          />
-                        </div>
-                        <DialogFooter className="gap-2">
-                          <Button variant="outline" onClick={stopCamera}>
-                            {t('cancel', 'Cancel')}
-                          </Button>
-                          <Button onClick={captureSelfie}>
-                            <Camera className="w-4 h-4 mr-2" />
-                            {t('capture', 'Capture')}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  )}
                 </TabsContent>
 
                 {/* Members Tab */}

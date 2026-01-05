@@ -1,11 +1,7 @@
 /**
  * Real-Time Translation Hook
  * 
- * Translation methods:
- * 1. Dictionary Translation (main) - instant
- * 2. DL-Translate HuggingFace API (fallback) - 200+ languages
- * 
- * Features:
+ * Provides live translation for typing indicators:
  * - Sender sees their message converted to native script
  * - Recipient sees partial typing translated to their language
  * - Skips translation when same language
@@ -14,7 +10,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { isSameLanguage } from './language-detector';
-import { translateText } from './translation-engine';
 
 export interface TypingIndicator {
   userId: string;
@@ -96,25 +91,21 @@ export function useRealtimeTranslation({
           timestamp: Date.now()
         });
 
-        // Translate to recipient's language using embedded engine
+        // Translate to recipient's language
         try {
-          const result = await translateText(text, {
-            sourceLanguage: senderLanguage,
-            targetLanguage: currentUserLanguage,
-            mode: 'translate'
+          const { data, error } = await supabase.functions.invoke('translate-message', {
+            body: {
+              message: text,
+              sourceLanguage: senderLanguage,
+              targetLanguage: currentUserLanguage,
+              mode: 'translate'
+            }
           });
 
-          if (result.isTranslated && result.translatedText) {
+          if (!error && data?.translatedMessage) {
             setPartnerTyping(prev => prev ? {
               ...prev,
-              translatedText: result.translatedText,
-              isTranslating: false
-            } : null);
-          } else {
-            // Fallback if no translation
-            setPartnerTyping(prev => prev ? {
-              ...prev,
-              translatedText: text,
+              translatedText: data.translatedMessage,
               isTranslating: false
             } : null);
           }

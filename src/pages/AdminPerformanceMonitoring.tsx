@@ -183,14 +183,14 @@ const AdminPerformanceMonitoring = () => {
 
   const getGaugeColor = (value: number, thresholds: { warning: number; critical: number }) => {
     if (value >= thresholds.critical) return "text-destructive";
-    if (value >= thresholds.warning) return "text-warning";
-    return "text-success";
+    if (value >= thresholds.warning) return "text-amber-500";
+    return "text-emerald-500";
   };
 
   const getProgressColor = (value: number, thresholds: { warning: number; critical: number }) => {
     if (value >= thresholds.critical) return "bg-destructive";
-    if (value >= thresholds.warning) return "bg-warning";
-    return "bg-success";
+    if (value >= thresholds.warning) return "bg-amber-500";
+    return "bg-emerald-500";
   };
 
   const formatChartData = () => {
@@ -310,8 +310,8 @@ const AdminPerformanceMonitoring = () => {
         {isLive && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             Live updates enabled (refreshes every 10s)
           </div>
@@ -467,7 +467,7 @@ const AdminPerformanceMonitoring = () => {
           </Card>
           <Card className="p-4">
             <div className="text-sm text-muted-foreground">Error Rate</div>
-            <div className={`text-2xl font-bold mt-1 ${(currentMetrics?.error_rate || 0) > 1 ? 'text-destructive' : 'text-success'}`}>
+            <div className={`text-2xl font-bold mt-1 ${(currentMetrics?.error_rate || 0) > 1 ? 'text-destructive' : 'text-emerald-500'}`}>
               {(currentMetrics?.error_rate || 0).toFixed(2)}%
             </div>
           </Card>
@@ -477,7 +477,7 @@ const AdminPerformanceMonitoring = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
               System Alerts
               {alerts.filter(a => !a.is_resolved).length > 0 && (
                 <Badge variant="destructive" className="ml-2">
@@ -490,7 +490,7 @@ const AdminPerformanceMonitoring = () => {
             <ScrollArea className="h-[200px]">
               {alerts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-success" />
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
                   <p>No alerts - All systems operational</p>
                 </div>
               ) : (
@@ -503,24 +503,24 @@ const AdminPerformanceMonitoring = () => {
                           ? 'bg-muted/50 border-muted'
                           : alert.alert_type === 'critical'
                           ? 'bg-destructive/10 border-destructive/30'
-                          : 'bg-warning/10 border-warning/30'
+                          : 'bg-amber-500/10 border-amber-500/30'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-2">
                           {alert.is_resolved ? (
-                            <CheckCircle className="h-4 w-4 text-success mt-0.5" />
+                            <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5" />
                           ) : alert.alert_type === 'critical' ? (
                             <XCircle className="h-4 w-4 text-destructive mt-0.5" />
                           ) : (
-                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+                            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
                           )}
                           <div>
                             <p className="text-sm font-medium">{alert.message}</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {new Date(alert.created_at).toLocaleString()}
                               {alert.is_resolved && alert.resolved_at && (
-                                <span className="ml-2 text-success">
+                                <span className="ml-2 text-emerald-500">
                                   • Resolved {new Date(alert.resolved_at).toLocaleString()}
                                 </span>
                               )}

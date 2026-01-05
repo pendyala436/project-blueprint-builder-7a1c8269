@@ -10,21 +10,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, Globe } from 'lucide-react';
+import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid } from 'lucide-react';
 import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
-import { languages } from '@/data/languages';
 
-// Gift item interface for gift selection
-interface GiftOption {
-  id: string;
-  name: string;
-  emoji: string;
-  price: number;
-}
+// Fixed gift amounts available in the app
+const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
 
-// Helper to format gift amount label
 const getAmountLabel = (amount: number) => {
-  if (amount === 0) return 'Free (No Gift Required)';
+  if (amount === 0) return 'Free (Private Call - No Gift Required)';
   return `₹${amount}`;
 };
 
@@ -39,7 +32,6 @@ interface PrivateGroup {
   stream_id: string | null;
   participant_count: number;
   created_at: string;
-  owner_language?: string;
 }
 
 interface PrivateGroupsSectionProps {
@@ -55,7 +47,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
   const [activeGroup, setActiveGroup] = useState<PrivateGroup | null>(null);
-  const [userLanguage, setUserLanguage] = useState<string>('');
   
   // Form state
   const [groupName, setGroupName] = useState('');
@@ -63,12 +54,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [minGiftAmount, setMinGiftAmount] = useState(0);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
-  const [ownerLanguage, setOwnerLanguage] = useState('');
-  const [availableGifts, setAvailableGifts] = useState<GiftOption[]>([]);
+
   useEffect(() => {
     fetchGroups();
-    fetchUserLanguage();
-    fetchAvailableGifts();
     
     // Subscribe to realtime updates
     const channel = supabase
@@ -82,32 +70,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
-
-  const fetchAvailableGifts = async () => {
-    const { data } = await supabase
-      .from('gifts')
-      .select('id, name, emoji, price')
-      .eq('is_active', true)
-      .order('price', { ascending: true });
-    
-    if (data) {
-      setAvailableGifts(data);
-    }
-  };
-
-  const fetchUserLanguage = async () => {
-    // Get user's primary language from profile
-    const { data } = await supabase
-      .from('profiles')
-      .select('primary_language')
-      .eq('user_id', currentUserId)
-      .single();
-    
-    if (data?.primary_language) {
-      setUserLanguage(data.primary_language);
-      setOwnerLanguage(data.primary_language);
-    }
-  };
 
   const fetchGroups = async () => {
     try {
@@ -142,10 +104,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       toast.error('Please enable at least chat or video call');
       return;
     }
-    if (!ownerLanguage) {
-      toast.error('Please select your language for the video call');
-      return;
-    }
 
     try {
       const { data: newGroup, error } = await supabase
@@ -156,8 +114,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           description: groupDescription.trim() || null,
           min_gift_amount: minGiftAmount,
           access_type: getAccessType(),
-          participant_count: 1,
-          owner_language: ownerLanguage // Store owner's mother tongue
+          participant_count: 1 // Owner is automatically a member
         })
         .select()
         .single();
@@ -231,7 +188,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     setMinGiftAmount(100);
     setChatEnabled(true);
     setVideoEnabled(true);
-    setOwnerLanguage(userLanguage);
   };
 
   const openUpdateDialog = (group: PrivateGroup) => {
@@ -239,7 +195,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     setMinGiftAmount(group.min_gift_amount);
     setChatEnabled(group.access_type === 'chat' || group.access_type === 'both');
     setVideoEnabled(group.access_type === 'video' || group.access_type === 'both');
-    setOwnerLanguage(group.owner_language || userLanguage);
     setShowUpdateDialog(true);
   };
 
@@ -286,45 +241,21 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 />
               </div>
               <div className="space-y-2">
-                <Label>Minimum Gift to Join</Label>
+                <Label>Minimum Gift Amount (₹)</Label>
                 <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select minimum gift" />
+                    <SelectValue placeholder="Select amount" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">
-                      🆓 Free (No Gift Required)
-                    </SelectItem>
-                    {availableGifts.map((gift) => (
-                      <SelectItem key={gift.id} value={String(gift.price)}>
-                        {gift.emoji} {gift.name} - ₹{gift.price}
+                    {GIFT_AMOUNTS.map((amount) => (
+                      <SelectItem key={amount} value={String(amount)}>
+                        {getAmountLabel(amount)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Men pay this once for 30 min video access. 50% to you, 50% to admin.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  Your Language (for video call name)
-                </Label>
-                <Select value={ownerLanguage} onValueChange={setOwnerLanguage}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.name}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Video calls will start with your language name displayed.
+                  Every gift sent is split: 50% to you, 50% to admin.
                 </p>
               </div>
               <div className="space-y-3">
@@ -375,10 +306,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
             <Card key={group.id} className="relative">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">
-                    {group.owner_language && <span className="text-primary">{group.owner_language} - </span>}
-                    {group.name}
-                  </CardTitle>
+                  <CardTitle className="text-base">{group.name}</CardTitle>
                   <div className="flex gap-1">
                     <Button 
                       variant="ghost" 
@@ -410,7 +338,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
-                    {group.participant_count}/150 members
+                    {group.participant_count} members
                   </Badge>
                   {(group.access_type === 'chat' || group.access_type === 'both') && (
                     <Badge variant="outline" className="gap-1">
@@ -453,24 +381,21 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Minimum Gift to Join</Label>
+              <Label>Minimum Gift Amount (₹)</Label>
               <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select minimum gift" />
+                  <SelectValue placeholder="Select amount" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">
-                    🆓 Free (No Gift Required)
-                  </SelectItem>
-                  {availableGifts.map((gift) => (
-                    <SelectItem key={gift.id} value={String(gift.price)}>
-                      {gift.emoji} {gift.name} - ₹{gift.price}
+                  {GIFT_AMOUNTS.map((amount) => (
+                    <SelectItem key={amount} value={String(amount)}>
+                      {getAmountLabel(amount)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Men must send a gift of at least this price to join.
+                Men must send gift of this amount to join
               </p>
             </div>
             <div className="space-y-3">

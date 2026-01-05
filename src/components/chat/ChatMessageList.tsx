@@ -99,19 +99,12 @@ const MessageBubble = memo(({
         {/* Message bubble */}
         <div
           className={cn(
-            'rounded-2xl px-4 py-2.5 unicode-text message-text',
+            'rounded-2xl px-4 py-2.5 unicode-text',
             isOwn
               ? 'bg-primary text-primary-foreground rounded-br-md chat-message-sent'
               : 'bg-muted text-foreground rounded-bl-md chat-message-received'
           )}
           dir="auto"
-          lang={message.senderLanguage || 'en'}
-          style={{
-            fontFamily: "'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Malayalam', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans Thai', 'Noto Sans Khmer', 'Noto Sans Myanmar', 'Noto Sans Hebrew', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Sans Ethiopic', -apple-system, system-ui, sans-serif",
-            unicodeBidi: 'plaintext',
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-          }}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
             {displayContent}

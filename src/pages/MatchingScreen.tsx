@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { isIndianLanguage } from "@/data/dlTranslateLanguages";
-import { filterWomenByTranslationRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useTranslationVisibility";
+import { isIndianLanguage } from "@/data/nllb200Languages";
+import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
 import {
   Tooltip,
   TooltipContent,
@@ -256,8 +256,8 @@ const MatchingScreen = () => {
       // Apply profile visibility filtering (probability-based)
       const visibilityFilteredWomen = women.filter(w => shouldShowProfile(w.profileVisibility));
 
-      // Apply translation visibility rules
-      const visibilityResult = filterWomenByTranslationRules(
+      // Apply NLLB-200 visibility rules
+      const visibilityResult = filterWomenByNLLBRules(
         visibilityFilteredWomen.map(w => ({
           ...w,
           aiVerified: w.aiVerified,
@@ -555,7 +555,7 @@ const MatchingScreen = () => {
           </Card>
         )}
 
-        {/* Translation Visibility Info Banner */}
+        {/* NLLB Visibility Info Banner */}
         <Card className="p-4 bg-muted/50 border-border/50">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-full bg-primary/10">
@@ -578,7 +578,7 @@ const MatchingScreen = () => {
                   <Info className="w-5 h-5 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p>Messages are automatically translated using DL-Translate. You can chat with anyone regardless of language!</p>
+                  <p>Messages are automatically translated using NLLB-200 neural translation. You can chat with anyone regardless of language!</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

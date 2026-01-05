@@ -30,29 +30,20 @@ interface EnhancedParallelChatsContainerProps {
   currentUserId: string;
   userGender: "male" | "female";
   currentUserLanguage?: string;
-  currentUserName?: string;
 }
 
-// Calculate initial positions for windows - spread horizontally from right
+// Calculate initial positions for windows
 const getInitialPosition = (index: number): { x: number; y: number } => {
-  if (typeof window === 'undefined') return { x: 20, y: 100 };
-  
-  const windowWidth = window.innerWidth;
-  const chatWidth = windowWidth < 640 ? 290 : 330; // Match responsive chat window width
-  const gap = 12;
-  
-  // Position from right side, staggered horizontally
-  const x = Math.max(10, windowWidth - ((index + 1) * (chatWidth + gap)));
-  const y = 100; // Fixed distance from top
-  
-  return { x, y };
+  const baseX = 20;
+  const baseY = 20;
+  const offset = 30;
+  return { x: baseX + (index * offset), y: baseY + (index * offset) };
 };
 
 const EnhancedParallelChatsContainer = ({ 
   currentUserId, 
   userGender, 
-  currentUserLanguage = "English",
-  currentUserName = "Me"
+  currentUserLanguage = "English" 
 }: EnhancedParallelChatsContainerProps) => {
   const { toast } = useToast();
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
@@ -355,51 +346,50 @@ const EnhancedParallelChatsContainer = ({
         </Popover>
       </div>
 
-      {/* Incoming chat popups - ONLY for women (men initiate chats, they don't receive accept/reject popups) */}
-      {userGender === "female" && (
-        <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
-          {pendingIncomingChats.map((incoming) => (
-            <IncomingChatPopup
-              key={incoming.sessionId}
-              sessionId={incoming.sessionId}
-              chatId={incoming.chatId}
-              partnerId={incoming.partnerId}
-              partnerName={incoming.partnerName}
-              partnerPhoto={incoming.partnerPhoto}
-              partnerLanguage={incoming.partnerLanguage}
-              ratePerMinute={incoming.ratePerMinute}
-              startedAt={incoming.startedAt}
-              userGender={userGender}
-              onAccept={handleAcceptChat}
-              onReject={handleRejectChat}
-            />
-          ))}
-        </div>
-      )}
+      {/* Incoming chat popups - fixed position, highest z-index */}
+      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
+        {pendingIncomingChats.map((incoming) => (
+          <IncomingChatPopup
+            key={incoming.sessionId}
+            sessionId={incoming.sessionId}
+            chatId={incoming.chatId}
+            partnerId={incoming.partnerId}
+            partnerName={incoming.partnerName}
+            partnerPhoto={incoming.partnerPhoto}
+            partnerLanguage={incoming.partnerLanguage}
+            ratePerMinute={incoming.ratePerMinute}
+            startedAt={incoming.startedAt}
+            userGender={userGender}
+            onAccept={handleAcceptChat}
+            onReject={handleRejectChat}
+          />
+        ))}
+      </div>
 
-      {/* Active chat windows - freely draggable with absolute positioning */}
-      {displayedChats.map((chat, index) => (
-        <DraggableMiniChatWindow
-          key={chat.chatId}
-          chatId={chat.chatId}
-          sessionId={chat.id}
-          partnerId={chat.partnerId}
-          partnerName={chat.partnerName}
-          partnerPhoto={chat.partnerPhoto}
-          partnerLanguage={chat.partnerLanguage}
-          isPartnerOnline={chat.isPartnerOnline}
-          currentUserId={currentUserId}
-          currentUserName={currentUserName}
-          currentUserLanguage={currentUserLanguage}
-          userGender={userGender}
-          ratePerMinute={chat.ratePerMinute}
-          earningRatePerMinute={chat.earningRatePerMinute}
-          onClose={() => handleCloseChat(chat.chatId, chat.id)}
-          initialPosition={chat.position}
-          zIndex={chat.zIndex}
-          onFocus={() => handleFocusChat(chat.chatId)}
-        />
-      ))}
+      {/* Active chat windows - responsive side by side layout for all devices */}
+      <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
+        {displayedChats.map((chat) => (
+          <DraggableMiniChatWindow
+            key={chat.chatId}
+            chatId={chat.chatId}
+            sessionId={chat.id}
+            partnerId={chat.partnerId}
+            partnerName={chat.partnerName}
+            partnerPhoto={chat.partnerPhoto}
+            partnerLanguage={chat.partnerLanguage}
+            isPartnerOnline={chat.isPartnerOnline}
+            currentUserId={currentUserId}
+            currentUserLanguage={currentUserLanguage}
+            userGender={userGender}
+            ratePerMinute={chat.ratePerMinute}
+            earningRatePerMinute={chat.earningRatePerMinute}
+            onClose={() => handleCloseChat(chat.chatId, chat.id)}
+            initialPosition={{ x: 0, y: 0 }}
+            zIndex={chat.zIndex}
+            onFocus={() => handleFocusChat(chat.chatId)}
+          />
+        ))}
+      </div>
     </>
   );
 };

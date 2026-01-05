@@ -63,21 +63,12 @@ export const AIElectionPanel = ({
     isLeader,
     hasActiveElection,
     hasVoted,
-    votingExpired,
-    minWomenRequired,
-    nominationDays,
-    votingDays,
-    termMonths,
     startElection,
     nominateCandidate,
     castVote,
     endElection,
     sendAnnouncement
   } = useAIElectionSystem(languageCode, currentUserId);
-
-  // Count women members
-  const womenCount = members.length;
-  const canStartElection = womenCount >= minWomenRequired;
 
   const [showNominateDialog, setShowNominateDialog] = useState(false);
   const [showSelfNominateDialog, setShowSelfNominateDialog] = useState(false);
@@ -154,46 +145,32 @@ export const AIElectionPanel = ({
     <div className="space-y-4">
       {/* AI Badge */}
       <div className="flex items-center justify-between">
-        <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
+        <Badge className="bg-gradient-to-r from-primary to-accent text-white">
           <Sparkles className="h-3 w-3 mr-1" />
           AI-Managed Elections
         </Badge>
         <Badge variant="outline" className="text-xs">
-          {status.termMonths || 12} month term
+          {status.termYears} year term
         </Badge>
       </div>
 
       {/* Voting Period Timer */}
       {hasActiveElection && votingEndsAt && (
-        <Card className={cn(
-          "border",
-          votingExpired 
-            ? "bg-gradient-to-r from-destructive/10 to-warning/10 border-destructive/30"
-            : "bg-gradient-to-r from-info/10 to-secondary/10 border-info/30"
-        )}>
+        <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Timer className={cn("h-4 w-4", votingExpired ? "text-destructive" : "text-info")} />
-                <span className="text-sm font-medium">
-                  {votingExpired ? "Voting Period Ended" : "Voting Period"}
-                </span>
+                <Timer className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">Voting Period</span>
               </div>
               <div className="flex items-center gap-2">
-                {votingExpired ? (
-                  <Badge variant="destructive">EXPIRED</Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-info/10 border-info/30 text-info">
-                    {daysRemaining > 0 ? `${daysRemaining}d ${hoursRemaining}h left` : `${hoursRemaining}h left`}
-                  </Badge>
-                )}
+                <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+                  {daysRemaining > 0 ? `${daysRemaining}d ${hoursRemaining}h left` : `${hoursRemaining}h left`}
+                </Badge>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {votingExpired 
-                ? "Click 'End Election' to declare the winner"
-                : `Ends: ${format(votingEndsAt, "MMM d, yyyy 'at' h:mm a")}`
-              }
+              Ends: {format(votingEndsAt, "MMM d, yyyy 'at' h:mm a")}
             </p>
           </CardContent>
         </Card>
@@ -202,18 +179,18 @@ export const AIElectionPanel = ({
       {/* Current Leader */}
       <Card className={cn(
         "border-2",
-        leader ? "border-crown/30 bg-crown/5" : "border-muted"
+        leader ? "border-amber-500/30 bg-amber-500/5" : "border-muted"
       )}>
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-crown/20">
-              <Crown className="h-5 w-5 text-crown" />
+            <div className="p-2 rounded-full bg-amber-500/20">
+              <Crown className="h-5 w-5 text-amber-500" />
             </div>
             {leader ? (
               <div className="flex items-center gap-3 flex-1">
-                <Avatar className="h-10 w-10 border-2 border-crown/50">
+                <Avatar className="h-10 w-10 border-2 border-amber-500/50">
                   <AvatarImage src={leader.photo_url || ""} />
-                  <AvatarFallback className="bg-crown/20">{leader.full_name?.[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-amber-500/20">{leader.full_name?.[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-semibold">{leader.full_name}</p>
@@ -237,28 +214,23 @@ export const AIElectionPanel = ({
         </CardContent>
       </Card>
 
-      {/* Leader Responsibilities - Full Dashboard for Leaders */}
+      {/* Leader Responsibilities */}
       {leader && (
-        <Card className={cn("bg-muted/50", isLeader && "border-primary/30 border-2")}>
+        <Card className="bg-muted/50">
           <CardContent className="p-3">
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-              {isLeader ? "Your Leader Responsibilities:" : "Leader Responsibilities:"}
-            </p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Leader Responsibilities:</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex items-center gap-1">
-                <Users className="h-3 w-3 text-primary" /> Manage {womenCount} women
+                <Clock className="h-3 w-3" /> Coordinate shifts
               </div>
               <div className="flex items-center gap-1">
-                <Shield className="h-3 w-3 text-primary" /> Solve issues
+                <Calendar className="h-3 w-3" /> Schedule management
               </div>
               <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3 text-primary" /> Coordinate shifts
+                <Users className="h-3 w-3" /> Assist new users
               </div>
               <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-primary" /> Build teams
-              </div>
-              <div className="flex items-center gap-1 col-span-2">
-                <Megaphone className="h-3 w-3 text-primary" /> Communicate with Admin & post announcements
+                <Shield className="h-3 w-3" /> Resolve disputes
               </div>
             </div>
           </CardContent>
@@ -284,7 +256,7 @@ export const AIElectionPanel = ({
       <Card className={cn(
         "border-2",
         hasActiveElection 
-          ? "border-success/30 bg-success/5" 
+          ? "border-green-500/30 bg-green-500/5" 
           : "border-muted"
       )}>
         <CardHeader className="pb-2">
@@ -294,7 +266,7 @@ export const AIElectionPanel = ({
               {hasActiveElection ? "Election in Progress" : "Elections"}
             </div>
             {hasActiveElection && (
-              <Badge className="bg-live text-live-foreground animate-pulse">LIVE</Badge>
+              <Badge className="bg-green-500 animate-pulse">LIVE</Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -319,10 +291,7 @@ export const AIElectionPanel = ({
                 {sortedCandidates.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground text-sm">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>{votingExpired 
-                      ? "No candidates ran in this election. Start a new one!"
-                      : "No candidates yet. Be the first to run!"
-                    }</p>
+                    <p>No candidates yet. Be the first to run!</p>
                   </div>
                 ) : (
                   sortedCandidates.map((candidate, index) => {
@@ -345,7 +314,7 @@ export const AIElectionPanel = ({
                                 </AvatarFallback>
                               </Avatar>
                               {isLeading && (
-                                <Award className="h-4 w-4 text-crown absolute -top-1 -right-1" />
+                                <Award className="h-4 w-4 text-amber-500 absolute -top-1 -right-1" />
                               )}
                             </div>
                             <div>
@@ -357,7 +326,7 @@ export const AIElectionPanel = ({
                           </div>
                           <div className="flex items-center gap-2">
                             {isLeading && (
-                              <Badge className="bg-crown text-crown-foreground text-xs py-0">
+                              <Badge className="bg-amber-500 text-white text-xs py-0">
                                 Leading
                               </Badge>
                             )}
@@ -373,32 +342,8 @@ export const AIElectionPanel = ({
 
               {/* Action Buttons */}
               <div className="space-y-2 pt-2">
-                {/* Voting Expired with Candidates - Show End Election Button */}
-                {votingExpired && candidates.length >= 1 && (
-                  <Button 
-                    className="w-full bg-primary"
-                    onClick={endElection}
-                    disabled={isProcessing}
-                  >
-                    <Trophy className="h-4 w-4 mr-2" />
-                    End Election & Declare Winner
-                  </Button>
-                )}
-
-                {/* Voting Expired with NO Candidates - Show Start New Election */}
-                {votingExpired && candidates.length === 0 && (
-                  <Button 
-                    className="w-full"
-                    onClick={startElection}
-                    disabled={isProcessing}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Start New Election
-                  </Button>
-                )}
-
-                {/* Vote Button - Only if voting not expired */}
-                {!votingExpired && !hasVoted ? (
+                {/* Vote Button */}
+                {!hasVoted ? (
                   <Button 
                     className="w-full" 
                     onClick={() => setShowVoteDialog(true)}
@@ -407,15 +352,15 @@ export const AIElectionPanel = ({
                     <Vote className="h-4 w-4 mr-2" />
                     Cast Your Vote (Anonymous)
                   </Button>
-                ) : !votingExpired && hasVoted ? (
-                  <Badge variant="outline" className="w-full justify-center py-2 bg-primary/10 border-primary/30 text-primary">
+                ) : (
+                  <Badge variant="outline" className="w-full justify-center py-2 bg-green-500/10 border-green-500/30 text-green-600">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     You have voted
                   </Badge>
-                ) : null}
+                )}
 
-                {/* Self Nominate - Only if voting not expired */}
-                {!votingExpired && !isCurrentUserCandidate && (
+                {/* Self Nominate */}
+                {!isCurrentUserCandidate && (
                   <Button 
                     variant="secondary" 
                     className="w-full"
@@ -427,75 +372,46 @@ export const AIElectionPanel = ({
                   </Button>
                 )}
 
-                {/* Nominate Others - Only if voting not expired */}
-                {!votingExpired && (
+                {/* Nominate Others */}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowNominateDialog(true)}
+                  disabled={isProcessing}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nominate Someone Else
+                </Button>
+
+                {/* End Election (for testing - in prod AI auto-ends) */}
+                {totalVotes > 0 && candidates.length >= 1 && (
                   <Button 
-                    variant="outline" 
+                    variant="destructive" 
                     size="sm"
                     className="w-full"
-                    onClick={() => setShowNominateDialog(true)}
-                    disabled={isProcessing}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Nominate Someone Else
-                  </Button>
-                )}
-
-                {/* End Election Button - For when voting NOT expired but has votes */}
-                {!votingExpired && totalVotes > 0 && candidates.length >= 1 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
                     onClick={endElection}
                     disabled={isProcessing}
                   >
-                    End Election Early
+                    End Election & Declare Winner
                   </Button>
                 )}
               </div>
             </>
           ) : (
             <>
-              {/* Minimum Women Requirement */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Women in Group:</span>
-                  <Badge variant={canStartElection ? "default" : "destructive"}>
-                    {womenCount} / {minWomenRequired} required
-                  </Badge>
-                </div>
-                {!canStartElection && (
-                  <p className="text-xs text-destructive">
-                    Need at least {minWomenRequired} women to start an election. 
-                    Currently {minWomenRequired - womenCount} more needed.
-                  </p>
-                )}
-              </div>
-              
               <p className="text-sm text-muted-foreground">
                 {needsNewElection 
                   ? "The leader's term has ended. Start a new election!"
-                  : "No active election. Any eligible woman can start one."}
+                  : "No active election. Any member can start one."}
               </p>
-              
-              {/* Election Timeline Info */}
-              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 space-y-1">
-                <p><strong>Nomination Phase:</strong> {nominationDays} days</p>
-                <p><strong>Voting Phase:</strong> {votingDays} days</p>
-                <p><strong>Leader Term:</strong> {termMonths} months</p>
-              </div>
-              
               <Button 
                 className="w-full" 
                 onClick={startElection}
-                disabled={isProcessing || !canStartElection}
+                disabled={isProcessing}
               >
                 <Play className="h-4 w-4 mr-2" />
-                {canStartElection 
-                  ? `Start Election (${nominationDays + votingDays} days total)`
-                  : `Need ${minWomenRequired - womenCount} more women`
-                }
+                Start New Election (7-day voting)
               </Button>
             </>
           )}

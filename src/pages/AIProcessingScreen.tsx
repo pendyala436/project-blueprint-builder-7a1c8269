@@ -142,33 +142,19 @@ const AIProcessingScreen = () => {
       // Save verification result to Supabase
       await saveVerificationResult(result);
 
-      if (result.verified && result.detectedGender !== 'unknown') {
-        if (result.genderMatches) {
-          // Gender matches - success
-          setVerificationStatus("success");
-          toast({
-            title: "Gender Verified! ✓",
-            description: `Gender is same as selected: ${result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`,
-          });
-        } else {
-          // Gender doesn't match - auto-correct and continue
-          const correctedGender = result.detectedGender as 'male' | 'female';
-          localStorage.setItem("userGender", correctedGender);
-          
-          setVerificationStatus("success");
-          toast({
-            title: "Gender Corrected",
-            description: `Gender selected was different. We are correcting the gender to ${correctedGender} and proceeding.`,
-          });
-          
-          // Update the result to reflect the correction
-          setVerificationResult({
-            ...result,
-            genderCorrected: true,
-            originalGender: expectedGender,
-            correctedGender: correctedGender
-          });
-        }
+      if (result.verified && result.genderMatches) {
+        setVerificationStatus("success");
+        toast({
+          title: "Verification Successful! ✓",
+          description: `Gender verified as ${result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`,
+        });
+      } else if (!result.genderMatches) {
+        setVerificationStatus("failed");
+        toast({
+          title: "Gender Mismatch",
+          description: `Expected ${expectedGender}, but detected ${result.detectedGender}. Please try again.`,
+          variant: "destructive",
+        });
       } else {
         setVerificationStatus("failed");
         toast({
@@ -391,23 +377,10 @@ const AIProcessingScreen = () => {
                   : "bg-destructive/10 text-destructive border border-destructive/20"
               }`}>
                 {verificationStatus === "success" ? (
-                  verificationResult.genderCorrected ? (
-                    <div className="space-y-1">
-                      <p className="font-medium">⚠️ Gender Corrected</p>
-                      <p>
-                        Selected: <span className="capitalize">{verificationResult.originalGender}</span> → 
-                        Detected: <span className="font-semibold capitalize">{verificationResult.correctedGender}</span>
-                      </p>
-                      <p className="text-xs opacity-80">
-                        Your gender has been updated to {verificationResult.correctedGender}
-                      </p>
-                    </div>
-                  ) : (
-                    <p>
-                      ✓ Gender is same: <span className="font-semibold capitalize">{verificationResult.detectedGender}</span>
-                      {" "}({Math.round(verificationResult.confidence * 100)}% confidence)
-                    </p>
-                  )
+                  <p>
+                    ✓ Verified as <span className="font-semibold capitalize">{verificationResult.detectedGender}</span>
+                    {" "}({Math.round(verificationResult.confidence * 100)}% confidence)
+                  </p>
                 ) : (
                   <p>{verificationResult.reason}</p>
                 )}

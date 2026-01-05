@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.reset-password]
 verify_jwt = false
 
+[functions.translate-message]
+verify_jwt = false
+
 [functions.shift-scheduler]
 verify_jwt = false
 
@@ -43,13 +46,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.ai-election-manager]
-verify_jwt = false
-
-[functions.gender-detection]
-verify_jwt = false
-
-[functions.community-chat-cleanup]
-verify_jwt = false
-
-[functions.shift-auto-scheduler]
 verify_jwt = false

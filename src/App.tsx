@@ -65,7 +65,6 @@ const SettingsScreen = lazy(() => import(/* webpackChunkName: "settings" */ "./p
 const ShiftManagementScreen = lazy(() => import(/* webpackChunkName: "shifts" */ "./pages/ShiftManagementScreen"));
 const WomenDashboardScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/WomenDashboardScreen"));
 const WomenWalletScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/WomenWalletScreen"));
-const WomenTransactionHistoryScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/WomenTransactionHistoryScreen"));
 const ApprovalPendingScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/ApprovalPendingScreen"));
 const AdminAnalyticsDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminAnalyticsDashboard"));
 const AdminDashboard = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminDashboard"));
@@ -89,24 +88,21 @@ const AdminLanguageLimits = lazy(() => import(/* webpackChunkName: "admin" */ ".
 const PasswordResetScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetScreen"));
 const PasswordResetSuccessScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetSuccessScreen"));
 const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminTransactionHistory"));
-const AdminLeadersScreen = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminLeadersScreen"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
 
-
-// ULTRA-AGGRESSIVE React Query caching - minimize network calls
+// Ultra-optimized React Query - maximum caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 60 * 1000, // 30 minutes - data stays fresh longer
-      gcTime: 2 * 60 * 60 * 1000, // 2 hours - keep in memory longer
+      staleTime: 15 * 60 * 1000, // 15 minutes
+      gcTime: 60 * 60 * 1000, // 1 hour gc
       retry: 0, // No retries for speed
-      refetchOnWindowFocus: false, // Never refetch on focus
-      refetchOnMount: false, // Never refetch on mount
-      refetchOnReconnect: false, // Never refetch on reconnect
-      networkMode: 'offlineFirst', // Always try cache first
-      structuralSharing: true, // Reduce re-renders
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      networkMode: 'offlineFirst',
     },
     mutations: {
       retry: 0,
@@ -198,7 +194,6 @@ const App = () => (
             <Route path="/shift-management" element={<LazyRoute component={ShiftManagementScreen} />} />
             <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
             <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} />} />
-            <Route path="/women-transactions" element={<LazyRoute component={WomenTransactionHistoryScreen} />} />
             <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} />} />
             <Route path="/admin" element={<LazyRoute component={AdminDashboard} />} />
             <Route path="/admin/analytics" element={<LazyRoute component={AdminAnalyticsDashboard} />} />
@@ -220,10 +215,8 @@ const App = () => (
             <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
             <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
             <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
-            <Route path="/admin/leaders" element={<LazyRoute component={AdminLeadersScreen} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
-            
             <Route path="*" element={<LazyRoute component={NotFound} />} />
           </Routes>
         </AutoLogoutWrapper>

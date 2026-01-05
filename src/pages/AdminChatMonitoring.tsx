@@ -538,14 +538,14 @@ const AdminChatMonitoring = () => {
     switch (message.moderation_status) {
       case "cleared":
         return (
-          <Badge variant="secondary" className="gap-1 bg-success/20 text-success">
+          <Badge variant="secondary" className="gap-1 bg-green-500/20 text-green-600">
             <CheckCircle className="h-3 w-3" />
             Cleared
           </Badge>
         );
       case "removed":
         return (
-          <Badge variant="secondary" className="gap-1 bg-destructive/20 text-destructive">
+          <Badge variant="secondary" className="gap-1 bg-red-500/20 text-red-600">
             <XCircle className="h-3 w-3" />
             Removed
           </Badge>
@@ -627,7 +627,7 @@ const AdminChatMonitoring = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-warning">
+              <div className="text-2xl font-bold text-yellow-600">
                 {messages.filter((m) => m.moderation_status === "pending").length}
               </div>
               <div className="text-sm text-muted-foreground">Pending Review</div>
@@ -635,7 +635,7 @@ const AdminChatMonitoring = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-success">
+              <div className="text-2xl font-bold text-green-600">
                 {messages.filter((m) => m.moderation_status === "cleared").length}
               </div>
               <div className="text-sm text-muted-foreground">Cleared</div>
@@ -777,7 +777,7 @@ const AdminChatMonitoring = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-success hover:text-success hover:bg-success/10"
+                                className="text-green-600 hover:text-green-600 hover:bg-green-600/10"
                                 onClick={() => handleUnflag(message)}
                               >
                                 <CheckCircle className="h-4 w-4" />
@@ -819,8 +819,8 @@ const AdminChatMonitoring = () => {
                           key={msg.id}
                           className={`p-3 rounded-lg max-w-[80%] ${
                             profiles[msg.sender_id]?.gender === "male"
-                              ? "bg-male/10 ml-0"
-                              : "bg-female/10 ml-auto"
+                              ? "bg-blue-500/10 ml-0"
+                              : "bg-pink-500/10 ml-auto"
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -1134,7 +1134,7 @@ const AdminChatMonitoring = () => {
               <>
                 <Button
                   variant="outline"
-                  className="text-success"
+                  className="text-green-600"
                   onClick={() => {
                     handleResolve(selectedMessage, "cleared");
                     setViewDialogOpen(false);

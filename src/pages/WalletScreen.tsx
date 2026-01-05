@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
+  ArrowLeft, 
   Wallet, 
   Plus, 
   ArrowUpRight, 
@@ -43,7 +44,6 @@ import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
-import NavigationHeader from "@/components/NavigationHeader";
 
 interface WalletData {
   id: string;
@@ -416,35 +416,38 @@ const WalletScreen = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="max-w-md mx-auto px-4 py-2">
-          <NavigationHeader
-            title={t('myWallet', 'My Wallet')}
-            showBack={true}
-            showHome={true}
-            showForward={false}
-            rightContent={
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/transaction-history")}
-                  className="rounded-full"
-                  title="Transaction History"
-                >
-                  <History className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="rounded-full"
-                >
-                  <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
-                </Button>
-              </div>
-            }
-          />
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">{t('myWallet', 'My Wallet')}</h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => navigate("/transaction-history")}
+              className="rounded-full"
+              title="Transaction History"
+            >
+              <History className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="auroraGhost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-full"
+            >
+              <RefreshCw className={cn("h-5 w-5", refreshing && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -752,8 +755,8 @@ const WalletScreen = () => {
                       <div className={cn(
                         "p-2 rounded-full",
                         tx.type === "credit" 
-                          ? "bg-success/10 text-success" 
-                          : "bg-destructive/10 text-destructive"
+                          ? "bg-green-500/10 text-green-500" 
+                          : "bg-red-500/10 text-red-500"
                       )}>
                         {tx.type === "credit" ? (
                           <ArrowDownLeft className="h-4 w-4" />
@@ -773,7 +776,7 @@ const WalletScreen = () => {
                     <div className="text-right">
                       <p className={cn(
                         "font-semibold",
-                        tx.type === "credit" ? "text-success" : "text-destructive"
+                        tx.type === "credit" ? "text-green-500" : "text-red-500"
                       )}>
                         {tx.type === "credit" ? "+" : "-"}₹{tx.amount.toFixed(2)}
                       </p>

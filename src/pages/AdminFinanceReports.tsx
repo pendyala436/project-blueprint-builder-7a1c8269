@@ -678,8 +678,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-male/10 rounded-lg">
-                  <Users className="h-6 w-6 text-male" />
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <Users className="h-6 w-6 text-blue-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Men</p>
@@ -692,8 +692,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-female/10 rounded-lg">
-                  <Users className="h-6 w-6 text-female" />
+                <div className="p-3 bg-pink-500/10 rounded-lg">
+                  <Users className="h-6 w-6 text-pink-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Women</p>
@@ -706,8 +706,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-destructive/10 rounded-lg">
-                  <TrendingDown className="h-6 w-6 text-destructive" />
+                <div className="p-3 bg-red-500/10 rounded-lg">
+                  <TrendingDown className="h-6 w-6 text-red-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Men Spending</p>
@@ -720,8 +720,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-warning/10 rounded-lg">
-                  <IndianRupee className="h-6 w-6 text-warning" />
+                <div className="p-3 bg-orange-500/10 rounded-lg">
+                  <IndianRupee className="h-6 w-6 text-orange-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Women Earnings</p>
@@ -731,15 +731,15 @@ const AdminFinanceReports = () => {
             </CardContent>
           </Card>
 
-          <Card className={totals.totalProfit >= 0 ? "border-success/50" : "border-destructive/50"}>
+          <Card className={totals.totalProfit >= 0 ? "border-green-500/50" : "border-red-500/50"}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-lg ${totals.totalProfit >= 0 ? "bg-success/10" : "bg-destructive/10"}`}>
-                  <DollarSign className={`h-6 w-6 ${totals.totalProfit >= 0 ? "text-success" : "text-destructive"}`} />
+                <div className={`p-3 rounded-lg ${totals.totalProfit >= 0 ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                  <DollarSign className={`h-6 w-6 ${totals.totalProfit >= 0 ? "text-green-500" : "text-red-500"}`} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Platform Profit</p>
-                  <p className={`text-2xl font-bold ${totals.totalProfit >= 0 ? "text-success" : "text-destructive"}`}>
+                  <p className={`text-2xl font-bold ${totals.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {totals.totalProfit >= 0 ? "+" : ""}₹{totals.totalProfit.toFixed(0)}
                   </p>
                 </div>
@@ -910,7 +910,7 @@ const AdminFinanceReports = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Languages className="h-5 w-5 text-secondary-foreground" />
+                <Languages className="h-5 w-5 text-purple-500" />
                 Chat Wait Queue by Language
               </CardTitle>
             </CardHeader>
@@ -1049,7 +1049,7 @@ const AdminFinanceReports = () => {
                           <TableCell>{w.language}</TableCell>
                           <TableCell className="text-right">₹{w.chat_earnings.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{w.gift_earnings.toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-bold text-success">₹{w.total_earned.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-bold text-green-600">₹{w.total_earned.toFixed(2)}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -1098,7 +1098,7 @@ const AdminFinanceReports = () => {
                           </TableCell>
                           <TableCell className="text-right">₹{c.men_spending.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{c.women_earnings.toFixed(2)}</TableCell>
-                          <TableCell className={`text-right font-bold ${c.profit >= 0 ? "text-success" : "text-destructive"}`}>
+                          <TableCell className={`text-right font-bold ${c.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                             {c.profit >= 0 ? "+" : ""}₹{c.profit.toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right">{c.user_count}</TableCell>
@@ -1150,7 +1150,7 @@ const AdminFinanceReports = () => {
                           </TableCell>
                           <TableCell className="text-right">₹{l.men_spending.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{l.women_earnings.toFixed(2)}</TableCell>
-                          <TableCell className={`text-right font-bold ${l.profit >= 0 ? "text-success" : "text-destructive"}`}>
+                          <TableCell className={`text-right font-bold ${l.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                             {l.profit >= 0 ? "+" : ""}₹{l.profit.toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right">{l.user_count}</TableCell>

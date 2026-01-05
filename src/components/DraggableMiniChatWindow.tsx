@@ -22,26 +22,32 @@ import {
   Wallet,
   AlertTriangle,
   GripVertical,
+  Move,
   Paperclip,
-  Camera,
   Image,
   Video,
   FileText,
-  MoreVertical,
-  Eye,
-  EyeOff
+  Mic,
+  Square,
+  Languages
 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { HoldToRecordButton } from "@/components/HoldToRecordButton";
-import { VoiceRecordButton } from "@/components/VoiceRecordButton";
+import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { useProductionChat } from "@/hooks/useProductionChat";
+import { 
+  translate, 
+  convertToNativeScript, 
+  processIncomingMessage as dlProcessIncoming,
+  isSameLanguage,
+  isLatinScript,
+  isLatinScriptLanguage
+} from "@/lib/dl-translate";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -65,7 +71,6 @@ interface DraggableMiniChatWindowProps {
   partnerLanguage: string;
   isPartnerOnline: boolean;
   currentUserId: string;
-  currentUserName: string;
   currentUserLanguage: string;
   userGender: "male" | "female";
   ratePerMinute: number;
@@ -85,7 +90,6 @@ const DraggableMiniChatWindow = ({
   partnerLanguage,
   isPartnerOnline,
   currentUserId,
-  currentUserName,
   currentUserLanguage,
   userGender,
   ratePerMinute,
@@ -96,28 +100,8 @@ const DraggableMiniChatWindow = ({
   onFocus
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
-  const { 
-    livePreview,
-    updateLivePreview,
-    clearLivePreview,
-    processOutgoingMessage,
-    processIncomingMessage,
-    isLatinScript,
-    isSameLanguage,
-    needsNativeConversion,
-    isTranslating,
-    initializeModel,
-    isModelReady
-  } = useProductionChat({ 
-    currentUserId,
-    currentUserLanguage, 
-    partnerId,
-    partnerLanguage 
-  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isComposing, setIsComposing] = useState(false);
-  const [displayMessage, setDisplayMessage] = useState(""); // Native script display
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -132,15 +116,15 @@ const DraggableMiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [showActions, setShowActions] = useState(false);
+  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
+  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
-  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
+  // Check if translation is needed
+  const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
+  const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
+
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -183,28 +167,6 @@ const DraggableMiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // Track Latin input separately to avoid double conversion
-  const lastLatinInputRef = useRef<string>('');
-  const isConvertingRef = useRef(false);
-
-  // Real-time transliteration using NLLB production hook
-  useEffect(() => {
-    if (newMessage.trim()) {
-      updateLivePreview(newMessage);
-    } else {
-      clearLivePreview();
-    }
-  }, [newMessage, updateLivePreview, clearLivePreview]);
-
-  // Update display message from live preview
-  useEffect(() => {
-    if (livePreview.nativePreview) {
-      setDisplayMessage(livePreview.nativePreview);
-    } else {
-      setDisplayMessage(newMessage);
-    }
-  }, [livePreview.nativePreview, newMessage]);
-
   // Dragging handlers - supports both mouse and touch
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
@@ -233,13 +195,9 @@ const DraggableMiniChatWindow = ({
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
       
-      // Constrain within viewport
-      const maxX = window.innerWidth - size.width;
-      const maxY = window.innerHeight - size.height;
-      
       setPosition({
-        x: Math.max(0, Math.min(maxX, dragRef.current.startPosX + deltaX)),
-        y: Math.max(0, Math.min(maxY, dragRef.current.startPosY + deltaY))
+        x: Math.max(0, dragRef.current.startPosX + deltaX),
+        y: Math.max(0, dragRef.current.startPosY + deltaY)
       });
     };
 
@@ -261,34 +219,27 @@ const DraggableMiniChatWindow = ({
       document.removeEventListener("touchmove", handleMove);
       document.removeEventListener("touchend", handleEnd);
     };
-  }, [isDragging, size]);
+  }, [isDragging]);
 
-  // Resize handlers - supports both mouse and touch
-  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  // Resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
     resizeRef.current = {
       startWidth: size.width,
       startHeight: size.height,
-      startX: clientX,
-      startY: clientY
+      startX: e.clientX,
+      startY: e.clientY
     };
   }, [size]);
 
   useEffect(() => {
-    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
+    const handleResizeMove = (e: MouseEvent) => {
       if (!isResizing || !resizeRef.current) return;
       
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
-      const deltaX = clientX - resizeRef.current.startX;
-      const deltaY = clientY - resizeRef.current.startY;
+      const deltaX = e.clientX - resizeRef.current.startX;
+      const deltaY = e.clientY - resizeRef.current.startY;
       
       setSize({
         width: Math.max(280, Math.min(600, resizeRef.current.startWidth + deltaX)),
@@ -304,15 +255,11 @@ const DraggableMiniChatWindow = ({
     if (isResizing) {
       document.addEventListener("mousemove", handleResizeMove);
       document.addEventListener("mouseup", handleResizeEnd);
-      document.addEventListener("touchmove", handleResizeMove, { passive: false });
-      document.addEventListener("touchend", handleResizeEnd);
     }
 
     return () => {
       document.removeEventListener("mousemove", handleResizeMove);
       document.removeEventListener("mouseup", handleResizeEnd);
-      document.removeEventListener("touchmove", handleResizeMove);
-      document.removeEventListener("touchend", handleResizeEnd);
     };
   }, [isResizing]);
 
@@ -359,20 +306,12 @@ const DraggableMiniChatWindow = ({
     loadInitialData();
   }, [currentUserId, userGender, ratePerMinute, earningRatePerMinute]);
 
-  // Load messages and subscribe - with retry to catch race conditions
+  // Load messages and subscribe
   useEffect(() => {
-    // Load immediately
     loadMessages();
-    
-    // Retry after short delay to catch any messages that arrived during window initialization
-    const retryTimeout = setTimeout(() => {
-      loadMessages();
-    }, 500);
-    
     const unsubscribe = subscribeToMessages();
 
     return () => {
-      clearTimeout(retryTimeout);
       if (timerRef.current) clearInterval(timerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
@@ -600,41 +539,25 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // Auto-translate a message using NLLB-200
-  // Skip translation entirely if both users have the same native language
-  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
+  // Auto-translate a message to current user's language using dl-translate
+  const translateMessage = useCallback(async (text: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Determine sender language based on who sent the message
-    const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
-    
-    // Same language - no translation needed, just display as-is
-    if (isSameLanguage(senderLang, currentUserLanguage)) {
+    try {
+      // Use dl-translate to process incoming message
+      const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
+      return {
+        translatedMessage: result.text,
+        isTranslated: result.isTranslated,
+        detectedLanguage: result.detectedLanguage
+      };
+    } catch (error) {
+      console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-    
-    // Only translate incoming messages (from partner) to current user's language
-    if (senderId !== currentUserId) {
-      try {
-        // Translate from partner's language to current user's language using NLLB
-        const result = await processIncomingMessage(text, senderId, partnerLanguage);
-        
-        return {
-          translatedMessage: result.displayText,
-          isTranslated: result.isTranslated,
-          detectedLanguage: partnerLanguage
-        };
-      } catch (error) {
-        console.error('[DraggableMiniChatWindow] Translation error:', error);
-        return { translatedMessage: text, isTranslated: false };
-      }
-    }
-    
-    // For own messages, no translation needed (displayed as-is)
-    return { translatedMessage: text, isTranslated: false };
-  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, processIncomingMessage]);
+  }, [partnerLanguage, currentUserLanguage]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -645,44 +568,28 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // First, show messages immediately without translation (non-blocking)
-      const initialMessages = data.map((m) => ({
-        id: m.id,
-        senderId: m.sender_id,
-        message: m.message,
-        translatedMessage: m.message, // Show original initially
-        isTranslated: false,
-        detectedLanguage: undefined,
-        createdAt: m.created_at
-      }));
-      setMessages(initialMessages);
-
-      // Then translate partner messages in parallel (non-blocking background task)
-      data.forEach(async (m) => {
-        if (m.sender_id !== currentUserId) {
-          try {
-            const translation = await translateMessage(m.message, m.sender_id);
-            if (translation.isTranslated) {
-              setMessages(prev => prev.map(msg => 
-                msg.id === m.id 
-                  ? { ...msg, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
-                  : msg
-              ));
-            }
-          } catch (err) {
-            console.error('Background translation error:', err);
-          }
-        }
-      });
+      // Translate ALL messages to current user's language
+      const translatedMessages = await Promise.all(
+        data.map(async (m) => {
+          const translation = await translateMessage(m.message);
+          return {
+            id: m.id,
+            senderId: m.sender_id,
+            message: m.message,
+            translatedMessage: translation.translatedMessage,
+            isTranslated: translation.isTranslated,
+            detectedLanguage: translation.detectedLanguage,
+            createdAt: m.created_at
+          };
+        })
+      );
+      setMessages(translatedMessages);
     }
   };
 
   const subscribeToMessages = () => {
-    console.log(`[RealTime] Setting up draggable subscription for chat: ${chatId}, user: ${currentUserId}`);
-
-    // Simple channel without broadcast/presence config (more reliable)
     const channel = supabase
-      .channel(`draggable-chat-messages-${chatId}`)
+      .channel(`draggable-chat-${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -691,58 +598,36 @@ const DraggableMiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newMsg = payload.new;
-          console.log(`[RealTime] Draggable received message:`, newMsg?.id, 'from:', newMsg?.sender_id);
-
-          if (!newMsg) return;
-
-          // Skip if message is from current user (already added locally)
-          if (newMsg.sender_id === currentUserId) {
-            return;
-          }
-
-          // Add message immediately - show original first
+          // Translate to current user's language
+          const translation = await translateMessage(newMsg.message);
+          
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: newMsg.message,
-              isTranslated: false,
-              detectedLanguage: undefined,
+              translatedMessage: translation.translatedMessage,
+              isTranslated: translation.isTranslated,
+              detectedLanguage: translation.detectedLanguage,
               createdAt: newMsg.created_at
             }];
           });
 
-          // Update activity time for incoming messages
-          setLastActivityTime(Date.now());
-
-          if (isMinimized) {
-            setUnreadCount(prev => prev + 1);
+          if (newMsg.sender_id !== currentUserId) {
+            setLastActivityTime(Date.now());
           }
 
-          // Translate in background
-          translateMessage(newMsg.message, newMsg.sender_id)
-            .then(translation => {
-              if (translation.isTranslated) {
-                setMessages(prev => prev.map(m => 
-                  m.id === newMsg.id
-                    ? { ...m, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
-                    : m
-                ));
-              }
-            })
-            .catch(err => console.error('[RealTime] Draggable translation error:', err));
+          if (isMinimized && newMsg.sender_id !== currentUserId) {
+            setUnreadCount(prev => prev + 1);
+          }
         }
       )
-      .subscribe((status, err) => {
-        console.log(`[RealTime] Draggable subscription status: ${status}`, err ? `Error: ${err.message}` : '');
-      });
+      .subscribe();
 
     return () => {
-      console.log(`[RealTime] Draggable unsubscribing from chat: ${chatId}`);
       supabase.removeChannel(channel);
     };
   };
@@ -791,15 +676,12 @@ const DraggableMiniChatWindow = ({
 
   const MAX_MESSAGE_LENGTH = 2000;
 
-  const sendMessage = () => {
-    if (isComposing || isSending || isBlocked) return;
+  const sendMessage = async () => {
+    if (!newMessage.trim() || isSending) return;
 
-    const rawInput = (messageInputRef.current?.value ?? newMessage);
-    if (!rawInput.trim()) return;
-
-    const trimmedInput = rawInput.trim();
+    const messageText = newMessage.trim();
     
-    if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
+    if (messageText.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
@@ -808,123 +690,50 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // Capture displayMessage BEFORE clearing state
-    const currentPreview = displayMessage?.trim() || '';
-    
-    // CRITICAL FIX: Only use preview if it was generated from the EXACT same input
-    // lastLatinInputRef tracks what input the preview was generated from
-    const previewMatchesInput = lastLatinInputRef.current === trimmedInput;
-
-    // Clear input IMMEDIATELY - don't block user from typing next message
     setNewMessage("");
-    setDisplayMessage("");
-    lastLatinInputRef.current = ''; // Reset Latin input tracking
+    setLivePreview({ text: '', isLoading: false }); // Clear live preview
     setIsSending(true);
     setLastActivityTime(Date.now());
 
-    // Determine message text - use preview if available AND matches input, otherwise flag for background conversion
-    let messageText = trimmedInput;
-    let needsBackgroundConversion = false;
-    
-    // Check if we have a valid native script preview ready
-    // Don't require exact input match - just check if preview is native script and non-empty
-    const hasValidPreview = currentPreview && 
-                           currentPreview !== trimmedInput && 
-                           !isLatinScript(currentPreview);
-    
-    if (hasValidPreview) {
-      // Use the pre-converted preview
-      messageText = currentPreview;
-      console.log('[DraggableMiniChatWindow] Using native preview:', messageText);
-    } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
-      // No preview ready - flag for background conversion when sender types Latin
-      needsBackgroundConversion = true;
-      console.log('[DraggableMiniChatWindow] Preview not ready, will convert in background:', trimmedInput);
-    }
-
-    // Optimistic update - show native script to sender immediately if available
-    const tempId = `temp-${Date.now()}`;
-    const displayText = hasValidPreview ? messageText : trimmedInput;
-    const optimisticMessage: Message = {
-      id: tempId,
-      senderId: currentUserId,
-      message: displayText, // Show native if available, otherwise Latin (will be updated)
-      translatedMessage: displayText,
-      isTranslated: false,
-      createdAt: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, optimisticMessage]);
-
-    // Send in background - don't await
-    (async () => {
-      try {
-        let finalMessageText = messageText;
-        
-        // If we need background conversion, use NLLB production hook
-        if (needsBackgroundConversion) {
-          try {
-            console.log('[DraggableMiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
-            const processed = await processOutgoingMessage(trimmedInput);
-            if (processed.senderNativeText && processed.senderNativeText !== trimmedInput) {
-              finalMessageText = processed.senderNativeText;
-              console.log('[DraggableMiniChatWindow] Converted to:', finalMessageText);
-              // Update optimistic message with converted text immediately
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, message: finalMessageText, translatedMessage: finalMessageText }
-                  : m
-              ));
-            }
-          } catch (convErr) {
-            console.error('[DraggableMiniChatWindow] Background conversion failed:', convErr);
-            // Continue with original text if conversion fails
-          }
+    try {
+      // Convert to user's native script using dl-translate
+      let processedMessage = messageText;
+      
+      // If user types in Latin and their language uses non-Latin script, convert
+      if (transliterationEnabled && needsScriptConversion && isLatinScript(messageText)) {
+        try {
+          const converted = await convertToNativeScript(messageText, currentUserLanguage);
+          processedMessage = converted.text || messageText;
+          console.log('[DraggableMiniChatWindow] Converted:', messageText, '->', processedMessage);
+        } catch (err) {
+          console.error('[DraggableMiniChatWindow] Script conversion error:', err);
         }
-
-        const { data: insertedMsg, error } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: finalMessageText
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Replace optimistic message with real one - keep the converted message text
-        if (insertedMsg) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempId 
-              ? {
-                  id: insertedMsg.id,
-                  senderId: insertedMsg.sender_id,
-                  message: insertedMsg.message,
-                  translatedMessage: insertedMsg.message,
-                  isTranslated: false,
-                  createdAt: insertedMsg.created_at
-                }
-              : m
-          ));
-        }
-      } catch (error) {
-        console.error("Error sending message:", error);
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        toast({
-          title: "Error",
-          description: "Failed to send message",
-          variant: "destructive"
-        });
-      } finally {
-        setIsSending(false);
       }
-    })();
+      
+      const { error } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: currentUserId,
+          receiver_id: partnerId,
+          message: processedMessage // Store in sender's native script
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setNewMessage(messageText);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -945,26 +754,21 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  const handleClose = useCallback(() => {
-    // Immediately close the UI (don't wait for database)
+  const handleClose = async () => {
+    try {
+      await supabase
+        .from("active_chat_sessions")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          end_reason: "user_closed"
+        })
+        .eq("id", sessionId);
+    } catch (error) {
+      console.error("Error closing chat:", error);
+    }
     onClose();
-    
-    // Update database in background
-    (async () => {
-      try {
-        await supabase
-          .from("active_chat_sessions")
-          .update({
-            status: "ended",
-            ended_at: new Date().toISOString(),
-            end_reason: "user_closed"
-          })
-          .eq("id", sessionId);
-      } catch (error) {
-        console.error("Error closing chat:", error);
-      }
-    })();
-  }, [sessionId, onClose]);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -1050,109 +854,12 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  // Selfie capture
-  const startCamera = async () => {
-    setIsCameraOpen(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('Camera error:', error);
-      toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to take selfies",
-        variant: "destructive"
-      });
-      setIsCameraOpen(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setIsCameraOpen(false);
-  };
-
-  const captureSelfie = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Mirror the image for selfie
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
-
-    // Convert to blob
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-
-      stopCamera();
-      setIsUploading(true);
-
-      try {
-        const fileName = `${currentUserId}/${chatId}/selfie_${Date.now()}.jpg`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('profile-photos')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg'
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('profile-photos')
-          .getPublicUrl(fileName);
-
-        const { error: messageError } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: `📷 [IMAGE:${publicUrl}] Selfie`
-          });
-
-        if (messageError) throw messageError;
-
-        toast({
-          title: "Selfie sent!",
-          description: "Your photo has been shared"
-        });
-        setLastActivityTime(Date.now());
-      } catch (error) {
-        console.error("Error sending selfie:", error);
-        toast({
-          title: "Failed to send selfie",
-          description: "Please try again",
-          variant: "destructive"
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    }, 'image/jpeg', 0.8);
-  };
-
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
-  // Always use fixed positioning for drag support
+  // When initialPosition is {0,0}, use relative positioning for flex layout
+  const useFlexLayout = initialPosition.x === 0 && initialPosition.y === 0;
+  
   const windowStyle = isMaximized 
     ? { 
         position: 'fixed' as const, 
@@ -1164,25 +871,28 @@ const DraggableMiniChatWindow = ({
         height: '100%',
         zIndex: zIndex + 100 
       }
-    : { 
-        position: 'fixed' as const,
-        left: position.x, 
-        top: position.y, 
-        width: isMinimized ? 240 : size.width, 
-        height: isMinimized ? 48 : size.height,
-        zIndex
-      };
+    : useFlexLayout
+      ? {
+          position: 'relative' as const,
+          width: isMinimized ? 240 : size.width, 
+          height: isMinimized ? 48 : size.height,
+          zIndex
+        }
+      : { 
+          position: 'fixed' as const,
+          right: position.x, 
+          bottom: position.y, 
+          width: isMinimized ? 240 : size.width, 
+          height: isMinimized ? 48 : size.height,
+          zIndex
+        };
 
   return (
     <Card 
       ref={windowRef}
-      style={{
-        ...windowStyle,
-        willChange: isDragging ? 'transform' : 'auto'
-      }}
+      style={windowStyle}
       className={cn(
-        "flex flex-col shadow-2xl border-2",
-        "transition-[border-color,box-shadow,opacity] duration-200",
+        "flex flex-col shadow-2xl border-2 transition-all duration-200",
         isPartnerOnline ? "border-primary/30" : "border-muted",
         isDragging && "opacity-90",
         isMaximized && "rounded-none"
@@ -1208,7 +918,7 @@ const DraggableMiniChatWindow = ({
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {!isMaximized && (
-            <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <Move className="h-3 w-3 text-muted-foreground flex-shrink-0" />
           )}
           <div className="relative">
             <Avatar className="h-7 w-7">
@@ -1225,10 +935,6 @@ const DraggableMiniChatWindow = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
-              {/* Partner's language badge */}
-              <Badge variant="secondary" className="h-3.5 text-[8px] px-1 bg-primary/10 text-primary">
-                {partnerLanguage}
-              </Badge>
               {userGender === "male" && walletBalance > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
                   <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(0)}
@@ -1273,41 +979,24 @@ const DraggableMiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
-          {/* Toggle button to show/hide actions */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={() => setShowActions(!showActions)}
-            title={showActions ? "Hide actions" : "Show actions"}
-          >
-            {showActions ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
-          </Button>
-          
-          {/* Collapsible action buttons */}
-          {showActions && (
-            <div className="flex items-center gap-0.5">
-              {userGender === "male" && (
-                <GiftSendButton
-                  senderId={currentUserId}
-                  receiverId={partnerId}
-                  receiverName={partnerName}
-                  disabled={!billingStarted}
-                />
-              )}
-              <MiniChatActions
-                currentUserId={currentUserId}
-                targetUserId={partnerId}
-                targetUserName={partnerName}
-                isPartnerOnline={isPartnerOnline}
-                onBlock={handleClose}
-                onStopChat={handleClose}
-                onLogOff={handleClose}
-              />
-            </div>
+        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
+          {userGender === "male" && (
+            <GiftSendButton
+              senderId={currentUserId}
+              receiverId={partnerId}
+              receiverName={partnerName}
+              disabled={!billingStarted}
+            />
           )}
-          
+          <MiniChatActions
+            currentUserId={currentUserId}
+            targetUserId={partnerId}
+            targetUserName={partnerName}
+            isPartnerOnline={isPartnerOnline}
+            onBlock={handleClose}
+            onStopChat={handleClose}
+            onLogOff={handleClose}
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -1328,7 +1017,7 @@ const DraggableMiniChatWindow = ({
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-destructive/20 hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); handleClose(); }}
+            onClick={handleClose}
           >
             <X className="h-2.5 w-2.5" />
           </Button>
@@ -1338,29 +1027,6 @@ const DraggableMiniChatWindow = ({
       {/* Messages area */}
       {!isMinimized && (
         <>
-          {/* Camera Modal for Selfie */}
-          {isCameraOpen && (
-            <div className="absolute inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-4">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className="w-full max-h-48 rounded-lg object-cover transform -scale-x-100"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={stopCamera}>
-                  <X className="h-3 w-3 mr-1" /> Cancel
-                </Button>
-                <Button size="sm" onClick={captureSelfie} disabled={isUploading}>
-                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />}
-                  Capture
-                </Button>
-              </div>
-            </div>
-          )}
-
           <ScrollArea className="flex-1 p-2">
             <div className="space-y-1.5">
               {messages.length === 0 && (
@@ -1389,35 +1055,25 @@ const DraggableMiniChatWindow = ({
                   : isDocument ? extractUrl(msg.message, 'DOCUMENT')
                   : null;
 
-                const isSentByMe = msg.senderId === currentUserId;
-                // Get first name only for both users
-                const myFirstName = currentUserName?.split(' ')[0] || 'Me';
-                const partnerFirstName = partnerName?.split(' ')[0] || 'Partner';
-                const senderName = isSentByMe ? myFirstName : partnerFirstName;
-
                 return (
                   <div
                     key={msg.id}
                     className={cn(
-                      "flex flex-col",
-                      isSentByMe ? "items-end" : "items-start"
+                      "flex",
+                      msg.senderId === currentUserId ? "justify-end" : "justify-start"
                     )}
                   >
-                    {/* Sender first name */}
-                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1 font-medium">
-                      {senderName}
-                    </span>
                     <div
                       className={cn(
                         "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-                        isSentByMe
+                        msg.senderId === currentUserId
                           ? "bg-primary text-primary-foreground rounded-br-sm"
                           : "bg-muted rounded-bl-sm"
                       )}
                     >
                       {isVoice && fileUrl ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">🎤</span>
+                          <Mic className="h-3 w-3" />
                           <audio src={fileUrl} controls className="h-6 max-w-[150px]" />
                         </div>
                       ) : isImage && fileUrl ? (
@@ -1447,9 +1103,21 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
+                      ) : msg.translatedMessage ? (
+                        // Show translated message in current user's language
+                        <div className="space-y-0.5">
+                          <p>{msg.translatedMessage}</p>
+                          {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                            <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                              {msg.message}
+                              {msg.detectedLanguage && (
+                                <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
                       ) : (
-                        // Display message in user's native language - translation is invisible
-                        msg.translatedMessage || msg.message
+                        msg.message
                       )}
                     </div>
                   </div>
@@ -1481,7 +1149,7 @@ const DraggableMiniChatWindow = ({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    disabled={isUploading || isBlocked}
+                    disabled={isUploading}
                   >
                     {isUploading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1492,15 +1160,6 @@ const DraggableMiniChatWindow = ({
                 </PopoverTrigger>
                 <PopoverContent className="w-40 p-1" side="top" align="start">
                   <div className="flex flex-col gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-8 text-xs"
-                      onClick={() => { setIsAttachOpen(false); startCamera(); }}
-                    >
-                      <Camera className="h-4 w-4 mr-2 text-primary" />
-                      Selfie
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1523,70 +1182,105 @@ const DraggableMiniChatWindow = ({
                       variant="ghost"
                       size="sm"
                       className="justify-start h-8 text-xs"
-                      onClick={() => triggerFileInput('*/*', 'document')}
+                      onClick={() => triggerFileInput('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar', 'document')}
                     >
                       <FileText className="h-4 w-4 mr-2 text-orange-500" />
-                      File
+                      Document
                     </Button>
                   </div>
                 </PopoverContent>
               </Popover>
 
-              {/* Hold to record voice button */}
-              <HoldToRecordButton
+              {/* Voice recorder */}
+              <VoiceMessageRecorder
                 chatId={chatId}
                 currentUserId={currentUserId}
                 partnerId={partnerId}
                 onMessageSent={() => setLastActivityTime(Date.now())}
-                disabled={isBlocked}
+                disabled={isSending}
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Voice-to-text button */}
-              <VoiceRecordButton
-                onTranscription={(text) => {
-                  setNewMessage(prev => prev ? `${prev} ${text}` : text);
-                  setLastActivityTime(Date.now());
-                }}
-                disabled={isBlocked}
-                className="h-8 w-8 shrink-0"
-              />
-
-              {/* Text input - with real-time native script conversion */}
-              <div className="relative flex-1">
-                {/* Native script preview - shown above input when user types in Latin */}
-                {displayMessage && displayMessage !== newMessage && needsNativeConversion && !isLatinScript(displayMessage) && (
-                  <div className="absolute -top-7 left-0 right-0 p-1 bg-primary/10 rounded text-[10px] border border-primary/20 z-10">
-                    <span className="text-[9px] text-muted-foreground/70 mr-1">Native:</span>
-                    <span className="text-foreground font-medium" dir="auto">{displayMessage}</span>
+              {/* Text input with live translation preview */}
+              <div className="flex-1 relative">
+                {/* Live translation preview - shows text in sender's native language */}
+                {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
+                  <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
+                    {livePreview.isLoading ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        Converting...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Languages className="h-2.5 w-2.5" />
+                        <span className="font-medium">{currentUserLanguage}:</span>
+                        <span className="truncate">{livePreview.text}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Same language indicator */}
+                {!needsTranslation && newMessage.trim() && !livePreview.text && (
+                  <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
+                    Same language - no translation
                   </div>
                 )}
                 <Input
-                  ref={messageInputRef}
-                  placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
+                  placeholder="Type in any language..."
                   value={newMessage}
                   onChange={(e) => {
-                    setNewMessage(e.target.value);
+                    const value = e.target.value;
+                    setNewMessage(value);
                     handleTyping();
+                    // Update live preview with debounce
+                    if (previewTimeoutRef.current) {
+                      clearTimeout(previewTimeoutRef.current);
+                    }
+                    if (transliterationEnabled && needsScriptConversion && isLatinScript(value) && value.trim()) {
+                      setLivePreview({ text: '', isLoading: true });
+                      previewTimeoutRef.current = setTimeout(async () => {
+                        try {
+                          const result = await convertToNativeScript(value, currentUserLanguage);
+                          setLivePreview({ text: result.text || value, isLoading: false });
+                        } catch {
+                          setLivePreview({ text: '', isLoading: false });
+                        }
+                      }, 300);
+                    } else {
+                      setLivePreview({ text: '', isLoading: false });
+                    }
                   }}
                   onKeyDown={handleKeyPress}
-                  onCompositionStart={() => setIsComposing(true)}
-                  onCompositionEnd={() => setIsComposing(false)}
-                  className="h-8 text-xs pr-6"
-                  disabled={isUploading || isBlocked}
-                  dir={needsNativeConversion && displayMessage && !isLatinScript(displayMessage) ? 'auto' : 'ltr'}
+                  className="h-8 text-xs w-full"
+                  disabled={isSending || isUploading}
                 />
-                {isConverting && (
-                  <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                )}
               </div>
+
+              {/* Transliteration toggle */}
+              <Button
+                type="button"
+                variant={transliterationEnabled ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-8 w-8 shrink-0",
+                  transliterationEnabled && "bg-primary/20 text-primary hover:bg-primary/30"
+                )}
+                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
+                title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
+              >
+                <Languages className={cn(
+                  "h-4 w-4",
+                  livePreview.isLoading && "animate-pulse"
+                )} />
+              </Button>
 
               {/* Send button */}
               <Button
                 size="icon"
                 className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending || isBlocked || isComposing}
+                disabled={!newMessage.trim() || isSending}
               >
                 {isSending ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1597,12 +1291,11 @@ const DraggableMiniChatWindow = ({
             </div>
           </div>
 
-          {/* Resize handle - supports both mouse and touch */}
+          {/* Resize handle */}
           {!isMaximized && (
             <div
-              className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-center justify-center touch-none"
+              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center"
               onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
             >
               <GripVertical className="h-3 w-3 text-muted-foreground rotate-[-45deg]" />
             </div>

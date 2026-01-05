@@ -222,14 +222,14 @@ export function useOptimizedGifts() {
   });
 }
 
-// Optimized chat pricing (rarely changes) - video calls are gift-based
+// Optimized chat pricing (rarely changes)
 export function useOptimizedChatPricing() {
   return useQuery({
     queryKey: queryKeys.chatPricing(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('chat_pricing')
-        .select('rate_per_minute, women_earning_rate, min_withdrawal_balance, currency')
+        .select('rate_per_minute, video_rate_per_minute, women_earning_rate, video_women_earning_rate, currency')
         .eq('is_active', true)
         .single();
       if (error) throw error;

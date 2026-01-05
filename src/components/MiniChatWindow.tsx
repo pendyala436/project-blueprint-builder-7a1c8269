@@ -6,11 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -26,27 +21,24 @@ import {
   TrendingUp,
   Wallet,
   AlertTriangle,
-  Paperclip,
-  Camera,
-  Image,
-  Video,
-  FileText,
-  Mic,
-  MoreVertical,
-  Eye,
-  EyeOff
+  Languages
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
-import { HoldToRecordButton } from "@/components/HoldToRecordButton";
-import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { useChatTranslation } from "@/hooks/useChatTranslation";
+import { 
+  translate, 
+  convertToNativeScript, 
+  processIncomingMessage as dlProcessIncoming,
+  isSameLanguage,
+  isLatinScript,
+  isLatinScriptLanguage
+} from "@/lib/dl-translate";
 
-const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes - auto disconnect per feature requirement
-const WARNING_THRESHOLD_MS = 4 * 60 * 1000; // 4 minutes - show warning
+const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
+const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
 
 interface Message {
   id: string;
@@ -67,7 +59,6 @@ interface MiniChatWindowProps {
   partnerLanguage: string;
   isPartnerOnline: boolean;
   currentUserId: string;
-  currentUserName: string;
   currentUserLanguage: string;
   userGender: "male" | "female";
   ratePerMinute: number;
@@ -84,7 +75,6 @@ const MiniChatWindow = ({
   partnerLanguage,
   isPartnerOnline,
   currentUserId,
-  currentUserName,
   currentUserLanguage,
   userGender,
   ratePerMinute,
@@ -93,30 +83,8 @@ const MiniChatWindow = ({
 }: MiniChatWindowProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Chat translation hook - handles all translation logic
-  const { 
-    livePreview,
-    updateLivePreview,
-    clearLivePreview,
-    processOutgoingMessage,
-    processIncomingMessage,
-    translateForReceiver,
-    isLatinScript,
-    isSameLanguage,
-    needsTranslation,
-    needsNativeConversion
-  } = useChatTranslation({
-    currentUserId,
-    currentUserLanguage,
-    partnerId,
-    partnerLanguage,
-    debounceMs: 150
-  });
-  
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isComposing, setIsComposing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -128,31 +96,19 @@ const MiniChatWindow = ({
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
-  const [billingPaused, setBillingPaused] = useState(false); // Billing paused due to inactivity
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [isAttachOpen, setIsAttachOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
+  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debug: Log initialization
-  console.log('[MiniChatWindow] Initialized:', {
-    currentUserLanguage,
-    partnerLanguage,
-    needsNativeConversion,
-    needsTranslation,
-    currentUserId: currentUserId?.slice(0, 8),
-    partnerId: partnerId?.slice(0, 8)
-  });
+  // Check if translation is needed
+  const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
+  const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
 
   // Real-time typing indicator with translation
   const {
@@ -182,28 +138,6 @@ const MiniChatWindow = ({
       handleClose();
     }
   }, [isBlocked]);
-
-  // Track Latin input separately to avoid double conversion
-  const lastLatinInputRef = useRef<string>('');
-
-  // Real-time transliteration: Update live preview as user types
-  useEffect(() => {
-    console.log('[MiniChatWindow] Transliteration effect:', {
-      newMessage: newMessage.slice(0, 20),
-      needsNativeConversion,
-      currentUserLanguage,
-      isLatin: newMessage ? isLatinScript(newMessage) : 'empty'
-    });
-
-    // Update live preview with the new message
-    if (newMessage.trim() && needsNativeConversion && isLatinScript(newMessage)) {
-      lastLatinInputRef.current = newMessage;
-      updateLivePreview(newMessage);
-    } else {
-      lastLatinInputRef.current = '';
-      clearLivePreview();
-    }
-  }, [newMessage, needsNativeConversion, currentUserLanguage, isLatinScript, updateLivePreview, clearLivePreview]);
 
   // Load initial data (wallet, earnings, pricing)
   useEffect(() => {
@@ -292,9 +226,9 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Inactivity check with warning - PAUSE billing after 5 mins, but keep chat window open
+  // Inactivity check with warning - auto disconnect after 3 mins of no activity
   useEffect(() => {
-    if (!billingStarted || billingPaused) return;
+    if (!billingStarted) return;
 
     // Update warning every second
     const warningInterval = setInterval(() => {
@@ -302,7 +236,7 @@ const MiniChatWindow = ({
       
       if (timeSinceActivity >= WARNING_THRESHOLD_MS && timeSinceActivity < INACTIVITY_TIMEOUT_MS) {
         const remainingSecs = Math.ceil((INACTIVITY_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Billing pauses in ${remainingSecs}s`);
+        setInactiveWarning(`Ends in ${remainingSecs}s`);
       } else {
         setInactiveWarning(null);
       }
@@ -313,7 +247,7 @@ const MiniChatWindow = ({
     }
 
     inactivityRef.current = setTimeout(async () => {
-      // Stop the timer and heartbeat - PAUSE billing, don't close
+      // Stop the timer and heartbeat
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -323,143 +257,53 @@ const MiniChatWindow = ({
         heartbeatRef.current = null;
       }
       
-      // Mark billing as paused
-      setBillingPaused(true);
-      setInactiveWarning("Billing paused - send a message to resume");
-      
       toast({
-        title: "Billing Paused",
-        description: "No activity for 5 minutes. Charging/earning stopped. Send a message to resume.",
+        title: "Chat Disconnected",
+        description: "No activity for 3 minutes. Chat ended automatically.",
       });
       
-      // Update session status to paused (but not ended)
+      // Auto-close the chat session
       try {
         await supabase
           .from("active_chat_sessions")
           .update({
-            status: "paused",
-            end_reason: "inactivity_pause"
+            status: "ended",
+            ended_at: new Date().toISOString(),
+            end_reason: "inactivity_timeout"
           })
           .eq("id", sessionId);
       } catch (error) {
-        console.error("Error pausing chat session:", error);
+        console.error("Error auto-closing chat:", error);
       }
       
-      // DON'T close the chat window - keep it open
+      onClose();
     }, INACTIVITY_TIMEOUT_MS);
 
     return () => {
       clearInterval(warningInterval);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
     };
-  }, [lastActivityTime, billingStarted, billingPaused, sessionId]);
-
-  // Resume billing when user sends a message after pause
-  const resumeBilling = useCallback(async () => {
-    if (!billingPaused) return;
-    
-    setBillingPaused(false);
-    setInactiveWarning(null);
-    setLastActivityTime(Date.now());
-    
-    // Restart timer
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-      }, 1000);
-    }
-    
-    // Restart heartbeat
-    if (!heartbeatRef.current) {
-      heartbeatRef.current = setInterval(async () => {
-        try {
-          await supabase.functions.invoke("chat-manager", {
-            body: { action: "heartbeat", chat_id: chatId }
-          });
-        } catch (error) {
-          console.error("Heartbeat error:", error);
-        }
-      }, 60000);
-    }
-    
-    // Update session back to active
-    try {
-      await supabase
-        .from("active_chat_sessions")
-        .update({
-          status: "active",
-          end_reason: null,
-          last_activity_at: new Date().toISOString()
-        })
-        .eq("id", sessionId);
-    } catch (error) {
-      console.error("Error resuming chat session:", error);
-    }
-    
-    toast({
-      title: "Billing Resumed",
-      description: "Charging/earning has resumed.",
-    });
-  }, [billingPaused, chatId, sessionId]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language using dl-translate
-  // This enables receiver to see messages in their native language
-  // Flow: Partner types in Latin → converts to partner's native → translates to receiver's native
-  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
+  const translateMessage = useCallback(async (text: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Determine sender and receiver languages based on who sent the message
-    const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
-    const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
-    
-    console.log('[MiniChatWindow] Translate request:', { 
-      text: text.slice(0, 30), 
-      senderId: senderId.slice(0, 8),
-      senderLang, 
-      receiverLang,
-      isMine: senderId === currentUserId
-    });
-    
-    // Same language - no translation needed
-    if (isSameLanguage(senderLang, receiverLang)) {
-      console.log('[MiniChatWindow] Same language, skipping translation');
-      return { translatedMessage: text, isTranslated: false };
-    }
-    
-    // For outgoing messages - sender sees their own message as-is (already in native script)
-    if (senderId === currentUserId) {
-      console.log('[MiniChatWindow] Own message, skipping translation');
-      return { translatedMessage: text, isTranslated: false };
-    }
-    
     try {
-      // Translate partner's message to current user's language
-      // Partner's native text → Current user's native text
-      console.log('[MiniChatWindow] Translating from', partnerLanguage, 'to', currentUserLanguage);
-      
-      const translated = await translateForReceiver(text, partnerLanguage, currentUserLanguage);
-      
-      // Check if translation actually happened
-      const wasActuallyTranslated = translated !== text;
-      
-      console.log('[MiniChatWindow] Translation result:', {
-        original: text.slice(0, 30),
-        translated: translated.slice(0, 30),
-        wasTranslated: wasActuallyTranslated
-      });
-      
+      // Use dl-translate to process incoming message
+      const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
       return {
-        translatedMessage: wasActuallyTranslated ? translated : text,
-        isTranslated: wasActuallyTranslated,
-        detectedLanguage: partnerLanguage
+        translatedMessage: result.text,
+        isTranslated: result.isTranslated,
+        detectedLanguage: result.detectedLanguage
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForReceiver]);
+  }, [partnerLanguage, currentUserLanguage]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -470,44 +314,29 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      // First, show messages immediately without translation (non-blocking)
-      const initialMessages = data.map((m) => ({
-        id: m.id,
-        senderId: m.sender_id,
-        message: m.message,
-        translatedMessage: m.message, // Show original initially
-        isTranslated: false,
-        detectedLanguage: undefined,
-        createdAt: m.created_at
-      }));
-      setMessages(initialMessages);
-
-      // Then translate in parallel (non-blocking background task)
-      data.forEach(async (m) => {
-        if (m.sender_id !== currentUserId) {
-          try {
-            const translation = await translateMessage(m.message, m.sender_id);
-            if (translation.isTranslated) {
-              setMessages(prev => prev.map(msg => 
-                msg.id === m.id 
-                  ? { ...msg, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
-                  : msg
-              ));
-            }
-          } catch (err) {
-            console.error('Background translation error:', err);
-          }
-        }
-      });
+      // Translate ALL messages to current user's language
+      const translatedMessages = await Promise.all(
+        data.map(async (m) => {
+          // Translate to current user's language
+          const translation = await translateMessage(m.message);
+          return {
+            id: m.id,
+            senderId: m.sender_id,
+            message: m.message, // Original message (in sender's language)
+            translatedMessage: translation.translatedMessage, // In current user's language
+            isTranslated: translation.isTranslated,
+            detectedLanguage: translation.detectedLanguage,
+            createdAt: m.created_at
+          };
+        })
+      );
+      setMessages(translatedMessages);
     }
   };
 
   const subscribeToMessages = () => {
-    console.log(`[RealTime] Setting up subscription for chat: ${chatId}, user: ${currentUserId}`);
-    
-    // Simple channel without broadcast config - just listen for postgres changes
     const channel = supabase
-      .channel(`chat-messages-${chatId}`)
+      .channel(`mini-chat-${chatId}`)
       .on(
         'postgres_changes',
         {
@@ -516,66 +345,39 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        (payload: any) => {
-          console.log(`[RealTime] Received message:`, payload.new?.id, 'from:', payload.new?.sender_id);
+        async (payload: any) => {
           const newMsg = payload.new;
           
-          if (!newMsg) {
-            console.warn('[RealTime] Empty payload received');
-            return;
-          }
+          // Translate message for display
+          const translation = await translateMessage(newMsg.message);
           
-          // Skip if message is from current user (already added via optimistic update)
-          if (newMsg.sender_id === currentUserId) {
-            console.log('[RealTime] Skipping own message');
-            return;
-          }
-          
-          // Add message immediately - show original first
           setMessages(prev => {
-            // Check if message already exists (prevent duplicates)
-            if (prev.some(m => m.id === newMsg.id)) {
-              console.log('[RealTime] Message already exists, skipping');
-              return prev;
-            }
-            console.log('[RealTime] Adding new message to state');
+            if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: newMsg.message,
-              isTranslated: false,
-              detectedLanguage: undefined,
+              translatedMessage: translation.translatedMessage,
+              isTranslated: translation.isTranslated,
+              detectedLanguage: translation.detectedLanguage,
               createdAt: newMsg.created_at
             }];
           });
 
           // Partner sent a message - update activity time
-          setLastActivityTime(Date.now());
-
-          // Update unread count if minimized
-          if (isMinimized) {
-            setUnreadCount(prev => prev + 1);
+          if (newMsg.sender_id !== currentUserId) {
+            setLastActivityTime(Date.now());
           }
 
-          // Translate in background
-          translateMessage(newMsg.message, newMsg.sender_id).then(translation => {
-            if (translation.isTranslated) {
-              setMessages(prev => prev.map(m => 
-                m.id === newMsg.id 
-                  ? { ...m, translatedMessage: translation.translatedMessage, isTranslated: true, detectedLanguage: translation.detectedLanguage }
-                  : m
-              ));
-            }
-          }).catch(err => console.error('[RealTime] Translation error:', err));
+          // Update unread count if minimized
+          if (isMinimized && newMsg.sender_id !== currentUserId) {
+            setUnreadCount(prev => prev + 1);
+          }
         }
       )
-      .subscribe((status, err) => {
-        console.log(`[RealTime] Subscription status: ${status}`, err ? `Error: ${err.message}` : '');
-      });
+      .subscribe();
 
     return () => {
-      console.log(`[RealTime] Unsubscribing from chat: ${chatId}`);
       supabase.removeChannel(channel);
     };
   };
@@ -609,16 +411,13 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
-  const sendMessage = () => {
-    if (isComposing || isSending || isBlocked) return;
+  const sendMessage = async () => {
+    if (!newMessage.trim() || isSending) return;
 
-    const rawInput = (messageInputRef.current?.value ?? newMessage);
-    if (!rawInput.trim()) return;
-
-    const trimmedInput = rawInput.trim();
+    const messageText = newMessage.trim();
     
     // SECURITY: Validate message length to prevent database abuse
-    if (trimmedInput.length > MAX_MESSAGE_LENGTH) {
+    if (messageText.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
@@ -627,127 +426,56 @@ const MiniChatWindow = ({
       return;
     }
 
-    // Capture live preview BEFORE clearing state - this is the native script preview
-    const currentPreview = livePreview.nativePreview?.trim() || '';
-    
-    // Clear input IMMEDIATELY - don't block user from typing next message
+    // SECURITY: Basic content validation - reject empty or only whitespace
+    if (messageText.length === 0) {
+      return;
+    }
+
     setNewMessage("");
-    clearLivePreview();
-    lastLatinInputRef.current = ''; // Reset Latin input tracking
-    stopTyping();
+    setLivePreview({ text: '', isLoading: false }); // Clear live preview
+    stopTyping(); // Stop typing indicator on send
     setIsSending(true);
     setLastActivityTime(Date.now());
-    
-    // Resume billing if it was paused
-    if (billingPaused) {
-      resumeBilling();
-    }
 
-    // Determine message text - prioritize the native script preview if available
-    let messageText = trimmedInput;
-    let needsBackgroundConversion = false;
-    
-    // Check if we have a valid native script preview ready
-    // Valid means: preview exists, is different from input, and is NOT in Latin script
-    const hasValidPreview = currentPreview && 
-                           currentPreview.length > 0 &&
-                           currentPreview !== trimmedInput && 
-                           !isLatinScript(currentPreview);
-    
-    if (hasValidPreview) {
-      // Use the pre-converted native script preview
-      messageText = currentPreview;
-      console.log('[MiniChatWindow] Using native preview:', messageText);
-    } else if (needsNativeConversion && isLatinScript(trimmedInput)) {
-      // Input is in Latin script and user's language needs conversion
-      // Flag for background conversion since preview isn't ready
-      needsBackgroundConversion = true;
-      console.log('[MiniChatWindow] Preview not ready, will convert in background:', trimmedInput);
-    }
-
-    // Optimistic update - show native script to sender immediately if available
-    const tempId = `temp-${Date.now()}`;
-    const displayText = hasValidPreview ? messageText : trimmedInput;
-    const optimisticMessage: Message = {
-      id: tempId,
-      senderId: currentUserId,
-      message: displayText, // Show native if available, otherwise Latin (will be updated)
-      translatedMessage: displayText,
-      isTranslated: false,
-      createdAt: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, optimisticMessage]);
-
-    // Send in background - don't await
-    (async () => {
-      try {
-        let finalMessageText = messageText;
-        
-        // If we need background conversion, do it now before sending to DB
-        if (needsBackgroundConversion) {
-          try {
-            console.log('[MiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
-            const { nativeText } = await processOutgoingMessage(trimmedInput);
-            if (nativeText && nativeText !== trimmedInput) {
-              finalMessageText = nativeText;
-              console.log('[MiniChatWindow] Converted to:', finalMessageText);
-              // Update optimistic message with converted text immediately
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, message: finalMessageText, translatedMessage: finalMessageText }
-                  : m
-              ));
-            }
-          } catch (convErr) {
-            console.error('[MiniChatWindow] Background conversion failed:', convErr);
-            // Continue with original text if conversion fails
-          }
+    try {
+      // Convert to user's native script using dl-translate
+      let processedMessage = messageText;
+      
+      // If user types in Latin and their language uses non-Latin script, convert
+      if (transliterationEnabled && needsScriptConversion && isLatinScript(messageText)) {
+        try {
+          const converted = await convertToNativeScript(messageText, currentUserLanguage);
+          processedMessage = converted.text || messageText;
+          console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
+        } catch (err) {
+          console.error('[MiniChatWindow] Script conversion error:', err);
         }
-
-        const { data: insertedMsg, error } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: finalMessageText
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Replace optimistic message with real one - keep the converted message text
-        if (insertedMsg) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempId 
-              ? {
-                  id: insertedMsg.id,
-                  senderId: insertedMsg.sender_id,
-                  message: insertedMsg.message,
-                  translatedMessage: insertedMsg.message,
-                  isTranslated: false,
-                  createdAt: insertedMsg.created_at
-                }
-              : m
-          ));
-        }
-      } catch (error) {
-        console.error("Error sending message:", error);
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        toast({
-          title: "Error",
-          description: "Failed to send message",
-          variant: "destructive"
-        });
-      } finally {
-        setIsSending(false);
       }
-    })();
+      
+      const { error } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: currentUserId,
+          receiver_id: partnerId,
+          message: processedMessage // Store in sender's native script
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setNewMessage(messageText);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -766,286 +494,20 @@ const MiniChatWindow = ({
     setIsMinimized(false);
   };
 
-  const handleClose = useCallback(() => {
-    // Immediately close the UI (don't wait for database)
-    onClose();
-    
-    // Update database in background
-    (async () => {
-      try {
-        await supabase
-          .from("active_chat_sessions")
-          .update({
-            status: "ended",
-            ended_at: new Date().toISOString(),
-            end_reason: "user_closed"
-          })
-          .eq("id", sessionId);
-      } catch (error) {
-        console.error("Error closing chat:", error);
-      }
-    })();
-  }, [sessionId, onClose]);
-
-  // File upload handler - with optimistic UI (show immediately to sender)
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'video' | 'document') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast({
-        title: "File too large",
-        description: "Maximum file size is 50MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    setIsAttachOpen(false);
-    setLastActivityTime(Date.now());
-
-    const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
-    const tempId = `temp-file-${Date.now()}`;
-    
-    // Create local preview URL for immediate display
-    const localPreviewUrl = URL.createObjectURL(file);
-    const optimisticMessage = `${emoji} [${fileType.toUpperCase()}:${localPreviewUrl}] ${file.name}`;
-
-    // Optimistic update - show file immediately to sender
-    const optimisticMsg: Message = {
-      id: tempId,
-      senderId: currentUserId,
-      message: optimisticMessage,
-      translatedMessage: optimisticMessage,
-      isTranslated: false,
-      createdAt: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, optimisticMsg]);
-
+  const handleClose = async () => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentUserId}/${chatId}/${Date.now()}.${fileExt}`;
-      const bucket = fileType === 'image' ? 'profile-photos' : 'community-files';
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(fileName);
-
-      // Send message with actual uploaded file URL
-      const finalMessage = `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`;
-      const { data: insertedMsg, error: messageError } = await supabase
-        .from("chat_messages")
-        .insert({
-          chat_id: chatId,
-          sender_id: currentUserId,
-          receiver_id: partnerId,
-          message: finalMessage
+      await supabase
+        .from("active_chat_sessions")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          end_reason: "user_closed"
         })
-        .select()
-        .single();
-
-      if (messageError) throw messageError;
-
-      // Replace optimistic message with real one (with server URL)
-      if (insertedMsg) {
-        setMessages(prev => prev.map(m => 
-          m.id === tempId 
-            ? {
-                id: insertedMsg.id,
-                senderId: insertedMsg.sender_id,
-                message: insertedMsg.message,
-                translatedMessage: insertedMsg.message,
-                isTranslated: false,
-                createdAt: insertedMsg.created_at
-              }
-            : m
-        ));
-      }
-
-      // Clean up local preview URL
-      URL.revokeObjectURL(localPreviewUrl);
-
-      toast({
-        title: "File sent",
-        description: `${file.name} has been sent`
-      });
+        .eq("id", sessionId);
     } catch (error) {
-      console.error("Error uploading file:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-      URL.revokeObjectURL(localPreviewUrl);
-      toast({
-        title: "Upload failed",
-        description: "Failed to send file. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      console.error("Error closing chat:", error);
     }
-  };
-
-  const triggerFileInput = (accept: string, fileType: 'image' | 'video' | 'document') => {
-    if (fileInputRef.current) {
-      fileInputRef.current.accept = accept;
-      fileInputRef.current.dataset.fileType = fileType;
-      fileInputRef.current.click();
-    }
-  };
-
-  // Selfie capture
-  const startCamera = async () => {
-    setIsCameraOpen(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('Camera error:', error);
-      toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to take selfies",
-        variant: "destructive"
-      });
-      setIsCameraOpen(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setIsCameraOpen(false);
-  };
-
-  const captureSelfie = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Mirror the image for selfie
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
-
-    // Convert to blob
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-
-      stopCamera();
-      setIsUploading(true);
-      setLastActivityTime(Date.now());
-
-      const tempId = `temp-selfie-${Date.now()}`;
-      
-      // Create local preview URL for immediate display
-      const localPreviewUrl = URL.createObjectURL(blob);
-      const optimisticMessage = `📷 [IMAGE:${localPreviewUrl}] Selfie`;
-
-      // Optimistic update - show selfie immediately to sender
-      const optimisticMsg: Message = {
-        id: tempId,
-        senderId: currentUserId,
-        message: optimisticMessage,
-        translatedMessage: optimisticMessage,
-        isTranslated: false,
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, optimisticMsg]);
-
-      try {
-        const fileName = `${currentUserId}/${chatId}/selfie_${Date.now()}.jpg`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('profile-photos')
-          .upload(fileName, blob, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'image/jpeg'
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('profile-photos')
-          .getPublicUrl(fileName);
-
-        const finalMessage = `📷 [IMAGE:${publicUrl}] Selfie`;
-        const { data: insertedMsg, error: messageError } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: finalMessage
-          })
-          .select()
-          .single();
-
-        if (messageError) throw messageError;
-
-        // Replace optimistic message with real one (with server URL)
-        if (insertedMsg) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempId 
-              ? {
-                  id: insertedMsg.id,
-                  senderId: insertedMsg.sender_id,
-                  message: insertedMsg.message,
-                  translatedMessage: insertedMsg.message,
-                  isTranslated: false,
-                  createdAt: insertedMsg.created_at
-                }
-              : m
-          ));
-        }
-
-        // Clean up local preview URL
-        URL.revokeObjectURL(localPreviewUrl);
-
-        toast({
-          title: "Selfie sent!",
-          description: "Your photo has been shared"
-        });
-      } catch (error) {
-        console.error("Error sending selfie:", error);
-        // Remove optimistic message on error
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        URL.revokeObjectURL(localPreviewUrl);
-        toast({
-          title: "Failed to send selfie",
-          description: "Please try again",
-          variant: "destructive"
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    }, 'image/jpeg', 0.8);
+    onClose();
   };
 
   const formatTime = (seconds: number) => {
@@ -1060,8 +522,7 @@ const MiniChatWindow = ({
   return (
     <Card 
       className={cn(
-        "flex flex-col shadow-xl border-2",
-        "transition-[border-color,box-shadow,width,height] duration-200",
+        "flex flex-col shadow-xl border-2 transition-all duration-200",
         isMinimized ? "w-56 h-12" : `${windowWidthClass} h-80`,
         isPartnerOnline ? "border-primary/30" : "border-muted"
       )}
@@ -1095,10 +556,6 @@ const MiniChatWindow = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
-              {/* Partner's language badge */}
-              <Badge variant="secondary" className="h-3.5 text-[8px] px-1 bg-primary/10 text-primary">
-                {partnerLanguage}
-              </Badge>
               {/* Wallet/Earnings badge */}
               {userGender === "male" && walletBalance > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
@@ -1106,7 +563,7 @@ const MiniChatWindow = ({
                 </Badge>
               )}
               {userGender === "female" && todayEarnings > 0 && (
-                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-earnings/30 text-earnings">
+                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
                   <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(0)}
                 </Badge>
               )}
@@ -1142,41 +599,24 @@ const MiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
-          {/* Toggle button to show/hide actions */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-            title={showActions ? "Hide actions" : "Show actions"}
-          >
-            {showActions ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
-          </Button>
-          
-          {/* Collapsible action buttons */}
-          {showActions && (
-            <div className="flex items-center gap-0.5">
-              {/* Gift Button - only men can send */}
-              {userGender === "male" && (
-                <GiftSendButton
-                  senderId={currentUserId}
-                  receiverId={partnerId}
-                  receiverName={partnerName}
-                  disabled={!billingStarted}
-                />
-              )}
-              {/* Relationship Actions (Block/Friend) */}
-              <ChatRelationshipActions
-                currentUserId={currentUserId}
-                targetUserId={partnerId}
-                targetUserName={partnerName}
-                onBlock={handleClose}
-                className="h-5 w-5"
-              />
-            </div>
+        <div className="flex items-center gap-0.5">
+          {/* Gift Button - only men can send */}
+          {userGender === "male" && (
+            <GiftSendButton
+              senderId={currentUserId}
+              receiverId={partnerId}
+              receiverName={partnerName}
+              disabled={!billingStarted}
+            />
           )}
-          
+          {/* Relationship Actions (Block/Friend) */}
+          <ChatRelationshipActions
+            currentUserId={currentUserId}
+            targetUserId={partnerId}
+            targetUserName={partnerName}
+            onBlock={handleClose}
+            className="h-5 w-5"
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -1214,39 +654,41 @@ const MiniChatWindow = ({
                   Say hi to start!
                 </p>
               )}
-              {messages.map((msg) => {
-                const isSentByMe = msg.senderId === currentUserId;
-                // Get first name only for both users
-                const myFirstName = currentUserName?.split(' ')[0] || 'Me';
-                const partnerFirstName = partnerName?.split(' ')[0] || 'Partner';
-                const senderName = isSentByMe ? myFirstName : partnerFirstName;
-                
-                return (
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex",
+                    msg.senderId === currentUserId ? "justify-end" : "justify-start"
+                  )}
+                >
                   <div
-                    key={msg.id}
                     className={cn(
-                      "flex flex-col",
-                      isSentByMe ? "items-end" : "items-start"
+                      "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+                      msg.senderId === currentUserId
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Sender first name */}
-                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1 font-medium">
-                      {senderName}
-                    </span>
-                    <div
-                      className={cn(
-                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-                        isSentByMe
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-muted rounded-bl-sm"
-                      )}
-                    >
-                      {/* Display message in user's native language - translation is invisible */}
-                      {msg.translatedMessage || msg.message}
-                    </div>
+                    {/* Show translated message in current user's language */}
+                    {msg.translatedMessage ? (
+                      <div className="space-y-0.5">
+                        <p>{msg.translatedMessage}</p>
+                        {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                          <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
+                            {msg.message}
+                            {msg.detectedLanguage && (
+                              <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      msg.message
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
               
               {/* Real-time typing indicator with translation */}
               {partnerTyping && (
@@ -1265,190 +707,73 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Camera Modal for Selfie */}
-          {isCameraOpen && (
-            <div className="absolute inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-2">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className="w-full max-h-48 rounded-lg object-cover transform -scale-x-100"
-              />
-              <canvas ref={canvasRef} className="hidden" />
-              <div className="flex gap-2 mt-2">
-                <Button size="sm" variant="outline" onClick={stopCamera}>
-                  <X className="h-3 w-3 mr-1" /> Cancel
-                </Button>
-                <Button size="sm" onClick={captureSelfie} disabled={isUploading}>
-                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3 mr-1" />}
-                  Capture
-                </Button>
+          {/* Input area with live translation preview */}
+          <div className="p-1.5 border-t space-y-1">
+            {/* Live translation preview - shows text in user's native language */}
+            {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
+              <div className="px-2 py-1 bg-primary/5 rounded text-[10px] text-primary/80 border border-primary/10">
+                <div className="flex items-center gap-1">
+                  <Languages className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">{currentUserLanguage}:</span>
+                </div>
+                <p className="mt-0.5 pl-4">{livePreview.text}</p>
+                {livePreview.isLoading && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
               </div>
-            </div>
-          )}
-
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => {
-              const fileType = (e.target.dataset.fileType || 'document') as 'image' | 'video' | 'document';
-              handleFileUpload(e, fileType);
-            }}
-          />
-
-          {/* Input area - with real-time native script conversion */}
-          <div className="p-1.5 border-t">
-            {/* Native script preview - shown above input when user types in Latin and needs conversion */}
-            {livePreview.nativePreview && livePreview.nativePreview !== newMessage && needsNativeConversion && !isLatinScript(livePreview.nativePreview) && (
-              <div className="mb-1.5 p-1.5 bg-primary/10 rounded text-[10px] border border-primary/20">
-                <span className="text-[9px] text-muted-foreground/70 mr-1">
-                  {livePreview.isConverting ? <Loader2 className="h-2 w-2 inline animate-spin mr-0.5" /> : 'Native:'}
-                </span>
-                <span className="text-foreground font-medium" dir="auto">{livePreview.nativePreview}</span>
+            )}
+            {/* Same language indicator */}
+            {!needsTranslation && newMessage.trim() && (
+              <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
+                Same language - no translation needed
               </div>
             )}
             <div className="flex items-center gap-1">
-              {/* Attach button */}
-              <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    disabled={isUploading || isBlocked}
-                  >
-                    {isUploading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Paperclip className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-36 p-1" side="top" align="start">
-                  <div className="flex flex-col gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-7 text-[10px]"
-                      onClick={startCamera}
-                    >
-                      <Camera className="h-3.5 w-3.5 mr-2 text-primary" />
-                      Selfie
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-7 text-[10px]"
-                      onClick={() => triggerFileInput('image/*', 'image')}
-                    >
-                      <Image className="h-3.5 w-3.5 mr-2 text-blue-500" />
-                      Photo
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-7 text-[10px]"
-                      onClick={() => triggerFileInput('video/*', 'video')}
-                    >
-                      <Video className="h-3.5 w-3.5 mr-2 text-purple-500" />
-                      Video
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-7 text-[10px]"
-                      onClick={() => triggerFileInput('*/*', 'document')}
-                    >
-                      <FileText className="h-3.5 w-3.5 mr-2 text-orange-500" />
-                      File
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Hold to record voice button */}
-              <HoldToRecordButton
-                chatId={chatId}
-                currentUserId={currentUserId}
-                partnerId={partnerId}
-                onMessageSent={() => setLastActivityTime(Date.now())}
-                onOptimisticMessage={(tempId, localBlobUrl, duration) => {
-                  // Show voice message immediately to sender
-                  const optimisticMsg: Message = {
-                    id: tempId,
-                    senderId: currentUserId,
-                    message: `🎤 [VOICE:${localBlobUrl}]`,
-                    translatedMessage: `🎤 [VOICE:${localBlobUrl}]`,
-                    isTranslated: false,
-                    createdAt: new Date().toISOString()
-                  };
-                  setMessages(prev => [...prev, optimisticMsg]);
-                }}
-                onMessageConfirmed={(tempId, serverMessageId, serverUrl) => {
-                  // Replace optimistic message with real one
-                  setMessages(prev => prev.map(m => 
-                    m.id === tempId 
-                      ? {
-                          id: serverMessageId,
-                          senderId: currentUserId,
-                          message: `[VOICE:${serverUrl}]`,
-                          translatedMessage: `[VOICE:${serverUrl}]`,
-                          isTranslated: false,
-                          createdAt: m.createdAt
-                        }
-                      : m
-                  ));
-                }}
-                onMessageFailed={(tempId) => {
-                  // Remove optimistic message on error
-                  setMessages(prev => prev.filter(m => m.id !== tempId));
-                }}
-                disabled={isBlocked}
-                className="h-7 w-7 shrink-0"
-              />
-
-              {/* Voice-to-text button */}
-              <VoiceRecordButton
-                onTranscription={(text) => {
-                  setNewMessage(prev => prev ? `${prev} ${text}` : text);
-                  setLastActivityTime(Date.now());
-                }}
-                disabled={isBlocked}
-                className="h-7 w-7 shrink-0"
-              />
-
-              {/* Text input - shows native script when available */}
-              <div className="relative flex-1">
-                <Input
-                  ref={messageInputRef}
-                  placeholder={isBlocked ? "Chat ended" : needsNativeConversion ? "Type in English..." : "Type your message..."}
-                  value={newMessage}
-                  onChange={(e) => {
-                    setNewMessage(e.target.value);
-                    handleTyping();
-                  }}
-                  onKeyDown={handleKeyPress}
-                  onCompositionStart={() => setIsComposing(true)}
-                  onCompositionEnd={() => setIsComposing(false)}
-                  className="h-7 text-[11px] pr-6"
-                  disabled={isBlocked}
-                  dir={needsNativeConversion && livePreview.nativePreview && !isLatinScript(livePreview.nativePreview) ? 'auto' : 'ltr'}
-                />
-                {livePreview.isConverting && (
-                  <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              {/* Transliteration toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-7 w-7 shrink-0",
+                  transliterationEnabled ? "text-primary" : "text-muted-foreground"
                 )}
-              </div>
-
-              {/* Send button */}
+                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
+                title={transliterationEnabled ? "Disable auto-conversion" : "Enable auto-conversion"}
+              >
+                <Languages className="h-3 w-3" />
+              </Button>
+              <Input
+                placeholder="Type in any language..."
+                value={newMessage}
+              onChange={(e) => {
+                  const val = e.target.value;
+                  setNewMessage(val);
+                  handleTyping();
+                  // Update live preview with debounce
+                  if (previewTimeoutRef.current) {
+                    clearTimeout(previewTimeoutRef.current);
+                  }
+                  if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
+                    setLivePreview({ text: '', isLoading: true });
+                    previewTimeoutRef.current = setTimeout(async () => {
+                      try {
+                        const result = await convertToNativeScript(val, currentUserLanguage);
+                        setLivePreview({ text: result.text || val, isLoading: false });
+                      } catch {
+                        setLivePreview({ text: '', isLoading: false });
+                      }
+                    }, 300);
+                  } else {
+                    setLivePreview({ text: '', isLoading: false });
+                  }
+                }}
+                onKeyDown={handleKeyPress}
+                className="h-7 text-[11px]"
+                disabled={isSending}
+              />
               <Button
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="h-7 w-7"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending || isBlocked || isComposing}
+                disabled={!newMessage.trim() || isSending}
               >
                 {isSending ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

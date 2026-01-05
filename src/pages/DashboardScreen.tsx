@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -53,15 +52,12 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { RandomChatButton } from "@/components/RandomChatButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-// Video calling removed - group private calls still available via AvailableGroupsSection
-
+import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
-import { MenPrivateCallSection } from "@/components/MenPrivateCallSection";
-import { PrivateCallInvitationListener } from "@/components/PrivateCallInvitationListener";
 
 import { useTranslation } from "@/contexts/TranslationContext";
-import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/dlTranslateLanguages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
@@ -115,17 +111,16 @@ const DashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
-  const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState("IN");
-  const [userCountryName, setUserCountryName] = useState(""); // Full country name for translation feature
+  const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
-  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // DL-Translate language code
+  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // NLLB-200 language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
-  const [isNonIndianTranslationUser, setIsNonIndianTranslationUser] = useState(false); // Is man's language non-Indian but translation supported
+  const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -259,13 +254,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'active_chat_sessions' },
-        () => { 
-          loadActiveChatCount(); 
-          // Also refresh women list to update their availability status
-          if (userLanguage) {
-            fetchOnlineWomen(userLanguage);
-          }
-        }
+        () => { loadActiveChatCount(); }
       )
       .on(
         'postgres_changes',
@@ -382,16 +371,16 @@ const DashboardScreen = () => {
   };
 
   const getStatusColor = () => {
-    // Uses primary theme color with different opacities for states
-    if (activeChatCount === 0) return "bg-primary";
-    if (activeChatCount >= 3) return "bg-primary/40";
-    return "bg-primary/70";
+    // Uses semantic colors: online (green), busy (amber), destructive (red)
+    if (activeChatCount === 0) return "bg-online";
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-busy";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-primary";
-    if (activeChatCount >= 3) return "bg-primary/40";
-    return "bg-primary/70";
+    if (activeChatCount === 0) return "bg-online";
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-busy";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -411,12 +400,9 @@ const DashboardScreen = () => {
       // First check gender from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country")
         .eq("user_id", user.id)
         .maybeSingle();
-
-      // Set user photo
-      setUserPhoto(mainProfile?.photo_url || null);
 
       // Redirect women to their dashboard (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female") {
@@ -464,7 +450,7 @@ const DashboardScreen = () => {
       // Use country from main profiles table
       const userCountryValue = mainProfile?.country;
       if (userCountryValue) {
-        setUserCountryName(userCountryValue); // Store full country name for translation feature
+        setUserCountryName(userCountryValue); // Store full country name for NLLB feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -983,25 +969,25 @@ const DashboardScreen = () => {
     { 
       icon: <Search className="w-6 h-6" />, 
       label: t('findMatch', 'Find Match'), 
-      color: "from-primary to-primary/80",
+      color: "from-primary to-rose-400",
       action: () => navigate("/find-match")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: t('messages', 'Messages'), 
-      color: "from-primary/90 to-primary/70",
+      color: "from-blue-500 to-blue-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-primary/80 to-primary/60",
+      color: "from-rose-500 to-pink-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'Profile'), 
-      color: "from-primary/70 to-primary/50",
+      color: "from-violet-500 to-purple-400",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -1018,7 +1004,7 @@ const DashboardScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -1041,7 +1027,7 @@ const DashboardScreen = () => {
             >
               <Bell className="w-5 h-5 text-primary" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                   {stats.unreadNotifications > 9 ? "9+" : stats.unreadNotifications}
                 </span>
               )}
@@ -1083,15 +1069,18 @@ const DashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-primary"
+                    className="data-[state=checked]:bg-emerald-500"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
                 </div>
-                <Badge className={cn("text-xs text-primary-foreground flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse bg-primary-foreground/60")} />
+                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
+                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
+                    activeChatCount === 0 ? "bg-online/60" : 
+                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-warning-foreground/60"
+                  )} />
                   {getStatusText()}
                 </Badge>
               </div>
@@ -1114,7 +1103,7 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
+              <Users className="w-5 h-5 text-success" />
               {t('onlineWomen', 'Women Online')}
             </h2>
             <Button
@@ -1135,53 +1124,53 @@ const DashboardScreen = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Same Language Women - List View */}
-              <div className="space-y-2">
+              {/* Left Column: Same Language Women */}
+              <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
+                  <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
                     {userLanguage}
                   </span>
                   <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
                 </div>
                 
                 {sameLanguageWomen.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-2">
-                    <div className="space-y-1">
-                      {sameLanguageWomen.map((woman) => (
-                        <div
-                          key={woman.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-all cursor-pointer group border border-transparent hover:border-primary/30"
-                          onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                        >
-                          <div className="relative flex-shrink-0">
-                            <Avatar className="w-9 h-9 border border-background shadow-sm">
-                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs">
-                                {woman.full_name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-primary" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
-                            )} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs text-foreground truncate">
-                              {woman.full_name || "Anonymous"}
-                            </p>
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              {woman.age && <span>{woman.age}y</span>}
-                              {woman.country && <><span>•</span><span className="truncate">{woman.country}</span></>}
-                            </div>
-                          </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {sameLanguageWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                          )} />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-success/20 text-success rounded-full">
+                          {woman.primary_language}
+                        </span>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
-                            variant="ghost"
+                            variant="aurora"
                             size="sm"
                             className={cn(
-                              "h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50"
+                              "flex-1 gap-1 text-xs h-7",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1189,13 +1178,13 @@ const DashboardScreen = () => {
                               handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                             }}
                           >
-                            <MessageCircle className="w-3 h-3 mr-1" />
+                            <MessageCircle className="w-3 h-3" />
                             {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                           </Button>
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
@@ -1204,11 +1193,11 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: All Women with Auto-Translation - List View */}
-              <div className="space-y-2">
+              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
+              <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-primary/80">{t('otherLanguages', 'Other Languages')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full flex items-center gap-1">
+                  <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-info/20 text-info rounded-full flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     {t('autoTranslate', 'Auto-Translate')}
                   </span>
@@ -1216,44 +1205,48 @@ const DashboardScreen = () => {
                 </div>
                 
                 {indianTranslatedWomen.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-2">
-                    <div className="space-y-1">
-                      {indianTranslatedWomen.map((woman) => (
-                        <div
-                          key={woman.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/10 transition-all cursor-pointer group border border-transparent hover:border-primary/30"
-                          onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                        >
-                          <div className="relative flex-shrink-0">
-                            <Avatar className="w-9 h-9 border border-background shadow-sm">
-                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary/50 text-primary-foreground text-xs">
-                                {woman.full_name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-primary" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-primary/40" : "bg-primary/70"
-                            )} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs text-foreground truncate">
-                              {woman.full_name || "Anonymous"}
-                            </p>
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              {woman.age && <span>{woman.age}y</span>}
-                              <span className="px-1 py-0.5 bg-primary/10 text-primary rounded text-[9px]">
-                                {woman.primary_language} → {userLanguage}
-                              </span>
-                            </div>
-                          </div>
+                  <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                    {indianTranslatedWomen.map((woman) => (
+                      <Card
+                        key={woman.id}
+                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                      >
+                        <div className="relative mx-auto mb-2">
+                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
+                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                            <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-sm">
+                              {woman.full_name?.charAt(0) || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={cn(
+                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                          )} />
+                        </div>
+                        <p className="font-medium text-xs text-foreground truncate">
+                          {woman.full_name || "Anonymous"}
+                        </p>
+                        {woman.age && (
+                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
+                        )}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-info/20 text-info rounded-full">
+                            {woman.primary_language}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">→</span>
+                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
+                            {userLanguage}
+                          </span>
+                        </div>
+                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
-                            variant="ghost"
+                            variant="aurora"
                             size="sm"
                             className={cn(
-                              "h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50"
+                              "flex-1 gap-1 text-xs h-7",
+                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
                             onClick={(e) => {
@@ -1261,13 +1254,13 @@ const DashboardScreen = () => {
                               handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                             }}
                           >
-                            <MessageCircle className="w-3 h-3 mr-1" />
+                            <MessageCircle className="w-3 h-3" />
                             {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
                           </Button>
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
@@ -1282,10 +1275,10 @@ const DashboardScreen = () => {
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
+          <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/20">
-                <Users className="w-6 h-6 text-primary" />
+              <div className="p-3 rounded-xl bg-emerald-500/20">
+                <Users className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.onlineUsersCount}</p>
@@ -1295,7 +1288,7 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Matches */}
-          <Card className="p-5 bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20 hover:shadow-glow transition-all">
+          <Card className="p-5 bg-gradient-aurora border-primary/30 hover:shadow-glow transition-all">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-primary/20">
                 <Heart className="w-6 h-6 text-primary" />
@@ -1308,10 +1301,10 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Notifications */}
-          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-glow transition-all col-span-2 md:col-span-1">
+          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/20">
-                <Bell className="w-6 h-6 text-primary" />
+              <div className="p-3 rounded-xl bg-accent/20">
+                <Bell className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.unreadNotifications}</p>
@@ -1349,6 +1342,12 @@ const DashboardScreen = () => {
                   size="lg"
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
                 />
+                <VideoCallMiniButton
+                  currentUserId={currentUserId}
+                  userLanguage={userLanguage}
+                  walletBalance={walletBalance}
+                  onBalanceChange={setWalletBalance}
+                />
                 <Button 
                   variant="aurora" 
                   size="lg"
@@ -1371,9 +1370,9 @@ const DashboardScreen = () => {
               <button
                 key={index}
                 onClick={action.action}
-                className="group p-6 rounded-2xl bg-gradient-to-br from-male/5 to-male/10 border border-male/20 hover:border-male/40 hover:shadow-glow transition-all duration-300"
+                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
               >
-                <div className={`w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                   {action.icon}
                 </div>
                 <p className="text-sm font-medium text-foreground">{action.label}</p>
@@ -1407,16 +1406,6 @@ const DashboardScreen = () => {
           />
         </div>
 
-        {/* Private 1-to-1 Calls Section (Men see invitations from women) */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.27s" }}>
-            <MenPrivateCallSection
-              currentUserId={currentUserId}
-              currentUserLanguage={userLanguage}
-            />
-          </div>
-        )}
-
         {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-4">
@@ -1434,8 +1423,8 @@ const DashboardScreen = () => {
                   className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className={`p-2 rounded-full ${
-                    notification.type === "match" ? "bg-primary/15 text-primary" :
-                    notification.type === "message" ? "bg-primary/10 text-primary" :
+                    notification.type === "match" ? "bg-female/10 text-female" :
+                    notification.type === "message" ? "bg-info/10 text-info" :
                     "bg-primary/10 text-primary"
                   }`}>
                     {notification.type === "match" ? <Heart className="w-5 h-5" /> :
@@ -1464,9 +1453,9 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-6 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-white">
               <Sparkles className="w-8 h-8" />
             </div>
             <div className="flex-1">
@@ -1522,9 +1511,9 @@ const DashboardScreen = () => {
                       htmlFor={`gateway-${gateway.id}`}
                       className={cn(
                         "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-primary/50 hover:bg-primary/5",
+                        "hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20",
                         selectedGateway === gateway.id
-                          ? "border-primary bg-primary/10"
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
                           : "border-border"
                       )}
                     >
@@ -1532,7 +1521,7 @@ const DashboardScreen = () => {
                       <span className="font-semibold text-sm">{gateway.name}</span>
                       <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
                       {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
+                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-orange-500" />
                       )}
                     </Label>
                   </div>
@@ -1636,8 +1625,7 @@ const DashboardScreen = () => {
         <EnhancedParallelChatsContainer
           currentUserId={currentUserId}
           userGender="male"
-          currentUserLanguage={userLanguage || "English"}
-          currentUserName={userName || "User"}
+          currentUserLanguage={userLanguage}
         />
       )}
 
@@ -1647,16 +1635,6 @@ const DashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="male"
           onClose={() => setShowFriendsPanel(false)}
-        />
-      )}
-
-      {/* Private Call Invitation Listener for Men */}
-      {currentUserId && (
-        <PrivateCallInvitationListener
-          currentUserId={currentUserId}
-          userName={userName}
-          userPhoto={userPhoto}
-          userGender="male"
         />
       )}
     </div>

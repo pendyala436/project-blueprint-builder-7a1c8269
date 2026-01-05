@@ -471,19 +471,19 @@ const AdminPolicyAlerts = () => {
           <Card>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Resolved</p>
-              <p className="text-2xl font-bold text-success">{stats.resolved}</p>
+              <p className="text-2xl font-bold text-green-500">{stats.resolved}</p>
             </CardContent>
           </Card>
-          <Card className={cn(stats.critical > 0 && "border-destructive animate-pulse")}>
+          <Card className={cn(stats.critical > 0 && "border-red-500 animate-pulse")}>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Critical</p>
-              <p className="text-2xl font-bold text-destructive">{stats.critical}</p>
+              <p className="text-2xl font-bold text-red-500">{stats.critical}</p>
             </CardContent>
           </Card>
-          <Card className={cn(stats.high > 0 && "border-destructive/70")}>
+          <Card className={cn(stats.high > 0 && "border-red-400")}>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">High Severity</p>
-              <p className="text-2xl font-bold text-destructive/80">{stats.high}</p>
+              <p className="text-2xl font-bold text-red-400">{stats.high}</p>
             </CardContent>
           </Card>
         </div>
@@ -577,8 +577,8 @@ const AdminPolicyAlerts = () => {
                       const profile = userProfiles[alert.user_id];
                       return (
                         <TableRow key={alert.id} className={cn(
-                          alert.severity === "critical" && "bg-destructive/10",
-                          alert.severity === "high" && "bg-destructive/5"
+                          alert.severity === "critical" && "bg-red-500/10",
+                          alert.severity === "high" && "bg-red-500/5"
                         )}>
                           <TableCell>
                             <div className="flex items-center gap-2">

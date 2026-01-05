@@ -2,7 +2,7 @@
  * ChatScreen.tsx
  * 
  * PURPOSE: Real-time messaging interface between two matched users.
- * Features automatic message translation using DL-Translate.
+ * Features automatic message translation using NLLB-200 neural translation.
  * 
  * KEY FEATURES:
  * - Real-time message updates via Supabase Realtime subscriptions
@@ -17,7 +17,7 @@
  * - user_status: Online/offline tracking
  * 
  * EDGE FUNCTIONS USED:
- * - translate-message: DL-Translate based translation
+ * - translate-message: NLLB-200 based neural translation
  */
 
 // ============= IMPORTS SECTION =============
@@ -83,9 +83,6 @@ import {
 } from "@/components/ui/alert-dialog";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
-// Embedded translation engine (browser-based ML + dictionaries)
-import { translateText, convertToNativeScript, normalizeLanguage, isLatinScript } from "@/lib/translation/translation-engine";
-import { isLatinScriptLanguage } from "@/lib/translation/language-codes";
 // Billing and earnings display components
 import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
@@ -163,11 +160,6 @@ const ChatScreen = () => {
   
   // Current message being typed
   const [newMessage, setNewMessage] = useState("");
-  
-  // Live preview of native script conversion (e.g., "bagunnava" → "బాగున్నావా")
-  const [livePreview, setLivePreview] = useState("");
-  const [isConverting, setIsConverting] = useState(false);
-  const transliterationDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   // True while message is being sent
   const [isSending, setIsSending] = useState(false);
@@ -348,11 +340,6 @@ const ChatScreen = () => {
         async (payload: any) => {
           // Extract new message from payload
           const newMsg = payload.new;
-
-          // Skip own messages - we add them locally on send for reliability
-          if (newMsg?.sender_id === currentUserId) {
-            return;
-          }
           
           // ============= TRANSLATE INCOMING MESSAGES =============
           
@@ -361,13 +348,9 @@ const ChatScreen = () => {
           let isTranslated = false;
           
           // Only translate messages from partner (not our own)
-          if (newMsg.sender_id !== currentUserId && chatPartner) {
-            // Translate from partner's language to current user's preferred language
-            const translation = await translateMessage(
-              newMsg.message, 
-              currentUserLanguage,
-              chatPartner.preferredLanguage // Partner's language as source
-            );
+          if (newMsg.sender_id !== currentUserId) {
+            // Translate to current user's preferred language
+            const translation = await translateMessage(newMsg.message, currentUserLanguage);
             translatedMessage = translation.translatedMessage;
             isTranslated = translation.isTranslated;
           }
@@ -395,12 +378,7 @@ const ChatScreen = () => {
           }
         }
       )
-      .subscribe((status, err) => {
-        console.log(
-          `[RealTime] ChatScreen subscription: ${status}`,
-          err ? `Error: ${err.message}` : ""
-        );
-      }); // Start listening
+      .subscribe(); // Start listening
 
     // Cleanup function: remove channel on unmount
     return () => {
@@ -926,57 +904,38 @@ const ChatScreen = () => {
    * translateMessage Function
    * 
    * Calls the translate-message edge function to translate text.
-   * Uses DL-Translate dictionary-based translation supporting 200+ languages.
+   * Uses NLLB-200 neural machine translation model supporting 200+ languages.
    * 
    * @param message - Text to translate
    * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
    * @param sourceLanguage - Optional source language (auto-detected if not provided)
    * @returns Object with translatedMessage, isTranslated flag, and detectedLanguage
    */
-  const translateMessage = async (
-    message: string,
-    targetLanguage: string,
-    sourceLanguage?: string
-  ) => {
-    const trimmed = message.trim();
-    if (!trimmed) {
-      return {
-        translatedMessage: message,
-        isTranslated: false,
-        detectedLanguage: "unknown",
-        translationPair: "",
-      };
-    }
-
+  const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      const normTarget = normalizeLanguage(targetLanguage || "english");
-      const normSource = sourceLanguage ? normalizeLanguage(sourceLanguage) : undefined;
-
-      const result = await translateText(trimmed, {
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        mode: "translate",
+      // Call Supabase Edge Function for NLLB-200 translation
+      const { data, error } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message, 
+          targetLanguage,
+          sourceLanguage: sourceLanguage || currentUserLanguage // Use current user's language as source
+        }
       });
 
-      const wasActuallyTranslated =
-        result.isTranslated &&
-        result.translatedText &&
-        result.translatedText !== trimmed;
-
-      return {
-        translatedMessage: result.translatedText,
-        isTranslated: wasActuallyTranslated,
-        detectedLanguage: result.sourceLanguage,
-        translationPair: `${result.sourceLanguage} → ${normTarget}`,
+      if (error) throw error;
+      
+      // Translation completed successfully
+      
+      return { 
+        translatedMessage: data.translatedMessage, 
+        isTranslated: data.isTranslated,
+        detectedLanguage: data.detectedLanguage,
+        translationPair: data.translationPair || `${data.detectedLanguage} → ${targetLanguage}`
       };
     } catch (error) {
       console.error("Translation error:", error);
-      return {
-        translatedMessage: trimmed,
-        isTranslated: false,
-        detectedLanguage: "unknown",
-        translationPair: "",
-      };
+      // Return original message on error
+      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
     }
   };
 
@@ -996,103 +955,37 @@ const ChatScreen = () => {
   };
 
   /**
-   * convertToSenderNativeScript Function
+   * convertMessageToTargetLanguage Function
    * 
-   * Converts Latin/English typing to the SENDER's native language script.
-   * This is used when sender types "bagunnava" and their language is Telugu.
+   * Converts English typing to the target language script.
    * Example: "bagunnava" → బాగున్నావా (Telugu)
    * Example: "kaise ho" → कैसे हो (Hindi)
    * 
    * @param message - Text typed in English/Latin characters
-   * @param senderLanguage - Sender's native language (e.g., "Telugu", "Hindi")
-   * @returns Converted text in sender's native script
+   * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
+   * @returns Converted text in target language script
    */
-  const convertToSenderNativeScript = async (
-    message: string,
-    senderLanguage: string
-  ): Promise<string> => {
+  const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
     try {
-      const trimmed = message.trim();
-      if (!trimmed) return message;
+      const { data, error } = await supabase.functions.invoke("translate-message", {
+        body: { 
+          message, 
+          targetLanguage,
+          mode: "convert" // Force conversion mode for outgoing messages
+        }
+      });
 
-      const normLang = normalizeLanguage(senderLanguage);
-      
-      // Skip if language uses Latin script or text is already non-Latin
-      if (isLatinScriptLanguage(normLang) || !isLatinScript(trimmed)) {
-        return trimmed;
+      if (error) {
+        console.error("Conversion error:", error);
+        return message;
       }
-
-      const converted = await convertToNativeScript(trimmed, senderLanguage);
-      return converted || message;
+      
+      return data.convertedMessage || data.translatedMessage || message;
     } catch (error) {
-      console.error("Conversion to native script failed:", error);
+      console.error("Conversion failed:", error);
       return message;
     }
   };
-
-  /**
-   * Real-time transliteration effect
-   * 
-   * Converts Latin typing to sender's native script as they type.
-   * Updates livePreview state with the converted text.
-   */
-  useEffect(() => {
-    // Clear previous debounce
-    if (transliterationDebounceRef.current) {
-      clearTimeout(transliterationDebounceRef.current);
-    }
-
-    const trimmed = newMessage.trim();
-    
-    // Skip if empty or very short
-    if (trimmed.length < 2) {
-      setLivePreview("");
-      setIsConverting(false);
-      return;
-    }
-
-    const normLang = normalizeLanguage(currentUserLanguage);
-    
-    // Skip if user's language uses Latin script
-    if (isLatinScriptLanguage(normLang)) {
-      setLivePreview("");
-      setIsConverting(false);
-      return;
-    }
-
-    // Skip if text is already in non-Latin script
-    if (!isLatinScript(trimmed)) {
-      setLivePreview("");
-      setIsConverting(false);
-      return;
-    }
-
-    // Show converting indicator
-    setIsConverting(true);
-
-    // Debounce the conversion
-    transliterationDebounceRef.current = setTimeout(async () => {
-      try {
-        const converted = await convertToNativeScript(trimmed, currentUserLanguage);
-        if (converted && converted !== trimmed) {
-          setLivePreview(converted);
-        } else {
-          setLivePreview("");
-        }
-      } catch (error) {
-        console.error("Live transliteration error:", error);
-        setLivePreview("");
-      } finally {
-        setIsConverting(false);
-      }
-    }, 300);
-
-    return () => {
-      if (transliterationDebounceRef.current) {
-        clearTimeout(transliterationDebounceRef.current);
-      }
-    };
-  }, [newMessage, currentUserLanguage]);
 
   /**
    * handleSendMessage Function
@@ -1106,7 +999,7 @@ const ChatScreen = () => {
    */
   const handleSendMessage = async () => {
     // ============= VALIDATION =============
-
+    
     // Don't send empty messages or while already sending
     if (!newMessage.trim() || !chatPartner || isSending) return;
 
@@ -1114,7 +1007,7 @@ const ChatScreen = () => {
     if (isBlocked || isBlockedByPartner) {
       toast({
         title: "Cannot Send Message",
-        description: isBlocked
+        description: isBlocked 
           ? "You have blocked this user. Unblock to send messages."
           : "You cannot send messages to this user.",
         variant: "destructive",
@@ -1124,108 +1017,47 @@ const ChatScreen = () => {
 
     // Store message and clear input immediately for responsiveness
     const messageText = newMessage.trim();
-    
-    // Use livePreview (native script) if available, otherwise use typed text
-    // This ensures sender immediately sees native script, not Latin
-    const displayMessage = livePreview || messageText;
-    
     setNewMessage("");
-    setLivePreview(""); // Clear preview immediately
     setIsSending(true);
 
-    // Optimistic update - sender sees native script immediately
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: Message = {
-      id: tempId,
-      senderId: currentUserId,
-      message: displayMessage, // Show native script immediately
-      translatedMessage: undefined,
-      isTranslated: false,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimisticMessage]);
-
     try {
-      // ============= CONVERT LATIN TYPING TO SENDER'S NATIVE SCRIPT =============
-      // If livePreview was available, use it; otherwise convert now
-      // Example: User types "bagunnava" with Telugu as their language
-      // Converts to "బాగున్నావా" (Telugu script)
-      const convertedMessage = displayMessage !== messageText 
-        ? displayMessage // Already converted via livePreview
-        : await convertToSenderNativeScript(messageText, currentUserLanguage);
-
-      // Update optimistic message if we had to convert now
-      if (convertedMessage !== displayMessage) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === tempId ? { ...m, message: convertedMessage } : m))
-        );
-      }
-
-      // ============= TRANSLATE FOR RECEIVER (Background) =============
-      // Translate from sender's language to partner's language
-      const translation = await translateMessage(
-        convertedMessage,
-        chatPartner.preferredLanguage,
-        currentUserLanguage // Source is sender's language
-      );
+      // ============= CONVERT ENGLISH TYPING TO TARGET LANGUAGE =============
+      
+      // First, convert English typing to partner's language script
+      const convertedMessage = await convertMessageToTargetLanguage(messageText, chatPartner.preferredLanguage);
+      
+      // ============= TRANSLATE FOR RECEIVER =============
+      
+      // Translate message to partner's preferred language (for display)
+      const translation = await translateMessage(convertedMessage, chatPartner.preferredLanguage);
       const translatedMessage = translation.translatedMessage;
       const isTranslated = translation.isTranslated;
 
-      // Update optimistic message with translation preview
-      if (translatedMessage) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempId
-              ? { ...m, translatedMessage, isTranslated }
-              : m
-          )
-        );
-      }
-
       // ============= INSERT MESSAGE INTO DATABASE =============
-      const { data: insertedMsg, error } = await supabase
+      
+      const { error } = await supabase
         .from("chat_messages")
         .insert({
-          chat_id: chatId.current, // Consistent chat identifier
-          sender_id: currentUserId, // Current user as sender
-          receiver_id: chatPartner.userId, // Partner as receiver
-          message: convertedMessage, // Converted message (English typing → target script)
-          translated_message: translatedMessage || null,
-          is_translated: isTranslated,
-        })
-        .select()
-        .single();
+          chat_id: chatId.current,          // Consistent chat identifier
+          sender_id: currentUserId,          // Current user as sender
+          receiver_id: chatPartner.userId,   // Partner as receiver
+          message: convertedMessage,         // Converted message (English typing → target script)
+          translated_message: translatedMessage || null, // Translation if different
+          is_translated: isTranslated,       // Flag if translation occurred
+        });
 
       if (error) throw error;
 
-      if (insertedMsg) {
-        // Replace optimistic temp message with real message row
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempId
-              ? {
-                  id: insertedMsg.id,
-                  senderId: insertedMsg.sender_id,
-                  message: insertedMsg.message,
-                  translatedMessage: insertedMsg.translated_message || translatedMessage,
-                  isTranslated: Boolean(insertedMsg.is_translated) || isTranslated,
-                  isRead: Boolean(insertedMsg.is_read),
-                  createdAt: insertedMsg.created_at,
-                }
-              : m
-          )
-        );
-      }
+      // Note: Message will appear via realtime subscription
+      
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove optimistic message on failure and restore input
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       toast({
         title: "Error",
         description: "Failed to send message",
         variant: "destructive",
       });
+      // Restore message to input on failure
       setNewMessage(messageText);
     } finally {
       setIsSending(false);
@@ -1764,7 +1596,7 @@ const ChatScreen = () => {
           <div className="flex items-center justify-center gap-2 text-sm text-info">
             <Languages className="w-4 h-4" />
             <span>Auto-translating: <strong>{currentUserLanguage}</strong> ↔ <strong>{chatPartner.preferredLanguage}</strong></span>
-            <span className="text-xs opacity-75">(DL-Translate)</span>
+            <span className="text-xs opacity-75">(NLLB-200)</span>
           </div>
         </div>
       )}
@@ -1815,11 +1647,6 @@ const ChatScreen = () => {
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
-                
-                // === MESSAGE DISPLAY LOGIC ===
-                // Sender sees: Their native script message only
-                // Receiver sees: Translated message in their language
-                // Original is hidden by default for receiver (can toggle to show)
                 const displayText = !isMine && message.isTranslated && message.translatedMessage 
                   ? extractAttachment(message.translatedMessage).text 
                   : messageText;
@@ -1902,23 +1729,23 @@ const ChatScreen = () => {
                           </div>
                         )}
 
-                        {/* Original message for receiver - shown only when toggle is ON */}
+                        {/* Original message for receiver (when translations shown) */}
                         {showTranslations && !isMine && message.isTranslated && message.translatedMessage && (
                           <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-border/50 rounded-bl-md">
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
-                              Original ({chatPartner?.preferredLanguage || 'Unknown'})
+                              Original
                             </p>
                             <p className="text-sm text-muted-foreground">{messageText}</p>
                           </div>
                         )}
 
-                        {/* "They see" preview for sender - shown only when toggle is ON */}
+                        {/* Translation preview for sender */}
                         {showTranslations && isMine && message.isTranslated && message.translatedMessage && (
                           <div className="px-4 py-2 rounded-2xl bg-info/10 border border-info/20 rounded-br-md">
                             <p className="text-xs text-info flex items-center gap-1 mb-1">
                               <Languages className="w-3 h-3" />
-                              {chatPartner?.fullName || 'They'} sees ({chatPartner?.preferredLanguage || 'Unknown'})
+                              They see
                             </p>
                             <p className="text-sm text-foreground">{extractAttachment(message.translatedMessage).text}</p>
                           </div>
@@ -1951,12 +1778,12 @@ const ChatScreen = () => {
 
       {/* ============= CAMERA MODAL ============= */}
       {isCameraOpen && (
-        <div className="fixed inset-0 z-50 bg-video flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between p-4">
-            <button onClick={closeCamera} className="p-2 text-video-text">
+            <button onClick={closeCamera} className="p-2 text-white">
               <X className="w-6 h-6" />
             </button>
-            <span className="text-video-text font-medium">Take Selfie</span>
+            <span className="text-white font-medium">Take Selfie</span>
             <div className="w-10" />
           </div>
           <div className="flex-1 flex items-center justify-center">
@@ -1984,21 +1811,6 @@ const ChatScreen = () => {
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 bg-background border-t border-border/50 px-4 py-3">
         <div className="max-w-4xl mx-auto space-y-2">
-          {/* Live transliteration preview - shows native script while typing */}
-          {/* Example: User types "bagunnava" → Preview shows "బాగున్నావా" */}
-          {livePreview && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-accent/50 rounded-lg border border-accent">
-              <Languages className="w-4 h-4 text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground mb-0.5">
-                  Preview ({currentUserLanguage}):
-                </p>
-                <p className="text-base font-medium text-foreground">{livePreview}</p>
-              </div>
-              {isConverting && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
-            </div>
-          )}
-          
           {/* Selected file preview */}
           {selectedFile && (
             <div className="flex items-center gap-3 p-2 bg-muted rounded-lg">

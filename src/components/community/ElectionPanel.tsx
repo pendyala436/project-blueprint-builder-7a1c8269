@@ -223,11 +223,11 @@ export const ElectionPanel = ({
       <div className={cn(
         "p-4 rounded-lg border relative overflow-hidden",
         currentElection?.status === "active" 
-          ? "bg-success/10 border-success/30" 
+          ? "bg-green-500/10 border-green-500/30" 
           : currentElection?.status === "pending"
-            ? "bg-pending/10 border-pending/30"
+            ? "bg-amber-500/10 border-amber-500/30"
             : currentElection?.status === "completed"
-              ? "bg-info/10 border-info/30"
+              ? "bg-blue-500/10 border-blue-500/30"
               : "bg-muted border-border"
       )}>
         {/* Live indicator for active elections */}
@@ -308,12 +308,12 @@ export const ElectionPanel = ({
 
       {/* Live Results Dashboard (Active Elections) */}
       {currentElection?.status === "active" && (
-        <Card className="border-success/30 bg-success/5">
+        <Card className="border-green-500/30 bg-green-500/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-success" />
+              <BarChart3 className="w-4 h-4 text-green-500" />
               {t('liveResults', 'Live Results')}
-              <Badge variant="outline" className="ml-auto bg-success/20 text-success border-success/30">
+              <Badge variant="outline" className="ml-auto bg-green-500/20 text-green-600 border-green-500/30">
                 <TrendingUp className="w-3 h-3 mr-1" />
                 {totalVotesCast} votes
               </Badge>
@@ -346,7 +346,7 @@ export const ElectionPanel = ({
                         </Avatar>
                         <span className="text-sm font-medium">{candidate.full_name}</span>
                         {isLeading && (
-                          <Badge className="bg-crown text-crown-foreground text-xs py-0">
+                          <Badge className="bg-amber-500 text-white text-xs py-0">
                             Leading
                           </Badge>
                         )}
@@ -357,7 +357,7 @@ export const ElectionPanel = ({
                       <div 
                         className={cn(
                           "h-full rounded-full transition-all duration-500",
-                          isLeading ? "bg-crown" : "bg-primary/60"
+                          isLeading ? "bg-amber-500" : "bg-primary/60"
                         )}
                         style={{ width: `${percentage}%` }}
                       />
@@ -449,10 +449,10 @@ export const ElectionPanel = ({
 
       {/* Officer Nominations (when no officer) */}
       {!electionOfficer && officerNominations.length > 0 && (
-        <Card className="border-accent/30 bg-accent/5">
+        <Card className="border-purple-500/30 bg-purple-500/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Gavel className="w-4 h-4 text-accent" />
+              <Gavel className="w-4 h-4 text-purple-500" />
               Commissioner Nominations
               <Badge variant="outline" className="ml-auto">
                 {officerNominations.length} pending
@@ -489,7 +489,7 @@ export const ElectionPanel = ({
                     {hasEnoughApproval && (
                       <Button
                         size="sm"
-                        className="bg-accent hover:bg-accent/90"
+                        className="bg-purple-500 hover:bg-purple-600"
                         onClick={async () => {
                           setIsProcessing(true);
                           await onConfirmOfficer(nomination);
@@ -506,11 +506,11 @@ export const ElectionPanel = ({
                   <div className="space-y-1">
                     <div className="h-2 bg-muted rounded-full overflow-hidden flex">
                       <div 
-                        className="h-full bg-success transition-all"
+                        className="h-full bg-green-500 transition-all"
                         style={{ width: `${approvalRate}%` }}
                       />
                       <div 
-                        className="h-full bg-destructive transition-all"
+                        className="h-full bg-red-500 transition-all"
                         style={{ width: `${100 - approvalRate}%` }}
                       />
                     </div>
@@ -526,7 +526,7 @@ export const ElectionPanel = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-success border-success/30 hover:bg-success/10"
+                        className="flex-1 text-green-600 border-green-500/30 hover:bg-green-500/10"
                         onClick={async () => {
                           setIsProcessing(true);
                           await onVoteOnNomination(nomination.id, true);
@@ -540,7 +540,7 @@ export const ElectionPanel = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                        className="flex-1 text-red-600 border-red-500/30 hover:bg-red-500/10"
                         onClick={async () => {
                           setIsProcessing(true);
                           await onVoteOnNomination(nomination.id, false);
@@ -558,15 +558,15 @@ export const ElectionPanel = ({
                     <Badge variant="outline" className={cn(
                       "w-full justify-center",
                       nomination.user_vote_type === "approve" 
-                        ? "bg-success/10 text-success border-success/30"
-                        : "bg-destructive/10 text-destructive border-destructive/30"
+                        ? "bg-green-500/10 text-green-600 border-green-500/30"
+                        : "bg-red-500/10 text-red-600 border-red-500/30"
                     )}>
                       You {nomination.user_vote_type === "approve" ? "approved" : "rejected"} this nomination
                     </Badge>
                   )}
 
                   {nomination.nominee_id === currentUserId && (
-                    <Badge variant="outline" className="w-full justify-center bg-accent/10 text-accent border-accent/30">
+                    <Badge variant="outline" className="w-full justify-center bg-purple-500/10 text-purple-600 border-purple-500/30">
                       This is your nomination
                     </Badge>
                   )}
@@ -580,7 +580,7 @@ export const ElectionPanel = ({
       {/* Online Members Count */}
       <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border">
         <div className="flex items-center gap-2 text-sm">
-          <Wifi className="w-4 h-4 text-online" />
+          <Wifi className="w-4 h-4 text-green-500" />
           <span>{onlineMembers.length} members online</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -601,7 +601,7 @@ export const ElectionPanel = ({
               {candidates.map(candidate => (
                 <Card key={candidate.id} className={cn(
                   "p-3",
-                  currentElection?.winner_id === candidate.user_id && "border-crown/50 bg-crown/10"
+                  currentElection?.winner_id === candidate.user_id && "border-amber-500/50 bg-amber-500/10"
                 )}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -613,7 +613,7 @@ export const ElectionPanel = ({
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{candidate.full_name}</span>
                           {currentElection?.winner_id === candidate.user_id && (
-                            <Badge className="bg-crown text-crown-foreground">
+                            <Badge className="bg-amber-500 text-white">
                               <Crown className="w-3 h-3 mr-1" />
                               {t('winner', 'Winner')}
                             </Badge>
@@ -638,7 +638,7 @@ export const ElectionPanel = ({
       {isOfficer && (
         <div className="space-y-2 pt-2 border-t">
           <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Gavel className="w-4 h-4 text-accent" />
+            <Gavel className="w-4 h-4 text-purple-500" />
             {t('commissionerControls', 'Commissioner Controls')}
           </h4>
           

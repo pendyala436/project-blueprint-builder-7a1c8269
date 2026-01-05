@@ -10,8 +10,7 @@ const corsHeaders = {
 let PRIORITY_WAIT_THRESHOLD_SECONDS = 180; // 3 minutes
 let CHAT_INACTIVITY_TIMEOUT_SECONDS = 120; // 2 minutes - chat auto-stops if inactive
 let USER_IDLE_TIMEOUT_SECONDS = 600; // 10 minutes - user auto-logged out if idle
-let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user (configurable)
-let MAX_PARALLEL_CALLS = 1; // Maximum parallel video calls per user
+let MAX_PARALLEL_CHATS = 3; // Maximum parallel connections per user
 let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
@@ -81,8 +80,6 @@ async function loadAdminSettings(supabase: any): Promise<void> {
       .in("setting_key", [
         "auto_disconnect_timer",
         "max_parallel_connections",
-        "max_concurrent_chats",
-        "max_concurrent_calls",
         "reconnect_attempts",
         "heartbeat_interval",
         "priority_wait_threshold"
@@ -102,11 +99,7 @@ async function loadAdminSettings(supabase: any): Promise<void> {
             USER_IDLE_TIMEOUT_SECONDS = value;
             break;
           case "max_parallel_connections":
-          case "max_concurrent_chats":
             MAX_PARALLEL_CHATS = value;
-            break;
-          case "max_concurrent_calls":
-            MAX_PARALLEL_CALLS = value;
             break;
           case "reconnect_attempts":
             RECONNECT_ATTEMPTS = value;
@@ -120,7 +113,7 @@ async function loadAdminSettings(supabase: any): Promise<void> {
         }
       }
     }
-    console.log(`[CONFIG] Loaded settings: chatInactivity=${CHAT_INACTIVITY_TIMEOUT_SECONDS}s, userIdle=${USER_IDLE_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, maxCalls=${MAX_PARALLEL_CALLS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
+    console.log(`[CONFIG] Loaded settings: chatInactivity=${CHAT_INACTIVITY_TIMEOUT_SECONDS}s, userIdle=${USER_IDLE_TIMEOUT_SECONDS}s, maxChats=${MAX_PARALLEL_CHATS}, reconnect=${RECONNECT_ATTEMPTS}, heartbeat=${HEARTBEAT_INTERVAL_SECONDS}s`);
   } catch (error) {
     console.error("[CONFIG] Error loading admin settings, using defaults:", error);
   }
@@ -463,15 +456,10 @@ serve(async (req) => {
         );
       }
 
-      // MAIN MATCHING LOGIC FOR CHAT:
-      // 1. If man's language matches woman's language → connect them
-      // 2. If no same-language women available → connect to ANY available Indian-language woman online
-      // 3. Auto-translation enabled for ALL cross-language chats
-      // Each parallel chat window connects to a DIFFERENT woman
+      // MAIN MATCHING LOGIC: Find best match based on language with load balancing (global - all languages)
       case "find_match": {
         const manLanguage = (preferred_language || "english").toLowerCase().trim();
         const manId = man_user_id;
-        const excludeIds = exclude_user_ids || [];
         
         if (!manId) {
           return new Response(
@@ -480,19 +468,7 @@ serve(async (req) => {
           );
         }
 
-        console.log(`[find_match] Man language: ${manLanguage}, Rule: Same language first → fallback to Indian-language women`);
-
-        // Get women already in active chat with this man (to exclude them)
-        const { data: existingChats } = await supabase
-          .from("active_chat_sessions")
-          .select("woman_user_id")
-          .eq("man_user_id", manId)
-          .eq("status", "active");
-
-        const womenAlreadyChatting = existingChats?.map((c: any) => c.woman_user_id) || [];
-        const allExcludedWomen = [...new Set([...excludeIds, ...womenAlreadyChatting])];
-
-        console.log(`Finding match for man ${manId} with language: ${manLanguage}, excluding ${allExcludedWomen.length} women`);
+        console.log(`Finding match for man ${manId} with language: ${manLanguage}`);
         
         // Step 1: Get all online women
         const { data: onlineStatuses } = await supabase
@@ -546,16 +522,10 @@ serve(async (req) => {
           }
         });
 
-        // Step 5: Filter and categorize women
-        const sameLanguageWomen: any[] = [];
-        const indianLanguageWomen: any[] = [];
+        // Step 5: Filter women by availability (no language/country restrictions)
+        const eligibleWomen: any[] = [];
         
         for (const woman of womenProfiles) {
-          // Skip women already chatting with this man
-          if (allExcludedWomen.includes(woman.user_id)) {
-            continue;
-          }
-
           const avail = availabilityMap.get(woman.user_id);
           const maxChats = avail?.max_concurrent_chats || 3;
           const currentChats = avail?.current_chat_count || 0;
@@ -574,55 +544,35 @@ serve(async (req) => {
             "english"
           ).toLowerCase().trim();
 
-          const isSameLanguage = womanLanguage === manLanguage;
-          const isIndian = isIndianLanguage(womanLanguage);
-
-          const enrichedWoman = {
+          eligibleWomen.push({
             ...woman,
             language: womanLanguage,
             currentChats,
-            isSameLanguage,
-            isIndianLanguage: isIndian
-          };
-
-          if (isSameLanguage) {
-            sameLanguageWomen.push(enrichedWoman);
-          } else if (isIndian) {
-            indianLanguageWomen.push(enrichedWoman);
-          }
-        }
-
-        console.log(`[find_match] Found ${sameLanguageWomen.length} same-language, ${indianLanguageWomen.length} Indian-language (fallback)`);
-
-        // Step 6: Sort by load (lower chat count = higher priority)
-        const sortByLoad = (a: any, b: any) => a.currentChats - b.currentChats;
-        sameLanguageWomen.sort(sortByLoad);
-        indianLanguageWomen.sort(sortByLoad);
-
-        // Step 7: Selection logic
-        let eligibleWomen: any[] = [];
-        let matchType = '';
-        
-        if (sameLanguageWomen.length > 0) {
-          eligibleWomen = sameLanguageWomen;
-          matchType = 'same_language';
-        } else if (indianLanguageWomen.length > 0) {
-          eligibleWomen = indianLanguageWomen;
-          matchType = 'indian_language_fallback';
-          console.log(`[find_match] No same-language women, falling back to Indian-language women`);
+            isSameLanguage: womanLanguage === manLanguage
+          });
         }
 
         if (eligibleWomen.length === 0) {
           return new Response(
-            JSON.stringify({ success: false, message: "No available Indian-language women at the moment" }),
+            JSON.stringify({ success: false, message: "No women available at the moment" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
+        // Step 6: Sort by priority (same language first, then by load)
+        eligibleWomen.sort((a, b) => {
+          // Priority 1: Same language
+          if (a.isSameLanguage !== b.isSameLanguage) {
+            return a.isSameLanguage ? -1 : 1;
+          }
+          // Priority 2: Lower chat count (load balancing)
+          return a.currentChats - b.currentChats;
+        });
+
         const selectedWoman = eligibleWomen[0];
         const translationNeeded = !selectedWoman.isSameLanguage;
 
-        console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, match_type: ${matchType}, translation_needed: ${translationNeeded}, load: ${selectedWoman.currentChats}`);
+        console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
 
         return new Response(
           JSON.stringify({
@@ -636,9 +586,6 @@ serve(async (req) => {
             },
             same_language: selectedWoman.isSameLanguage,
             translation_needed: translationNeeded,
-            translation_enabled: translationNeeded, // Auto-translation always enabled
-            match_type: matchType,
-            woman_language: selectedWoman.language,
             current_load: selectedWoman.currentChats,
             total_available: eligibleWomen.length
           }),
@@ -948,75 +895,32 @@ serve(async (req) => {
           );
         }
 
-        // Use configurable max parallel chats from admin settings
-        const maxChatsForMan = MAX_PARALLEL_CHATS;
+        const MAX_PARALLEL_CHATS = 3;
 
-        // Check man's active chat count
-        const { data: manActiveChatsData } = await supabase
+        // Check man's active chat count (max 3 parallel sessions)
+        const { count: manActiveChats } = await supabase
           .from("active_chat_sessions")
-          .select("woman_user_id")
+          .select("*", { count: "exact", head: true })
           .eq("man_user_id", man_user_id)
           .eq("status", "active");
 
-        const manActiveChats = manActiveChatsData?.length || 0;
-
-        if (manActiveChats >= maxChatsForMan) {
+        if ((manActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
-            JSON.stringify({ success: false, message: `Maximum ${maxChatsForMan} parallel chats allowed` }),
+            JSON.stringify({ success: false, message: `Maximum ${MAX_PARALLEL_CHATS} parallel chats allowed` }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // IMPORTANT: Check if man is already chatting with this specific woman
-        // Each chat window must be with a DIFFERENT woman
-        const alreadyChattingWithWoman = manActiveChatsData?.some(
-          (chat: any) => chat.woman_user_id === woman_user_id
-        );
-
-        if (alreadyChattingWithWoman) {
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "You already have an active chat with this user. Each chat window must be with a different person."
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Get woman's max capacity from her availability settings
-        const { data: womanAvail } = await supabase
-          .from("women_availability")
-          .select("current_chat_count, max_concurrent_chats")
-          .eq("user_id", woman_user_id)
-          .maybeSingle();
-
-        const womanMaxChats = womanAvail?.max_concurrent_chats || MAX_PARALLEL_CHATS;
-        const womanCurrentChats = womanAvail?.current_chat_count || 0;
-
-        if (womanCurrentChats >= womanMaxChats) {
-          return new Response(
-            JSON.stringify({ success: false, message: "This user is at maximum chat capacity" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Also verify woman is not already chatting with this man (each chat must be with different men)
-        const { data: womanActiveChats } = await supabase
+        // Check woman's active chat count (max 3 parallel sessions)
+        const { count: womanActiveChats } = await supabase
           .from("active_chat_sessions")
-          .select("man_user_id")
+          .select("*", { count: "exact", head: true })
           .eq("woman_user_id", woman_user_id)
           .eq("status", "active");
 
-        const alreadyChattingWithMan = womanActiveChats?.some(
-          (chat: any) => chat.man_user_id === man_user_id
-        );
-
-        if (alreadyChattingWithMan) {
+        if ((womanActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "This user is already in a chat with you."
-            }),
+            JSON.stringify({ success: false, message: "This user is at maximum chat capacity" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }

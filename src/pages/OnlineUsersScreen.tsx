@@ -395,9 +395,9 @@ const OnlineUsersScreen = () => {
               {/* Like Button */}
               <button
                 onClick={() => selectedUser && handleLike(selectedUser)}
-                className="group w-20 h-20 rounded-full bg-gradient-to-br from-primary to-female hover:from-primary/90 hover:to-female/90 flex items-center justify-center transition-all duration-300 shadow-glow hover:shadow-lg hover:scale-110"
+                className="group w-20 h-20 rounded-full bg-gradient-to-br from-primary to-rose-500 hover:from-primary/90 hover:to-rose-500/90 flex items-center justify-center transition-all duration-300 shadow-glow hover:shadow-lg hover:scale-110"
               >
-                <Heart className="w-10 h-10 text-primary-foreground fill-primary-foreground group-hover:animate-bounce-subtle" />
+                <Heart className="w-10 h-10 text-white fill-white group-hover:animate-bounce-subtle" />
               </button>
 
               {/* View Profile Button */}

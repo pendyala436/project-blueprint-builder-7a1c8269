@@ -128,9 +128,9 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
           }}
         >
           <span
-            className="text-foreground text-sm font-bold transform rotate-[-30deg] whitespace-nowrap"
+            className="text-white text-sm font-bold transform rotate-[-30deg] whitespace-nowrap"
             style={{
-              textShadow: showWatermark ? '1px 1px 2px hsl(var(--background))' : 'none'
+              textShadow: showWatermark ? '1px 1px 2px rgba(0,0,0,0.5)' : 'none'
             }}
           >
             {watermarkText}
@@ -140,8 +140,8 @@ const ProtectedImage: React.FC<ProtectedImageProps> = ({
 
       {/* Blur overlay message */}
       {isBlurred && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-30">
-          <span className="text-foreground text-sm font-medium">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
+          <span className="text-white text-sm font-medium">
             Content protected
           </span>
         </div>

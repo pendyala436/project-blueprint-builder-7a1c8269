@@ -40,25 +40,11 @@ interface WomanShift {
     endHour: number;
     duration: number;
   };
-  shiftCode?: string;
-  roleType?: string;
 }
 
 interface HourlyCoverage {
   hour: number;
   womenOnDuty: string[];
-  shiftCodes?: string[];
-}
-
-interface ShiftConfig {
-  hours: number;
-  changeBuffer: number;
-  weekOffInterval: number;
-  shifts?: {
-    A: { name: string; start: number; end: number; code: string; display: string };
-    B: { name: string; start: number; end: number; code: string; display: string };
-    C: { name: string; start: number; end: number; code: string; display: string };
-  };
 }
 
 interface LanguageGroupShiftsPanelProps {
@@ -74,7 +60,6 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   const [coverage24x7, setCoverage24x7] = useState<HourlyCoverage[]>([]);
   const [targetLanguage, setTargetLanguage] = useState(language || "");
   const [womenCount, setWomenCount] = useState(0);
-  const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -85,100 +70,21 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   const fetchLanguageGroupShifts = async () => {
     setIsLoading(true);
     try {
-      // Use shift-auto-scheduler for consistency with monthly schedule
-      const { data, error } = await supabase.functions.invoke("shift-auto-scheduler", {
+      const { data, error } = await supabase.functions.invoke("shift-scheduler", {
         body: { 
-          action: "get_language_group_schedule",
           userId, 
-          data: { language: language || undefined }
+          action: "get_language_group_shifts",
+          language: language || undefined
         }
       });
 
       if (error) throw error;
 
       if (data?.success) {
-        // Transform data from shift-auto-scheduler format
-        const womenData = data.women || [];
-        const transformedWomen: WomanShift[] = womenData.map((woman: any) => ({
-          userId: woman.user_id,
-          fullName: woman.full_name || 'Unknown',
-          photoUrl: woman.photo_url,
-          country: woman.country || 'Unknown',
-          language: data.language || language || 'Unknown',
-          todayShift: woman.today_on_duty ? {
-            startTime: woman.local_start_time || '00:00',
-            endTime: woman.local_end_time || '00:00',
-            status: 'scheduled'
-          } : null,
-          isWeekOff: woman.is_week_off_today || false,
-          weekOffDays: woman.week_off_days || [],
-          shiftHours: {
-            startHour: woman.shift_start_hour || 7,
-            endHour: woman.shift_end_hour || 16,
-            duration: 9
-          },
-          shiftCode: woman.shift_code || 'A',
-          roleType: woman.role_type || 'chat'
-        }));
-
-        setWomenShifts(transformedWomen);
+        setWomenShifts(data.womenShifts || []);
+        setCoverage24x7(data.coverage24x7 || []);
         setTargetLanguage(data.language || language || "");
-        setWomenCount(data.total_women || womenData.length);
-        
-        // Build 24x7 coverage from shifts data (synced with team schedule)
-        const coverage: HourlyCoverage[] = [];
-        const shifts = data.shifts || {};
-        
-        for (let hour = 0; hour < 24; hour++) {
-          const womenOnDuty: string[] = [];
-          const shiftCodes: string[] = [];
-          
-          // Check each shift for coverage at this hour
-          Object.entries(shifts).forEach(([code, shift]: [string, any]) => {
-            const shiftStart = shift.start || 0;
-            const shiftEnd = shift.end || 0;
-            
-            // Handle overnight shifts
-            let isOnDuty = false;
-            if (shiftEnd < shiftStart) {
-              // Overnight shift (e.g., 23-8)
-              isOnDuty = hour >= shiftStart || hour < shiftEnd;
-            } else {
-              isOnDuty = hour >= shiftStart && hour < shiftEnd;
-            }
-            
-            if (isOnDuty) {
-              if (!shiftCodes.includes(code)) {
-                shiftCodes.push(code);
-              }
-              // Add women from this shift who are on duty today
-              const chatWomen = shift.chat_support || [];
-              const videoWomen = shift.video_support || [];
-              [...chatWomen, ...videoWomen].forEach((w: any) => {
-                if (!w.is_week_off_today) {
-                  const name = w.full_name?.split(' ')[0] || 'User';
-                  if (!womenOnDuty.includes(name)) {
-                    womenOnDuty.push(name);
-                  }
-                }
-              });
-            }
-          });
-          
-          coverage.push({ hour, womenOnDuty, shiftCodes });
-        }
-        
-        setCoverage24x7(coverage);
-        setShiftConfig({
-          hours: 9,
-          changeBuffer: 1,
-          weekOffInterval: 2,
-          shifts: {
-            A: { name: shifts.A?.name || 'Shift A', start: shifts.A?.start || 7, end: shifts.A?.end || 16, code: 'A', display: shifts.A?.display || '7:00 AM - 4:00 PM' },
-            B: { name: shifts.B?.name || 'Shift B', start: shifts.B?.start || 15, end: shifts.B?.end || 24, code: 'B', display: shifts.B?.display || '3:00 PM - 12:00 AM' },
-            C: { name: shifts.C?.name || 'Shift C', start: shifts.C?.start || 23, end: shifts.C?.end || 8, code: 'C', display: shifts.C?.display || '11:00 PM - 8:00 AM' }
-          }
-        });
+        setWomenCount(data.womenCount || 0);
       }
     } catch (error) {
       console.error("Error fetching language group shifts:", error);
@@ -199,35 +105,17 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
   };
 
   const getTimeIcon = (hour: number) => {
-    if (hour >= 6 && hour < 12) return <Sunrise className="w-3 h-3 text-warning" />;
-    if (hour >= 12 && hour < 18) return <Sun className="w-3 h-3 text-crown" />;
-    if (hour >= 18 && hour < 21) return <Sunset className="w-3 h-3 text-warning" />;
-    return <Moon className="w-3 h-3 text-info" />;
+    if (hour >= 6 && hour < 12) return <Sunrise className="w-3 h-3 text-amber-500" />;
+    if (hour >= 12 && hour < 18) return <Sun className="w-3 h-3 text-yellow-500" />;
+    if (hour >= 18 && hour < 21) return <Sunset className="w-3 h-3 text-orange-500" />;
+    return <Moon className="w-3 h-3 text-indigo-400" />;
   };
 
-  const getCoverageColor = (count: number, shiftCodes?: string[]) => {
+  const getCoverageColor = (count: number) => {
     if (count === 0) return "bg-destructive/20 text-destructive";
-    if (count === 1) return "bg-warning/20 text-warning";
+    if (count === 1) return "bg-amber-500/20 text-amber-600";
     if (count === 2) return "bg-success/20 text-success";
     return "bg-primary/20 text-primary";
-  };
-
-  const getShiftBadgeColor = (shiftCode: string) => {
-    switch (shiftCode) {
-      case 'A': return "bg-info/20 text-info border-info/30";
-      case 'B': return "bg-warning/20 text-warning border-warning/30";
-      case 'C': return "bg-secondary/20 text-secondary-foreground border-secondary/30";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const getShiftIcon = (shiftCode: string) => {
-    switch (shiftCode) {
-      case 'A': return <Sunrise className="w-3 h-3 text-info" />;
-      case 'B': return <Sunset className="w-3 h-3 text-warning" />;
-      case 'C': return <Moon className="w-3 h-3 text-secondary-foreground" />;
-      default: return <Clock className="w-3 h-3" />;
-    }
   };
 
   const currentHour = new Date().getHours();
@@ -330,16 +218,10 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{woman.fullName}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Globe className="w-3 h-3" />
-                          <span>{woman.country}</span>
-                          {woman.shiftCode && (
-                            <Badge variant="outline" className={`text-[10px] ${getShiftBadgeColor(woman.shiftCode)}`}>
-                              {getShiftIcon(woman.shiftCode)}
-                              <span className="ml-1">Shift {woman.shiftCode}</span>
-                            </Badge>
-                          )}
-                        </div>
+                          {woman.country}
+                        </p>
                       </div>
                     </div>
 
@@ -351,12 +233,12 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
                         </Badge>
                       ) : woman.todayShift ? (
                         <div>
-                          <Badge variant="default" className="gap-1 bg-primary hover:bg-primary/80">
+                          <Badge variant="default" className="gap-1 bg-success hover:bg-success/80">
                             <Clock className="w-3 h-3" />
-                            {woman.todayShift.startTime} - {woman.todayShift.endTime}
+                            {woman.todayShift.startTime.slice(0, 5)} - {woman.todayShift.endTime.slice(0, 5)}
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {woman.shiftHours.duration}h • {woman.roleType || 'chat'}
+                            {woman.shiftHours.duration}h shift
                           </p>
                         </div>
                       ) : (
@@ -372,27 +254,6 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
           </ScrollArea>
         </div>
 
-        {/* Shift Timings Legend */}
-        {shiftConfig?.shifts && (
-          <div className="mb-4 p-3 rounded-lg bg-muted/30">
-            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Shift Timings (9hr shifts with 1hr overlap)
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {Object.values(shiftConfig.shifts).map((shift) => (
-                <div key={shift.code} className={`flex items-center gap-2 p-2 rounded-md border ${getShiftBadgeColor(shift.code)}`}>
-                  {getShiftIcon(shift.code)}
-                  <div>
-                    <span className="font-medium text-xs">Shift {shift.code}</span>
-                    <p className="text-[10px] opacity-80">{shift.display}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* 24/7 Coverage Timeline */}
         <div>
           <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
@@ -400,33 +261,28 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
             Today's 24/7 Coverage
           </h4>
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1">
-            {coverage24x7.map(({ hour, womenOnDuty, shiftCodes }) => (
+            {coverage24x7.map(({ hour, womenOnDuty }) => (
               <div 
                 key={hour}
                 className={`
                   relative p-2 rounded-md text-center cursor-default
-                  ${getCoverageColor(womenOnDuty.length, shiftCodes)}
+                  ${getCoverageColor(womenOnDuty.length)}
                   ${hour === currentHour ? "ring-2 ring-primary ring-offset-1" : ""}
                 `}
-                title={`${formatTime(hour)}${shiftCodes?.length ? ` [${shiftCodes.join('+')}]` : ''}: ${womenOnDuty.length > 0 ? womenOnDuty.join(", ") : "No coverage"}`}
+                title={womenOnDuty.length > 0 
+                  ? `${formatTime(hour)}: ${womenOnDuty.join(", ")}` 
+                  : `${formatTime(hour)}: No coverage`
+                }
               >
                 <div className="flex flex-col items-center gap-0.5">
-                  {shiftCodes && shiftCodes.length > 0 ? (
-                    <div className="flex gap-0.5">
-                      {shiftCodes.map(code => (
-                        <span key={code} className="text-[8px] font-bold">{code}</span>
-                      ))}
-                    </div>
-                  ) : (
-                    getTimeIcon(hour)
-                  )}
+                  {getTimeIcon(hour)}
                   <span className="text-[10px] font-medium">{hour}</span>
                   <span className="text-[10px]">{womenOnDuty.length}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded bg-destructive/20" />
               <span>No coverage</span>
@@ -454,8 +310,8 @@ const LanguageGroupShiftsPanel = ({ userId, language, compact = false }: Languag
               Week Off Pattern
             </h4>
             <p className="text-xs text-muted-foreground">
-              AI staggers 2 continuous off days within each shift to ensure coverage. 
-              Women in the same shift have different off days for 24/7 availability.
+              AI assigns week offs every 2 days based on registration date. 
+              Women can optionally work on their week off.
             </p>
           </div>
         )}

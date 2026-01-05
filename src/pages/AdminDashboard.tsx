@@ -104,7 +104,7 @@ const AdminDashboard = () => {
       description: "Manage users, roles, and permissions",
       icon: <Users className="h-6 w-6" />,
       path: "/admin/users",
-      color: "from-info to-info/80",
+      color: "from-blue-500 to-blue-600",
       badge: stats.pendingApprovals > 0 ? `${stats.pendingApprovals} pending` : undefined
     },
     {
@@ -112,14 +112,14 @@ const AdminDashboard = () => {
       description: "View platform analytics and insights",
       icon: <BarChart3 className="h-6 w-6" />,
       path: "/admin/analytics",
-      color: "from-success to-success/80"
+      color: "from-green-500 to-green-600"
     },
     {
       title: "Chat Monitoring",
       description: "Monitor active chats and conversations",
       icon: <MessageSquare className="h-6 w-6" />,
       path: "/admin/chat-monitoring",
-      color: "from-secondary to-secondary/80",
+      color: "from-purple-500 to-purple-600",
       badge: stats.activeChats > 0 ? `${stats.activeChats} active` : undefined
     },
     {
@@ -127,49 +127,49 @@ const AdminDashboard = () => {
       description: "Revenue, transactions, and payouts",
       icon: <DollarSign className="h-6 w-6" />,
       path: "/admin/finance",
-      color: "from-accent to-accent/80"
+      color: "from-emerald-500 to-emerald-600"
     },
     {
       title: "Chat Pricing",
       description: "Configure chat and video call rates",
       icon: <Clock className="h-6 w-6" />,
       path: "/admin/chat-pricing",
-      color: "from-warning to-warning/80"
+      color: "from-amber-500 to-amber-600"
     },
     {
       title: "Gift Management",
       description: "Manage virtual gifts and pricing",
       icon: <Gift className="h-6 w-6" />,
       path: "/admin/gifts",
-      color: "from-female to-female/80"
+      color: "from-pink-500 to-pink-600"
     },
     {
       title: "Language Groups",
       description: "Manage language-based user groups",
       icon: <Globe className="h-6 w-6" />,
       path: "/admin/languages",
-      color: "from-primary to-primary/80"
+      color: "from-cyan-500 to-cyan-600"
     },
     {
       title: "Language Limits",
       description: "Set language capacity limits",
       icon: <Languages className="h-6 w-6" />,
       path: "/admin/language-limits",
-      color: "from-info to-info/80"
+      color: "from-indigo-500 to-indigo-600"
     },
     {
       title: "Content Moderation",
       description: "Review flagged content and reports",
       icon: <Shield className="h-6 w-6" />,
       path: "/admin/moderation",
-      color: "from-destructive to-destructive/80"
+      color: "from-red-500 to-red-600"
     },
     {
       title: "Policy Alerts",
       description: "View policy violation alerts",
       icon: <AlertTriangle className="h-6 w-6" />,
       path: "/admin/policy-alerts",
-      color: "from-warning to-warning/80",
+      color: "from-orange-500 to-orange-600",
       badge: stats.policyAlerts > 0 ? `${stats.policyAlerts} alerts` : undefined
     },
     {
@@ -177,50 +177,43 @@ const AdminDashboard = () => {
       description: "System performance metrics",
       icon: <Activity className="h-6 w-6" />,
       path: "/admin/performance",
-      color: "from-accent to-accent/80"
+      color: "from-teal-500 to-teal-600"
     },
     {
       title: "Finance Reports",
       description: "Detailed financial reports",
       icon: <FileText className="h-6 w-6" />,
       path: "/admin/finance-reports",
-      color: "from-muted-foreground to-muted-foreground/80"
+      color: "from-slate-500 to-slate-600"
     },
     {
       title: "Legal Documents",
       description: "Manage terms, policies, and legal docs",
       icon: <FileText className="h-6 w-6" />,
       path: "/admin/legal-documents",
-      color: "from-muted-foreground to-muted-foreground/80"
-    },
-    {
-      title: "Shift Management",
-      description: "Manage women's shift schedules",
-      icon: <Clock className="h-6 w-6" />,
-      path: "/admin/shifts",
-      color: "from-info to-info/80"
-    },
-    {
-      title: "Audit Logs",
-      description: "View all system activity logs",
-      icon: <Database className="h-6 w-6" />,
-      path: "/admin/audit-logs",
-      color: "from-muted-foreground to-muted-foreground/80"
+      color: "from-gray-500 to-gray-600"
     },
     {
       title: "Backup Management",
-      description: "Manage database backups",
+      description: "Database backups and restoration",
       icon: <Database className="h-6 w-6" />,
       path: "/admin/backups",
-      color: "from-secondary to-secondary/80"
+      color: "from-stone-500 to-stone-600"
     },
     {
-      title: "Settings",
-      description: "Configure system settings",
+      title: "Audit Logs",
+      description: "View admin activity logs",
+      icon: <Clock className="h-6 w-6" />,
+      path: "/admin/audit-logs",
+      color: "from-zinc-500 to-zinc-600"
+    },
+    {
+      title: "Admin Settings",
+      description: "Platform configuration settings",
       icon: <Settings className="h-6 w-6" />,
       path: "/admin/settings",
-      color: "from-muted-foreground to-muted-foreground/80"
-    },
+      color: "from-neutral-500 to-neutral-600"
+    }
   ];
 
   const loadStats = useCallback(async () => {
@@ -387,7 +380,7 @@ const AdminDashboard = () => {
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${module.color} text-primary-foreground shadow-lg group-hover:scale-110 transition-transform`}>
+                    <div className={`p-3 rounded-xl bg-gradient-to-br ${module.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
                       {module.icon}
                     </div>
                     {module.badge && (
