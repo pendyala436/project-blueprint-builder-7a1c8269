@@ -405,6 +405,49 @@ const DICTIONARY: Record<string, Record<string, string>> = {
   'there': { hi: 'वहाँ', te: 'అక్కడ', ta: 'அங்கே', bn: 'ওখানে', es: 'Allí', fr: 'Là', de: 'Dort', zh: '那里', ja: 'そこ', en: 'There' },
   'then': { hi: 'फिर', te: 'అప్పుడు', ta: 'பிறகு', bn: 'তারপর', es: 'Entonces', fr: 'Puis', de: 'Dann', zh: '然后', ja: 'それから', en: 'Then' },
 
+  // ===== ROMANIZED PHRASES (Phonetic Latin → English and Native) =====
+  // Telugu romanized
+  'bagunnava': { en: 'How are you', hi: 'आप कैसे हैं', te: 'బాగున్నావా', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்', bn: 'আপনি কেমন আছেন' },
+  'bagunnanu': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்', bn: 'আমি ভালো আছি' },
+  'bagundi': { en: 'Good', hi: 'अच्छा', te: 'బాగుంది', ta: 'நல்லது', bn: 'ভালো' },
+  'ela unnav': { en: 'How are you', hi: 'आप कैसे हैं', te: 'ఎలా ఉన్నావ్', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'ela unnaru': { en: 'How are you', hi: 'आप कैसे हैं', te: 'ఎలా ఉన్నారు', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'nenu bagunnanu': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'నేను బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்' },
+  'dhanyavadalu': { en: 'Thank you', hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி', bn: 'ধন্যবাদ' },
+  'emi chesthunnav': { en: 'What are you doing', hi: 'तुम क्या कर रहे हो', te: 'ఏమి చేస్తున్నావ్', ta: 'என்ன செய்கிறாய்' },
+  'emi chesthunnaru': { en: 'What are you doing', hi: 'आप क्या कर रहे हैं', te: 'ఏమి చేస్తున్నారు', ta: 'என்ன செய்கிறீர்கள்' },
+  'subhodayam': { en: 'Good morning', hi: 'सुप्रभात', te: 'శుభోదయం', ta: 'காலை வணக்கம்' },
+  'subha ratri': { en: 'Good night', hi: 'शुभ रात्रि', te: 'శుభ రాత్రి', ta: 'இனிய இரவு' },
+  // Hindi romanized
+  'kaise ho': { en: 'How are you', hi: 'कैसे हो', te: 'ఎలా ఉన్నావ్', ta: 'எப்படி இருக்கிறாய்', bn: 'কেমন আছ' },
+  'aap kaise hain': { en: 'How are you', hi: 'आप कैसे हैं', te: 'మీరు ఎలా ఉన్నారు', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'main theek hoon': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'నేను బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்' },
+  'kya kar rahe ho': { en: 'What are you doing', hi: 'क्या कर रहे हो', te: 'ఏం చేస్తున్నావ్', ta: 'என்ன செய்கிறாய்' },
+  'mujhe tumse pyar hai': { en: 'I love you', hi: 'मुझे तुमसे प्यार है', te: 'నేను నిన్ను ప్రేమిస్తున్నాను', ta: 'நான் உன்னை காதலிக்கிறேன்' },
+  'shukriya': { en: 'Thank you', hi: 'शुक्रिया', te: 'ధన్యవాదాలు', ta: 'நன்றி', bn: 'ধন্যবাদ' },
+  'suprabhat': { en: 'Good morning', hi: 'सुप्रभात', te: 'శుభోదయం', ta: 'காலை வணக்கம்' },
+  'shubh ratri': { en: 'Good night', hi: 'शुभ रात्रि', te: 'శుభ రాత్రి', ta: 'இனிய இரவு' },
+  // Tamil romanized  
+  'eppadi irukeenga': { en: 'How are you', hi: 'आप कैसे हैं', te: 'మీరు ఎలా ఉన్నారు', ta: 'எப்படி இருக்கீங்க' },
+  'naan nallairukkean': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'నేను బాగున్నాను', ta: 'நான் நல்லா இருக்கேன்' },
+  'nandri': { en: 'Thank you', hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி', bn: 'ধন্যবাদ' },
+  // Bengali romanized
+  'kemon acho': { en: 'How are you', hi: 'कैसे हो', te: 'ఎలా ఉన్నావ్', ta: 'எப்படி இருக்கிறாய்', bn: 'কেমন আছ' },
+  'ami bhalo achi': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'నేను బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்', bn: 'আমি ভালো আছি' },
+  'dhonnobad': { en: 'Thank you', hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி', bn: 'ধন্যবাদ' },
+  // Native script entries for reverse lookup
+  'బాగున్నావా': { en: 'How are you', hi: 'आप कैसे हैं', te: 'బాగున్నావా', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'బాగున్నాను': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்' },
+  'బాగుంది': { en: 'Good', hi: 'अच्छा', te: 'బాగుంది', ta: 'நல்லது' },
+  'ఎలా ఉన్నావ్': { en: 'How are you', hi: 'कैसे हो', te: 'ఎలా ఉన్నావ్', ta: 'எப்படி இருக்கிறாய்' },
+  'ఎలా ఉన్నారు': { en: 'How are you', hi: 'आप कैसे हैं', te: 'ఎలా ఉన్నారు', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'ధన్యవాదాలు': { en: 'Thank you', hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி' },
+  'ఏమి చేస్తున్నావ్': { en: 'What are you doing', hi: 'तुम क्या कर रहे हो', te: 'ఏమి చేస్తున్నావ్', ta: 'என்ன செய்கிறாய்' },
+  'कैसे हो': { en: 'How are you', hi: 'कैसे हो', te: 'ఎలా ఉన్నావ్', ta: 'எப்படி இருக்கிறாய்' },
+  'आप कैसे हैं': { en: 'How are you', hi: 'आप कैसे हैं', te: 'మీరు ఎలా ఉన్నారు', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+  'मैं ठीक हूं': { en: 'I am fine', hi: 'मैं ठीक हूं', te: 'నేను బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்' },
+  'धन्यवाद': { en: 'Thank you', hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி' },
+
   // ===== HEALTH & FAMILY RELATED =====
   'parents': { hi: 'माता-पिता', te: 'తల్లిదండ్రులు', ta: 'பெற்றோர்', bn: 'বাবা-মা', es: 'Padres', fr: 'Parents', de: 'Eltern', zh: '父母', ja: '両親', en: 'Parents' },
   'health': { hi: 'स्वास्थ्य', te: 'ఆరోగ్యం', ta: 'ஆரோக்கியம்', bn: 'স্বাস্থ্য', es: 'Salud', fr: 'Santé', de: 'Gesundheit', zh: '健康', ja: '健康', en: 'Health' },
