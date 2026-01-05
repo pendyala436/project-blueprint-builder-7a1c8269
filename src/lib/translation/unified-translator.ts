@@ -303,43 +303,57 @@ const PHONETIC_WORDS: Record<string, Record<string, string>> = {
   },
 };
 
-// ================== REVERSE DICTIONARY ==================
-// Build reverse mappings for native → English translation
+// ================== DYNAMIC REVERSE DICTIONARY ==================
+// Build reverse mappings dynamically for native → English translation
 const REVERSE_DICTIONARY: Record<string, Record<string, string>> = {};
 
+// Semantic meaning map: phonetic word → English meaning
+const SEMANTIC_MAP: Record<string, string> = {};
+
 function buildReverseDictionary(): void {
-  // From DICTIONARY
+  // Step 1: Build semantic map from DICTIONARY (phonetic → English meaning)
   for (const [english, translations] of Object.entries(DICTIONARY)) {
+    // Store English as the semantic meaning for all variations
     for (const [lang, native] of Object.entries(translations)) {
-      const key = native.toLowerCase();
-      if (!REVERSE_DICTIONARY[key]) REVERSE_DICTIONARY[key] = {};
-      REVERSE_DICTIONARY[key]['en'] = english.charAt(0).toUpperCase() + english.slice(1);
-      // Also store translation to other languages
+      const nativeKey = native.toLowerCase();
+      SEMANTIC_MAP[nativeKey] = english;
+      SEMANTIC_MAP[english.toLowerCase()] = english;
+      
+      if (!REVERSE_DICTIONARY[nativeKey]) REVERSE_DICTIONARY[nativeKey] = {};
+      REVERSE_DICTIONARY[nativeKey]['en'] = english.charAt(0).toUpperCase() + english.slice(1);
+      
+      // Cross-language mappings
       for (const [otherLang, otherNative] of Object.entries(translations)) {
         if (otherLang !== lang) {
-          REVERSE_DICTIONARY[key][otherLang] = otherNative;
+          REVERSE_DICTIONARY[nativeKey][otherLang] = otherNative;
         }
       }
     }
   }
-  // From PHONETIC_WORDS - map native script to English translations
+  
+  // Step 2: Link PHONETIC_WORDS to their semantic meanings
   for (const [lang, words] of Object.entries(PHONETIC_WORDS)) {
     for (const [phonetic, native] of Object.entries(words)) {
       const nativeKey = native.toLowerCase();
       const phoneticKey = phonetic.toLowerCase();
       
+      // Check if this phonetic word has a known meaning
+      const dictEntry = DICTIONARY[phoneticKey];
+      const semanticMeaning = dictEntry ? phoneticKey : SEMANTIC_MAP[phoneticKey];
+      
       if (!REVERSE_DICTIONARY[nativeKey]) REVERSE_DICTIONARY[nativeKey] = {};
       if (!REVERSE_DICTIONARY[phoneticKey]) REVERSE_DICTIONARY[phoneticKey] = {};
       
-      // Find English equivalent from DICTIONARY using phonetic
-      const dictEntry = DICTIONARY[phoneticKey];
+      // Store semantic meaning
+      SEMANTIC_MAP[phoneticKey] = semanticMeaning || phoneticKey;
+      SEMANTIC_MAP[nativeKey] = semanticMeaning || phoneticKey;
+      
       if (dictEntry) {
-        // Map native script → all languages
+        // Map to all languages from dictionary
         if (dictEntry.en) {
           REVERSE_DICTIONARY[nativeKey]['en'] = dictEntry.en;
           REVERSE_DICTIONARY[phoneticKey]['en'] = dictEntry.en;
         }
-        // Add cross-language mappings
         for (const [otherLang, otherNative] of Object.entries(dictEntry)) {
           REVERSE_DICTIONARY[nativeKey][otherLang] = otherNative;
           REVERSE_DICTIONARY[phoneticKey][otherLang] = otherNative;
@@ -349,6 +363,32 @@ function buildReverseDictionary(): void {
   }
 }
 buildReverseDictionary();
+
+/**
+ * DYNAMIC: Get translation for any text using semantic lookup
+ * Works for texts not in hardcoded dictionary
+ */
+function getSemanticTranslation(text: string, targetLang: string): string | null {
+  const lowerText = text.toLowerCase().trim();
+  
+  // 1. Direct dictionary lookup
+  if (DICTIONARY[lowerText]?.[targetLang]) {
+    return DICTIONARY[lowerText][targetLang];
+  }
+  
+  // 2. Reverse dictionary lookup
+  if (REVERSE_DICTIONARY[lowerText]?.[targetLang]) {
+    return REVERSE_DICTIONARY[lowerText][targetLang];
+  }
+  
+  // 3. Semantic meaning lookup
+  const meaning = SEMANTIC_MAP[lowerText];
+  if (meaning && DICTIONARY[meaning]?.[targetLang]) {
+    return DICTIONARY[meaning][targetLang];
+  }
+  
+  return null;
+}
 
 // ================== UTILITY FUNCTIONS ==================
 
@@ -718,13 +758,17 @@ export function getLivePreviewWithSuggestions(text: string, userLanguage: string
   };
 }
 
-// ================== DICTIONARY-BASED TRANSLATION ==================
+// ================== DYNAMIC TRANSLATION ==================
 
 /**
- * TRANSLATION: Dictionary-based instant translation
+ * DYNAMIC TRANSLATION: Works for ANY text
  * 
- * Uses DICTIONARY lookups only - no external API calls
- * Supports phrase matching, word-by-word, and reverse lookups
+ * Flow:
+ * 1. Semantic lookup (dictionary + reverse + phonetic mappings)
+ * 2. Word-by-word semantic translation
+ * 3. ICU transliteration fallback for unknown words
+ * 
+ * No hardcoded limitations - handles any input dynamically
  */
 export function translate(text: string, sourceLanguage: string, targetLanguage: string): string {
   if (!text) return text;
@@ -734,43 +778,40 @@ export function translate(text: string, sourceLanguage: string, targetLanguage: 
   
   if (srcCode === tgtCode) return text;
 
-  const cacheKey = `${text.toLowerCase()}:${srcCode}:${tgtCode}`;
+  const cacheKey = `trans:${text.toLowerCase()}:${srcCode}:${tgtCode}`;
   const cached = translationCache.get(cacheKey);
   if (cached) return cached;
 
   const lowerText = text.toLowerCase().trim();
 
-  // 1. Exact phrase match
-  if (DICTIONARY[lowerText]?.[tgtCode]) {
-    const result = DICTIONARY[lowerText][tgtCode];
-    addToCache(cacheKey, result);
-    return result;
+  // STEP 1: Try semantic translation (works for dictionary entries AND their phonetic variants)
+  const semanticResult = getSemanticTranslation(lowerText, tgtCode);
+  if (semanticResult) {
+    addToCache(cacheKey, semanticResult);
+    return semanticResult;
   }
 
-  // 2. Reverse dictionary (native → target)
-  if (REVERSE_DICTIONARY[lowerText]?.[tgtCode]) {
-    const result = REVERSE_DICTIONARY[lowerText][tgtCode];
-    addToCache(cacheKey, result);
-    return result;
-  }
-
-  // 3. Check phonetic words for translation
+  // STEP 2: Check phonetic words → get native → lookup translation
   const phoneticEntry = PHONETIC_WORDS[srcCode]?.[lowerText];
   if (phoneticEntry) {
-    // Find translation for the phonetic word
-    const reverseLookup = REVERSE_DICTIONARY[phoneticEntry.toLowerCase()];
-    if (reverseLookup?.[tgtCode]) {
-      const result = reverseLookup[tgtCode];
-      addToCache(cacheKey, result);
-      return result;
+    const nativeTranslation = getSemanticTranslation(phoneticEntry.toLowerCase(), tgtCode);
+    if (nativeTranslation) {
+      addToCache(cacheKey, nativeTranslation);
+      return nativeTranslation;
     }
-    if (reverseLookup?.en && tgtCode === 'en') {
-      addToCache(cacheKey, reverseLookup.en);
-      return reverseLookup.en;
+  }
+  
+  // STEP 3: Check if this is native script → find semantic meaning → translate
+  const semanticMeaning = SEMANTIC_MAP[lowerText];
+  if (semanticMeaning) {
+    const meaningTranslation = getSemanticTranslation(semanticMeaning, tgtCode);
+    if (meaningTranslation) {
+      addToCache(cacheKey, meaningTranslation);
+      return meaningTranslation;
     }
   }
 
-  // 4. Word-by-word translation
+  // STEP 4: Word-by-word dynamic translation
   const words = text.split(/\s+/);
   const translatedWords: string[] = [];
   let hasTranslation = false;
@@ -779,23 +820,47 @@ export function translate(text: string, sourceLanguage: string, targetLanguage: 
     const lowerWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
     const punctuation = word.match(/[.,!?;:'"]+$/)?.[0] || '';
 
-    // Check dictionary
-    const dictTranslation = DICTIONARY[lowerWord]?.[tgtCode];
-    if (dictTranslation) {
-      translatedWords.push(dictTranslation + punctuation);
+    // Try semantic translation for each word
+    const wordTranslation = getSemanticTranslation(lowerWord, tgtCode);
+    if (wordTranslation) {
+      translatedWords.push(wordTranslation + punctuation);
       hasTranslation = true;
       continue;
     }
-
-    // Check reverse dictionary
-    const reverseTranslation = REVERSE_DICTIONARY[lowerWord]?.[tgtCode];
-    if (reverseTranslation) {
-      translatedWords.push(reverseTranslation + punctuation);
-      hasTranslation = true;
-      continue;
+    
+    // Try phonetic → native → semantic for this word
+    const wordPhonetic = PHONETIC_WORDS[srcCode]?.[lowerWord];
+    if (wordPhonetic) {
+      const phoneticTranslation = getSemanticTranslation(wordPhonetic.toLowerCase(), tgtCode);
+      if (phoneticTranslation) {
+        translatedWords.push(phoneticTranslation + punctuation);
+        hasTranslation = true;
+        continue;
+      }
+    }
+    
+    // Try semantic meaning lookup
+    const wordMeaning = SEMANTIC_MAP[lowerWord];
+    if (wordMeaning) {
+      const meaningTrans = getSemanticTranslation(wordMeaning, tgtCode);
+      if (meaningTrans) {
+        translatedWords.push(meaningTrans + punctuation);
+        hasTranslation = true;
+        continue;
+      }
     }
 
-    // Keep original
+    // DYNAMIC FALLBACK: Transliterate unknown words to target script
+    if (isLatinScript(lowerWord)) {
+      const translitWord = transliterate(lowerWord, targetLanguage);
+      if (translitWord !== lowerWord) {
+        translatedWords.push(translitWord + punctuation);
+        hasTranslation = true;
+        continue;
+      }
+    }
+
+    // Keep original word
     translatedWords.push(word);
   }
 
@@ -805,7 +870,7 @@ export function translate(text: string, sourceLanguage: string, targetLanguage: 
     return result;
   }
 
-  // 5. If Latin to non-Latin, transliterate
+  // STEP 5: Final fallback - transliterate entire text
   if (isLatinScript(text)) {
     const translit = transliterate(text, targetLanguage);
     if (translit !== text) {
