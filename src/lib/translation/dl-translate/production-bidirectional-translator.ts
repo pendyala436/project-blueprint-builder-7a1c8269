@@ -486,28 +486,14 @@ export async function processIncomingMessage(
   }
 
   try {
-    // PRIORITY 1: Use dictionary-based translation (instant, no model loading)
-    const { translateWithML } = await import('@/lib/translation/ml-translation-engine');
-    const dictTranslated = await translateWithML(message, senderMotherTongue, receiverMotherTongue);
+    // PRIORITY 1: Use unified translator (dictionary + ICU - instant)
+    const { translate } = await import('@/lib/translation/unified-translator');
+    const translated = translate(message, senderMotherTongue, receiverMotherTongue);
     
-    if (dictTranslated && dictTranslated !== message) {
-      translationCache.set(cacheKey, dictTranslated);
-      console.log('[BiDirectionalTranslator] Dictionary translation:', message.slice(0, 30), '→', dictTranslated.slice(0, 30));
-      return dictTranslated;
-    }
-
-    // PRIORITY 2: Try translation-engine (has more dictionaries)
-    const { translateText } = await import('@/lib/translation/translation-engine');
-    const result = await translateText(message, {
-      sourceLanguage: senderMotherTongue,
-      targetLanguage: receiverMotherTongue,
-      mode: 'translate'
-    });
-    
-    if (result.isTranslated && result.translatedText !== message) {
-      translationCache.set(cacheKey, result.translatedText);
-      console.log('[BiDirectionalTranslator] Engine translation:', message.slice(0, 30), '→', result.translatedText.slice(0, 30));
-      return result.translatedText;
+    if (translated && translated !== message) {
+      translationCache.set(cacheKey, translated);
+      console.log('[BiDirectionalTranslator] Unified translation:', message.slice(0, 30), '→', translated.slice(0, 30));
+      return translated;
     }
 
     // FALLBACK: Return original message (don't block on heavy NLLB model)
@@ -546,29 +532,14 @@ function queueBackgroundTranslation(
   // Start async translation without awaiting (using dictionary - FAST)
   (async () => {
     try {
-      // PRIORITY 1: Use dictionary-based translation (instant)
-      const { translateWithML } = await import('@/lib/translation/ml-translation-engine');
-      const dictTranslated = await translateWithML(text, sourceLang, targetLang);
+      // Use unified translator (dictionary + ICU - instant)
+      const { translate } = await import('@/lib/translation/unified-translator');
+      const translated = translate(text, sourceLang, targetLang);
       
-      if (dictTranslated && dictTranslated !== text) {
-        translationCache.set(cacheKey, dictTranslated);
-        console.log('[BiDirectionalTranslator] Background dict translation:', text.slice(0, 30), '→', dictTranslated.slice(0, 30));
-        onSuccess(dictTranslated);
-        return;
-      }
-
-      // PRIORITY 2: Try translation-engine
-      const { translateText } = await import('@/lib/translation/translation-engine');
-      const result = await translateText(text, {
-        sourceLanguage: sourceLang,
-        targetLanguage: targetLang,
-        mode: 'translate'
-      });
-      
-      if (result.isTranslated && result.translatedText !== text) {
-        translationCache.set(cacheKey, result.translatedText);
-        console.log('[BiDirectionalTranslator] Background engine translation:', text.slice(0, 30), '→', result.translatedText.slice(0, 30));
-        onSuccess(result.translatedText);
+      if (translated && translated !== text) {
+        translationCache.set(cacheKey, translated);
+        console.log('[BiDirectionalTranslator] Background translation:', text.slice(0, 30), '→', translated.slice(0, 30));
+        onSuccess(translated);
         return;
       }
 
