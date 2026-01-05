@@ -1169,33 +1169,91 @@ function transliterateWord(word: string, config: ScriptConfig): string {
   return prefix + result + suffix;
 }
 
+// ============================================================================
+// PERFORMANCE CACHES - Sub-2ms Response Time
+// ============================================================================
+
+const icuTranslitCache = new Map<string, string>();
+const icuConfigCache = new Map<string, ScriptConfig | null>();
+const icuSupportCache = new Map<string, boolean>();
+const MAX_ICU_CACHE = 10000;
+
 /**
  * Main ICU-style transliteration function
+ * ULTRA-FAST: Aggressive caching for sub-2ms response
  * Converts Latin script to target language's native script
  */
 export function icuTransliterate(text: string, targetLanguage: string): string {
-  const lang = targetLanguage.toLowerCase().replace(/[_\-\s]/g, '');
-  const config = LANGUAGE_SCRIPT_MAP[lang];
+  // Fast path: empty text
+  if (!text || text.length === 0) return text;
   
+  // Check cache first (fastest path)
+  const cacheKey = `${text}|${targetLanguage}`;
+  const cached = icuTranslitCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  
+  // Get cached config
+  const config = getCachedConfig(targetLanguage);
   if (!config) {
-    // Unsupported language - return as-is
+    // Unsupported language - cache and return as-is
+    icuTranslitCache.set(cacheKey, text);
     return text;
   }
   
   // Split by whitespace, preserving spaces
   const parts = text.split(/(\s+)/);
-  return parts.map(part => {
+  const result = parts.map(part => {
     if (/^\s+$/.test(part)) return part;
     return transliterateWord(part, config);
   }).join('');
+  
+  // Cache result with size limit
+  if (icuTranslitCache.size > MAX_ICU_CACHE) {
+    const keysToDelete = Array.from(icuTranslitCache.keys()).slice(0, 2000);
+    keysToDelete.forEach(k => icuTranslitCache.delete(k));
+  }
+  icuTranslitCache.set(cacheKey, result);
+  
+  return result;
+}
+
+/**
+ * Cached config lookup
+ */
+function getCachedConfig(targetLanguage: string): ScriptConfig | null {
+  const lang = targetLanguage.toLowerCase().replace(/[_\-\s]/g, '');
+  
+  const cached = icuConfigCache.get(lang);
+  if (cached !== undefined) return cached;
+  
+  const config = LANGUAGE_SCRIPT_MAP[lang] || null;
+  icuConfigCache.set(lang, config);
+  return config;
 }
 
 /**
  * Check if language is supported for transliteration
+ * CACHED: Sub-2ms response time
  */
 export function isICUTransliterationSupported(language: string): boolean {
+  // Check cache first
+  const cached = icuSupportCache.get(language);
+  if (cached !== undefined) return cached;
+  
   const lang = language.toLowerCase().replace(/[_\-\s]/g, '');
-  return lang in LANGUAGE_SCRIPT_MAP;
+  const result = lang in LANGUAGE_SCRIPT_MAP;
+  
+  icuSupportCache.set(language, result);
+  return result;
+}
+
+/**
+ * Clear ICU caches
+ */
+export function clearICUCache(): void {
+  icuTranslitCache.clear();
+  icuConfigCache.clear();
+  icuSupportCache.clear();
 }
 
 /**

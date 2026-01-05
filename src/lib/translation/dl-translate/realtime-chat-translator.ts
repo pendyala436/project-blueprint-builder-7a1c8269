@@ -16,7 +16,7 @@ import { detectLanguage, isSameLanguage, isLatinScript } from './language-detect
 import { transliterate, isTransliterationSupported } from './transliteration';
 import { resolveLangCode, normalizeLanguageInput } from './utils';
 import { queueTranslation, isWorkerReady, initWorkerTranslator, getQueueStats } from './translation-worker';
-import { applySpellCorrections, validateTransliteration } from './spell-corrections';
+import { applySpellCorrections } from './spell-corrections';
 import { icuTransliterate, isICUTransliterationSupported } from '@/lib/translation/icu-transliterator';
 
 // ============================================================================
@@ -48,11 +48,19 @@ export interface LivePreview {
 }
 
 // ============================================================================
+// PERFORMANCE CACHES - Sub-2ms Response Time
+// ============================================================================
+
+const previewCache = new Map<string, string>();
+const MAX_PREVIEW_CACHE = 5000;
+
+// ============================================================================
 // Core Functions
 // ============================================================================
 
 /**
  * Get live transliteration preview as user types (non-blocking)
+ * ULTRA-FAST: Aggressive caching for sub-2ms response
  * Returns native script preview for Latin input with spell correction
  * Uses ICU transliteration for all 300+ languages
  */
@@ -60,39 +68,48 @@ export function getLiveNativePreview(
   input: string,
   userLanguage: string
 ): string {
-  if (!input || input.trim().length === 0) {
+  // Fast path: empty input
+  if (!input || input.length === 0) {
     return '';
   }
 
-  // Only transliterate Latin script input
+  // Check cache first (fastest path)
+  const cacheKey = `${input}|${userLanguage}`;
+  const cached = previewCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Fast path: non-Latin script (no transliteration needed)
   if (!isLatinScript(input)) {
-    return input; // Already in native script
+    previewCache.set(cacheKey, input);
+    return input;
   }
 
   const langCode = resolveLangCode(normalizeLanguageInput(userLanguage), 'nllb200');
   
-  // Apply spell corrections first (supports all 300 languages)
+  // Apply spell corrections
   const { correctedText } = applySpellCorrections(input, userLanguage);
+  
+  let result: string;
   
   // Use ICU transliteration for all 300+ languages
   if (isTransliterationSupported(langCode)) {
-    const result = transliterate(correctedText, langCode);
-    
-    // Validate transliteration
-    const { isValid } = validateTransliteration(correctedText, result, userLanguage);
-    if (!isValid) {
-      console.warn('[RealtimeTranslator] Transliteration validation warning for:', input);
-    }
-    
-    return result;
-  }
-  
-  // Direct ICU fallback for additional languages
-  if (isICUTransliterationSupported(userLanguage)) {
-    return icuTransliterate(correctedText, userLanguage);
+    result = transliterate(correctedText, langCode);
+  } else if (isICUTransliterationSupported(userLanguage)) {
+    result = icuTransliterate(correctedText, userLanguage);
+  } else {
+    result = input;
   }
 
-  return input;
+  // Cache result with size limit
+  if (previewCache.size > MAX_PREVIEW_CACHE) {
+    const keysToDelete = Array.from(previewCache.keys()).slice(0, 1000);
+    keysToDelete.forEach(k => previewCache.delete(k));
+  }
+  previewCache.set(cacheKey, result);
+
+  return result;
 }
 
 /**

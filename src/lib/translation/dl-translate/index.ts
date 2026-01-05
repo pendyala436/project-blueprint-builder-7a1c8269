@@ -208,4 +208,11 @@ export {
   getICUSupportedLanguages,
   convertNumerals,
   getScriptType,
+  clearICUCache,
 } from '@/lib/translation/icu-transliterator';
+
+// ============================================================================
+// CACHE CLEARING (For Memory Management)
+// ============================================================================
+
+export { clearTransliterationCaches } from './transliteration';
