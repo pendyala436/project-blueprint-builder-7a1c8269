@@ -249,13 +249,23 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             disabled={disabled || isSending}
             lang={senderLanguage}
             dir="auto"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck="false"
+            inputMode="text"
             className={cn(
-              'min-h-[44px] max-h-[120px] resize-none unicode-text',
+              'min-h-[44px] max-h-[120px] resize-none',
+              'unicode-text',
               'py-3 px-4 pr-12',
               'rounded-xl border-muted-foreground/20',
               'focus-visible:ring-primary/50',
+              'placeholder:text-muted-foreground/60',
               isComposing && 'ime-composing'
             )}
+            style={{
+              fontFamily: "'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Malayalam', 'Noto Sans Kannada', 'Noto Sans Gujarati', 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans Thai', 'Noto Sans Khmer', 'Noto Sans Myanmar', 'Noto Sans Hebrew', 'Noto Sans Georgian', 'Noto Sans Armenian', 'Noto Sans Ethiopic', -apple-system, system-ui, sans-serif",
+              unicodeBidi: 'plaintext',
+            }}
             aria-label={t('chat.typeMessage')}
           />
 
