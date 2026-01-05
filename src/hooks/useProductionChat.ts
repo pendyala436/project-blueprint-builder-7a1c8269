@@ -303,29 +303,41 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
       }
     }
 
-    // Step 3: Translate for receiver (background, async)
+    // Step 3: Same language = NO translation, both see native script
     let receiverTranslatedText = senderNativeText;
     let isTranslated = false;
 
-    if (needsTranslation) {
-      setIsTranslating(true);
-      try {
-        // Ensure model is loaded
-        if (!isNLLBLoaded()) {
-          await initializeModel();
-        }
+    // Skip translation entirely when sender and receiver have same language
+    // Both will see the same native script text
+    if (!needsTranslation) {
+      // Same language - receiver sees exact same native text as sender
+      console.log('[ProductionChat] Same language - no translation needed');
+      return { 
+        senderNativeText, 
+        receiverTranslatedText: senderNativeText, // Same text for both
+        originalText: trimmed,
+        correctedText,
+        isTranslated: false 
+      };
+    }
 
-        const translated = await translateWithNLLB(senderNativeText, myLanguage, theirLanguage);
-        if (translated && translated !== senderNativeText) {
-          receiverTranslatedText = translated;
-          isTranslated = true;
-        }
-      } catch (err) {
-        console.error('[ProductionChat] Translation error:', err);
-        setError(err instanceof Error ? err.message : 'Translation failed');
-      } finally {
-        setIsTranslating(false);
+    // Different languages - translate for receiver
+    setIsTranslating(true);
+    try {
+      if (!isNLLBLoaded()) {
+        await initializeModel();
       }
+
+      const translated = await translateWithNLLB(senderNativeText, myLanguage, theirLanguage);
+      if (translated && translated !== senderNativeText) {
+        receiverTranslatedText = translated;
+        isTranslated = true;
+      }
+    } catch (err) {
+      console.error('[ProductionChat] Translation error:', err);
+      setError(err instanceof Error ? err.message : 'Translation failed');
+    } finally {
+      setIsTranslating(false);
     }
 
     return { 
