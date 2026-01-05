@@ -33,6 +33,15 @@ export {
   autoDetect,
   isTextLatin,
   
+  // Memory cache functions
+  clearMemoryCache,
+  getCachedMessage,
+  cacheMessage,
+  getAllCachedMessages,
+  clearMessageCache,
+  clearTranslationCache,
+  getCacheStats,
+  
   // Types
   type ChatParticipant,
   type BiDirectionalMessage,

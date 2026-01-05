@@ -119,6 +119,8 @@ export function useBiDirectionalChat(
     pendingTranslations: 0,
     activeTranslations: 0,
     supportedLanguages: 300,
+    cachedTranslations: 0,
+    cachedMessages: 0,
   });
 
   // ============ Refs ============
@@ -153,6 +155,8 @@ export function useBiDirectionalChat(
               pendingTranslations: 0,
               activeTranslations: 0,
               supportedLanguages: getSupportedLanguageCount(),
+              cachedTranslations: 0,
+              cachedMessages: 0,
             });
           }
         })

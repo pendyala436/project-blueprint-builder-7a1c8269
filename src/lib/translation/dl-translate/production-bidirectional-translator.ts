@@ -1,6 +1,9 @@
 /**
  * Production Bi-Directional Translator - Full 300+ Language Support
  * 
+ * MEMORY-BASED: All state stored in memory for maximum performance
+ * No database persistence - pure real-time in-memory processing
+ * 
  * Complete real-time, non-blocking chat translation system:
  * 
  * 1. AUTO-DETECT: Automatically detect source and target language
@@ -25,7 +28,26 @@ import { applySpellCorrections, validateTransliteration } from './spell-correcti
 import { ALL_LANGUAGES, getLanguageByCode, getLanguageByName } from '@/data/dlTranslateLanguages';
 
 // ============================================================================
-// TYPES - Full 300 Language Support
+// MEMORY STORAGE - No Database, Pure In-Memory
+// ============================================================================
+
+// In-memory message cache (per session)
+const messageCache = new Map<string, BiDirectionalMessage>();
+
+// In-memory translation cache (avoids re-translating same text)
+const translationCache = new Map<string, string>();
+
+// Pending translations tracker
+const pendingTranslations = new Map<string, {
+  resolve: (text: string) => void;
+  reject: (error: Error) => void;
+}>();
+
+// Session state
+let sessionId = `session_${Date.now()}`;
+
+// ============================================================================
+// TYPES - Full 300 Language Support (Memory-Based)
 // ============================================================================
 
 export interface ChatParticipant {
@@ -83,6 +105,8 @@ export interface TranslatorState {
   pendingTranslations: number;
   activeTranslations: number;
   supportedLanguages: number;
+  cachedTranslations: number;         // Number of cached translations
+  cachedMessages: number;             // Number of cached messages
 }
 
 export interface TranslationCallbacks {
@@ -307,6 +331,13 @@ export async function processIncomingMessage(
     return message; // No translation needed
   }
 
+  // Check translation cache first (memory-based)
+  const cacheKey = `${message}|${senderMotherTongue}|${receiverMotherTongue}`;
+  const cached = translationCache.get(cacheKey);
+  if (cached) {
+    return cached; // Return from memory cache
+  }
+
   try {
     // Ensure translator is ready
     if (!isWorkerReady()) {
@@ -321,6 +352,9 @@ export async function processIncomingMessage(
       5 // High priority for incoming messages
     );
 
+    // Store in memory cache
+    translationCache.set(cacheKey, translated);
+
     return translated;
   } catch (error) {
     console.error('[BiDirectionalTranslator] Incoming translation failed:', error);
@@ -334,6 +368,7 @@ export async function processIncomingMessage(
 
 /**
  * Queue translation in background without blocking
+ * Uses memory cache to avoid re-translating same text
  */
 function queueBackgroundTranslation(
   text: string,
@@ -343,6 +378,14 @@ function queueBackgroundTranslation(
   onSuccess: (translatedText: string) => void,
   onError: (error: Error) => void
 ): void {
+  // Check translation cache first (memory-based)
+  const cacheKey = `${text}|${sourceLang}|${targetLang}`;
+  const cached = translationCache.get(cacheKey);
+  if (cached) {
+    onSuccess(cached);
+    return;
+  }
+
   // Start async translation without awaiting
   (async () => {
     try {
@@ -353,6 +396,9 @@ function queueBackgroundTranslation(
 
       // Queue translation with high priority
       const translatedText = await queueTranslation(text, sourceLang, targetLang, 10);
+      
+      // Store in memory cache
+      translationCache.set(cacheKey, translatedText);
       
       onSuccess(translatedText);
     } catch (error) {
@@ -422,11 +468,13 @@ export function getTranslatorState(): TranslatorState {
   
   return {
     isReady: stats.ready,
-    isInitializing: false, // Would need to track this separately
+    isInitializing: false,
     initProgress: stats.ready ? 100 : 0,
     pendingTranslations: stats.pending,
     activeTranslations: stats.active,
     supportedLanguages: ALL_LANGUAGES.length,
+    cachedTranslations: translationCache.size,
+    cachedMessages: messageCache.size,
   };
 }
 
@@ -440,10 +488,65 @@ export async function initializeTranslator(
 }
 
 /**
- * Cleanup translator resources
+ * Cleanup translator resources and clear memory caches
  */
 export function cleanupTranslator(): void {
   cleanupWorker();
+  clearMemoryCache();
+}
+
+/**
+ * Clear all memory caches
+ */
+export function clearMemoryCache(): void {
+  messageCache.clear();
+  translationCache.clear();
+  pendingTranslations.clear();
+}
+
+/**
+ * Get message from memory cache
+ */
+export function getCachedMessage(messageId: string): BiDirectionalMessage | undefined {
+  return messageCache.get(messageId);
+}
+
+/**
+ * Store message in memory cache
+ */
+export function cacheMessage(message: BiDirectionalMessage): void {
+  messageCache.set(message.id, message);
+}
+
+/**
+ * Get all cached messages
+ */
+export function getAllCachedMessages(): BiDirectionalMessage[] {
+  return Array.from(messageCache.values());
+}
+
+/**
+ * Clear message cache only
+ */
+export function clearMessageCache(): void {
+  messageCache.clear();
+}
+
+/**
+ * Clear translation cache only
+ */
+export function clearTranslationCache(): void {
+  translationCache.clear();
+}
+
+/**
+ * Get cache statistics
+ */
+export function getCacheStats(): { messages: number; translations: number } {
+  return {
+    messages: messageCache.size,
+    translations: translationCache.size,
+  };
 }
 
 // ============================================================================
