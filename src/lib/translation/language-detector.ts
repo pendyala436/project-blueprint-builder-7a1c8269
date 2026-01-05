@@ -144,21 +144,37 @@ function detectVietnamese(text: string): boolean {
   return /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i.test(text);
 }
 
+// Minimum text length for reliable detection
+const MIN_DETECTION_LENGTH = 3;
+const LOW_CONFIDENCE_THRESHOLD = 0.6;
+
 /**
  * Detect language from text using Unicode patterns
  * Also detects phonetic Latin input for Indian languages
+ * 
+ * FIX #1: For short or mixed text, falls back to user's profile (hintLanguage)
  */
 export function detectLanguage(text: string, hintLanguage?: string): LanguageDetectionResult {
   const trimmed = text.trim();
   
-  // Default to English
+  // Default result - use hint language if provided, otherwise English
+  const fallbackLanguage = hintLanguage?.toLowerCase() || 'english';
   const defaultResult: LanguageDetectionResult = {
-    language: 'english',
+    language: fallbackLanguage,
     isLatin: true,
-    confidence: 0.5
+    confidence: hintLanguage ? 0.7 : 0.5 // Higher confidence if we have a hint
   };
 
   if (!trimmed) return defaultResult;
+
+  // FIX #1: For very short text (< 3 chars), use hint language with low confidence
+  if (trimmed.length < MIN_DETECTION_LENGTH && hintLanguage) {
+    return {
+      language: hintLanguage.toLowerCase(),
+      isLatin: isLatinScript(trimmed),
+      confidence: 0.6
+    };
+  }
 
   // Check script patterns (non-Latin first) - highest priority
   for (const pattern of SCRIPT_PATTERNS) {
@@ -173,7 +189,7 @@ export function detectLanguage(text: string, hintLanguage?: string): LanguageDet
 
   // For Latin text, check if it's phonetic input for an Indian language
   if (isLatinScript(trimmed)) {
-    // If we have a hint (user's mother tongue), check if text matches that language's patterns
+    // If we have a hint (user's mother tongue), prioritize checking that language first
     if (hintLanguage) {
       const normalizedHint = hintLanguage.toLowerCase();
       const phoneticData = INDIAN_PHONETIC_PATTERNS[normalizedHint];
@@ -186,12 +202,22 @@ export function detectLanguage(text: string, hintLanguage?: string): LanguageDet
             matchCount++;
           }
         }
+        // FIX #1: Even with 0 matches, if hint is provided and text is short, use hint
         if (matchCount >= 1) {
           return {
             language: normalizedHint,
             isLatin: true,
             isPhonetic: true,
-            confidence: 0.8
+            confidence: 0.8 + (matchCount * 0.03)
+          };
+        }
+        // For short Latin text with a hint but no pattern match, still use hint
+        if (trimmed.length < 20 && hintLanguage) {
+          return {
+            language: normalizedHint,
+            isLatin: true,
+            isPhonetic: true,
+            confidence: 0.65
           };
         }
       }
@@ -200,6 +226,15 @@ export function detectLanguage(text: string, hintLanguage?: string): LanguageDet
     // Try to detect phonetic Indian language without hint
     const phoneticResult = detectPhoneticIndianLanguage(trimmed);
     if (phoneticResult) {
+      // FIX #1: If confidence is low and we have a hint, prefer hint
+      if (phoneticResult.confidence < LOW_CONFIDENCE_THRESHOLD && hintLanguage) {
+        return {
+          language: hintLanguage.toLowerCase(),
+          isLatin: true,
+          isPhonetic: true,
+          confidence: 0.65
+        };
+      }
       return {
         language: phoneticResult.language,
         isLatin: true,
@@ -218,6 +253,15 @@ export function detectLanguage(text: string, hintLanguage?: string): LanguageDet
   if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/i.test(trimmed)) {
     const european = detectEuropeanLanguage(trimmed);
     if (european) return european;
+  }
+
+  // FIX #1: For basic Latin text, fall back to hint language if available
+  if (hintLanguage) {
+    return {
+      language: hintLanguage.toLowerCase(),
+      isLatin: true,
+      confidence: 0.6
+    };
   }
 
   // Default to English for basic Latin

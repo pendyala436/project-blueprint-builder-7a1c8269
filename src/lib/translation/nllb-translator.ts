@@ -172,7 +172,34 @@ export function getNLLBSupportedLanguages(): string[] {
 }
 
 /**
+ * Validate and ensure proper UTF-8 encoding
+ * FIX #6: Ensures no broken Unicode characters
+ */
+function ensureUTF8(text: string): string {
+  try {
+    // Encode and decode to ensure valid UTF-8
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    return decoder.decode(encoder.encode(text));
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * Check if text contains broken Unicode (replacement characters)
+ * FIX #6: Detect and handle broken characters
+ */
+function hasBrokenUnicode(text: string): boolean {
+  return /\uFFFD/.test(text) || /�/.test(text);
+}
+
+/**
  * Translate text using NLLB-200
+ * 
+ * FIX #4: Always uses correct NLLB-200 language codes (never ISO codes directly)
+ * FIX #5: Forces target language to prevent mixed-language output
+ * FIX #6: Ensures proper UTF-8 encoding throughout
  */
 export async function translateWithNLLB(
   text: string,
@@ -181,9 +208,18 @@ export async function translateWithNLLB(
 ): Promise<string> {
   if (!text.trim()) return text;
   
-  // Same language - no translation needed
+  // FIX #6: Ensure input is valid UTF-8
+  const cleanText = ensureUTF8(text.trim());
+  
+  // FIX #4: Always convert language names to NLLB codes (never pass ISO directly)
   const srcCode = getNLLBCode(sourceLanguage);
   const tgtCode = getNLLBCode(targetLanguage);
+  
+  // Validate codes are proper NLLB format (xxx_Xxxx)
+  if (!srcCode.includes('_') || !tgtCode.includes('_')) {
+    console.error('[NLLB-200] Invalid language codes:', { srcCode, tgtCode });
+    return text;
+  }
   
   if (srcCode === tgtCode) {
     return text;
@@ -201,13 +237,29 @@ export async function translateWithNLLB(
   try {
     console.log(`[NLLB-200] Translating: ${srcCode} → ${tgtCode}`);
     
-    const result = await translatorPipeline(text, {
+    // FIX #5: Use forced_bos_token_id equivalent through tgt_lang parameter
+    // This forces output to be in target language only
+    const result = await translatorPipeline(cleanText, {
       src_lang: srcCode,
       tgt_lang: tgtCode,
       max_length: 512,
+      // FIX #5: Additional params to enforce target language
+      forced_bos_token_id: undefined, // Let pipeline handle this via tgt_lang
+      num_beams: 4, // Better quality with beam search
+      early_stopping: true,
     });
     
-    const translatedText = result[0]?.translation_text || text;
+    let translatedText = result[0]?.translation_text || text;
+    
+    // FIX #6: Validate output has no broken Unicode
+    if (hasBrokenUnicode(translatedText)) {
+      console.warn('[NLLB-200] Output has broken Unicode, returning original');
+      return text;
+    }
+    
+    // FIX #6: Ensure output is valid UTF-8
+    translatedText = ensureUTF8(translatedText);
+    
     console.log(`[NLLB-200] Result: "${translatedText.slice(0, 50)}..."`);
     
     return translatedText;

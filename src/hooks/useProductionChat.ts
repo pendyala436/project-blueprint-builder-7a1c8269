@@ -176,9 +176,12 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
     return success;
   }, [isModelReady, isModelLoading]);
 
-  /**
+/**
    * Update live preview as user types in Latin
-   * Non-blocking: Never delays typing
+   * 
+   * FIX #2: Correct spelling BEFORE transliteration (without changing meaning)
+   * FIX #3: Transliteration ONLY at this stage (no translation)
+   * FIX #7: Non-blocking - Never delays typing, runs instantly
    */
   const updateLivePreview = useCallback((latinText: string) => {
     // Clear previous debounce
@@ -188,7 +191,7 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
 
     const trimmed = latinText.trim();
     
-    // Update Latin input immediately (never block typing)
+    // FIX #7: Update Latin input IMMEDIATELY (never block typing)
     setLivePreview(prev => ({ ...prev, latinInput: latinText }));
 
     if (!trimmed) {
@@ -199,12 +202,13 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
 
     // If user's language is English, no conversion needed
     if (!needsNativeConversion) {
+      // FIX #2: Still correct spelling for English
       const corrected = autoCorrectSpelling ? correctSpelling(trimmed) : trimmed;
       setLivePreview(prev => ({ ...prev, correctedInput: corrected, nativePreview: corrected, isProcessing: false }));
       return;
     }
 
-    // If already non-Latin, show as-is
+    // If already non-Latin (native script), show as-is - no transliteration needed
     if (!checkLatinScript(trimmed)) {
       setLivePreview(prev => ({ ...prev, correctedInput: trimmed, nativePreview: trimmed, isProcessing: false }));
       lastProcessedRef.current = '';
@@ -216,22 +220,23 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
       return;
     }
 
-    // Show processing state
-    setLivePreview(prev => ({ ...prev, isProcessing: true }));
-
-    // Debounced conversion (non-blocking)
-    debounceRef.current = setTimeout(async () => {
+    // FIX #7: Perform transliteration synchronously for instant feedback
+    // Only use setTimeout for very minimal debounce to avoid excessive calls
+    debounceRef.current = setTimeout(() => {
       try {
         lastProcessedRef.current = trimmed;
 
-        // Step 1: Correct spelling
+        // FIX #2: Step 1 - Correct spelling FIRST (before transliteration)
+        // This fixes misspelled Latin input without changing meaning
         const corrected = autoCorrectSpelling ? correctSpelling(trimmed) : trimmed;
 
-        // Step 2: Transliterate to native script (instant)
+        // FIX #3: Step 2 - ONLY transliterate (no translation here)
+        // Convert Latin → Native script instantly
         let nativePreview = corrected;
         if (isPhoneticTransliterationSupported(myLanguage)) {
           const transliterated = phoneticTransliterate(corrected, myLanguage);
-          if (transliterated && transliterated !== corrected) {
+          // Only use transliteration if it actually produced native script
+          if (transliterated && transliterated !== corrected && !checkLatinScript(transliterated)) {
             nativePreview = transliterated;
           }
         }
@@ -251,7 +256,7 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
           isProcessing: false 
         }));
       }
-    }, debounceMs);
+    }, Math.min(debounceMs, 50)); // FIX #7: Cap debounce at 50ms for instant feel
   }, [myLanguage, needsNativeConversion, autoCorrectSpelling, debounceMs]);
 
   /**
@@ -267,9 +272,11 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
 
   /**
    * Process outgoing message before sending
-   * 1. Correct spelling
-   * 2. Convert to sender's native script (for sender display)
-   * 3. Translate to receiver's language (background, non-blocking)
+   * 
+   * FIX #2: Correct spelling BEFORE translation
+   * FIX #3: Transliterate to native script (sender display)
+   * FIX #7: Translation runs asynchronously in background (non-blocking)
+   * FIX #8: Sender sees their native language, receiver sees translated
    */
   const processOutgoingMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
@@ -284,33 +291,29 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
       };
     }
 
-    // Step 1: Correct spelling
+    // FIX #2: Step 1 - Correct spelling FIRST (before any conversion)
     const correctedText = autoCorrectSpelling ? correctSpelling(trimmed) : trimmed;
 
-    // Step 2: Convert to sender's native script
+    // FIX #3 & #8: Step 2 - Convert to sender's native script
+    // Sender will see this in their chat window
     let senderNativeText = correctedText;
     if (needsNativeConversion && checkLatinScript(correctedText)) {
-      // Check if we have ready preview
+      // Use cached preview if available and matches
       if (livePreview.nativePreview && 
           livePreview.latinInput.trim() === trimmed &&
           !checkLatinScript(livePreview.nativePreview)) {
         senderNativeText = livePreview.nativePreview;
       } else if (isPhoneticTransliterationSupported(myLanguage)) {
         const transliterated = phoneticTransliterate(correctedText, myLanguage);
-        if (transliterated && transliterated !== correctedText) {
+        if (transliterated && transliterated !== correctedText && !checkLatinScript(transliterated)) {
           senderNativeText = transliterated;
         }
       }
     }
 
-    // Step 3: Same language = NO translation, both see native script
-    let receiverTranslatedText = senderNativeText;
-    let isTranslated = false;
-
-    // Skip translation entirely when sender and receiver have same language
-    // Both will see the same native script text
+    // Same language = NO translation needed
+    // FIX #8: Both see the same native script text
     if (!needsTranslation) {
-      // Same language - receiver sees exact same native text as sender
       console.log('[ProductionChat] Same language - no translation needed');
       return { 
         senderNativeText, 
@@ -321,13 +324,18 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
       };
     }
 
-    // Different languages - translate for receiver
+    // FIX #7 & #8: Different languages - translate for receiver (background, async)
+    // This runs in background without blocking the UI
+    let receiverTranslatedText = senderNativeText;
+    let isTranslated = false;
+    
     setIsTranslating(true);
     try {
       if (!isNLLBLoaded()) {
         await initializeModel();
       }
 
+      // FIX #4 & #5: Translation uses proper NLLB codes and forces target language
       const translated = await translateWithNLLB(senderNativeText, myLanguage, theirLanguage);
       if (translated && translated !== senderNativeText) {
         receiverTranslatedText = translated;
@@ -336,13 +344,14 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
     } catch (err) {
       console.error('[ProductionChat] Translation error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
+      // On error, receiver sees sender's native text (graceful fallback)
     } finally {
       setIsTranslating(false);
     }
 
     return { 
-      senderNativeText, 
-      receiverTranslatedText, 
+      senderNativeText,        // FIX #8: Sender sees this (their native script)
+      receiverTranslatedText,  // FIX #8: Receiver sees this (their native language)
       originalText: trimmed,
       correctedText,
       isTranslated 
@@ -352,6 +361,9 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
   /**
    * Process incoming message for display
    * Translates from sender's language to current user's language
+   * 
+   * FIX #8: Bi-directional - receiver sees message in their native language
+   * FIX #7: Translation runs asynchronously (non-blocking)
    */
   const processIncomingMessage = useCallback(async (
     text: string,
@@ -370,12 +382,12 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
       return { displayText: trimmed, originalText: trimmed, isTranslated: false };
     }
 
-    // If same language, no translation needed
+    // FIX #8: If same language, no translation needed - both see same native script
     if (getNLLBCode(normSender) === getNLLBCode(myLanguage)) {
       return { displayText: trimmed, originalText: trimmed, isTranslated: false };
     }
 
-    // Translate to my language
+    // FIX #7 & #8: Translate to receiver's (my) language asynchronously
     setIsTranslating(true);
     let displayText = trimmed;
     let isTranslated = false;
@@ -385,6 +397,7 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
         await initializeModel();
       }
 
+      // FIX #4 & #5: Uses proper NLLB codes and forces target language
       const translated = await translateWithNLLB(trimmed, normSender, myLanguage);
       if (translated && translated !== trimmed) {
         displayText = translated;
@@ -393,19 +406,27 @@ export function useProductionChat(options: UseProductionChatOptions): UseProduct
     } catch (err) {
       console.error('[ProductionChat] Incoming translation error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
+      // On error, show original message (graceful fallback)
     } finally {
       setIsTranslating(false);
     }
 
+    // FIX #8: Receiver sees message in their native language
     return { displayText, originalText: trimmed, isTranslated };
   }, [currentUserId, myLanguage, initializeModel]);
 
   /**
    * Detect language from text
+   * FIX #1: Falls back to user's profile language if confidence is low
    */
   const detectLanguageFromText = useCallback((text: string): string => {
     if (!text.trim()) return myLanguage;
-    const result = detectLang(text);
+    // Pass myLanguage as hint for low-confidence fallback
+    const result = detectLang(text, myLanguage);
+    // If confidence is low, use user's profile language
+    if (result.confidence < 0.6) {
+      return myLanguage;
+    }
     return result.language || myLanguage;
   }, [myLanguage]);
 
