@@ -57,13 +57,22 @@ export {
 } from './language-detector';
 
 // ============================================================================
-// Phonetic Transliteration
+// Phonetic Transliteration (ICU-style for 200+ languages)
 // ============================================================================
 export {
   phoneticTransliterate,
   isPhoneticTransliterationSupported,
   getSupportedPhoneticLanguages,
+  convertNumerals,
+  getScriptType,
 } from './phonetic-transliterator';
+
+// Direct ICU exports for advanced usage
+export {
+  icuTransliterate,
+  isICUTransliterationSupported,
+  getICUSupportedLanguages,
+} from './icu-transliterator';
 
 // ============================================================================
 // Spell Correction
