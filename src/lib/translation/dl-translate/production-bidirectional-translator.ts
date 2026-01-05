@@ -419,8 +419,12 @@ export async function processOutgoingMessage(
     callbacks?.onSenderViewReady?.(messageId, senderNativeText);
 
     // Queue translation in background (NON-BLOCKING)
+    // IMPORTANT: Pass BOTH original Latin input and native text for translation
+    // Dictionary has Latin keys like "bagunnava" that need to be looked up
+    const textForTranslation = isLatin ? textToProcess : senderNativeText;
+    
     queueBackgroundTranslation(
-      senderNativeText,
+      textForTranslation,
       sender.motherTongue,
       receiver.motherTongue,
       messageId,
@@ -540,8 +544,7 @@ function queueBackgroundTranslation(
   (async () => {
     try {
       // Use unified translator (dictionary + ICU - instant)
-      const { translate } = await import('@/lib/translation/unified-translator');
-      const translated = translate(text, sourceLang, targetLang);
+      const translated = unifiedTranslate(text, sourceLang, targetLang);
       
       if (translated && translated !== text) {
         translationCache.set(cacheKey, translated);
@@ -550,7 +553,15 @@ function queueBackgroundTranslation(
         return;
       }
 
-      // FALLBACK: Return original text (don't use slow NLLB model)
+      // FALLBACK: Try transliteration if translation failed
+      const transliterated = unifiedTransliterate(text, targetLang);
+      if (transliterated && transliterated !== text) {
+        console.log('[BiDirectionalTranslator] Fallback to transliteration:', text.slice(0, 30), '→', transliterated.slice(0, 30));
+        onSuccess(transliterated);
+        return;
+      }
+
+      // No match - return original
       console.log('[BiDirectionalTranslator] No dictionary match, returning original');
       onSuccess(text);
     } catch (error) {
