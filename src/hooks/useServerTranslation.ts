@@ -225,13 +225,8 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
   }, [userLanguage]);
 
-  // Update live preview with debounce (Latin → Native script OR Latin → Latin language)
+  // Update live preview INSTANTLY using dictionary + ICU (no debounce needed)
   const updateLivePreview = useCallback((text: string) => {
-    // Clear previous debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
     const trimmed = text.trim();
     if (!trimmed) {
       setLivePreview('');
@@ -252,18 +247,29 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
       return;
     }
 
-    // For ALL non-English languages:
-    // - Non-Latin languages: convert script
-    // - Latin languages: translate
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const converted = await convertToNativeScript(trimmed, userLanguage);
-        setLivePreview(converted);
-      } catch {
-        setLivePreview(trimmed);
-      }
-    }, debounceMs);
-  }, [userLanguage, debounceMs]);
+    // INSTANT conversion using dictionary + ICU (synchronous for speed)
+    // Import synchronously for instant preview
+    import('@/lib/translation/dl-translate/transliteration').then(({ transliterate, isTransliterationSupported }) => {
+      import('@/lib/translation/dl-translate/utils').then(({ resolveLangCode, normalizeLanguageInput }) => {
+        const langCode = resolveLangCode(normalizeLanguageInput(normUser), 'nllb200');
+        
+        if (isTransliterationSupported(langCode)) {
+          const converted = transliterate(trimmed, langCode);
+          setLivePreview(converted);
+        } else {
+          // Fallback to ICU
+          import('@/lib/translation/icu-transliterator').then(({ icuTransliterate, isICUTransliterationSupported }) => {
+            if (isICUTransliterationSupported(normUser)) {
+              const converted = icuTransliterate(trimmed, normUser);
+              setLivePreview(converted);
+            } else {
+              setLivePreview(trimmed);
+            }
+          });
+        }
+      });
+    });
+  }, [userLanguage]);
 
   // Clear live preview
   const clearLivePreview = useCallback(() => {
