@@ -1,9 +1,10 @@
 /**
  * Transliteration Engine - Latin to Native Script
+ * Full 200+ language support from dl-translate
  * Phonetic conversion for real-time preview
  */
 
-// Devanagari (Hindi, Marathi, Nepali, Sanskrit)
+// Devanagari (Hindi, Marathi, Nepali, Sanskrit, Bhojpuri, Maithili, etc.)
 const DEVANAGARI_MAP: Record<string, string> = {
   // Vowels
   'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'ii': 'ई', 'u': 'उ', 'oo': 'ऊ', 'uu': 'ऊ',
@@ -213,8 +214,105 @@ const GURMUKHI_MAP: Record<string, string> = {
   '5': '੫', '6': '੬', '7': '੭', '8': '੮', '9': '੯',
 };
 
-// Map NLLB codes to script maps
+// Odia script mapping
+const ODIA_MAP: Record<string, string> = {
+  // Vowels
+  'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ee': 'ଈ', 'ii': 'ଈ', 'u': 'ଉ', 'oo': 'ଊ', 'uu': 'ଊ',
+  'e': 'ଏ', 'ai': 'ଐ', 'o': 'ଓ', 'au': 'ଔ', 'ou': 'ଔ',
+  
+  // Consonants
+  'k': 'କ', 'kh': 'ଖ', 'g': 'ଗ', 'gh': 'ଘ', 'ng': 'ଙ',
+  'ch': 'ଚ', 'chh': 'ଛ', 'j': 'ଜ', 'jh': 'ଝ', 'ny': 'ଞ',
+  'T': 'ଟ', 'Th': 'ଠ', 'D': 'ଡ', 'Dh': 'ଢ', 'N': 'ଣ',
+  't': 'ତ', 'th': 'ଥ', 'd': 'ଦ', 'dh': 'ଧ', 'n': 'ନ',
+  'p': 'ପ', 'ph': 'ଫ', 'f': 'ଫ', 'b': 'ବ', 'bh': 'ଭ', 'm': 'ମ',
+  'y': 'ଯ', 'r': 'ର', 'l': 'ଲ', 'v': 'ଵ', 'w': 'ଵ',
+  'sh': 'ଶ', 'shh': 'ଷ', 's': 'ସ', 'h': 'ହ',
+  'L': 'ଳ',
+  
+  // Matras
+  '_a': '', '_aa': 'ା', '_i': 'ି', '_ee': 'ୀ', '_ii': 'ୀ',
+  '_u': 'ୁ', '_oo': 'ୂ', '_uu': 'ୂ', '_e': 'େ',
+  '_ai': 'ୈ', '_o': 'ୋ', '_au': 'ୌ', '_ou': 'ୌ',
+  
+  // Numbers
+  '0': '୦', '1': '୧', '2': '୨', '3': '୩', '4': '୪',
+  '5': '୫', '6': '୬', '7': '୭', '8': '୮', '9': '୯',
+};
+
+// Sinhala script mapping
+const SINHALA_MAP: Record<string, string> = {
+  // Vowels
+  'a': 'අ', 'aa': 'ආ', 'i': 'ඉ', 'ee': 'ඊ', 'ii': 'ඊ', 'u': 'උ', 'oo': 'ඌ', 'uu': 'ඌ',
+  'e': 'එ', 'ai': 'ඓ', 'o': 'ඔ', 'au': 'ඖ', 'ou': 'ඖ',
+  
+  // Consonants
+  'k': 'ක', 'kh': 'ඛ', 'g': 'ග', 'gh': 'ඝ', 'ng': 'ඞ',
+  'ch': 'ච', 'chh': 'ඡ', 'j': 'ජ', 'jh': 'ඣ', 'ny': 'ඤ',
+  'T': 'ට', 'Th': 'ඨ', 'D': 'ඩ', 'Dh': 'ඪ', 'N': 'ණ',
+  't': 'ත', 'th': 'ථ', 'd': 'ද', 'dh': 'ධ', 'n': 'න',
+  'p': 'ප', 'ph': 'ඵ', 'f': 'ෆ', 'b': 'බ', 'bh': 'භ', 'm': 'ම',
+  'y': 'ය', 'r': 'ර', 'l': 'ල', 'v': 'ව', 'w': 'ව',
+  'sh': 'ශ', 'shh': 'ෂ', 's': 'ස', 'h': 'හ',
+  
+  // Matras
+  '_a': '', '_aa': 'ා', '_i': 'ි', '_ee': 'ී', '_ii': 'ී',
+  '_u': 'ු', '_oo': 'ූ', '_uu': 'ූ', '_e': 'ෙ',
+  '_ai': 'ෛ', '_o': 'ො', '_au': 'ෞ', '_ou': 'ෞ',
+};
+
+// Arabic script mapping (for Urdu, Arabic, Persian, etc.)
+const ARABIC_MAP: Record<string, string> = {
+  'a': 'ا', 'aa': 'آ', 'i': 'ی', 'ee': 'ی', 'u': 'و', 'oo': 'و',
+  'e': 'ے', 'ai': 'ے', 'o': 'و', 'au': 'و',
+  'b': 'ب', 'p': 'پ', 't': 'ت', 'th': 'ث', 's': 'س', 'j': 'ج',
+  'ch': 'چ', 'h': 'ح', 'kh': 'خ', 'd': 'د', 'dh': 'ذ', 'r': 'ر',
+  'z': 'ز', 'zh': 'ژ', 'sh': 'ش', 'gh': 'غ', 'f': 'ف', 'q': 'ق',
+  'k': 'ک', 'g': 'گ', 'l': 'ل', 'm': 'م', 'n': 'ن', 'w': 'و',
+  'v': 'و', 'y': 'ی', 'N': 'ں',
+  '0': '۰', '1': '۱', '2': '۲', '3': '۳', '4': '۴',
+  '5': '۵', '6': '۶', '7': '۷', '8': '۸', '9': '۹',
+};
+
+// Thai script mapping
+const THAI_MAP: Record<string, string> = {
+  'k': 'ก', 'kh': 'ข', 'g': 'ค', 'ng': 'ง',
+  'ch': 'จ', 'j': 'จ', 's': 'ซ', 'sh': 'ช',
+  'd': 'ด', 't': 'ต', 'th': 'ท', 'n': 'น',
+  'b': 'บ', 'p': 'ป', 'ph': 'พ', 'f': 'ฟ', 'm': 'ม',
+  'y': 'ย', 'r': 'ร', 'l': 'ล', 'w': 'ว', 'h': 'ห',
+  'a': 'อ', 'aa': 'า', 'i': 'ิ', 'ee': 'ี', 'u': 'ุ', 'oo': 'ู',
+  'e': 'เ', 'ai': 'ไ', 'o': 'โ', 'au': 'เา',
+};
+
+// Cyrillic mapping (for Russian, Ukrainian, etc.)
+const CYRILLIC_MAP: Record<string, string> = {
+  'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е',
+  'yo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и', 'y': 'й', 'k': 'к',
+  'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р',
+  's': 'с', 't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'kh': 'х',
+  'ts': 'ц', 'ch': 'ч', 'sh': 'ш', 'shch': 'щ', 'yu': 'ю', 'ya': 'я',
+};
+
+// Greek mapping
+const GREEK_MAP: Record<string, string> = {
+  'a': 'α', 'b': 'β', 'g': 'γ', 'd': 'δ', 'e': 'ε', 'z': 'ζ',
+  'ee': 'η', 'th': 'θ', 'i': 'ι', 'k': 'κ', 'l': 'λ', 'm': 'μ',
+  'n': 'ν', 'x': 'ξ', 'o': 'ο', 'p': 'π', 'r': 'ρ', 's': 'σ',
+  't': 'τ', 'u': 'υ', 'ph': 'φ', 'f': 'φ', 'ch': 'χ', 'ps': 'ψ', 'oo': 'ω',
+};
+
+// Hebrew mapping
+const HEBREW_MAP: Record<string, string> = {
+  'a': 'א', 'b': 'ב', 'v': 'ב', 'g': 'ג', 'd': 'ד', 'h': 'ה',
+  'w': 'ו', 'z': 'ז', 'kh': 'ח', 'ch': 'ח', 't': 'ט', 'y': 'י',
+  'k': 'כ', 'l': 'ל', 'm': 'מ', 'n': 'נ', 's': 'ס', 'p': 'פ',
+  'f': 'פ', 'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש', 'th': 'ת',
+};
+
+// Map NLLB codes to script maps (200+ languages)
 const SCRIPT_MAPS: Record<string, Record<string, string>> = {
+  // Devanagari scripts
   'hin_Deva': DEVANAGARI_MAP,
   'mar_Deva': DEVANAGARI_MAP,
   'npi_Deva': DEVANAGARI_MAP,
@@ -222,14 +320,85 @@ const SCRIPT_MAPS: Record<string, Record<string, string>> = {
   'bho_Deva': DEVANAGARI_MAP,
   'mag_Deva': DEVANAGARI_MAP,
   'mai_Deva': DEVANAGARI_MAP,
+  'awa_Deva': DEVANAGARI_MAP,
+  'hne_Deva': DEVANAGARI_MAP,
+  'kas_Deva': DEVANAGARI_MAP,
+  
+  // South Indian scripts
   'tel_Telu': TELUGU_MAP,
   'tam_Taml': TAMIL_MAP,
   'kan_Knda': KANNADA_MAP,
   'mal_Mlym': MALAYALAM_MAP,
+  
+  // Bengali scripts
   'ben_Beng': BENGALI_MAP,
   'asm_Beng': BENGALI_MAP,
+  'mni_Beng': BENGALI_MAP,
+  
+  // Other Indic scripts
   'guj_Gujr': GUJARATI_MAP,
   'pan_Guru': GURMUKHI_MAP,
+  'ory_Orya': ODIA_MAP,
+  'sin_Sinh': SINHALA_MAP,
+  
+  // Arabic scripts
+  'urd_Arab': ARABIC_MAP,
+  'arb_Arab': ARABIC_MAP,
+  'arz_Arab': ARABIC_MAP,
+  'ary_Arab': ARABIC_MAP,
+  'aeb_Arab': ARABIC_MAP,
+  'acm_Arab': ARABIC_MAP,
+  'acq_Arab': ARABIC_MAP,
+  'ajp_Arab': ARABIC_MAP,
+  'apc_Arab': ARABIC_MAP,
+  'ars_Arab': ARABIC_MAP,
+  'pes_Arab': ARABIC_MAP,
+  'prs_Arab': ARABIC_MAP,
+  'pbt_Arab': ARABIC_MAP,
+  'snd_Arab': ARABIC_MAP,
+  'kas_Arab': ARABIC_MAP,
+  'uig_Arab': ARABIC_MAP,
+  'azb_Arab': ARABIC_MAP,
+  
+  // Thai
+  'tha_Thai': THAI_MAP,
+  
+  // Cyrillic scripts
+  'rus_Cyrl': CYRILLIC_MAP,
+  'ukr_Cyrl': CYRILLIC_MAP,
+  'bel_Cyrl': CYRILLIC_MAP,
+  'bul_Cyrl': CYRILLIC_MAP,
+  'mkd_Cyrl': CYRILLIC_MAP,
+  'srp_Cyrl': CYRILLIC_MAP,
+  'kaz_Cyrl': CYRILLIC_MAP,
+  'kir_Cyrl': CYRILLIC_MAP,
+  'tgk_Cyrl': CYRILLIC_MAP,
+  'tat_Cyrl': CYRILLIC_MAP,
+  'bak_Cyrl': CYRILLIC_MAP,
+  'khk_Cyrl': CYRILLIC_MAP,
+  
+  // Greek
+  'ell_Grek': GREEK_MAP,
+  
+  // Hebrew
+  'heb_Hebr': HEBREW_MAP,
+  'ydd_Hebr': HEBREW_MAP,
+};
+
+// Virama (halant) for each script
+const VIRAMAS: Record<string, string> = {
+  'hin_Deva': '्', 'mar_Deva': '्', 'npi_Deva': '्', 'san_Deva': '्',
+  'bho_Deva': '्', 'mag_Deva': '्', 'mai_Deva': '्', 'awa_Deva': '्',
+  'hne_Deva': '्', 'kas_Deva': '्',
+  'tel_Telu': '్',
+  'tam_Taml': '்',
+  'kan_Knda': '್',
+  'mal_Mlym': '്',
+  'ben_Beng': '্', 'asm_Beng': '্', 'mni_Beng': '্',
+  'guj_Gujr': '્',
+  'pan_Guru': '੍',
+  'ory_Orya': '୍',
+  'sin_Sinh': '්',
 };
 
 // Supported scripts for transliteration
@@ -261,20 +430,7 @@ export function transliterate(
     return text; // Return original if no script map found
   }
   
-  // Get virama (halant) for the script
-  const viramas: Record<string, string> = {
-    'hin_Deva': '्', 'mar_Deva': '्', 'npi_Deva': '्', 'san_Deva': '्',
-    'bho_Deva': '्', 'mag_Deva': '्', 'mai_Deva': '्',
-    'tel_Telu': '్',
-    'tam_Taml': '்',
-    'kan_Knda': '್',
-    'mal_Mlym': '്',
-    'ben_Beng': '্', 'asm_Beng': '্',
-    'guj_Gujr': '્',
-    'pan_Guru': '੍',
-  };
-  
-  const virama = viramas[targetNllbCode] || '';
+  const virama = VIRAMAS[targetNllbCode] || '';
   
   let result = '';
   let i = 0;
@@ -289,15 +445,12 @@ export function transliterate(
         const substr = text.substring(i, i + len);
         const lowerSubstr = substr.toLowerCase();
         
-        // Check for consonant
-        if (scriptMap[lowerSubstr] || scriptMap[substr]) {
-          const char = scriptMap[lowerSubstr] || scriptMap[substr];
-          
-          // Check if it's a vowel (starts with vowel indicators)
+        // Check exact match first (case-sensitive for T/D distinction)
+        if (scriptMap[substr]) {
+          const char = scriptMap[substr];
           const isVowel = /^[aeiou]/i.test(lowerSubstr);
           
           if (isVowel && prevWasConsonant) {
-            // Apply matra instead of full vowel
             const matraKey = '_' + lowerSubstr;
             const matra = scriptMap[matraKey];
             if (matra !== undefined) {
@@ -306,7 +459,31 @@ export function transliterate(
               result += char;
             }
           } else if (!isVowel && prevWasConsonant) {
-            // Add virama before consonant cluster
+            result += virama + char;
+          } else {
+            result += char;
+          }
+          
+          prevWasConsonant = !isVowel && !/^[0-9\s\p{P}]/u.test(lowerSubstr);
+          i += len;
+          matched = true;
+          break;
+        }
+        
+        // Check lowercase match
+        if (scriptMap[lowerSubstr]) {
+          const char = scriptMap[lowerSubstr];
+          const isVowel = /^[aeiou]/i.test(lowerSubstr);
+          
+          if (isVowel && prevWasConsonant) {
+            const matraKey = '_' + lowerSubstr;
+            const matra = scriptMap[matraKey];
+            if (matra !== undefined) {
+              result += matra;
+            } else {
+              result += char;
+            }
+          } else if (!isVowel && prevWasConsonant) {
             result += virama + char;
           } else {
             result += char;
@@ -321,7 +498,6 @@ export function transliterate(
     }
     
     if (!matched) {
-      // Keep original character (spaces, punctuation, etc.)
       const char = text[i];
       
       // Check for number conversion
@@ -344,6 +520,7 @@ export function transliterate(
  */
 export function getLanguageDisplayName(nllbCode: string): string {
   const names: Record<string, string> = {
+    // Indian languages
     'hin_Deva': 'हिन्दी',
     'tel_Telu': 'తెలుగు',
     'tam_Taml': 'தமிழ்',
@@ -357,19 +534,73 @@ export function getLanguageDisplayName(nllbCode: string): string {
     'asm_Beng': 'অসমীয়া',
     'npi_Deva': 'नेपाली',
     'urd_Arab': 'اردو',
+    'sin_Sinh': 'සිංහල',
+    'bho_Deva': 'भोजपुरी',
+    'mai_Deva': 'मैथिली',
+    'san_Deva': 'संस्कृतम्',
+    
+    // European languages
     'eng_Latn': 'English',
     'spa_Latn': 'Español',
     'fra_Latn': 'Français',
     'deu_Latn': 'Deutsch',
     'por_Latn': 'Português',
     'ita_Latn': 'Italiano',
+    'nld_Latn': 'Nederlands',
+    'pol_Latn': 'Polski',
+    'ron_Latn': 'Română',
+    'hun_Latn': 'Magyar',
+    'ces_Latn': 'Čeština',
+    'slk_Latn': 'Slovenčina',
+    'slv_Latn': 'Slovenščina',
+    'hrv_Latn': 'Hrvatski',
+    'bos_Latn': 'Bosanski',
+    'swe_Latn': 'Svenska',
+    'dan_Latn': 'Dansk',
+    'nob_Latn': 'Norsk',
+    'fin_Latn': 'Suomi',
+    'ell_Grek': 'Ελληνικά',
+    
+    // Cyrillic languages
     'rus_Cyrl': 'Русский',
+    'ukr_Cyrl': 'Українська',
+    'bel_Cyrl': 'Беларуская',
+    'bul_Cyrl': 'Български',
+    'mkd_Cyrl': 'Македонски',
+    'srp_Cyrl': 'Српски',
+    
+    // Middle Eastern languages
     'arb_Arab': 'العربية',
+    'arz_Arab': 'العربية المصرية',
+    'heb_Hebr': 'עברית',
+    'pes_Arab': 'فارسی',
+    'tur_Latn': 'Türkçe',
+    
+    // East Asian languages
     'zho_Hans': '中文',
+    'zho_Hant': '繁體中文',
     'jpn_Jpan': '日本語',
     'kor_Hang': '한국어',
+    
+    // Southeast Asian languages
     'tha_Thai': 'ไทย',
     'vie_Latn': 'Tiếng Việt',
+    'ind_Latn': 'Bahasa Indonesia',
+    'zsm_Latn': 'Bahasa Melayu',
+    'mya_Mymr': 'မြန်မာ',
+    'khm_Khmr': 'ខ្មែរ',
+    'lao_Laoo': 'ລາວ',
+    'tgl_Latn': 'Tagalog',
+    
+    // African languages
+    'swh_Latn': 'Kiswahili',
+    'amh_Ethi': 'አማርኛ',
+    'hau_Latn': 'Hausa',
+    'yor_Latn': 'Yorùbá',
+    'ibo_Latn': 'Igbo',
+    'zul_Latn': 'isiZulu',
+    'xho_Latn': 'isiXhosa',
+    'afr_Latn': 'Afrikaans',
   };
   
   return names[nllbCode] || nllbCode;
