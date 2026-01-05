@@ -123,6 +123,16 @@ export {
 } from './realtime-chat-translator';
 
 // ============================================================================
+// Spell Corrections
+// ============================================================================
+export {
+  applySpellCorrections,
+  suggestCorrections,
+  validateTransliteration,
+  LANGUAGE_CORRECTIONS,
+} from './spell-corrections';
+
+// ============================================================================
 // Translation Worker (Background Processing)
 // ============================================================================
 export {

@@ -4,6 +4,7 @@
  * Features:
  * - Auto-detect source language
  * - Latin typing with live native preview
+ * - Spell correction for better transliteration
  * - Same language = no translation, both see native script
  * - Background translation (non-blocking)
  * - Bi-directional translation
@@ -14,6 +15,7 @@ import { detectLanguage, isSameLanguage, isLatinScript } from './language-detect
 import { transliterate, isTransliterationSupported } from './transliteration';
 import { resolveLangCode, normalizeLanguageInput } from './utils';
 import { queueTranslation, isWorkerReady, initWorkerTranslator, getQueueStats } from './translation-worker';
+import { applySpellCorrections, validateTransliteration } from './spell-corrections';
 
 // ============================================================================
 // Types
@@ -32,12 +34,15 @@ export interface ProcessedMessage {
   isTranslated: boolean;           // Was translation performed
   detectedLanguage: string;        // Auto-detected input language
   timestamp: number;
+  spellCorrections?: string[];     // Any spelling corrections applied
+  transliterationValid?: boolean;  // Was transliteration successful
 }
 
 export interface LivePreview {
   input: string;                   // Current Latin input
   nativePreview: string;           // Live native script preview
   isProcessing: boolean;           // Is preview being calculated
+  spellCorrected?: boolean;        // Was spell correction applied
 }
 
 // ============================================================================
@@ -46,7 +51,7 @@ export interface LivePreview {
 
 /**
  * Get live transliteration preview as user types (non-blocking)
- * Returns native script preview for Latin input
+ * Returns native script preview for Latin input with spell correction
  */
 export function getLiveNativePreview(
   input: string,
@@ -63,8 +68,19 @@ export function getLiveNativePreview(
 
   const langCode = resolveLangCode(normalizeLanguageInput(userLanguage), 'nllb200');
   
+  // Apply spell corrections first
+  const { correctedText } = applySpellCorrections(input, userLanguage);
+  
   if (isTransliterationSupported(langCode)) {
-    return transliterate(input, langCode);
+    const result = transliterate(correctedText, langCode);
+    
+    // Validate transliteration
+    const { isValid } = validateTransliteration(correctedText, result, userLanguage);
+    if (!isValid) {
+      console.warn('[RealtimeTranslator] Transliteration validation failed for:', input);
+    }
+    
+    return result;
   }
 
   return input;
@@ -87,13 +103,17 @@ export async function processOutgoingMessage(
   // Auto-detect input language
   const detection = detectLanguage(input, sender.language);
   
+  // Apply spell corrections for phonetic input
+  const { correctedText, corrections } = applySpellCorrections(input, sender.language);
+  const inputToProcess = corrections.length > 0 ? correctedText : input;
+  
   // Get sender's native text
-  let senderNativeText = input;
+  let senderNativeText = inputToProcess;
   const senderLangCode = resolveLangCode(normalizeLanguageInput(sender.language), 'nllb200');
   
   if (detection.isLatinScript && isTransliterationSupported(senderLangCode)) {
     // Convert Latin to sender's native script
-    senderNativeText = transliterate(input, senderLangCode);
+    senderNativeText = transliterate(inputToProcess, senderLangCode);
   }
 
   // Check if sender and receiver have same language
@@ -107,7 +127,7 @@ export async function processOutgoingMessage(
     
     // If receiver's language uses different script variant, transliterate
     if (isTransliterationSupported(receiverLangCode) && detection.isLatinScript) {
-      receiverNativeText = transliterate(input, receiverLangCode);
+      receiverNativeText = transliterate(inputToProcess, receiverLangCode);
     }
 
     onReceiverTextReady?.(receiverNativeText);
@@ -120,6 +140,8 @@ export async function processOutgoingMessage(
       isTranslated: false,
       detectedLanguage: detection.language,
       timestamp,
+      spellCorrections: corrections.length > 0 ? corrections : undefined,
+      transliterationValid: true,
     };
   }
 
