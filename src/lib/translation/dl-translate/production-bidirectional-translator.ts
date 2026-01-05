@@ -486,23 +486,33 @@ export async function processIncomingMessage(
   }
 
   try {
-    // Ensure translator is ready
-    if (!isWorkerReady()) {
-      await initWorkerTranslator();
+    // PRIORITY 1: Use dictionary-based translation (instant, no model loading)
+    const { translateWithML } = await import('@/lib/translation/ml-translation-engine');
+    const dictTranslated = await translateWithML(message, senderMotherTongue, receiverMotherTongue);
+    
+    if (dictTranslated && dictTranslated !== message) {
+      translationCache.set(cacheKey, dictTranslated);
+      console.log('[BiDirectionalTranslator] Dictionary translation:', message.slice(0, 30), '→', dictTranslated.slice(0, 30));
+      return dictTranslated;
     }
 
-    // Translate in background
-    const translated = await queueTranslation(
-      message,
-      senderMotherTongue,
-      receiverMotherTongue,
-      5 // High priority for incoming messages
-    );
+    // PRIORITY 2: Try translation-engine (has more dictionaries)
+    const { translateText } = await import('@/lib/translation/translation-engine');
+    const result = await translateText(message, {
+      sourceLanguage: senderMotherTongue,
+      targetLanguage: receiverMotherTongue,
+      mode: 'translate'
+    });
+    
+    if (result.isTranslated && result.translatedText !== message) {
+      translationCache.set(cacheKey, result.translatedText);
+      console.log('[BiDirectionalTranslator] Engine translation:', message.slice(0, 30), '→', result.translatedText.slice(0, 30));
+      return result.translatedText;
+    }
 
-    // Store in memory cache
-    translationCache.set(cacheKey, translated);
-
-    return translated;
+    // FALLBACK: Return original message (don't block on heavy NLLB model)
+    console.log('[BiDirectionalTranslator] No dictionary match, returning original:', message.slice(0, 30));
+    return message;
   } catch (error) {
     console.error('[BiDirectionalTranslator] Incoming translation failed:', error);
     return message; // Fallback to original
@@ -515,7 +525,7 @@ export async function processIncomingMessage(
 
 /**
  * Queue translation in background without blocking
- * Uses memory cache to avoid re-translating same text
+ * Uses dictionary-based translation for instant results
  */
 function queueBackgroundTranslation(
   text: string,
@@ -533,21 +543,38 @@ function queueBackgroundTranslation(
     return;
   }
 
-  // Start async translation without awaiting
+  // Start async translation without awaiting (using dictionary - FAST)
   (async () => {
     try {
-      // Ensure translator is ready
-      if (!isWorkerReady()) {
-        await initWorkerTranslator();
+      // PRIORITY 1: Use dictionary-based translation (instant)
+      const { translateWithML } = await import('@/lib/translation/ml-translation-engine');
+      const dictTranslated = await translateWithML(text, sourceLang, targetLang);
+      
+      if (dictTranslated && dictTranslated !== text) {
+        translationCache.set(cacheKey, dictTranslated);
+        console.log('[BiDirectionalTranslator] Background dict translation:', text.slice(0, 30), '→', dictTranslated.slice(0, 30));
+        onSuccess(dictTranslated);
+        return;
       }
 
-      // Queue translation with high priority
-      const translatedText = await queueTranslation(text, sourceLang, targetLang, 10);
+      // PRIORITY 2: Try translation-engine
+      const { translateText } = await import('@/lib/translation/translation-engine');
+      const result = await translateText(text, {
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+        mode: 'translate'
+      });
       
-      // Store in memory cache
-      translationCache.set(cacheKey, translatedText);
-      
-      onSuccess(translatedText);
+      if (result.isTranslated && result.translatedText !== text) {
+        translationCache.set(cacheKey, result.translatedText);
+        console.log('[BiDirectionalTranslator] Background engine translation:', text.slice(0, 30), '→', result.translatedText.slice(0, 30));
+        onSuccess(result.translatedText);
+        return;
+      }
+
+      // FALLBACK: Return original text (don't use slow NLLB model)
+      console.log('[BiDirectionalTranslator] No dictionary match, returning original');
+      onSuccess(text);
     } catch (error) {
       console.error('[BiDirectionalTranslator] Background translation failed:', messageId, error);
       onError(error instanceof Error ? error : new Error('Translation failed'));
