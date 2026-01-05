@@ -64,7 +64,7 @@ const SCRIPT_PATTERNS: Array<{
   { regex: /[\u2D30-\u2D7F]/u, language: 'Tamazight', script: 'Tifinagh', nllbCode: 'tzm_Tfng' },
 ];
 
-// Phonetic patterns for detecting languages typed in Latin script
+// Phonetic patterns for detecting ALL Indian languages typed in Latin script
 const PHONETIC_PATTERNS: Array<{
   language: string;
   nllbCode: string;
@@ -78,7 +78,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(kya|kaise|kab|kahan|kaun|kyun|aur|mein|hai|hain|tha|thi|the|hoga|hogi|kar|karo|karna|jao|aao|bolo|dekho|suno)\b/i,
     ],
-    words: ['namaste', 'dhanyawad', 'kripya', 'acha', 'theek', 'bahut', 'pyar', 'dost', 'bhai', 'behan', 'maa', 'papa', 'ghar', 'kaam', 'paani', 'khana', 'sona', 'jaana', 'accha', 'nahi', 'haan'],
+    words: ['namaste', 'dhanyawad', 'kripya', 'acha', 'theek', 'bahut', 'pyar', 'dost', 'bhai', 'behan', 'maa', 'papa', 'ghar', 'kaam', 'paani', 'khana', 'sona', 'jaana', 'accha', 'nahi', 'haan', 'suniye', 'boliye', 'dijiye'],
   },
   // Telugu
   {
@@ -87,7 +87,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(emi|ela|eppudu|ekkada|evaru|enduku|mariyu|nenu|meeru|undi|unnaru|cheppu|chepandi|ra|randi|po|poda)\b/i,
     ],
-    words: ['namaskar', 'namaskaram', 'dhanyavadalu', 'manchiga', 'bagundi', 'chala', 'prema', 'sneham', 'anna', 'akka', 'amma', 'nanna', 'illu', 'pani', 'neeru', 'bhojanam', 'nidra', 'vellali', 'avunu', 'kadu'],
+    words: ['namaskar', 'namaskaram', 'dhanyavadalu', 'manchiga', 'bagundi', 'chala', 'prema', 'sneham', 'anna', 'akka', 'amma', 'nanna', 'illu', 'pani', 'neeru', 'bhojanam', 'nidra', 'vellali', 'avunu', 'kadu', 'cheppandi', 'randi'],
   },
   // Tamil
   {
@@ -96,7 +96,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(enna|eppadi|eppo|enga|yaar|en|mattum|naan|neenga|irukku|irukken|sollu|sollungal|va|vaanga|po|ponga)\b/i,
     ],
-    words: ['vanakkam', 'nandri', 'nalla', 'romba', 'kadhal', 'nanban', 'anna', 'akka', 'amma', 'appa', 'veedu', 'velai', 'thanni', 'saapadu', 'thookkam', 'pogalam', 'illai', 'aamam'],
+    words: ['vanakkam', 'nandri', 'nalla', 'romba', 'kadhal', 'nanban', 'anna', 'akka', 'amma', 'appa', 'veedu', 'velai', 'thanni', 'saapadu', 'thookkam', 'pogalam', 'illai', 'aamam', 'sari', 'paaru'],
   },
   // Kannada
   {
@@ -105,7 +105,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(enu|hege|yavaga|elli|yaru|yaake|mattu|naanu|neevu|ide|iddare|helu|heliri|ba|banni|ho|hogi)\b/i,
     ],
-    words: ['namaskara', 'dhanyavadagalu', 'chennagi', 'tumba', 'preeti', 'gelaya', 'anna', 'akka', 'amma', 'appa', 'mane', 'kelasa', 'neeru', 'oota', 'nidde', 'hogona', 'illa', 'haudu'],
+    words: ['namaskara', 'dhanyavadagalu', 'chennagi', 'tumba', 'preeti', 'gelaya', 'anna', 'akka', 'amma', 'appa', 'mane', 'kelasa', 'neeru', 'oota', 'nidde', 'hogona', 'illa', 'haudu', 'sari', 'banni'],
   },
   // Malayalam
   {
@@ -114,7 +114,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(enthu|engane|eppol|evide|aru|enthinau|um|njan|ningal|undu|undayo|para|parayoo|vaa|varee|po|poda)\b/i,
     ],
-    words: ['namaskar', 'namaskaram', 'nanni', 'nallath', 'valare', 'sneham', 'koottukar', 'chettan', 'chechi', 'amma', 'achan', 'veedu', 'pani', 'vellam', 'bhakshanam', 'urakam', 'pokam', 'illa', 'aanu'],
+    words: ['namaskar', 'namaskaram', 'nanni', 'nallath', 'valare', 'sneham', 'koottukar', 'chettan', 'chechi', 'amma', 'achan', 'veedu', 'pani', 'vellam', 'bhakshanam', 'urakam', 'pokam', 'illa', 'aanu', 'sheriyanu'],
   },
   // Marathi
   {
@@ -123,7 +123,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(kay|kasa|keva|kuthe|kon|ka|ani|mi|tumhi|aahe|aahes|sang|sanga|ye|ya|ja|jaa)\b/i,
     ],
-    words: ['namaskar', 'dhanyawad', 'changle', 'khup', 'prem', 'mitra', 'dada', 'tai', 'aai', 'baba', 'ghar', 'kaam', 'paani', 'jevan', 'jhop', 'jaauya', 'nahi', 'ho'],
+    words: ['namaskar', 'dhanyawad', 'changle', 'khup', 'prem', 'mitra', 'dada', 'tai', 'aai', 'baba', 'ghar', 'kaam', 'paani', 'jevan', 'jhop', 'jaauya', 'nahi', 'ho', 'baryaa', 'chalte'],
   },
   // Bengali
   {
@@ -132,7 +132,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(ki|kemon|kokhon|kothay|ke|keno|ebong|ami|tumi|ache|achho|bolo|bolun|eso|esho|jao|jan)\b/i,
     ],
-    words: ['namaskar', 'dhanyabad', 'bhalo', 'onek', 'bhalobasha', 'bondhu', 'dada', 'didi', 'ma', 'baba', 'bari', 'kaj', 'jol', 'khabar', 'ghum', 'jai', 'na', 'haan'],
+    words: ['namaskar', 'dhanyabad', 'bhalo', 'onek', 'bhalobasha', 'bondhu', 'dada', 'didi', 'ma', 'baba', 'bari', 'kaj', 'jol', 'khabar', 'ghum', 'jai', 'na', 'haan', 'thik', 'ache'],
   },
   // Gujarati
   {
@@ -141,7 +141,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(su|kem|kyare|kya|kon|kem|ane|hu|tame|che|chho|kaho|kahejo|aavo|aavjo|jao|jajo)\b/i,
     ],
-    words: ['namaskar', 'aabhar', 'saru', 'ghanu', 'prem', 'mitra', 'bhai', 'ben', 'maa', 'papa', 'ghar', 'kaam', 'paani', 'jaman', 'nidra', 'jaiye', 'na', 'haa'],
+    words: ['namaskar', 'aabhar', 'saru', 'ghanu', 'prem', 'mitra', 'bhai', 'ben', 'maa', 'papa', 'ghar', 'kaam', 'paani', 'jaman', 'nidra', 'jaiye', 'na', 'haa', 'majama', 'avjo'],
   },
   // Punjabi
   {
@@ -150,7 +150,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(ki|kivein|kado|kithe|kaun|kyu|te|main|tusi|hai|ho|dasso|dasao|aao|aajo|jao|jaao)\b/i,
     ],
-    words: ['sat sri akal', 'dhanyawad', 'changi', 'bahut', 'pyar', 'yaar', 'bhai', 'bhain', 'maa', 'pita', 'ghar', 'kaam', 'paani', 'khana', 'neend', 'chaliye', 'nahi', 'haanji'],
+    words: ['sat sri akal', 'dhanyawad', 'changi', 'bahut', 'pyar', 'yaar', 'bhai', 'bhain', 'maa', 'pita', 'ghar', 'kaam', 'paani', 'khana', 'neend', 'chaliye', 'nahi', 'haanji', 'theek', 'changa'],
   },
   // Urdu
   {
@@ -159,7 +159,25 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(kya|kaise|kab|kahan|kaun|kyun|aur|mein|hai|hain|tha|thi|the|hoga|hogi|kar|karo|karna)\b/i,
     ],
-    words: ['assalam', 'shukriya', 'meharbani', 'acha', 'theek', 'bahut', 'mohabbat', 'dost', 'bhai', 'behan', 'ammi', 'abbu', 'ghar', 'kaam', 'paani', 'khana', 'walaikum', 'jee'],
+    words: ['assalam', 'shukriya', 'meharbani', 'acha', 'theek', 'bahut', 'mohabbat', 'dost', 'bhai', 'behan', 'ammi', 'abbu', 'ghar', 'kaam', 'paani', 'khana', 'walaikum', 'jee', 'bilkul', 'zaroor'],
+  },
+  // Odia/Oriya
+  {
+    language: 'Odia',
+    nllbCode: 'ory_Orya',
+    patterns: [
+      /\b(ki|kemiti|kebe|kouthi|kie|kahin|o|mu|tume|achi|achhi|kaha|kahibe|aa|aas|ja|jaa)\b/i,
+    ],
+    words: ['namaskar', 'dhanyabad', 'bhala', 'bahu', 'bhalapaiba', 'bandhu', 'bhai', 'bhauji', 'maa', 'bapa', 'ghara', 'kama', 'pani', 'bhata', 'nida', 'jiba', 'na', 'haan', 'thik', 'accha'],
+  },
+  // Assamese
+  {
+    language: 'Assamese',
+    nllbCode: 'asm_Beng',
+    patterns: [
+      /\b(ki|kene|ketiya|kot|kun|kinaki|aru|moi|apuni|ase|aso|kowa|kowouk|ahok|ja|jaa)\b/i,
+    ],
+    words: ['namaskar', 'dhanyabad', 'bhaal', 'bur', 'bhaalpuwa', 'bondhu', 'kokai', 'baideu', 'maa', 'deuta', 'ghar', 'kaam', 'pani', 'bhat', 'nidra', 'jamu', 'nohoi', 'hoi', 'thik', 'ase'],
   },
   // Nepali
   {
@@ -168,7 +186,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(ke|kasari|kahile|kaha|ko|kina|ra|ma|tapai|cha|chha|bhanna|bhannu|aau|aaunos|jau|janos)\b/i,
     ],
-    words: ['namaste', 'dhanyabad', 'ramro', 'dherai', 'maya', 'saathi', 'dai', 'didi', 'ama', 'buwa', 'ghar', 'kaam', 'paani', 'khana', 'nidra', 'jaun', 'hoina', 'ho'],
+    words: ['namaste', 'dhanyabad', 'ramro', 'dherai', 'maya', 'saathi', 'dai', 'didi', 'ama', 'buwa', 'ghar', 'kaam', 'paani', 'khana', 'nidra', 'jaun', 'hoina', 'ho', 'thik', 'huncha'],
   },
   // Sinhala
   {
@@ -177,7 +195,7 @@ const PHONETIC_PATTERNS: Array<{
     patterns: [
       /\b(mokada|kohomada|kavada|koheda|kavuru|ai|saha|mama|oba|thiyenawa|innawa|kiyanna|kiyannako|enna|yanna)\b/i,
     ],
-    words: ['ayubowan', 'isthuthi', 'hodai', 'godak', 'adare', 'yaluwa', 'aiya', 'akka', 'amma', 'thaththa', 'gedara', 'wadaya', 'wathura', 'kema', 'nidiya', 'yamu', 'nehe', 'ow'],
+    words: ['ayubowan', 'isthuthi', 'hodai', 'godak', 'adare', 'yaluwa', 'aiya', 'akka', 'amma', 'thaththa', 'gedara', 'wadaya', 'wathura', 'kema', 'nidiya', 'yamu', 'nehe', 'ow', 'harida', 'ehema'],
   },
   // Bhojpuri
   {
@@ -185,6 +203,105 @@ const PHONETIC_PATTERNS: Array<{
     nllbCode: 'bho_Deva',
     patterns: [
       /\b(ka|kaise|kab|kahan|ke|kahe|aur|ham|raua|ba|baani|bola|bolna|aawa|ja|jaa)\b/i,
+    ],
+    words: ['pranam', 'dhanyawad', 'badhiya', 'bahut', 'pyar', 'dost', 'bhaiya', 'didi', 'maai', 'babu', 'ghar', 'kaam', 'paani', 'khana', 'nind', 'jaib', 'nahi', 'haan', 'thik', 'acha'],
+  },
+  // Maithili
+  {
+    language: 'Maithili',
+    nllbCode: 'mai_Deva',
+    patterns: [
+      /\b(ki|kona|kakhon|katay|ke|kiya|aur|ham|apne|achi|achhi|kaha|kahaba|aau|ja|jaau)\b/i,
+    ],
+    words: ['pranam', 'dhanyawad', 'nik', 'bahut', 'prem', 'sangat', 'bhaiya', 'didi', 'mai', 'babu', 'ghar', 'kaam', 'paani', 'bhaat', 'nind', 'jaib', 'nahi', 'haan', 'thik', 'accha'],
+  },
+  // Konkani
+  {
+    language: 'Konkani',
+    nllbCode: 'hin_Deva', // Falls back to Hindi as closest
+    patterns: [
+      /\b(kitem|koshem|kedna|khoimn|konn|kiteak|ani|hanv|tum|asa|asat|sang|sangat|ye|yeya|voch|vochat)\b/i,
+    ],
+    words: ['namaskar', 'dev borem', 'borem', 'khup', 'mog', 'ixt', 'bab', 'mai', 'ghor', 'kam', 'udak', 'jevon', 'nidd', 'vochum', 'na', 'hoy', 'borem', 'cholta'],
+  },
+  // Dogri
+  {
+    language: 'Dogri',
+    nllbCode: 'hin_Deva', // Falls back to Hindi as closest
+    patterns: [
+      /\b(ki|kidan|kad|kitthe|kun|kyun|te|main|tuhaan|ae|ain|dasso|dasao|aao|jao|jaao)\b/i,
+    ],
+    words: ['sat sri akal', 'dhanyavad', 'changi', 'bahut', 'pyar', 'yaar', 'bhai', 'bhain', 'maa', 'pita', 'ghar', 'kaam', 'paani', 'khana', 'neend', 'chaliye', 'nai', 'haanji'],
+  },
+  // Santali
+  {
+    language: 'Santali',
+    nllbCode: 'sat_Olck',
+    patterns: [
+      /\b(chedi|okoy|okare|okoe|okoe|chedi|ar|ing|am|menaka|menakling|al|alom|hinju|cal|calom)\b/i,
+    ],
+    words: ['johar', 'sarjom', 'bhala', 'buru', 'dular', 'hopon', 'baba', 'ayo', 'orak', 'kaam', 'dak', 'jom', 'jhi', 'senom', 'bang', 'haan', 'thik', 'ado'],
+  },
+  // Meitei/Manipuri
+  {
+    language: 'Meitei',
+    nllbCode: 'mni_Beng',
+    patterns: [
+      /\b(kari|karam|kadaida|kadai|kana|karigino|amasung|ei|nang|lei|leire|haire|hairako|lak|laklo|chal|challo)\b/i,
+    ],
+    words: ['khurumjari', 'thaagatchari', 'phajei', 'yamna', 'nungshibi', 'mahao', 'ichal', 'ichil', 'ima', 'ipak', 'yum', 'thabak', 'ishing', 'chaak', 'tumba', 'chal', 'natte', 'hoi'],
+  },
+  // Kashmiri
+  {
+    language: 'Kashmiri',
+    nllbCode: 'kas_Arab',
+    patterns: [
+      /\b(kya|kyazi|kati|kamis|kun|kyah|te|bi|tuhund|chu|chukh|vanakh|vanai|yi|gav|gav)\b/i,
+    ],
+    words: ['aadab', 'shukriya', 'wari', 'boh', 'mohabbat', 'dost', 'boi', 'beni', 'mouj', 'bab', 'ghar', 'kaam', 'aab', 'bata', 'neend', 'gatsh', 'na', 'aav', 'theek', 'chu'],
+  },
+  // Sanskrit
+  {
+    language: 'Sanskrit',
+    nllbCode: 'san_Deva',
+    patterns: [
+      /\b(kim|katham|kada|kutra|kah|kasmaat|cha|aham|tvam|asti|santi|vadami|vadatu|aagaccha|gaccha|gacchaami)\b/i,
+    ],
+    words: ['namaste', 'dhanyavaadah', 'sundaram', 'bahutam', 'premah', 'mitram', 'bhraata', 'bhagini', 'maata', 'pita', 'griham', 'karyam', 'jalam', 'bhojanam', 'nidraa', 'gacchaamah', 'na', 'aam', 'samyak'],
+  },
+  // Sindhi
+  {
+    language: 'Sindhi',
+    nllbCode: 'snd_Arab',
+    patterns: [
+      /\b(cha|kiyan|kade|kithe|kun|chaee|ain|aau|tawhan|aahe|aahyo|chao|chaijo|acho|wanjo|wanju)\b/i,
+    ],
+    words: ['assalam', 'meharbani', 'suthro', 'gahano', 'pyar', 'yaar', 'bhau', 'bhain', 'amma', 'baba', 'ghar', 'kamu', 'paani', 'maani', 'neend', 'haloon', 'na', 'haa', 'theek', 'sahi'],
+  },
+  // Awadhi
+  {
+    language: 'Awadhi',
+    nllbCode: 'awa_Deva',
+    patterns: [
+      /\b(ka|kaise|kab|kahan|ke|kahe|aur|ham|tohra|ba|baani|bola|bolna|aawa|ja|jaa)\b/i,
+    ],
+    words: ['pranam', 'dhanyawad', 'achha', 'bahut', 'pyar', 'dost', 'bhaiya', 'bahini', 'maiya', 'babuji', 'ghar', 'kaam', 'paani', 'khana', 'nind', 'jaib', 'nahi', 'haan'],
+  },
+  // Chhattisgarhi
+  {
+    language: 'Chhattisgarhi',
+    nllbCode: 'hne_Deva',
+    patterns: [
+      /\b(ka|kaise|kab|kahan|kun|kabar|aur|mein|tai|he|hain|bol|bolbe|aa|aabe|ja|jabe)\b/i,
+    ],
+    words: ['johar', 'dhanyawad', 'badhiya', 'bahut', 'maya', 'sangwari', 'bhai', 'bahini', 'dai', 'dau', 'ghar', 'kaam', 'paani', 'bhat', 'nind', 'jaabe', 'nahi', 'haan'],
+  },
+  // Magahi
+  {
+    language: 'Magahi',
+    nllbCode: 'mag_Deva',
+    patterns: [
+      /\b(ka|kaise|kab|kahan|ke|kahe|aur|ham|raua|hai|hain|bola|bolna|aawa|ja|jaa)\b/i,
     ],
     words: ['pranam', 'dhanyawad', 'badhiya', 'bahut', 'pyar', 'dost', 'bhaiya', 'didi', 'maai', 'babu', 'ghar', 'kaam', 'paani', 'khana', 'nind', 'jaib', 'nahi', 'haan'],
   },
