@@ -863,14 +863,26 @@ export function processOutgoingMessage(
     : input;
 
   // Receiver text (translate if different languages)
-  let receiverNativeText = input;
+  let receiverNativeText = senderNativeText;
   let isTranslated = false;
 
   if (senderCode !== receiverCode) {
-    receiverNativeText = translate(senderNativeText, senderLanguage, receiverLanguage);
-    isTranslated = receiverNativeText !== senderNativeText;
+    // IMPORTANT: Try translating BOTH Latin input AND native text
+    // Dictionary has Latin keys like "bagunnava" and native keys in REVERSE_DICTIONARY
     
-    // If translation didn't change much, try transliterating for receiver
+    // 1. First try Latin input (dictionary has Latin phonetic keys)
+    if (isLatinScript(input)) {
+      receiverNativeText = translate(input.toLowerCase().trim(), senderLanguage, receiverLanguage);
+      isTranslated = receiverNativeText !== input.toLowerCase().trim() && receiverNativeText !== input;
+    }
+    
+    // 2. If Latin didn't work, try native text (reverse dictionary lookup)
+    if (!isTranslated) {
+      receiverNativeText = translate(senderNativeText, senderLanguage, receiverLanguage);
+      isTranslated = receiverNativeText !== senderNativeText;
+    }
+    
+    // 3. Fallback: transliterate for receiver's script
     if (!isTranslated && isLatinScript(input)) {
       receiverNativeText = transliterate(input, receiverLanguage);
       isTranslated = receiverNativeText !== input;
