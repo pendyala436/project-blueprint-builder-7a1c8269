@@ -41,7 +41,7 @@ import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { useServerTranslation } from "@/hooks/useServerTranslation";
+import { useProductionChat } from "@/hooks/useProductionChat";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -96,8 +96,24 @@ const DraggableMiniChatWindow = ({
   onFocus
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
-  const { convertToNative, translate, translateForChat, isSameLanguage } = useServerTranslation({ userLanguage: currentUserLanguage, partnerLanguage });
-  const isLatinScript = (text: string) => /^[\x00-\x7F\u00A0-\u00FF\u0100-\u017F]*$/.test(text);
+  const { 
+    livePreview,
+    updateLivePreview,
+    clearLivePreview,
+    processOutgoingMessage,
+    processIncomingMessage,
+    isLatinScript,
+    isSameLanguage,
+    needsNativeConversion,
+    isTranslating,
+    initializeModel,
+    isModelReady
+  } = useProductionChat({ 
+    currentUserId,
+    currentUserLanguage, 
+    partnerId,
+    partnerLanguage 
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isComposing, setIsComposing] = useState(false);
@@ -125,9 +141,6 @@ const DraggableMiniChatWindow = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Only skip conversion if mother tongue is English - all other languages need conversion
-  const needsNativeConversion = currentUserLanguage.toLowerCase() !== 'english' && currentUserLanguage.toLowerCase() !== 'en';
-
   // Dragging state
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -174,69 +187,23 @@ const DraggableMiniChatWindow = ({
   const lastLatinInputRef = useRef<string>('');
   const isConvertingRef = useRef(false);
 
-  // Real-time transliteration: Convert typing to native language (ONCE only)
+  // Real-time transliteration using NLLB production hook
   useEffect(() => {
-    // Skip if no conversion needed or empty input
-    if (!needsNativeConversion || !newMessage.trim()) {
+    if (newMessage.trim()) {
+      updateLivePreview(newMessage);
+    } else {
+      clearLivePreview();
+    }
+  }, [newMessage, updateLivePreview, clearLivePreview]);
+
+  // Update display message from live preview
+  useEffect(() => {
+    if (livePreview.nativePreview) {
+      setDisplayMessage(livePreview.nativePreview);
+    } else {
       setDisplayMessage(newMessage);
-      lastLatinInputRef.current = '';
-      return;
     }
-
-    // Skip if already in native script (not Latin) - prevents double conversion
-    if (!isLatinScript(newMessage)) {
-      setDisplayMessage(newMessage);
-      return;
-    }
-
-    // Skip if we're currently converting (prevents re-entry)
-    if (isConvertingRef.current) {
-      return;
-    }
-
-    // Skip if this is the same input we already processed
-    if (lastLatinInputRef.current === newMessage) {
-      return;
-    }
-
-    // Debounce the conversion
-    if (transliterationTimeoutRef.current) {
-      clearTimeout(transliterationTimeoutRef.current);
-    }
-
-    setIsConverting(true);
-    transliterationTimeoutRef.current = setTimeout(async () => {
-      // Double-check we're still dealing with Latin input
-      if (!isLatinScript(newMessage)) {
-        setIsConverting(false);
-        return;
-      }
-
-      try {
-        isConvertingRef.current = true;
-        lastLatinInputRef.current = newMessage; // Mark this input as processed
-        
-        // Use convertToNative for non-Latin languages
-        const result = await convertToNative(newMessage, currentUserLanguage);
-        
-        if (result.isTranslated && result.text && result.text !== newMessage) {
-          setDisplayMessage(result.text); // Only update preview, NOT the input
-          // Don't update newMessage - keep Latin input, convert only on send
-        }
-      } catch (error) {
-        console.error('Transliteration error:', error);
-      } finally {
-        setIsConverting(false);
-        isConvertingRef.current = false;
-      }
-    }, 150); // Reduced to 150ms for faster response
-
-    return () => {
-      if (transliterationTimeoutRef.current) {
-        clearTimeout(transliterationTimeoutRef.current);
-      }
-    };
-  }, [newMessage, needsNativeConversion, currentUserLanguage, isLatinScript, convertToNative]);
+  }, [livePreview.nativePreview, newMessage]);
 
   // Dragging handlers - supports both mouse and touch
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -633,35 +600,31 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // Auto-translate a message to current user's language using dl-translate
+  // Auto-translate a message using NLLB-200
   // Skip translation entirely if both users have the same native language
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    // Determine sender and receiver languages based on who sent the message
+    // Determine sender language based on who sent the message
     const senderLang = senderId === currentUserId ? currentUserLanguage : partnerLanguage;
-    const receiverLang = senderId === currentUserId ? partnerLanguage : currentUserLanguage;
     
     // Same language - no translation needed, just display as-is
-    if (isSameLanguage(senderLang, receiverLang)) {
+    if (isSameLanguage(senderLang, currentUserLanguage)) {
       return { translatedMessage: text, isTranslated: false };
     }
     
     // Only translate incoming messages (from partner) to current user's language
     if (senderId !== currentUserId) {
       try {
-        // Translate from partner's language to current user's language
-        const result = await translateForChat(text, partnerLanguage, currentUserLanguage);
-        
-        // Only mark as translated if we actually got a different text
-        const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;
+        // Translate from partner's language to current user's language using NLLB
+        const result = await processIncomingMessage(text, senderId, partnerLanguage);
         
         return {
-          translatedMessage: wasActuallyTranslated ? result.text : text,
-          isTranslated: wasActuallyTranslated,
-          detectedLanguage: result.source
+          translatedMessage: result.displayText,
+          isTranslated: result.isTranslated,
+          detectedLanguage: partnerLanguage
         };
       } catch (error) {
         console.error('[DraggableMiniChatWindow] Translation error:', error);
@@ -671,7 +634,7 @@ const DraggableMiniChatWindow = ({
     
     // For own messages, no translation needed (displayed as-is)
     return { translatedMessage: text, isTranslated: false };
-  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, translateForChat]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId, isSameLanguage, processIncomingMessage]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -897,13 +860,13 @@ const DraggableMiniChatWindow = ({
       try {
         let finalMessageText = messageText;
         
-        // If we need background conversion, do it now before sending to DB
+        // If we need background conversion, use NLLB production hook
         if (needsBackgroundConversion) {
           try {
             console.log('[DraggableMiniChatWindow] Background converting:', trimmedInput, '->', currentUserLanguage);
-            const convertResult = await convertToNative(trimmedInput, currentUserLanguage);
-            if (convertResult.isTranslated && convertResult.text) {
-              finalMessageText = convertResult.text;
+            const processed = await processOutgoingMessage(trimmedInput);
+            if (processed.senderNativeText && processed.senderNativeText !== trimmedInput) {
+              finalMessageText = processed.senderNativeText;
               console.log('[DraggableMiniChatWindow] Converted to:', finalMessageText);
               // Update optimistic message with converted text immediately
               setMessages(prev => prev.map(m => 

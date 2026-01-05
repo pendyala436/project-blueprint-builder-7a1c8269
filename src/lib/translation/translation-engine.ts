@@ -1,10 +1,11 @@
 /**
- * Translation Engine
+ * Translation Engine with NLLB-200 Neural Translation
  * 
- * Translation Methods:
+ * Translation Methods (200+ languages):
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
+ * - NLLB-200 Neural Translation (200+ languages - in-browser fallback)
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -529,11 +530,29 @@ export async function translateText(
     }
   }
   
-  // No further fallback - dictionary and phonetic transliteration only
-  console.log('[Translation] No translation available, returning original');
+  // ========== FALLBACK: NLLB-200 Neural Translation (200+ languages) ==========
+  if (enableMLTranslation) {
+    console.log('[Translation] Trying NLLB-200 neural translation...');
+    try {
+      const { translateWithNLLB, isNLLBLoaded, initializeNLLB } = await import('./nllb-translator');
+      
+      if (!isNLLBLoaded()) {
+        await initializeNLLB();
+      }
+      
+      const nllbResult = await translateWithNLLB(trimmed, normSource, normTarget);
+      if (nllbResult && nllbResult !== trimmed) {
+        console.log('[Translation] NLLB-200 result:', nllbResult.slice(0, 50));
+        addToCache(cacheKey, nllbResult);
+        return createResult(trimmed, nllbResult, normSource, normTarget, true, 'translate');
+      }
+    } catch (error) {
+      console.warn('[Translation] NLLB-200 translation failed:', error);
+    }
+  }
   
-  // Local translation complete - no translation found
-  console.log('[DL-Translate] No translation available, returning original');
+  // No translation found
+  console.log('[Translation] No translation available, returning original');
   return createResult(trimmed, trimmed, normSource, normTarget, false, 'translate');
 }
 
