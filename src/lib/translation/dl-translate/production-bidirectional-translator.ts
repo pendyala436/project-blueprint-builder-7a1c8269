@@ -20,7 +20,7 @@
  * - 260+ world languages (European, Asian, African, etc.)
  */
 
-import { detectLanguage, isSameLanguage, isLatinScript, LanguageDetectionResult } from './language-detector';
+import { detectLanguage, detectLanguageWithMotherTongue, isSameLanguage, isLatinScript, LanguageDetectionResult, DEFAULT_FALLBACK_LANGUAGE, DEFAULT_FALLBACK_CODE } from './language-detector';
 import { transliterate, isTransliterationSupported, getLanguageDisplayName } from './transliteration';
 import { resolveLangCode, normalizeLanguageInput, isLanguageSupported } from './utils';
 import { queueTranslation, isWorkerReady, initWorkerTranslator, getQueueStats, cleanupWorker } from './translation-worker';
@@ -164,9 +164,9 @@ export function getLivePreview(
       nativePreview = transliterate(textToProcess, langCode);
     }
 
-    // Auto-detect language for longer text
+    // Auto-detect language using mother tongue awareness for better accuracy
     if (input.trim().length > 3) {
-      const detection = detectLanguage(input, motherTongue);
+      const detection = detectLanguageWithMotherTongue(input, motherTongue);
       detectedLang = detection.language;
     }
   } else {
@@ -218,9 +218,9 @@ export async function processOutgoingMessage(
   const senderLangCode = resolveLangCode(normalizeLanguageInput(sender.motherTongue), 'nllb200');
   const receiverLangCode = resolveLangCode(normalizeLanguageInput(receiver.motherTongue), 'nllb200');
 
-  // Detect input script and language
+  // Detect input script and language using mother tongue awareness
   const isLatin = isLatinScript(trimmedInput);
-  const detection = detectLanguage(trimmedInput, sender.motherTongue);
+  const detection = detectLanguageWithMotherTongue(trimmedInput, sender.motherTongue);
 
   // Apply spell corrections for phonetic input
   const { correctedText, corrections } = applySpellCorrections(trimmedInput, sender.motherTongue);

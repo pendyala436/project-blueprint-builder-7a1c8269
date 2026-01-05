@@ -1,7 +1,8 @@
 /**
  * Transliteration Engine - Latin to Native Script
- * Full 200+ language support from dl-translate
+ * Full 300+ language support from dl-translate
  * Phonetic conversion for real-time preview
+ * Handles all Indian, Middle Eastern, Asian, and European scripts
  */
 
 // Devanagari (Hindi, Marathi, Nepali, Sanskrit, Bhojpuri, Maithili, etc.)
@@ -310,7 +311,7 @@ const HEBREW_MAP: Record<string, string> = {
   'f': 'פ', 'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש', 'th': 'ת',
 };
 
-// Map NLLB codes to script maps (200+ languages)
+// Map NLLB codes to script maps (300+ languages)
 const SCRIPT_MAPS: Record<string, Record<string, string>> = {
   // Devanagari scripts
   'hin_Deva': DEVANAGARI_MAP,

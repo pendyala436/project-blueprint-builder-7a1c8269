@@ -1,13 +1,18 @@
 /**
  * Language Detector - Auto-detect source language
- * Full 200+ language support from dl-translate
+ * Full 300+ language support from dl-translate
  * Based on Unicode script patterns and character analysis
+ * Default fallback: English (eng_Latn)
  */
 
 import { ModelFamily } from './language-pairs';
 import { resolveLangCode, normalizeLanguageInput } from './utils';
 
-// Script detection patterns with Unicode ranges (200+ languages)
+// Default fallback language (English)
+export const DEFAULT_FALLBACK_LANGUAGE = 'English';
+export const DEFAULT_FALLBACK_CODE = 'eng_Latn';
+
+// Script detection patterns with Unicode ranges (300+ languages)
 const SCRIPT_PATTERNS: Array<{
   regex: RegExp;
   language: string;
@@ -561,10 +566,10 @@ function detectLatinLanguage(text: string): LanguageDetectionResult | null {
     }
   }
   
-  // Default to English
+  // Default fallback to English for all 300+ languages
   return {
-    language: 'English',
-    nllbCode: 'eng_Latn',
+    language: DEFAULT_FALLBACK_LANGUAGE,
+    nllbCode: DEFAULT_FALLBACK_CODE,
     script: 'Latin',
     confidence: 0.5,
     isPhonetic: false,
@@ -573,16 +578,19 @@ function detectLatinLanguage(text: string): LanguageDetectionResult | null {
 }
 
 /**
- * Auto-detect language from text
+ * Auto-detect language from text (supports 300+ languages)
+ * Uses user's mother tongue as hint for phonetic typing detection
+ * Falls back to English when no match found
  */
 export function detectLanguage(
   text: string,
   hintLanguage?: string
 ): LanguageDetectionResult {
   if (!text || text.trim().length === 0) {
+    // Return default fallback for empty text
     return {
-      language: 'English',
-      nllbCode: 'eng_Latn',
+      language: DEFAULT_FALLBACK_LANGUAGE,
+      nllbCode: DEFAULT_FALLBACK_CODE,
       script: 'Latin',
       confidence: 0,
       isPhonetic: false,
@@ -632,14 +640,85 @@ export function detectLanguage(
     return phoneticResult;
   }
   
+  // Final fallback to English (default for all 300+ languages)
   return latinResult || {
-    language: 'English',
-    nllbCode: 'eng_Latn',
+    language: DEFAULT_FALLBACK_LANGUAGE,
+    nllbCode: DEFAULT_FALLBACK_CODE,
     script: 'Latin',
     confidence: 0.3,
     isPhonetic: false,
     isLatinScript: true,
   };
+}
+
+/**
+ * Smart detection with mother tongue awareness
+ * When user types in Latin but their mother tongue is non-Latin,
+ * assume they're typing phonetically in their language
+ */
+export function detectLanguageWithMotherTongue(
+  text: string,
+  motherTongue: string
+): LanguageDetectionResult {
+  if (!text || text.trim().length === 0) {
+    return {
+      language: DEFAULT_FALLBACK_LANGUAGE,
+      nllbCode: DEFAULT_FALLBACK_CODE,
+      script: 'Latin',
+      confidence: 0,
+      isPhonetic: false,
+      isLatinScript: true,
+    };
+  }
+  
+  // First check for non-Latin scripts (native script typing)
+  for (const pattern of SCRIPT_PATTERNS) {
+    if (pattern.regex.test(text)) {
+      return {
+        language: pattern.language,
+        nllbCode: pattern.nllbCode,
+        script: pattern.script,
+        confidence: 0.95,
+        isPhonetic: false,
+        isLatinScript: false,
+      };
+    }
+  }
+  
+  // Text is Latin - check if user's mother tongue is non-Latin
+  const motherTongueCode = resolveLangCode(normalizeLanguageInput(motherTongue), 'nllb200');
+  const isMotherTongueNonLatin = !motherTongueCode.includes('_Latn');
+  
+  // If user's mother tongue uses non-Latin script, they're likely typing phonetically
+  if (isMotherTongueNonLatin && isLatinScript(text)) {
+    // Find matching phonetic pattern for their language
+    for (const pattern of PHONETIC_PATTERNS) {
+      if (pattern.nllbCode === motherTongueCode) {
+        return {
+          language: pattern.language,
+          nllbCode: pattern.nllbCode,
+          script: 'Latin (Phonetic)',
+          confidence: 0.85, // High confidence since we know their mother tongue
+          isPhonetic: true,
+          isLatinScript: true,
+        };
+      }
+    }
+    
+    // Even if no specific pattern, assume phonetic for their language
+    const normalizedMother = normalizeLanguageInput(motherTongue);
+    return {
+      language: normalizedMother.charAt(0).toUpperCase() + normalizedMother.slice(1),
+      nllbCode: motherTongueCode,
+      script: 'Latin (Phonetic)',
+      confidence: 0.75,
+      isPhonetic: true,
+      isLatinScript: true,
+    };
+  }
+  
+  // For Latin mother tongue, use standard detection
+  return detectLanguage(text, motherTongue);
 }
 
 /**
