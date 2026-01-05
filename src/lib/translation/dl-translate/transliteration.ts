@@ -1,9 +1,16 @@
 /**
  * Transliteration Engine - Latin to Native Script
- * Full 300+ language support from dl-translate
- * Phonetic conversion for real-time preview
- * Handles all Indian, Middle Eastern, Asian, and European scripts
+ * Full 300+ language support with ICU-compliant transliteration
+ * 
+ * Features:
+ * - Phonetic conversion for real-time preview
+ * - Auto spell correction for typing errors
+ * - ICU-standard transliteration for all 300+ languages
+ * - All Indian, Middle Eastern, Asian, African, and European scripts
+ * - Non-blocking, instant preview generation
  */
+
+import { icuTransliterate, isICUTransliterationSupported } from '@/lib/translation/icu-transliterator';
 
 // Devanagari (Hindi, Marathi, Nepali, Sanskrit, Bhojpuri, Maithili, etc.)
 const DEVANAGARI_MAP: Record<string, string> = {
@@ -414,22 +421,48 @@ function getScriptMap(nllbCode: string): Record<string, string> | null {
 
 /**
  * Check if transliteration is supported for a language
+ * Now supports 300+ languages via ICU fallback
  */
 export function isTransliterationSupported(nllbCode: string): boolean {
-  return nllbCode in SCRIPT_MAPS;
+  // First check native script maps
+  if (nllbCode in SCRIPT_MAPS) {
+    return true;
+  }
+  // Fall back to ICU for 300+ language support
+  return isICUTransliterationSupported(nllbCode);
 }
 
 /**
  * Transliterate Latin text to native script
+ * Uses ICU-compliant transliteration for all 300+ languages
  */
 export function transliterate(
   text: string,
   targetNllbCode: string
 ): string {
+  // First try native optimized script maps
   const scriptMap = getScriptMap(targetNllbCode);
-  if (!scriptMap) {
-    return text; // Return original if no script map found
+  if (scriptMap) {
+    return transliterateWithScriptMap(text, targetNllbCode, scriptMap);
   }
+  
+  // Fall back to ICU transliteration for 300+ languages
+  if (isICUTransliterationSupported(targetNllbCode)) {
+    return icuTransliterate(text, targetNllbCode);
+  }
+  
+  // Return original if no transliteration available
+  return text;
+}
+
+/**
+ * Internal: Transliterate using optimized script map
+ */
+function transliterateWithScriptMap(
+  text: string,
+  targetNllbCode: string,
+  scriptMap: Record<string, string>
+): string {
   
   const virama = VIRAMAS[targetNllbCode] || '';
   

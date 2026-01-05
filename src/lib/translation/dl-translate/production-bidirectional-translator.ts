@@ -1,19 +1,25 @@
 /**
- * Production Bi-Directional Translator - Full 300+ Language Support
+ * Production Bi-Directional Translator - Full 300+ Language Support with ICU
  * 
  * MEMORY-BASED: All state stored in memory for maximum performance
+ * ICU-COMPLIANT: Uses ICU transliteration for all 300+ languages
  * No database persistence - pure real-time in-memory processing
  * 
  * Complete real-time, non-blocking chat translation system:
  * 
- * 1. AUTO-DETECT: Automatically detect source and target language
+ * 1. AUTO-DETECT: Automatically detect source and target language (300+ languages)
  * 2. LATIN TYPING: Users type in Latin script based on their mother tongue
- * 3. LIVE PREVIEW: Real-time transliteration to native script as user types
+ * 3. LIVE PREVIEW: Real-time ICU transliteration to native script as user types
  * 4. SAME LANGUAGE: No translation needed, both see native script
- * 5. SENDER VIEW: Sender sees their native script immediately
- * 6. RECEIVER VIEW: Receiver sees translated message in their mother tongue
+ * 5. SENDER VIEW: Sender sees their native script immediately (ICU transliterated)
+ * 6. RECEIVER VIEW: Receiver sees translated message in their mother tongue (native script)
  * 7. BI-DIRECTIONAL: Both sides type Latin, see native, get translations
  * 8. NON-BLOCKING: All operations run in background, typing is never affected
+ * 
+ * ICU Integration:
+ * - All 300+ languages use ICU-standard transliteration
+ * - Proper handling of all world scripts (Brahmic, Arabic, Cyrillic, CJK, etc.)
+ * - Spell correction integrated for better phonetic accuracy
  * 
  * Supports 300+ languages including:
  * - 44+ Indian languages (all scheduled + regional)
@@ -26,6 +32,7 @@ import { resolveLangCode, normalizeLanguageInput, isLanguageSupported } from './
 import { queueTranslation, isWorkerReady, initWorkerTranslator, getQueueStats, cleanupWorker } from './translation-worker';
 import { applySpellCorrections, validateTransliteration } from './spell-corrections';
 import { ALL_LANGUAGES, getLanguageByCode, getLanguageByName } from '@/data/dlTranslateLanguages';
+import { icuTransliterate, isICUTransliterationSupported, getICUSupportedLanguages } from '@/lib/translation/icu-transliterator';
 
 // ============================================================================
 // MEMORY STORAGE - No Database, Pure In-Memory
@@ -153,24 +160,28 @@ export function getLivePreview(
 
   // Only transliterate Latin input
   if (isLatin) {
-    // Apply spell corrections for phonetic input
+    // Apply spell corrections for phonetic input (all 300 languages)
     const { correctedText, corrections } = applySpellCorrections(input, motherTongue);
     spellCorrected = corrections.length > 0;
     
     const textToProcess = spellCorrected ? correctedText : input;
 
-    // Transliterate to native script
+    // Use ICU transliteration for all 300+ languages
+    // First try optimized script maps, then ICU fallback
     if (isTransliterationSupported(langCode)) {
       nativePreview = transliterate(textToProcess, langCode);
+    } else if (isICUTransliterationSupported(motherTongue)) {
+      // Direct ICU transliteration by language name
+      nativePreview = icuTransliterate(textToProcess, motherTongue);
     }
 
     // Auto-detect language using mother tongue awareness for better accuracy
-    if (input.trim().length > 3) {
+    if (input.trim().length > 2) {
       const detection = detectLanguageWithMotherTongue(input, motherTongue);
       detectedLang = detection.language;
     }
   } else {
-    // Already in native script
+    // Already in native script - no transliteration needed
     nativePreview = input;
   }
 
@@ -226,16 +237,21 @@ export async function processOutgoingMessage(
   const { correctedText, corrections } = applySpellCorrections(trimmedInput, sender.motherTongue);
   const textToProcess = corrections.length > 0 ? correctedText : trimmedInput;
 
-  // === SENDER'S VIEW (Immediate) ===
+  // === SENDER'S VIEW (Immediate with ICU transliteration) ===
   let senderNativeText = textToProcess;
   
-  if (isLatin && isTransliterationSupported(senderLangCode)) {
-    senderNativeText = transliterate(textToProcess, senderLangCode);
+  if (isLatin) {
+    // Use ICU transliteration for all 300+ languages
+    if (isTransliterationSupported(senderLangCode)) {
+      senderNativeText = transliterate(textToProcess, senderLangCode);
+    } else if (isICUTransliterationSupported(sender.motherTongue)) {
+      senderNativeText = icuTransliterate(textToProcess, sender.motherTongue);
+    }
   }
 
   // Validate transliteration
   let transliterationValid = true;
-  if (isLatin) {
+  if (isLatin && senderNativeText !== textToProcess) {
     const validation = validateTransliteration(textToProcess, senderNativeText, sender.motherTongue);
     transliterationValid = validation.isValid;
   }
@@ -249,9 +265,13 @@ export async function processOutgoingMessage(
 
   if (!needsTranslation) {
     // Same language - no translation needed
-    // Just transliterate to receiver's script if different
-    if (isLatin && isTransliterationSupported(receiverLangCode)) {
-      receiverNativeText = transliterate(textToProcess, receiverLangCode);
+    // Transliterate to receiver's native script using ICU
+    if (isLatin) {
+      if (isTransliterationSupported(receiverLangCode)) {
+        receiverNativeText = transliterate(textToProcess, receiverLangCode);
+      } else if (isICUTransliterationSupported(receiver.motherTongue)) {
+        receiverNativeText = icuTransliterate(textToProcess, receiver.motherTongue);
+      }
     }
     
     // Notify immediately

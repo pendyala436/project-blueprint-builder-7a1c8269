@@ -1,15 +1,17 @@
 /**
- * DL-Translate Library - Complete 300+ Language Translation System
+ * DL-Translate Library - Complete 300+ Language Translation System with ICU
  * 
  * Production-ready, real-time, bi-directional chat translation
+ * ICU-compliant transliteration for all world scripts
  * 
  * Supports:
  * - 44+ Indian languages (all scheduled + regional)
  * - 260+ world languages (European, Asian, African, etc.)
- * - Auto-detection of source language
- * - Latin typing with live native preview
+ * - Auto-detection of source language (English fallback)
+ * - Latin typing with live native preview (ICU transliteration)
  * - Non-blocking background translation
  * - Bi-directional translation
+ * - Spell correction for typing errors
  */
 
 // ============================================================================
@@ -195,3 +197,15 @@ export {
   isIndianLanguage,
   type DLTranslateLanguage,
 } from '@/data/dlTranslateLanguages';
+
+// ============================================================================
+// ICU TRANSLITERATION (300+ Languages with Unicode Standard)
+// ============================================================================
+
+export {
+  icuTransliterate,
+  isICUTransliterationSupported,
+  getICUSupportedLanguages,
+  convertNumerals,
+  getScriptType,
+} from '@/lib/translation/icu-transliterator';
