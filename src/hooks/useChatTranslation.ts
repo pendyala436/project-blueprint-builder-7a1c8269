@@ -25,7 +25,6 @@ import {
   normalizeLanguage
 } from '@/lib/translation/translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from '@/lib/translation/phonetic-transliterator';
-import { translateWithDLTranslate, getDLTranslateLanguageName } from '@/lib/translation/dl-translate-api';
 
 // Types
 export interface TranslatedMessage {
@@ -282,26 +281,15 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
       try {
         console.log('[ChatTranslation] Translating for receiver:', myLanguage, '→', theirLanguage);
         
-        // Try DL-Translate API first for accurate ML translation
-        const apiResult = await translateWithDLTranslate(
-          nativeText, 
-          getDLTranslateLanguageName(myLanguage), 
-          getDLTranslateLanguageName(theirLanguage)
-        );
-        
-        if (apiResult && apiResult !== nativeText) {
-          translatedForReceiver = apiResult;
-          console.log('[ChatTranslation] DL-Translate API result:', translatedForReceiver.slice(0, 50));
-        } else {
-          // Fallback to local translation engine
-          const result = await translateText(nativeText, {
-            sourceLanguage: myLanguage,
-            targetLanguage: theirLanguage,
-            mode: 'translate'
-          });
-          if (result.isTranslated) {
-            translatedForReceiver = result.translatedText;
-          }
+        // Use local translation engine
+        const result = await translateText(nativeText, {
+          sourceLanguage: myLanguage,
+          targetLanguage: theirLanguage,
+          mode: 'translate'
+        });
+        if (result.isTranslated) {
+          translatedForReceiver = result.translatedText;
+          console.log('[ChatTranslation] Translation result:', translatedForReceiver.slice(0, 50));
         }
       } catch (err) {
         console.error('[ChatTranslation] Translation for receiver error:', err);
@@ -318,7 +306,7 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
 
   /**
    * Translate text from sender's language to receiver's language
-   * Uses DL-Translate HuggingFace API with local fallback
+   * Uses local translation engine
    */
   const translateForReceiver = useCallback(async (
     text: string,
@@ -337,19 +325,7 @@ export function useChatTranslation(options: UseChatTranslationOptions): UseChatT
       setIsTranslating(true);
       console.log('[ChatTranslation] Translating:', normSender, '→', normReceiver);
       
-      // Try DL-Translate API first (200+ languages)
-      const apiResult = await translateWithDLTranslate(
-        text,
-        getDLTranslateLanguageName(normSender),
-        getDLTranslateLanguageName(normReceiver)
-      );
-      
-      if (apiResult && apiResult !== text) {
-        console.log('[ChatTranslation] DL-Translate API success');
-        return apiResult;
-      }
-      
-      // Fallback to local translation engine
+      // Use local translation engine
       const result = await translateText(text, {
         sourceLanguage: normSender,
         targetLanguage: normReceiver,
