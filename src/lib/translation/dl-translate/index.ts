@@ -147,14 +147,16 @@ export {
 } from './realtime-chat-translator';
 
 // ============================================================================
-// SPELL CORRECTIONS (20+ Languages)
+// SPELL CORRECTIONS (ALL 300+ Languages with intelligent fallback)
 // ============================================================================
 
 export {
   applySpellCorrections,
   suggestCorrections,
   validateTransliteration,
+  getCorrectionsForLanguage,
   LANGUAGE_CORRECTIONS,
+  UNIVERSAL_LATIN_CORRECTIONS,
 } from './spell-corrections';
 
 // ============================================================================
