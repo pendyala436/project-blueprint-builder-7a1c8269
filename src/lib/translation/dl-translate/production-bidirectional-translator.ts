@@ -27,12 +27,25 @@
  */
 
 import { detectLanguage, detectLanguageWithMotherTongue, isSameLanguage, isLatinScript, LanguageDetectionResult, DEFAULT_FALLBACK_LANGUAGE, DEFAULT_FALLBACK_CODE } from './language-detector';
-import { transliterate, isTransliterationSupported, getLanguageDisplayName } from './transliteration';
+import { transliterate as legacyTransliterate, isTransliterationSupported, getLanguageDisplayName } from './transliteration';
 import { resolveLangCode, normalizeLanguageInput, isLanguageSupported } from './utils';
 import { queueTranslation, isWorkerReady, initWorkerTranslator, getQueueStats, cleanupWorker } from './translation-worker';
 import { applySpellCorrections, validateTransliteration } from './spell-corrections';
 import { ALL_LANGUAGES, getLanguageByCode, getLanguageByName } from '@/data/dlTranslateLanguages';
 import { icuTransliterate, isICUTransliterationSupported, getICUSupportedLanguages } from '@/lib/translation/icu-transliterator';
+
+// UNIFIED TRANSLATOR: Combined ICU + Dictionary approach
+import {
+  transliterate as unifiedTransliterate,
+  getLivePreview as unifiedGetLivePreview,
+  translate as unifiedTranslate,
+  processOutgoingMessage as unifiedProcessOutgoing,
+  processIncomingMessage as unifiedProcessIncoming,
+  spellCheck,
+  detectLanguage as unifiedDetectLanguage,
+  isLatinScript as unifiedIsLatinScript,
+  isSameLanguage as unifiedIsSameLanguage,
+} from '@/lib/translation/unified-translator';
 
 // ============================================================================
 // HIGH-PERFORMANCE MEMORY CACHES - Sub-2ms Response Time
@@ -195,22 +208,15 @@ function getCachedSupportCheck(langCode: string, motherTongue: string): boolean 
 }
 
 /**
- * Ultra-fast cached transliteration
+ * Ultra-fast cached transliteration using UNIFIED TRANSLATOR (ICU + Dictionary)
  */
 function getCachedTransliteration(text: string, langCode: string, motherTongue: string): string {
   const cacheKey = `${text}|${langCode}`;
   const cached = transliterationCache.get(cacheKey);
   if (cached) return cached;
   
-  let result: string;
-  
-  if (isTransliterationSupported(langCode)) {
-    result = transliterate(text, langCode);
-  } else if (isICUTransliterationSupported(motherTongue)) {
-    result = icuTransliterate(text, motherTongue);
-  } else {
-    result = text;
-  }
+  // USE UNIFIED TRANSLATOR: Combines ICU + Dictionary for all 300+ languages
+  const result = unifiedTransliterate(text, motherTongue);
   
   // Limit cache size (LRU-style cleanup)
   if (transliterationCache.size > MAX_CACHE_SIZE) {
@@ -364,16 +370,12 @@ export async function processOutgoingMessage(
   const { correctedText, corrections } = applySpellCorrections(trimmedInput, sender.motherTongue);
   const textToProcess = corrections.length > 0 ? correctedText : trimmedInput;
 
-  // === SENDER'S VIEW (Immediate with ICU transliteration) ===
+  // === SENDER'S VIEW (Immediate with UNIFIED ICU + Dictionary transliteration) ===
   let senderNativeText = textToProcess;
   
   if (isLatin) {
-    // Use ICU transliteration for all 300+ languages
-    if (isTransliterationSupported(senderLangCode)) {
-      senderNativeText = transliterate(textToProcess, senderLangCode);
-    } else if (isICUTransliterationSupported(sender.motherTongue)) {
-      senderNativeText = icuTransliterate(textToProcess, sender.motherTongue);
-    }
+    // USE UNIFIED TRANSLATOR: Combines ICU + Dictionary for all 300+ languages
+    senderNativeText = unifiedTransliterate(textToProcess, sender.motherTongue);
   }
 
   // Validate transliteration
@@ -384,7 +386,7 @@ export async function processOutgoingMessage(
   }
 
   // Check if translation is needed
-  const needsTranslation = !isSameLanguage(sender.motherTongue, receiver.motherTongue);
+  const needsTranslation = !unifiedIsSameLanguage(sender.motherTongue, receiver.motherTongue);
 
   // === RECEIVER'S VIEW ===
   let receiverNativeText = senderNativeText;
@@ -392,13 +394,9 @@ export async function processOutgoingMessage(
 
   if (!needsTranslation) {
     // Same language - no translation needed
-    // Transliterate to receiver's native script using ICU
+    // Transliterate to receiver's native script using UNIFIED translator
     if (isLatin) {
-      if (isTransliterationSupported(receiverLangCode)) {
-        receiverNativeText = transliterate(textToProcess, receiverLangCode);
-      } else if (isICUTransliterationSupported(receiver.motherTongue)) {
-        receiverNativeText = icuTransliterate(textToProcess, receiver.motherTongue);
-      }
+      receiverNativeText = unifiedTransliterate(textToProcess, receiver.motherTongue);
     }
     
     // Notify immediately
