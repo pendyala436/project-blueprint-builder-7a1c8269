@@ -455,10 +455,49 @@ export function isTransliterationSupported(nllbCode: string): boolean {
   return result;
 }
 
+// Word-level transliteration dictionary (common phrases as single words)
+const WORD_TRANSLIT_DICT: Record<string, Record<string, string>> = {
+  'tel_Telu': {
+    'bagunnava': 'బాగున్నావా', 'bagunnanu': 'బాగున్నాను', 'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న',
+    'ela': 'ఎలా', 'emi': 'ఏమి', 'eppudu': 'ఎప్పుడు', 'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు',
+    'nenu': 'నేను', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 'vaaru': 'వారు', 'vaallu': 'వాళ్ళు',
+    'subhodayam': 'శుభోదయం', 'subharatri': 'శుభరాత్రి', 'dhanyavadalu': 'ధన్యవాదాలు',
+    'amma': 'అమ్మ', 'nanna': 'నాన్న', 'anna': 'అన్న', 'akka': 'అక్క', 'chelli': 'చెల్లి', 'tammudu': 'తమ్ముడు',
+    'chala': 'చాలా', 'konchem': 'కొంచెం', 'inka': 'ఇంకా', 'ipudu': 'ఇప్పుడు', 'tarvata': 'తర్వాత',
+    'prema': 'ప్రేమ', 'snehithudu': 'స్నేహితుడు', 'manchidi': 'మంచిది', 'avunu': 'అవును', 'ledu': 'లేదు',
+    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు',
+    'hello': 'హలో', 'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం',
+  },
+  'hin_Deva': {
+    'namaste': 'नमस्ते', 'namaskar': 'नमस्कार', 'dhanyavad': 'धन्यवाद', 'shukriya': 'शुक्रिया',
+    'kaise': 'कैसे', 'kaisa': 'कैसा', 'theek': 'ठीक', 'thik': 'ठीक', 'hoon': 'हूं', 'hain': 'हैं',
+    'aap': 'आप', 'tum': 'तुम', 'main': 'मैं', 'hum': 'हम', 'wo': 'वो', 'woh': 'वो',
+    'kya': 'क्या', 'kab': 'कब', 'kahan': 'कहाँ', 'kyun': 'क्यों', 'kaun': 'कौन',
+    'haan': 'हाँ', 'nahi': 'नहीं', 'accha': 'अच्छा', 'acha': 'अच्छा', 'bahut': 'बहुत',
+    'pyar': 'प्यार', 'dost': 'दोस्त', 'bhai': 'भाई', 'behen': 'बहन', 'maa': 'माँ', 'papa': 'पापा',
+    'suprabhat': 'सुप्रभात', 'shubh': 'शुभ', 'ratri': 'रात्रि', 'sandhya': 'संध्या',
+    'hello': 'हैलो', 'hi': 'हाय', 'bye': 'बाय', 'ok': 'ओके',
+  },
+  'tam_Taml': {
+    'vanakkam': 'வணக்கம்', 'nandri': 'நன்றி', 'anbu': 'அன்பு', 'kadhal': 'காதல்',
+    'eppadi': 'எப்படி', 'enna': 'என்ன', 'eppo': 'எப்போ', 'enga': 'எங்கே',
+    'naan': 'நான்', 'nee': 'நீ', 'neengal': 'நீங்கள்', 'avan': 'அவன்', 'aval': 'அவள்',
+    'aama': 'ஆமா', 'illa': 'இல்லை', 'nalla': 'நல்ல', 'romba': 'ரொம்ப',
+    'amma': 'அம்மா', 'appa': 'அப்பா', 'anna': 'அண்ணா', 'akka': 'அக்கா',
+  },
+  'ben_Beng': {
+    'namaskar': 'নমস্কার', 'dhonnobad': 'ধন্যবাদ', 'bhalobashi': 'ভালোবাসি',
+    'kemon': 'কেমন', 'acho': 'আছ', 'bhalo': 'ভালো', 'achi': 'আছি',
+    'ami': 'আমি', 'tumi': 'তুমি', 'apni': 'আপনি', 'tara': 'তারা',
+    'haan': 'হ্যাঁ', 'na': 'না', 'ki': 'কি', 'kothay': 'কোথায়', 'keno': 'কেন',
+    'ma': 'মা', 'baba': 'বাবা', 'dada': 'দাদা', 'didi': 'দিদি',
+  },
+};
+
 /**
  * Transliterate Latin text to native script
  * ULTRA-FAST: Aggressive caching for sub-2ms response
- * Uses ICU-compliant transliteration for all 300+ languages
+ * Uses word-level dictionary + ICU-compliant transliteration for all 300+ languages
  */
 export function transliterate(
   text: string,
@@ -474,16 +513,58 @@ export function transliterate(
   
   let result: string;
   
-  // Try native optimized script maps first
-  const scriptMap = getCachedScriptMap(targetNllbCode);
-  if (scriptMap) {
-    result = transliterateWithScriptMap(text, targetNllbCode, scriptMap);
-  } else if (isICUTransliterationSupported(targetNllbCode)) {
-    // Fall back to ICU transliteration for 300+ languages
-    result = icuTransliterate(text, targetNllbCode);
+  // PRIORITY 1: Check word-level dictionary (for common phrases like "bagunnava")
+  const wordDict = WORD_TRANSLIT_DICT[targetNllbCode];
+  if (wordDict) {
+    // Process word by word first
+    const words = text.split(/(\s+)/); // Keep separators
+    const translatedWords = words.map(word => {
+      const lowerWord = word.toLowerCase().trim();
+      if (lowerWord && wordDict[lowerWord]) {
+        return wordDict[lowerWord];
+      }
+      return null; // Will be handled by character-level transliteration
+    });
+    
+    // If all words matched, return joined result
+    if (translatedWords.every((w, i) => w !== null || /^\s*$/.test(words[i]))) {
+      result = translatedWords.map((w, i) => w !== null ? w : words[i]).join('');
+      // Cache and return
+      if (translitCache.size > MAX_TRANSLIT_CACHE) {
+        const keysToDelete = Array.from(translitCache.keys()).slice(0, 2000);
+        keysToDelete.forEach(k => translitCache.delete(k));
+      }
+      translitCache.set(cacheKey, result);
+      return result;
+    }
+    
+    // Partial match: transliterate word by word
+    result = words.map((word, i) => {
+      const lowerWord = word.toLowerCase().trim();
+      if (!lowerWord || /^\s+$/.test(word)) return word; // Keep whitespace
+      if (wordDict[lowerWord]) return wordDict[lowerWord];
+      
+      // Fall back to character-level transliteration for this word
+      const scriptMap = getCachedScriptMap(targetNllbCode);
+      if (scriptMap) {
+        return transliterateWithScriptMap(word, targetNllbCode, scriptMap);
+      } else if (isICUTransliterationSupported(targetNllbCode)) {
+        return icuTransliterate(word, targetNllbCode);
+      }
+      return word;
+    }).join('');
   } else {
-    // Return original if no transliteration available
-    result = text;
+    // PRIORITY 2: Try native optimized script maps
+    const scriptMap = getCachedScriptMap(targetNllbCode);
+    if (scriptMap) {
+      result = transliterateWithScriptMap(text, targetNllbCode, scriptMap);
+    } else if (isICUTransliterationSupported(targetNllbCode)) {
+      // Fall back to ICU transliteration for 300+ languages
+      result = icuTransliterate(text, targetNllbCode);
+    } else {
+      // Return original if no transliteration available
+      result = text;
+    }
   }
   
   // Cache result with size limit
