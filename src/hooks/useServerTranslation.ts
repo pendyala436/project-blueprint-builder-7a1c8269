@@ -1,28 +1,25 @@
 /**
- * Translation Hook (DL-Translate)
- * 
- * Translation methods:
- * 1. Dictionary Translation (main) - instant common phrases
- * 2. Phonetic Transliteration (fallback) - Latin → native script
- * 3. DL-Translate HuggingFace API (fallback) - 200+ languages
+ * Server Translation Hook
+ * Uses unified translator for instant dictionary + ICU translation
  * 
  * Features:
- * - Translation between sender/receiver based on mother tongue
- * - Skip translation if same language
- * - Latin to native script conversion when typing
+ * - Instant translation (no server calls needed)
+ * - Live native preview
+ * - 300+ language support
+ * - Non-blocking
  */
 
 import { useState, useCallback, useRef } from 'react';
 import {
-  translateText,
-  convertToNativeScript,
-  clearTranslationCache,
-  detectLanguage as detectLang,
-  isLatinScript,
+  getLivePreview,
+  translate,
+  translateAsync,
+  transliterate,
+  detectLanguage,
+  getLanguageCode,
   isSameLanguage as isSameLang,
-  normalizeLanguage
-} from '@/lib/translation/translation-engine';
-import { isLatinScriptLanguage } from '@/lib/translation/language-codes';
+  isLatinScript,
+} from '@/lib/translation/unified-translator';
 
 // Types
 export interface TranslationResult {
@@ -67,10 +64,8 @@ export interface UseServerTranslationReturn {
   error: string | null;
 }
 
-// For client-side quick checks
-function isEnglish(language: string): boolean {
-  const norm = normalizeLanguage(language);
-  return norm === 'english' || norm === 'en';
+function normalizeLanguage(lang: string): string {
+  return lang?.toLowerCase().trim() || 'english';
 }
 
 export function useServerTranslation(options: UseServerTranslationOptions): UseServerTranslationReturn {
@@ -93,12 +88,12 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
   }, []);
 
   // Core translation with auto-detection
-  const translate = useCallback(async (
+  const translateText = useCallback(async (
     text: string,
     targetLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    const effectiveTarget = targetLanguage || userLanguage;
+    const effectiveTarget = normalizeLanguage(targetLanguage || userLanguage);
     
     if (!trimmed) {
       return { text, originalText: text, isTranslated: false, source: 'auto', target: effectiveTarget, mode: 'passthrough' };
@@ -108,18 +103,16 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      const result = await translateText(trimmed, {
-        targetLanguage: normalizeLanguage(effectiveTarget),
-        mode: 'translate'
-      });
+      const detected = detectLanguage(trimmed, userLanguage);
+      const result = translate(trimmed, detected.lang, effectiveTarget);
 
       return {
-        text: result.translatedText,
-        originalText: result.originalText,
-        isTranslated: result.isTranslated,
-        source: result.sourceLanguage,
-        target: result.targetLanguage,
-        mode: result.mode === 'same_language' ? 'passthrough' : result.mode
+        text: result,
+        originalText: trimmed,
+        isTranslated: result !== trimmed,
+        source: detected.lang,
+        target: effectiveTarget,
+        mode: result !== trimmed ? 'dictionary' : 'passthrough'
       };
     } catch (err) {
       console.error('[Translation] Error:', err);
@@ -137,11 +130,9 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     receiverLang?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    const detectedSender = senderLang || detectLang(trimmed).language;
-    const effectiveReceiver = receiverLang || partnerLanguage || userLanguage;
-    
-    const normSender = normalizeLanguage(detectedSender);
-    const normReceiver = normalizeLanguage(effectiveReceiver);
+    const detected = detectLanguage(trimmed, senderLang || userLanguage);
+    const normSender = normalizeLanguage(detected.lang);
+    const normReceiver = normalizeLanguage(receiverLang || partnerLanguage || userLanguage);
 
     if (!trimmed) {
       return { text, originalText: text, isTranslated: false, source: normSender, target: normReceiver, mode: 'passthrough' };
@@ -156,19 +147,15 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setError(null);
 
     try {
-      const result = await translateText(trimmed, {
-        sourceLanguage: normSender,
-        targetLanguage: normReceiver,
-        mode: 'translate'
-      });
+      const result = translate(trimmed, normSender, normReceiver);
 
       return {
-        text: result.translatedText,
-        originalText: result.originalText,
-        isTranslated: result.isTranslated,
-        source: result.sourceLanguage,
-        target: result.targetLanguage,
-        mode: result.mode === 'same_language' ? 'passthrough' : result.mode
+        text: result,
+        originalText: trimmed,
+        isTranslated: result !== trimmed,
+        source: normSender,
+        target: normReceiver,
+        mode: result !== trimmed ? 'dictionary' : 'passthrough'
       };
     } catch (err) {
       console.error('[Translation] Chat error:', err);
@@ -179,53 +166,46 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
   }, [userLanguage, partnerLanguage]);
 
-  // Convert Latin text to native script OR translate to Latin-script language
+  // Convert Latin text to native script
   const convertToNative = useCallback(async (
     text: string,
     targetLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    const effectiveTarget = targetLanguage || userLanguage;
-    const normTarget = normalizeLanguage(effectiveTarget);
+    const effectiveTarget = normalizeLanguage(targetLanguage || userLanguage);
 
     if (!trimmed) {
-      return { text, originalText: text, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
+      return { text, originalText: text, isTranslated: false, source: 'english', target: effectiveTarget, mode: 'passthrough' };
     }
 
     // If target is English, no conversion needed
-    if (normTarget === 'english') {
-      return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
+    if (effectiveTarget === 'english' || effectiveTarget === 'en') {
+      return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: effectiveTarget, mode: 'passthrough' };
     }
 
     // If already non-Latin, no conversion needed
     if (!isLatinScript(trimmed)) {
-      return { text: trimmed, originalText: trimmed, isTranslated: false, source: normTarget, target: normTarget, mode: 'passthrough' };
+      return { text: trimmed, originalText: trimmed, isTranslated: false, source: effectiveTarget, target: effectiveTarget, mode: 'passthrough' };
     }
 
-    setIsTranslating(true);
-    setError(null);
-
     try {
-      const converted = await convertToNativeScript(trimmed, normTarget);
+      const converted = transliterate(trimmed, effectiveTarget);
       
       return {
         text: converted,
         originalText: trimmed,
         isTranslated: converted !== trimmed,
         source: 'english',
-        target: normTarget,
+        target: effectiveTarget,
         mode: 'convert'
       };
     } catch (err) {
       console.error('[Translation] Convert error:', err);
-      setError(err instanceof Error ? err.message : 'Conversion failed');
-      return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: normTarget, mode: 'passthrough' };
-    } finally {
-      setIsTranslating(false);
+      return { text: trimmed, originalText: trimmed, isTranslated: false, source: 'english', target: effectiveTarget, mode: 'passthrough' };
     }
   }, [userLanguage]);
 
-  // Update live preview INSTANTLY using dictionary + ICU (no debounce needed)
+  // Update live preview INSTANTLY
   const updateLivePreview = useCallback((text: string) => {
     const trimmed = text.trim();
     if (!trimmed) {
@@ -235,40 +215,21 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
 
     const normUser = normalizeLanguage(userLanguage);
     
-    // If user's language is English, no conversion needed - show as-is
-    if (isEnglish(normUser)) {
+    // If user's language is English, no conversion needed
+    if (normUser === 'english' || normUser === 'en') {
       setLivePreview(trimmed);
       return;
     }
 
-    // If already non-Latin script, show as-is (already in native)
+    // If already non-Latin script, show as-is
     if (!isLatinScript(trimmed)) {
       setLivePreview(trimmed);
       return;
     }
 
-    // INSTANT conversion using dictionary + ICU (synchronous for speed)
-    // Import synchronously for instant preview
-    import('@/lib/translation/dl-translate/transliteration').then(({ transliterate, isTransliterationSupported }) => {
-      import('@/lib/translation/dl-translate/utils').then(({ resolveLangCode, normalizeLanguageInput }) => {
-        const langCode = resolveLangCode(normalizeLanguageInput(normUser), 'nllb200');
-        
-        if (isTransliterationSupported(langCode)) {
-          const converted = transliterate(trimmed, langCode);
-          setLivePreview(converted);
-        } else {
-          // Fallback to ICU
-          import('@/lib/translation/icu-transliterator').then(({ icuTransliterate, isICUTransliterationSupported }) => {
-            if (isICUTransliterationSupported(normUser)) {
-              const converted = icuTransliterate(trimmed, normUser);
-              setLivePreview(converted);
-            } else {
-              setLivePreview(trimmed);
-            }
-          });
-        }
-      });
-    });
+    // INSTANT conversion using unified translator
+    const preview = getLivePreview(trimmed, normUser);
+    setLivePreview(preview);
   }, [userLanguage]);
 
   // Clear live preview
@@ -279,7 +240,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     setLivePreview('');
   }, []);
 
-  // Process outgoing message (convert to sender's native script if needed)
+  // Process outgoing message
   const processOutgoing = useCallback(async (text: string): Promise<TranslationResult> => {
     const trimmed = text.trim();
     const normUser = normalizeLanguage(userLanguage);
@@ -289,7 +250,7 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     }
 
     // If user's language is English, no conversion needed
-    if (isEnglish(normUser)) {
+    if (normUser === 'english' || normUser === 'en') {
       return { text: trimmed, originalText: trimmed, isTranslated: false, source: normUser, target: normUser, mode: 'passthrough' };
     }
 
@@ -302,14 +263,14 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
     return { text: trimmed, originalText: trimmed, isTranslated: false, source: normUser, target: normUser, mode: 'passthrough' };
   }, [userLanguage, convertToNative]);
 
-  // Process incoming message (translate to receiver's language) with auto-detection
+  // Process incoming message
   const processIncoming = useCallback(async (
     text: string,
     senderLanguage?: string
   ): Promise<TranslationResult> => {
     const trimmed = text.trim();
-    const detectedSender = senderLanguage || detectLang(trimmed).language;
-    const normSender = normalizeLanguage(detectedSender);
+    const detected = detectLanguage(trimmed, senderLanguage || 'english');
+    const normSender = normalizeLanguage(detected.lang);
     const normUser = normalizeLanguage(userLanguage);
 
     if (!trimmed) {
@@ -326,16 +287,16 @@ export function useServerTranslation(options: UseServerTranslationOptions): UseS
   }, [userLanguage, translateForChat]);
 
   // Expose detectLanguage utility
-  const detectLanguage = useCallback((text: string): string | null => {
-    const result = detectLang(text);
-    return result.language;
-  }, []);
+  const detectLang = useCallback((text: string): string | null => {
+    const result = detectLanguage(text, userLanguage);
+    return result.lang;
+  }, [userLanguage]);
 
   return {
-    translate,
+    translate: translateText,
     translateForChat,
     convertToNative,
-    detectLanguage,
+    detectLanguage: detectLang,
     livePreview,
     updateLivePreview,
     clearLivePreview,
