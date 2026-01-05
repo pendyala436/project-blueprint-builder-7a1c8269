@@ -41,10 +41,12 @@ import {
   translate as unifiedTranslate,
   processOutgoingMessage as unifiedProcessOutgoing,
   processIncomingMessage as unifiedProcessIncoming,
-  spellCheck,
+  spellCheck as unifiedSpellCheck,
+  getLivePreviewWithSuggestions,
   detectLanguage as unifiedDetectLanguage,
   isLatinScript as unifiedIsLatinScript,
   isSameLanguage as unifiedIsSameLanguage,
+  getLanguageCode as unifiedGetLanguageCode,
 } from '@/lib/translation/unified-translator';
 
 // ============================================================================
@@ -229,14 +231,21 @@ function getCachedTransliteration(text: string, langCode: string, motherTongue: 
 }
 
 /**
- * Cached spell corrections
+ * DICTIONARY-BASED spell corrections using unified translator
+ * All spell checking is done via dictionary lookup only
  */
 function getCachedSpellCorrections(input: string, motherTongue: string): { correctedText: string; corrections: string[] } {
-  const cacheKey = `${input}|${motherTongue}`;
+  const cacheKey = `spell|${input}|${motherTongue}`;
   const cached = spellCorrectionCache.get(cacheKey);
   if (cached) return cached;
   
-  const result = applySpellCorrections(input, motherTongue);
+  // USE UNIFIED DICTIONARY-BASED SPELL CHECK
+  const spellResult = unifiedSpellCheck(input, motherTongue);
+  
+  const result = {
+    correctedText: spellResult.correctedText,
+    corrections: spellResult.suggestions.map(s => `${s.original} → ${s.corrected}`)
+  };
   
   // Limit cache size
   if (spellCorrectionCache.size > MAX_CACHE_SIZE) {

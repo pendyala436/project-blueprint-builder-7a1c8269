@@ -416,11 +416,51 @@ export function detectLanguage(text: string, hintLanguage?: string): { lang: str
   return { ...result, isLatin: true };
 }
 
-// ================== SPELL CHECK ==================
+// ================== FUZZY MATCH HELPER ==================
 
 /**
- * Check spelling and provide suggestions
- * Uses language-specific correction dictionaries
+ * Find fuzzy match in dictionaries (dictionary-based only)
+ */
+function findFuzzyMatch(
+  word: string,
+  corrections: Record<string, string>,
+  phoneticWords: Record<string, string>
+): string | null {
+  // Try corrections first
+  for (const [typo, correct] of Object.entries(corrections)) {
+    if (Math.abs(typo.length - word.length) <= 1) {
+      let diff = 0;
+      for (let i = 0; i < Math.max(typo.length, word.length); i++) {
+        if (typo[i] !== word[i]) diff++;
+        if (diff > 1) break;
+      }
+      if (diff <= 1) return correct;
+    }
+  }
+  
+  // Try phonetic words
+  for (const phonetic of Object.keys(phoneticWords)) {
+    if (Math.abs(phonetic.length - word.length) <= 1) {
+      let diff = 0;
+      for (let i = 0; i < Math.max(phonetic.length, word.length); i++) {
+        if (phonetic[i] !== word[i]) diff++;
+        if (diff > 1) break;
+      }
+      if (diff <= 1) return phonetic;
+    }
+  }
+  
+  return null;
+}
+
+// ================== DICTIONARY-BASED SPELL CHECK ==================
+
+/**
+ * DICTIONARY-BASED SPELL CHECK
+ * All spell checking uses ONLY dictionary lookups - no external APIs
+ * Supports 300+ languages via language-specific correction dictionaries
+ * 
+ * Flow: User Input → Dictionary Lookup → Corrections → ICU Format → Native Preview
  */
 export function spellCheck(text: string, language: string): SpellCheckResult {
   if (!text.trim()) {
@@ -433,7 +473,10 @@ export function spellCheck(text: string, language: string): SpellCheckResult {
   const cached = spellCache.get(cacheKey);
   if (cached) return cached;
 
+  // DICTIONARY-BASED: Get language-specific corrections
   const corrections = SPELL_CORRECTIONS[langCode] || {};
+  const phoneticWords = PHONETIC_WORDS[langCode] || {};
+  
   const words = text.split(/(\s+)/);
   const correctedWords: string[] = [];
   const suggestions: SpellSuggestion[] = [];
@@ -447,9 +490,18 @@ export function spellCheck(text: string, language: string): SpellCheckResult {
 
     const lowerWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
     const punctuation = word.match(/[.,!?;:'"]+$/)?.[0] || '';
+    
+    // DICTIONARY CHECK 1: Direct correction lookup
     const corrected = corrections[lowerWord];
+    
+    // DICTIONARY CHECK 2: Phonetic word validation
+    const isValidPhonetic = phoneticWords[lowerWord] !== undefined;
+    
+    // DICTIONARY CHECK 3: Check DICTIONARY entries
+    const isInDictionary = DICTIONARY[lowerWord] !== undefined;
 
     if (corrected && corrected !== lowerWord) {
+      // Found a spelling correction in dictionary
       correctedWords.push(corrected + punctuation);
       suggestions.push({
         original: lowerWord,
@@ -457,8 +509,23 @@ export function spellCheck(text: string, language: string): SpellCheckResult {
         confidence: 0.95,
       });
       hasMistakes = true;
-    } else {
+    } else if (isValidPhonetic || isInDictionary) {
+      // Word is valid in our dictionary - no change needed
       correctedWords.push(word);
+    } else {
+      // Word not in dictionary - try fuzzy match
+      const fuzzySuggestion = findFuzzyMatch(lowerWord, corrections, phoneticWords);
+      if (fuzzySuggestion) {
+        correctedWords.push(fuzzySuggestion + punctuation);
+        suggestions.push({
+          original: lowerWord,
+          corrected: fuzzySuggestion,
+          confidence: 0.7,
+        });
+        hasMistakes = true;
+      } else {
+        correctedWords.push(word);
+      }
     }
   }
 
