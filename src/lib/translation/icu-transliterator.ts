@@ -52,17 +52,17 @@ const DEVANAGARI: ScriptConfig = {
     'am': 'ं', 'an': 'ं', 'n': 'ं', 'ah': 'ः',
   },
   consonants: {
-    'k': 'क', 'kh': 'ख', 'g': 'ग', 'gh': 'घ', 'ng': 'ङ', 'ṅ': 'ङ',
-    'c': 'च', 'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jh': 'झ', 'ny': 'ञ', 'ñ': 'ञ',
+    'k': 'क', 'kk': 'क्क', 'kh': 'ख', 'g': 'ग', 'gg': 'ग्ग', 'gh': 'घ', 'ng': 'ङ', 'ṅ': 'ङ',
+    'c': 'च', 'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jj': 'ज्ज', 'jh': 'झ', 'ny': 'ञ', 'ñ': 'ञ',
     // Retroflex consonants (capital for distinction, common in everyday typing)
-    'T': 'ट', 'Th': 'ठ', 'D': 'ड', 'Dh': 'ढ', 'N': 'ण',
+    'T': 'ट', 'TT': 'ट्ट', 'Th': 'ठ', 'D': 'ड', 'DD': 'ड्ड', 'Dh': 'ढ', 'N': 'ण', 'NN': 'ण्ण',
     'ṭ': 'ट', 'ṭh': 'ठ', 'ḍ': 'ड', 'ḍh': 'ढ', 'ṇ': 'ण',
     // Dental consonants (lowercase - default for everyday Hindi)
-    't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न',
-    'p': 'प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bh': 'भ', 'm': 'म',
-    'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'w': 'व',
-    'ś': 'श', 'sh': 'श', 'Sh': 'ष', 'ṣ': 'ष', 's': 'स', 'h': 'ह',
-    'z': 'ज़', 'q': 'क़', 'x': 'क्स', 'ḻ': 'ळ', 'L': 'ळ',
+    't': 'त', 'tt': 'त्त', 'th': 'थ', 'd': 'द', 'dd': 'द्द', 'dh': 'ध', 'n': 'न', 'nn': 'न्न',
+    'p': 'प', 'pp': 'प्प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bb': 'ब्ब', 'bh': 'भ', 'm': 'म', 'mm': 'म्म',
+    'y': 'य', 'yy': 'य्य', 'r': 'र', 'l': 'ल', 'll': 'ल्ल', 'v': 'व', 'vv': 'व्व', 'w': 'व',
+    'ś': 'श', 'sh': 'श', 'Sh': 'ष', 'ṣ': 'ष', 's': 'स', 'ss': 'स्स', 'h': 'ह',
+    'z': 'ज़', 'q': 'क़', 'x': 'क्स', 'ḻ': 'ळ', 'L': 'ळ', 'LL': 'ळ्ळ',
     // Clusters
     'ksh': 'क्ष', 'ks': 'क्स', 'tr': 'त्र', 'Tr': 'ट्र', 'gy': 'ज्ञ', 'gn': 'ज्ञ', 'jn': 'ज्ञ',
     'kr': 'क्र', 'gr': 'ग्र', 'pr': 'प्र', 'br': 'ब्र', 'dr': 'द्र', 'Dr': 'ड्र', 'sr': 'स्र',
@@ -76,8 +76,9 @@ const DEVANAGARI: ScriptConfig = {
 };
 
 // Telugu - with dental/retroflex distinction
-// 't' = ట (retroflex), 'th' = థ (dental tha - common in speech)
-// For exact transliteration: T=ట, Th=ఠ (retroflex), t=త, th=థ (dental)
+// 't' = త (dental - common), 'T' = ట (retroflex)
+// 'n' = న (dental), 'N' = ణ (retroflex)
+// 'nn' = న్న (geminated n - uses halant for double consonant)
 const TELUGU: ScriptConfig = {
   vowels: {
     'a': 'అ', 'aa': 'ఆ', 'ā': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ī': 'ఈ', 'ee': 'ఈ',
@@ -93,19 +94,20 @@ const TELUGU: ScriptConfig = {
     'e': 'ె', 'ae': 'ే', 'ē': 'ే', 'ai': 'ై',
     'o': 'ొ', 'oa': 'ో', 'ō': 'ో', 'au': 'ౌ', 'ou': 'ౌ',
     'ri': 'ృ', 'ru': 'ృ', 'ṛ': 'ృ',
-    'am': 'ం', 'an': 'ం', 'n': 'ం', 'ah': 'ః',
+    'am': 'ం', 'an': 'ం', 'ah': 'ః',
   },
   consonants: {
-    'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
-    'c': 'చ', 'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ', 'gn': 'జ్ఞ',
+    'k': 'క', 'kk': 'క్క', 'kh': 'ఖ', 'g': 'గ', 'gg': 'గ్గ', 'gh': 'ఘ', 'ng': 'ఙ',
+    'c': 'చ', 'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jj': 'జ్జ', 'jh': 'ఝ', 'ny': 'ఞ', 'gn': 'జ్ఞ',
     // Dental consonants (most common in everyday Telugu typing)
-    't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ',
+    't': 'త', 'tt': 'త్త', 'th': 'థ', 'd': 'ద', 'dd': 'ద్ద', 'dh': 'ధ',
     // Retroflex consonants (capital letters for distinction)
-    'T': 'ట', 'Th': 'ఠ', 'D': 'డ', 'Dh': 'ఢ',
-    'n': 'న', 'nn': 'ణ', 'N': 'ణ',
-    'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
-    'y': 'య', 'r': 'ర', 'rr': 'ఱ', 'l': 'ల', 'll': 'ళ', 'L': 'ళ', 'v': 'వ', 'w': 'వ',
-    'sh': 'శ', 'Sh': 'ష', 's': 'స', 'h': 'హ',
+    'T': 'ట', 'TT': 'ట్ట', 'Th': 'ఠ', 'D': 'డ', 'DD': 'డ్డ', 'Dh': 'ఢ',
+    // n = న (dental), N = ణ (retroflex), nn = న్న (geminated dental)
+    'n': 'న', 'nn': 'న్న', 'N': 'ణ', 'NN': 'ణ్ణ',
+    'p': 'ప', 'pp': 'ప్ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bb': 'బ్బ', 'bh': 'భ', 'm': 'మ', 'mm': 'మ్మ',
+    'y': 'య', 'yy': 'య్య', 'r': 'ర', 'rr': 'ఱ', 'l': 'ల', 'll': 'ల్ల', 'L': 'ళ', 'LL': 'ళ్ళ', 'v': 'వ', 'vv': 'వ్వ', 'w': 'వ',
+    'sh': 'శ', 'Sh': 'ష', 's': 'స', 'ss': 'స్స', 'h': 'హ',
     'z': 'జ', 'x': 'క్స', 'q': 'క',
     // Clusters
     'ksh': 'క్ష', 'ks': 'క్స', 'tr': 'త్ర', 'Tr': 'ట్ర', 'pr': 'ప్ర', 'kr': 'క్ర',
@@ -1000,10 +1002,12 @@ const LANGUAGE_SCRIPT_MAP: Record<string, ScriptConfig> = {
 // ============================================================================
 
 // Consonant patterns sorted by length (longest first)
-// Includes both lowercase (dental) and uppercase (retroflex) variants
+// Includes geminated consonants (kk, gg, nn, etc.) and retroflex (T, D, N)
 const CONSONANT_PATTERNS = [
   'shch', 'ksh', 'chh', 'thr', 'Thr', 'shr', 'Shr', 'ntr', 'str', 'tsh', 'dz',
-  'Th', 'Dh', 'th', 'dh', 'bh', 'ph', 'gh', 'kh', 'jh', 'Sh', 'sh', 'ch', 'ng', 'ny', 'nn', 'll', 'rr',
+  // Geminated consonants (double letters) - MUST come before single letters
+  'TT', 'DD', 'NN', 'LL', 'kk', 'gg', 'jj', 'tt', 'dd', 'nn', 'pp', 'bb', 'mm', 'yy', 'vv', 'ss', 'll',
+  'Th', 'Dh', 'th', 'dh', 'bh', 'ph', 'gh', 'kh', 'jh', 'Sh', 'sh', 'ch', 'ng', 'ny', 'rr',
   'Tr', 'Dr', 'tr', 'pr', 'kr', 'gr', 'br', 'dr', 'fr', 'sr', 'hr', 'ts', 'zh', 'ps',
   'T', 'D', 'N', 'L', 'k', 'g', 'c', 'j', 't', 'd', 'n', 'p', 'b', 'm', 'y', 'r', 'l', 
   'v', 'w', 's', 'h', 'z', 'f', 'q', 'x'
@@ -1131,7 +1135,7 @@ function transliterateWord(word: string, config: ScriptConfig): string {
     const {consonant, vowel, hasExplicitVowel} = syllables[i];
     
     if (consonant) {
-      // Try exact match first (for T, D, N retroflex), then lowercase fallback
+      // Try exact match first (for T, D, N retroflex and geminated consonants like nn, mm), then lowercase fallback
       let consonantChar = config.consonants[consonant];
       if (!consonantChar) {
         consonantChar = config.consonants[consonant.toLowerCase()];
@@ -1144,12 +1148,17 @@ function transliterateWord(word: string, config: ScriptConfig): string {
       
       result += consonantChar;
       
+      // Check if this is a geminated consonant (already contains halant like న్న)
+      // Geminated consonants already have the halant built-in, so don't add another
+      const isGeminatedConsonant = consonant.length === 2 && consonant[0] === consonant[1];
+      
       // Handle vowel sign or halant
       if (vowel === '' || (!hasExplicitVowel && vowel === 'a')) {
         const nextSyllable = syllables[i + 1];
-        if (nextSyllable?.consonant && config.halant) {
+        // Only add halant if not a geminated consonant (which already has it) and there's a next consonant
+        if (!isGeminatedConsonant && nextSyllable?.consonant && config.halant) {
           result += config.halant;
-        } else if (vowel === '' && config.halant) {
+        } else if (!isGeminatedConsonant && vowel === '' && config.halant) {
           result += config.halant;
         }
       } else {
@@ -1181,15 +1190,21 @@ const MAX_ICU_CACHE = 10000;
 // Word-level transliteration dictionary for ICU (common phrases as single words)
 const ICU_WORD_DICT: Record<string, Record<string, string>> = {
   'telugu': {
-    'bagunnava': 'బాగున్నావా', 'bagunnanu': 'బాగున్నాను', 'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న',
+    // Common greetings and phrases
+    'bagunnava': 'బాగున్నావా', 'bagunnaru': 'బాగున్నారు', 'bagunnanu': 'బాగున్నాను', 
+    'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న', 'baga': 'బాగా',
     'ela': 'ఎలా', 'emi': 'ఏమి', 'eppudu': 'ఎప్పుడు', 'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు',
     'nenu': 'నేను', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 'vaaru': 'వారు', 'vaallu': 'వాళ్ళు',
     'subhodayam': 'శుభోదయం', 'subharatri': 'శుభరాత్రి', 'dhanyavadalu': 'ధన్యవాదాలు',
     'amma': 'అమ్మ', 'nanna': 'నాన్న', 'anna': 'అన్న', 'akka': 'అక్క', 'chelli': 'చెల్లి', 'tammudu': 'తమ్ముడు',
     'chala': 'చాలా', 'konchem': 'కొంచెం', 'inka': 'ఇంకా', 'ipudu': 'ఇప్పుడు', 'tarvata': 'తర్వాత',
     'prema': 'ప్రేమ', 'snehithudu': 'స్నేహితుడు', 'manchidi': 'మంచిది', 'avunu': 'అవును', 'ledu': 'లేదు',
-    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు',
+    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'unna': 'ఉన్న', 'unnadi': 'ఉన్నది',
+    'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు', 'chesthunna': 'చేస్తున్న',
     'hello': 'హలో', 'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'hi': 'హాయ్', 'bye': 'బై',
+    // Common words with double consonants
+    'mundu': 'ముందు', 'venuka': 'వెనుక', 'pakkana': 'పక్కన', 'meeda': 'మీద', 'kinda': 'కింద',
+    'okati': 'ఒకటి', 'rendu': 'రెండు', 'moodu': 'మూడు', 'nalugu': 'నాలుగు', 'ayidu': 'అయిదు',
   },
   'hindi': {
     'namaste': 'नमस्ते', 'namaskar': 'नमस्कार', 'dhanyavad': 'धन्यवाद', 'shukriya': 'शुक्रिया',

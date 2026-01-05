@@ -56,21 +56,22 @@ const DEVANAGARI_MAP: Record<string, string> = {
   '5': '५', '6': '६', '7': '७', '8': '८', '9': '९',
 };
 
-// Telugu script mapping
+// Telugu script mapping - with geminated consonant support
 const TELUGU_MAP: Record<string, string> = {
   // Vowels
   'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ee': 'ఈ', 'ii': 'ఈ', 'u': 'ఉ', 'oo': 'ఊ', 'uu': 'ఊ',
   'e': 'ఎ', 'ae': 'ఏ', 'ai': 'ఐ', 'o': 'ఒ', 'oe': 'ఓ', 'au': 'ఔ', 'ou': 'ఔ',
   
-  // Consonants
-  'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
-  'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ',
-  'T': 'ట', 'Th': 'ఠ', 'D': 'డ', 'Dh': 'ఢ', 'N': 'ణ',
-  't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న',
-  'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
-  'y': 'య', 'r': 'ర', 'l': 'ల', 'v': 'వ', 'w': 'వ',
-  'sh': 'శ', 'shh': 'ష', 's': 'స', 'h': 'హ',
-  'L': 'ళ', 'zh': 'ఴ', 'R': 'ఱ',
+  // Consonants - with geminated (double) consonants
+  'k': 'క', 'kk': 'క్క', 'kh': 'ఖ', 'g': 'గ', 'gg': 'గ్గ', 'gh': 'ఘ', 'ng': 'ఙ',
+  'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jj': 'జ్జ', 'jh': 'ఝ', 'ny': 'ఞ',
+  'T': 'ట', 'TT': 'ట్ట', 'Th': 'ఠ', 'D': 'డ', 'DD': 'డ్డ', 'Dh': 'ఢ', 'N': 'ణ', 'NN': 'ణ్ణ',
+  't': 'త', 'tt': 'త్త', 'th': 'థ', 'd': 'ద', 'dd': 'ద్ద', 'dh': 'ధ', 
+  'n': 'న', 'nn': 'న్న',
+  'p': 'ప', 'pp': 'ప్ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bb': 'బ్బ', 'bh': 'భ', 'm': 'మ', 'mm': 'మ్మ',
+  'y': 'య', 'yy': 'య్య', 'r': 'ర', 'l': 'ల', 'll': 'ల్ల', 'v': 'వ', 'vv': 'వ్వ', 'w': 'వ',
+  'sh': 'శ', 'shh': 'ష', 's': 'స', 'ss': 'స్స', 'h': 'హ',
+  'L': 'ళ', 'LL': 'ళ్ళ', 'zh': 'ఴ', 'R': 'ఱ',
   
   // Matras
   '_a': '', '_aa': 'ా', '_i': 'ి', '_ee': 'ీ', '_ii': 'ీ',
@@ -458,15 +459,21 @@ export function isTransliterationSupported(nllbCode: string): boolean {
 // Word-level transliteration dictionary (common phrases as single words)
 const WORD_TRANSLIT_DICT: Record<string, Record<string, string>> = {
   'tel_Telu': {
-    'bagunnava': 'బాగున్నావా', 'bagunnanu': 'బాగున్నాను', 'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న',
+    // Common greetings and phrases
+    'bagunnava': 'బాగున్నావా', 'bagunnaru': 'బాగున్నారు', 'bagunnanu': 'బాగున్నాను', 
+    'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న', 'baga': 'బాగా',
     'ela': 'ఎలా', 'emi': 'ఏమి', 'eppudu': 'ఎప్పుడు', 'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు',
     'nenu': 'నేను', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 'vaaru': 'వారు', 'vaallu': 'వాళ్ళు',
     'subhodayam': 'శుభోదయం', 'subharatri': 'శుభరాత్రి', 'dhanyavadalu': 'ధన్యవాదాలు',
     'amma': 'అమ్మ', 'nanna': 'నాన్న', 'anna': 'అన్న', 'akka': 'అక్క', 'chelli': 'చెల్లి', 'tammudu': 'తమ్ముడు',
     'chala': 'చాలా', 'konchem': 'కొంచెం', 'inka': 'ఇంకా', 'ipudu': 'ఇప్పుడు', 'tarvata': 'తర్వాత',
     'prema': 'ప్రేమ', 'snehithudu': 'స్నేహితుడు', 'manchidi': 'మంచిది', 'avunu': 'అవును', 'ledu': 'లేదు',
-    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు',
-    'hello': 'హలో', 'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం',
+    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'unna': 'ఉన్న', 'unnadi': 'ఉన్నది',
+    'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు', 'chesthunna': 'చేస్తున్న',
+    'hello': 'హలో', 'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'hi': 'హాయ్', 'bye': 'బై',
+    // Common words with double consonants
+    'mundu': 'ముందు', 'venuka': 'వెనుక', 'pakkana': 'పక్కన', 'meeda': 'మీద', 'kinda': 'కింద',
+    'okati': 'ఒకటి', 'rendu': 'రెండు', 'moodu': 'మూడు', 'nalugu': 'నాలుగు', 'ayidu': 'అయిదు',
   },
   'hin_Deva': {
     'namaste': 'नमस्ते', 'namaskar': 'नमस्कार', 'dhanyavad': 'धन्यवाद', 'shukriya': 'शुक्रिया',
