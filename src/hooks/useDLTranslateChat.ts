@@ -16,6 +16,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
   getLivePreview,
+  getLivePreviewWithSuggestions,
   translate,
   transliterate,
   detectLanguage,
@@ -24,12 +25,16 @@ import {
   isLatinScript as checkLatinScript,
   processOutgoingMessage,
   processIncomingMessage,
+  spellCheck,
+  SpellSuggestion,
 } from '@/lib/translation/unified-translator';
 
 interface TransliterationState {
   input: string;
   output: string;
   isProcessing: boolean;
+  spellCorrected?: boolean;
+  spellSuggestions?: SpellSuggestion[];
 }
 
 interface MessageProcessResult {
@@ -37,6 +42,7 @@ interface MessageProcessResult {
   translatedText?: string;
   detectedLanguage: string;
   isTranslated: boolean;
+  spellCorrected?: boolean;
 }
 
 interface UseDLTranslateChatOptions {
@@ -84,19 +90,21 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
   const browserLanguage = useMemo(() => navigator.language?.split('-')[0] || 'en', []);
   const prevInputRef = useRef('');
 
-  // Set input text and update preview INSTANTLY
+  // Set input text and update preview INSTANTLY with DICTIONARY-BASED spell check
   const setInputText = useCallback((text: string) => {
     // Skip if same as previous
     if (text === prevInputRef.current) return;
     prevInputRef.current = text;
     
-    // INSTANT native preview using unified translator
-    const nativePreview = getLivePreview(text, normUserLang);
+    // DICTIONARY-BASED: Get preview with spell suggestions
+    const previewResult = getLivePreviewWithSuggestions(text, normUserLang);
     
     setTransliteration({
       input: text,
-      output: nativePreview,
-      isProcessing: false
+      output: previewResult.nativeText,
+      isProcessing: false,
+      spellCorrected: previewResult.spellCorrected,
+      spellSuggestions: previewResult.suggestions,
     });
   }, [normUserLang]);
 
