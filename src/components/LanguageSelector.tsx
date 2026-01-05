@@ -11,14 +11,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Languages, Search, Check, ChevronDown, Globe, Save, X } from "lucide-react";
+import { Languages, Search, Check, Globe, Save, X, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   ALL_LANGUAGES, 
   INDIAN_LANGUAGES, 
   NON_INDIAN_LANGUAGES,
   DLTranslateLanguage,
-  getTotalLanguageCount
+  getTotalLanguageCount,
+  searchLanguages,
+  getLanguagesByRegion
 } from "@/data/dlTranslateLanguages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -182,11 +184,16 @@ export const LanguageSelector = ({
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground"
           )}>
-            {lang.name.charAt(0)}
+            {lang.nativeName?.charAt(0) || lang.name.charAt(0)}
           </div>
           <div>
             <p className="font-semibold text-foreground">{lang.name}</p>
-            <p className="text-xs text-muted-foreground">{lang.script}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">{lang.nativeName}</p>
+              {lang.region && (
+                <span className="text-xs text-muted-foreground/70">• {lang.region}</span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -268,12 +275,12 @@ export const LanguageSelector = ({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] p-0">
           <DialogHeader className="p-6 pb-0">
-            <DialogTitle className="flex items-center gap-2 text-xl">
+          <DialogTitle className="flex items-center gap-2 text-xl">
               <Languages className="h-5 w-5 text-primary" />
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {getTotalLanguageCount()} languages ({INDIAN_LANGUAGES.length} Indian + {NON_INDIAN_LANGUAGES.length} World)
+              Choose from {getTotalLanguageCount()}+ languages worldwide ({INDIAN_LANGUAGES.length} Indian + {NON_INDIAN_LANGUAGES.length} World)
             </p>
           </DialogHeader>
           
