@@ -47,15 +47,18 @@ const DEVANAGARI: ScriptConfig = {
   consonants: {
     'k': 'क', 'kh': 'ख', 'g': 'ग', 'gh': 'घ', 'ng': 'ङ', 'ṅ': 'ङ',
     'c': 'च', 'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jh': 'झ', 'ny': 'ञ', 'ñ': 'ञ',
+    // Retroflex consonants (capital for distinction, common in everyday typing)
+    'T': 'ट', 'Th': 'ठ', 'D': 'ड', 'Dh': 'ढ', 'N': 'ण',
     'ṭ': 'ट', 'ṭh': 'ठ', 'ḍ': 'ड', 'ḍh': 'ढ', 'ṇ': 'ण',
+    // Dental consonants (lowercase - default for everyday Hindi)
     't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न',
     'p': 'प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bh': 'भ', 'm': 'म',
     'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'w': 'व',
-    'ś': 'श', 'sh': 'श', 'ṣ': 'ष', 's': 'स', 'h': 'ह',
-    'z': 'ज़', 'q': 'क़', 'x': 'क्स', 'ḻ': 'ळ',
+    'ś': 'श', 'sh': 'श', 'Sh': 'ष', 'ṣ': 'ष', 's': 'स', 'h': 'ह',
+    'z': 'ज़', 'q': 'क़', 'x': 'क्स', 'ḻ': 'ळ', 'L': 'ळ',
     // Clusters
-    'ksh': 'क्ष', 'ks': 'क्स', 'tr': 'त्र', 'gy': 'ज्ञ', 'gn': 'ज्ञ', 'jn': 'ज्ञ',
-    'kr': 'क्र', 'gr': 'ग्र', 'pr': 'प्र', 'br': 'ब्र', 'dr': 'द्र', 'sr': 'स्र',
+    'ksh': 'क्ष', 'ks': 'क्स', 'tr': 'त्र', 'Tr': 'ट्र', 'gy': 'ज्ञ', 'gn': 'ज्ञ', 'jn': 'ज्ञ',
+    'kr': 'क्र', 'gr': 'ग्र', 'pr': 'प्र', 'br': 'ब्र', 'dr': 'द्र', 'Dr': 'ड्र', 'sr': 'स्र',
     'thr': 'थ्र', 'shr': 'श्र', 'str': 'स्ट्र', 'ntr': 'न्त्र',
   },
   halant: '्',
@@ -65,7 +68,9 @@ const DEVANAGARI: ScriptConfig = {
   },
 };
 
-// Telugu
+// Telugu - with dental/retroflex distinction
+// 't' = ట (retroflex), 'th' = థ (dental tha - common in speech)
+// For exact transliteration: T=ట, Th=ఠ (retroflex), t=త, th=థ (dental)
 const TELUGU: ScriptConfig = {
   vowels: {
     'a': 'అ', 'aa': 'ఆ', 'ā': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ī': 'ఈ', 'ee': 'ఈ',
@@ -86,16 +91,19 @@ const TELUGU: ScriptConfig = {
   consonants: {
     'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
     'c': 'చ', 'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ', 'gn': 'జ్ఞ',
-    't': 'ట', 'th': 'ఠ', 'd': 'డ', 'dh': 'ఢ',
-    'n': 'న', 'nn': 'ణ',
+    // Dental consonants (most common in everyday Telugu typing)
+    't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ',
+    // Retroflex consonants (capital letters for distinction)
+    'T': 'ట', 'Th': 'ఠ', 'D': 'డ', 'Dh': 'ఢ',
+    'n': 'న', 'nn': 'ణ', 'N': 'ణ',
     'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
-    'y': 'య', 'r': 'ర', 'rr': 'ఱ', 'l': 'ల', 'll': 'ళ', 'v': 'వ', 'w': 'వ',
-    'sh': 'శ', 's': 'స', 'h': 'హ',
+    'y': 'య', 'r': 'ర', 'rr': 'ఱ', 'l': 'ల', 'll': 'ళ', 'L': 'ళ', 'v': 'వ', 'w': 'వ',
+    'sh': 'శ', 'Sh': 'ష', 's': 'స', 'h': 'హ',
     'z': 'జ', 'x': 'క్స', 'q': 'క',
     // Clusters
-    'ksh': 'క్ష', 'ks': 'క్స', 'tr': 'ట్ర', 'pr': 'ప్ర', 'kr': 'క్ర',
-    'gr': 'గ్ర', 'br': 'బ్ర', 'dr': 'డ్ర', 'sr': 'స్ర', 'hr': 'హ్ర',
-    'thr': 'థ్ర', 'shr': 'శ్ర', 'str': 'స్ట్ర', 'ntr': 'న్ట్ర',
+    'ksh': 'క్ష', 'ks': 'క్స', 'tr': 'త్ర', 'Tr': 'ట్ర', 'pr': 'ప్ర', 'kr': 'క్ర',
+    'gr': 'గ్ర', 'br': 'బ్ర', 'dr': 'ద్ర', 'Dr': 'డ్ర', 'sr': 'స్ర', 'hr': 'హ్ర',
+    'thr': 'థ్ర', 'shr': 'శ్ర', 'str': 'స్ట్ర', 'ntr': 'న్త్ర',
   },
   halant: '్',
   numerals: {
@@ -804,11 +812,12 @@ const LANGUAGE_SCRIPT_MAP: Record<string, ScriptConfig> = {
 // ============================================================================
 
 // Consonant patterns sorted by length (longest first)
+// Includes both lowercase (dental) and uppercase (retroflex) variants
 const CONSONANT_PATTERNS = [
-  'shch', 'ksh', 'chh', 'thr', 'shr', 'ntr', 'str', 'tsh', 'dz',
-  'th', 'dh', 'bh', 'ph', 'gh', 'kh', 'jh', 'sh', 'ch', 'ng', 'ny', 
-  'tr', 'pr', 'kr', 'gr', 'br', 'dr', 'fr', 'sr', 'hr', 'ts', 'zh', 'ps',
-  'k', 'g', 'c', 'j', 't', 'd', 'n', 'p', 'b', 'm', 'y', 'r', 'l', 
+  'shch', 'ksh', 'chh', 'thr', 'Thr', 'shr', 'Shr', 'ntr', 'str', 'tsh', 'dz',
+  'Th', 'Dh', 'th', 'dh', 'bh', 'ph', 'gh', 'kh', 'jh', 'Sh', 'sh', 'ch', 'ng', 'ny', 'nn', 'll', 'rr',
+  'Tr', 'Dr', 'tr', 'pr', 'kr', 'gr', 'br', 'dr', 'fr', 'sr', 'hr', 'ts', 'zh', 'ps',
+  'T', 'D', 'N', 'L', 'k', 'g', 'c', 'j', 't', 'd', 'n', 'p', 'b', 'm', 'y', 'r', 'l', 
   'v', 'w', 's', 'h', 'z', 'f', 'q', 'x'
 ];
 
@@ -823,26 +832,34 @@ const VOWEL_PATTERNS = [
 
 /**
  * Parse text into syllables for transliteration
+ * Preserves case for retroflex/dental distinction (T vs t)
  */
 function parseToSyllables(text: string): Array<{consonant: string | null; vowel: string; hasExplicitVowel: boolean}> {
   const syllables: Array<{consonant: string | null; vowel: string; hasExplicitVowel: boolean}> = [];
-  const lower = text.toLowerCase();
   let i = 0;
   
-  while (i < lower.length) {
+  while (i < text.length) {
     let consonant: string | null = null;
     let vowel = 'a';
     let hasExplicitVowel = false;
     
-    // Skip non-alphabetic
-    if (!/[a-zāīūēōṛṅñṭḍṇśṣḻ]/i.test(lower[i])) {
+    // Skip non-alphabetic characters
+    if (!/[a-zA-Zāīūēōṛṅñṭḍṇśṣḻ]/i.test(text[i])) {
       i++;
       continue;
     }
     
-    // Match consonant
+    // Match consonant - try case-sensitive first for retroflex detection
     for (const pattern of CONSONANT_PATTERNS) {
-      if (lower.slice(i).startsWith(pattern)) {
+      const slice = text.slice(i, i + pattern.length);
+      // Check exact match first (for T, D, N, etc.)
+      if (slice === pattern) {
+        consonant = pattern;
+        i += pattern.length;
+        break;
+      }
+      // Then case-insensitive match
+      if (slice.toLowerCase() === pattern.toLowerCase() && pattern === pattern.toLowerCase()) {
         consonant = pattern;
         i += pattern.length;
         break;
@@ -851,8 +868,9 @@ function parseToSyllables(text: string): Array<{consonant: string | null; vowel:
     
     if (consonant) {
       // Look for vowel after consonant
+      const lowerSlice = text.slice(i).toLowerCase();
       for (const pattern of VOWEL_PATTERNS) {
-        if (lower.slice(i).startsWith(pattern)) {
+        if (lowerSlice.startsWith(pattern.toLowerCase())) {
           vowel = pattern;
           hasExplicitVowel = true;
           i += pattern.length;
@@ -860,11 +878,11 @@ function parseToSyllables(text: string): Array<{consonant: string | null; vowel:
         }
       }
       
-      // Check for consonant cluster or word-final
+      // Check for consonant cluster or word-final (adds halant)
       if (!hasExplicitVowel) {
-        const nextChar = lower[i] || '';
-        const isNextConsonant = /[bcdfghjklmnpqrstvwxyz]/.test(nextChar);
-        const isEndOfWord = !nextChar || !/[a-z]/i.test(nextChar);
+        const nextChar = text[i] || '';
+        const isNextConsonant = /[bcdfghjklmnpqrstvwxyzTDNL]/i.test(nextChar);
+        const isEndOfWord = !nextChar || !/[a-zA-Z]/i.test(nextChar);
         
         if (isNextConsonant || isEndOfWord) {
           vowel = '';
@@ -875,8 +893,9 @@ function parseToSyllables(text: string): Array<{consonant: string | null; vowel:
       syllables.push({consonant, vowel, hasExplicitVowel});
     } else {
       // Standalone vowel
+      const lowerSlice = text.slice(i).toLowerCase();
       for (const pattern of VOWEL_PATTERNS) {
-        if (lower.slice(i).startsWith(pattern)) {
+        if (lowerSlice.startsWith(pattern.toLowerCase())) {
           vowel = pattern;
           hasExplicitVowel = true;
           i += pattern.length;
@@ -897,6 +916,7 @@ function parseToSyllables(text: string): Array<{consonant: string | null; vowel:
 
 /**
  * Transliterate a single word using the given script config
+ * Handles case-sensitive lookups for retroflex (T, D, N) vs dental (t, d, n)
  */
 function transliterateWord(word: string, config: ScriptConfig): string {
   if (!word.trim()) return word;
@@ -923,7 +943,12 @@ function transliterateWord(word: string, config: ScriptConfig): string {
     const {consonant, vowel, hasExplicitVowel} = syllables[i];
     
     if (consonant) {
-      const consonantChar = config.consonants[consonant];
+      // Try exact match first (for T, D, N retroflex), then lowercase fallback
+      let consonantChar = config.consonants[consonant];
+      if (!consonantChar) {
+        consonantChar = config.consonants[consonant.toLowerCase()];
+      }
+      
       if (!consonantChar) {
         result += consonant;
         continue;
@@ -940,13 +965,13 @@ function transliterateWord(word: string, config: ScriptConfig): string {
           result += config.halant;
         }
       } else {
-        const vowelSign = config.vowelSigns[vowel];
+        const vowelSign = config.vowelSigns[vowel] ?? config.vowelSigns[vowel.toLowerCase()];
         if (vowelSign !== undefined) {
           result += vowelSign;
         }
       }
     } else if (vowel) {
-      const vowelChar = config.vowels[vowel];
+      const vowelChar = config.vowels[vowel] ?? config.vowels[vowel.toLowerCase()];
       if (vowelChar) {
         result += vowelChar;
       }
