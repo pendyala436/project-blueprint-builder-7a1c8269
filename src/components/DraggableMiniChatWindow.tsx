@@ -41,7 +41,7 @@ import { VoiceRecordButton } from "@/components/VoiceRecordButton";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { useDLTranslate } from "@/lib/dl-translate";
+import { useServerTranslation } from "@/hooks/useServerTranslation";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -96,7 +96,8 @@ const DraggableMiniChatWindow = ({
   onFocus
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
-  const { convertToNative, translate, translateForChat, isLatinScript, isSameLanguage } = useDLTranslate();
+  const { convertToNative, translate, translateForChat, isSameLanguage } = useServerTranslation({ userLanguage: currentUserLanguage, partnerLanguage });
+  const isLatinScript = (text: string) => /^[\x00-\x7F\u00A0-\u00FF\u0100-\u017F]*$/.test(text);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isComposing, setIsComposing] = useState(false);
@@ -652,10 +653,7 @@ const DraggableMiniChatWindow = ({
     if (senderId !== currentUserId) {
       try {
         // Translate from partner's language to current user's language
-        const result = await translateForChat(text, { 
-          senderLanguage: partnerLanguage, 
-          receiverLanguage: currentUserLanguage 
-        });
+        const result = await translateForChat(text, partnerLanguage, currentUserLanguage);
         
         // Only mark as translated if we actually got a different text
         const wasActuallyTranslated = result.isTranslated && result.text && result.text !== text;

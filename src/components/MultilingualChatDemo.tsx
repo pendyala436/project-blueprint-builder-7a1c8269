@@ -6,7 +6,7 @@
  * 2. Live native script preview while typing
  * 3. On Send: message displays in sender's native script
  * 4. Receiver sees message in their native language
- * 5. Background translation using DL-Translate (200+ languages)
+ * 5. Background translation using dictionary
  * 6. No partial/half messages ever sent
  */
 
@@ -306,7 +306,7 @@ export function MultilingualChatDemo() {
             ) : isMLReady ? (
               <>
                 <Globe className="h-3 w-3 mr-1" />
-                DL-Translate Ready
+                Translator Ready
               </>
             ) : (
               <button onClick={initializeML} className="hover:underline">
@@ -405,7 +405,7 @@ export function MultilingualChatDemo() {
         </div>
 
         <p className="text-[10px] text-muted-foreground text-center">
-          🔒 No partial messages sent • Background translation • 200+ languages via DL-Translate
+          🔒 No partial messages sent • Background translation • Dictionary-based
         </p>
       </div>
     </Card>

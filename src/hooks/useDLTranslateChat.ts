@@ -1,9 +1,7 @@
 /**
- * Hook for DL-Translate Chat functionality
+ * Hook for Chat Translation functionality
  * 
- * Uses M2M100 model for 100+ language translation (same as dl-translate)
- * 
- * Based on: https://github.com/xhluca/dl-translate
+ * Uses dictionary and phonetic transliteration for translation
  * 
  * FEATURES:
  * - Auto-detect source and target language
@@ -16,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useDLTranslate } from '@/lib/dl-translate';
+import { useServerTranslation } from '@/hooks/useServerTranslation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { detectLanguage as detectLang } from '@/lib/translation/translation-engine';
 
@@ -53,6 +51,18 @@ interface UseDLTranslateChatReturn {
   isTranslating: boolean;
 }
 
+// Helper function to check if text is Latin script
+const isLatinScript = (text: string): boolean => /^[\x00-\x7F\u00A0-\u00FF\u0100-\u017F]*$/.test(text);
+
+// Native language names
+const NATIVE_NAMES: Record<string, string> = {
+  english: 'English', hindi: 'हिंदी', bengali: 'বাংলা', telugu: 'తెలుగు',
+  marathi: 'मराठी', tamil: 'தமிழ்', gujarati: 'ગુજરાતી', kannada: 'ಕನ್ನಡ',
+  malayalam: 'മലയാളം', punjabi: 'ਪੰਜਾਬੀ', odia: 'ଓଡ଼ିଆ', urdu: 'اردو',
+  arabic: 'العربية', spanish: 'Español', french: 'Français', german: 'Deutsch',
+  chinese: '中文', japanese: '日本語', korean: '한국어', russian: 'Русский',
+};
+
 export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTranslateChatReturn {
   const { 
     userLanguage, 
@@ -64,11 +74,8 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
   const { 
     convertToNative, 
     translateForChat, 
-    detectLanguage, 
-    isSameLanguage, 
-    isLatinScript,
-    getNativeName 
-  } = useDLTranslate();
+    isSameLanguage
+  } = useServerTranslation({ userLanguage, partnerLanguage });
 
   const [inputText, setInputTextState] = useState('');
   const [transliteration, setTransliteration] = useState<TransliterationState>({
@@ -119,7 +126,7 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
     return () => {
       abortRef.current?.abort();
     };
-  }, [debouncedInput, userLanguage, autoTransliterate, convertToNative, isLatinScript]);
+  }, [debouncedInput, userLanguage, autoTransliterate, convertToNative]);
 
   const setInputText = useCallback((text: string) => {
     setInputTextState(text);
@@ -141,10 +148,7 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
 
     // If partner has different language, translate for them
     if (!isSameLanguage(userLanguage, partnerLanguage)) {
-      const translateResult = await translateForChat(nativeText, {
-        senderLanguage: userLanguage,
-        receiverLanguage: partnerLanguage
-      });
+      const translateResult = await translateForChat(nativeText, userLanguage, partnerLanguage);
 
       return {
         nativeScriptText: nativeText,
@@ -155,7 +159,7 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
     }
 
     return { nativeScriptText: nativeText, detectedLanguage: userLanguage, isTranslated: false };
-  }, [userLanguage, partnerLanguage, convertToNative, translateForChat, isLatinScript, isSameLanguage]);
+  }, [userLanguage, partnerLanguage, convertToNative, translateForChat, isSameLanguage]);
 
   const processIncoming = useCallback(async (
     text: string,
@@ -172,10 +176,7 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
     }
 
     // Translate to user's language
-    const result = await translateForChat(trimmed, {
-      senderLanguage: senderLang,
-      receiverLanguage: userLanguage
-    });
+    const result = await translateForChat(trimmed, senderLang, userLanguage);
 
     return {
       nativeScriptText: trimmed,
@@ -190,8 +191,8 @@ export function useDLTranslateChat(options: UseDLTranslateChatOptions): UseDLTra
   }, [userLanguage, partnerLanguage, isSameLanguage]);
 
   const getNativeLanguageName = useCallback((lang: string) => {
-    return getNativeName(lang);
-  }, [getNativeName]);
+    return NATIVE_NAMES[lang.toLowerCase()] || lang;
+  }, []);
 
   // Enhanced detectLanguageFromText using embedded language detector
   const detectLanguageFromText = useCallback((text: string): string => {

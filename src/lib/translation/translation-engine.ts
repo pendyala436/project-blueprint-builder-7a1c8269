@@ -1,13 +1,10 @@
 /**
- * Translation Engine with DL-Translate M2M100 Model
+ * Translation Engine
  * 
- * Translation Methods (100+ languages):
+ * Translation Methods:
  * - Embedded phrase dictionaries (common phrases - instant)
  * - Transliteration dictionaries (phonetic → native script - instant)
  * - Phonetic transliterator (syllable-based - instant)
- * - M2M100 Neural Translation (100+ languages - in-browser)
- * 
- * Based on: https://github.com/xhluca/dl-translate
  */
 
 import { SCRIPT_PATTERNS, normalizeLanguage, isLatinScriptLanguage } from './language-codes';
@@ -15,7 +12,7 @@ import { detectLanguage, isLatinScript, isSameLanguage } from './language-detect
 import type { TranslationResult, TranslationOptions } from './types';
 import { translateWithML as translateWithDictionary } from './ml-translation-engine';
 import { phoneticTransliterate, isPhoneticTransliterationSupported } from './phonetic-transliterator';
-import { translateWithDLTranslate } from './dl-translate-api';
+
 
 // Enable ML translation fallback
 let enableMLTranslation = true;
@@ -532,20 +529,8 @@ export async function translateText(
     }
   }
   
-  // ========== FALLBACK: ML Translation (NLLB-200 - 200+ languages) ==========
-  if (enableMLTranslation) {
-    console.log('[DL-Translate] Trying ML translation (NLLB-200)...');
-    try {
-      const mlResult = await translateWithDLTranslate(trimmed, normSource, normTarget);
-      if (mlResult && mlResult !== trimmed) {
-        console.log('[DL-Translate] ML translation result:', mlResult.slice(0, 50));
-        addToCache(cacheKey, mlResult);
-        return createResult(trimmed, mlResult, normSource, normTarget, true, 'translate');
-      }
-    } catch (error) {
-      console.warn('[DL-Translate] ML translation failed:', error);
-    }
-  }
+  // No further fallback - dictionary and phonetic transliteration only
+  console.log('[Translation] No translation available, returning original');
   
   // Local translation complete - no translation found
   console.log('[DL-Translate] No translation available, returning original');
