@@ -13,12 +13,57 @@
  */
 
 import { icuTransliterate, isICUTransliterationSupported } from './icu-transliterator';
+import {
+  HINDI_CORRECTIONS,
+  TELUGU_CORRECTIONS,
+  TAMIL_CORRECTIONS,
+  BENGALI_CORRECTIONS,
+  KANNADA_CORRECTIONS,
+  MALAYALAM_CORRECTIONS,
+  GUJARATI_CORRECTIONS,
+  PUNJABI_CORRECTIONS,
+  MARATHI_CORRECTIONS,
+  ODIA_CORRECTIONS,
+  URDU_CORRECTIONS,
+  ARABIC_CORRECTIONS,
+} from './dl-translate/spell-corrections';
 
 // ================== PERFORMANCE CACHES ==================
 const translitCache = new Map<string, string>();
 const translationCache = new Map<string, string>();
 const langDetectCache = new Map<string, { lang: string; confidence: number }>();
+const spellCache = new Map<string, SpellCheckResult>();
 const MAX_CACHE_SIZE = 10000;
+
+// ================== SPELL CHECK TYPES ==================
+export interface SpellSuggestion {
+  original: string;
+  corrected: string;
+  confidence: number;
+}
+
+export interface SpellCheckResult {
+  text: string;
+  correctedText: string;
+  suggestions: SpellSuggestion[];
+  hasMistakes: boolean;
+}
+
+// ================== SPELL CORRECTION MAPS ==================
+const SPELL_CORRECTIONS: Record<string, Record<string, string>> = {
+  hi: HINDI_CORRECTIONS,
+  te: TELUGU_CORRECTIONS,
+  ta: TAMIL_CORRECTIONS,
+  bn: BENGALI_CORRECTIONS,
+  kn: KANNADA_CORRECTIONS,
+  ml: MALAYALAM_CORRECTIONS,
+  gu: GUJARATI_CORRECTIONS,
+  pa: PUNJABI_CORRECTIONS,
+  mr: MARATHI_CORRECTIONS,
+  or: ODIA_CORRECTIONS,
+  ur: URDU_CORRECTIONS,
+  ar: ARABIC_CORRECTIONS,
+};
 
 // ================== LANGUAGE CODE MAPPINGS ==================
 // Full 300+ language support with NLLB codes
@@ -371,11 +416,107 @@ export function detectLanguage(text: string, hintLanguage?: string): { lang: str
   return { ...result, isLatin: true };
 }
 
+// ================== SPELL CHECK ==================
+
+/**
+ * Check spelling and provide suggestions
+ * Uses language-specific correction dictionaries
+ */
+export function spellCheck(text: string, language: string): SpellCheckResult {
+  if (!text.trim()) {
+    return { text, correctedText: text, suggestions: [], hasMistakes: false };
+  }
+
+  const langCode = getLanguageCode(language);
+  const cacheKey = `spell:${text}:${langCode}`;
+  
+  const cached = spellCache.get(cacheKey);
+  if (cached) return cached;
+
+  const corrections = SPELL_CORRECTIONS[langCode] || {};
+  const words = text.split(/(\s+)/);
+  const correctedWords: string[] = [];
+  const suggestions: SpellSuggestion[] = [];
+  let hasMistakes = false;
+
+  for (const word of words) {
+    if (/^\s+$/.test(word)) {
+      correctedWords.push(word);
+      continue;
+    }
+
+    const lowerWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
+    const punctuation = word.match(/[.,!?;:'"]+$/)?.[0] || '';
+    const corrected = corrections[lowerWord];
+
+    if (corrected && corrected !== lowerWord) {
+      correctedWords.push(corrected + punctuation);
+      suggestions.push({
+        original: lowerWord,
+        corrected: corrected,
+        confidence: 0.95,
+      });
+      hasMistakes = true;
+    } else {
+      correctedWords.push(word);
+    }
+  }
+
+  const result: SpellCheckResult = {
+    text,
+    correctedText: correctedWords.join(''),
+    suggestions,
+    hasMistakes,
+  };
+
+  // Cache result
+  spellCache.set(cacheKey, result);
+  if (spellCache.size > MAX_CACHE_SIZE) {
+    const firstKey = spellCache.keys().next().value;
+    if (firstKey) spellCache.delete(firstKey);
+  }
+
+  return result;
+}
+
+/**
+ * Get spelling suggestions for a word
+ */
+export function getSpellingSuggestions(word: string, language: string): string[] {
+  const langCode = getLanguageCode(language);
+  const corrections = SPELL_CORRECTIONS[langCode] || {};
+  const lowerWord = word.toLowerCase();
+  
+  // Direct match
+  if (corrections[lowerWord]) {
+    return [corrections[lowerWord]];
+  }
+
+  // Find similar words (fuzzy matching)
+  const suggestions: string[] = [];
+  for (const [typo, correct] of Object.entries(corrections)) {
+    // Simple similarity check (within 2 character difference)
+    if (Math.abs(typo.length - lowerWord.length) <= 2) {
+      let diff = 0;
+      for (let i = 0; i < Math.max(typo.length, lowerWord.length); i++) {
+        if (typo[i] !== lowerWord[i]) diff++;
+        if (diff > 2) break;
+      }
+      if (diff <= 2 && !suggestions.includes(correct)) {
+        suggestions.push(correct);
+      }
+    }
+    if (suggestions.length >= 3) break;
+  }
+
+  return suggestions;
+}
+
 // ================== TRANSLITERATION ==================
 
 /**
  * Transliterate Latin text to native script
- * Uses ICU-based transliteration + word dictionary
+ * Uses ICU-based transliteration + word dictionary + spell correction
  */
 export function transliterate(text: string, targetLanguage: string): string {
   if (!text || !isLatinScript(text)) return text;
@@ -386,8 +527,12 @@ export function transliterate(text: string, targetLanguage: string): string {
   const cached = translitCache.get(cacheKey);
   if (cached) return cached;
 
-  // Word-by-word processing
-  const words = text.split(/(\s+)/);
+  // Step 1: Apply spell corrections first
+  const spellResult = spellCheck(text, targetLanguage);
+  const textToProcess = spellResult.correctedText;
+
+  // Step 2: Word-by-word transliteration
+  const words = textToProcess.split(/(\s+)/);
   const result: string[] = [];
   let hasChange = false;
 
@@ -408,7 +553,7 @@ export function transliterate(text: string, targetLanguage: string): string {
       continue;
     }
 
-    // 2. Try ICU transliteration
+    // 2. Try ICU transliteration for proper Unicode display
     const nllbCode = getNLLBCode(langCode);
     if (isICUTransliterationSupported(nllbCode)) {
       const icuResult = icuTransliterate(lowerWord, nllbCode);
@@ -422,7 +567,7 @@ export function transliterate(text: string, targetLanguage: string): string {
     result.push(word);
   }
 
-  const finalResult = hasChange ? result.join('') : text;
+  const finalResult = hasChange ? result.join('') : textToProcess;
   
   // Cache result
   translitCache.set(cacheKey, finalResult);
@@ -435,12 +580,50 @@ export function transliterate(text: string, targetLanguage: string): string {
 }
 
 /**
+ * Live preview result with spell check info
+ */
+export interface LivePreviewResult {
+  nativeText: string;
+  originalText: string;
+  spellCorrected: boolean;
+  suggestions: SpellSuggestion[];
+}
+
+/**
  * Get live native preview while typing
  * Sub-2ms response time
+ * Includes spell check and ICU formatting
  */
 export function getLivePreview(text: string, userLanguage: string): string {
   if (!text || !isLatinScript(text)) return text;
   return transliterate(text, userLanguage);
+}
+
+/**
+ * Get detailed live preview with spell suggestions
+ * Use this when you need to show spelling suggestions to user
+ */
+export function getLivePreviewWithSuggestions(text: string, userLanguage: string): LivePreviewResult {
+  if (!text) {
+    return { nativeText: '', originalText: '', spellCorrected: false, suggestions: [] };
+  }
+
+  if (!isLatinScript(text)) {
+    return { nativeText: text, originalText: text, spellCorrected: false, suggestions: [] };
+  }
+
+  // Step 1: Spell check
+  const spellResult = spellCheck(text, userLanguage);
+  
+  // Step 2: ICU transliteration
+  const nativeText = transliterate(spellResult.correctedText, userLanguage);
+
+  return {
+    nativeText,
+    originalText: text,
+    spellCorrected: spellResult.hasMistakes,
+    suggestions: spellResult.suggestions,
+  };
 }
 
 // ================== TRANSLATION ==================
