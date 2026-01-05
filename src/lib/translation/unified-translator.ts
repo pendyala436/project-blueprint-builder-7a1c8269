@@ -579,26 +579,32 @@ export function getSpellingSuggestions(word: string, language: string): string[]
   return suggestions;
 }
 
-// ================== TRANSLITERATION ==================
+// ================== COMBINED ICU + DICTIONARY TRANSLITERATION ==================
 
 /**
- * Transliterate Latin text to native script
- * Uses ICU-based transliteration + word dictionary + spell correction
+ * TRANSLITERATION: Combined ICU + Dictionary approach
+ * 
+ * FLOW:
+ * 1. DICTIONARY SPELL CHECK: Correct spelling using language-specific dictionaries
+ * 2. DICTIONARY PHONETIC: Check phonetic word dictionary for instant native conversion
+ * 3. ICU TRANSLITERATION: Use ICU for proper Unicode/script conversion
+ * 
+ * This ensures accurate native script output with spell correction
  */
 export function transliterate(text: string, targetLanguage: string): string {
   if (!text || !isLatinScript(text)) return text;
   
   const langCode = getLanguageCode(targetLanguage);
-  const cacheKey = `${text}:${langCode}`;
+  const cacheKey = `translit:${text}:${langCode}`;
   
   const cached = translitCache.get(cacheKey);
   if (cached) return cached;
 
-  // Step 1: Apply spell corrections first
+  // STEP 1: DICTIONARY SPELL CHECK - Correct spelling first
   const spellResult = spellCheck(text, targetLanguage);
   const textToProcess = spellResult.correctedText;
 
-  // Step 2: Word-by-word transliteration
+  // STEP 2: DICTIONARY PHONETIC + ICU TRANSLITERATION (word-by-word)
   const words = textToProcess.split(/(\s+)/);
   const result: string[] = [];
   let hasChange = false;
@@ -612,7 +618,7 @@ export function transliterate(text: string, targetLanguage: string): string {
     const lowerWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
     const punctuation = word.match(/[.,!?;:'"]+$/)?.[0] || '';
 
-    // 1. Check phonetic dictionary first (instant)
+    // STEP 2a: DICTIONARY PHONETIC - Check phonetic dictionary first (instant)
     const phonetic = PHONETIC_WORDS[langCode]?.[lowerWord];
     if (phonetic) {
       result.push(phonetic + punctuation);
@@ -620,7 +626,7 @@ export function transliterate(text: string, targetLanguage: string): string {
       continue;
     }
 
-    // 2. Try ICU transliteration for proper Unicode display
+    // STEP 2b: ICU TRANSLITERATION - Use ICU for proper Unicode/script conversion
     const nllbCode = getNLLBCode(langCode);
     if (isICUTransliterationSupported(nllbCode)) {
       const icuResult = icuTransliterate(lowerWord, nllbCode);
@@ -657,9 +663,10 @@ export interface LivePreviewResult {
 }
 
 /**
- * Get live native preview while typing
- * Sub-2ms response time
- * Includes spell check and ICU formatting
+ * LIVE PREVIEW: Dictionary Spell Check + ICU+Dictionary Transliteration
+ * 
+ * FLOW: User Types → Dictionary Spell Check → ICU+Dict Transliteration → Native Preview
+ * Sub-2ms response time with aggressive caching
  */
 export function getLivePreview(text: string, userLanguage: string): string {
   if (!text || !isLatinScript(text)) return text;
@@ -667,8 +674,12 @@ export function getLivePreview(text: string, userLanguage: string): string {
 }
 
 /**
- * Get detailed live preview with spell suggestions
- * Use this when you need to show spelling suggestions to user
+ * LIVE PREVIEW WITH SUGGESTIONS: Full spell check info for UI display
+ * 
+ * FLOW:
+ * 1. DICTIONARY SPELL CHECK: Check and correct spelling
+ * 2. COMBINED ICU+DICTIONARY TRANSLITERATION: Convert to native script
+ * 3. Return native text + spell suggestions for UI
  */
 export function getLivePreviewWithSuggestions(text: string, userLanguage: string): LivePreviewResult {
   if (!text) {
@@ -679,10 +690,10 @@ export function getLivePreviewWithSuggestions(text: string, userLanguage: string
     return { nativeText: text, originalText: text, spellCorrected: false, suggestions: [] };
   }
 
-  // Step 1: Spell check
+  // STEP 1: DICTIONARY SPELL CHECK
   const spellResult = spellCheck(text, userLanguage);
   
-  // Step 2: ICU transliteration
+  // STEP 2: COMBINED ICU + DICTIONARY TRANSLITERATION
   const nativeText = transliterate(spellResult.correctedText, userLanguage);
 
   return {
@@ -693,11 +704,13 @@ export function getLivePreviewWithSuggestions(text: string, userLanguage: string
   };
 }
 
-// ================== TRANSLATION ==================
+// ================== DICTIONARY-BASED TRANSLATION ==================
 
 /**
- * Translate text using dictionary
- * Instant, no external API calls
+ * TRANSLATION: Dictionary-based instant translation
+ * 
+ * Uses DICTIONARY lookups only - no external API calls
+ * Supports phrase matching, word-by-word, and reverse lookups
  */
 export function translate(text: string, sourceLanguage: string, targetLanguage: string): string {
   if (!text) return text;
