@@ -71,14 +71,17 @@ export {
 } from './translation-model';
 
 // ============================================================================
-// LANGUAGE DETECTION
+// LANGUAGE DETECTION (300+ Languages, English Default Fallback)
 // ============================================================================
 
 export {
   detectLanguage,
+  detectLanguageWithMotherTongue,
   isLatinScript,
   isSameLanguage,
   getTargetLanguageCode,
+  DEFAULT_FALLBACK_LANGUAGE,
+  DEFAULT_FALLBACK_CODE,
   type LanguageDetectionResult,
 } from './language-detector';
 
