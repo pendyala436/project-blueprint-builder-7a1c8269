@@ -1178,6 +1178,45 @@ const icuConfigCache = new Map<string, ScriptConfig | null>();
 const icuSupportCache = new Map<string, boolean>();
 const MAX_ICU_CACHE = 10000;
 
+// Word-level transliteration dictionary for ICU (common phrases as single words)
+const ICU_WORD_DICT: Record<string, Record<string, string>> = {
+  'telugu': {
+    'bagunnava': 'బాగున్నావా', 'bagunnanu': 'బాగున్నాను', 'bagundi': 'బాగుంది', 'bagunna': 'బాగున్న',
+    'ela': 'ఎలా', 'emi': 'ఏమి', 'eppudu': 'ఎప్పుడు', 'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు',
+    'nenu': 'నేను', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 'vaaru': 'వారు', 'vaallu': 'వాళ్ళు',
+    'subhodayam': 'శుభోదయం', 'subharatri': 'శుభరాత్రి', 'dhanyavadalu': 'ధన్యవాదాలు',
+    'amma': 'అమ్మ', 'nanna': 'నాన్న', 'anna': 'అన్న', 'akka': 'అక్క', 'chelli': 'చెల్లి', 'tammudu': 'తమ్ముడు',
+    'chala': 'చాలా', 'konchem': 'కొంచెం', 'inka': 'ఇంకా', 'ipudu': 'ఇప్పుడు', 'tarvata': 'తర్వాత',
+    'prema': 'ప్రేమ', 'snehithudu': 'స్నేహితుడు', 'manchidi': 'మంచిది', 'avunu': 'అవును', 'ledu': 'లేదు',
+    'unnav': 'ఉన్నావ్', 'unnaru': 'ఉన్నారు', 'chesthunnav': 'చేస్తున్నావ్', 'chesthunnaru': 'చేస్తున్నారు',
+    'hello': 'హలో', 'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'hi': 'హాయ్', 'bye': 'బై',
+  },
+  'hindi': {
+    'namaste': 'नमस्ते', 'namaskar': 'नमस्कार', 'dhanyavad': 'धन्यवाद', 'shukriya': 'शुक्रिया',
+    'kaise': 'कैसे', 'kaisa': 'कैसा', 'theek': 'ठीक', 'thik': 'ठीक', 'hoon': 'हूं', 'hain': 'हैं',
+    'aap': 'आप', 'tum': 'तुम', 'main': 'मैं', 'hum': 'हम', 'wo': 'वो', 'woh': 'वो',
+    'kya': 'क्या', 'kab': 'कब', 'kahan': 'कहाँ', 'kyun': 'क्यों', 'kaun': 'कौन',
+    'haan': 'हाँ', 'nahi': 'नहीं', 'accha': 'अच्छा', 'acha': 'अच्छा', 'bahut': 'बहुत',
+    'pyar': 'प्यार', 'dost': 'दोस्त', 'bhai': 'भाई', 'behen': 'बहन', 'maa': 'माँ', 'papa': 'पापा',
+    'suprabhat': 'सुप्रभात', 'shubh': 'शुभ', 'ratri': 'रात्रि', 'sandhya': 'संध्या',
+    'hello': 'हैलो', 'hi': 'हाय', 'bye': 'बाय', 'ok': 'ओके',
+  },
+  'tamil': {
+    'vanakkam': 'வணக்கம்', 'nandri': 'நன்றி', 'anbu': 'அன்பு', 'kadhal': 'காதல்',
+    'eppadi': 'எப்படி', 'enna': 'என்ன', 'eppo': 'எப்போ', 'enga': 'எங்கே',
+    'naan': 'நான்', 'nee': 'நீ', 'neengal': 'நீங்கள்', 'avan': 'அவன்', 'aval': 'அவள்',
+    'aama': 'ஆமா', 'illa': 'இல்லை', 'nalla': 'நல்ல', 'romba': 'ரொம்ப',
+    'amma': 'அம்மா', 'appa': 'அப்பா', 'anna': 'அண்ணா', 'akka': 'அக்கா',
+  },
+  'bengali': {
+    'namaskar': 'নমস্কার', 'dhonnobad': 'ধন্যবাদ', 'bhalobashi': 'ভালোবাসি',
+    'kemon': 'কেমন', 'acho': 'আছ', 'bhalo': 'ভালো', 'achi': 'আছি',
+    'ami': 'আমি', 'tumi': 'তুমি', 'apni': 'আপনি', 'tara': 'তারা',
+    'haan': 'হ্যাঁ', 'na': 'না', 'ki': 'কি', 'kothay': 'কোথায়', 'keno': 'কেন',
+    'ma': 'মা', 'baba': 'বাবা', 'dada': 'দাদা', 'didi': 'দিদি',
+  },
+};
+
 /**
  * Main ICU-style transliteration function
  * ULTRA-FAST: Aggressive caching for sub-2ms response
@@ -1192,6 +1231,12 @@ export function icuTransliterate(text: string, targetLanguage: string): string {
   const cached = icuTranslitCache.get(cacheKey);
   if (cached !== undefined) return cached;
   
+  // Normalize language name
+  const lang = targetLanguage.toLowerCase().replace(/[_\-\s]/g, '');
+  
+  // Get word dictionary for this language
+  const wordDict = ICU_WORD_DICT[lang];
+  
   // Get cached config
   const config = getCachedConfig(targetLanguage);
   if (!config) {
@@ -1204,6 +1249,14 @@ export function icuTransliterate(text: string, targetLanguage: string): string {
   const parts = text.split(/(\s+)/);
   const result = parts.map(part => {
     if (/^\s+$/.test(part)) return part;
+    
+    // PRIORITY 1: Check word dictionary first (for common words like "bagunnava")
+    const lowerPart = part.toLowerCase();
+    if (wordDict && wordDict[lowerPart]) {
+      return wordDict[lowerPart];
+    }
+    
+    // PRIORITY 2: Character-level transliteration
     return transliterateWord(part, config);
   }).join('');
   
