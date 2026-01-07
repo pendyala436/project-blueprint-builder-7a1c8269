@@ -231,11 +231,214 @@ const QUICK_TRANSLITERATION: Record<string, Record<string, string>> = {
     'sat sri akal': 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ', 'dhanyavad': 'ਧੰਨਵਾਦ', 'main': 'ਮੈਂ',
     'tusi': 'ਤੁਸੀਂ', 'ki': 'ਕੀ', 'hal': 'ਹਾਲ', 'hai': 'ਹੈ',
   },
-  // Odia
+  // Odia (Oriya) - Official Indian Language
   odia: {
     'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ee': 'ଈ', 'u': 'ଉ', 'oo': 'ଊ',
     'e': 'ଏ', 'ai': 'ଐ', 'o': 'ଓ', 'au': 'ଔ',
+    'ka': 'କ', 'kha': 'ଖ', 'ga': 'ଗ', 'gha': 'ଘ', 'na': 'ନ',
+    'cha': 'ଚ', 'ja': 'ଜ', 'ta': 'ତ', 'tha': 'ଥ', 'da': 'ଦ', 'dha': 'ଧ',
+    'pa': 'ପ', 'pha': 'ଫ', 'ba': 'ବ', 'bha': 'ଭ', 'ma': 'ମ',
+    'ya': 'ଯ', 'ra': 'ର', 'la': 'ଲ', 'va': 'ଵ', 'sha': 'ଶ', 'sa': 'ସ', 'ha': 'ହ',
     'namaskar': 'ନମସ୍କାର', 'dhanyabad': 'ଧନ୍ୟବାଦ', 'mu': 'ମୁଁ',
+    'apana': 'ଆପଣ', 'kemiti': 'କେମିତି', 'achhi': 'ଅଛି', 'haan': 'ହଁ', 'naa': 'ନା',
+  },
+  oriya: {
+    'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ee': 'ଈ', 'u': 'ଉ', 'oo': 'ଊ',
+    'namaskar': 'ନମସ୍କାର', 'dhanyabad': 'ଧନ୍ୟବାଦ', 'mu': 'ମୁଁ',
+  },
+  // Assamese - Official Indian Language (Bengali script)
+  assamese: {
+    'a': 'অ', 'aa': 'আ', 'i': 'ই', 'ee': 'ঈ', 'u': 'উ', 'oo': 'ঊ',
+    'e': 'এ', 'ai': 'ঐ', 'o': 'ও', 'au': 'ঔ',
+    'ka': 'ক', 'kha': 'খ', 'ga': 'গ', 'gha': 'ঘ', 'na': 'ন',
+    'cha': 'চ', 'ja': 'জ', 'ta': 'ত', 'tha': 'থ', 'da': 'দ', 'dha': 'ধ',
+    'pa': 'প', 'pha': 'ফ', 'ba': 'ব', 'bha': 'ভ', 'ma': 'ম',
+    'ya': 'য', 'ra': 'ৰ', 'la': 'ল', 'wa': 'ৱ', 'sha': 'শ', 'sa': 'স', 'ha': 'হ',
+    'namaskar': 'নমস্কাৰ', 'dhanyabad': 'ধন্যবাদ', 'moi': 'মই',
+    'apuni': 'আপুনি', 'keman': 'কেমন', 'ase': 'আছে', 'hoy': 'হয়', 'nohoy': 'নহয়',
+  },
+  // Bodo - Official Indian Language (Devanagari)
+  bodo: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'oi namaskar': 'ओं नमस्कार', 'mwjang': 'मोजां', 'ang': 'आं',
+    'nwng': 'नों', 'gabwn': 'गाबों', 'hoyi': 'होय', 'nihoyi': 'निहोय',
+  },
+  // Dogri - Official Indian Language (Devanagari)
+  dogri: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'namaste': 'नमस्ते', 'dhanyavad': 'धन्यवाद', 'main': 'मैं',
+    'tusi': 'तुसी', 'kiwen': 'कियें', 'ho': 'हो', 'haan': 'हां', 'naa': 'ना',
+  },
+  // Kashmiri - Official Indian Language (Arabic/Devanagari)
+  kashmiri: {
+    'a': 'ا', 'b': 'ب', 'p': 'پ', 't': 'ت', 's': 'س', 'h': 'ہ',
+    'assalamu alaikum': 'اَسلام علیکم', 'shukriya': 'شُکریہ', 'boh': 'بوہ',
+    'tohe': 'تۄہے', 'kemchan': 'کِتھہ', 'chhan': 'چھان', 'aa': 'آ', 'na': 'نہ',
+  },
+  kashmiri_devanagari: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'namaskar': 'नमस्कार', 'dhanyavad': 'धन्यवाद', 'bah': 'बह',
+  },
+  // Konkani - Official Indian Language (Devanagari)
+  konkani: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'namaskar': 'नमस्कार', 'dev borem korum': 'देव बरें करुं', 'hanv': 'हांव',
+    'tum': 'तुम', 'kaso': 'कसो', 'asa': 'आसा', 'hoy': 'होय', 'naa': 'ना',
+  },
+  // Maithili - Official Indian Language (Devanagari)
+  maithili: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'pranam': 'प्रणाम', 'dhanyavad': 'धन्यवाद', 'hum': 'हम',
+    'aahan': 'अहाँ', 'ki': 'की', 'hal': 'हाल', 'chhai': 'छै', 'haan': 'हाँ', 'nahi': 'नहीं',
+  },
+  // Manipuri (Meitei) - Official Indian Language (Bengali/Meitei script)
+  manipuri: {
+    'a': 'অ', 'aa': 'আ', 'i': 'ই', 'ee': 'ঈ', 'u': 'উ', 'oo': 'ঊ',
+    'ka': 'ক', 'kha': 'খ', 'ga': 'গ', 'gha': 'ঘ', 'na': 'ন',
+    'khurumjari': 'খুরুমজরি', 'thaagatchari': 'থাগৎচরি', 'ei': 'ঐ',
+    'nang': 'নং', 'kamna': 'কম্না', 'lei': 'লৈ', 'hoi': 'হোই', 'natte': 'নত্তে',
+  },
+  meitei: {
+    'a': 'ꯑ', 'aa': 'ꯑꯥ', 'i': 'ꯏ', 'ee': 'ꯏꯢ', 'u': 'ꯎ', 'oo': 'ꯎꯨ',
+    'ka': 'ꯀ', 'kha': 'ꯈ', 'ga': 'ꯒ', 'gha': 'ꯓ', 'na': 'ꯅ',
+    'khurumjari': 'ꯈꯨꯔꯨꯝꯖꯔꯤ', 'thaagatchari': 'ꯊꯥꯒꯠꯆꯔꯤ',
+  },
+  // Sanskrit - Official Indian Language (Devanagari)
+  sanskrit: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'e': 'ए', 'ai': 'ऐ', 'o': 'ओ', 'au': 'औ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'cha': 'च', 'ja': 'ज', 'ta': 'त', 'tha': 'थ', 'da': 'द', 'dha': 'ध',
+    'pa': 'प', 'pha': 'फ', 'ba': 'ब', 'bha': 'भ', 'ma': 'म',
+    'ya': 'य', 'ra': 'र', 'la': 'ल', 'va': 'व', 'sha': 'श', 'sa': 'स', 'ha': 'ह',
+    'namaste': 'नमस्ते', 'dhanyavadah': 'धन्यवादः', 'aham': 'अहम्',
+    'bhavaan': 'भवान्', 'katham': 'कथम्', 'asti': 'अस्ति', 'aam': 'आम्', 'naa': 'न',
+  },
+  // Santali - Official Indian Language (Ol Chiki script)
+  santali: {
+    'a': 'ᱚ', 'aa': 'ᱟ', 'i': 'ᱤ', 'ee': 'ᱤᱭ', 'u': 'ᱩ', 'oo': 'ᱩᱣ',
+    'e': 'ᱮ', 'o': 'ᱳ',
+    'ka': 'ᱠ', 'kha': 'ᱠᱷ', 'ga': 'ᱜ', 'gha': 'ᱜᱷ', 'na': 'ᱱ',
+    'cha': 'ᱪ', 'ja': 'ᱡ', 'ta': 'ᱴ', 'da': 'ᱰ', 'dha': 'ᱫ',
+    'pa': 'ᱯ', 'ba': 'ᱵ', 'ma': 'ᱢ',
+    'johar': 'ᱡᱚᱦᱟᱨ', 'sarhao': 'ᱥᱟᱨᱦᱟᱣ', 'ing': 'ᱤᱧ',
+    'am': 'ᱟᱢ', 'okoe': 'ᱚᱠᱚᱭ', 'menah': 'ᱢᱮᱱᱟᱦ', 'haan': 'ᱦᱟᱹᱱ', 'bako': 'ᱵᱟᱠᱚ',
+  },
+  // Sindhi - Official Indian Language (Arabic/Devanagari)
+  sindhi: {
+    'a': 'ا', 'b': 'ب', 'p': 'پ', 't': 'ت', 's': 'س', 'h': 'ه',
+    'kh': 'خ', 'd': 'د', 'r': 'ر', 'z': 'ز', 'sh': 'ش',
+    'salam': 'سلام', 'mehrbani': 'مهرباني', 'maan': 'مان',
+    'tawhan': 'تون', 'kehra': 'ڪهڙو', 'ahiyan': 'آهيان', 'ha': 'ها', 'na': 'نه',
+  },
+  sindhi_devanagari: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'namaskar': 'नमस्कार', 'meharbani': 'मेहरबानी', 'maan': 'मां',
+  },
+  // ===== REGIONAL INDIAN LANGUAGES =====
+  // Bhojpuri - Regional (Devanagari)
+  bhojpuri: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'pranam': 'प्रणाम', 'dhanyavad': 'धन्यवाद', 'ham': 'हम',
+    'rauwa': 'रउआ', 'kaa': 'का', 'hal': 'हाल', 'ba': 'बा', 'haan': 'हाँ', 'naikhe': 'नइखे',
+  },
+  // Rajasthani - Regional (Devanagari)
+  rajasthani: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'khamma ghani': 'खम्मा घणी', 'dhanyavad': 'धन्यवाद', 'main': 'मैं',
+    'thane': 'थाने', 'kiyaan': 'कियां', 'ho': 'हो', 'haan': 'हाँ', 'naa': 'ना',
+  },
+  // Chhattisgarhi - Regional (Devanagari)
+  chhattisgarhi: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'jay johar': 'जय जोहार', 'dhanyavad': 'धन्यवाद', 'main': 'मैं',
+    'tain': 'तैं', 'kaise': 'कइसे', 'hes': 'हेस', 'haan': 'हाँ', 'nahi': 'नहीं',
+  },
+  // Garhwali - Regional (Devanagari)
+  garhwali: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'namaste': 'नमस्ते', 'dhanyavad': 'धन्यवाद', 'main': 'मैं',
+    'tu': 'तू', 'kai': 'कै', 'chha': 'छा', 'haan': 'हां', 'na': 'ना',
+  },
+  // Kumaoni - Regional (Devanagari)
+  kumaoni: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'namaskaar': 'नमस्कार', 'dhanyavaad': 'धन्यवाद', 'main': 'मैं',
+    'tu': 'तू', 'kai': 'कै', 'chha': 'छा', 'haan': 'हां', 'na': 'ना',
+  },
+  // Khasi - Regional (Latin script)
+  khasi: {
+    'khublei': 'khublei', 'phi': 'phi', 'nga': 'nga', 'kumno': 'kumno',
+    'biang': 'biang', 'hooid': 'hooid', 'em': 'em', 'ymm': 'ymm',
+  },
+  // Garo - Regional (Latin script)
+  garo: {
+    'namaska': 'namaska', 'mitela': 'mitela', 'anga': 'anga',
+    'nang': 'nang', 'bia': 'bia', 'donga': 'donga', 'he': 'he', 'ja': 'ja',
+  },
+  // Mizo - Regional (Latin script)
+  mizo: {
+    'chibai': 'chibai', 'ka lawm e': 'ka lawm e', 'kei': 'kei',
+    'nang': 'nang', 'i dam': 'i dam', 'em': 'em', 'aw': 'aw', 'ni lo': 'ni lo',
+  },
+  // Tripuri/Kokborok - Regional (Bengali/Latin)
+  tripuri: {
+    'khulumkha': 'খুলুমখা', 'kokborok': 'কক্বরক্', 'ang': 'আং',
+    'nwng': 'নং', 'mojaiya': 'মজাইয়া', 'ya': 'যা', 'da': 'দা',
+  },
+  kokborok: {
+    'khulumkha': 'খুলুমখা', 'ang': 'আং', 'nwng': 'নং',
+  },
+  // Kodava/Coorgi - Regional (Kannada script)
+  kodava: {
+    'a': 'ಅ', 'aa': 'ಆ', 'i': 'ಇ', 'ee': 'ಈ', 'u': 'ಉ', 'oo': 'ಊ',
+    'namaskara': 'ನಮಸ್ಕಾರ', 'poli': 'ಪೊಳಿ', 'naanu': 'ನಾನು',
+    'nee': 'ನೀ', 'eppadi': 'ಎಪ್ಪಡಿ', 'ulle': 'ಉಳ್ಳೆ', 'aave': 'ಆವೆ', 'alla': 'ಅಲ್ಲ',
+  },
+  coorgi: {
+    'namaskara': 'ನಮಸ್ಕಾರ', 'poli': 'ಪೊಳಿ', 'naanu': 'ನಾನು',
+  },
+  // Sourashtra - Regional (Tamil script)
+  sourashtra: {
+    'a': 'அ', 'aa': 'ஆ', 'i': 'இ', 'ee': 'ஈ', 'u': 'உ', 'oo': 'ஊ',
+    'namaskaram': 'நமஸ்காரம்', 'upkaar': 'உப்கார்', 'aamha': 'ஆம்ஹா',
+    'tumha': 'தும்ஹா', 'kasa': 'கஸா', 'aase': 'ஆஸே', 'haan': 'ஹாந்', 'nai': 'நை',
+  },
+  // Bhili/Bhil - Regional (Devanagari)
+  bhili: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'ram ram': 'राम राम', 'dhanyavad': 'धन्यवाद', 'hun': 'हुं',
+    'tun': 'तुं', 'kya': 'क्या', 'che': 'छे', 'haan': 'हां', 'naa': 'ना',
+  },
+  // Kurukh/Oraon - Regional (Devanagari)
+  kurukh: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'namaskar': 'नमस्कार', 'parnam': 'प्रणाम', 'en': 'एन',
+    'nin': 'निन', 'emda': 'एमदा', 'ekka': 'एक्का', 'haan': 'हाँ', 'illa': 'इल्ला',
+  },
+  oraon: {
+    'namaskar': 'नमस्कार', 'parnam': 'प्रणाम', 'en': 'एन',
+  },
+  // Awadhi - Regional (Devanagari)
+  awadhi: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'na': 'न',
+    'pranam': 'प्रणाम', 'dhanyavad': 'धन्यवाद', 'ham': 'हम',
+    'tu': 'तू', 'kaa': 'का', 'hal': 'हाल', 'ba': 'बा', 'haan': 'हाँ', 'naa': 'ना',
+  },
+  // Magahi - Regional (Devanagari)
+  magahi: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ee': 'ई', 'u': 'उ', 'oo': 'ऊ',
+    'pranam': 'प्रणाम', 'dhanyavad': 'धन्यवाद', 'ham': 'हम',
+    'tu': 'तू', 'kaa': 'का', 'haal': 'हाल', 'hai': 'है', 'haan': 'हाँ', 'naa': 'ना',
   },
   // Arabic
   arabic: {
