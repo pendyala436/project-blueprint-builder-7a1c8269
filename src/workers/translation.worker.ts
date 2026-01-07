@@ -1339,54 +1339,60 @@ async function processReceiverMessage(
     return { receiverView: text, wasTranslated: false };
   }
 
-  // Auto-detect source language from text script - CRITICAL for 300+ languages
+  // Auto-detect source language from text script
   const detected = detectLanguageFromText(originalText);
   
-  // Determine effective source language:
-  // 1. If text is in native script (non-Latin), trust script detection (Telugu, Hindi, Arabic, etc.)
-  // 2. If text is Latin, use sender's declared language for meaning
-  const effectiveSource = detected.isLatin 
-    ? senderLanguage 
-    : detected.language;
-  
-  console.log('[Worker] processReceiverMessage - TRANSLATION MODE:', {
+  console.log('[Worker] processReceiverMessage:', {
     originalText: originalText.substring(0, 50),
     detectedLanguage: detected.language,
-    detectedScript: detected.script,
     isLatin: detected.isLatin,
-    effectiveSource,
     senderLanguage,
-    receiverLanguage,
-    needsTranslation: !isSameLanguage(effectiveSource, receiverLanguage)
+    receiverLanguage
   });
 
   // Same language check - no translation needed
-  if (isSameLanguage(effectiveSource, receiverLanguage)) {
+  if (isSameLanguage(senderLanguage, receiverLanguage)) {
     console.log('[Worker] Same language - no translation needed');
     return { receiverView: originalText, wasTranslated: false };
   }
 
   // ========================================================
-  // TRANSLATION REQUIRED - Use NLLB model for EXACT meaning
-  // NEVER use transliteration here - it only converts sounds, not meaning!
-  // Example: Telugu "నమస్కారం" → English must be "Hello" (meaning)
-  //          NOT "namaskaram" (sound - wrong!)
+  // CRITICAL FIX: Handle Romanized input (e.g., "bagunnanu")
+  // When user types in Latin letters but sender language is non-Latin,
+  // first convert to native script, THEN translate to receiver's language
+  // 
+  // Example: "bagunnanu" (Latin) → "బాగున్నాను" (Telugu) → "I am fine" (English)
   // ========================================================
   
-  console.log('[Worker] Starting NLLB translation:', effectiveSource, '→', receiverLanguage);
+  let textToTranslate = originalText;
+  let effectiveSource = senderLanguage;
   
-  const result = await translateText(originalText, effectiveSource, receiverLanguage);
+  if (detected.isLatin && !isLatinScriptLanguage(senderLanguage)) {
+    // User typed in Latin but their language uses non-Latin script
+    // First convert to native script for better translation accuracy
+    console.log('[Worker] Converting Romanized text to native script first:', senderLanguage);
+    
+    const nativeResult = await transliterateToNative(originalText, senderLanguage);
+    if (nativeResult.success && nativeResult.text !== originalText) {
+      textToTranslate = nativeResult.text;
+      console.log('[Worker] Converted to native:', originalText, '→', textToTranslate.substring(0, 30));
+    }
+  } else if (!detected.isLatin) {
+    // Text is already in native script - use detected language
+    effectiveSource = detected.language;
+  }
+
+  // Now translate from sender's language to receiver's language
+  console.log('[Worker] Translating:', effectiveSource, '→', receiverLanguage);
   
-  console.log('[Worker] NLLB Translation result:', {
-    from: effectiveSource,
-    to: receiverLanguage,
-    input: originalText.substring(0, 50),
-    output: result.text.substring(0, 50),
-    success: result.success,
-    cached: result.cached
+  const result = await translateText(textToTranslate, effectiveSource, receiverLanguage);
+  
+  console.log('[Worker] Translation result:', {
+    input: textToTranslate.substring(0, 30),
+    output: result.text.substring(0, 30),
+    success: result.success
   });
   
-  // Return translation result
   return {
     receiverView: result.text,
     wasTranslated: result.success && result.text !== originalText,
