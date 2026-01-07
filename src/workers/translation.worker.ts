@@ -875,42 +875,130 @@ async function translateText(
 // ============================================================
 
 // Telugu phonetic map (Latin sounds → Telugu script)
+// Comprehensive mapping for accurate Romanized Telugu → Native script conversion
 const TELUGU_TRANSLITERATION: Record<string, string> = {
-  // Vowels
-  'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ', 
+  // === COMMON TELUGU WORDS (highest priority - exact match) ===
+  'bagunnava': 'బాగున్నావా', 'bagunnaru': 'బాగున్నారు', 'bagunnanu': 'బాగున్నాను',
+  'bagundi': 'బాగుంది', 'baga': 'బాగా', 'bagunna': 'బాగున్న',
+  'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'vanakkam': 'వణక్కం',
+  'hello': 'హలో', 'bye': 'బై', 'ok': 'ఓకే', 'yes': 'యెస్',
+  'thanks': 'థాంక్స్', 'please': 'ప్లీజ్', 'sorry': 'సారీ',
+  'ela': 'ఎలా', 'undi': 'ఉంది', 'enta': 'ఎంత', 'evaru': 'ఎవరు',
+  'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు', 'emiti': 'ఏమిటి',
+  'nenu': 'నేను', 'neevu': 'నీవు', 'meeru': 'మీరు', 'vaaru': 'వారు',
+  'raanu': 'రాను', 'velthanu': 'వెళ్తాను', 'chusthanu': 'చూస్తాను',
+  'manchi': 'మంచి', 'chala': 'చాలా', 'koncham': 'కొంచెం',
+  'avunu': 'అవును', 'kadu': 'కాదు', 'ledhu': 'లేదు', 'ledu': 'లేదు',
+  'ikkada': 'ఇక్కడ', 'akkada': 'అక్కడ', 'appudu': 'అప్పుడు',
+  'ippudu': 'ఇప్పుడు', 'epudu': 'ఎప్పుడు',
+  // === VOWELS ===
+  'a': 'అ', 'aa': 'ఆ', 'aaa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ', 
   'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
-  'o': 'ఒ', 'au': 'ఔ', 'ou': 'ఔ',
-  // Consonants with inherent 'a'
-  'ka': 'క', 'kha': 'ఖ', 'ga': 'గ', 'gha': 'ఘ', 'nga': 'ఙ',
-  'cha': 'చ', 'chha': 'ఛ', 'ja': 'జ', 'jha': 'ఝ', 'nya': 'ఞ',
-  'ta': 'ట', 'tha': 'ఠ', 'da': 'డ', 'dha': 'ఢ', 'na': 'న',
-  'tta': 'త', 'ttha': 'థ', 'dda': 'ద', 'ddha': 'ధ', 'nna': 'ణ',
-  'pa': 'ప', 'pha': 'ఫ', 'ba': 'బ', 'bha': 'భ', 'ma': 'మ',
-  'ya': 'య', 'ra': 'ర', 'la': 'ల', 'va': 'వ', 'wa': 'వ',
-  'sha': 'శ', 'ssa': 'ష', 'sa': 'స', 'ha': 'హ', 'lla': 'ళ',
-  // Common combinations (consonant + vowel)
-  'he': 'హె', 'ho': 'హో', 'hu': 'హు',
-  'ki': 'కి', 'ke': 'కె', 'ko': 'కో', 'ku': 'కు',
-  'gi': 'గి', 'ge': 'గె', 'go': 'గో', 'gu': 'గు',
-  'ji': 'జి', 'je': 'జె', 'jo': 'జో', 'ju': 'జు',
-  'ti': 'టి', 'te': 'టె', 'to': 'టో', 'tu': 'టు',
-  'di': 'డి', 'de': 'డె', 'do': 'డో', 'du': 'డు',
-  'ni': 'ని', 'ne': 'నె', 'no': 'నో', 'nu': 'ను',
-  'pi': 'పి', 'pe': 'పె', 'po': 'పో', 'pu': 'పు',
-  'bi': 'బి', 'be': 'బె', 'bo': 'బో', 'bu': 'బు',
-  'mi': 'మి', 'me': 'మె', 'mo': 'మో', 'mu': 'ము',
-  'yi': 'యి', 'ye': 'యె', 'yo': 'యో', 'yu': 'యు',
-  'ri': 'రి', 're': 'రె', 'ro': 'రో', 'ru': 'రు',
-  'li': 'లి', 'le': 'లె', 'lo': 'లో', 'lu': 'లు',
-  'vi': 'వి', 've': 'వె', 'vo': 'వో', 'vu': 'వు',
-  'si': 'సి', 'se': 'సె', 'so': 'సో', 'su': 'సు',
-  // Single consonants (end of word)
+  'o': 'ఒ', 'au': 'ఔ', 'ou': 'ఔ', 'ae': 'ఏ',
+  // === CONSONANTS WITH VOWEL COMBINATIONS ===
+  // Ka series
+  'ka': 'క', 'kaa': 'కా', 'ki': 'కి', 'kii': 'కీ', 'kee': 'కీ',
+  'ku': 'కు', 'kuu': 'కూ', 'koo': 'కూ', 'ke': 'కె', 'kai': 'కై',
+  'ko': 'కో', 'kau': 'కౌ', 'kam': 'కం',
+  // Kha series
+  'kha': 'ఖ', 'khaa': 'ఖా', 'khi': 'ఖి', 'khu': 'ఖు', 'khe': 'ఖె', 'kho': 'ఖో',
+  // Ga series
+  'ga': 'గ', 'gaa': 'గా', 'gi': 'గి', 'gii': 'గీ', 'gee': 'గీ',
+  'gu': 'గు', 'guu': 'గూ', 'goo': 'గూ', 'ge': 'గె', 'gai': 'గై',
+  'go': 'గో', 'gau': 'గౌ', 'gam': 'గం',
+  // Gha series
+  'gha': 'ఘ', 'ghaa': 'ఘా', 'ghi': 'ఘి', 'ghu': 'ఘు', 'ghe': 'ఘె', 'gho': 'ఘో',
+  'nga': 'ఙ',
+  // Cha series
+  'cha': 'చ', 'chaa': 'చా', 'chi': 'చి', 'chii': 'చీ', 'chee': 'చీ',
+  'chu': 'చు', 'chuu': 'చూ', 'choo': 'చూ', 'che': 'చె', 'chai': 'చై',
+  'cho': 'చో', 'chau': 'చౌ', 'cham': 'చం',
+  'chha': 'ఛ', 'chhaa': 'ఛా', 'chhi': 'ఛి', 'chhu': 'ఛు',
+  // Ja series
+  'ja': 'జ', 'jaa': 'జా', 'ji': 'జి', 'jii': 'జీ', 'jee': 'జీ',
+  'ju': 'జు', 'juu': 'జూ', 'joo': 'జూ', 'je': 'జె', 'jai': 'జై',
+  'jo': 'జో', 'jau': 'జౌ', 'jam': 'జం',
+  'jha': 'ఝ', 'jhaa': 'ఝా', 'jhi': 'ఝి', 'jhu': 'ఝు',
+  'nya': 'ఞ',
+  // Ta (retroflex) series
+  'ta': 'ట', 'taa': 'టా', 'ti': 'టి', 'tii': 'టీ', 'tee': 'టీ',
+  'tu': 'టు', 'tuu': 'టూ', 'too': 'టూ', 'te': 'టె', 'tai': 'టై',
+  'to': 'టో', 'tau': 'టౌ', 'tam': 'టం',
+  'tha': 'ఠ', 'thaa': 'ఠా', 'thi': 'ఠి', 'thu': 'ఠు', 'the': 'ఠె', 'tho': 'ఠో',
+  // Da (retroflex) series
+  'da': 'డ', 'daa': 'డా', 'di': 'డి', 'dii': 'డీ', 'dee': 'డీ',
+  'du': 'డు', 'duu': 'డూ', 'doo': 'డూ', 'de': 'డె', 'dai': 'డై',
+  'do': 'డో', 'dau': 'డౌ', 'dam': 'డం',
+  'dha': 'ఢ', 'dhaa': 'ఢా', 'dhi': 'ఢి', 'dhu': 'ఢు', 'dhe': 'ఢె', 'dho': 'ఢో',
+  // Na series  
+  'na': 'న', 'naa': 'నా', 'ni': 'ని', 'nii': 'నీ', 'nee': 'నీ',
+  'nu': 'ను', 'nuu': 'నూ', 'noo': 'నూ', 'ne': 'నె', 'nai': 'నై',
+  'no': 'నో', 'nau': 'నౌ', 'nam': 'నం',
+  'nna': 'న్న', 'nnaa': 'న్నా', 'nni': 'న్ని', 'nnu': 'న్ను', 'nne': 'న్నె', 'nno': 'న్నో',
+  // Tta (dental ta) series
+  'tta': 'త', 'ttaa': 'తా', 'tti': 'తి', 'ttii': 'తీ', 'ttee': 'తీ',
+  'ttu': 'తు', 'ttuu': 'తూ', 'ttoo': 'తూ', 'tte': 'తె', 'ttai': 'తై',
+  'tto': 'తో', 'ttau': 'తౌ', 'ttam': 'తం',
+  'ttha': 'థ', 'tthaa': 'థా', 'tthi': 'థి', 'tthu': 'థు', 'tthe': 'థె', 'ttho': 'థో',
+  // Dda (dental da) series
+  'dda': 'ద', 'ddaa': 'దా', 'ddi': 'ది', 'ddii': 'దీ', 'ddee': 'దీ',
+  'ddu': 'దు', 'dduu': 'దూ', 'ddoo': 'దూ', 'dde': 'దె', 'ddai': 'దై',
+  'ddo': 'దో', 'ddau': 'దౌ', 'ddam': 'దం',
+  'ddha': 'ధ', 'ddhaa': 'ధా', 'ddhi': 'ధి', 'ddhu': 'ధు', 'ddhe': 'ధె', 'ddho': 'ధో',
+  // Nna (retroflex na) series
+  'Nna': 'ణ', 'Nnaa': 'ణా', 'Nni': 'ణి', 'Nnu': 'ణు',
+  // Pa series
+  'pa': 'ప', 'paa': 'పా', 'pi': 'పి', 'pii': 'పీ', 'pee': 'పీ',
+  'pu': 'పు', 'puu': 'పూ', 'poo': 'పూ', 'pe': 'పె', 'pai': 'పై',
+  'po': 'పో', 'pau': 'పౌ', 'pam': 'పం',
+  'pha': 'ఫ', 'phaa': 'ఫా', 'phi': 'ఫి', 'phu': 'ఫు', 'phe': 'ఫె', 'pho': 'ఫో',
+  // Ba series
+  'ba': 'బ', 'baa': 'బా', 'bi': 'బి', 'bii': 'బీ', 'bee': 'బీ',
+  'bu': 'బు', 'buu': 'బూ', 'boo': 'బూ', 'be': 'బె', 'bai': 'బై',
+  'bo': 'బో', 'bau': 'బౌ', 'bam': 'బం',
+  'bha': 'భ', 'bhaa': 'భా', 'bhi': 'భి', 'bhu': 'భు', 'bhe': 'భె', 'bho': 'భో',
+  // Ma series
+  'ma': 'మ', 'maa': 'మా', 'mi': 'మి', 'mii': 'మీ', 'mee': 'మీ',
+  'mu': 'ము', 'muu': 'మూ', 'moo': 'మూ', 'me': 'మె', 'mai': 'మై',
+  'mo': 'మో', 'mau': 'మౌ', 'mam': 'మం',
+  // Ya series
+  'ya': 'య', 'yaa': 'యా', 'yi': 'యి', 'yii': 'యీ', 'yee': 'యీ',
+  'yu': 'యు', 'yuu': 'యూ', 'yoo': 'యూ', 'ye': 'యె', 'yai': 'యై',
+  'yo': 'యో', 'yau': 'యౌ', 'yam': 'యం',
+  // Ra series
+  'ra': 'ర', 'raa': 'రా', 'ri': 'రి', 'rii': 'రీ', 'ree': 'రీ',
+  'ru': 'రు', 'ruu': 'రూ', 'roo': 'రూ', 're': 'రె', 'rai': 'రై',
+  'ro': 'రో', 'rau': 'రౌ', 'ram': 'రం',
+  // La series
+  'la': 'ల', 'laa': 'లా', 'li': 'లి', 'lii': 'లీ', 'lee': 'లీ',
+  'lu': 'లు', 'luu': 'లూ', 'loo': 'లూ', 'le': 'లె', 'lai': 'లై',
+  'lo': 'లో', 'lau': 'లౌ', 'lam': 'లం',
+  'lla': 'ళ', 'llaa': 'ళా', 'lli': 'ళి', 'llu': 'ళు', 'lle': 'ళె', 'llo': 'ళో',
+  // Va/Wa series
+  'va': 'వ', 'vaa': 'వా', 'vi': 'వి', 'vii': 'వీ', 'vee': 'వీ',
+  'vu': 'వు', 'vuu': 'వూ', 'voo': 'వూ', 've': 'వె', 'vai': 'వై',
+  'vo': 'వో', 'vau': 'వౌ', 'vam': 'వం',
+  'wa': 'వ', 'waa': 'వా', 'wi': 'వి', 'wu': 'వు', 'we': 'వె', 'wo': 'వో',
+  // Sha series
+  'sha': 'శ', 'shaa': 'శా', 'shi': 'శి', 'shii': 'శీ', 'shee': 'శీ',
+  'shu': 'శు', 'shuu': 'శూ', 'shoo': 'శూ', 'she': 'శె', 'shai': 'శై',
+  'sho': 'శో', 'shau': 'శౌ', 'sham': 'శం',
+  // Ssa (retroflex sha) series
+  'ssa': 'ష', 'ssaa': 'షా', 'ssi': 'షి', 'ssu': 'షు', 'sse': 'షె', 'sso': 'షో',
+  // Sa series
+  'sa': 'స', 'saa': 'సా', 'si': 'సి', 'sii': 'సీ', 'see': 'సీ',
+  'su': 'సు', 'suu': 'సూ', 'soo': 'సూ', 'se': 'సె', 'sai': 'సై',
+  'so': 'సో', 'sau': 'సౌ', 'sam': 'సం',
+  // Ha series
+  'ha': 'హ', 'haa': 'హా', 'hi': 'హి', 'hii': 'హీ', 'hee': 'హీ',
+  'hu': 'హు', 'huu': 'హూ', 'hoo': 'హూ', 'he': 'హె', 'hai': 'హై',
+  'ho': 'హో', 'hau': 'హౌ', 'ham': 'హం',
+  // === HALANT CONSONANTS (end of word/syllable) ===
   'k': 'క్', 'g': 'గ్', 'j': 'జ్', 't': 'ట్', 'd': 'డ్',
   'n': 'న్', 'p': 'ప్', 'b': 'బ్', 'm': 'మ్', 'y': 'య్',
   'r': 'ర్', 'l': 'ల్', 'v': 'వ్', 's': 'స్', 'h': 'హ్',
-  // Common words (priority - checked first via exact match)
-  'hello': 'హలో', 'hi': 'హాయ్', 'bye': 'బై', 'ok': 'ఓకే', 'yes': 'యెస్',
-  'thanks': 'థాంక్స్', 'please': 'ప్లీజ్', 'sorry': 'సారీ',
+  // === ANUSVARA/VISARGA ===
+  'am': 'అం', 'ah': 'అః',
 };
 
 // Hindi phonetic map (Latin sounds → Devanagari script)
