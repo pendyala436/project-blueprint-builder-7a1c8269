@@ -1044,6 +1044,19 @@ serve(async (req) => {
       ? transliterateToLatin(inTargetScript)
       : inTargetScript;
     
+    // COMPLETE REVERSE: English → Source (for target user's reply to reach source user)
+    const sourceScriptName = getTargetScriptFromLanguage(fromLang);
+    let englishToSource = inEnglish;
+    if (sourceScriptName !== 'latin') {
+      const converted = transliterateFromLatin(inEnglish, sourceScriptName);
+      const convertedScript = detectScriptFromText(converted);
+      if (convertedScript === sourceScriptName || converted !== inEnglish) {
+        englishToSource = converted;
+      } else {
+        englishToSource = forcePhoneticConversion(inEnglish, sourceScriptName);
+      }
+    }
+    
     // Full response with English pivot architecture
     const response: Record<string, any> = {
       success: true,
@@ -1070,8 +1083,11 @@ serve(async (req) => {
       // Reverse: Target → English (for replies)
       targetToEnglish: targetToEnglish,
       
+      // Complete Reverse: English → Source (for target user replying back)
+      englishToSource: englishToSource,
+      
       // ═══════════════════════════════════════════════════════════════════
-      // BIDIRECTIONAL CHAT FIELDS
+      // BIDIRECTIONAL CHAT FIELDS (Source ↔ English ↔ Target)
       // ═══════════════════════════════════════════════════════════════════
       bidirectional: {
         // What was typed
@@ -1082,14 +1098,30 @@ serve(async (req) => {
         pivot: 'english',
         pivotText: inEnglish,
         
+        // ═══════════════════════════════════════════════════════════════
+        // FORWARD PATH: Source → English → Target
+        // ═══════════════════════════════════════════════════════════════
+        sourceToEnglish: inEnglish,
+        englishToTarget: inTargetScript,
+        
+        // ═══════════════════════════════════════════════════════════════
+        // REVERSE PATH: Target → English → Source  
+        // ═══════════════════════════════════════════════════════════════
+        targetToEnglish: targetToEnglish,
+        englishToSource: englishToSource,
+        
         // For English/Latin speaker to read
         forEnglishReader: inEnglish,
+        
+        // For source language speaker to read
+        forSourceReader: englishToSource,
         
         // For target language speaker to read
         forTargetReader: inTargetScript,
         
-        // For reverse communication (target replies)
-        reverseToEnglish: targetToEnglish
+        // Reverse communication paths
+        reverseToEnglish: targetToEnglish,
+        reverseToSource: englishToSource
       },
       
       // Metadata
@@ -1097,17 +1129,18 @@ serve(async (req) => {
       targetLang: toLang,
       sourceScript: sourceScript,
       targetScript: targetScript,
+      sourceScriptName: sourceScriptName,
       pivotLanguage: 'english',
       
       // Architecture info
       method: 'english_pivot_transliteration',
-      architecture: 'source → english → target',
+      architecture: 'source ↔ english ↔ target',
       supportedLanguages: 900,
       totalCombinations: '810,000+',
       actualMappings: '1,800 (900×2 via English pivot)'
     };
     
-    console.log(`[English Pivot] "${inputText.substring(0, 15)}..." [${sourceScript}] → English: "${inEnglish.substring(0, 15)}..." → [${targetScript}]: "${inTargetScript.substring(0, 15)}..."`);
+    console.log(`[English Pivot] "${inputText.substring(0, 15)}..." [${sourceScript}] → English: "${inEnglish.substring(0, 15)}..." → [${targetScript}]: "${inTargetScript.substring(0, 15)}..." | Reverse: "${englishToSource.substring(0, 15)}..."`);
     
     return new Response(
       JSON.stringify(response),
