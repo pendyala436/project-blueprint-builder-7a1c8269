@@ -1,5 +1,47 @@
+// Re-export all Gboard languages as the main language list
+// This provides 900+ language coverage matching Google Gboard
+import { 
+  ALL_GBOARD_LANGUAGES, 
+  INDIAN_GBOARD_LANGUAGES,
+  WORLD_GBOARD_LANGUAGES,
+  getGboardLanguageByCode,
+  getGboardLanguageByName,
+  searchGboardLanguages,
+  isIndianGboardLanguage,
+  getGboardLanguageCount,
+  type GboardLanguage 
+} from './gboardLanguages';
+
+// Export the comprehensive language list for backwards compatibility
+export const languages = ALL_GBOARD_LANGUAGES.map(lang => ({
+  code: lang.code,
+  name: lang.name,
+  nativeName: lang.nativeName,
+  script: lang.script,
+  isIndian: lang.isIndian,
+  region: lang.region
+}));
+
+// Re-export helpers
+export { 
+  ALL_GBOARD_LANGUAGES,
+  INDIAN_GBOARD_LANGUAGES,
+  WORLD_GBOARD_LANGUAGES,
+  getGboardLanguageByCode,
+  getGboardLanguageByName,
+  searchGboardLanguages,
+  isIndianGboardLanguage,
+  getGboardLanguageCount,
+};
+
+export type { GboardLanguage };
+
+// Legacy exports for backwards compatibility
+export const INDIAN_LANGUAGES = INDIAN_GBOARD_LANGUAGES;
+export const WORLD_LANGUAGES = WORLD_GBOARD_LANGUAGES;
+
 // Complete language list including ISO 639-1, NLLB-200, and all Indian languages
-export const languages = [
+export const legacyLanguages = [
   // Major World Languages (ISO 639-1)
   { code: "aa", name: "Afar", nativeName: "Afaraf" },
   { code: "ab", name: "Abkhazian", nativeName: "Аҧсуа" },
