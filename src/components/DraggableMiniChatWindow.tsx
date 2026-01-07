@@ -54,6 +54,7 @@ import {
   isLatinText as asyncIsLatinText,
   needsScriptConversion as asyncNeedsScriptConversion,
   autoDetectLanguageSync,
+  processMessageForChat,
 } from "@/lib/translation/async-translator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
@@ -641,6 +642,7 @@ const DraggableMiniChatWindow = ({
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   // NON-BLOCKING: Load messages with optimistic display first, then background translation
+  // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
   const loadMessages = async () => {
     const { data } = await supabase
       .from("chat_messages")
@@ -651,48 +653,90 @@ const DraggableMiniChatWindow = ({
 
     if (data) {
       // STEP 1: IMMEDIATE - Show messages instantly without translation
-      const immediateMessages = data.map((m) => ({
-        id: m.id,
-        senderId: m.sender_id,
-        message: m.message,
-        translatedMessage: undefined, // Will be filled by background
-        isTranslated: false,
-        detectedLanguage: undefined,
-        createdAt: m.created_at
-      }));
+      const immediateMessages = data.map((m) => {
+        const detected = autoDetectLanguageSync(m.message);
+        return {
+          id: m.id,
+          senderId: m.sender_id,
+          message: m.message,
+          translatedMessage: undefined, // Will be filled by background
+          isTranslated: false,
+          detectedLanguage: detected.language,
+          createdAt: m.created_at
+        };
+      });
       setMessages(immediateMessages);
 
       // STEP 2: BACKGROUND - Translate partner's messages without blocking UI
-      // Only translate if languages are different
-      if (!isSameLanguage(partnerLanguage, currentUserLanguage)) {
-        const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
+      const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
+      
+      // Process each partner message in background
+      partnerMessages.forEach((m) => {
+        const detected = autoDetectLanguageSync(m.message);
+        const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
+        const targetLanguage = currentUserLanguage;
+        const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
         
-        // Parallel background translation - doesn't block UI
-        partnerMessages.forEach((m) => {
+        if (sameLanguage) {
+          // SAME LANGUAGE: Just convert to native script if needed
+          if (asyncNeedsScriptConversion(targetLanguage) && detected.isLatin) {
+            convertToNativeScriptAsync(m.message, targetLanguage)
+              .then(result => {
+                if (result.isTranslated && result.text) {
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === m.id 
+                      ? { 
+                          ...msg, 
+                          translatedMessage: result.text, 
+                          isTranslated: true,
+                          detectedLanguage: sourceLanguage
+                        }
+                      : msg
+                  ));
+                }
+              })
+              .catch(() => {}); // Non-blocking
+          }
+        } else {
+          // DIFFERENT LANGUAGE: Translate to receiver's language + native script
           translateInBackground(
             m.message,
-            partnerLanguage,
-            currentUserLanguage,
-            (result) => {
-              // Update only this message when translation completes
+            sourceLanguage,
+            targetLanguage,
+            async (result) => {
+              let finalText = result.text;
+              
+              // Convert to native script if needed
+              if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage) && asyncIsLatinText(result.text)) {
+                try {
+                  const nativeResult = await convertToNativeScriptAsync(result.text, targetLanguage);
+                  if (nativeResult.isTranslated && nativeResult.text) {
+                    finalText = nativeResult.text;
+                  }
+                } catch {
+                  // Keep translated text
+                }
+              }
+              
               setMessages(prev => prev.map(msg => 
                 msg.id === m.id 
                   ? {
                       ...msg,
-                      translatedMessage: result.text,
-                      isTranslated: result.isTranslated,
-                      detectedLanguage: result.sourceLanguage || partnerLanguage
+                      translatedMessage: finalText,
+                      isTranslated: true,
+                      detectedLanguage: result.detectedLanguage || sourceLanguage
                     }
                   : msg
               ));
             }
           );
-        });
-      }
+        }
+      });
     }
   };
 
   // NON-BLOCKING: Subscribe to new messages with immediate display + background translation
+  // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -724,7 +768,7 @@ const DraggableMiniChatWindow = ({
             }];
           });
 
-          // Update activity and unread count
+          // Update activity and unread count for partner messages
           if (newMsg.sender_id !== currentUserId) {
             setLastActivityTime(Date.now());
             if (isMinimized) {
@@ -732,49 +776,78 @@ const DraggableMiniChatWindow = ({
             }
           }
 
-          // STEP 2: BACKGROUND - Translate partner's message without blocking
-          // Bi-directional: Partner message → translate to current user's language
-          if (newMsg.sender_id !== currentUserId) {
-            // Use auto-detected language or fall back to partner's configured language
-            const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
-            
-            // Same language check - no translation needed, but may need script conversion
-            if (isSameLanguage(sourceLanguage, currentUserLanguage)) {
-              // Same language - just convert to native script if needed
-              if (asyncNeedsScriptConversion(currentUserLanguage) && detected.isLatin) {
-                convertToNativeScriptAsync(newMsg.message, currentUserLanguage)
-                  .then(result => {
-                    if (result.isTranslated) {
-                      setMessages(prev => prev.map(msg => 
-                        msg.id === newMsg.id 
-                          ? { ...msg, translatedMessage: result.text, isTranslated: true }
-                          : msg
-                      ));
-                    }
-                  })
-                  .catch(() => {}); // Non-blocking
-              }
-            } else {
-              // Different languages - translate in background
-              translateInBackground(
-                newMsg.message,
-                sourceLanguage,
-                currentUserLanguage,
-                (result) => {
-                  // Update message when translation completes
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === newMsg.id 
-                      ? {
-                          ...msg,
-                          translatedMessage: result.text,
-                          isTranslated: result.isTranslated,
-                          detectedLanguage: result.detectedLanguage || sourceLanguage
-                        }
-                      : msg
-                  ));
-                }
-              );
+          // STEP 2: BACKGROUND - Process message based on sender
+          if (newMsg.sender_id === currentUserId) {
+            // OWN MESSAGE: Already in sender's native script (processed during send)
+            // No further processing needed - sender already sees native script
+            return;
+          }
+          
+          // PARTNER MESSAGE: Translate to current user's mother tongue + native script
+          // Auto-detect source language from script
+          const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
+          const targetLanguage = currentUserLanguage;
+          
+          // Check if same language
+          const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
+          
+          if (sameLanguage) {
+            // SAME LANGUAGE: No translation needed, but convert to native script if needed
+            if (asyncNeedsScriptConversion(targetLanguage) && detected.isLatin) {
+              convertToNativeScriptAsync(newMsg.message, targetLanguage)
+                .then(result => {
+                  if (result.isTranslated && result.text) {
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === newMsg.id 
+                        ? { 
+                            ...msg, 
+                            translatedMessage: result.text, 
+                            isTranslated: true,
+                            detectedLanguage: sourceLanguage
+                          }
+                        : msg
+                    ));
+                  }
+                })
+                .catch(() => {}); // Non-blocking, fail silently
             }
+          } else {
+            // DIFFERENT LANGUAGE: Translate to receiver's language + native script
+            translateInBackground(
+              newMsg.message,
+              sourceLanguage,
+              targetLanguage,
+              async (result) => {
+                let finalText = result.text;
+                
+                // If translation successful and target language needs native script
+                if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage)) {
+                  try {
+                    // Convert translated text to native script if it's in Latin
+                    if (asyncIsLatinText(result.text)) {
+                      const nativeResult = await convertToNativeScriptAsync(result.text, targetLanguage);
+                      if (nativeResult.isTranslated && nativeResult.text) {
+                        finalText = nativeResult.text;
+                      }
+                    }
+                  } catch {
+                    // Keep translated text if native conversion fails
+                  }
+                }
+                
+                // Update message with translated + native script text
+                setMessages(prev => prev.map(msg => 
+                  msg.id === newMsg.id 
+                    ? {
+                        ...msg,
+                        translatedMessage: finalText,
+                        isTranslated: true,
+                        detectedLanguage: result.detectedLanguage || sourceLanguage
+                      }
+                    : msg
+                ));
+              }
+            );
           }
         }
       )
@@ -830,6 +903,7 @@ const DraggableMiniChatWindow = ({
   const MAX_MESSAGE_LENGTH = 2000;
 
   // NON-BLOCKING: Send message with optimistic UI update
+  // Bi-directional: Sender sees native script, receiver sees translated native script
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
@@ -845,28 +919,29 @@ const DraggableMiniChatWindow = ({
     }
 
     // CRITICAL: Capture the current preview BEFORE clearing state
-    // This ensures we use the preview that matches the current input
     const currentPreview = livePreview.text;
     const hasPreview = currentPreview && currentPreview !== messageText && transliterationEnabled;
-    const messageToSend = hasPreview ? currentPreview : messageText;
+    
+    // Determine what the sender will see (native script if preview available)
+    const senderViewMessage = hasPreview ? currentPreview : messageText;
 
     // IMMEDIATE: Clear input and update UI (non-blocking)
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
     setLastActivityTime(Date.now());
     
-    // Clear any pending preview timeout to prevent stale updates
+    // Clear any pending preview timeout
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
     
-    // OPTIMISTIC: Add message to UI immediately
+    // OPTIMISTIC: Add message to UI immediately in sender's native script
     const tempId = `temp-${Date.now()}`;
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageToSend,
+      message: senderViewMessage, // Sender sees their native script
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -875,32 +950,33 @@ const DraggableMiniChatWindow = ({
     // BACKGROUND: Process and send without blocking
     setIsSending(true);
     try {
-      let processedMessage = messageText;
+      let finalSenderMessage = senderViewMessage;
       
-      // If no preview but needs conversion, convert now (quick for cached)
+      // If no preview but transliteration enabled and needs conversion
       if (!hasPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
         try {
           const converted = await convertToNativeScriptAsync(messageText, currentUserLanguage);
-          processedMessage = converted.text || messageText;
-          
-          // Update optimistic message with converted text
-          setMessages(prev => prev.map(m => 
-            m.id === tempId ? { ...m, message: processedMessage } : m
-          ));
+          if (converted.isTranslated && converted.text) {
+            finalSenderMessage = converted.text;
+            // Update optimistic message with converted text
+            setMessages(prev => prev.map(m => 
+              m.id === tempId ? { ...m, message: finalSenderMessage } : m
+            ));
+          }
         } catch (err) {
           console.error('[DraggableMiniChatWindow] Script conversion error:', err);
         }
-      } else if (hasPreview) {
-        processedMessage = currentPreview; // Use captured preview, not stale state
       }
       
+      // BACKGROUND: Process for receiver (translation happens in background after send)
+      // We send the sender's native script version - receiver will translate on their side
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: processedMessage
+          message: finalSenderMessage // Send sender's native script version
         });
 
       if (error) throw error;
