@@ -131,28 +131,45 @@ function generateDevanagariMapping(): ScriptMapping {
   const fromLatinMap = new Map<string, string>();
   const vowelModifiers = new Map<string, string>();
   
-  // Vowels
+  // Vowels (standalone forms)
   const vowels: [string, string][] = [
-    ['अ', 'a'], ['आ', 'aa'], ['इ', 'i'], ['ई', 'ii'], ['उ', 'u'], ['ऊ', 'uu'],
+    ['अ', 'a'], ['आ', 'aa'], ['इ', 'i'], ['ई', 'ee'], ['उ', 'u'], ['ऊ', 'oo'],
     ['ऋ', 'ri'], ['ए', 'e'], ['ऐ', 'ai'], ['ओ', 'o'], ['औ', 'au'], ['अं', 'am'], ['अः', 'ah']
   ];
   
-  // Consonants
+  // Consonants with inherent 'a' for toLatinMap
   const consonants: [string, string][] = [
+    ['क', 'ka'], ['ख', 'kha'], ['ग', 'ga'], ['घ', 'gha'], ['ङ', 'nga'],
+    ['च', 'cha'], ['छ', 'chha'], ['ज', 'ja'], ['झ', 'jha'], ['ञ', 'nya'],
+    ['ट', 'ta'], ['ठ', 'tha'], ['ड', 'da'], ['ढ', 'dha'], ['ण', 'na'],
+    ['त', 'ta'], ['थ', 'tha'], ['द', 'da'], ['ध', 'dha'], ['न', 'na'],
+    ['प', 'pa'], ['फ', 'pha'], ['ब', 'ba'], ['भ', 'bha'], ['म', 'ma'],
+    ['य', 'ya'], ['र', 'ra'], ['ल', 'la'], ['व', 'va'], ['श', 'sha'],
+    ['ष', 'sha'], ['स', 'sa'], ['ह', 'ha'], ['क्ष', 'ksha'], ['त्र', 'tra'], ['ज्ञ', 'gya']
+  ];
+  
+  // Consonant base forms (without inherent vowel) for fromLatinMap
+  const consonantBases: [string, string][] = [
     ['क', 'k'], ['ख', 'kh'], ['ग', 'g'], ['घ', 'gh'], ['ङ', 'ng'],
     ['च', 'ch'], ['छ', 'chh'], ['ज', 'j'], ['झ', 'jh'], ['ञ', 'ny'],
     ['ट', 't'], ['ठ', 'th'], ['ड', 'd'], ['ढ', 'dh'], ['ण', 'n'],
     ['त', 't'], ['थ', 'th'], ['द', 'd'], ['ध', 'dh'], ['न', 'n'],
     ['प', 'p'], ['फ', 'ph'], ['ब', 'b'], ['भ', 'bh'], ['म', 'm'],
-    ['य', 'y'], ['र', 'r'], ['ल', 'l'], ['व', 'v'], ['श', 'sh'],
-    ['ष', 'shh'], ['स', 's'], ['ह', 'h'], ['क्ष', 'ksh'], ['त्र', 'tr'], ['ज्ञ', 'gn'],
-    ['क़', 'q'], ['ख़', 'kh'], ['ग़', 'gh'], ['ज़', 'z'], ['फ़', 'f']
+    ['य', 'y'], ['र', 'r'], ['ल', 'l'], ['व', 'v'], ['व', 'w'], ['श', 'sh'],
+    ['ष', 'sh'], ['स', 's'], ['ह', 'h'],
+    // Foreign sounds
+    ['क़', 'q'], ['ख़', 'kh'], ['ग़', 'gh'], ['ज़', 'z'], ['फ़', 'f'], ['क', 'c'], ['क्स', 'x']
   ];
   
   // Vowel signs (matras)
   const matras: [string, string][] = [
-    ['ा', 'aa'], ['ि', 'i'], ['ी', 'ii'], ['ु', 'u'], ['ू', 'uu'],
-    ['ृ', 'ri'], ['े', 'e'], ['ै', 'ai'], ['ो', 'o'], ['ौ', 'au'], ['ं', 'm'], ['ः', 'h']
+    ['ा', 'aa'], ['ि', 'i'], ['ी', 'ee'], ['ु', 'u'], ['ू', 'oo'],
+    ['ृ', 'ri'], ['े', 'e'], ['ै', 'ai'], ['ो', 'o'], ['ौ', 'au']
+  ];
+  
+  // Special characters
+  const specials: [string, string][] = [
+    ['ं', 'm'], ['ः', 'h'], ['ँ', 'n']  // Anusvara, Visarga, Chandrabindu
   ];
   
   vowels.forEach(([deva, latin]) => {
@@ -161,13 +178,22 @@ function generateDevanagariMapping(): ScriptMapping {
   });
   
   consonants.forEach(([deva, latin]) => {
-    toLatinMap.set(deva, latin + 'a');
+    toLatinMap.set(deva, latin);
+  });
+  
+  consonantBases.forEach(([deva, latin]) => {
     fromLatinMap.set(latin, deva);
   });
   
   matras.forEach(([deva, latin]) => {
+    toLatinMap.set(deva, latin);
     vowelModifiers.set(deva, latin);
     vowelModifiers.set(latin, deva);
+  });
+  
+  specials.forEach(([deva, latin]) => {
+    toLatinMap.set(deva, latin);
+    vowelModifiers.set(deva, latin);
   });
   
   return { toLatinMap, fromLatinMap, vowelModifiers, virama: '्' };
@@ -180,25 +206,41 @@ function generateTeluguMapping(): ScriptMapping {
   const vowelModifiers = new Map<string, string>();
   
   const vowels: [string, string][] = [
-    ['అ', 'a'], ['ఆ', 'aa'], ['ఇ', 'i'], ['ఈ', 'ii'], ['ఉ', 'u'], ['ఊ', 'uu'],
-    ['ఋ', 'ri'], ['ఎ', 'e'], ['ఏ', 'ee'], ['ఐ', 'ai'], ['ఒ', 'o'], ['ఓ', 'oo'], ['ఔ', 'au']
+    ['అ', 'a'], ['ఆ', 'aa'], ['ఇ', 'i'], ['ఈ', 'ee'], ['ఉ', 'u'], ['ఊ', 'oo'],
+    ['ఋ', 'ri'], ['ఎ', 'e'], ['ఏ', 'ae'], ['ఐ', 'ai'], ['ఒ', 'o'], ['ఓ', 'o'], ['ఔ', 'au']
   ];
   
   const consonants: [string, string][] = [
+    ['క', 'ka'], ['ఖ', 'kha'], ['గ', 'ga'], ['ఘ', 'gha'], ['ఙ', 'nga'],
+    ['చ', 'cha'], ['ఛ', 'chha'], ['జ', 'ja'], ['ఝ', 'jha'], ['ఞ', 'nya'],
+    ['ట', 'ta'], ['ఠ', 'tha'], ['డ', 'da'], ['ఢ', 'dha'], ['ణ', 'na'],
+    ['త', 'tha'], ['థ', 'thha'], ['ద', 'da'], ['ధ', 'dha'], ['న', 'na'],
+    ['ప', 'pa'], ['ఫ', 'pha'], ['బ', 'ba'], ['భ', 'bha'], ['మ', 'ma'],
+    ['య', 'ya'], ['ర', 'ra'], ['ల', 'la'], ['వ', 'va'], ['శ', 'sha'],
+    ['ష', 'sha'], ['స', 'sa'], ['హ', 'ha'], ['ళ', 'la'], ['క్ష', 'ksha']
+  ];
+  
+  // Consonant base forms (without inherent vowel) for fromLatinMap
+  const consonantBases: [string, string][] = [
     ['క', 'k'], ['ఖ', 'kh'], ['గ', 'g'], ['ఘ', 'gh'], ['ఙ', 'ng'],
     ['చ', 'ch'], ['ఛ', 'chh'], ['జ', 'j'], ['ఝ', 'jh'], ['ఞ', 'ny'],
     ['ట', 't'], ['ఠ', 'th'], ['డ', 'd'], ['ఢ', 'dh'], ['ణ', 'n'],
     ['త', 't'], ['థ', 'th'], ['ద', 'd'], ['ధ', 'dh'], ['న', 'n'],
     ['ప', 'p'], ['ఫ', 'ph'], ['బ', 'b'], ['భ', 'bh'], ['మ', 'm'],
-    ['య', 'y'], ['ర', 'r'], ['ల', 'l'], ['వ', 'v'], ['శ', 'sh'],
-    ['ష', 'shh'], ['స', 's'], ['హ', 'h'], ['ళ', 'l'], ['క్ష', 'ksh'],
-    // Additional mappings for foreign sounds (using closest Telugu equivalents)
-    ['ఫ', 'f'], ['జ', 'z'], ['క', 'c'], ['క', 'q'], ['వ', 'w'], ['క్స', 'x']
+    ['య', 'y'], ['ర', 'r'], ['ల', 'l'], ['వ', 'v'], ['వ', 'w'], ['శ', 'sh'],
+    ['ష', 'sh'], ['స', 's'], ['హ', 'h'], ['ళ', 'l'],
+    // Foreign sound mappings
+    ['ఫ', 'f'], ['జ', 'z'], ['క', 'c'], ['క', 'q'], ['క్స', 'x']
   ];
   
   const matras: [string, string][] = [
-    ['ా', 'aa'], ['ి', 'i'], ['ీ', 'ii'], ['ు', 'u'], ['ూ', 'uu'],
-    ['ృ', 'ri'], ['ె', 'e'], ['ే', 'ee'], ['ై', 'ai'], ['ొ', 'o'], ['ో', 'oo'], ['ౌ', 'au'], ['ం', 'm'], ['ః', 'h']
+    ['ా', 'aa'], ['ి', 'i'], ['ీ', 'ee'], ['ు', 'u'], ['ూ', 'oo'],
+    ['ృ', 'ri'], ['ె', 'e'], ['ే', 'ae'], ['ై', 'ai'], ['ొ', 'o'], ['ో', 'o'], ['ౌ', 'au']
+  ];
+  
+  // Special characters
+  const specials: [string, string][] = [
+    ['ం', 'm'], ['ః', 'h'], ['ఁ', 'n']  // Anusvara, Visarga, Chandrabindu
   ];
   
   vowels.forEach(([tel, latin]) => {
@@ -207,13 +249,22 @@ function generateTeluguMapping(): ScriptMapping {
   });
   
   consonants.forEach(([tel, latin]) => {
-    toLatinMap.set(tel, latin + 'a');
+    toLatinMap.set(tel, latin); // consonant + inherent 'a'
+  });
+  
+  consonantBases.forEach(([tel, latin]) => {
     fromLatinMap.set(latin, tel);
   });
   
   matras.forEach(([tel, latin]) => {
+    toLatinMap.set(tel, latin);  // For reading matras
     vowelModifiers.set(tel, latin);
     vowelModifiers.set(latin, tel);
+  });
+  
+  specials.forEach(([tel, latin]) => {
+    toLatinMap.set(tel, latin);
+    vowelModifiers.set(tel, latin);
   });
   
   return { toLatinMap, fromLatinMap, vowelModifiers, virama: '్' };
@@ -696,41 +747,59 @@ function transliterateToLatin(text: string): string {
   
   const mapping = getScriptMapping(sourceScript);
   let result = '';
+  let i = 0;
   
-  for (let i = 0; i < text.length; i++) {
+  while (i < text.length) {
     const char = text[i];
-    const twoChar = text.substring(i, i + 2);
+    const nextChar = text[i + 1] || '';
+    const twoChar = char + nextChar;
+    const threeChar = text.substring(i, i + 3);
     
-    // Try two-character match first
+    // Try three-character match first (for conjuncts like క్ష)
+    if (mapping.toLatinMap.has(threeChar)) {
+      result += mapping.toLatinMap.get(threeChar);
+      i += 3;
+      continue;
+    }
+    
+    // Try two-character match (for conjuncts)
     if (mapping.toLatinMap.has(twoChar)) {
       result += mapping.toLatinMap.get(twoChar);
-      i++; // Skip next char
+      i += 2;
       continue;
     }
     
-    // Check vowel modifiers
-    if (mapping.vowelModifiers?.has(char)) {
-      result += mapping.vowelModifiers.get(char);
-      continue;
-    }
-    
-    // Check virama (remove inherent vowel)
+    // Check virama (halant) - removes inherent vowel
     if (mapping.virama && char === mapping.virama) {
-      // Remove trailing 'a' if present
+      // Remove trailing 'a' from previous consonant
       if (result.endsWith('a')) {
         result = result.slice(0, -1);
       }
+      i++;
       continue;
     }
     
-    // Single character match
+    // Check vowel modifiers (matras) - replace inherent 'a' with matra vowel
+    if (mapping.vowelModifiers?.has(char)) {
+      // Remove trailing 'a' and add matra vowel
+      if (result.endsWith('a')) {
+        result = result.slice(0, -1);
+      }
+      result += mapping.vowelModifiers.get(char);
+      i++;
+      continue;
+    }
+    
+    // Single character match (consonant with inherent 'a' or vowel)
     if (mapping.toLatinMap.has(char)) {
       result += mapping.toLatinMap.get(char);
+      i++;
       continue;
     }
     
-    // Pass through unchanged
+    // Pass through unchanged (spaces, punctuation, numbers)
     result += char;
+    i++;
   }
   
   return result;
@@ -746,26 +815,28 @@ function transliterateFromLatin(text: string, targetScript: string): string {
   
   // Normalize special characters (German, French, Spanish, etc.)
   const charNormalization: Record<string, string> = {
-    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+    'ä': 'a', 'ö': 'o', 'ü': 'u', 'ß': 'ss', 'Ä': 'A', 'Ö': 'O', 'Ü': 'U',
     'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
     'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
     'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
     'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o',
     'ù': 'u', 'ú': 'u', 'û': 'u',
     'ý': 'y', 'ÿ': 'y',
-    'ñ': 'ny', 'ç': 's', 'ð': 'dh', 'þ': 'th', 'æ': 'ae', 'œ': 'oe'
+    'ñ': 'n', 'ç': 's', 'ð': 'd', 'þ': 'th', 'æ': 'e', 'œ': 'e'
   };
   
   // Normalize the input
   let normalizedText = '';
   for (const char of text) {
-    normalizedText += charNormalization[char] || charNormalization[char.toLowerCase()]?.toLowerCase() || char;
+    normalizedText += charNormalization[char] || charNormalization[char.toLowerCase()] || char;
   }
   
   const lower = normalizedText.toLowerCase();
   let result = '';
   let i = 0;
-  let prevWasConsonant = false;
+  
+  // Common digraphs/trigraphs to check first (order matters - longest first)
+  const multiCharPatterns = ['shh', 'chh', 'ksh', 'thr', 'sch', 'ng', 'ny', 'kh', 'gh', 'ch', 'jh', 'th', 'dh', 'ph', 'bh', 'sh', 'aa', 'ee', 'ii', 'oo', 'uu', 'ai', 'au', 'ou', 'ei'];
   
   while (i < lower.length) {
     const char = lower[i];
@@ -773,43 +844,81 @@ function transliterateFromLatin(text: string, targetScript: string): string {
     // Skip non-alphabetic characters
     if (!/[a-z]/.test(char)) {
       result += normalizedText[i];
-      prevWasConsonant = false;
       i++;
       continue;
     }
     
-    // Try multi-character matches (longest first)
+    // Try multi-character patterns first
     let matched = false;
-    for (let len = 4; len >= 1; len--) {
-      const substr = lower.substring(i, i + len);
-      if (mapping.fromLatinMap.has(substr)) {
-        const converted = mapping.fromLatinMap.get(substr)!;
+    
+    for (const pattern of multiCharPatterns) {
+      const substr = lower.substring(i, i + pattern.length);
+      if (substr === pattern && mapping.fromLatinMap.has(pattern)) {
+        const consonant = mapping.fromLatinMap.get(pattern)!;
         
-        // Handle vowel after consonant (use matra instead)
-        if (prevWasConsonant && mapping.vowelModifiers?.has(substr)) {
-          // Remove inherent 'a' and add matra
-          if (result.length > 0 && mapping.virama) {
-            // Add vowel sign instead of full vowel
-            result += mapping.vowelModifiers.get(substr) || converted;
-          } else {
-            result += converted;
+        // Check if next char is a vowel (need matra instead of inherent 'a')
+        const nextPos = i + pattern.length;
+        const nextVowel = getNextVowelPattern(lower, nextPos);
+        
+        if (nextVowel && nextVowel !== 'a') {
+          // Add consonant without inherent vowel, then add matra
+          result += consonant;
+          if (mapping.vowelModifiers?.has(nextVowel)) {
+            result += mapping.vowelModifiers.get(nextVowel);
           }
+          i = nextPos + nextVowel.length;
+        } else if (nextVowel === 'a') {
+          // Inherent 'a' - just add consonant (no matra needed)
+          result += consonant;
+          i = nextPos + 1; // Skip the 'a'
         } else {
-          result += converted;
+          // No following vowel - add consonant with virama
+          result += consonant;
+          if (mapping.virama && i + pattern.length < lower.length && /[a-z]/.test(lower[i + pattern.length])) {
+            result += mapping.virama;
+          }
+          i = nextPos;
         }
-        
-        // Check if this is a consonant (has inherent 'a')
-        prevWasConsonant = !['a', 'e', 'i', 'o', 'u', 'aa', 'ee', 'ii', 'oo', 'uu', 'ai', 'au'].includes(substr);
-        
-        i += len;
         matched = true;
         break;
       }
     }
     
-    if (!matched) {
+    if (matched) continue;
+    
+    // Single consonant
+    if (mapping.fromLatinMap.has(char)) {
+      const consonant = mapping.fromLatinMap.get(char)!;
+      
+      // Check if next char is a vowel
+      const nextVowel = getNextVowelPattern(lower, i + 1);
+      
+      if (nextVowel && nextVowel !== 'a') {
+        result += consonant;
+        if (mapping.vowelModifiers?.has(nextVowel)) {
+          result += mapping.vowelModifiers.get(nextVowel);
+        }
+        i += 1 + nextVowel.length;
+      } else if (nextVowel === 'a') {
+        result += consonant;
+        i += 2; // Skip consonant and 'a'
+      } else {
+        // Check if it's a standalone vowel
+        const isVowel = ['a', 'e', 'i', 'o', 'u'].includes(char);
+        if (isVowel) {
+          result += consonant; // It's a full vowel character
+          i++;
+        } else {
+          result += consonant;
+          // Add virama if followed by another consonant
+          if (i + 1 < lower.length && /[a-z]/.test(lower[i + 1]) && !isVowelChar(lower[i + 1])) {
+            result += mapping.virama || '';
+          }
+          i++;
+        }
+      }
+    } else {
       result += normalizedText[i];
-      prevWasConsonant = false;
       i++;
     }
   }
@@ -817,88 +926,34 @@ function transliterateFromLatin(text: string, targetScript: string): string {
   return result;
 }
 
-// Force phonetic conversion - character by character mapping for any Latin text
+// Helper: Check if character is a vowel
+function isVowelChar(char: string): boolean {
+  return ['a', 'e', 'i', 'o', 'u'].includes(char.toLowerCase());
+}
+
+// Helper: Get next vowel pattern from position
+function getNextVowelPattern(text: string, pos: number): string | null {
+  if (pos >= text.length) return null;
+  
+  // Check for long vowels first
+  const twoChar = text.substring(pos, pos + 2);
+  if (['aa', 'ee', 'ii', 'oo', 'uu', 'ai', 'au', 'ou', 'ei'].includes(twoChar)) {
+    return twoChar;
+  }
+  
+  // Single vowel
+  const char = text[pos];
+  if (['a', 'e', 'i', 'o', 'u'].includes(char)) {
+    return char;
+  }
+  
+  return null;
+}
+
+// Force phonetic conversion - uses the improved transliterateFromLatin
 function forcePhoneticConversion(text: string, targetScript: string): string {
-  const mapping = getScriptMapping(targetScript);
-  
-  // Normalize special characters first (German, French, Spanish, etc.)
-  const charNormalization: Record<string, string> = {
-    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
-    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
-    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o',
-    'ù': 'u', 'ú': 'u', 'û': 'u',
-    'ý': 'y', 'ÿ': 'y',
-    'ñ': 'ny', 'ç': 's', 'ð': 'dh', 'þ': 'th', 'æ': 'ae', 'œ': 'oe'
-  };
-  
-  // Normalize the input text first
-  let normalizedText = '';
-  for (const char of text) {
-    normalizedText += charNormalization[char] || charNormalization[char.toLowerCase()] || char;
-  }
-  
-  // Convert to lowercase for processing
-  const lower = normalizedText.toLowerCase();
-  
-  // Multi-character patterns for better phonetic conversion
-  const multiCharPatterns: [string, string][] = [
-    ['sch', 'sh'], ['ch', 'kh'], ['ei', 'ai'], ['ie', 'ii'], ['eu', 'oy'],
-    ['ue', 'u'], ['ae', 'e'], ['oe', 'o'], // Normalized German umlauts
-    ['ck', 'k'], ['ph', 'ph'], ['th', 'th'], ['qu', 'kv'], ['ng', 'ng'],
-    ['nk', 'nk'], ['tz', 'ts'], ['pf', 'pf'], ['st', 'st'], ['sp', 'sp'],
-    ['sh', 'sh'], ['wh', 'v'], ['oo', 'uu'], ['ee', 'ii'], 
-    ['ou', 'au'], ['ow', 'au'], ['ai', 'ai'], ['ay', 'ai'],
-    ['oi', 'oy'], ['oy', 'oy'], ['au', 'au']
-  ];
-  
-  let processedText = lower;
-  
-  // Apply multi-character patterns
-  for (const [pattern, replacement] of multiCharPatterns) {
-    processedText = processedText.split(pattern).join(replacement);
-  }
-  
-  // Now convert each character to target script
-  let result = '';
-  let i = 0;
-  
-  while (i < processedText.length) {
-    const char = processedText[i];
-    
-    // Keep spaces, punctuation, numbers as-is
-    if (!/[a-z]/.test(char)) {
-      result += char;
-      i++;
-      continue;
-    }
-    
-    // Try multi-character matches in mapping (longest first)
-    let matched = false;
-    for (let len = 4; len >= 1; len--) {
-      const substr = processedText.substring(i, i + len);
-      if (mapping.fromLatinMap.has(substr)) {
-        result += mapping.fromLatinMap.get(substr)!;
-        i += len;
-        matched = true;
-        break;
-      }
-    }
-    
-    if (!matched) {
-      // Fallback: try single char mapping
-      if (mapping.fromLatinMap.has(char)) {
-        result += mapping.fromLatinMap.get(char)!;
-      } else {
-        // Last resort: keep the character as is
-        result += char;
-      }
-      i++;
-    }
-  }
-  
-  return result;
+  // Just use the main transliteration function which now handles everything properly
+  return transliterateFromLatin(text, targetScript);
 }
 
 // Get target script from language name
