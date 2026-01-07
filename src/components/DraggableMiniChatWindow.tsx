@@ -177,10 +177,10 @@ const DraggableMiniChatWindow = ({
   // Check block status
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
-  // Real-time typing indicator with bi-directional translation
+  // Real-time typing indicator with bi-directional translation - FULLY ASYNC
   const {
     sendTypingIndicator,
-    stopTyping,
+    clearPreview,
     senderNativePreview,
     partnerTyping
   } = useRealtimeTranslation({
@@ -1059,7 +1059,7 @@ const DraggableMiniChatWindow = ({
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
     currentPreviewRef.current = ''; // CRITICAL: Reset ref for next message
-    stopTyping(); // Stop typing indicator
+    clearPreview(); // Clear typing preview - auto handled, no button
     setLastActivityTime(Date.now());
     
     // Clear any pending preview timeout to avoid stale updates
