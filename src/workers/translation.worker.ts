@@ -1395,15 +1395,24 @@ async function processChatMessage(
     };
   }
 
-  // Step 1: Process for sender (convert Latin to native script)
+  // Step 1: Process for sender (convert Latin to native script for display)
   const senderResult = await processSenderMessage(originalText, senderLanguage);
 
-  // Step 2: Process for receiver (translate if different language)
+  // Step 2: Process for receiver - CRITICAL: Use ORIGINAL text for exact translation
+  // The receiver needs accurate meaning-based translation from the original input,
+  // not from the sender's native script (which is just for sender's display)
   const receiverResult = await processReceiverMessage(
-    senderResult.senderView,
+    originalText,  // Use original text for accurate NLLB translation
     senderLanguage,
     receiverLanguage
   );
+
+  console.log('[Worker] processChatMessage complete:', {
+    original: originalText.substring(0, 30),
+    senderView: senderResult.senderView.substring(0, 30),
+    receiverView: receiverResult.receiverView.substring(0, 30),
+    translated: receiverResult.wasTranslated
+  });
 
   return {
     senderView: senderResult.senderView,
