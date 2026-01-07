@@ -467,8 +467,50 @@ async function translateText(
 
   console.log(`[dl-translate] Translating: ${sourceCode} -> ${targetCode}`);
 
-  // Try direct translation first (LibreTranslate -> MyMemory -> Google)
-  let result = await translateWithLibre(text, sourceCode, targetCode);
+  // For non-English to non-English pairs, ALWAYS use English pivot for reliability
+  // Direct translation between rare pairs often returns English instead of target language
+  if (sourceCode !== 'en' && targetCode !== 'en') {
+    console.log('[dl-translate] Non-English pair, using English pivot for reliability');
+    
+    // Step 1: Translate source -> English
+    let pivotResult = await translateWithGoogle(text, sourceCode, 'en');
+    if (!pivotResult.success) {
+      pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
+    }
+    if (!pivotResult.success) {
+      pivotResult = await translateWithLibre(text, sourceCode, 'en');
+    }
+
+    if (pivotResult.success && pivotResult.translatedText.trim() !== text.trim()) {
+      const englishText = pivotResult.translatedText.trim();
+      console.log(`[dl-translate] Pivot step 1 (${sourceCode}->en): "${englishText.substring(0, 50)}..."`);
+      
+      // Step 2: Translate English -> target
+      let finalResult = await translateWithGoogle(englishText, 'en', targetCode);
+      if (!finalResult.success) {
+        finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
+      }
+      if (!finalResult.success) {
+        finalResult = await translateWithLibre(englishText, 'en', targetCode);
+      }
+
+      if (finalResult.success) {
+        console.log(`[dl-translate] Pivot step 2 (en->${targetCode}): "${finalResult.translatedText.substring(0, 50)}..."`);
+        console.log('[dl-translate] English pivot translation success');
+        return { translatedText: finalResult.translatedText.trim(), success: true, pivotUsed: true };
+      } else {
+        // Step 2 failed, return English text as fallback (better than original)
+        console.log('[dl-translate] Pivot step 2 failed, returning English');
+        return { translatedText: englishText, success: true, pivotUsed: true };
+      }
+    }
+    
+    // If pivot step 1 failed, fall through to direct translation attempts
+    console.log('[dl-translate] Pivot step 1 failed, trying direct translation');
+  }
+
+  // Try direct translation (for English<->X pairs, or as fallback)
+  let result = await translateWithGoogle(text, sourceCode, targetCode);
   if (result.success) {
     return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
@@ -478,35 +520,9 @@ async function translateText(
     return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
 
-  result = await translateWithGoogle(text, sourceCode, targetCode);
+  result = await translateWithLibre(text, sourceCode, targetCode);
   if (result.success) {
     return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
-  }
-
-  // If direct translation failed and neither language is English, use English pivot
-  if (sourceCode !== 'en' && targetCode !== 'en') {
-    console.log('[dl-translate] Using English pivot translation');
-    
-    // Step 1: Translate source -> English
-    let pivotResult = await translateWithGoogle(text, sourceCode, 'en');
-    if (!pivotResult.success) {
-      pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
-    }
-
-    if (pivotResult.success && pivotResult.translatedText.trim() !== text.trim()) {
-      const englishText = pivotResult.translatedText.trim();
-      
-      // Step 2: Translate English -> target
-      let finalResult = await translateWithGoogle(englishText, 'en', targetCode);
-      if (!finalResult.success) {
-        finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
-      }
-
-      if (finalResult.success) {
-        console.log('[dl-translate] English pivot translation success');
-        return { translatedText: finalResult.translatedText.trim(), success: true, pivotUsed: true };
-      }
-    }
   }
 
   // All translation attempts failed
