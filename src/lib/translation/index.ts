@@ -1,16 +1,26 @@
 /**
- * Universal Real-Time Translation Module
+ * Translation Module Exports
+ * ==========================
  * 
- * TypeScript implementation for universal multilingual chat
- * Supports 200+ languages with NLLB-200 model
- * 
- * Features:
- * - Real-time typing in sender's native language
- * - Automatic translation for recipient
- * - Skip translation when same language
- * - Web Worker for non-blocking operations
+ * Production-ready, fully in-browser translation with:
+ * - Web Worker (non-blocking UI)
+ * - 200+ NLLB languages
+ * - Debounced preview (50-100ms throttle)
  * - Unicode NFC normalization
- * - Debounced live preview
+ * - Phonetic preprocessing (ICU-style)
+ * - Chunked translation for long text
+ * - Message queue with unique IDs
+ * - Error handling with fallbacks
+ * - Atomic state updates
+ * 
+ * Fixes Applied:
+ * - Transliteration mapping with phonetic rules (aa→ā, sh→ś)
+ * - Preview debounce to prevent lag/flicker
+ * - Unicode NFC normalization for combining marks
+ * - Chunked translation for long sentences
+ * - Batch translate for multi-user scenarios
+ * - Confidence-based language detection
+ * - Extended Latin character support
  * 
  * @example
  * ```tsx
@@ -19,8 +29,9 @@
  * // Translate text
  * const result = await translate('Hello', 'english', 'hindi');
  * 
- * // Live preview for typing
- * const preview = await transliterateToNative('namaste', 'hindi');
+ * // Live preview for typing (with debounce)
+ * const preview = createDebouncedPreview(75);
+ * const text = await preview.update('namaste', 'hindi');
  * 
  * // Process full chat message
  * const chat = await processChatMessage('Hello', 'english', 'hindi');
@@ -79,20 +90,25 @@ export {
   processChatMessage,
   detectLanguage,
   
+  // Batch operations (for multi-user scenarios)
+  batchTranslate,
+  
   // Worker management
   initWorker,
   isReady,
+  isTranslatorReady,
   getLoadingStatus,
   terminateWorker,
   
-  // Debounced preview (for live typing)
+  // Debounced preview (for live typing - 50-100ms recommended)
   createDebouncedPreview,
   
-  // Utility functions (sync, no worker)
+  // Utility functions (sync, no worker needed)
   isLatinScriptLanguage,
   isLatinText,
   isSameLanguage,
   normalizeUnicode,
+  detectLanguageSync,
 } from './worker-translator';
 
 // Export types from worker-translator
@@ -100,4 +116,6 @@ export type {
   TranslationResult as WorkerTranslationResult,
   ChatProcessResult,
   LanguageDetectionResult as WorkerLanguageDetectionResult,
+  BatchTranslateItem,
+  BatchTranslateResult,
 } from './worker-translator';
