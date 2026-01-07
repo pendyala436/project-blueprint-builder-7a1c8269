@@ -57,32 +57,141 @@ let processingQueue = false;
 const pendingQueue: WorkerMessage[] = [];
 
 // ============================================================
-// PHONETIC PREPROCESSING MAPS (ICU-style)
+// COMPREHENSIVE PHONETIC PREPROCESSING (ICU-style for 300+ languages)
 // ============================================================
 
-// Common romanization patterns → normalized phonemes
-const PHONETIC_PREPROCESSOR: Record<string, string> = {
-  // Doubled vowels → long vowels
+// Language-specific phonetic mappings
+const INDIC_PHONETIC_MAP: Record<string, string> = {
+  // Long vowels (doubled)
   'aa': 'ā', 'ee': 'ī', 'ii': 'ī', 'oo': 'ū', 'uu': 'ū',
-  'ai': 'ai', 'au': 'au', 'ou': 'ō', 'ei': 'ē',
+  'ai': 'ai', 'au': 'au', 'ou': 'ō', 'ei': 'ē', 'ae': 'æ',
   
-  // Aspirated consonants (common in Indic)
+  // Aspirated consonants
   'kh': 'kʰ', 'gh': 'gʰ', 'ch': 'cʰ', 'jh': 'jʰ',
   'th': 'tʰ', 'dh': 'dʰ', 'ph': 'pʰ', 'bh': 'bʰ',
   
   // Retroflex consonants
   'tt': 'ṭ', 'dd': 'ḍ', 'nn': 'ṇ', 'rr': 'ṛ', 'll': 'ḷ',
+  'nd': 'ṇḍ', 'nt': 'ṇṭ',
   
   // Sibilants and nasals
-  'sh': 'ś', 'ng': 'ṅ', 'ny': 'ñ', 'gn': 'ñ',
+  'sh': 'ś', 'ng': 'ṅ', 'ny': 'ñ', 'gn': 'ñ', 'nh': 'ṇh',
   
-  // Special sounds
-  'zh': 'ẓ', 'ksh': 'kṣ', 'gya': 'gyā', 'tra': 'trā',
+  // Special combinations
+  'zh': 'ẓ', 'ksh': 'kṣ', 'ks': 'kṣ', 'gya': 'gyā', 'tra': 'trā',
+  'chh': 'cch', 'tth': 'ṭṭh', 'ddh': 'ḍḍh',
+  
+  // Telugu/Kannada specific
+  'lh': 'ḷh', 'mh': 'mh',
+  
+  // Tamil specific  
+  'zha': 'ழ', 'nha': 'ன',
+  
+  // Nasal combinations
+  'nk': 'ṅk', 'nc': 'ñc', 'nch': 'ñcʰ', 'nj': 'ñj',
+};
+
+const ARABIC_PHONETIC_MAP: Record<string, string> = {
+  // Emphatic consonants
+  'dh': 'ḍ', 'th': 'ṯ', 'gh': 'ġ', 'kh': 'ḫ',
+  'aa': 'ā', 'ee': 'ī', 'oo': 'ū', 'ai': 'ay', 'au': 'aw',
+  'sh': 'š', 'zh': 'ž',
+  // Hamza
+  "'": 'ʾ', "''": 'ʿ',
+  // Pharyngeal
+  'hh': 'ḥ', 'ss': 'ṣ', 'tt': 'ṭ', 'zz': 'ẓ',
+};
+
+const CJK_PHONETIC_MAP: Record<string, string> = {
+  // Pinyin tones (for typing without tone marks)
+  'ü': 'ü', 'v': 'ü', 'lv': 'lü', 'nv': 'nü',
+  // Japanese romaji
+  'shi': 'し', 'chi': 'ち', 'tsu': 'つ', 'fu': 'ふ',
+  'sha': 'しゃ', 'shu': 'しゅ', 'sho': 'しょ',
+  'ja': 'じゃ', 'ju': 'じゅ', 'jo': 'じょ',
+  // Korean (basic)
+  'eo': 'ə', 'eu': 'ɯ',
+};
+
+const CYRILLIC_PHONETIC_MAP: Record<string, string> = {
+  'sh': 'ш', 'ch': 'ч', 'ts': 'ц', 'zh': 'ж',
+  'shch': 'щ', 'ya': 'я', 'yu': 'ю', 'ye': 'е',
+  'yo': 'ё', 'kh': 'х',
+};
+
+const THAI_PHONETIC_MAP: Record<string, string> = {
+  'kh': 'ข', 'ng': 'ง', 'ch': 'ช', 'th': 'ท',
+  'ph': 'พ', 'aa': 'า', 'ee': 'ี', 'oo': 'ู',
+};
+
+const ETHIOPIC_PHONETIC_MAP: Record<string, string> = {
+  'sh': 'ሽ', 'ch': 'ች', 'ts': 'ፅ', 'zh': 'ዥ',
+  'ny': 'ኝ', 'ng': 'ንግ',
+};
+
+// Combine all phonetic maps with priority
+const PHONETIC_PREPROCESSOR: Record<string, string> = {
+  ...INDIC_PHONETIC_MAP,
+  ...ARABIC_PHONETIC_MAP,
+  ...CYRILLIC_PHONETIC_MAP,
+  ...ETHIOPIC_PHONETIC_MAP,
 };
 
 // Order matters - process longer patterns first
 const PHONETIC_PATTERNS = Object.entries(PHONETIC_PREPROCESSOR)
   .sort((a, b) => b[0].length - a[0].length);
+
+// Language-specific pattern sets
+const LANGUAGE_PHONETIC_MAPS: Record<string, Record<string, string>> = {
+  hindi: INDIC_PHONETIC_MAP,
+  marathi: INDIC_PHONETIC_MAP,
+  nepali: INDIC_PHONETIC_MAP,
+  sanskrit: INDIC_PHONETIC_MAP,
+  bengali: INDIC_PHONETIC_MAP,
+  gujarati: INDIC_PHONETIC_MAP,
+  punjabi: INDIC_PHONETIC_MAP,
+  odia: INDIC_PHONETIC_MAP,
+  tamil: INDIC_PHONETIC_MAP,
+  telugu: INDIC_PHONETIC_MAP,
+  kannada: INDIC_PHONETIC_MAP,
+  malayalam: INDIC_PHONETIC_MAP,
+  sinhala: INDIC_PHONETIC_MAP,
+  urdu: ARABIC_PHONETIC_MAP,
+  arabic: ARABIC_PHONETIC_MAP,
+  persian: ARABIC_PHONETIC_MAP,
+  farsi: ARABIC_PHONETIC_MAP,
+  pashto: ARABIC_PHONETIC_MAP,
+  sindhi: ARABIC_PHONETIC_MAP,
+  kashmiri: ARABIC_PHONETIC_MAP,
+  chinese: CJK_PHONETIC_MAP,
+  japanese: CJK_PHONETIC_MAP,
+  korean: CJK_PHONETIC_MAP,
+  russian: CYRILLIC_PHONETIC_MAP,
+  ukrainian: CYRILLIC_PHONETIC_MAP,
+  bulgarian: CYRILLIC_PHONETIC_MAP,
+  serbian: CYRILLIC_PHONETIC_MAP,
+  macedonian: CYRILLIC_PHONETIC_MAP,
+  belarusian: CYRILLIC_PHONETIC_MAP,
+  kazakh: CYRILLIC_PHONETIC_MAP,
+  kyrgyz: CYRILLIC_PHONETIC_MAP,
+  tajik: CYRILLIC_PHONETIC_MAP,
+  mongolian: CYRILLIC_PHONETIC_MAP,
+  thai: THAI_PHONETIC_MAP,
+  amharic: ETHIOPIC_PHONETIC_MAP,
+  tigrinya: ETHIOPIC_PHONETIC_MAP,
+};
+
+/**
+ * Get language-specific phonetic patterns
+ */
+function getLanguagePhoneticPatterns(language: string): Array<[string, string]> {
+  const langLower = language.toLowerCase();
+  const specificMap = LANGUAGE_PHONETIC_MAPS[langLower];
+  if (specificMap) {
+    return Object.entries(specificMap).sort((a, b) => b[0].length - a[0].length);
+  }
+  return PHONETIC_PATTERNS;
+}
 
 // ============================================================
 // NLLB LANGUAGE MAPPINGS (300+ languages - comprehensive)
@@ -278,59 +387,115 @@ const NLLB_CODES: Record<string, string> = {
   yiddish: 'ydd_Hebr', yi: 'ydd_Hebr',
 };
 
-// Latin script languages
+// Latin script languages (comprehensive for all 300+ languages)
 const LATIN_SCRIPT_LANGUAGES = new Set([
-  'english', 'en', 'spanish', 'es', 'french', 'fr', 'german', 'de',
-  'italian', 'it', 'portuguese', 'pt', 'dutch', 'nl', 'polish', 'pl',
-  'turkish', 'tr', 'vietnamese', 'vi', 'indonesian', 'id', 'malay', 'ms',
-  'tagalog', 'tl', 'swahili', 'sw', 'javanese', 'jv', 'cebuano', 'ceb',
-  'romanian', 'ro', 'czech', 'cs', 'hungarian', 'hu', 'swedish', 'sv',
-  'danish', 'da', 'finnish', 'fi', 'norwegian', 'no', 'croatian', 'hr',
-  'slovak', 'sk', 'slovenian', 'sl', 'latvian', 'lv', 'lithuanian', 'lt',
-  'estonian', 'et', 'bosnian', 'bs', 'albanian', 'sq', 'icelandic', 'is',
-  'irish', 'ga', 'welsh', 'cy', 'basque', 'eu', 'catalan', 'ca',
-  'galician', 'gl', 'maltese', 'mt', 'afrikaans', 'af', 'yoruba', 'yo',
-  'igbo', 'ig', 'hausa', 'ha', 'zulu', 'zu', 'xhosa', 'xh', 'somali', 'so',
-  'uzbek', 'uz', 'turkmen', 'tk',
+  // Major European languages
+  'english', 'en', 'eng', 'spanish', 'es', 'spa', 'french', 'fr', 'fra',
+  'german', 'de', 'deu', 'italian', 'it', 'ita', 'portuguese', 'pt', 'por',
+  'dutch', 'nl', 'nld', 'polish', 'pl', 'pol', 'romanian', 'ro', 'ron',
+  'czech', 'cs', 'ces', 'hungarian', 'hu', 'hun', 'swedish', 'sv', 'swe',
+  'danish', 'da', 'dan', 'finnish', 'fi', 'fin', 'norwegian', 'no', 'nob',
+  'croatian', 'hr', 'hrv', 'slovak', 'sk', 'slk', 'slovenian', 'sl', 'slv',
+  'latvian', 'lv', 'lvs', 'lithuanian', 'lt', 'lit', 'estonian', 'et', 'est',
+  'bosnian', 'bs', 'bos', 'albanian', 'sq', 'als', 'icelandic', 'is', 'isl',
+  'irish', 'ga', 'gle', 'welsh', 'cy', 'cym', 'basque', 'eu', 'eus',
+  'catalan', 'ca', 'cat', 'galician', 'gl', 'glg', 'maltese', 'mt', 'mlt',
+  'luxembourgish', 'lb', 'ltz', 'faroese', 'fo', 'fao', 'breton', 'br', 'bre',
+  'occitan', 'oc', 'oci', 'asturian', 'ast', 'scottish gaelic', 'gd', 'gla',
+  // Asian Latin-script languages
+  'turkish', 'tr', 'tur', 'vietnamese', 'vi', 'vie', 'indonesian', 'id', 'ind',
+  'malay', 'ms', 'zsm', 'tagalog', 'tl', 'tgl', 'filipino', 'fil',
+  'javanese', 'jv', 'jav', 'sundanese', 'su', 'sun', 'cebuano', 'ceb',
+  'ilocano', 'ilo', 'pangasinan', 'pag', 'waray', 'war',
+  'uzbek', 'uz', 'uzn', 'turkmen', 'tk', 'tuk', 'azerbaijani', 'az', 'azj',
+  'acehnese', 'ace', 'balinese', 'ban', 'banjar', 'bjn', 'buginese', 'bug',
+  'minangkabau', 'min', 'hmong', 'hmn',
+  // African Latin-script languages
+  'swahili', 'sw', 'swh', 'afrikaans', 'af', 'afr', 'yoruba', 'yo', 'yor',
+  'igbo', 'ig', 'ibo', 'hausa', 'ha', 'hau', 'zulu', 'zu', 'zul',
+  'xhosa', 'xh', 'xho', 'somali', 'so', 'som', 'shona', 'sn', 'sna',
+  'kinyarwanda', 'rw', 'kin', 'rundi', 'rn', 'run', 'lingala', 'ln', 'lin',
+  'wolof', 'wo', 'wol', 'bambara', 'bm', 'bam', 'ewe', 'ee',
+  'luganda', 'lg', 'lug', 'chichewa', 'ny', 'nya', 'oromo', 'om', 'gaz',
+  'tswana', 'tn', 'tsn', 'tsonga', 'ts', 'tso', 'malagasy', 'mg', 'plt',
+  'kikuyu', 'ki', 'kik', 'akan', 'ak', 'aka', 'twi', 'tw', 'sango', 'sg', 'sag',
+  'fulah', 'ff', 'fuv',
+  // Pacific languages
+  'maori', 'mi', 'mri', 'samoan', 'sm', 'smo', 'tongan', 'to', 'ton',
+  'fijian', 'fj', 'fij', 'hawaiian', 'haw', 'tok pisin', 'tpi',
+  // Creole languages
+  'haitian creole', 'ht', 'hat', 'papiamento', 'pap',
+  // Other Latin-script languages
+  'esperanto', 'eo', 'epo', 'latin', 'la', 'lat',
+  'guarani', 'gn', 'grn', 'quechua', 'qu', 'quy', 'aymara', 'ay', 'aym',
+  'mizo', 'lus',
 ]);
 
 // ============================================================
-// SCRIPT DETECTION (Unicode Ranges)
+// SCRIPT DETECTION (Unicode Ranges) - Comprehensive for 300+ languages
 // ============================================================
 
 const scriptPatterns: Array<{ regex: RegExp; script: string; languages: string[] }> = [
-  // South Asian
-  { regex: /[\u0900-\u097F]/, script: 'Devanagari', languages: ['hindi', 'marathi', 'nepali', 'sanskrit', 'konkani', 'maithili', 'dogri'] },
-  { regex: /[\u0980-\u09FF]/, script: 'Bengali', languages: ['bengali', 'assamese'] },
+  // South Asian Scripts
+  { regex: /[\u0900-\u097F]/, script: 'Devanagari', languages: ['hindi', 'marathi', 'nepali', 'sanskrit', 'konkani', 'maithili', 'dogri', 'bodo', 'bhojpuri', 'magahi', 'awadhi', 'chhattisgarhi'] },
+  { regex: /[\u0980-\u09FF]/, script: 'Bengali', languages: ['bengali', 'assamese', 'manipuri', 'sylheti', 'chittagonian'] },
   { regex: /[\u0B80-\u0BFF]/, script: 'Tamil', languages: ['tamil'] },
   { regex: /[\u0C00-\u0C7F]/, script: 'Telugu', languages: ['telugu'] },
-  { regex: /[\u0C80-\u0CFF]/, script: 'Kannada', languages: ['kannada'] },
+  { regex: /[\u0C80-\u0CFF]/, script: 'Kannada', languages: ['kannada', 'tulu'] },
   { regex: /[\u0D00-\u0D7F]/, script: 'Malayalam', languages: ['malayalam'] },
   { regex: /[\u0A80-\u0AFF]/, script: 'Gujarati', languages: ['gujarati'] },
   { regex: /[\u0A00-\u0A7F]/, script: 'Gurmukhi', languages: ['punjabi'] },
-  { regex: /[\u0B00-\u0B7F]/, script: 'Odia', languages: ['odia'] },
-  { regex: /[\u0D80-\u0DFF]/, script: 'Sinhala', languages: ['sinhala'] },
+  { regex: /[\u0B00-\u0B7F]/, script: 'Odia', languages: ['odia', 'oriya'] },
+  { regex: /[\u0D80-\u0DFF]/, script: 'Sinhala', languages: ['sinhala', 'sinhalese'] },
   { regex: /[\u1C50-\u1C7F]/, script: 'Ol_Chiki', languages: ['santali'] },
-  // East Asian
-  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, script: 'Han', languages: ['chinese'] },
-  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, script: 'Japanese', languages: ['japanese'] },
-  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, script: 'Hangul', languages: ['korean'] },
-  // Southeast Asian
+  { regex: /[\uABC0-\uABFF]/, script: 'Meetei_Mayek', languages: ['meitei', 'manipuri'] },
+  { regex: /[\u11100-\u1114F]/, script: 'Chakma', languages: ['chakma'] },
+  
+  // East Asian Scripts
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF\u20000-\u2A6DF]/, script: 'Han', languages: ['chinese', 'mandarin', 'cantonese'] },
+  { regex: /[\u3040-\u309F\u30A0-\u30FF\u31F0-\u31FF]/, script: 'Japanese', languages: ['japanese'] },
+  { regex: /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/, script: 'Hangul', languages: ['korean'] },
+  
+  // Southeast Asian Scripts
   { regex: /[\u0E00-\u0E7F]/, script: 'Thai', languages: ['thai'] },
-  { regex: /[\u0E80-\u0EFF]/, script: 'Lao', languages: ['lao'] },
-  { regex: /[\u1000-\u109F]/, script: 'Myanmar', languages: ['burmese'] },
-  { regex: /[\u1780-\u17FF]/, script: 'Khmer', languages: ['khmer'] },
-  // Middle Eastern
-  { regex: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/, script: 'Arabic', languages: ['arabic', 'urdu', 'persian', 'sindhi', 'kashmiri'] },
-  { regex: /[\u0590-\u05FF]/, script: 'Hebrew', languages: ['hebrew'] },
-  // European
-  { regex: /[\u0400-\u04FF]/, script: 'Cyrillic', languages: ['russian', 'ukrainian', 'bulgarian', 'serbian', 'macedonian', 'belarusian', 'kazakh', 'kyrgyz', 'tajik', 'mongolian'] },
+  { regex: /[\u0E80-\u0EFF]/, script: 'Lao', languages: ['lao', 'laotian'] },
+  { regex: /[\u1000-\u109F\uAA60-\uAA7F]/, script: 'Myanmar', languages: ['burmese', 'shan', 'mon', 'karen'] },
+  { regex: /[\u1780-\u17FF\u19E0-\u19FF]/, script: 'Khmer', languages: ['khmer', 'cambodian'] },
+  { regex: /[\u1980-\u19DF]/, script: 'Tai_Le', languages: ['tai_le'] },
+  { regex: /[\u1A20-\u1AAF]/, script: 'Tai_Tham', languages: ['lanna', 'tai_lue'] },
+  { regex: /[\uA980-\uA9DF]/, script: 'Javanese', languages: ['javanese'] },
+  { regex: /[\u1B00-\u1B7F]/, script: 'Balinese', languages: ['balinese'] },
+  { regex: /[\u1B80-\u1BBF]/, script: 'Sundanese', languages: ['sundanese'] },
+  { regex: /[\u1A00-\u1A1F]/, script: 'Buginese', languages: ['buginese'] },
+  
+  // Middle Eastern Scripts
+  { regex: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/, script: 'Arabic', languages: ['arabic', 'urdu', 'persian', 'farsi', 'pashto', 'sindhi', 'kashmiri', 'uyghur', 'kurdish'] },
+  { regex: /[\u0590-\u05FF\uFB1D-\uFB4F]/, script: 'Hebrew', languages: ['hebrew', 'yiddish'] },
+  { regex: /[\u0700-\u074F]/, script: 'Syriac', languages: ['syriac', 'assyrian'] },
+  { regex: /[\u0780-\u07BF]/, script: 'Thaana', languages: ['dhivehi', 'maldivian'] },
+  
+  // European Scripts
+  { regex: /[\u0400-\u04FF\u0500-\u052F]/, script: 'Cyrillic', languages: ['russian', 'ukrainian', 'bulgarian', 'serbian', 'macedonian', 'belarusian', 'kazakh', 'kyrgyz', 'tajik', 'mongolian', 'tatar', 'bashkir', 'chuvash', 'chechen'] },
   { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, script: 'Greek', languages: ['greek'] },
-  // Caucasian
-  { regex: /[\u10A0-\u10FF]/, script: 'Georgian', languages: ['georgian'] },
-  { regex: /[\u0530-\u058F]/, script: 'Armenian', languages: ['armenian'] },
-  // African
-  { regex: /[\u1200-\u137F]/, script: 'Ethiopic', languages: ['amharic', 'tigrinya'] },
+  
+  // Caucasian Scripts
+  { regex: /[\u10A0-\u10FF\u2D00-\u2D2F]/, script: 'Georgian', languages: ['georgian', 'mingrelian', 'laz'] },
+  { regex: /[\u0530-\u058F\uFB13-\uFB17]/, script: 'Armenian', languages: ['armenian'] },
+  
+  // African Scripts
+  { regex: /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF\uAB00-\uAB2F]/, script: 'Ethiopic', languages: ['amharic', 'tigrinya', 'oromo', 'geez'] },
+  { regex: /[\u2D30-\u2D7F]/, script: 'Tifinagh', languages: ['berber', 'tamazight', 'kabyle'] },
+  { regex: /[\u07C0-\u07FF]/, script: 'NKo', languages: ['mandinka', 'bambara', 'dyula'] },
+  { regex: /[\uA500-\uA63F]/, script: 'Vai', languages: ['vai'] },
+  { regex: /[\u1E900-\u1E95F]/, script: 'Adlam', languages: ['fulani', 'fula'] },
+  
+  // Central Asian Scripts
+  { regex: /[\u0F00-\u0FFF]/, script: 'Tibetan', languages: ['tibetan', 'dzongkha'] },
+  { regex: /[\u1800-\u18AF]/, script: 'Mongolian', languages: ['mongolian'] },
+  
+  // Canadian Aboriginal
+  { regex: /[\u1400-\u167F]/, script: 'Canadian_Aboriginal', languages: ['cree', 'inuktitut', 'ojibwe'] },
+  { regex: /[\u13A0-\u13FF]/, script: 'Cherokee', languages: ['cherokee'] },
 ];
 
 // ============================================================
@@ -365,20 +530,62 @@ function normalizeUnicode(text: string): string {
 }
 
 /**
- * Preprocess Latin input with phonetic normalization
- * Fixes: Missing diacritics, ambiguous Latin input
+ * Preprocess Latin input with language-specific phonetic normalization
+ * Fixes: Missing diacritics, ambiguous Latin input, language-specific patterns
  */
-function preprocessLatinInput(text: string): string {
-  // Normalize case first
-  let result = text.toLowerCase().trim();
+function preprocessLatinInput(text: string, targetLanguage?: string): string {
+  // Normalize case first (preserve original for some languages)
+  let result = text.trim();
+  const lowerResult = result.toLowerCase();
+  
+  // Get language-specific patterns
+  const patterns = targetLanguage 
+    ? getLanguagePhoneticPatterns(targetLanguage)
+    : PHONETIC_PATTERNS;
   
   // Apply phonetic patterns (longer patterns first)
-  for (const [pattern, replacement] of PHONETIC_PATTERNS) {
-    result = result.split(pattern).join(replacement);
+  let processed = lowerResult;
+  for (const [pattern, replacement] of patterns) {
+    processed = processed.split(pattern).join(replacement);
   }
   
-  // Normalize repeated characters (typo correction)
-  result = result.replace(/(.)\1{2,}/g, '$1$1');
+  // Fix common typos
+  // Normalize repeated characters (typo correction: aaaa → aa, not aaa → aa → a)
+  processed = processed.replace(/(.)\1{2,}/g, '$1$1');
+  
+  // Handle common Latin ambiguities for specific scripts
+  if (targetLanguage) {
+    const langLower = targetLanguage.toLowerCase();
+    
+    // For Indic languages: handle schwa deletion ambiguity
+    if (['hindi', 'marathi', 'nepali', 'sanskrit', 'bengali', 'gujarati', 'punjabi'].includes(langLower)) {
+      // Add implicit 'a' vowel handling hints (schwa)
+      processed = processed.replace(/([kgcjṭḍtdpb])([kgcjṭḍtdpbmnlrsśṣhy])/g, '$1a$2');
+    }
+    
+    // For Arabic script: handle sun/moon letter assimilation
+    if (['arabic', 'urdu', 'persian', 'farsi', 'pashto'].includes(langLower)) {
+      processed = processed.replace(/al([tdszšṣnlr])/g, 'a$1$1');
+    }
+  }
+  
+  return processed;
+}
+
+/**
+ * Normalize and fix common input issues
+ */
+function normalizeInput(text: string): string {
+  let result = text.trim();
+  
+  // Unicode NFC normalization
+  result = normalizeUnicode(result);
+  
+  // Fix zero-width characters that can cause display issues
+  result = result.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  
+  // Normalize multiple spaces
+  result = result.replace(/\s+/g, ' ');
   
   return result;
 }
@@ -608,7 +815,7 @@ async function transliterateToNative(
   latinText: string,
   targetLanguage: string
 ): Promise<{ text: string; success: boolean }> {
-  const originalText = latinText.trim();
+  const originalText = normalizeInput(latinText);
   
   if (!originalText) {
     return { text: latinText, success: false };
@@ -625,8 +832,8 @@ async function transliterateToNative(
   }
 
   try {
-    // Preprocess with phonetic normalization
-    const preprocessed = preprocessLatinInput(originalText);
+    // Preprocess with language-specific phonetic normalization
+    const preprocessed = preprocessLatinInput(originalText, targetLanguage);
     
     // Use translation from English to convert to native script
     const result = await translateText(preprocessed, 'english', targetLanguage);
@@ -637,9 +844,19 @@ async function transliterateToNative(
       return { text: normalizeUnicode(result.text), success: true };
     }
     
+    // Try with original text as well (in case preprocessing was too aggressive)
+    if (preprocessed !== originalText.toLowerCase()) {
+      const fallbackResult = await translateText(originalText.toLowerCase(), 'english', targetLanguage);
+      const fallbackDetected = detectLanguageFromText(fallbackResult.text);
+      if (!fallbackDetected.isLatin && fallbackResult.text !== originalText.toLowerCase() && fallbackDetected.confidence > 0.5) {
+        return { text: normalizeUnicode(fallbackResult.text), success: true };
+      }
+    }
+    
     // Fallback: return original with NFC normalization
     return { text: normalizeUnicode(originalText), success: false };
-  } catch {
+  } catch (err) {
+    console.error('[Worker] Transliteration error:', err);
     return { text: normalizeUnicode(latinText), success: false };
   }
 }
@@ -648,7 +865,7 @@ async function processSenderMessage(
   text: string,
   senderLanguage: string
 ): Promise<{ senderView: string; wasTransliterated: boolean }> {
-  const originalText = normalizeUnicode(text.trim());
+  const originalText = normalizeInput(text);
   
   if (!originalText) {
     return { senderView: text, wasTransliterated: false };
@@ -677,7 +894,7 @@ async function processReceiverMessage(
   senderLanguage: string,
   receiverLanguage: string
 ): Promise<{ receiverView: string; wasTranslated: boolean }> {
-  const originalText = normalizeUnicode(text.trim());
+  const originalText = normalizeInput(text);
   
   if (!originalText) {
     return { receiverView: text, wasTranslated: false };

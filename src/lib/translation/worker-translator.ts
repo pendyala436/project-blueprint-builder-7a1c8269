@@ -442,18 +442,41 @@ export function createDebouncedPreview(debounceMs: number = 75): DebouncedPrevie
 // ============================================================
 
 const LATIN_SCRIPT_LANGUAGES = new Set([
-  'english', 'en', 'spanish', 'es', 'french', 'fr', 'german', 'de',
-  'italian', 'it', 'portuguese', 'pt', 'dutch', 'nl', 'polish', 'pl',
-  'turkish', 'tr', 'vietnamese', 'vi', 'indonesian', 'id', 'malay', 'ms',
-  'tagalog', 'tl', 'swahili', 'sw', 'javanese', 'jv', 'cebuano', 'ceb',
-  'romanian', 'ro', 'czech', 'cs', 'hungarian', 'hu', 'swedish', 'sv',
-  'danish', 'da', 'finnish', 'fi', 'norwegian', 'no', 'croatian', 'hr',
-  'slovak', 'sk', 'slovenian', 'sl', 'latvian', 'lv', 'lithuanian', 'lt',
-  'estonian', 'et', 'bosnian', 'bs', 'albanian', 'sq', 'icelandic', 'is',
-  'irish', 'ga', 'welsh', 'cy', 'basque', 'eu', 'catalan', 'ca',
-  'galician', 'gl', 'maltese', 'mt', 'afrikaans', 'af', 'yoruba', 'yo',
-  'igbo', 'ig', 'hausa', 'ha', 'zulu', 'zu', 'xhosa', 'xh', 'somali', 'so',
-  'uzbek', 'uz', 'turkmen', 'tk',
+  // Major European languages
+  'english', 'en', 'eng', 'spanish', 'es', 'spa', 'french', 'fr', 'fra',
+  'german', 'de', 'deu', 'italian', 'it', 'ita', 'portuguese', 'pt', 'por',
+  'dutch', 'nl', 'nld', 'polish', 'pl', 'pol', 'romanian', 'ro', 'ron',
+  'czech', 'cs', 'ces', 'hungarian', 'hu', 'hun', 'swedish', 'sv', 'swe',
+  'danish', 'da', 'dan', 'finnish', 'fi', 'fin', 'norwegian', 'no', 'nob',
+  'croatian', 'hr', 'hrv', 'slovak', 'sk', 'slk', 'slovenian', 'sl', 'slv',
+  'latvian', 'lv', 'lvs', 'lithuanian', 'lt', 'lit', 'estonian', 'et', 'est',
+  'bosnian', 'bs', 'bos', 'albanian', 'sq', 'als', 'icelandic', 'is', 'isl',
+  'irish', 'ga', 'gle', 'welsh', 'cy', 'cym', 'basque', 'eu', 'eus',
+  'catalan', 'ca', 'cat', 'galician', 'gl', 'glg', 'maltese', 'mt', 'mlt',
+  'luxembourgish', 'lb', 'ltz', 'faroese', 'fo', 'fao',
+  // Asian Latin-script languages
+  'turkish', 'tr', 'tur', 'vietnamese', 'vi', 'vie', 'indonesian', 'id', 'ind',
+  'malay', 'ms', 'zsm', 'tagalog', 'tl', 'tgl', 'filipino', 'fil',
+  'javanese', 'jv', 'jav', 'sundanese', 'su', 'sun', 'cebuano', 'ceb',
+  'ilocano', 'ilo', 'uzbek', 'uz', 'uzn', 'turkmen', 'tk', 'tuk',
+  'azerbaijani', 'az', 'azj',
+  // African Latin-script languages
+  'swahili', 'sw', 'swh', 'afrikaans', 'af', 'afr', 'yoruba', 'yo', 'yor',
+  'igbo', 'ig', 'ibo', 'hausa', 'ha', 'hau', 'zulu', 'zu', 'zul',
+  'xhosa', 'xh', 'xho', 'somali', 'so', 'som', 'shona', 'sn', 'sna',
+  'kinyarwanda', 'rw', 'kin', 'lingala', 'ln', 'lin', 'wolof', 'wo', 'wol',
+  'bambara', 'bm', 'bam', 'ewe', 'ee', 'malagasy', 'mg', 'plt',
+  'luganda', 'lg', 'lug', 'chichewa', 'ny', 'nya', 'oromo', 'om', 'gaz',
+  'tswana', 'tn', 'tsn', 'tsonga', 'ts', 'tso',
+  // Pacific languages
+  'maori', 'mi', 'mri', 'samoan', 'sm', 'smo', 'tongan', 'to', 'ton',
+  'fijian', 'fj', 'fij', 'hawaiian', 'haw',
+  // Creole languages
+  'haitian creole', 'ht', 'hat', 'papiamento', 'pap',
+  // Other
+  'esperanto', 'eo', 'epo', 'latin', 'la', 'lat',
+  'guarani', 'gn', 'grn', 'quechua', 'qu', 'quy', 'aymara', 'ay', 'aym',
+  'mizo', 'lus',
 ]);
 
 /**
