@@ -28,16 +28,13 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-// Translation utilities
+// Translation utilities - Gboard native input, no Latin conversion needed
 import { 
-  transliterateToNative,
   isSameLanguage,
-  isLatinText,
   isLatinScriptLanguage,
   isReady as isTranslatorReady,
   initWorker,
   normalizeUnicode,
-  spellCorrectForChat,
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 
@@ -310,75 +307,55 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language via Edge Function
+  // GBOARD-FIRST: Users type in their mother tongue, so use profile language
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Only process messages from the partner - sender sees their own message as-is
+      // Own messages - sender sees their own message as-is
       if (senderId === currentUserId) {
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Detect the actual script/language of the incoming message
-      const messageIsLatin = isLatinText(text);
-      
-      // Determine actual source language based on message script
-      // If message is in non-Latin script (e.g., Telugu తెలుగు), use partner's language
-      // If message is in Latin, check if it might be English or transliterated partner language
-      const actualSourceLanguage = messageIsLatin ? 'english' : partnerLanguage;
+      // Partner's message - translate to current user's language
+      // Source = partner's mother tongue (from profile)
+      // Target = current user's mother tongue (from profile)
+      const sourceLanguage = partnerLanguage; // Partner typed in their mother tongue via Gboard
+      const targetLanguage = currentUserLanguage;
       
       console.log('[MiniChatWindow] translateMessage:', {
         text: text.substring(0, 30),
-        messageIsLatin,
-        actualSourceLanguage,
-        partnerLanguage,
-        currentUserLanguage
+        sourceLanguage,
+        targetLanguage
       });
       
-      // Check if same language (after determining actual source)
-      const sameLanguage = isSameLanguage(actualSourceLanguage, currentUserLanguage);
-      
-      // Apply spell correction to Latin text only BEFORE processing
-      const correctedText = messageIsLatin ? spellCorrectForChat(text, 'english') : text;
-      
-      let finalText = correctedText;
-      let wasTranslated = false;
+      // Same language - no translation needed
+      const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
       
       if (sameLanguage) {
-        // Same language - just convert to native script if needed
-        if (!isLatinScriptLanguage(currentUserLanguage) && messageIsLatin) {
-          finalText = transliterateToNative(correctedText, currentUserLanguage);
-        }
-      } else {
-        // Different languages - translate via Edge Function
-        // IMPORTANT: Use actualSourceLanguage (detected from message) not partnerLanguage
-        console.log(`[MiniChatWindow] Translating: ${actualSourceLanguage} -> ${currentUserLanguage}`);
-        const result = await translateAsync(correctedText, actualSourceLanguage, currentUserLanguage);
-        
-        if (result.isTranslated && result.text) {
-          finalText = result.text;
-          wasTranslated = true;
-          console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
-        } else {
-          console.log('[MiniChatWindow] Translation not applied, using original');
-        }
-        
-        // Convert to native script if needed (only if result is Latin)
-        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(finalText)) {
-          const nativeScript = transliterateToNative(finalText, currentUserLanguage);
-          if (nativeScript && nativeScript !== finalText) {
-            finalText = nativeScript;
-          }
-        }
+        console.log('[MiniChatWindow] Same language, no translation needed');
+        return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
-
-      return {
-        translatedMessage: normalizeUnicode(finalText),
-        isTranslated: wasTranslated || finalText !== text,
-        detectedLanguage: actualSourceLanguage
-      };
+      
+      // Different languages - translate via Edge Function
+      console.log(`[MiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
+      const result = await translateAsync(text, sourceLanguage, targetLanguage);
+      
+      if (result.isTranslated && result.text) {
+        console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
+        return {
+          translatedMessage: normalizeUnicode(result.text),
+          isTranslated: true,
+          detectedLanguage: sourceLanguage
+        };
+      }
+      
+      // Translation failed, return original
+      console.log('[MiniChatWindow] Translation not applied, using original');
+      return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
+      
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
