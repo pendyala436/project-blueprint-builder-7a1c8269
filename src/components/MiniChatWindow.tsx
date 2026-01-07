@@ -51,6 +51,7 @@ interface Message {
   message: string;
   translatedMessage?: string;
   isTranslated?: boolean;
+  isTranslating?: boolean;
   detectedLanguage?: string;
   createdAt: string;
 }
@@ -319,20 +320,26 @@ const MiniChatWindow = ({
     detectedLanguage?: string;
   }> => {
     try {
-      // Only process messages from the partner
+      // Only process messages from the partner - sender sees their own message as-is
       if (senderId === currentUserId) {
         return { translatedMessage: text, isTranslated: false };
       }
 
       // Detect the actual script/language of the incoming message
-      // The stored message may be in partner's native script (e.g., Hindi देवनागरी)
-      // or in Latin (English) - we need to detect this for proper translation
       const messageIsLatin = isLatinText(text);
       
       // Determine actual source language based on message script
-      // If message is in Latin, treat as English for translation
-      // If message is non-Latin, use partner's language
+      // If message is in non-Latin script (e.g., Telugu తెలుగు), use partner's language
+      // If message is in Latin, check if it might be English or transliterated partner language
       const actualSourceLanguage = messageIsLatin ? 'english' : partnerLanguage;
+      
+      console.log('[MiniChatWindow] translateMessage:', {
+        text: text.substring(0, 30),
+        messageIsLatin,
+        actualSourceLanguage,
+        partnerLanguage,
+        currentUserLanguage
+      });
       
       // Check if same language (after determining actual source)
       const sameLanguage = isSameLanguage(actualSourceLanguage, currentUserLanguage);
@@ -353,16 +360,23 @@ const MiniChatWindow = ({
         // IMPORTANT: Use actualSourceLanguage (detected from message) not partnerLanguage
         console.log(`[MiniChatWindow] Translating: ${actualSourceLanguage} -> ${currentUserLanguage}`);
         const result = await translateAsync(correctedText, actualSourceLanguage, currentUserLanguage);
-        finalText = result.text;
-        wasTranslated = result.isTranslated;
+        
+        if (result.isTranslated && result.text) {
+          finalText = result.text;
+          wasTranslated = true;
+          console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
+        } else {
+          console.log('[MiniChatWindow] Translation not applied, using original');
+        }
         
         // Convert to native script if needed (only if result is Latin)
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(finalText)) {
-          finalText = transliterateToNative(finalText, currentUserLanguage);
+          const nativeScript = transliterateToNative(finalText, currentUserLanguage);
+          if (nativeScript && nativeScript !== finalText) {
+            finalText = nativeScript;
+          }
         }
       }
-      
-      // DO NOT apply spell correction to final result (it may be in native script)
 
       return {
         translatedMessage: normalizeUnicode(finalText),
@@ -434,6 +448,10 @@ const MiniChatWindow = ({
           const newMsg = payload.new;
           
           // IMMEDIATE: Replace temp message or add new one (non-blocking)
+          // Mark partner messages as "translating" initially
+          const isPartnerMessage = newMsg.sender_id !== currentUserId;
+          const needsTranslationCheck = isPartnerMessage && needsTranslation;
+          
           setMessages(prev => {
             // Check if this message already exists (real or temp)
             const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
@@ -452,18 +470,19 @@ const MiniChatWindow = ({
               message: newMsg.message,
               translatedMessage: undefined, // Will be filled by background
               isTranslated: false,
+              isTranslating: needsTranslationCheck, // Show loading for partner messages
               detectedLanguage: undefined,
               createdAt: newMsg.created_at
             }];
           });
 
           // Partner sent a message - update activity time
-          if (newMsg.sender_id !== currentUserId) {
+          if (isPartnerMessage) {
             setLastActivityTime(Date.now());
           }
 
           // Update unread count if minimized
-          if (isMinimized && newMsg.sender_id !== currentUserId) {
+          if (isMinimized && isPartnerMessage) {
             setUnreadCount(prev => prev + 1);
           }
 
@@ -476,6 +495,7 @@ const MiniChatWindow = ({
                     ...m,
                     translatedMessage: translation.translatedMessage,
                     isTranslated: translation.isTranslated,
+                    isTranslating: false, // Translation complete
                     detectedLanguage: translation.detectedLanguage
                   }
                 : m
@@ -842,17 +862,21 @@ const MiniChatWindow = ({
                   >
                     {/* 
                       For YOUR OWN messages: always show what you typed (in your native script)
-                      For PARTNER messages: show translated version in your native language ONLY
+                      For PARTNER messages: show translated version in your native language
+                      Priority: translatedMessage > message (always prefer translated)
                     */}
                     {msg.senderId === currentUserId ? (
                       // Own message - show in sender's native script
                       <p>{msg.message}</p>
-                    ) : msg.translatedMessage && msg.isTranslated ? (
-                      // Partner message with translation - show ONLY translated text in receiver's native language
-                      <p>{msg.translatedMessage}</p>
+                    ) : msg.isTranslating ? (
+                      // Partner message being translated - show with loading indicator
+                      <div className="flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="opacity-70 italic">{msg.message}</span>
+                      </div>
                     ) : (
-                      // Partner message without translation (same language)
-                      <p>{msg.message}</p>
+                      // Partner message - show translated version if available, else original
+                      <p>{msg.translatedMessage || msg.message}</p>
                     )}
                   </div>
                 </div>
