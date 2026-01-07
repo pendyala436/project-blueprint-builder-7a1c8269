@@ -4,13 +4,44 @@
  * 100% embedded code - NO external APIs
  * Dynamically handles ANY language combination via English pivot
  * Uses Unicode range detection - no hardcoded language mappings needed
+ * Supports profile-based language detection via userId parameters
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Supabase client for fetching user profiles
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Helper function to get user's primary language from profile (mother tongue)
+async function getUserLanguageFromProfile(userId: string): Promise<string | null> {
+  if (!userId || !supabaseUrl || !supabaseServiceKey) return null;
+  
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('primary_language, preferred_language')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error || !data) {
+      console.log(`[TranslateMessage] Could not fetch language for user ${userId}:`, error?.message);
+      return null;
+    }
+    
+    // Prefer primary_language (mother tongue), fallback to preferred_language
+    return data.primary_language || data.preferred_language || null;
+  } catch (err) {
+    console.error('[TranslateMessage] Error fetching user language:', err);
+    return null;
+  }
+}
 
 // ============================================================
 // UNICODE SCRIPT RANGES - Detects script from any text
@@ -1049,11 +1080,51 @@ serve(async (req) => {
   }
 
   try {
-    const { text, message, sourceLang, targetLang, source_language, target_language, bidirectional } = await req.json();
+    const { 
+      text, 
+      message, 
+      sourceLang, 
+      targetLang, 
+      source_language, 
+      target_language, 
+      bidirectional,
+      // NEW: User IDs for profile-based language detection (mother tongue)
+      senderId,
+      receiverId,
+      userId,       // Alternative: sender's user ID
+      partnerId     // Alternative: receiver's user ID
+    } = await req.json();
     
     const inputText = text || message;
-    const fromLang = sourceLang || source_language || 'auto';
-    const toLang = targetLang || target_language || 'english';
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PROFILE-BASED LANGUAGE DETECTION FROM MOTHER TONGUE
+    // Priority: Explicit language param > Profile mother tongue > Auto-detect
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Resolve sender (source) and receiver (target) user IDs
+    const senderUserId = senderId || userId;
+    const receiverUserId = receiverId || partnerId;
+    
+    // Fetch languages from profiles if user IDs provided
+    let profileSourceLang: string | null = null;
+    let profileTargetLang: string | null = null;
+    
+    if (senderUserId || receiverUserId) {
+      const [senderLang, receiverLang] = await Promise.all([
+        senderUserId ? getUserLanguageFromProfile(senderUserId) : Promise.resolve(null),
+        receiverUserId ? getUserLanguageFromProfile(receiverUserId) : Promise.resolve(null)
+      ]);
+      profileSourceLang = senderLang;
+      profileTargetLang = receiverLang;
+      console.log(`[TranslateMessage] Profile languages - Sender: ${profileSourceLang}, Receiver: ${profileTargetLang}`);
+    }
+    
+    // Resolve final languages: explicit param > profile mother tongue > auto-detect
+    const fromLang = sourceLang || source_language || profileSourceLang || 'auto';
+    const toLang = targetLang || target_language || profileTargetLang || 'english';
+    
+    console.log(`[TranslateMessage] Resolved languages - Source: ${fromLang}, Target: ${toLang}`);
     
     if (!inputText) {
       return new Response(
@@ -1186,6 +1257,11 @@ serve(async (req) => {
       targetScript: targetScript,
       sourceScriptName: sourceScriptName,
       pivotLanguage: 'english',
+      
+      // Profile-based language info (mother tongue from user profiles)
+      profileSourceLanguage: profileSourceLang,
+      profileTargetLanguage: profileTargetLang,
+      languageSource: profileSourceLang ? 'profile' : (sourceLang || source_language ? 'explicit' : 'auto-detected'),
       
       // Architecture info
       method: 'english_pivot_transliteration',

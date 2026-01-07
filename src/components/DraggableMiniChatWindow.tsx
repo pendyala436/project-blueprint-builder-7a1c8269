@@ -706,8 +706,11 @@ const DraggableMiniChatWindow = ({
           return;
         }
         
-        // Different languages - translate via Edge Function
-        translateAsync(m.message, partnerLanguage, currentUserLanguage)
+        // Different languages - translate via Edge Function with profile-based language detection
+        translateAsync(m.message, partnerLanguage, currentUserLanguage, {
+          senderId: partnerId,
+          receiverId: currentUserId
+        })
           .then((result) => {
             setMessages(prev => prev.map(msg => 
               msg.id === m.id 
@@ -768,7 +771,10 @@ const DraggableMiniChatWindow = ({
             
             // STEP 2: BACKGROUND - Translate partner message
             if (needsTranslation) {
-              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage)
+              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage, {
+                senderId: partnerId,
+                receiverId: currentUserId
+              })
                 .then((result) => {
                   setMessages(prev => prev.map(msg => 
                     msg.id === newMsg.id 

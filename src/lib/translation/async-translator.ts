@@ -259,7 +259,11 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
 export async function translateAsync(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  options?: {
+    senderId?: string;
+    receiverId?: string;
+  }
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
 
@@ -291,6 +295,8 @@ export async function translateAsync(
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
+    senderId: options?.senderId,
+    receiverId: options?.receiverId,
   });
 
   try {
@@ -300,6 +306,9 @@ export async function translateAsync(
         sourceLanguage: normSource,
         targetLanguage: normTarget,
         mode: 'translate',
+        // Pass user IDs for profile-based mother tongue detection
+        senderId: options?.senderId,
+        receiverId: options?.receiverId,
       },
     });
 
@@ -311,9 +320,9 @@ export async function translateAsync(
     const result: AsyncTranslationResult = {
       text: data?.translatedText || trimmed,
       originalText: trimmed,
-      isTranslated: data?.isTranslated || false,
-      sourceLanguage: data?.sourceLanguage || normSource,
-      targetLanguage: data?.targetLanguage || normTarget,
+      isTranslated: data?.isTranslated !== false && data?.translatedText !== trimmed,
+      sourceLanguage: data?.sourceLang || normSource,
+      targetLanguage: data?.targetLang || normTarget,
       detectedLanguage: data?.detectedLanguage,
     };
 
@@ -324,6 +333,8 @@ export async function translateAsync(
     console.log('[AsyncTranslator] Edge function result:', {
       translated: result.text?.substring(0, 30),
       isTranslated: result.isTranslated,
+      profileSource: data?.profileSourceLanguage,
+      profileTarget: data?.profileTargetLanguage,
     });
 
     return result;
