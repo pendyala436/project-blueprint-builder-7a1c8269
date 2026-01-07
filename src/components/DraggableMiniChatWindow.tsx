@@ -43,22 +43,15 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useRealtimeTranslation } from "@/lib/translation";
-// HYBRID TRANSLATION:
-// - Embedded: Instant preview, script conversion, spell correction (< 2ms)
-// - Edge Function: Actual translation between languages (async)
+// GBOARD-FIRST: Users type in native script, no Latin conversion needed
 import {
-  convertToNativeScript,
-  transliterateToNative,
-  autoDetectLanguage,
   isSameLanguage,
   isLatinScriptLanguage,
-  isLatinText,
-  needsScriptConversion as checkNeedsScriptConversion,
-  spellCorrectForChat,
+  normalizeUnicode,
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - Hybrid: embedded preview + Edge Function translation');
+console.log('[DraggableMiniChatWindow] Module loaded - Gboard native input + Edge Function translation');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -134,9 +127,10 @@ const DraggableMiniChatWindow = ({
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if translation is needed
+  // Check if translation is needed (based on mother tongue from profiles)
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
-  const needsScriptConversionFlag = !isLatinScriptLanguage(currentUserLanguage);
+  // User's language uses Latin script natively (English, Spanish, etc.)
+  const userUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
 
   // Dragging state - use left/top for absolute positioning anywhere on screen
   const [position, setPosition] = useState(() => {
@@ -627,78 +621,60 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // NON-BLOCKING: Auto-translate partner's messages using async translator
-  // Supports 300+ languages, massive scale, background processing
-  // SPELL CORRECTION: Applied before and after translation
+  // GBOARD-FIRST: Auto-translate partner's messages using profile languages
+  // Users type in native script via Gboard - no Latin detection needed
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
-    console.log('[DraggableMiniChatWindow] translateMessage called:', {
-      text: text.substring(0, 50),
-      senderId,
-      currentUserId,
-      partnerLanguage,
-      currentUserLanguage
-    });
-    
     try {
-      // Only translate messages from the partner (not our own messages)
+      // Own messages - sender sees their own message as-is
       if (senderId === currentUserId) {
-        console.log('[DraggableMiniChatWindow] Skipping - own message');
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Detect the actual script/language of the incoming message
-      // The stored message may be in partner's native script or in Latin (English)
-      const messageIsLatin = /[a-zA-Z]/.test(text) && !/[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(text);
+      // Partner's message - translate to current user's language
+      // Source = partner's mother tongue (from profile)
+      // Target = current user's mother tongue (from profile)
+      const sourceLanguage = partnerLanguage;
+      const targetLanguage = currentUserLanguage;
       
-      // Determine actual source language based on message script
-      // If message is in Latin, treat as English for translation
-      // If message is non-Latin, use partner's language
-      const actualSourceLanguage = messageIsLatin ? 'english' : partnerLanguage;
-      
-      // Skip if same language - instant return
-      if (isSameLanguage(actualSourceLanguage, currentUserLanguage)) {
-        console.log('[DraggableMiniChatWindow] Skipping - same language');
-        return { translatedMessage: text, isTranslated: false };
-      }
-
-      // STEP 1: Apply SymSpell correction to source text ONLY if it's Latin
-      const correctedText = messageIsLatin ? spellCorrectForChat(text, 'english') : text;
-      console.log('[DraggableMiniChatWindow] Input is Latin:', messageIsLatin, 'Source:', actualSourceLanguage);
-
-      // STEP 2: Use async translator for non-blocking translation via Edge Function
-      // IMPORTANT: Use actualSourceLanguage (detected from message) not partnerLanguage
-      console.log('[DraggableMiniChatWindow] Starting translation:', actualSourceLanguage, '→', currentUserLanguage);
-      const { translateAsync } = await import('@/lib/translation/async-translator');
-      const result = await translateAsync(correctedText, actualSourceLanguage, currentUserLanguage);
-      console.log('[DraggableMiniChatWindow] Translation result:', {
-        translated: result.text?.substring(0, 50),
-        isTranslated: result.isTranslated
+      console.log('[DraggableMiniChatWindow] translateMessage:', {
+        text: text.substring(0, 30),
+        sourceLanguage,
+        targetLanguage
       });
       
-      // STEP 3: DO NOT apply spell correction to result - it's likely in native script
-      // Spell correction can corrupt non-Latin text
-      const finalText = result.text;
-      console.log('[DraggableMiniChatWindow] Final text:', finalText.substring(0, 50));
+      // Same language - no translation needed
+      if (isSameLanguage(sourceLanguage, targetLanguage)) {
+        console.log('[DraggableMiniChatWindow] Same language, no translation needed');
+        return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
+      }
       
-      return {
-        translatedMessage: finalText,
-        isTranslated: result.isTranslated,
-        detectedLanguage: actualSourceLanguage
-      };
+      // Different languages - translate via Edge Function
+      console.log(`[DraggableMiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
+      const result = await translateAsync(text, sourceLanguage, targetLanguage);
+      
+      if (result.isTranslated && result.text) {
+        console.log('[DraggableMiniChatWindow] Translation result:', result.text.substring(0, 50));
+        return {
+          translatedMessage: normalizeUnicode(result.text),
+          isTranslated: true,
+          detectedLanguage: sourceLanguage
+        };
+      }
+      
+      return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
-  // NON-BLOCKING: Load messages with optimistic display first, then background translation
-  // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
+  // GBOARD-FIRST: Load messages with immediate display + background translation
   const loadMessages = async () => {
-    console.log('[DraggableMiniChatWindow] loadMessages called - using Edge Function translation');
+    console.log('[DraggableMiniChatWindow] loadMessages called');
     
     const { data } = await supabase
       .from("chat_messages")
@@ -707,122 +683,55 @@ const DraggableMiniChatWindow = ({
       .order("created_at", { ascending: true })
       .limit(100);
 
-    console.log('[DraggableMiniChatWindow] Loaded messages:', data?.length || 0);
-
     if (data) {
-      // STEP 1: IMMEDIATE - Show messages instantly without translation
-      const immediateMessages = data.map((m) => {
-        const detected = autoDetectLanguage(m.message);
-        return {
-          id: m.id,
-          senderId: m.sender_id,
-          message: m.message,
-          translatedMessage: undefined, // Will be filled by background
-          isTranslated: false,
-          detectedLanguage: detected.language,
-          createdAt: m.created_at
-        };
-      });
+      // STEP 1: IMMEDIATE - Show messages instantly
+      const immediateMessages = data.map((m) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        message: m.message,
+        translatedMessage: undefined,
+        isTranslated: false,
+        isTranslating: m.sender_id !== currentUserId && needsTranslation,
+        createdAt: m.created_at
+      }));
       setMessages(immediateMessages);
 
-      // STEP 2: BACKGROUND - Translate partner's messages without blocking UI
+      // STEP 2: BACKGROUND - Translate partner's messages
       const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
       
-      // Process each partner message in background
-      console.log('[DraggableMiniChatWindow] Processing', partnerMessages.length, 'partner messages for translation');
-      
       partnerMessages.forEach((m) => {
-        const detected = autoDetectLanguage(m.message);
-        // IMPORTANT: If message is Latin, treat as English for translation
-        // If message is non-Latin, use the detected language
-        const messageIsLatin = detected.isLatin;
-        const sourceLanguage = messageIsLatin ? 'english' : detected.language;
-        const targetLanguage = currentUserLanguage;
-        const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
-        
-        console.log('[DraggableMiniChatWindow] Message translation check:', {
-          msgId: m.id,
-          text: m.message.substring(0, 30),
-          detected: detected.language,
-          isLatin: messageIsLatin,
-          sourceLanguage,
-          targetLanguage,
-          sameLanguage
-        });
-        
-        if (sameLanguage) {
-          // SAME LANGUAGE: Just convert to native script if needed
-          if (checkNeedsScriptConversion(targetLanguage) && messageIsLatin) {
-            // Apply spell correction ONLY to Latin text
-            const correctedMsg = spellCorrectForChat(m.message, 'english');
-            
-            convertToNativeScript(correctedMsg, targetLanguage)
-              .then(result => {
-                if (result.isTranslated && result.text) {
-                  // DO NOT apply spell correction to native script result
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === m.id 
-                      ? { 
-                          ...msg, 
-                          translatedMessage: result.text, 
-                          isTranslated: true,
-                          detectedLanguage: sourceLanguage
-                        }
-                      : msg
-                  ));
-                }
-              })
-              .catch(() => {}); // Non-blocking
-          }
-        } else {
-          // DIFFERENT LANGUAGE: Translate via Edge Function
-          console.log('[DraggableMiniChatWindow] Starting translation for msgId:', m.id);
-          // Apply spell correction ONLY if source is Latin/English
-          const correctedSource = messageIsLatin ? spellCorrectForChat(m.message, 'english') : m.message;
-          
-          // Use async translator that calls Edge Function
-          translateAsync(correctedSource, sourceLanguage, targetLanguage)
-            .then(async (result) => {
-              console.log('[DraggableMiniChatWindow] Edge Function result:', {
-                msgId: m.id,
-                translated: result.text?.substring(0, 30),
-                isTranslated: result.isTranslated
-              });
-              
-              // DO NOT apply spell correction to translated/native text
-              let finalText = result.text;
-              
-              // Convert to native script if needed (only if result is still in Latin)
-              if (result.isTranslated && checkNeedsScriptConversion(targetLanguage) && isLatinText(finalText)) {
-                try {
-                  const nativeResult = await convertToNativeScript(finalText, targetLanguage);
-                  if (nativeResult.isTranslated && nativeResult.text) {
-                    finalText = nativeResult.text;
-                  }
-                } catch (err) {
-                  console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
-                }
-              }
-              
-              setMessages(prev => prev.map(msg => 
-                msg.id === m.id 
-                  ? {
-                      ...msg,
-                      translatedMessage: finalText,
-                      isTranslated: result.isTranslated,
-                      detectedLanguage: result.detectedLanguage || sourceLanguage
-                    }
-                  : msg
-              ));
-            })
-            .catch(() => {}); // Non-blocking
+        if (!needsTranslation) {
+          // Same language - no translation needed
+          setMessages(prev => prev.map(msg => 
+            msg.id === m.id ? { ...msg, isTranslating: false } : msg
+          ));
+          return;
         }
+        
+        // Different languages - translate via Edge Function
+        translateAsync(m.message, partnerLanguage, currentUserLanguage)
+          .then((result) => {
+            setMessages(prev => prev.map(msg => 
+              msg.id === m.id 
+                ? {
+                    ...msg,
+                    translatedMessage: result.isTranslated ? normalizeUnicode(result.text) : undefined,
+                    isTranslated: result.isTranslated,
+                    isTranslating: false
+                  }
+                : msg
+            ));
+          })
+          .catch(() => {
+            setMessages(prev => prev.map(msg => 
+              msg.id === m.id ? { ...msg, isTranslating: false } : msg
+            ));
+          });
       });
     }
   };
 
-  // NON-BLOCKING: Subscribe to new messages with immediate display + background translation
-  // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
+  // GBOARD-FIRST: Subscribe to new messages with immediate display + background translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -836,141 +745,55 @@ const DraggableMiniChatWindow = ({
         },
         (payload: any) => {
           const newMsg = payload.new;
-          
-          // STEP 1: IMMEDIATE - Add message to UI instantly (no translation yet)
-          // Auto-detect language from message content
-          const detected = autoDetectLanguage(newMsg.message);
           const isPartnerMessage = newMsg.sender_id !== currentUserId;
-          const needsTranslationCheck = isPartnerMessage && !isSameLanguage(detected.language, currentUserLanguage);
           
+          // STEP 1: IMMEDIATE - Add message to UI
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: undefined, // Will be filled by background
+              translatedMessage: undefined,
               isTranslated: false,
-              isTranslating: needsTranslationCheck, // Show loading for partner messages needing translation
-              detectedLanguage: detected.language,
+              isTranslating: isPartnerMessage && needsTranslation,
               createdAt: newMsg.created_at
             }];
           });
 
           // Update activity and unread count for partner messages
-          if (newMsg.sender_id !== currentUserId) {
+          if (isPartnerMessage) {
             setLastActivityTime(Date.now());
             if (isMinimized) {
               setUnreadCount(prev => prev + 1);
             }
-          }
-
-          // STEP 2: BACKGROUND - Process message based on sender
-          if (newMsg.sender_id === currentUserId) {
-            // OWN MESSAGE: Already in sender's native script (processed during send)
-            // No further processing needed - sender already sees native script
-            return;
-          }
-          
-          // PARTNER MESSAGE: Translate to current user's mother tongue + native script
-          // IMPORTANT: If message is Latin, treat as English for translation
-          // If message is non-Latin, use the detected language
-          const messageIsLatin = detected.isLatin;
-          const sourceLanguage = messageIsLatin ? 'english' : detected.language;
-          const targetLanguage = currentUserLanguage;
-          
-          console.log('[DraggableMiniChatWindow] Processing partner message:', {
-            message: newMsg.message.substring(0, 30),
-            detected: detected.language,
-            isLatin: messageIsLatin,
-            sourceLanguage,
-            targetLanguage
-          });
-          
-          // Check if same language
-          const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
-          
-          if (sameLanguage) {
-            // SAME LANGUAGE: No translation needed, but convert to native script if needed
-            if (checkNeedsScriptConversion(targetLanguage) && messageIsLatin) {
-              // Apply spell correction ONLY to Latin text
-              console.log('[DraggableMiniChatWindow] Same lang - Applying SymSpell to Latin text');
-              const correctedMsg = spellCorrectForChat(newMsg.message, 'english');
-              
-              convertToNativeScript(correctedMsg, targetLanguage)
-                .then(result => {
-                  // DO NOT apply spell correction to native script result
+            
+            // STEP 2: BACKGROUND - Translate partner message
+            if (needsTranslation) {
+              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage)
+                .then((result) => {
                   setMessages(prev => prev.map(msg => 
                     msg.id === newMsg.id 
-                      ? { 
-                          ...msg, 
-                          translatedMessage: result.isTranslated ? result.text : undefined, 
+                      ? {
+                          ...msg,
+                          translatedMessage: result.isTranslated ? normalizeUnicode(result.text) : undefined,
                           isTranslated: result.isTranslated,
-                          isTranslating: false, // Translation complete
-                          detectedLanguage: sourceLanguage
+                          isTranslating: false
                         }
                       : msg
                   ));
                 })
                 .catch(() => {
-                  // Translation failed - mark as complete
                   setMessages(prev => prev.map(msg => 
                     msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
                   ));
                 });
             } else {
-              // Same language, same script - no processing needed
+              // Same language - mark as complete
               setMessages(prev => prev.map(msg => 
                 msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
               ));
             }
-          } else {
-            // DIFFERENT LANGUAGE: Translate via Edge Function
-            console.log('[DraggableMiniChatWindow] Diff lang - Translating:', sourceLanguage, '→', targetLanguage);
-            // Apply spell correction ONLY if source is Latin/English
-            const correctedSource = messageIsLatin ? spellCorrectForChat(newMsg.message, 'english') : newMsg.message;
-            
-            // Use async translator that calls Edge Function
-            translateAsync(correctedSource, sourceLanguage, targetLanguage)
-              .then(async (result) => {
-                console.log('[DraggableMiniChatWindow] Translation result:', {
-                  translated: result.text?.substring(0, 30),
-                  isTranslated: result.isTranslated
-                });
-                
-                // DO NOT apply spell correction to translated/native text
-                let finalText = result.text;
-                
-                // Convert to native script if needed (only if result is still in Latin)
-                if (result.isTranslated && checkNeedsScriptConversion(targetLanguage) && isLatinText(finalText)) {
-                  try {
-                    const nativeResult = await convertToNativeScript(finalText, targetLanguage);
-                    if (nativeResult.isTranslated && nativeResult.text) {
-                      finalText = nativeResult.text;
-                    }
-                  } catch (err) {
-                    console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
-                  }
-                }
-                
-                setMessages(prev => prev.map(msg => 
-                  msg.id === newMsg.id 
-                    ? {
-                        ...msg,
-                        translatedMessage: finalText,
-                        isTranslated: result.isTranslated,
-                        isTranslating: false, // Translation complete
-                        detectedLanguage: result.detectedLanguage || sourceLanguage
-                      }
-                    : msg
-                ));
-              })
-              .catch(() => {
-                // Translation failed - mark as complete
-                setMessages(prev => prev.map(msg => 
-                  msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
-                ));
-              });
           }
         }
       )
@@ -1034,11 +857,9 @@ const DraggableMiniChatWindow = ({
 
   // NON-BLOCKING: Send message with optimistic UI update
   // Bi-directional: Sender sees native script, receiver sees translated native script
-  // Handles small to very large messages without truncation
+  // GBOARD-FIRST: Send message directly - user types in native script
   const sendMessage = async () => {
-    // CRITICAL: Capture message immediately to prevent any data loss
     const messageText = newMessage.trim();
-    
     if (!messageText || isSending) return;
 
     if (messageText.length > MAX_MESSAGE_LENGTH) {
@@ -1050,94 +871,50 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // CRITICAL: Use the senderNativePreview from hook OR ref-tracked preview which is always current for THIS message
-    // This ensures we never use a stale preview from a previous message
-    const capturedPreview = senderNativePreview || currentPreviewRef.current;
-    const hasValidPreview = capturedPreview && capturedPreview.trim() && transliterationEnabled && capturedPreview !== messageText;
-    
-    // Determine what the sender will see:
-    // - If valid preview exists (native script conversion happened), use it
-    // - Otherwise use the original typed text
-    const senderViewMessage = hasValidPreview ? capturedPreview : messageText;
-
-    // IMMEDIATE: Clear input, preview state, AND the preview ref
+    // IMMEDIATE: Clear input and UI
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
-    currentPreviewRef.current = ''; // CRITICAL: Reset ref for next message
-    clearPreview(); // Clear typing preview - auto handled, no button
+    currentPreviewRef.current = '';
+    clearPreview();
     setLastActivityTime(Date.now());
     
-    // Clear any pending preview timeout to avoid stale updates
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
     
-    // OPTIMISTIC: Add FULL message to UI immediately in sender's native script
+    // OPTIMISTIC: Add message to UI immediately
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: senderViewMessage, // FULL message - sender sees their native script
+      message: messageText, // Gboard native input - show as-is
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
     }]);
 
-    // BACKGROUND: Process and send without blocking
+    // BACKGROUND: Send to database
     setIsSending(true);
     try {
-      let finalSenderMessage = senderViewMessage;
+      console.log('[DraggableMiniChatWindow] Sending:', messageText.substring(0, 30));
       
-      // SYMSPELL CORRECTION: Apply to Latin text ONLY before conversion/sending
-      const inputIsLatin = isLatinText(senderViewMessage);
-      console.log('[DraggableMiniChatWindow] Send - Input is Latin:', inputIsLatin);
-      const correctedText = inputIsLatin ? spellCorrectForChat(senderViewMessage, currentUserLanguage) : senderViewMessage;
-      
-      // If no preview but transliteration enabled and needs conversion
-      // Process the FULL message text without any truncation
-      if (!hasValidPreview && transliterationEnabled && needsScriptConversionFlag && isLatinText(messageText)) {
-        try {
-          // Apply SymSpell correction before native script conversion (only Latin input)
-          console.log('[DraggableMiniChatWindow] Send - Converting to native script');
-          const correctedInput = spellCorrectForChat(messageText, currentUserLanguage);
-          const converted = await convertToNativeScript(correctedInput, currentUserLanguage);
-          if (converted.isTranslated && converted.text) {
-            finalSenderMessage = converted.text;
-            // Update optimistic message with FULL converted text
-            setMessages(prev => prev.map(m => 
-              m.id === tempId ? { ...m, message: finalSenderMessage } : m
-            ));
-          }
-        } catch (err) {
-          console.error('[DraggableMiniChatWindow] Script conversion error:', err);
-          // On error, still use the corrected message - never lose data
-          finalSenderMessage = correctedText;
-        }
-      } else {
-        finalSenderMessage = correctedText;
-      }
-      
-      // BACKGROUND: Send the FULL message to database
-      // Receiver will translate on their side
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: finalSenderMessage // Send FULL sender's native script version
+          message: messageText
         });
 
       if (error) throw error;
       
-      // Remove temp message (real one will come via subscription)
       setMessages(prev => prev.filter(m => m.id !== tempId));
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove optimistic message on error and restore the FULL message
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(messageText); // Restore FULL message for retry
+      setNewMessage(messageText);
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -1147,7 +924,6 @@ const DraggableMiniChatWindow = ({
       setIsSending(false);
     }
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -1648,123 +1424,20 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input with live native script preview */}
+              {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
               <div className="flex-1 relative">
-                {/* Live native script preview - shows text in sender's native script */}
-                {/* Uses senderNativePreview from hook OR livePreview from local state */}
-                {transliterationEnabled && newMessage.trim() && (senderNativePreview || livePreview.text || livePreview.isLoading) && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1.5 bg-primary/10 border-l-2 border-primary/50 rounded-r text-sm max-h-24 overflow-y-auto">
-                    {livePreview.isLoading && !senderNativePreview ? (
-                      <span className="flex items-center gap-1 text-xs">
-                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                        Converting to {currentUserLanguage}...
-                      </span>
-                    ) : (senderNativePreview || livePreview.text) && (senderNativePreview || livePreview.text) !== newMessage ? (
-                      <div className="flex flex-col gap-0.5">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Languages className="h-3 w-3 shrink-0 text-primary/70" />
-                          <span>Preview ({currentUserLanguage}):</span>
-                          {livePreview.isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                        </span>
-                        <span className="break-words whitespace-pre-wrap leading-relaxed text-foreground">
-                          {senderNativePreview || livePreview.text}
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-                {/* Same language indicator - only show when no native preview needed */}
-                {!needsTranslation && !needsScriptConversionFlag && newMessage.trim() && !senderNativePreview && !livePreview.text && !livePreview.isLoading && (
+                {/* Same language indicator */}
+                {!needsTranslation && newMessage.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                     Same language - direct chat
                   </div>
                 )}
                 <Input
-                  placeholder="Type in any language..."
+                  placeholder={userUsesLatinScript ? "Type your message..." : "Type in your language..."}
                   value={newMessage}
                   onChange={(e) => {
-                    // CRITICAL: Capture value immediately - never use e.target.value after this
-                    const value = e.target.value;
-                    
-                    // IMMEDIATE: Update input state synchronously - NEVER BLOCKED
-                    // This ensures typing is never interrupted regardless of message length
-                    setNewMessage(value);
-                    
-                    // Update activity timestamp and send typing indicator (non-blocking)
-                    handleTyping(value);
-                    
-                    // ASYNC PREVIEW: Run in background, never blocks typing
-                    // Clear any pending preview timeout
-                    if (previewTimeoutRef.current) {
-                      clearTimeout(previewTimeoutRef.current);
-                      previewTimeoutRef.current = null;
-                    }
-                    
-                    // Quick sync check - these are instant (<0.1ms), never block
-                    const trimmedValue = value.trim();
-                    if (!trimmedValue) {
-                      // Empty input - clear preview immediately AND reset ref
-                      setLivePreview({ text: '', isLoading: false });
-                      currentPreviewRef.current = '';
-                      return;
-                    }
-                    
-                    // Check if conversion is needed (sync, <0.5ms)
-                    const needsConversion = transliterationEnabled && 
-                      needsScriptConversionFlag && 
-                      isLatinText(value);
-                    
-                    if (!needsConversion) {
-                      // No conversion needed - clear preview AND reset ref
-                      setLivePreview({ text: '', isLoading: false });
-                      currentPreviewRef.current = '';
-                      return;
-                    }
-                    
-                    // Show loading indicator without blocking typing
-                    setLivePreview(prev => ({ text: prev.text, isLoading: true }));
-                    
-                    // DEBOUNCED PREVIEW: Schedule preview update after typing pause
-                    // Use longer debounce for very long messages to reduce processing
-                    const debounceTime = value.length > 500 ? 500 : value.length > 100 ? 350 : 250;
-                    
-                    previewTimeoutRef.current = setTimeout(() => {
-                      // Capture the current value at debounce time
-                      const capturedValue = value;
-                      
-                      // Use requestIdleCallback for true non-blocking background work
-                      const runPreview = () => {
-                        // SYMSPELL CORRECTION: Apply before native script conversion (PREVIEW)
-                        console.log('[DraggableMiniChatWindow] Preview - Applying SymSpell:', currentUserLanguage);
-                        const correctedValue = spellCorrectForChat(capturedValue, currentUserLanguage);
-                        console.log('[DraggableMiniChatWindow] Preview - SymSpell result:', correctedValue.substring(0, 30));
-                        
-                        convertToNativeScript(correctedValue, currentUserLanguage)
-                          .then(result => {
-                            // Only update if result is valid and meaningful
-                            if (result.isTranslated && result.text && result.text !== capturedValue) {
-                              setLivePreview({ text: result.text, isLoading: false });
-                              // CRITICAL: Update ref to track current preview for this message
-                              currentPreviewRef.current = result.text;
-                            } else {
-                              setLivePreview({ text: '', isLoading: false });
-                              currentPreviewRef.current = '';
-                            }
-                          })
-                          .catch(() => {
-                            // Silently fail - preview is optional enhancement
-                            setLivePreview({ text: '', isLoading: false });
-                            currentPreviewRef.current = '';
-                          });
-                      };
-                      
-                      // Schedule during idle time or use fallback
-                      if ('requestIdleCallback' in window) {
-                        (window as any).requestIdleCallback(runPreview, { timeout: 1000 });
-                      } else {
-                        setTimeout(runPreview, 0);
-                      }
-                    }, debounceTime);
+                    setNewMessage(e.target.value);
+                    handleTyping(e.target.value);
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs w-full"
