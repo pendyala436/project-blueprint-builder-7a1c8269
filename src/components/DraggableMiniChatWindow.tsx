@@ -919,25 +919,28 @@ const DraggableMiniChatWindow = ({
     }
 
     // CRITICAL: Capture the current preview BEFORE clearing state
+    // This ensures the native script preview is used when sending
     const currentPreview = livePreview.text;
-    const hasPreview = currentPreview && currentPreview !== messageText && transliterationEnabled;
+    const hasValidPreview = currentPreview && currentPreview.trim() && transliterationEnabled;
     
-    // Determine what the sender will see (native script if preview available)
-    const senderViewMessage = hasPreview ? currentPreview : messageText;
+    // Determine what the sender will see:
+    // - If preview exists (native script conversion happened), use the preview
+    // - Otherwise use the original typed text
+    const senderViewMessage = hasValidPreview ? currentPreview : messageText;
 
-    // IMMEDIATE: Clear input and update UI (non-blocking)
+    // IMMEDIATE: Clear input and reset preview state completely
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
     setLastActivityTime(Date.now());
     
-    // Clear any pending preview timeout
+    // Clear any pending preview timeout to avoid stale updates
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
     
     // OPTIMISTIC: Add message to UI immediately in sender's native script
-    const tempId = `temp-${Date.now()}`;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
@@ -953,7 +956,7 @@ const DraggableMiniChatWindow = ({
       let finalSenderMessage = senderViewMessage;
       
       // If no preview but transliteration enabled and needs conversion
-      if (!hasPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
+      if (!hasValidPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
         try {
           const converted = await convertToNativeScriptAsync(messageText, currentUserLanguage);
           if (converted.isTranslated && converted.text) {
