@@ -57,6 +57,17 @@ import {
   processMessageForChat,
 } from "@/lib/translation/async-translator";
 import { spellCorrectForChat } from "@/lib/translation/phonetic-symspell";
+import { initWorker as initTranslationWorker, isReady as isTranslatorReady, getLoadingStatus } from "@/lib/translation/worker-translator";
+
+// Initialize translation worker on module load (non-blocking)
+console.log('[DraggableMiniChatWindow] Module loaded, initiating translation worker...');
+initTranslationWorker()
+  .then(ready => {
+    console.log('[DraggableMiniChatWindow] Translation worker initialized:', ready ? 'SUCCESS' : 'FAILED');
+  })
+  .catch(err => {
+    console.error('[DraggableMiniChatWindow] Translation worker init error:', err);
+  });
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -672,12 +683,19 @@ const DraggableMiniChatWindow = ({
   // NON-BLOCKING: Load messages with optimistic display first, then background translation
   // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
   const loadMessages = async () => {
+    console.log('[DraggableMiniChatWindow] loadMessages called, checking worker status:', {
+      isReady: isTranslatorReady(),
+      loadingStatus: getLoadingStatus()
+    });
+    
     const { data } = await supabase
       .from("chat_messages")
       .select("*")
       .eq("chat_id", chatId)
       .order("created_at", { ascending: true })
       .limit(100);
+
+    console.log('[DraggableMiniChatWindow] Loaded messages:', data?.length || 0);
 
     if (data) {
       // STEP 1: IMMEDIATE - Show messages instantly without translation
@@ -699,11 +717,23 @@ const DraggableMiniChatWindow = ({
       const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
       
       // Process each partner message in background
+      console.log('[DraggableMiniChatWindow] Processing', partnerMessages.length, 'partner messages for translation');
+      
       partnerMessages.forEach((m) => {
         const detected = autoDetectLanguageSync(m.message);
         const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
         const targetLanguage = currentUserLanguage;
         const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
+        
+        console.log('[DraggableMiniChatWindow] Message translation check:', {
+          msgId: m.id,
+          text: m.message.substring(0, 30),
+          detected: detected.language,
+          isLatin: detected.isLatin,
+          sourceLanguage,
+          targetLanguage,
+          sameLanguage
+        });
         
         if (sameLanguage) {
           // SAME LANGUAGE: Just convert to native script if needed
@@ -733,25 +763,38 @@ const DraggableMiniChatWindow = ({
         } else {
           // DIFFERENT LANGUAGE: Translate to receiver's language + native script
           // SYMSPELL CORRECTION: Apply to source before translation (LOAD - diff lang)
+          console.log('[DraggableMiniChatWindow] Starting translation for msgId:', m.id);
           const correctedSource = spellCorrectForChat(m.message, sourceLanguage);
+          console.log('[DraggableMiniChatWindow] SymSpell corrected source:', correctedSource.substring(0, 30));
           
           translateInBackground(
             correctedSource,
             sourceLanguage,
             targetLanguage,
             async (result) => {
+              console.log('[DraggableMiniChatWindow] translateInBackground callback received:', {
+                msgId: m.id,
+                original: m.message.substring(0, 30),
+                translated: result.text?.substring(0, 30),
+                isTranslated: result.isTranslated
+              });
+              
               // SYMSPELL CORRECTION: Apply to translated result
               let finalText = spellCorrectForChat(result.text, targetLanguage);
+              console.log('[DraggableMiniChatWindow] SymSpell corrected result:', finalText.substring(0, 30));
               
               // Convert to native script if needed
               if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage) && asyncIsLatinText(finalText)) {
+                console.log('[DraggableMiniChatWindow] Converting to native script:', targetLanguage);
                 try {
                   const nativeResult = await convertToNativeScriptAsync(finalText, targetLanguage);
                   if (nativeResult.isTranslated && nativeResult.text) {
                     // SYMSPELL CORRECTION: Apply after native conversion
                     finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
+                    console.log('[DraggableMiniChatWindow] Native script result:', finalText.substring(0, 30));
                   }
-                } catch {
+                } catch (err) {
+                  console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
                   // Keep translated text
                 }
               }
@@ -766,6 +809,7 @@ const DraggableMiniChatWindow = ({
                     }
                   : msg
               ));
+              console.log('[DraggableMiniChatWindow] Message updated with translation for msgId:', m.id);
             }
           );
         }
