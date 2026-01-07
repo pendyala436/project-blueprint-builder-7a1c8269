@@ -631,30 +631,36 @@ export type Database = {
       }
       community_leaders: {
         Row: {
+          activity_status: string | null
           created_at: string
           election_id: string | null
           id: string
           language_code: string
+          last_activity_at: string | null
           status: string
           term_end: string
           term_start: string
           user_id: string
         }
         Insert: {
+          activity_status?: string | null
           created_at?: string
           election_id?: string | null
           id?: string
           language_code: string
+          last_activity_at?: string | null
           status?: string
           term_end: string
           term_start?: string
           user_id: string
         }
         Update: {
+          activity_status?: string | null
           created_at?: string
           election_id?: string | null
           id?: string
           language_code?: string
+          last_activity_at?: string | null
           status?: string
           term_end?: string
           term_start?: string
@@ -1113,6 +1119,57 @@ export type Database = {
           },
         ]
       }
+      group_video_access: {
+        Row: {
+          access_expires_at: string
+          access_granted_at: string
+          created_at: string
+          gift_amount: number
+          gift_id: string | null
+          group_id: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          access_expires_at?: string
+          access_granted_at?: string
+          created_at?: string
+          gift_amount?: number
+          gift_id?: string | null
+          group_id: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          access_expires_at?: string
+          access_granted_at?: string
+          created_at?: string
+          gift_amount?: number
+          gift_id?: string | null
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_video_access_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "gifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_video_access_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       language_community_groups: {
         Row: {
           created_at: string
@@ -1280,6 +1337,39 @@ export type Database = {
           max_call_women?: number
           max_chat_women?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      leader_admin_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          language_code: string
+          leader_id: string
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          language_code: string
+          leader_id: string
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          language_code?: string
+          leader_id?: string
+          message?: string
+          sender_id?: string
+          sender_role?: string
         }
         Relationships: []
       }
@@ -1803,6 +1893,104 @@ export type Database = {
         }
         Relationships: []
       }
+      private_call_invitations: {
+        Row: {
+          caller_id: string
+          caller_language: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          min_gift_amount: number
+          receiver_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          caller_id: string
+          caller_language?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          min_gift_amount?: number
+          receiver_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          caller_id?: string
+          caller_language?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          min_gift_amount?: number
+          receiver_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      private_calls: {
+        Row: {
+          access_expires_at: string | null
+          admin_earnings: number | null
+          call_type: string
+          caller_id: string
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          gift_amount: number | null
+          gift_id: string | null
+          id: string
+          receiver_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          woman_earnings: number | null
+        }
+        Insert: {
+          access_expires_at?: string | null
+          admin_earnings?: number | null
+          call_type?: string
+          caller_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          gift_amount?: number | null
+          gift_id?: string | null
+          id?: string
+          receiver_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          woman_earnings?: number | null
+        }
+        Update: {
+          access_expires_at?: string | null
+          admin_earnings?: number | null
+          call_type?: string
+          caller_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          gift_amount?: number | null
+          gift_id?: string | null
+          id?: string
+          receiver_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          woman_earnings?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "private_calls_gift_id_fkey"
+            columns: ["gift_id"]
+            isOneToOne: false
+            referencedRelation: "gifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       private_groups: {
         Row: {
           access_type: string
@@ -1814,6 +2002,7 @@ export type Database = {
           min_gift_amount: number
           name: string
           owner_id: string
+          owner_language: string | null
           participant_count: number
           stream_id: string | null
           updated_at: string
@@ -1828,6 +2017,7 @@ export type Database = {
           min_gift_amount?: number
           name: string
           owner_id: string
+          owner_language?: string | null
           participant_count?: number
           stream_id?: string | null
           updated_at?: string
@@ -1842,6 +2032,7 @@ export type Database = {
           min_gift_amount?: number
           name?: string
           owner_id?: string
+          owner_language?: string | null
           participant_count?: number
           stream_id?: string | null
           updated_at?: string
@@ -2135,6 +2326,33 @@ export type Database = {
           },
         ]
       }
+      shift_rotations: {
+        Row: {
+          affected_users: number | null
+          created_at: string | null
+          executed_at: string | null
+          id: string
+          notes: string | null
+          rotation_date: string
+        }
+        Insert: {
+          affected_users?: number | null
+          created_at?: string | null
+          executed_at?: string | null
+          id?: string
+          notes?: string | null
+          rotation_date: string
+        }
+        Update: {
+          affected_users?: number | null
+          created_at?: string | null
+          executed_at?: string | null
+          id?: string
+          notes?: string | null
+          rotation_date?: string
+        }
+        Relationships: []
+      }
       shift_templates: {
         Row: {
           break_hours: number
@@ -2144,6 +2362,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          rotation_order: number | null
           shift_code: string
           start_time: string
           updated_at: string
@@ -2157,6 +2376,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          rotation_order?: number | null
           shift_code: string
           start_time: string
           updated_at?: string
@@ -2170,6 +2390,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          rotation_order?: number | null
           shift_code?: string
           start_time?: string
           updated_at?: string
@@ -2584,31 +2805,40 @@ export type Database = {
       }
       user_status: {
         Row: {
+          active_call_count: number | null
           active_chat_count: number | null
           created_at: string
           id: string
           is_online: boolean
           last_seen: string
+          max_parallel_calls: number | null
+          max_parallel_chats: number | null
           status_text: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          active_call_count?: number | null
           active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
           last_seen?: string
+          max_parallel_calls?: number | null
+          max_parallel_chats?: number | null
           status_text?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          active_call_count?: number | null
           active_chat_count?: number | null
           created_at?: string
           id?: string
           is_online?: boolean
           last_seen?: string
+          max_parallel_calls?: number | null
+          max_parallel_chats?: number | null
           status_text?: string | null
           updated_at?: string
           user_id?: string
@@ -2977,6 +3207,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_group_video_access: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: Json
+      }
       check_message_rate_limit: {
         Args: {
           max_messages?: number
@@ -2985,12 +3219,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_private_call_access: {
+        Args: { p_call_id: string; p_user_id: string }
+        Returns: Json
+      }
       cleanup_chat_media: { Args: never; Returns: undefined }
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
+      expire_group_video_access: { Args: never; Returns: undefined }
       get_current_chat_rate: {
         Args: never
         Returns: {
@@ -3117,6 +3356,19 @@ export type Database = {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
       }
+      process_group_video_gift: {
+        Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_private_call_gift: {
+        Args: {
+          p_gift_id: string
+          p_invitation_id?: string
+          p_receiver_id: string
+          p_sender_id: string
+        }
+        Returns: Json
+      }
       process_recharge: {
         Args: {
           p_amount: number
@@ -3149,6 +3401,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rotate_monthly_shifts: { Args: never; Returns: undefined }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
     }
