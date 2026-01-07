@@ -114,11 +114,11 @@ const khmerRow3: KeyDefinition[] = [
   { key: '⇧', type: 'modifier', width: 1.5, label: 'Shift' },
   { key: 'ឃ', shift: 'ឍ' },
   { key: 'ខ', shift: 'ឃ' },
-  { key: 'ច', shift: 'ជ org' },
+  { key: 'ច', shift: 'ជ' },
   { key: 'វ', shift: 'វ្រ' },
-  { key: 'ប', shift: 'ព' org' },
+  { key: 'ប', shift: 'ព' },
   { key: 'ន', shift: 'ណ' },
-  { key: 'ម org', shift: 'ំ' },
+  { key: 'ម', shift: 'ំ' },
   { key: '់', shift: '៌' },
   { key: '⌫', type: 'action', width: 1.5, label: 'Delete' },
 ];
@@ -141,7 +141,7 @@ export const khmerLayout: KeyboardLayout = {
   rows: [
     { keys: khmerRow1 },
     { keys: khmerRow2 },
-    { keys: khmerRow3.map(k => ({ ...k, key: k.key.replace(' org', ''), shift: k.shift?.replace(' org', '') })) },
+    { keys: khmerRow3 },
     { keys: khmerRow4 },
   ],
 };
