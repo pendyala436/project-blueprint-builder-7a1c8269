@@ -723,7 +723,7 @@ export const comprehensiveLanguageMappings: LanguageMapping[] = [
   { code: 'sms', name: 'Skolt Sami', nativeName: 'Sääʹmǩiõll', script: 'latin', layoutId: 'fi' },
   { code: 'smj', name: 'Lule Sami', nativeName: 'Julevsámegiella', script: 'latin', layoutId: 'sv' },
   { code: 'sma', name: 'Southern Sami', nativeName: 'Åarjelsaemien', script: 'latin', layoutId: 'no' },
-  { code: 'vep', name: 'Veps', nativeName: 'Vepsän kel'', script: 'latin', layoutId: 'fi' },
+  { code: 'vep', name: 'Veps', nativeName: 'Vepsän kelʼ', script: 'latin', layoutId: 'fi' },
   { code: 'vro', name: 'Võro', nativeName: 'Võro', script: 'latin', layoutId: 'et' },
   { code: 'liv', name: 'Livonian', nativeName: 'Līvõ kēļ', script: 'latin', layoutId: 'lv' },
   { code: 'mdf', name: 'Moksha', nativeName: 'Мокшень', script: 'cyrillic', layoutId: 'ru' },
@@ -1025,5 +1025,7 @@ export function getTotalSupportedLanguages(): number {
   return allCodes.size;
 }
 
-// Export LanguageMapping type for external use
-export type { LanguageMapping };
+// Alias exports for compatibility
+export const getLanguagesForScript = (script: ScriptType) => 
+  comprehensiveLanguageMappings.filter(m => m.script === script);
+export const searchLanguagesMappings = searchLanguages;
