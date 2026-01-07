@@ -46,6 +46,9 @@ import {
   detectLanguage as workerDetectLanguage,
 } from './worker-translator';
 
+// Fallback: server-side/edge translation (when browser worker cannot load)
+import { translate as edgeTranslate } from '@/lib/dl-translate';
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -477,15 +480,33 @@ async function translateViaBrowserWorker(
     targetLanguage,
     workerReady: isWorkerReady()
   });
-  
+
   try {
-    // Non-blocking worker check - if not ready, start init but queue for later
+    // Background path: it's safe to wait here (this is NOT the typing UI).
     if (!isWorkerReady()) {
-      console.log('[AsyncTranslator] Worker not ready, initiating and returning original');
-      // Fire and forget init - let the queue handle retries
-      initWorker().catch(() => {});
-      // Return original for now - caller can retry
-      return { text, originalText: text, isTranslated: false };
+      console.log('[AsyncTranslator] Worker not ready, attempting init...');
+      const ready = await initWorker().catch((err) => {
+        console.warn('[AsyncTranslator] initWorker failed:', err);
+        return false;
+      });
+
+      if (!ready) {
+        console.warn('[AsyncTranslator] Worker unavailable; falling back to Edge translate-message');
+        try {
+          const edge = await edgeTranslate(text, sourceLanguage, targetLanguage);
+          return {
+            text: edge.text || text,
+            originalText: text,
+            isTranslated: !!edge.isTranslated && (edge.text || text) !== text,
+            sourceLanguage: edge.source || sourceLanguage,
+            targetLanguage: edge.target || targetLanguage,
+            detectedLanguage: edge.detectedLanguage,
+          };
+        } catch (edgeErr) {
+          console.error('[AsyncTranslator] Edge fallback translation failed:', edgeErr);
+          return { text, originalText: text, isTranslated: false, error: String(edgeErr) };
+        }
+      }
     }
 
     console.log('[AsyncTranslator] Calling workerTranslate...');
@@ -494,11 +515,29 @@ async function translateViaBrowserWorker(
       normalizeLanguage(sourceLanguage),
       normalizeLanguage(targetLanguage)
     );
-    
+
     console.log('[AsyncTranslator] workerTranslate result:', {
       success: result.success,
       resultText: result.text?.substring(0, 30)
     });
+
+    // If worker couldn't translate, try Edge fallback
+    if (!result.success) {
+      console.warn('[AsyncTranslator] Worker translate failed; falling back to Edge translate-message');
+      try {
+        const edge = await edgeTranslate(text, sourceLanguage, targetLanguage);
+        return {
+          text: edge.text || text,
+          originalText: text,
+          isTranslated: !!edge.isTranslated && (edge.text || text) !== text,
+          sourceLanguage: edge.source || sourceLanguage,
+          targetLanguage: edge.target || targetLanguage,
+          detectedLanguage: edge.detectedLanguage,
+        };
+      } catch (edgeErr) {
+        console.error('[AsyncTranslator] Edge fallback translation failed:', edgeErr);
+      }
+    }
 
     return {
       text: result.text || text,

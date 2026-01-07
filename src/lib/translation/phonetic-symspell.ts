@@ -62,14 +62,8 @@ const PHONETIC_RULES: Record<string, string[]> = {
 
 // Language-specific phonetic patterns
 const LANGUAGE_PHONETIC_PATTERNS: Record<string, Record<string, string>> = {
-  // Telugu specific
-  telugu: {
-    'vu': 'u',      // bagunnavu → bagunnaavu
-    'nna': 'na',    // double consonants
-    'lla': 'la',
-    'rra': 'ra',
-    'avu': 'aavu',  // common suffix
-  },
+  // Telugu (keep romanization mostly intact; aggressive rules break transliteration)
+  telugu: {},
   // Hindi specific
   hindi: {
     'aa': 'a',
