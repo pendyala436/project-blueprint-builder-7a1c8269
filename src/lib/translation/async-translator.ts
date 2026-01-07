@@ -5,15 +5,24 @@
  * 
  * Features:
  * 1. Supports 300+ NLLB languages
- * 2. Non-blocking async operations
+ * 2. Non-blocking async operations (Web Worker based)
  * 3. Background translation queue
  * 4. Optimistic UI updates
  * 5. Parallel processing for lakhs of users
  * 6. Live native script preview (sender side)
  * 7. Background translation (receiver side)
+ * 8. Fully browser-side - NO external API calls
  */
 
-import { supabase } from '@/integrations/supabase/client';
+import {
+  translate as workerTranslate,
+  transliterateToNative as workerTransliterate,
+  initWorker,
+  isReady as isWorkerReady,
+  isSameLanguage as workerIsSameLanguage,
+  isLatinScriptLanguage as workerIsLatinScriptLanguage,
+  isLatinText as workerIsLatinText,
+} from './worker-translator';
 
 // ============================================================
 // TYPES
@@ -40,40 +49,6 @@ export interface TranslationTask {
 }
 
 // ============================================================
-// LATIN SCRIPT LANGUAGES (300+)
-// ============================================================
-
-const LATIN_SCRIPT_LANGUAGES = new Set([
-  // Major European languages
-  'english', 'en', 'eng', 'spanish', 'es', 'spa', 'french', 'fr', 'fra',
-  'german', 'de', 'deu', 'italian', 'it', 'ita', 'portuguese', 'pt', 'por',
-  'dutch', 'nl', 'nld', 'polish', 'pl', 'pol', 'romanian', 'ro', 'ron',
-  'czech', 'cs', 'ces', 'hungarian', 'hu', 'hun', 'swedish', 'sv', 'swe',
-  'danish', 'da', 'dan', 'finnish', 'fi', 'fin', 'norwegian', 'no', 'nob',
-  'croatian', 'hr', 'hrv', 'slovak', 'sk', 'slk', 'slovenian', 'sl', 'slv',
-  'latvian', 'lv', 'lvs', 'lithuanian', 'lt', 'lit', 'estonian', 'et', 'est',
-  'bosnian', 'bs', 'bos', 'albanian', 'sq', 'als', 'icelandic', 'is', 'isl',
-  'irish', 'ga', 'gle', 'welsh', 'cy', 'cym', 'basque', 'eu', 'eus',
-  'catalan', 'ca', 'cat', 'galician', 'gl', 'glg', 'maltese', 'mt', 'mlt',
-  // Asian Latin-script languages
-  'turkish', 'tr', 'tur', 'vietnamese', 'vi', 'vie', 'indonesian', 'id', 'ind',
-  'malay', 'ms', 'zsm', 'tagalog', 'tl', 'tgl', 'filipino', 'fil',
-  'javanese', 'jv', 'jav', 'sundanese', 'su', 'sun', 'cebuano', 'ceb',
-  'uzbek', 'uz', 'uzn', 'turkmen', 'tk', 'tuk', 'azerbaijani', 'az', 'azj',
-  // African Latin-script languages
-  'swahili', 'sw', 'swh', 'afrikaans', 'af', 'afr', 'yoruba', 'yo', 'yor',
-  'igbo', 'ig', 'ibo', 'hausa', 'ha', 'hau', 'zulu', 'zu', 'zul',
-  'xhosa', 'xh', 'xho', 'somali', 'so', 'som', 'shona', 'sn', 'sna',
-  'kinyarwanda', 'rw', 'kin', 'lingala', 'ln', 'lin', 'wolof', 'wo', 'wol',
-  // Pacific languages
-  'maori', 'mi', 'mri', 'samoan', 'sm', 'smo', 'tongan', 'to', 'ton',
-  'fijian', 'fj', 'fij', 'hawaiian', 'haw',
-  // Other
-  'esperanto', 'eo', 'epo', 'latin', 'la', 'lat',
-  'guarani', 'gn', 'grn', 'quechua', 'qu', 'quy', 'aymara', 'ay', 'aym',
-]);
-
-// ============================================================
 // TRANSLATION CACHE (In-memory LRU)
 // ============================================================
 
@@ -85,7 +60,7 @@ interface CacheEntry {
 
 const translationCache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 1000;
+const MAX_CACHE_SIZE = 2000;
 
 function getCacheKey(text: string, source: string, target: string): string {
   return `${source.toLowerCase()}:${target.toLowerCase()}:${text.slice(0, 100)}`;
@@ -111,24 +86,21 @@ function setInCache(key: string, result: AsyncTranslationResult): void {
 }
 
 // ============================================================
-// UTILITY FUNCTIONS (SYNC - No blocking)
+// UTILITY FUNCTIONS (SYNC - No blocking) - Use worker utilities
 // ============================================================
 
 /**
  * Check if language uses Latin script (sync, instant)
  */
 export function isLatinScriptLanguage(language: string): boolean {
-  return LATIN_SCRIPT_LANGUAGES.has(language.toLowerCase().trim());
+  return workerIsLatinScriptLanguage(language);
 }
 
 /**
  * Check if text is primarily Latin script (sync, instant)
  */
 export function isLatinText(text: string): boolean {
-  const cleaned = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
-  if (!cleaned) return true;
-  const latinChars = cleaned.match(/[a-zA-Z\u00C0-\u024F]/g);
-  return latinChars !== null && (latinChars.length / cleaned.length) > 0.7;
+  return workerIsLatinText(text);
 }
 
 /**
@@ -169,7 +141,7 @@ export function normalizeLanguage(lang: string): string {
  * Check if two languages are the same (sync, instant)
  */
 export function isSameLanguage(lang1: string, lang2: string): boolean {
-  return normalizeLanguage(lang1) === normalizeLanguage(lang2);
+  return workerIsSameLanguage(lang1, lang2);
 }
 
 /**
@@ -180,14 +152,27 @@ export function needsScriptConversion(language: string): boolean {
 }
 
 // ============================================================
-// BACKGROUND TRANSLATION QUEUE
+// BACKGROUND TRANSLATION QUEUE (Uses Web Worker)
 // ============================================================
 
 class TranslationQueue {
   private queue: TranslationTask[] = [];
   private isProcessing = false;
-  private concurrentLimit = 5; // Process 5 translations in parallel
+  private concurrentLimit = 10; // Process 10 translations in parallel (browser-side is fast)
   private activeCount = 0;
+  private workerInitialized = false;
+
+  private async ensureWorkerReady(): Promise<boolean> {
+    if (this.workerInitialized && isWorkerReady()) {
+      return true;
+    }
+    try {
+      this.workerInitialized = await initWorker();
+      return this.workerInitialized;
+    } catch {
+      return false;
+    }
+  }
 
   async add(task: Omit<TranslationTask, 'id' | 'timestamp' | 'resolve' | 'reject'>): Promise<AsyncTranslationResult> {
     return new Promise((resolve, reject) => {
@@ -215,6 +200,9 @@ class TranslationQueue {
     
     this.isProcessing = true;
     
+    // Ensure worker is ready
+    await this.ensureWorkerReady();
+    
     while (this.queue.length > 0 && this.activeCount < this.concurrentLimit) {
       const task = this.queue.shift();
       if (!task) continue;
@@ -236,7 +224,7 @@ class TranslationQueue {
 
   private async processTask(task: TranslationTask): Promise<void> {
     try {
-      const result = await translateViaEdgeFunction(
+      const result = await translateViaBrowserWorker(
         task.text,
         task.sourceLanguage,
         task.targetLanguage
@@ -256,38 +244,60 @@ class TranslationQueue {
 const translationQueue = new TranslationQueue();
 
 // ============================================================
-// EDGE FUNCTION CALL (Actual translation)
+// BROWSER-SIDE TRANSLATION (Uses Web Worker - No API calls)
 // ============================================================
 
-async function translateViaEdgeFunction(
+async function translateViaBrowserWorker(
   text: string,
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        sourceLanguage: normalizeLanguage(sourceLanguage),
-        targetLanguage: normalizeLanguage(targetLanguage),
-        mode: 'translate'
-      }
-    });
-
-    if (error) {
-      console.error('[AsyncTranslator] Edge function error:', error);
-      return { text, originalText: text, isTranslated: false, error: error.message };
+    // Initialize worker if needed
+    if (!isWorkerReady()) {
+      await initWorker();
     }
 
+    const result = await workerTranslate(
+      text,
+      normalizeLanguage(sourceLanguage),
+      normalizeLanguage(targetLanguage)
+    );
+
     return {
-      text: data?.translatedText || text,
+      text: result.text || text,
       originalText: text,
-      isTranslated: data?.isTranslated || false,
-      sourceLanguage: data?.sourceLanguage || sourceLanguage,
-      targetLanguage: data?.targetLanguage || targetLanguage,
+      isTranslated: result.success && result.text !== text,
+      sourceLanguage,
+      targetLanguage,
     };
   } catch (error) {
-    console.error('[AsyncTranslator] Translation error:', error);
+    console.error('[AsyncTranslator] Browser worker error:', error);
+    return { text, originalText: text, isTranslated: false, error: String(error) };
+  }
+}
+
+async function transliterateViaBrowserWorker(
+  text: string,
+  targetLanguage: string
+): Promise<AsyncTranslationResult> {
+  try {
+    // Initialize worker if needed
+    if (!isWorkerReady()) {
+      await initWorker();
+    }
+
+    const result = await workerTransliterate(text, normalizeLanguage(targetLanguage));
+
+    return {
+      text: result.text || text,
+      originalText: text,
+      isTranslated: result.success && result.text !== text,
+      sourceLanguage: 'english',
+      targetLanguage,
+    };
+  } catch (error) {
+    console.error('[AsyncTranslator] Transliteration error:', error);
     return { text, originalText: text, isTranslated: false, error: String(error) };
   }
 }
@@ -344,7 +354,7 @@ export async function translateAsync(
 
 /**
  * Convert Latin text to native script (for live preview)
- * Non-blocking, debounced
+ * Non-blocking, uses browser-side worker
  */
 export async function convertToNativeScriptAsync(
   text: string,
@@ -374,36 +384,14 @@ export async function convertToNativeScriptAsync(
     return cached;
   }
   
-  try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: 'english',
-        targetLanguage: normalizeLanguage(targetLanguage),
-        mode: 'convert'
-      }
-    });
-
-    if (error) {
-      return { text: trimmed, originalText: trimmed, isTranslated: false };
-    }
-
-    const result: AsyncTranslationResult = {
-      text: data?.translatedText || trimmed,
-      originalText: trimmed,
-      isTranslated: data?.isTranslated || false,
-      sourceLanguage: 'english',
-      targetLanguage,
-    };
-    
-    if (result.isTranslated) {
-      setInCache(cacheKey, result);
-    }
-    
-    return result;
-  } catch {
-    return { text: trimmed, originalText: trimmed, isTranslated: false };
+  // Use browser-side worker for transliteration
+  const result = await transliterateViaBrowserWorker(trimmed, targetLanguage);
+  
+  if (result.isTranslated) {
+    setInCache(cacheKey, result);
   }
+  
+  return result;
 }
 
 /**
