@@ -412,13 +412,13 @@ async function translateText(
   // Try direct translation first
   let result = await translateWithLibre(text, sourceCode, targetCode);
   if (result.success) {
-    return { ...result, pivotUsed: false };
+    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
 
   // Try MyMemory fallback for direct translation
   result = await translateWithMyMemory(text, sourceCode, targetCode);
   if (result.success) {
-    return { ...result, pivotUsed: false };
+    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
 
   // If direct translation failed and neither language is English, use English pivot
@@ -431,23 +431,37 @@ async function translateText(
       pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
     }
 
-    if (pivotResult.success && pivotResult.translatedText !== text) {
+    if (pivotResult.success && pivotResult.translatedText.trim() !== text.trim()) {
+      const englishText = pivotResult.translatedText.trim();
+      
       // Step 2: Translate English -> target
-      let finalResult = await translateWithLibre(pivotResult.translatedText, 'en', targetCode);
+      let finalResult = await translateWithLibre(englishText, 'en', targetCode);
       if (!finalResult.success) {
-        finalResult = await translateWithMyMemory(pivotResult.translatedText, 'en', targetCode);
+        finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
       }
 
       if (finalResult.success) {
         console.log('[dl-translate] English pivot translation success');
-        return { translatedText: finalResult.translatedText, success: true, pivotUsed: true };
+        return { translatedText: finalResult.translatedText.trim(), success: true, pivotUsed: true };
       }
     }
   }
 
   // All translation attempts failed
   console.log('[dl-translate] All translation attempts failed, returning original text');
-  return { translatedText: text, success: false, pivotUsed: false };
+  return { translatedText: text.trim(), success: false, pivotUsed: false };
+}
+
+/**
+ * Clean and normalize text output
+ * Removes extra whitespace, tabs, newlines from translation results
+ */
+function cleanTextOutput(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/[\t\n\r]+/g, ' ')  // Replace tabs/newlines with spaces
+    .replace(/\s+/g, ' ')         // Collapse multiple spaces
+    .trim();                       // Trim leading/trailing
 }
 
 /**
@@ -471,16 +485,16 @@ async function transliterateToNative(
   
   // Check if the result is in native script (not Latin)
   if (result.success) {
-    const trimmedResult = result.translatedText.trim();
-    const detected = detectScriptFromText(trimmedResult);
-    if (!detected.isLatin) {
-      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${trimmedResult}"`);
-      return { text: trimmedResult, success: true };
+    const cleanedResult = cleanTextOutput(result.translatedText);
+    const detected = detectScriptFromText(cleanedResult);
+    if (!detected.isLatin && cleanedResult.length > 0) {
+      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${cleanedResult}"`);
+      return { text: cleanedResult, success: true };
     }
   }
   
   console.log(`[dl-translate] Transliteration failed, keeping original`);
-  return { text: latinText, success: false };
+  return { text: latinText.trim(), success: false };
 }
 
 // ============================================================
@@ -540,11 +554,12 @@ serve(async (req) => {
         
         // Step 2: Translate from source native script to target language
         const translated = await translateText(transliterated.text, effectiveSource, effectiveTarget);
+        const cleanedTranslation = cleanTextOutput(translated.translatedText);
 
         return new Response(
           JSON.stringify({
-            translatedText: translated.translatedText,
-            translatedMessage: translated.translatedText,
+            translatedText: cleanedTranslation,
+            translatedMessage: cleanedTranslation,
             originalText: inputText,
             nativeScriptText: transliterated.text,
             isTranslated: translated.success,
@@ -571,11 +586,12 @@ serve(async (req) => {
       if (inputIsLatin && isNonLatinLanguage(effectiveTarget)) {
         console.log(`[dl-translate] Same language, converting to native script`);
         const converted = await transliterateToNative(inputText, effectiveTarget);
+        const cleanedText = cleanTextOutput(converted.success ? converted.text : inputText);
         
         return new Response(
           JSON.stringify({
-            translatedText: converted.success ? converted.text : inputText,
-            translatedMessage: converted.success ? converted.text : inputText,
+            translatedText: cleanedText,
+            translatedMessage: cleanedText,
             originalText: inputText,
             isTranslated: false,
             wasTransliterated: converted.success,
@@ -591,8 +607,8 @@ serve(async (req) => {
       console.log('[dl-translate] Same language, skipping translation');
       return new Response(
         JSON.stringify({
-          translatedText: inputText,
-          translatedMessage: inputText,
+          translatedText: cleanTextOutput(inputText),
+          translatedMessage: cleanTextOutput(inputText),
           originalText: inputText,
           isTranslated: false,
           detectedLanguage: detected.language,
@@ -615,14 +631,15 @@ serve(async (req) => {
       effectiveTarget
     );
 
-    console.log(`[dl-translate] Result: "${result.translatedText.substring(0, 50)}..." (success: ${result.success}, pivot: ${result.pivotUsed})`);
+    const cleanedResult = cleanTextOutput(result.translatedText);
+    console.log(`[dl-translate] Result: "${cleanedResult.substring(0, 50)}..." (success: ${result.success}, pivot: ${result.pivotUsed})`);
 
     return new Response(
       JSON.stringify({
-        translatedText: result.translatedText,
-        translatedMessage: result.translatedText,
+        translatedText: cleanedResult,
+        translatedMessage: cleanedResult,
         originalText: inputText,
-        isTranslated: result.success && result.translatedText !== inputText,
+        isTranslated: result.success && cleanedResult !== inputText.trim(),
         pivotUsed: result.pivotUsed,
         detectedLanguage: detected.language,
         sourceLanguage: effectiveSource,

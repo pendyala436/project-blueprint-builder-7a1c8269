@@ -655,10 +655,10 @@ const DraggableMiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // STEP 1: Apply SymSpell correction to source text (partner's language)
-      console.log('[DraggableMiniChatWindow] Applying SymSpell to source:', partnerLanguage);
-      const correctedText = spellCorrectForChat(text, partnerLanguage);
-      console.log('[DraggableMiniChatWindow] SymSpell corrected:', correctedText.substring(0, 50));
+      // STEP 1: Apply SymSpell correction to source text ONLY if it's Latin
+      const inputIsLatin = /[a-zA-Z]/.test(text) && !/[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(text);
+      const correctedText = inputIsLatin ? spellCorrectForChat(text, partnerLanguage) : text;
+      console.log('[DraggableMiniChatWindow] Input is Latin:', inputIsLatin);
 
       // STEP 2: Use async translator for non-blocking translation via Edge Function
       console.log('[DraggableMiniChatWindow] Starting translation:', partnerLanguage, '→', currentUserLanguage);
@@ -669,9 +669,9 @@ const DraggableMiniChatWindow = ({
         isTranslated: result.isTranslated
       });
       
-      // STEP 3: Apply SymSpell correction to translated result (receiver's language)
-      console.log('[DraggableMiniChatWindow] Applying SymSpell to result:', currentUserLanguage);
-      const finalText = spellCorrectForChat(result.text, currentUserLanguage);
+      // STEP 3: DO NOT apply spell correction to result - it's likely in native script
+      // Spell correction can corrupt non-Latin text
+      const finalText = result.text;
       console.log('[DraggableMiniChatWindow] Final text:', finalText.substring(0, 50));
       
       return {
@@ -1058,16 +1058,16 @@ const DraggableMiniChatWindow = ({
     try {
       let finalSenderMessage = senderViewMessage;
       
-      // SYMSPELL CORRECTION: Apply before conversion/sending (SEND BUTTON)
-      console.log('[DraggableMiniChatWindow] Send - Applying SymSpell:', currentUserLanguage);
-      const correctedText = spellCorrectForChat(senderViewMessage, currentUserLanguage);
-      console.log('[DraggableMiniChatWindow] Send - SymSpell result:', correctedText.substring(0, 30));
+      // SYMSPELL CORRECTION: Apply to Latin text ONLY before conversion/sending
+      const inputIsLatin = isLatinText(senderViewMessage);
+      console.log('[DraggableMiniChatWindow] Send - Input is Latin:', inputIsLatin);
+      const correctedText = inputIsLatin ? spellCorrectForChat(senderViewMessage, currentUserLanguage) : senderViewMessage;
       
       // If no preview but transliteration enabled and needs conversion
       // Process the FULL message text without any truncation
       if (!hasValidPreview && transliterationEnabled && needsScriptConversionFlag && isLatinText(messageText)) {
         try {
-          // Apply SymSpell correction before native script conversion
+          // Apply SymSpell correction before native script conversion (only Latin input)
           console.log('[DraggableMiniChatWindow] Send - Converting to native script');
           const correctedInput = spellCorrectForChat(messageText, currentUserLanguage);
           const converted = await convertToNativeScript(correctedInput, currentUserLanguage);

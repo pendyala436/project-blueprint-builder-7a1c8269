@@ -327,15 +327,16 @@ const MiniChatWindow = ({
       // Check if same language
       const sameLanguage = isSameLanguage(partnerLanguage, currentUserLanguage);
       
-      // Apply spell correction
-      const correctedText = spellCorrectForChat(text, partnerLanguage);
+      // Apply spell correction to Latin text only BEFORE processing
+      const inputIsLatin = isLatinText(text);
+      const correctedText = inputIsLatin ? spellCorrectForChat(text, partnerLanguage) : text;
       
       let finalText = correctedText;
       let wasTranslated = false;
       
       if (sameLanguage) {
         // Same language - just convert to native script if needed
-        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(correctedText)) {
+        if (!isLatinScriptLanguage(currentUserLanguage) && inputIsLatin) {
           finalText = transliterateToNative(correctedText, currentUserLanguage);
         }
       } else {
@@ -344,14 +345,13 @@ const MiniChatWindow = ({
         finalText = result.text;
         wasTranslated = result.isTranslated;
         
-        // Convert to native script if needed
+        // Convert to native script if needed (only if result is Latin)
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(finalText)) {
           finalText = transliterateToNative(finalText, currentUserLanguage);
         }
       }
       
-      // Apply spell correction to result
-      finalText = spellCorrectForChat(finalText, currentUserLanguage);
+      // DO NOT apply spell correction to final result (it may be in native script)
 
       return {
         translatedMessage: normalizeUnicode(finalText),
@@ -559,13 +559,13 @@ const MiniChatWindow = ({
       try {
         let processedMessage = messageText;
         
-        // SPELL CORRECTION: Apply before conversion/sending
-        const correctedText = spellCorrectForChat(messageText, currentUserLanguage);
+        // SPELL CORRECTION: Apply to Latin text ONLY before conversion/sending
+        const inputIsLatin = isLatinText(messageText);
+        const correctedText = inputIsLatin ? spellCorrectForChat(messageText, currentUserLanguage) : messageText;
         
-        // If we have native text, use it; otherwise convert in background
+        // If we have native text, use it (don't spell correct - it's already in native script)
         if (nativeText) {
-          // Also spell-correct the native text
-          processedMessage = spellCorrectForChat(nativeText, currentUserLanguage);
+          processedMessage = nativeText;
         } else if (shouldConvert) {
           try {
             const converted = transliterateToNative(correctedText, currentUserLanguage);
