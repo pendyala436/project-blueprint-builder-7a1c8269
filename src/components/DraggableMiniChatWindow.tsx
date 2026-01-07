@@ -649,21 +649,30 @@ const DraggableMiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
+      // Detect the actual script/language of the incoming message
+      // The stored message may be in partner's native script or in Latin (English)
+      const messageIsLatin = /[a-zA-Z]/.test(text) && !/[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(text);
+      
+      // Determine actual source language based on message script
+      // If message is in Latin, treat as English for translation
+      // If message is non-Latin, use partner's language
+      const actualSourceLanguage = messageIsLatin ? 'english' : partnerLanguage;
+      
       // Skip if same language - instant return
-      if (isSameLanguage(partnerLanguage, currentUserLanguage)) {
+      if (isSameLanguage(actualSourceLanguage, currentUserLanguage)) {
         console.log('[DraggableMiniChatWindow] Skipping - same language');
         return { translatedMessage: text, isTranslated: false };
       }
 
       // STEP 1: Apply SymSpell correction to source text ONLY if it's Latin
-      const inputIsLatin = /[a-zA-Z]/.test(text) && !/[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(text);
-      const correctedText = inputIsLatin ? spellCorrectForChat(text, partnerLanguage) : text;
-      console.log('[DraggableMiniChatWindow] Input is Latin:', inputIsLatin);
+      const correctedText = messageIsLatin ? spellCorrectForChat(text, 'english') : text;
+      console.log('[DraggableMiniChatWindow] Input is Latin:', messageIsLatin, 'Source:', actualSourceLanguage);
 
       // STEP 2: Use async translator for non-blocking translation via Edge Function
-      console.log('[DraggableMiniChatWindow] Starting translation:', partnerLanguage, '→', currentUserLanguage);
+      // IMPORTANT: Use actualSourceLanguage (detected from message) not partnerLanguage
+      console.log('[DraggableMiniChatWindow] Starting translation:', actualSourceLanguage, '→', currentUserLanguage);
       const { translateAsync } = await import('@/lib/translation/async-translator');
-      const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage);
+      const result = await translateAsync(correctedText, actualSourceLanguage, currentUserLanguage);
       console.log('[DraggableMiniChatWindow] Translation result:', {
         translated: result.text?.substring(0, 50),
         isTranslated: result.isTranslated
@@ -677,7 +686,7 @@ const DraggableMiniChatWindow = ({
       return {
         translatedMessage: finalText,
         isTranslated: result.isTranslated,
-        detectedLanguage: result.sourceLanguage || partnerLanguage
+        detectedLanguage: actualSourceLanguage
       };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
@@ -723,7 +732,10 @@ const DraggableMiniChatWindow = ({
       
       partnerMessages.forEach((m) => {
         const detected = autoDetectLanguage(m.message);
-        const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
+        // IMPORTANT: If message is Latin, treat as English for translation
+        // If message is non-Latin, use the detected language
+        const messageIsLatin = detected.isLatin;
+        const sourceLanguage = messageIsLatin ? 'english' : detected.language;
         const targetLanguage = currentUserLanguage;
         const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
         
@@ -731,7 +743,7 @@ const DraggableMiniChatWindow = ({
           msgId: m.id,
           text: m.message.substring(0, 30),
           detected: detected.language,
-          isLatin: detected.isLatin,
+          isLatin: messageIsLatin,
           sourceLanguage,
           targetLanguage,
           sameLanguage
@@ -739,20 +751,19 @@ const DraggableMiniChatWindow = ({
         
         if (sameLanguage) {
           // SAME LANGUAGE: Just convert to native script if needed
-          if (checkNeedsScriptConversion(targetLanguage) && detected.isLatin) {
-            // SYMSPELL CORRECTION: Apply before native script conversion (LOAD - same lang)
-            const correctedMsg = spellCorrectForChat(m.message, targetLanguage);
+          if (checkNeedsScriptConversion(targetLanguage) && messageIsLatin) {
+            // Apply spell correction ONLY to Latin text
+            const correctedMsg = spellCorrectForChat(m.message, 'english');
             
             convertToNativeScript(correctedMsg, targetLanguage)
               .then(result => {
                 if (result.isTranslated && result.text) {
-                  // SYMSPELL CORRECTION: Apply after conversion
-                  const finalText = spellCorrectForChat(result.text, targetLanguage);
+                  // DO NOT apply spell correction to native script result
                   setMessages(prev => prev.map(msg => 
                     msg.id === m.id 
                       ? { 
                           ...msg, 
-                          translatedMessage: finalText, 
+                          translatedMessage: result.text, 
                           isTranslated: true,
                           detectedLanguage: sourceLanguage
                         }
@@ -765,7 +776,8 @@ const DraggableMiniChatWindow = ({
         } else {
           // DIFFERENT LANGUAGE: Translate via Edge Function
           console.log('[DraggableMiniChatWindow] Starting translation for msgId:', m.id);
-          const correctedSource = spellCorrectForChat(m.message, sourceLanguage);
+          // Apply spell correction ONLY if source is Latin/English
+          const correctedSource = messageIsLatin ? spellCorrectForChat(m.message, 'english') : m.message;
           
           // Use async translator that calls Edge Function
           translateAsync(correctedSource, sourceLanguage, targetLanguage)
@@ -776,14 +788,15 @@ const DraggableMiniChatWindow = ({
                 isTranslated: result.isTranslated
               });
               
-              let finalText = spellCorrectForChat(result.text, targetLanguage);
+              // DO NOT apply spell correction to translated/native text
+              let finalText = result.text;
               
-              // Convert to native script if needed
+              // Convert to native script if needed (only if result is still in Latin)
               if (result.isTranslated && checkNeedsScriptConversion(targetLanguage) && isLatinText(finalText)) {
                 try {
                   const nativeResult = await convertToNativeScript(finalText, targetLanguage);
                   if (nativeResult.isTranslated && nativeResult.text) {
-                    finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
+                    finalText = nativeResult.text;
                   }
                 } catch (err) {
                   console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
@@ -856,15 +869,16 @@ const DraggableMiniChatWindow = ({
           }
           
           // PARTNER MESSAGE: Translate to current user's mother tongue + native script
-          // Auto-detect source language from script
-          // CRITICAL: For Latin text, use partner's declared language, not detected (which would be English)
-          const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
+          // IMPORTANT: If message is Latin, treat as English for translation
+          // If message is non-Latin, use the detected language
+          const messageIsLatin = detected.isLatin;
+          const sourceLanguage = messageIsLatin ? 'english' : detected.language;
           const targetLanguage = currentUserLanguage;
           
           console.log('[DraggableMiniChatWindow] Processing partner message:', {
             message: newMsg.message.substring(0, 30),
             detected: detected.language,
-            isLatin: detected.isLatin,
+            isLatin: messageIsLatin,
             sourceLanguage,
             targetLanguage
           });
@@ -874,22 +888,20 @@ const DraggableMiniChatWindow = ({
           
           if (sameLanguage) {
             // SAME LANGUAGE: No translation needed, but convert to native script if needed
-            if (checkNeedsScriptConversion(targetLanguage) && detected.isLatin) {
-              // SYMSPELL CORRECTION: Apply before native script conversion (RECEIVER - same language)
-              console.log('[DraggableMiniChatWindow] Same lang - Applying SymSpell:', targetLanguage);
-              const correctedMsg = spellCorrectForChat(newMsg.message, targetLanguage);
-              console.log('[DraggableMiniChatWindow] Same lang - SymSpell result:', correctedMsg.substring(0, 30));
+            if (checkNeedsScriptConversion(targetLanguage) && messageIsLatin) {
+              // Apply spell correction ONLY to Latin text
+              console.log('[DraggableMiniChatWindow] Same lang - Applying SymSpell to Latin text');
+              const correctedMsg = spellCorrectForChat(newMsg.message, 'english');
               
               convertToNativeScript(correctedMsg, targetLanguage)
                 .then(result => {
                   if (result.isTranslated && result.text) {
-                    // SYMSPELL CORRECTION: Apply after conversion
-                    const finalText = spellCorrectForChat(result.text, targetLanguage);
+                    // DO NOT apply spell correction to native script result
                     setMessages(prev => prev.map(msg => 
                       msg.id === newMsg.id 
                         ? { 
                             ...msg, 
-                            translatedMessage: finalText, 
+                            translatedMessage: result.text, 
                             isTranslated: true,
                             detectedLanguage: sourceLanguage
                           }
@@ -902,7 +914,8 @@ const DraggableMiniChatWindow = ({
           } else {
             // DIFFERENT LANGUAGE: Translate via Edge Function
             console.log('[DraggableMiniChatWindow] Diff lang - Translating:', sourceLanguage, '→', targetLanguage);
-            const correctedSource = spellCorrectForChat(newMsg.message, sourceLanguage);
+            // Apply spell correction ONLY if source is Latin/English
+            const correctedSource = messageIsLatin ? spellCorrectForChat(newMsg.message, 'english') : newMsg.message;
             
             // Use async translator that calls Edge Function
             translateAsync(correctedSource, sourceLanguage, targetLanguage)
@@ -912,16 +925,15 @@ const DraggableMiniChatWindow = ({
                   isTranslated: result.isTranslated
                 });
                 
-                let finalText = spellCorrectForChat(result.text, targetLanguage);
+                // DO NOT apply spell correction to translated/native text
+                let finalText = result.text;
                 
-                // Convert to native script if needed
-                if (result.isTranslated && checkNeedsScriptConversion(targetLanguage)) {
+                // Convert to native script if needed (only if result is still in Latin)
+                if (result.isTranslated && checkNeedsScriptConversion(targetLanguage) && isLatinText(finalText)) {
                   try {
-                    if (isLatinText(finalText)) {
-                      const nativeResult = await convertToNativeScript(finalText, targetLanguage);
-                      if (nativeResult.isTranslated && nativeResult.text) {
-                        finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
-                      }
+                    const nativeResult = await convertToNativeScript(finalText, targetLanguage);
+                    if (nativeResult.isTranslated && nativeResult.text) {
+                      finalText = nativeResult.text;
                     }
                   } catch (err) {
                     console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
