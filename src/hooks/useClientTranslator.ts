@@ -30,83 +30,20 @@ export interface ClientTranslationResult {
   detectedLanguage?: string;
 }
 
-// Romanized text to native script mappings (basic transliteration)
-const ROMANIZED_MAPPINGS: Record<string, Record<string, string>> = {
-  hindi: {
-    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ii': 'ई', 'u': 'उ', 'uu': 'ऊ',
-    'e': 'ए', 'ai': 'ऐ', 'o': 'ओ', 'au': 'औ',
-    'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'nga': 'ङ',
-    'cha': 'च', 'chha': 'छ', 'ja': 'ज', 'jha': 'झ', 'nya': 'ञ',
-    'ta': 'ट', 'tha': 'ठ', 'da': 'ड', 'dha': 'ढ', 'na': 'ण',
-    'pa': 'प', 'pha': 'फ', 'ba': 'ब', 'bha': 'भ', 'ma': 'म',
-    'ya': 'य', 'ra': 'र', 'la': 'ल', 'va': 'व', 'wa': 'व',
-    'sha': 'श', 'sa': 'स', 'ha': 'ह',
-    'namaste': 'नमस्ते', 'kaise': 'कैसे', 'ho': 'हो', 'aap': 'आप',
-    'main': 'मैं', 'theek': 'ठीक', 'hoon': 'हूं', 'dhanyavad': 'धन्यवाद',
-    'kya': 'क्या', 'hai': 'है', 'hain': 'हैं', 'nahi': 'नहीं',
-    'bahut': 'बहुत', 'achha': 'अच्छा', 'accha': 'अच्छा',
-    'mujhe': 'मुझे', 'aapka': 'आपका', 'naam': 'नाम',
-    'kahan': 'कहाँ', 'se': 'से', 'hum': 'हम', 'tum': 'तुम',
-    'pyaar': 'प्यार', 'khushi': 'खुशी', 'dost': 'दोस्त',
-  },
-  bengali: {
-    'namaste': 'নমস্কার', 'namaskar': 'নমস্কার',
-    'kemon': 'কেমন', 'acho': 'আছো', 'bhalo': 'ভালো',
-    'ami': 'আমি', 'tumi': 'তুমি', 'apni': 'আপনি',
-    'dhanyabad': 'ধন্যবাদ', 'haan': 'হ্যাঁ', 'na': 'না',
-  },
-  tamil: {
-    'vanakkam': 'வணக்கம்', 'nandri': 'நன்றி',
-    'naam': 'நான்', 'nee': 'நீ', 'ungal': 'உங்கள்',
-    'eppadi': 'எப்படி', 'irukkireer': 'இருக்கிறீர்',
-  },
-  telugu: {
-    'namaskaram': 'నమస్కారం', 'dhanyavaadalu': 'ధన్యవాదాలు',
-    'nenu': 'నేను', 'mee': 'మీ', 'ela': 'ఎలా',
-    'unnaru': 'ఉన్నారు',
-  },
-  arabic: {
-    'salam': 'سلام', 'marhaba': 'مرحبا', 'shukran': 'شكرا',
-    'ana': 'أنا', 'anta': 'أنت', 'anti': 'أنتِ',
-    'ahlan': 'أهلا', 'naam': 'نعم', 'la': 'لا',
-  },
-  japanese: {
-    'konnichiwa': 'こんにちは', 'arigatou': 'ありがとう',
-    'hai': 'はい', 'iie': 'いいえ', 'sumimasen': 'すみません',
-    'ohayou': 'おはよう', 'sayonara': 'さようなら',
-  },
-  korean: {
-    'annyeong': '안녕', 'annyeonghaseyo': '안녕하세요',
-    'kamsahamnida': '감사합니다', 'ne': '네', 'aniyo': '아니요',
-  },
-  chinese: {
-    'nihao': '你好', 'xiexie': '谢谢', 'zaijian': '再见',
-    'shi': '是', 'bu': '不', 'wo': '我', 'ni': '你',
-  },
-  russian: {
-    'privet': 'привет', 'spasibo': 'спасибо', 'da': 'да', 'net': 'нет',
-    'zdravstvuyte': 'здравствуйте', 'poka': 'пока',
-  },
-};
+// DEPRECATED: Old hardcoded word mappings removed
+// Now uses dynamic phonetic transliteration from @/lib/translation/dynamic-transliterator
+// This supports ALL 300+ languages without hardcoded words
+//
+// Import the dynamic transliterator for fallback
+import { dynamicTransliterate, isLatinScriptLanguage } from '@/lib/translation/dynamic-transliterator';
 
-// Simple word-by-word transliteration
+// Dynamic phonetic transliteration - NO hardcoded words
+// Uses dynamic-transliterator for ALL 300+ languages
 function transliterateToNative(text: string, targetLanguage: string): string {
-  const lang = targetLanguage.toLowerCase();
-  const mapping = ROMANIZED_MAPPINGS[lang];
+  if (!text || !text.trim()) return text;
   
-  if (!mapping) return text;
-  
-  let result = text.toLowerCase();
-  
-  // Sort by length (longer first) to avoid partial matches
-  const sortedKeys = Object.keys(mapping).sort((a, b) => b.length - a.length);
-  
-  for (const key of sortedKeys) {
-    const regex = new RegExp(`\\b${key}\\b`, 'gi');
-    result = result.replace(regex, mapping[key]);
-  }
-  
-  return result;
+  // Use dynamic transliterator - works for ALL 300+ languages
+  return dynamicTransliterate(text, targetLanguage);
 }
 
 // Get the NLLB language code for translation
