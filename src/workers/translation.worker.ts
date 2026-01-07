@@ -811,6 +811,226 @@ async function translateText(
   }
 }
 
+// ============================================================
+// PHONETIC TRANSLITERATION MAPS (Sound-based, not meaning-based)
+// ============================================================
+
+// Telugu phonetic map (Latin sounds → Telugu script)
+const TELUGU_TRANSLITERATION: Record<string, string> = {
+  // Vowels
+  'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ', 
+  'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
+  'o': 'ఒ', 'au': 'ఔ', 'ou': 'ఔ',
+  // Consonants with inherent 'a'
+  'ka': 'క', 'kha': 'ఖ', 'ga': 'గ', 'gha': 'ఘ', 'nga': 'ఙ',
+  'cha': 'చ', 'chha': 'ఛ', 'ja': 'జ', 'jha': 'ఝ', 'nya': 'ఞ',
+  'ta': 'ట', 'tha': 'ఠ', 'da': 'డ', 'dha': 'ఢ', 'na': 'న',
+  'tta': 'త', 'ttha': 'థ', 'dda': 'ద', 'ddha': 'ధ', 'nna': 'ణ',
+  'pa': 'ప', 'pha': 'ఫ', 'ba': 'బ', 'bha': 'భ', 'ma': 'మ',
+  'ya': 'య', 'ra': 'ర', 'la': 'ల', 'va': 'వ', 'wa': 'వ',
+  'sha': 'శ', 'ssa': 'ష', 'sa': 'స', 'ha': 'హ', 'lla': 'ళ',
+  // Common combinations (consonant + vowel)
+  'he': 'హె', 'ho': 'హో', 'hu': 'హు',
+  'ki': 'కి', 'ke': 'కె', 'ko': 'కో', 'ku': 'కు',
+  'gi': 'గి', 'ge': 'గె', 'go': 'గో', 'gu': 'గు',
+  'ji': 'జి', 'je': 'జె', 'jo': 'జో', 'ju': 'జు',
+  'ti': 'టి', 'te': 'టె', 'to': 'టో', 'tu': 'టు',
+  'di': 'డి', 'de': 'డె', 'do': 'డో', 'du': 'డు',
+  'ni': 'ని', 'ne': 'నె', 'no': 'నో', 'nu': 'ను',
+  'pi': 'పి', 'pe': 'పె', 'po': 'పో', 'pu': 'పు',
+  'bi': 'బి', 'be': 'బె', 'bo': 'బో', 'bu': 'బు',
+  'mi': 'మి', 'me': 'మె', 'mo': 'మో', 'mu': 'ము',
+  'yi': 'యి', 'ye': 'యె', 'yo': 'యో', 'yu': 'యు',
+  'ri': 'రి', 're': 'రె', 'ro': 'రో', 'ru': 'రు',
+  'li': 'లి', 'le': 'లె', 'lo': 'లో', 'lu': 'లు',
+  'vi': 'వి', 've': 'వె', 'vo': 'వో', 'vu': 'వు',
+  'si': 'సి', 'se': 'సె', 'so': 'సో', 'su': 'సు',
+  // Single consonants (end of word)
+  'k': 'క్', 'g': 'గ్', 'j': 'జ్', 't': 'ట్', 'd': 'డ్',
+  'n': 'న్', 'p': 'ప్', 'b': 'బ్', 'm': 'మ్', 'y': 'య్',
+  'r': 'ర్', 'l': 'ల్', 'v': 'వ్', 's': 'స్', 'h': 'హ్',
+  // Common words (priority - checked first via exact match)
+  'hello': 'హలో', 'hi': 'హాయ్', 'bye': 'బై', 'ok': 'ఓకే', 'yes': 'యెస్',
+  'thanks': 'థాంక్స్', 'please': 'ప్లీజ్', 'sorry': 'సారీ',
+};
+
+// Hindi phonetic map (Latin sounds → Devanagari script)
+const HINDI_TRANSLITERATION: Record<string, string> = {
+  // Vowels
+  'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ii': 'ई', 'ee': 'ई',
+  'u': 'उ', 'uu': 'ऊ', 'oo': 'ऊ', 'e': 'ए', 'ai': 'ऐ',
+  'o': 'ओ', 'au': 'औ', 'ou': 'औ',
+  // Consonants with inherent 'a'
+  'ka': 'क', 'kha': 'ख', 'ga': 'ग', 'gha': 'घ', 'nga': 'ङ',
+  'cha': 'च', 'chha': 'छ', 'ja': 'ज', 'jha': 'झ', 'nya': 'ञ',
+  'ta': 'ट', 'tha': 'ठ', 'da': 'ड', 'dha': 'ढ', 'na': 'न',
+  'tta': 'त', 'ttha': 'थ', 'dda': 'द', 'ddha': 'ध', 'nna': 'ण',
+  'pa': 'प', 'pha': 'फ', 'ba': 'ब', 'bha': 'भ', 'ma': 'म',
+  'ya': 'य', 'ra': 'र', 'la': 'ल', 'va': 'व', 'wa': 'व',
+  'sha': 'श', 'ssa': 'ष', 'sa': 'स', 'ha': 'ह',
+  // Common combinations (consonant + vowel)
+  'he': 'हे', 'ho': 'हो', 'hu': 'हु',
+  'ki': 'कि', 'ke': 'के', 'ko': 'को', 'ku': 'कु',
+  'gi': 'गि', 'ge': 'गे', 'go': 'गो', 'gu': 'गु',
+  'ji': 'जि', 'je': 'जे', 'jo': 'जो', 'ju': 'जु',
+  'ni': 'नि', 'ne': 'ने', 'no': 'नो', 'nu': 'नु',
+  'mi': 'मि', 'me': 'मे', 'mo': 'मो', 'mu': 'मु',
+  // Single consonants
+  'k': 'क्', 'g': 'ग्', 'j': 'ज्', 't': 'ट्', 'd': 'ड्',
+  'n': 'न्', 'p': 'प्', 'b': 'ब्', 'm': 'म्', 'y': 'य्',
+  'r': 'र्', 'l': 'ल्', 'v': 'व्', 's': 'स्', 'h': 'ह्',
+  // Common words (priority - checked first via exact match)
+  'hello': 'हेलो', 'hi': 'हाय', 'bye': 'बाय', 'ok': 'ओके', 'yes': 'येस',
+  'thanks': 'थैंक्स', 'please': 'प्लीज', 'sorry': 'सॉरी',
+};
+
+// Tamil phonetic map
+const TAMIL_TRANSLITERATION: Record<string, string> = {
+  'a': 'அ', 'aa': 'ஆ', 'i': 'இ', 'ii': 'ஈ', 'ee': 'ஈ',
+  'u': 'உ', 'uu': 'ஊ', 'oo': 'ஊ', 'e': 'எ', 'ai': 'ஐ',
+  'o': 'ஒ', 'au': 'ஔ',
+  'ka': 'க', 'ga': 'க', 'cha': 'ச', 'ja': 'ஜ',
+  'ta': 'ட', 'da': 'ட', 'na': 'ந', 'pa': 'ப', 'ba': 'ப',
+  'ma': 'ம', 'ya': 'ய', 'ra': 'ர', 'la': 'ல', 'va': 'வ',
+  'sha': 'ஷ', 'sa': 'ச', 'ha': 'ஹ',
+  'he': 'ஹெ', 'ho': 'ஹோ',
+  // Common words
+  'hello': 'ஹலோ', 'hi': 'ஹாய்', 'bye': 'பை', 'ok': 'ஓகே',
+};
+
+// Kannada phonetic map
+const KANNADA_TRANSLITERATION: Record<string, string> = {
+  'a': 'ಅ', 'aa': 'ಆ', 'i': 'ಇ', 'ii': 'ಈ', 'ee': 'ಈ',
+  'u': 'ಉ', 'uu': 'ಊ', 'oo': 'ಊ', 'e': 'ಎ', 'ai': 'ಐ',
+  'o': 'ಒ', 'au': 'ಔ',
+  'ka': 'ಕ', 'kha': 'ಖ', 'ga': 'ಗ', 'gha': 'ಘ',
+  'cha': 'ಚ', 'ja': 'ಜ', 'ta': 'ಟ', 'da': 'ಡ', 'na': 'ನ',
+  'pa': 'ಪ', 'pha': 'ಫ', 'ba': 'ಬ', 'bha': 'ಭ', 'ma': 'ಮ',
+  'ya': 'ಯ', 'ra': 'ರ', 'la': 'ಲ', 'va': 'ವ',
+  'sha': 'ಶ', 'sa': 'ಸ', 'ha': 'ಹ',
+  'he': 'ಹೆ', 'ho': 'ಹೋ',
+  // Common words
+  'hello': 'ಹಲೋ', 'hi': 'ಹಾಯ್', 'bye': 'ಬೈ', 'ok': 'ಓಕೆ',
+};
+
+// Malayalam phonetic map
+const MALAYALAM_TRANSLITERATION: Record<string, string> = {
+  'a': 'അ', 'aa': 'ആ', 'i': 'ഇ', 'ii': 'ഈ', 'ee': 'ഈ',
+  'u': 'ഉ', 'uu': 'ഊ', 'oo': 'ഊ', 'e': 'എ', 'ai': 'ഐ',
+  'o': 'ഒ', 'au': 'ഔ',
+  'ka': 'ക', 'kha': 'ഖ', 'ga': 'ഗ', 'gha': 'ഘ',
+  'cha': 'ച', 'ja': 'ജ', 'ta': 'ട', 'da': 'ഡ', 'na': 'ന',
+  'pa': 'പ', 'pha': 'ഫ', 'ba': 'ബ', 'bha': 'ഭ', 'ma': 'മ',
+  'ya': 'യ', 'ra': 'ര', 'la': 'ല', 'va': 'വ',
+  'sha': 'ശ', 'sa': 'സ', 'ha': 'ഹ',
+  'he': 'ഹെ', 'ho': 'ഹോ',
+  // Common words
+  'hello': 'ഹലോ', 'hi': 'ഹായ്', 'bye': 'ബൈ', 'ok': 'ഓകെ',
+};
+
+// Bengali phonetic map
+const BENGALI_TRANSLITERATION: Record<string, string> = {
+  'a': 'অ', 'aa': 'আ', 'i': 'ই', 'ii': 'ঈ', 'ee': 'ঈ',
+  'u': 'উ', 'uu': 'ঊ', 'oo': 'ঊ', 'e': 'এ', 'ai': 'ঐ',
+  'o': 'ও', 'au': 'ঔ',
+  'ka': 'ক', 'kha': 'খ', 'ga': 'গ', 'gha': 'ঘ',
+  'cha': 'চ', 'ja': 'জ', 'ta': 'ট', 'da': 'ড', 'na': 'ন',
+  'pa': 'প', 'pha': 'ফ', 'ba': 'ব', 'bha': 'ভ', 'ma': 'ম',
+  'ya': 'য', 'ra': 'র', 'la': 'ল', 'va': 'ভ',
+  'sha': 'শ', 'sa': 'স', 'ha': 'হ',
+  'he': 'হে', 'ho': 'হো',
+  // Common words
+  'hello': 'হ্যালো', 'hi': 'হাই', 'bye': 'বাই', 'ok': 'ওকে',
+};
+
+// Gujarati phonetic map
+const GUJARATI_TRANSLITERATION: Record<string, string> = {
+  'a': 'અ', 'aa': 'આ', 'i': 'ઇ', 'ii': 'ઈ', 'ee': 'ઈ',
+  'u': 'ઉ', 'uu': 'ઊ', 'oo': 'ઊ', 'e': 'એ', 'ai': 'ઐ',
+  'o': 'ઓ', 'au': 'ઔ',
+  'ka': 'ક', 'kha': 'ખ', 'ga': 'ગ', 'gha': 'ઘ',
+  'cha': 'ચ', 'ja': 'જ', 'ta': 'ટ', 'da': 'ડ', 'na': 'ન',
+  'pa': 'પ', 'pha': 'ફ', 'ba': 'બ', 'bha': 'ભ', 'ma': 'મ',
+  'ya': 'ય', 'ra': 'ર', 'la': 'લ', 'va': 'વ',
+  'sha': 'શ', 'sa': 'સ', 'ha': 'હ',
+  'he': 'હે', 'ho': 'હો',
+  // Common words
+  'hello': 'હેલો', 'hi': 'હાય', 'bye': 'બાય', 'ok': 'ઓકે',
+};
+
+// Marathi uses Devanagari, same as Hindi
+const MARATHI_TRANSLITERATION = HINDI_TRANSLITERATION;
+
+// Language to transliteration map lookup
+const TRANSLITERATION_MAPS: Record<string, Record<string, string>> = {
+  telugu: TELUGU_TRANSLITERATION,
+  te: TELUGU_TRANSLITERATION,
+  hindi: HINDI_TRANSLITERATION,
+  hi: HINDI_TRANSLITERATION,
+  marathi: MARATHI_TRANSLITERATION,
+  mr: MARATHI_TRANSLITERATION,
+  tamil: TAMIL_TRANSLITERATION,
+  ta: TAMIL_TRANSLITERATION,
+  kannada: KANNADA_TRANSLITERATION,
+  kn: KANNADA_TRANSLITERATION,
+  malayalam: MALAYALAM_TRANSLITERATION,
+  ml: MALAYALAM_TRANSLITERATION,
+  bengali: BENGALI_TRANSLITERATION,
+  bn: BENGALI_TRANSLITERATION,
+  gujarati: GUJARATI_TRANSLITERATION,
+  gu: GUJARATI_TRANSLITERATION,
+};
+
+/**
+ * Apply phonetic transliteration (sound-based, not meaning-based)
+ */
+function applyPhoneticTransliteration(text: string, targetLanguage: string): string | null {
+  const langLower = targetLanguage.toLowerCase();
+  const map = TRANSLITERATION_MAPS[langLower];
+  
+  if (!map) return null;
+  
+  const lowerText = text.toLowerCase().trim();
+  
+  // First try exact word match
+  if (map[lowerText]) {
+    return map[lowerText];
+  }
+  
+  // Build result by matching patterns (longest first)
+  const patterns = Object.keys(map).sort((a, b) => b.length - a.length);
+  let result = '';
+  let i = 0;
+  
+  while (i < lowerText.length) {
+    let matched = false;
+    
+    // Try to match longest pattern first
+    for (const pattern of patterns) {
+      if (lowerText.substring(i, i + pattern.length) === pattern) {
+        result += map[pattern];
+        i += pattern.length;
+        matched = true;
+        break;
+      }
+    }
+    
+    // If no pattern matched, keep original character
+    if (!matched) {
+      // Check for single char
+      const char = lowerText[i];
+      if (map[char]) {
+        result += map[char];
+      } else {
+        result += lowerText[i];
+      }
+      i++;
+    }
+  }
+  
+  return result !== lowerText ? result : null;
+}
+
 async function transliterateToNative(
   latinText: string,
   targetLanguage: string
@@ -832,7 +1052,14 @@ async function transliterateToNative(
   }
 
   try {
-    // Preprocess with language-specific phonetic normalization
+    // FIRST: Try phonetic transliteration (sound-based, instant)
+    const phoneticResult = applyPhoneticTransliteration(originalText, targetLanguage);
+    if (phoneticResult) {
+      console.log('[Worker] Phonetic transliteration:', originalText, '→', phoneticResult);
+      return { text: normalizeUnicode(phoneticResult), success: true };
+    }
+    
+    // FALLBACK: Use translation model for longer/complex text
     const preprocessed = preprocessLatinInput(originalText, targetLanguage);
     
     // Use translation from English to convert to native script
