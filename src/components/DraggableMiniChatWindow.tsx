@@ -53,6 +53,7 @@ import {
   convertToNativeScriptAsync,
   isLatinText as asyncIsLatinText,
   needsScriptConversion as asyncNeedsScriptConversion,
+  autoDetectLanguageSync,
 } from "@/lib/translation/async-translator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
@@ -707,6 +708,9 @@ const DraggableMiniChatWindow = ({
           const newMsg = payload.new;
           
           // STEP 1: IMMEDIATE - Add message to UI instantly (no translation yet)
+          // Auto-detect language from message content
+          const detected = autoDetectLanguageSync(newMsg.message);
+          
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, {
@@ -715,7 +719,7 @@ const DraggableMiniChatWindow = ({
               message: newMsg.message,
               translatedMessage: undefined, // Will be filled by background
               isTranslated: false,
-              detectedLanguage: undefined,
+              detectedLanguage: detected.language,
               createdAt: newMsg.created_at
             }];
           });
@@ -729,25 +733,48 @@ const DraggableMiniChatWindow = ({
           }
 
           // STEP 2: BACKGROUND - Translate partner's message without blocking
-          if (newMsg.sender_id !== currentUserId && !isSameLanguage(partnerLanguage, currentUserLanguage)) {
-            translateInBackground(
-              newMsg.message,
-              partnerLanguage,
-              currentUserLanguage,
-              (result) => {
-                // Update message when translation completes
-                setMessages(prev => prev.map(msg => 
-                  msg.id === newMsg.id 
-                    ? {
-                        ...msg,
-                        translatedMessage: result.text,
-                        isTranslated: result.isTranslated,
-                        detectedLanguage: result.sourceLanguage || partnerLanguage
-                      }
-                    : msg
-                ));
+          // Bi-directional: Partner message → translate to current user's language
+          if (newMsg.sender_id !== currentUserId) {
+            // Use auto-detected language or fall back to partner's configured language
+            const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
+            
+            // Same language check - no translation needed, but may need script conversion
+            if (isSameLanguage(sourceLanguage, currentUserLanguage)) {
+              // Same language - just convert to native script if needed
+              if (asyncNeedsScriptConversion(currentUserLanguage) && detected.isLatin) {
+                convertToNativeScriptAsync(newMsg.message, currentUserLanguage)
+                  .then(result => {
+                    if (result.isTranslated) {
+                      setMessages(prev => prev.map(msg => 
+                        msg.id === newMsg.id 
+                          ? { ...msg, translatedMessage: result.text, isTranslated: true }
+                          : msg
+                      ));
+                    }
+                  })
+                  .catch(() => {}); // Non-blocking
               }
-            );
+            } else {
+              // Different languages - translate in background
+              translateInBackground(
+                newMsg.message,
+                sourceLanguage,
+                currentUserLanguage,
+                (result) => {
+                  // Update message when translation completes
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === newMsg.id 
+                      ? {
+                          ...msg,
+                          translatedMessage: result.text,
+                          isTranslated: result.isTranslated,
+                          detectedLanguage: result.detectedLanguage || sourceLanguage
+                        }
+                      : msg
+                  ));
+                }
+              );
+            }
           }
         }
       )
