@@ -902,6 +902,9 @@ const DraggableMiniChatWindow = ({
 
   const MAX_MESSAGE_LENGTH = 10000; // Support very large messages
 
+  // Track the current preview for this typing session - reset after each send
+  const currentPreviewRef = useRef<string>('');
+
   // NON-BLOCKING: Send message with optimistic UI update
   // Bi-directional: Sender sees native script, receiver sees translated native script
   // Handles small to very large messages without truncation
@@ -920,19 +923,20 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // CRITICAL: Capture the current preview BEFORE clearing state
-    // This ensures the full native script preview is used when sending
-    const currentPreview = livePreview.text;
-    const hasValidPreview = currentPreview && currentPreview.trim() && transliterationEnabled;
+    // CRITICAL: Use the ref-tracked preview which is always current for THIS message
+    // This ensures we never use a stale preview from a previous message
+    const capturedPreview = currentPreviewRef.current;
+    const hasValidPreview = capturedPreview && capturedPreview.trim() && transliterationEnabled && capturedPreview !== messageText;
     
     // Determine what the sender will see:
-    // - If preview exists (native script conversion happened), use the FULL preview
-    // - Otherwise use the FULL original typed text - NEVER truncate
-    const senderViewMessage = hasValidPreview ? currentPreview : messageText;
+    // - If valid preview exists (native script conversion happened), use it
+    // - Otherwise use the original typed text
+    const senderViewMessage = hasValidPreview ? capturedPreview : messageText;
 
-    // IMMEDIATE: Clear input and reset preview state completely
+    // IMMEDIATE: Clear input, preview state, AND the preview ref
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
+    currentPreviewRef.current = ''; // CRITICAL: Reset ref for next message
     setLastActivityTime(Date.now());
     
     // Clear any pending preview timeout to avoid stale updates
@@ -1543,8 +1547,9 @@ const DraggableMiniChatWindow = ({
                     // Quick sync check - these are instant (<0.1ms), never block
                     const trimmedValue = value.trim();
                     if (!trimmedValue) {
-                      // Empty input - clear preview immediately
+                      // Empty input - clear preview immediately AND reset ref
                       setLivePreview({ text: '', isLoading: false });
+                      currentPreviewRef.current = '';
                       return;
                     }
                     
@@ -1554,8 +1559,9 @@ const DraggableMiniChatWindow = ({
                       asyncIsLatinText(value);
                     
                     if (!needsConversion) {
-                      // No conversion needed - clear preview
+                      // No conversion needed - clear preview AND reset ref
                       setLivePreview({ text: '', isLoading: false });
+                      currentPreviewRef.current = '';
                       return;
                     }
                     
@@ -1572,19 +1578,22 @@ const DraggableMiniChatWindow = ({
                       
                       // Use requestIdleCallback for true non-blocking background work
                       const runPreview = () => {
-                        // Double-check value hasn't changed
                         convertToNativeScriptAsync(capturedValue, currentUserLanguage)
                           .then(result => {
                             // Only update if result is valid and meaningful
                             if (result.isTranslated && result.text && result.text !== capturedValue) {
                               setLivePreview({ text: result.text, isLoading: false });
+                              // CRITICAL: Update ref to track current preview for this message
+                              currentPreviewRef.current = result.text;
                             } else {
                               setLivePreview({ text: '', isLoading: false });
+                              currentPreviewRef.current = '';
                             }
                           })
                           .catch(() => {
                             // Silently fail - preview is optional enhancement
                             setLivePreview({ text: '', isLoading: false });
+                            currentPreviewRef.current = '';
                           });
                       };
                       
