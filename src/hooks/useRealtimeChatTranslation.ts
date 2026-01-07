@@ -216,7 +216,7 @@ const QUICK_TRANSLITERATION: Record<string, Record<string, string>> = {
     's': 'с', 't': 'т', 'u': 'у', 'f': 'ф', 'kh': 'х', 'ts': 'ц',
     'ch': 'ч', 'sh': 'ш', 'shch': 'щ', 'ya': 'я', 'yu': 'ю',
     'privet': 'привет', 'spasibo': 'спасибо', 'da': 'да', 'net': 'нет',
-    'kak': 'как', 'dela': 'дела', 'horosho': 'хорошо', 'ya': 'я',
+    'kak': 'как', 'dela': 'дела', 'horosho': 'хорошо',
   },
   // Ukrainian
   ukrainian: {
@@ -253,7 +253,7 @@ const QUICK_TRANSLITERATION: Record<string, Record<string, string>> = {
   // Thai
   thai: {
     'sawadee': 'สวัสดี', 'khob khun': 'ขอบคุณ', 'chai': 'ใช่', 'mai': 'ไม่',
-    'sabai': 'สบาย', 'dee': 'ดี', 'mai': 'ไหม', 'krab': 'ครับ', 'ka': 'ค่ะ',
+    'sabai': 'สบาย', 'dee': 'ดี', 'maikhm': 'ไหม', 'krab': 'ครับ', 'ka': 'ค่ะ',
   },
   // Chinese (Pinyin to simplified)
   chinese: {
