@@ -619,25 +619,44 @@ const DraggableMiniChatWindow = ({
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
+    console.log('[DraggableMiniChatWindow] translateMessage called:', {
+      text: text.substring(0, 50),
+      senderId,
+      currentUserId,
+      partnerLanguage,
+      currentUserLanguage
+    });
+    
     try {
       // Only translate messages from the partner (not our own messages)
       if (senderId === currentUserId) {
+        console.log('[DraggableMiniChatWindow] Skipping - own message');
         return { translatedMessage: text, isTranslated: false };
       }
 
       // Skip if same language - instant return
       if (isSameLanguage(partnerLanguage, currentUserLanguage)) {
+        console.log('[DraggableMiniChatWindow] Skipping - same language');
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // STEP 1: Apply spell correction to source text (partner's language)
+      // STEP 1: Apply SymSpell correction to source text (partner's language)
+      console.log('[DraggableMiniChatWindow] Applying SymSpell to source:', partnerLanguage);
       const correctedText = spellCorrectForChat(text, partnerLanguage);
+      console.log('[DraggableMiniChatWindow] SymSpell corrected:', correctedText.substring(0, 50));
 
       // STEP 2: Use async translator for non-blocking translation
+      console.log('[DraggableMiniChatWindow] Starting translation:', partnerLanguage, '→', currentUserLanguage);
       const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage, 'normal');
+      console.log('[DraggableMiniChatWindow] Translation result:', {
+        translated: result.text?.substring(0, 50),
+        isTranslated: result.isTranslated
+      });
       
-      // STEP 3: Apply spell correction to translated result (receiver's language)
+      // STEP 3: Apply SymSpell correction to translated result (receiver's language)
+      console.log('[DraggableMiniChatWindow] Applying SymSpell to result:', currentUserLanguage);
       const finalText = spellCorrectForChat(result.text, currentUserLanguage);
+      console.log('[DraggableMiniChatWindow] Final text:', finalText.substring(0, 50));
       
       return {
         translatedMessage: finalText,
@@ -689,14 +708,19 @@ const DraggableMiniChatWindow = ({
         if (sameLanguage) {
           // SAME LANGUAGE: Just convert to native script if needed
           if (asyncNeedsScriptConversion(targetLanguage) && detected.isLatin) {
-            convertToNativeScriptAsync(m.message, targetLanguage)
+            // SYMSPELL CORRECTION: Apply before native script conversion (LOAD - same lang)
+            const correctedMsg = spellCorrectForChat(m.message, targetLanguage);
+            
+            convertToNativeScriptAsync(correctedMsg, targetLanguage)
               .then(result => {
                 if (result.isTranslated && result.text) {
+                  // SYMSPELL CORRECTION: Apply after conversion
+                  const finalText = spellCorrectForChat(result.text, targetLanguage);
                   setMessages(prev => prev.map(msg => 
                     msg.id === m.id 
                       ? { 
                           ...msg, 
-                          translatedMessage: result.text, 
+                          translatedMessage: finalText, 
                           isTranslated: true,
                           detectedLanguage: sourceLanguage
                         }
@@ -708,19 +732,24 @@ const DraggableMiniChatWindow = ({
           }
         } else {
           // DIFFERENT LANGUAGE: Translate to receiver's language + native script
+          // SYMSPELL CORRECTION: Apply to source before translation (LOAD - diff lang)
+          const correctedSource = spellCorrectForChat(m.message, sourceLanguage);
+          
           translateInBackground(
-            m.message,
+            correctedSource,
             sourceLanguage,
             targetLanguage,
             async (result) => {
-              let finalText = result.text;
+              // SYMSPELL CORRECTION: Apply to translated result
+              let finalText = spellCorrectForChat(result.text, targetLanguage);
               
               // Convert to native script if needed
-              if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage) && asyncIsLatinText(result.text)) {
+              if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage) && asyncIsLatinText(finalText)) {
                 try {
-                  const nativeResult = await convertToNativeScriptAsync(result.text, targetLanguage);
+                  const nativeResult = await convertToNativeScriptAsync(finalText, targetLanguage);
                   if (nativeResult.isTranslated && nativeResult.text) {
-                    finalText = nativeResult.text;
+                    // SYMSPELL CORRECTION: Apply after native conversion
+                    finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
                   }
                 } catch {
                   // Keep translated text
@@ -812,14 +841,21 @@ const DraggableMiniChatWindow = ({
           if (sameLanguage) {
             // SAME LANGUAGE: No translation needed, but convert to native script if needed
             if (asyncNeedsScriptConversion(targetLanguage) && detected.isLatin) {
-              convertToNativeScriptAsync(newMsg.message, targetLanguage)
+              // SYMSPELL CORRECTION: Apply before native script conversion (RECEIVER - same language)
+              console.log('[DraggableMiniChatWindow] Same lang - Applying SymSpell:', targetLanguage);
+              const correctedMsg = spellCorrectForChat(newMsg.message, targetLanguage);
+              console.log('[DraggableMiniChatWindow] Same lang - SymSpell result:', correctedMsg.substring(0, 30));
+              
+              convertToNativeScriptAsync(correctedMsg, targetLanguage)
                 .then(result => {
                   if (result.isTranslated && result.text) {
+                    // SYMSPELL CORRECTION: Apply after conversion
+                    const finalText = spellCorrectForChat(result.text, targetLanguage);
                     setMessages(prev => prev.map(msg => 
                       msg.id === newMsg.id 
                         ? { 
                             ...msg, 
-                            translatedMessage: result.text, 
+                            translatedMessage: finalText, 
                             isTranslated: true,
                             detectedLanguage: sourceLanguage
                           }
@@ -831,10 +867,15 @@ const DraggableMiniChatWindow = ({
             }
           } else {
             // DIFFERENT LANGUAGE: Translate to receiver's language + native script
-            console.log('[DraggableMiniChatWindow] Translating:', sourceLanguage, '→', targetLanguage);
+            console.log('[DraggableMiniChatWindow] Diff lang - Translating:', sourceLanguage, '→', targetLanguage);
+            
+            // SYMSPELL CORRECTION: Apply to source text before translation (RECEIVER)
+            console.log('[DraggableMiniChatWindow] Diff lang - Applying SymSpell to source:', sourceLanguage);
+            const correctedSource = spellCorrectForChat(newMsg.message, sourceLanguage);
+            console.log('[DraggableMiniChatWindow] Diff lang - SymSpell source result:', correctedSource.substring(0, 30));
             
             translateInBackground(
-              newMsg.message,
+              correctedSource,
               sourceLanguage,
               targetLanguage,
               async (result) => {
@@ -844,16 +885,20 @@ const DraggableMiniChatWindow = ({
                   isTranslated: result.isTranslated
                 });
                 
-                let finalText = result.text;
+                // SYMSPELL CORRECTION: Apply to translated result (RECEIVER)
+                console.log('[DraggableMiniChatWindow] Diff lang - Applying SymSpell to result:', targetLanguage);
+                let finalText = spellCorrectForChat(result.text, targetLanguage);
+                console.log('[DraggableMiniChatWindow] Diff lang - SymSpell result text:', finalText.substring(0, 30));
                 
                 // If translation successful and target language needs native script
                 if (result.isTranslated && asyncNeedsScriptConversion(targetLanguage)) {
                   try {
                     // Convert translated text to native script if it's in Latin
-                    if (asyncIsLatinText(result.text)) {
-                      const nativeResult = await convertToNativeScriptAsync(result.text, targetLanguage);
+                    if (asyncIsLatinText(finalText)) {
+                      const nativeResult = await convertToNativeScriptAsync(finalText, targetLanguage);
                       if (nativeResult.isTranslated && nativeResult.text) {
-                        finalText = nativeResult.text;
+                        // SYMSPELL CORRECTION: Apply after native conversion
+                        finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
                       }
                     }
                   } catch (err) {
@@ -988,14 +1033,17 @@ const DraggableMiniChatWindow = ({
     try {
       let finalSenderMessage = senderViewMessage;
       
-      // SPELL CORRECTION: Apply before conversion/sending
+      // SYMSPELL CORRECTION: Apply before conversion/sending (SEND BUTTON)
+      console.log('[DraggableMiniChatWindow] Send - Applying SymSpell:', currentUserLanguage);
       const correctedText = spellCorrectForChat(senderViewMessage, currentUserLanguage);
+      console.log('[DraggableMiniChatWindow] Send - SymSpell result:', correctedText.substring(0, 30));
       
       // If no preview but transliteration enabled and needs conversion
       // Process the FULL message text without any truncation
       if (!hasValidPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
         try {
-          // Apply spell correction before native script conversion
+          // Apply SymSpell correction before native script conversion
+          console.log('[DraggableMiniChatWindow] Send - Converting to native script');
           const correctedInput = spellCorrectForChat(messageText, currentUserLanguage);
           const converted = await convertToNativeScriptAsync(correctedInput, currentUserLanguage);
           if (converted.isTranslated && converted.text) {
@@ -1613,8 +1661,10 @@ const DraggableMiniChatWindow = ({
                       
                       // Use requestIdleCallback for true non-blocking background work
                       const runPreview = () => {
-                        // SPELL CORRECTION: Apply before native script conversion
+                        // SYMSPELL CORRECTION: Apply before native script conversion (PREVIEW)
+                        console.log('[DraggableMiniChatWindow] Preview - Applying SymSpell:', currentUserLanguage);
                         const correctedValue = spellCorrectForChat(capturedValue, currentUserLanguage);
+                        console.log('[DraggableMiniChatWindow] Preview - SymSpell result:', correctedValue.substring(0, 30));
                         
                         convertToNativeScriptAsync(correctedValue, currentUserLanguage)
                           .then(result => {
