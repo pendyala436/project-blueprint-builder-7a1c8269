@@ -1410,24 +1410,49 @@ const DraggableMiniChatWindow = ({
                   value={newMessage}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // IMMEDIATE: Update input - never blocked
+                    // IMMEDIATE: Update input - never blocked (sync)
                     setNewMessage(value);
                     handleTyping();
                     
-                    // NON-BLOCKING: Update live preview with debounce
+                    // Clear any pending preview
                     if (previewTimeoutRef.current) {
                       clearTimeout(previewTimeoutRef.current);
+                      previewTimeoutRef.current = null;
                     }
                     
-                    // Only show preview if user's language needs script conversion
-                    if (transliterationEnabled && asyncNeedsScriptConversion(currentUserLanguage) && asyncIsLatinText(value) && value.trim()) {
-                      setLivePreview(prev => ({ ...prev, isLoading: true }));
+                    // Quick sync checks - these are instant, no blocking
+                    const needsConversion = transliterationEnabled && 
+                      asyncNeedsScriptConversion(currentUserLanguage) && 
+                      asyncIsLatinText(value) && 
+                      value.trim();
+                    
+                    if (!needsConversion) {
+                      // Instant clear - no async needed
+                      setLivePreview({ text: '', isLoading: false });
+                      return;
+                    }
+                    
+                    // Set loading state immediately (non-blocking)
+                    setLivePreview(prev => prev.isLoading ? prev : { ...prev, isLoading: true });
+                    
+                    // BACKGROUND: Use requestIdleCallback or setTimeout for true non-blocking
+                    const schedulePreview = (callback: () => void) => {
+                      if ('requestIdleCallback' in window) {
+                        (window as any).requestIdleCallback(callback, { timeout: 500 });
+                      } else {
+                        setTimeout(callback, 150);
+                      }
+                    };
+                    
+                    // Debounce preview update (300ms)
+                    previewTimeoutRef.current = setTimeout(() => {
+                      const currentValue = value; // Capture value at debounce time
                       
-                      // BACKGROUND: Convert script without blocking typing
-                      previewTimeoutRef.current = setTimeout(() => {
-                        convertToNativeScriptAsync(value, currentUserLanguage)
+                      // Schedule async work when browser is idle
+                      schedulePreview(() => {
+                        convertToNativeScriptAsync(currentValue, currentUserLanguage)
                           .then(result => {
-                            // Only update if input hasn't changed
+                            // Only update if this is still the current input
                             setLivePreview({ 
                               text: result.isTranslated ? result.text : '', 
                               isLoading: false 
@@ -1436,10 +1461,8 @@ const DraggableMiniChatWindow = ({
                           .catch(() => {
                             setLivePreview({ text: '', isLoading: false });
                           });
-                      }, 300);
-                    } else {
-                      setLivePreview({ text: '', isLoading: false });
-                    }
+                      });
+                    }, 300);
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs w-full"

@@ -253,9 +253,12 @@ async function translateViaBrowserWorker(
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   try {
-    // Initialize worker if needed
+    // Non-blocking worker check - if not ready, start init but queue for later
     if (!isWorkerReady()) {
-      await initWorker();
+      // Fire and forget init - let the queue handle retries
+      initWorker().catch(() => {});
+      // Return original for now - caller can retry
+      return { text, originalText: text, isTranslated: false };
     }
 
     const result = await workerTranslate(
@@ -282,9 +285,11 @@ async function transliterateViaBrowserWorker(
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   try {
-    // Initialize worker if needed
+    // Non-blocking worker check - if not ready, return original (don't wait)
     if (!isWorkerReady()) {
-      await initWorker();
+      // Try to init in background, but don't block
+      initWorker().catch(() => {}); // Fire and forget
+      return { text, originalText: text, isTranslated: false };
     }
 
     const result = await workerTransliterate(text, normalizeLanguage(targetLanguage));
