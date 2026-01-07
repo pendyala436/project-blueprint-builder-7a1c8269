@@ -566,19 +566,26 @@ const MiniChatWindow = ({
     clearPreview(); // Clear typing preview - auto handled, no button
     setLastActivityTime(Date.now());
 
-    // Determine if we need script conversion
-    const shouldConvert = transliterationEnabled && needsScriptConversion && isLatinText(messageText);
+    // GBOARD SUPPORT: Check if user typed in native script directly (Gboard)
+    const inputIsLatin = isLatinText(messageText);
+    
+    // Only convert if: Latin input + conversion enabled + user needs script conversion
+    const shouldConvert = transliterationEnabled && needsScriptConversion && inputIsLatin;
     
     // Use senderNativePreview from hook (already converted), fallback to livePreview, then original
-    const nativeText = senderNativePreview || (livePreview.text && livePreview.text !== messageText ? livePreview.text : null);
+    // For Gboard native input, use the text as-is (no preview needed)
+    const nativeText = inputIsLatin 
+      ? (senderNativePreview || (livePreview.text && livePreview.text !== messageText ? livePreview.text : null))
+      : null; // Gboard native input - no conversion
 
     // OPTIMISTIC: Add message to UI immediately with temp ID
-    // Sender ALWAYS sees their message in native script
+    // For Gboard native input, show as-is; for Latin, show native preview
     const tempId = `temp-${Date.now()}`;
+    const displayMessage = inputIsLatin ? (nativeText || messageText) : messageText;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: nativeText || messageText, // Show native script for sender
+      message: displayMessage, // Show native script for sender
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -590,28 +597,34 @@ const MiniChatWindow = ({
       try {
         let processedMessage = messageText;
         
-        // SPELL CORRECTION: Apply to Latin text ONLY before conversion/sending
-        const inputIsLatin = isLatinText(messageText);
-        const correctedText = inputIsLatin ? spellCorrectForChat(messageText, currentUserLanguage) : messageText;
-        
-        // If we have native text, use it (don't spell correct - it's already in native script)
-        if (nativeText) {
-          processedMessage = nativeText;
-        } else if (shouldConvert) {
-          try {
-            const converted = transliterateToNative(correctedText, currentUserLanguage);
-            processedMessage = converted || correctedText;
-            console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
-            
-            // Update optimistic message with converted text
-            setMessages(prev => prev.map(m => 
-              m.id === tempId ? { ...m, message: processedMessage } : m
-            ));
-          } catch (err) {
-            console.error('[MiniChatWindow] Script conversion error:', err);
-          }
+        if (!inputIsLatin) {
+          // GBOARD NATIVE INPUT: Already in native script, send as-is
+          processedMessage = messageText;
+          console.log('[MiniChatWindow] Gboard native input:', messageText.substring(0, 30));
         } else {
-          processedMessage = correctedText;
+          // LATIN INPUT: Apply spell correction and convert to native script
+          const correctedText = spellCorrectForChat(messageText, currentUserLanguage);
+          
+          // If we have native text from preview, use it
+          if (nativeText) {
+            processedMessage = nativeText;
+          } else if (shouldConvert) {
+            try {
+              const converted = transliterateToNative(correctedText, currentUserLanguage);
+              processedMessage = converted || correctedText;
+              console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
+              
+              // Update optimistic message with converted text
+              setMessages(prev => prev.map(m => 
+                m.id === tempId ? { ...m, message: processedMessage } : m
+              ));
+            } catch (err) {
+              console.error('[MiniChatWindow] Script conversion error:', err);
+              processedMessage = correctedText;
+            }
+          } else {
+            processedMessage = correctedText;
+          }
         }
         
         const { error } = await supabase
@@ -901,8 +914,8 @@ const MiniChatWindow = ({
 
           {/* Input area with live translation preview */}
           <div className="p-1.5 border-t space-y-1">
-            {/* Live native script preview - sender sees their mother tongue preview */}
-            {transliterationEnabled && (senderNativePreview || livePreview.text) && newMessage.trim() && (
+            {/* Live native script preview - only for Latin input being converted */}
+            {transliterationEnabled && (senderNativePreview || livePreview.text) && newMessage.trim() && isLatinText(newMessage) && (
               <div className="px-2 py-1.5 bg-primary/10 border-l-2 border-primary/50 rounded-r text-sm">
                 <div className="flex items-center gap-1 mb-0.5">
                   <Languages className="h-3 w-3 shrink-0 text-primary/70" />
@@ -910,6 +923,13 @@ const MiniChatWindow = ({
                   {livePreview.isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                 </div>
                 <p className="text-foreground">{senderNativePreview || livePreview.text}</p>
+              </div>
+            )}
+            {/* Gboard native input indicator - user typing directly in native script */}
+            {newMessage.trim() && !isLatinText(newMessage) && (
+              <div className="px-2 py-0.5 bg-green-500/10 border-l-2 border-green-500/50 rounded-r text-[9px] text-green-700 dark:text-green-400 flex items-center gap-1">
+                <Languages className="h-2.5 w-2.5" />
+                <span>Native input detected</span>
               </div>
             )}
             {/* Same language indicator - but still show native script */}
@@ -948,22 +968,35 @@ const MiniChatWindow = ({
                     clearTimeout(previewTimeoutRef.current);
                   }
                   
-                  if (transliterationEnabled && needsScriptConversion && isLatinText(val) && val.trim()) {
-                    setLivePreview(prev => ({ ...prev, isLoading: true }));
-                    previewTimeoutRef.current = setTimeout(() => {
-                      // BACKGROUND: Spell correct + convert script without blocking typing
-                      runInBackground(async () => {
-                        try {
-                          // SPELL CORRECTION: Apply before transliteration
-                          const correctedVal = spellCorrectForChat(val, currentUserLanguage);
-                          const result = transliterateToNative(correctedVal, currentUserLanguage);
-                          // Only update if input hasn't changed
-                          setLivePreview({ text: result || correctedVal, isLoading: false });
-                        } catch {
-                          setLivePreview({ text: '', isLoading: false });
-                        }
-                      });
-                    }, 300);
+                  // GBOARD SUPPORT: Check if user is typing in native script directly
+                  // If text is NOT Latin (e.g., Gboard native input), skip conversion
+                  const inputIsLatin = isLatinText(val);
+                  
+                  if (val.trim()) {
+                    if (!inputIsLatin) {
+                      // NATIVE INPUT (Gboard): User typing in native script - show as-is
+                      // No conversion needed, just clear the preview
+                      setLivePreview({ text: '', isLoading: false });
+                    } else if (transliterationEnabled && needsScriptConversion) {
+                      // LATIN INPUT: Convert to native script in background
+                      setLivePreview(prev => ({ ...prev, isLoading: true }));
+                      previewTimeoutRef.current = setTimeout(() => {
+                        // BACKGROUND: Spell correct + convert script without blocking typing
+                        runInBackground(async () => {
+                          try {
+                            // SPELL CORRECTION: Apply before transliteration
+                            const correctedVal = spellCorrectForChat(val, currentUserLanguage);
+                            const result = transliterateToNative(correctedVal, currentUserLanguage);
+                            // Only update if input hasn't changed
+                            setLivePreview({ text: result || correctedVal, isLoading: false });
+                          } catch {
+                            setLivePreview({ text: '', isLoading: false });
+                          }
+                        });
+                      }, 300);
+                    } else {
+                      setLivePreview({ text: '', isLoading: false });
+                    }
                   } else {
                     setLivePreview({ text: '', isLoading: false });
                   }
