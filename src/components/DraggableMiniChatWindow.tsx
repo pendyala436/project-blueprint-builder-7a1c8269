@@ -1393,13 +1393,17 @@ const DraggableMiniChatWindow = ({
                           <span>View Document</span>
                         </a>
                       ) : msg.senderId === currentUserId ? (
-                        // OWN MESSAGE: Show exactly what user typed (original)
+                        // OWN MESSAGE: Show sender's native script (already converted)
                         <p>{msg.message}</p>
                       ) : msg.translatedMessage && msg.isTranslated ? (
-                        // PARTNER MESSAGE with translation: Show translated text in user's language
+                        // PARTNER MESSAGE: Show in receiver's native language
+                        // For same language: just native script conversion (no original shown)
+                        // For different language: show translated + original
                         <div className="space-y-0.5">
                           <p>{msg.translatedMessage}</p>
-                          {msg.message !== msg.translatedMessage && (
+                          {/* Only show original if different language (actual translation happened) */}
+                          {!isSameLanguage(msg.detectedLanguage || partnerLanguage, currentUserLanguage) && 
+                           msg.message !== msg.translatedMessage && (
                             <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
                               {msg.message}
                               {msg.detectedLanguage && (
@@ -1409,7 +1413,7 @@ const DraggableMiniChatWindow = ({
                           )}
                         </div>
                       ) : (
-                        // PARTNER MESSAGE without translation (same language)
+                        // PARTNER MESSAGE: Same language, already in native script
                         <p>{msg.message}</p>
                       )}
                     </div>
