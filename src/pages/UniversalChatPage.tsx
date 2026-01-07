@@ -34,7 +34,7 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { Loader2, Send, Globe, ChevronDown, ChevronUp, Languages, Sparkles, Check, Zap, AlertCircle } from 'lucide-react';
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
+import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES } from '@/data/languages';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeChatTranslation } from '@/hooks/useRealtimeChatTranslation';

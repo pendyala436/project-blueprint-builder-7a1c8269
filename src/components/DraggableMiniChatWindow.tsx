@@ -43,7 +43,6 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useRealtimeTranslation } from "@/lib/translation";
-// GBOARD-FIRST: Users type in native script, no Latin conversion needed
 import {
   isSameLanguage,
   isLatinScriptLanguage,
@@ -51,7 +50,7 @@ import {
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - Gboard native input + Edge Function translation');
+console.log('[DraggableMiniChatWindow] Module loaded - native input + Edge Function translation');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -621,8 +620,7 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // GBOARD-FIRST: Auto-translate partner's messages using profile languages
-  // Users type in native script via Gboard - no Latin detection needed
+  // Auto-translate partner's messages using profile languages
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -672,7 +670,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
-  // GBOARD-FIRST: Load messages with immediate display + background translation
+  // Load messages with immediate display + background translation
   const loadMessages = async () => {
     console.log('[DraggableMiniChatWindow] loadMessages called');
     
@@ -731,7 +729,7 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  // GBOARD-FIRST: Subscribe to new messages with immediate display + background translation
+  // Subscribe to new messages with immediate display + background translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -857,7 +855,7 @@ const DraggableMiniChatWindow = ({
 
   // NON-BLOCKING: Send message with optimistic UI update
   // Bi-directional: Sender sees native script, receiver sees translated native script
-  // GBOARD-FIRST: Send message directly - user types in native script
+  // Send message directly - user types in native script
   const sendMessage = async () => {
     const messageText = newMessage.trim();
     if (!messageText || isSending) return;
@@ -888,7 +886,7 @@ const DraggableMiniChatWindow = ({
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText, // Gboard native input - show as-is
+      message: messageText, // Native input - show as-is
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -1414,14 +1412,8 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
+              {/* Simple text input */}
               <div className="flex-1 relative">
-                {/* GBoard voice tip - show when no messages */}
-                {messages.length === 0 && !newMessage.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/10 rounded text-[8px] text-primary border border-primary/20">
-                    💡 Use GBoard 🎤 mic for voice-to-text in your language
-                  </div>
-                )}
                 {/* Same language indicator */}
                 {!needsTranslation && newMessage.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">

@@ -70,7 +70,7 @@ import {
   INDIAN_NLLB200_LANGUAGES, 
   NON_INDIAN_NLLB200_LANGUAGES,
   NLLB200Language 
-} from "@/data/nllb200Languages";
+} from "@/data/languages";
 import { cn } from "@/lib/utils";
 
 export interface MatchFilters {

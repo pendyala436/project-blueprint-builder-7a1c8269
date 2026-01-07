@@ -9,7 +9,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { pipeline, env } from '@huggingface/transformers';
 import { detectLanguage, isLatinScript, isSameLanguage } from '@/lib/translation/language-detector';
 import { getNLLBCode, LANGUAGE_TO_NLLB } from '@/lib/translation/language-codes';
-import { ALL_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
+import { ALL_NLLB200_LANGUAGES } from '@/data/languages';
 
 // Configure transformers.js to allow local model caching
 env.allowLocalModels = true;
