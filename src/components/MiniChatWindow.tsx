@@ -841,7 +841,7 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area - Gboard native input */}
+          {/* Input area - Mother tongue via Gboard, all processing in background */}
           <div className="p-1.5 border-t space-y-1">
             {/* Same language indicator */}
             {!needsTranslation && newMessage.trim() && (
@@ -851,13 +851,15 @@ const MiniChatWindow = ({
             )}
             <div className="flex items-center gap-1">
               <Input
-                placeholder={userUsesLatinScript ? "Type your message..." : "Type in your language..."}
+                placeholder={`Type in ${currentUserLanguage}...`}
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
                   handleTyping();
                 }}
                 onKeyDown={handleKeyPress}
+                lang={currentUserLanguage}
+                dir="auto"
                 className="h-7 text-[11px]"
               />
               <Button
