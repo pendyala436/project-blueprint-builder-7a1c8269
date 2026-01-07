@@ -41,13 +41,15 @@ import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
+import { useRealtimeTranslation } from "@/lib/translation";
 // 100% EMBEDDED TRANSLATOR - No external APIs, no Edge Functions
 // Supports ALL 300+ languages with instant response (< 2ms)
 import {
   translate,
   translateInBackground,
   convertToNativeScript,
-  getNativeScriptPreview,
+  transliterateToNative,
   autoDetectLanguage,
   isSameLanguage,
   isLatinScriptLanguage,
@@ -174,6 +176,19 @@ const DraggableMiniChatWindow = ({
 
   // Check block status
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
+
+  // Real-time typing indicator with bi-directional translation
+  const {
+    sendTypingIndicator,
+    stopTyping,
+    senderNativePreview,
+    partnerTyping
+  } = useRealtimeTranslation({
+    currentUserId,
+    currentUserLanguage,
+    channelId: chatId,
+    enabled: true
+  });
 
   // Auto-close if blocked
   useEffect(() => {
@@ -999,9 +1014,13 @@ const DraggableMiniChatWindow = ({
     }, 60000);
   };
 
-  const handleTyping = () => {
+  const handleTyping = useCallback((text: string) => {
     setLastActivityTime(Date.now());
-  };
+    // Send typing indicator with native script preview
+    if (text.trim()) {
+      sendTypingIndicator(text.trim(), partnerLanguage);
+    }
+  }, [sendTypingIndicator, partnerLanguage]);
 
   const MAX_MESSAGE_LENGTH = 10000; // Support very large messages
 
@@ -1026,9 +1045,9 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // CRITICAL: Use the ref-tracked preview which is always current for THIS message
+    // CRITICAL: Use the senderNativePreview from hook OR ref-tracked preview which is always current for THIS message
     // This ensures we never use a stale preview from a previous message
-    const capturedPreview = currentPreviewRef.current;
+    const capturedPreview = senderNativePreview || currentPreviewRef.current;
     const hasValidPreview = capturedPreview && capturedPreview.trim() && transliterationEnabled && capturedPreview !== messageText;
     
     // Determine what the sender will see:
@@ -1040,6 +1059,7 @@ const DraggableMiniChatWindow = ({
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
     currentPreviewRef.current = ''; // CRITICAL: Reset ref for next message
+    stopTyping(); // Stop typing indicator
     setLastActivityTime(Date.now());
     
     // Clear any pending preview timeout to avoid stale updates
@@ -1529,6 +1549,20 @@ const DraggableMiniChatWindow = ({
                   </div>
                 );
               })}
+              
+              {/* Partner typing indicator - shows in receiver's native language */}
+              {partnerTyping && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%]">
+                    <TranslatedTypingIndicator
+                      indicator={partnerTyping}
+                      partnerName={partnerName}
+                      className="text-[10px]"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
@@ -1609,32 +1643,33 @@ const DraggableMiniChatWindow = ({
 
               {/* Text input with live native script preview */}
               <div className="flex-1 relative">
-                {/* Live native script preview - shows FULL text in sender's native script */}
-                {/* Show preview when: transliteration enabled AND (has preview text different from input OR is loading) AND has input text */}
-                {transliterationEnabled && newMessage.trim() && (livePreview.text || livePreview.isLoading) && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1.5 bg-primary/10 rounded text-[10px] text-primary border border-primary/20 max-h-20 overflow-y-auto">
-                    {livePreview.isLoading ? (
-                      <span className="flex items-center gap-1">
-                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                {/* Live native script preview - shows text in sender's native script */}
+                {/* Uses senderNativePreview from hook OR livePreview from local state */}
+                {transliterationEnabled && newMessage.trim() && (senderNativePreview || livePreview.text || livePreview.isLoading) && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1.5 bg-primary/10 border-l-2 border-primary/50 rounded-r text-sm max-h-24 overflow-y-auto">
+                    {livePreview.isLoading && !senderNativePreview ? (
+                      <span className="flex items-center gap-1 text-xs">
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
                         Converting to {currentUserLanguage}...
                       </span>
-                    ) : livePreview.text && livePreview.text !== newMessage ? (
+                    ) : (senderNativePreview || livePreview.text) && (senderNativePreview || livePreview.text) !== newMessage ? (
                       <div className="flex flex-col gap-0.5">
-                        <span className="flex items-center gap-1 text-[9px] opacity-70">
-                          <Languages className="h-2.5 w-2.5 shrink-0" />
-                          <span className="font-medium">{currentUserLanguage}</span>
-                          {!needsTranslation && <span>(same language)</span>}
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Languages className="h-3 w-3 shrink-0 text-primary/70" />
+                          <span>Preview ({currentUserLanguage}):</span>
+                          {livePreview.isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                         </span>
-                        {/* Full preview text - no truncation, wraps naturally */}
-                        <span className="break-words whitespace-pre-wrap leading-relaxed">{livePreview.text}</span>
+                        <span className="break-words whitespace-pre-wrap leading-relaxed text-foreground">
+                          {senderNativePreview || livePreview.text}
+                        </span>
                       </div>
                     ) : null}
                   </div>
                 )}
                 {/* Same language indicator - only show when no native preview needed */}
-                {!needsTranslation && newMessage.trim() && !livePreview.text && !livePreview.isLoading && !needsScriptConversionFlag && (
+                {!needsTranslation && !needsScriptConversionFlag && newMessage.trim() && !senderNativePreview && !livePreview.text && !livePreview.isLoading && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
-                    Same language - direct display
+                    Same language - direct chat
                   </div>
                 )}
                 <Input
@@ -1648,8 +1683,8 @@ const DraggableMiniChatWindow = ({
                     // This ensures typing is never interrupted regardless of message length
                     setNewMessage(value);
                     
-                    // Update activity timestamp (non-blocking)
-                    handleTyping();
+                    // Update activity timestamp and send typing indicator (non-blocking)
+                    handleTyping(value);
                     
                     // ASYNC PREVIEW: Run in background, never blocks typing
                     // Clear any pending preview timeout
