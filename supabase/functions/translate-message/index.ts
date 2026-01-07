@@ -987,15 +987,48 @@ function forcePhoneticConversion(text: string, targetScript: string): string {
   return transliterateFromLatin(text, targetScript);
 }
 
-// Get target script from language name
+// Get target script from language name OR ISO code
 function getTargetScriptFromLanguage(language: string): string {
   const lang = language.toLowerCase().trim();
+  
+  // Map ISO codes to full language names first
+  const isoToLang: Record<string, string> = {
+    // Indic ISO codes
+    'hi': 'hindi', 'mr': 'marathi', 'ne': 'nepali', 'sa': 'sanskrit',
+    'te': 'telugu', 'ta': 'tamil', 'kn': 'kannada', 'ml': 'malayalam',
+    'bn': 'bengali', 'gu': 'gujarati', 'pa': 'punjabi', 'or': 'oriya',
+    'as': 'assamese', 'ks': 'kashmiri', 'sd': 'sindhi', 'mai': 'maithili',
+    
+    // Middle Eastern ISO codes
+    'ar': 'arabic', 'ur': 'urdu', 'fa': 'persian', 'ps': 'pashto', 'he': 'hebrew',
+    
+    // European ISO codes
+    'en': 'english', 'de': 'german', 'fr': 'french', 'es': 'spanish', 'it': 'italian',
+    'pt': 'portuguese', 'nl': 'dutch', 'pl': 'polish', 'cs': 'czech', 'sv': 'swedish',
+    'no': 'norwegian', 'da': 'danish', 'fi': 'finnish', 'tr': 'turkish',
+    'ru': 'russian', 'uk': 'ukrainian', 'be': 'belarusian', 'bg': 'bulgarian',
+    'sr': 'serbian', 'mk': 'macedonian', 'el': 'greek',
+    
+    // Asian ISO codes
+    'zh': 'chinese', 'ja': 'japanese', 'ko': 'korean', 'th': 'thai',
+    'vi': 'vietnamese', 'id': 'indonesian', 'ms': 'malay', 'tl': 'tagalog',
+    
+    // African ISO codes
+    'sw': 'swahili', 'am': 'amharic', 'ha': 'hausa', 'yo': 'yoruba',
+    
+    // Central Asian
+    'kk': 'kazakh', 'ky': 'kyrgyz', 'uz': 'uzbek', 'tg': 'tajik', 'mn': 'mongolian'
+  };
+  
+  // Resolve ISO code to full language name
+  const resolvedLang = isoToLang[lang] || lang;
   
   // Map language names to script names
   const langToScript: Record<string, string> = {
     // Indic languages
     hindi: 'devanagari', marathi: 'devanagari', nepali: 'devanagari', sanskrit: 'devanagari',
     konkani: 'devanagari', dogri: 'devanagari', bodo: 'devanagari', maithili: 'devanagari',
+    kashmiri: 'devanagari', sindhi: 'devanagari',
     telugu: 'telugu',
     tamil: 'tamil',
     kannada: 'kannada', tulu: 'kannada',
@@ -1007,6 +1040,10 @@ function getTargetScriptFromLanguage(language: string): string {
     
     // Middle Eastern
     arabic: 'arabic', urdu: 'arabic', persian: 'arabic', farsi: 'arabic', pashto: 'arabic',
+    hebrew: 'hebrew',
+    
+    // East Asian  
+    chinese: 'han', japanese: 'hiragana', korean: 'hangul',
     
     // European non-Latin
     russian: 'cyrillic', ukrainian: 'cyrillic', belarusian: 'cyrillic', bulgarian: 'cyrillic',
@@ -1016,14 +1053,18 @@ function getTargetScriptFromLanguage(language: string): string {
     // Southeast Asian
     thai: 'thai',
     
+    // African
+    amharic: 'ethiopic',
+    
     // Latin-based (no conversion needed)
     english: 'latin', german: 'latin', french: 'latin', spanish: 'latin', italian: 'latin',
     portuguese: 'latin', dutch: 'latin', polish: 'latin', czech: 'latin', swedish: 'latin',
     norwegian: 'latin', danish: 'latin', finnish: 'latin', turkish: 'latin', indonesian: 'latin',
-    malay: 'latin', vietnamese: 'latin', tagalog: 'latin', filipino: 'latin', swahili: 'latin'
+    malay: 'latin', vietnamese: 'latin', tagalog: 'latin', filipino: 'latin', swahili: 'latin',
+    hausa: 'latin', yoruba: 'latin', uzbek: 'latin', tajik: 'latin', mongolian: 'latin'
   };
   
-  return langToScript[lang] || 'latin';
+  return langToScript[resolvedLang] || 'latin';
 }
 
 // ============================================================
