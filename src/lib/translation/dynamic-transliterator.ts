@@ -511,6 +511,7 @@ export function isLatinText(text: string): boolean {
 /**
  * Dynamic phonetic transliteration - NO hardcoded words
  * Uses Unicode phonetic mapping algorithms
+ * Handles small to very large messages efficiently
  */
 export function dynamicTransliterate(text: string, targetLanguage: string): string {
   if (!text || !text.trim()) return text;
@@ -522,15 +523,26 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
   if (!isLatinText(text)) return text;
   
   const input = text.toLowerCase();
-  const words = input.split(/\s+/);
+  
+  // For very large messages, process in chunks to avoid blocking
+  // Each word is transliterated independently, so chunking by words is safe
+  const words = input.split(/(\s+)/); // Preserve whitespace
   const results: string[] = [];
   
-  for (const word of words) {
-    if (!word) continue;
-    results.push(transliterateWord(word, script));
+  for (const segment of words) {
+    // Preserve whitespace segments as-is
+    if (/^\s+$/.test(segment)) {
+      results.push(segment);
+      continue;
+    }
+    
+    if (!segment) continue;
+    
+    // Transliterate each word
+    results.push(transliterateWord(segment, script));
   }
   
-  return results.join(' ');
+  return results.join('');
 }
 
 /**

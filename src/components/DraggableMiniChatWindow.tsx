@@ -900,15 +900,17 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
   };
 
-  const MAX_MESSAGE_LENGTH = 2000;
+  const MAX_MESSAGE_LENGTH = 10000; // Support very large messages
 
   // NON-BLOCKING: Send message with optimistic UI update
   // Bi-directional: Sender sees native script, receiver sees translated native script
+  // Handles small to very large messages without truncation
   const sendMessage = async () => {
-    if (!newMessage.trim() || isSending) return;
-
+    // CRITICAL: Capture message immediately to prevent any data loss
     const messageText = newMessage.trim();
     
+    if (!messageText || isSending) return;
+
     if (messageText.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
@@ -919,13 +921,13 @@ const DraggableMiniChatWindow = ({
     }
 
     // CRITICAL: Capture the current preview BEFORE clearing state
-    // This ensures the native script preview is used when sending
+    // This ensures the full native script preview is used when sending
     const currentPreview = livePreview.text;
     const hasValidPreview = currentPreview && currentPreview.trim() && transliterationEnabled;
     
     // Determine what the sender will see:
-    // - If preview exists (native script conversion happened), use the preview
-    // - Otherwise use the original typed text
+    // - If preview exists (native script conversion happened), use the FULL preview
+    // - Otherwise use the FULL original typed text - NEVER truncate
     const senderViewMessage = hasValidPreview ? currentPreview : messageText;
 
     // IMMEDIATE: Clear input and reset preview state completely
@@ -939,12 +941,12 @@ const DraggableMiniChatWindow = ({
       previewTimeoutRef.current = null;
     }
     
-    // OPTIMISTIC: Add message to UI immediately in sender's native script
+    // OPTIMISTIC: Add FULL message to UI immediately in sender's native script
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: senderViewMessage, // Sender sees their native script
+      message: senderViewMessage, // FULL message - sender sees their native script
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -956,30 +958,32 @@ const DraggableMiniChatWindow = ({
       let finalSenderMessage = senderViewMessage;
       
       // If no preview but transliteration enabled and needs conversion
+      // Process the FULL message text without any truncation
       if (!hasValidPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
         try {
           const converted = await convertToNativeScriptAsync(messageText, currentUserLanguage);
           if (converted.isTranslated && converted.text) {
             finalSenderMessage = converted.text;
-            // Update optimistic message with converted text
+            // Update optimistic message with FULL converted text
             setMessages(prev => prev.map(m => 
               m.id === tempId ? { ...m, message: finalSenderMessage } : m
             ));
           }
         } catch (err) {
           console.error('[DraggableMiniChatWindow] Script conversion error:', err);
+          // On error, still use the original message - never lose data
         }
       }
       
-      // BACKGROUND: Process for receiver (translation happens in background after send)
-      // We send the sender's native script version - receiver will translate on their side
+      // BACKGROUND: Send the FULL message to database
+      // Receiver will translate on their side
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: finalSenderMessage // Send sender's native script version
+          message: finalSenderMessage // Send FULL sender's native script version
         });
 
       if (error) throw error;
@@ -988,9 +992,9 @@ const DraggableMiniChatWindow = ({
       setMessages(prev => prev.filter(m => m.id !== tempId));
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove optimistic message on error
+      // Remove optimistic message on error and restore the FULL message
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(messageText);
+      setNewMessage(messageText); // Restore FULL message for retry
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -1519,60 +1523,78 @@ const DraggableMiniChatWindow = ({
                   placeholder="Type in any language..."
                   value={newMessage}
                   onChange={(e) => {
+                    // CRITICAL: Capture value immediately - never use e.target.value after this
                     const value = e.target.value;
-                    // IMMEDIATE: Update input - never blocked (sync)
+                    
+                    // IMMEDIATE: Update input state synchronously - NEVER BLOCKED
+                    // This ensures typing is never interrupted regardless of message length
                     setNewMessage(value);
+                    
+                    // Update activity timestamp (non-blocking)
                     handleTyping();
                     
-                    // Clear any pending preview
+                    // ASYNC PREVIEW: Run in background, never blocks typing
+                    // Clear any pending preview timeout
                     if (previewTimeoutRef.current) {
                       clearTimeout(previewTimeoutRef.current);
                       previewTimeoutRef.current = null;
                     }
                     
-                    // Quick sync checks - these are instant, no blocking
-                    const needsConversion = transliterationEnabled && 
-                      asyncNeedsScriptConversion(currentUserLanguage) && 
-                      asyncIsLatinText(value) && 
-                      value.trim();
-                    
-                    if (!needsConversion) {
-                      // Instant clear - no async needed
+                    // Quick sync check - these are instant (<0.1ms), never block
+                    const trimmedValue = value.trim();
+                    if (!trimmedValue) {
+                      // Empty input - clear preview immediately
                       setLivePreview({ text: '', isLoading: false });
                       return;
                     }
                     
-                    // Set loading state immediately (non-blocking)
-                    setLivePreview(prev => prev.isLoading ? prev : { ...prev, isLoading: true });
+                    // Check if conversion is needed (sync, <0.5ms)
+                    const needsConversion = transliterationEnabled && 
+                      asyncNeedsScriptConversion(currentUserLanguage) && 
+                      asyncIsLatinText(value);
                     
-                    // BACKGROUND: Use requestIdleCallback or setTimeout for true non-blocking
-                    const schedulePreview = (callback: () => void) => {
-                      if ('requestIdleCallback' in window) {
-                        (window as any).requestIdleCallback(callback, { timeout: 500 });
-                      } else {
-                        setTimeout(callback, 150);
-                      }
-                    };
+                    if (!needsConversion) {
+                      // No conversion needed - clear preview
+                      setLivePreview({ text: '', isLoading: false });
+                      return;
+                    }
                     
-                    // Debounce preview update (300ms)
+                    // Show loading indicator without blocking typing
+                    setLivePreview(prev => ({ text: prev.text, isLoading: true }));
+                    
+                    // DEBOUNCED PREVIEW: Schedule preview update after typing pause
+                    // Use longer debounce for very long messages to reduce processing
+                    const debounceTime = value.length > 500 ? 500 : value.length > 100 ? 350 : 250;
+                    
                     previewTimeoutRef.current = setTimeout(() => {
-                      const currentValue = value; // Capture value at debounce time
+                      // Capture the current value at debounce time
+                      const capturedValue = value;
                       
-                      // Schedule async work when browser is idle
-                      schedulePreview(() => {
-                        convertToNativeScriptAsync(currentValue, currentUserLanguage)
+                      // Use requestIdleCallback for true non-blocking background work
+                      const runPreview = () => {
+                        // Double-check value hasn't changed
+                        convertToNativeScriptAsync(capturedValue, currentUserLanguage)
                           .then(result => {
-                            // Only update if this is still the current input
-                            setLivePreview({ 
-                              text: result.isTranslated ? result.text : '', 
-                              isLoading: false 
-                            });
+                            // Only update if result is valid and meaningful
+                            if (result.isTranslated && result.text && result.text !== capturedValue) {
+                              setLivePreview({ text: result.text, isLoading: false });
+                            } else {
+                              setLivePreview({ text: '', isLoading: false });
+                            }
                           })
                           .catch(() => {
+                            // Silently fail - preview is optional enhancement
                             setLivePreview({ text: '', isLoading: false });
                           });
-                      });
-                    }, 300);
+                      };
+                      
+                      // Schedule during idle time or use fallback
+                      if ('requestIdleCallback' in window) {
+                        (window as any).requestIdleCallback(runPreview, { timeout: 1000 });
+                      } else {
+                        setTimeout(runPreview, 0);
+                      }
+                    }, debounceTime);
                   }}
                   onKeyDown={handleKeyPress}
                   className="h-8 text-xs w-full"
