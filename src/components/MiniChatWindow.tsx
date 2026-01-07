@@ -314,46 +314,60 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
-  // Auto-translate a message to current user's language (WEB WORKER, non-blocking)
-  // SPELL CORRECTION: Applied before translation for better accuracy
+  // Auto-translate a message to current user's language (embedded translator, non-blocking)
+  // NATIVE SCRIPT: Convert to receiver's native script based on mother tongue
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Only translate messages from the partner (not our own messages)
+      // Only process messages from the partner (not our own messages)
       if (senderId === currentUserId) {
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Skip if same language
-      if (isSameLanguage(partnerLanguage, currentUserLanguage)) {
-        return { translatedMessage: text, isTranslated: false };
-      }
-
-      // STEP 1: Apply spell correction before translation (better translation accuracy)
-      const correctedText = spellCorrectForChat(text, partnerLanguage);
-
-      // STEP 2: Use worker-based translator for non-blocking translation
-      const result = await translate(correctedText, partnerLanguage, currentUserLanguage);
+      // Check if same language
+      const sameLanguage = isSameLanguage(partnerLanguage, currentUserLanguage);
       
-      // STEP 3: Apply spell correction to translated result (receiver's language)
-      const finalText = spellCorrectForChat(result.text, currentUserLanguage);
+      // STEP 1: Apply spell correction
+      const correctedText = spellCorrectForChat(text, partnerLanguage);
+      
+      let finalText = correctedText;
+      let wasTranslated = false;
+      
+      if (sameLanguage) {
+        // Same language - no translation, but convert to receiver's native script if needed
+        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(correctedText)) {
+          finalText = transliterateToNative(correctedText, currentUserLanguage);
+        }
+      } else {
+        // Different languages - translate to receiver's language
+        const result = await translate(correctedText, partnerLanguage, currentUserLanguage);
+        finalText = result.text;
+        wasTranslated = result.isTranslated;
+        
+        // Convert translated text to receiver's native script if needed
+        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(finalText)) {
+          finalText = transliterateToNative(finalText, currentUserLanguage);
+        }
+      }
+      
+      // STEP 2: Apply spell correction to final result
+      finalText = spellCorrectForChat(finalText, currentUserLanguage);
       
       console.log('[MiniChatWindow] Translation:', {
         original: text,
-        corrected: correctedText,
-        translated: result.text,
         final: finalText,
         from: partnerLanguage,
         to: currentUserLanguage,
-        success: result.isTranslated
+        sameLanguage,
+        wasTranslated
       });
 
       return {
         translatedMessage: normalizeUnicode(finalText),
-        isTranslated: result.isTranslated && finalText !== text,
+        isTranslated: wasTranslated || finalText !== text,
         detectedLanguage: partnerLanguage
       };
     } catch (error) {
@@ -536,15 +550,16 @@ const MiniChatWindow = ({
     // Determine if we need script conversion
     const shouldConvert = transliterationEnabled && needsScriptConversion && isLatinText(messageText);
     
-    // Use preview text if available (already converted), otherwise use original
-    const previewText = livePreview.text && livePreview.text !== messageText ? livePreview.text : null;
+    // Use senderNativePreview from hook (already converted), fallback to livePreview, then original
+    const nativeText = senderNativePreview || (livePreview.text && livePreview.text !== messageText ? livePreview.text : null);
 
     // OPTIMISTIC: Add message to UI immediately with temp ID
+    // Sender ALWAYS sees their message in native script
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage: Message = {
       id: tempId,
       senderId: currentUserId,
-      message: previewText || messageText, // Show preview if available
+      message: nativeText || messageText, // Show native script for sender
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -559,10 +574,10 @@ const MiniChatWindow = ({
         // SPELL CORRECTION: Apply before conversion/sending
         const correctedText = spellCorrectForChat(messageText, currentUserLanguage);
         
-        // If we have preview text, use it; otherwise convert in background
-        if (previewText) {
-          // Also spell-correct the preview
-          processedMessage = spellCorrectForChat(previewText, currentUserLanguage);
+        // If we have native text, use it; otherwise convert in background
+        if (nativeText) {
+          // Also spell-correct the native text
+          processedMessage = spellCorrectForChat(nativeText, currentUserLanguage);
         } else if (shouldConvert) {
           try {
             const converted = transliterateToNative(correctedText, currentUserLanguage);
