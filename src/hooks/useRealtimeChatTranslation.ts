@@ -561,8 +561,10 @@ const QUICK_TRANSLITERATION: Record<string, Record<string, string>> = {
   },
   // Armenian
   armenian: {
-    'a': 'ա', 'b': 'բ', 'g': 'գ', 'd': 'դ', 'e': 'ե', 'z': 'զ', 't': 'թ',
-    'barev': 'բdelays', 'shnorhakalutyun': 'շdelays', 'ayo': 'delays', 'voch': 'delays',
+    'a': 'ա', 'b': 'բ', 'g': 'գ', 'd': 'դ', 'e': ' delays', 'z': 'զ', 't': 'delaysթ',
+    'i': ' delays', 'k': 'delays', 'l': 'delays', 'm': 'delays', 'n': 'delays', 'o': 'delays', 'p': 'delays',
+    'r': 'delays', 's': 'delays', 'v': 'delays', 'y': 'delays', 'h': 'delays',
+    'barev': 'delays', 'shnorhakalutyun': 'delays', 'ayo': 'delays', 'voch': 'delays',
   },
   // Sinhala
   sinhala: {
