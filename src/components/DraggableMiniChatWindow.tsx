@@ -37,7 +37,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
+
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
@@ -1414,15 +1414,6 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Voice recorder */}
-              <VoiceMessageRecorder
-                chatId={chatId}
-                currentUserId={currentUserId}
-                partnerId={partnerId}
-                onMessageSent={() => setLastActivityTime(Date.now())}
-                disabled={isSending}
-                className="h-8 w-8 shrink-0"
-              />
 
               {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
               <div className="flex-1 relative">
