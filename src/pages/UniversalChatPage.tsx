@@ -160,12 +160,13 @@ const MessageBubble: React.FC<{
       </span>
       
       <div className={cn(
-        "rounded-2xl px-4 py-2.5 shadow-sm",
+        "rounded-2xl px-4 py-3 shadow-sm max-w-full",
         isUser 
           ? "bg-primary text-primary-foreground rounded-br-md" 
           : "bg-muted text-foreground rounded-bl-md"
       )}>
-        <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">
+        {/* Display FULL message - no truncation, supports small to very large texts */}
+        <p className="text-sm whitespace-pre-wrap break-words unicode-text leading-relaxed" dir="auto">
           {displayText}
         </p>
       </div>
@@ -532,21 +533,21 @@ const UniversalChatPage: React.FC = () => {
           
           {/* Input Area */}
           <div className="p-4 border-t bg-card">
-            {/* Live Preview - Shows instantly as you type */}
+            {/* Live Preview - Shows FULL message instantly as you type */}
             {showPreview && livePreview && livePreview !== input && (
-              <div className="mb-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="mb-2 p-3 rounded-lg bg-primary/5 border border-primary/20 max-h-[200px] overflow-y-auto">
                 <div className="flex items-center gap-1.5 text-xs text-primary mb-1">
                   <Sparkles className="h-3 w-3" />
-                  <span>Native script preview ({userLanguage}):</span>
+                  <span>Native script preview ({userLanguage}) - Full message:</span>
                 </div>
-                <p className="text-sm font-medium unicode-text" dir="auto">
+                <p className="text-sm font-medium unicode-text whitespace-pre-wrap break-words" dir="auto">
                   {livePreview}
                 </p>
               </div>
             )}
             
-            {/* Input field */}
-            <div className="flex gap-2">
+            {/* Input field - Shows FULL typed message, no truncation */}
+            <div className="flex gap-2 items-end">
               <Textarea
                 ref={inputRef}
                 value={input}
@@ -555,9 +556,10 @@ const UniversalChatPage: React.FC = () => {
                 onCompositionStart={() => setIsComposing(true)}
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder={`Type in ${userLanguage} (Latin letters work!)...`}
-                className="min-h-[44px] max-h-[120px] resize-none unicode-text"
+                className="min-h-[44px] max-h-[300px] resize-y unicode-text whitespace-pre-wrap"
                 disabled={isSending}
                 dir="auto"
+                rows={1}
               />
               <Button
                 onClick={handleSend}
