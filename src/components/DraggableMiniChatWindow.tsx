@@ -540,13 +540,24 @@ const DraggableMiniChatWindow = ({
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
   // Auto-translate a message to current user's language using dl-translate
-  const translateMessage = useCallback(async (text: string): Promise<{
+  // ONLY translate messages from the partner, NOT our own messages
+  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Use dl-translate to process incoming message
+      // Only translate messages from the partner (not our own messages)
+      if (senderId === currentUserId) {
+        return { translatedMessage: text, isTranslated: false };
+      }
+
+      // Skip if same language
+      if (isSameLanguage(partnerLanguage, currentUserLanguage)) {
+        return { translatedMessage: text, isTranslated: false };
+      }
+
+      // Use dl-translate to process incoming message from partner
       const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
       return {
         translatedMessage: result.text,
@@ -557,7 +568,7 @@ const DraggableMiniChatWindow = ({
       console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   const loadMessages = async () => {
     const { data } = await supabase
@@ -568,10 +579,10 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // Translate ALL messages to current user's language
+      // Translate only partner's messages to current user's language
       const translatedMessages = await Promise.all(
         data.map(async (m) => {
-          const translation = await translateMessage(m.message);
+          const translation = await translateMessage(m.message, m.sender_id);
           return {
             id: m.id,
             senderId: m.sender_id,
@@ -600,8 +611,8 @@ const DraggableMiniChatWindow = ({
         },
         async (payload: any) => {
           const newMsg = payload.new;
-          // Translate to current user's language
-          const translation = await translateMessage(newMsg.message);
+          // Translate partner's messages to current user's language
+          const translation = await translateMessage(newMsg.message, newMsg.sender_id);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -1103,11 +1114,14 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
-                      ) : msg.translatedMessage ? (
-                        // Show translated message in current user's language
+                      ) : msg.senderId === currentUserId ? (
+                        // OWN MESSAGE: Show exactly what user typed (original)
+                        <p>{msg.message}</p>
+                      ) : msg.translatedMessage && msg.isTranslated ? (
+                        // PARTNER MESSAGE with translation: Show translated text in user's language
                         <div className="space-y-0.5">
                           <p>{msg.translatedMessage}</p>
-                          {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                          {msg.message !== msg.translatedMessage && (
                             <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
                               {msg.message}
                               {msg.detectedLanguage && (
@@ -1117,7 +1131,8 @@ const DraggableMiniChatWindow = ({
                           )}
                         </div>
                       ) : (
-                        msg.message
+                        // PARTNER MESSAGE without translation (same language)
+                        <p>{msg.message}</p>
                       )}
                     </div>
                   </div>
