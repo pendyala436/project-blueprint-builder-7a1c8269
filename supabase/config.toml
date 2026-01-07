@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.libre-translate]
 verify_jwt = false
+
+[functions.pivot-translate]
+verify_jwt = false
