@@ -785,8 +785,17 @@ const DraggableMiniChatWindow = ({
           
           // PARTNER MESSAGE: Translate to current user's mother tongue + native script
           // Auto-detect source language from script
+          // CRITICAL: For Latin text, use partner's declared language, not detected (which would be English)
           const sourceLanguage = detected.isLatin ? partnerLanguage : detected.language;
           const targetLanguage = currentUserLanguage;
+          
+          console.log('[DraggableMiniChatWindow] Processing partner message:', {
+            message: newMsg.message.substring(0, 30),
+            detected: detected.language,
+            isLatin: detected.isLatin,
+            sourceLanguage,
+            targetLanguage
+          });
           
           // Check if same language
           const sameLanguage = isSameLanguage(sourceLanguage, targetLanguage);
@@ -813,11 +822,19 @@ const DraggableMiniChatWindow = ({
             }
           } else {
             // DIFFERENT LANGUAGE: Translate to receiver's language + native script
+            console.log('[DraggableMiniChatWindow] Translating:', sourceLanguage, '→', targetLanguage);
+            
             translateInBackground(
               newMsg.message,
               sourceLanguage,
               targetLanguage,
               async (result) => {
+                console.log('[DraggableMiniChatWindow] Translation result:', {
+                  original: newMsg.message.substring(0, 30),
+                  translated: result.text?.substring(0, 30),
+                  isTranslated: result.isTranslated
+                });
+                
                 let finalText = result.text;
                 
                 // If translation successful and target language needs native script
@@ -830,7 +847,8 @@ const DraggableMiniChatWindow = ({
                         finalText = nativeResult.text;
                       }
                     }
-                  } catch {
+                  } catch (err) {
+                    console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
                     // Keep translated text if native conversion fails
                   }
                 }

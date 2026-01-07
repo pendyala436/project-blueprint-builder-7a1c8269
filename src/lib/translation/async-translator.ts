@@ -471,15 +471,33 @@ async function transliterateViaBrowserWorker(
   text: string,
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
+  console.log('[AsyncTranslator] transliterateViaBrowserWorker:', {
+    text: text.substring(0, 30),
+    targetLanguage,
+    workerReady: isWorkerReady()
+  });
+  
   try {
     // Non-blocking worker check - if not ready, return original (don't wait)
     if (!isWorkerReady()) {
       // Try to init in background, but don't block
-      initWorker().catch(() => {}); // Fire and forget
+      console.log('[AsyncTranslator] Worker not ready, initializing...');
+      initWorker().catch((err) => {
+        console.error('[AsyncTranslator] Worker init failed:', err);
+      }); // Fire and forget
       return { text, originalText: text, isTranslated: false };
     }
 
-    const result = await workerTransliterate(text, normalizeLanguage(targetLanguage));
+    const normalizedLang = normalizeLanguage(targetLanguage);
+    console.log('[AsyncTranslator] Calling worker.transliterate:', normalizedLang);
+    
+    const result = await workerTransliterate(text, normalizedLang);
+    
+    console.log('[AsyncTranslator] Worker transliterate result:', {
+      original: text.substring(0, 20),
+      result: result.text?.substring(0, 20),
+      success: result.success
+    });
 
     return {
       text: result.text || text,
@@ -554,6 +572,11 @@ export async function convertToNativeScriptAsync(
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
   
+  console.log('[AsyncTranslator] convertToNativeScriptAsync:', {
+    text: trimmed.substring(0, 30),
+    targetLanguage
+  });
+  
   // Empty text
   if (!trimmed) {
     return { text, originalText: text, isTranslated: false };
@@ -561,11 +584,13 @@ export async function convertToNativeScriptAsync(
   
   // Latin script language - no conversion needed
   if (isLatinScriptLanguage(targetLanguage)) {
+    console.log('[AsyncTranslator] Target uses Latin, no conversion needed');
     return { text: trimmed, originalText: trimmed, isTranslated: false };
   }
   
   // Already in non-Latin - no conversion needed
   if (!isLatinText(trimmed)) {
+    console.log('[AsyncTranslator] Already in non-Latin script');
     return { text: trimmed, originalText: trimmed, isTranslated: false };
   }
   
@@ -573,11 +598,19 @@ export async function convertToNativeScriptAsync(
   const cacheKey = getCacheKey(trimmed, 'english', targetLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
+    console.log('[AsyncTranslator] Cache hit for native script');
     return cached;
   }
   
   // Use browser-side worker for transliteration
+  console.log('[AsyncTranslator] Calling worker for transliteration...');
   const result = await transliterateViaBrowserWorker(trimmed, targetLanguage);
+  
+  console.log('[AsyncTranslator] Transliteration result:', {
+    original: trimmed.substring(0, 20),
+    converted: result.text?.substring(0, 20),
+    isTranslated: result.isTranslated
+  });
   
   if (result.isTranslated) {
     setInCache(cacheKey, result);
@@ -596,8 +629,15 @@ export function translateInBackground(
   receiverLanguage: string,
   onComplete: (result: AsyncTranslationResult) => void
 ): void {
+  console.log('[AsyncTranslator] translateInBackground:', {
+    text: text.substring(0, 30),
+    senderLanguage,
+    receiverLanguage
+  });
+  
   // Same language - no translation needed, callback immediately
   if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    console.log('[AsyncTranslator] Same language, skipping translation');
     onComplete({ text, originalText: text, isTranslated: false });
     return;
   }
@@ -606,14 +646,26 @@ export function translateInBackground(
   const cacheKey = getCacheKey(text, senderLanguage, receiverLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
+    console.log('[AsyncTranslator] Cache hit');
     onComplete(cached);
     return;
   }
   
   // Queue translation in background - don't block
+  console.log('[AsyncTranslator] Queuing translation...');
   translateAsync(text, senderLanguage, receiverLanguage, 'normal')
-    .then(onComplete)
-    .catch(() => onComplete({ text, originalText: text, isTranslated: false }));
+    .then((result) => {
+      console.log('[AsyncTranslator] Translation complete:', {
+        original: text.substring(0, 20),
+        translated: result.text?.substring(0, 20),
+        isTranslated: result.isTranslated
+      });
+      onComplete(result);
+    })
+    .catch((err) => {
+      console.error('[AsyncTranslator] Translation error:', err);
+      onComplete({ text, originalText: text, isTranslated: false });
+    });
 }
 
 /**

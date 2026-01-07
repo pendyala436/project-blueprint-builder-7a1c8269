@@ -300,11 +300,25 @@ export async function transliterateToNative(
   text: string,
   targetLanguage: string
 ): Promise<TranslationResult> {
+  console.log('[WorkerTranslator] transliterateToNative:', {
+    text: text.substring(0, 30),
+    targetLanguage,
+    workerReady: isWorkerReady
+  });
+  
   try {
-    return await sendToWorker('transliterate', {
+    const result = await sendToWorker('transliterate', {
       text,
       targetLanguage,
     });
+    
+    console.log('[WorkerTranslator] transliterateToNative result:', {
+      original: text.substring(0, 20),
+      result: result.text?.substring(0, 20),
+      success: result.success
+    });
+    
+    return result;
   } catch (err) {
     console.error('[WorkerTranslator] Transliterate error:', err);
     return { text, success: false };
