@@ -10,6 +10,11 @@
  * 3. Works for ANY language pair without maintenance
  * 
  * PERFORMANCE: < 2ms for typical messages (sync, instant)
+ * 
+ * ANY LANGUAGE SUPPORT:
+ * - Unknown languages default to Latin (passthrough)
+ * - All operations are null-safe
+ * - No errors thrown for unsupported languages
  */
 
 // ============================================================
@@ -493,9 +498,12 @@ function getScriptForLanguage(language: string): ScriptBlock | null {
 
 /**
  * Check if language uses Latin script
+ * Returns true for unknown languages (safe default)
  */
 export function isLatinScriptLanguage(language: string): boolean {
+  if (!language || typeof language !== 'string') return true;
   const normalized = language.toLowerCase().trim();
+  if (!normalized) return true;
   return LANGUAGE_SCRIPT_MAP[normalized] === '' || LANGUAGE_SCRIPT_MAP[normalized] === undefined;
 }
 
@@ -512,12 +520,16 @@ export function isLatinText(text: string): boolean {
  * Dynamic phonetic transliteration - NO hardcoded words
  * Uses Unicode phonetic mapping algorithms
  * Handles small to very large messages efficiently
+ * Safe for ANY language - returns original text for unsupported
  */
 export function dynamicTransliterate(text: string, targetLanguage: string): string {
-  if (!text || !text.trim()) return text;
+  // Null-safe: return empty/original for invalid input
+  if (!text || typeof text !== 'string') return text || '';
+  if (!text.trim()) return text;
+  if (!targetLanguage || typeof targetLanguage !== 'string') return text;
   
   const script = getScriptForLanguage(targetLanguage);
-  if (!script) return text; // Latin script language, no conversion
+  if (!script) return text; // Latin script language or unknown, no conversion
   
   // If already in target script, return as-is
   if (!isLatinText(text)) return text;
@@ -688,10 +700,12 @@ export function needsScriptConversion(language: string): boolean {
 }
 
 /**
- * Normalize language name
+ * Normalize language name - handles any input safely
  */
 export function normalizeLanguage(lang: string): string {
+  if (!lang || typeof lang !== 'string') return 'english';
   const l = lang.toLowerCase().trim();
+  if (!l) return 'english';
   const aliases: Record<string, string> = {
     'en': 'english', 'eng': 'english', 'hi': 'hindi', 'hin': 'hindi',
     'te': 'telugu', 'tel': 'telugu', 'ta': 'tamil', 'tam': 'tamil',
@@ -710,10 +724,12 @@ export function normalizeLanguage(lang: string): string {
 }
 
 /**
- * Check if two languages are the same
+ * Check if two languages are the same - handles any input safely
  */
 export function isSameLanguage(lang1: string, lang2: string): boolean {
-  return normalizeLanguage(lang1) === normalizeLanguage(lang2);
+  const norm1 = normalizeLanguage(lang1);
+  const norm2 = normalizeLanguage(lang2);
+  return norm1 === norm2;
 }
 
 // Export all functions
