@@ -498,13 +498,35 @@ function getScriptForLanguage(language: string): ScriptBlock | null {
 
 /**
  * Check if language uses Latin script
- * Returns true for unknown languages (safe default)
+ * Returns true ONLY for known Latin-script languages
+ * Returns false for known non-Latin languages (so they get transliterated)
  */
 export function isLatinScriptLanguage(language: string): boolean {
   if (!language || typeof language !== 'string') return true;
   const normalized = language.toLowerCase().trim();
   if (!normalized) return true;
-  return LANGUAGE_SCRIPT_MAP[normalized] === '' || LANGUAGE_SCRIPT_MAP[normalized] === undefined;
+  
+  // If we have a script mapping for this language, it's NON-Latin
+  const scriptName = LANGUAGE_SCRIPT_MAP[normalized];
+  if (scriptName && scriptName !== '') {
+    return false; // Has a script mapping = non-Latin
+  }
+  
+  // Known Latin-script languages (explicit list)
+  const KNOWN_LATIN_LANGUAGES = new Set([
+    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
+    'dutch', 'polish', 'romanian', 'czech', 'hungarian', 'swedish',
+    'danish', 'finnish', 'norwegian', 'croatian', 'slovak', 'slovenian',
+    'latvian', 'lithuanian', 'estonian', 'bosnian', 'albanian', 'icelandic',
+    'irish', 'welsh', 'basque', 'catalan', 'galician', 'maltese',
+    'turkish', 'vietnamese', 'indonesian', 'malay', 'tagalog', 'filipino',
+    'javanese', 'sundanese', 'cebuano', 'swahili', 'afrikaans', 'yoruba',
+    'igbo', 'hausa', 'zulu', 'xhosa', 'somali', 'uzbek', 'turkmen',
+    'azerbaijani', 'maori', 'samoan', 'tongan', 'fijian', 'hawaiian',
+    'esperanto', 'latin'
+  ]);
+  
+  return KNOWN_LATIN_LANGUAGES.has(normalized);
 }
 
 /**
