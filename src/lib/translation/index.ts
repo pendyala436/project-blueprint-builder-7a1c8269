@@ -2,29 +2,28 @@
  * Universal Real-Time Translation Module
  * 
  * TypeScript implementation for universal multilingual chat
- * Supports all human languages with M2M100/NLLB-200 + English pivot fallback
+ * Supports 200+ languages with NLLB-200 model
  * 
  * Features:
  * - Real-time typing in sender's native language
  * - Automatic translation for recipient
  * - Skip translation when same language
- * - English pivot for rare language pairs
- * - Real-time typing indicators with translation
+ * - Web Worker for non-blocking operations
+ * - Unicode NFC normalization
+ * - Debounced live preview
  * 
  * @example
  * ```tsx
- * import { translator, translate, useTranslator, useRealtimeTranslation } from '@/lib/translation';
+ * import { translate, transliterateToNative, processChatMessage } from '@/lib/translation';
  * 
- * // Using the Translator class
- * const result = await translator.translate('Hello', { targetLanguage: 'hindi' });
- * console.log(result.translatedText); // "नमस्ते"
+ * // Translate text
+ * const result = await translate('Hello', 'english', 'hindi');
  * 
- * // Real-time typing with translation
- * const { sendTypingIndicator, partnerTyping } = useRealtimeTranslation({
- *   currentUserId: 'user-1',
- *   currentUserLanguage: 'english',
- *   channelId: 'chat-123'
- * });
+ * // Live preview for typing
+ * const preview = await transliterateToNative('namaste', 'hindi');
+ * 
+ * // Process full chat message
+ * const chat = await processChatMessage('Hello', 'english', 'hindi');
  * ```
  */
 
@@ -40,14 +39,14 @@ export type {
   ScriptPattern,
 } from './types';
 
-// Translator class and functions
+// Translator class and functions (legacy)
 export {
   Translator,
   translator,
-  translate,
+  translate as translateLegacy,
   convertScript,
-  detectLanguage,
-  isSameLanguage,
+  detectLanguage as detectLanguageLegacy,
+  isSameLanguage as isSameLanguageLegacy,
   isLatinScript,
 } from './translator';
 
@@ -55,7 +54,7 @@ export {
 export {
   getNLLBCode,
   isIndianLanguage,
-  isLatinScriptLanguage,
+  isLatinScriptLanguage as isLatinScriptLanguageLegacy,
   getSupportedLanguages,
   isLanguageSupported,
   LANGUAGE_TO_NLLB,
@@ -67,3 +66,38 @@ export {
 // React hooks
 export { useTranslator } from './useTranslator';
 export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
+
+// ============================================================
+// NEW: Worker-based translator (fully in-browser, non-blocking)
+// This is the preferred API - NO external APIs, NO Docker
+// ============================================================
+
+export {
+  // Core translation functions (async, uses Web Worker)
+  translate,
+  transliterateToNative,
+  processChatMessage,
+  detectLanguage,
+  
+  // Worker management
+  initWorker,
+  isReady,
+  getLoadingStatus,
+  terminateWorker,
+  
+  // Debounced preview (for live typing)
+  createDebouncedPreview,
+  
+  // Utility functions (sync, no worker)
+  isLatinScriptLanguage,
+  isLatinText,
+  isSameLanguage,
+  normalizeUnicode,
+} from './worker-translator';
+
+// Export types from worker-translator
+export type {
+  TranslationResult as WorkerTranslationResult,
+  ChatProcessResult,
+  LanguageDetectionResult as WorkerLanguageDetectionResult,
+} from './worker-translator';
