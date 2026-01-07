@@ -205,52 +205,22 @@ function generatePhoneticVariations(word: string, maxVariations: number = 10): s
 }
 
 // ============================================================
-// COMMON WORD PATTERNS (Dynamically built)
+// COMMON WORD PATTERNS - DISABLED FOR GENERAL USE
+// Pattern matching was causing "how" -> "howareyou" type mistakes
+// These patterns are only used for very specific fuzzy matching
 // ============================================================
 
-/**
- * Common greeting/word patterns across languages
- * These are phonetic patterns, not exact words
- */
-const COMMON_PATTERNS: Record<string, string[]> = {
-  // Greetings pattern
-  greeting: [
-    'hello', 'hi', 'hey', 'hola', 'namaste', 'namaskar',
-    'salam', 'shalom', 'marhaba', 'sawubona', 'zdravo'
-  ],
-  // How are you patterns
-  howareyou: [
-    'howareyou', 'howru', 'howreyou', 'kemon', 'kaisaho',
-    'keisaho', 'keiseho', 'elaunnaru', 'eppidiirukkireenga',
-    'bagunnava', 'bagunnaava', 'bagunnara', 'baagunnara'
-  ],
-  // Thank you patterns  
-  thanks: [
-    'thanks', 'thankyou', 'thanku', 'thx', 'dhanyavad',
-    'shukriya', 'nandri', 'vandanalu', 'dhanyawad'
-  ],
-  // Good patterns
-  good: [
-    'good', 'great', 'nice', 'accha', 'acha', 'badhiya',
-    'bagundi', 'nalla', 'thik', 'mast', 'super'
-  ],
-};
+const COMMON_PATTERNS: Record<string, string[]> = {};
 
 /**
- * Find matching pattern for a word
+ * Find matching pattern for a word - DISABLED
+ * This function was incorrectly matching partial words
+ * e.g., "how" was being matched to "howareyou" pattern
  */
-function findPatternMatch(word: string): { pattern: string; match: string } | null {
-  const normalized = phoneticNormalize(word);
-  
-  for (const [pattern, words] of Object.entries(COMMON_PATTERNS)) {
-    for (const w of words) {
-      const dist = editDistance(normalized, phoneticNormalize(w));
-      if (dist <= 2) {
-        return { pattern, match: w };
-      }
-    }
-  }
-  
+function findPatternMatch(_word: string): { pattern: string; match: string } | null {
+  // DISABLED: Pattern matching was causing incorrect corrections
+  // "how are you" was being changed to "HI are you" because "how" 
+  // was fuzzy matching to patterns incorrectly
   return null;
 }
 

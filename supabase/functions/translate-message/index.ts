@@ -621,28 +621,36 @@ serve(async (req) => {
 
     // ================================================================
     // CASE 3: Standard translation between different languages
+    // This is the main translation path: English -> Telugu, Hindi -> English, etc.
     // ================================================================
-    const effectiveSourceCode = inputIsLatin ? 'en' : getLibreCode(effectiveSource);
     
-    console.log(`[dl-translate] Standard translation: ${effectiveSourceCode} -> ${getLibreCode(effectiveTarget)}`);
+    // Determine effective source for translation
+    // If input is Latin script, treat as English for translation
+    const translateFrom = inputIsLatin ? 'english' : effectiveSource;
     
-    const result = await translateText(inputText, 
-      inputIsLatin ? 'english' : effectiveSource, 
-      effectiveTarget
-    );
+    console.log(`[dl-translate] Standard translation: ${translateFrom} -> ${effectiveTarget}`);
+    console.log(`[dl-translate] Input text for translation: "${inputText}"`);
+    
+    const result = await translateText(inputText, translateFrom, effectiveTarget);
 
     const cleanedResult = cleanTextOutput(result.translatedText);
-    console.log(`[dl-translate] Result: "${cleanedResult.substring(0, 50)}..." (success: ${result.success}, pivot: ${result.pivotUsed})`);
+    
+    // Check if translation actually changed the text
+    const wasActuallyTranslated = result.success && 
+                                   cleanedResult.toLowerCase().trim() !== inputText.toLowerCase().trim();
+    
+    console.log(`[dl-translate] Translation result: "${cleanedResult.substring(0, 100)}..."`);
+    console.log(`[dl-translate] Was translated: ${wasActuallyTranslated}, pivot: ${result.pivotUsed}`);
 
     return new Response(
       JSON.stringify({
         translatedText: cleanedResult,
         translatedMessage: cleanedResult,
         originalText: inputText,
-        isTranslated: result.success && cleanedResult !== inputText.trim(),
+        isTranslated: wasActuallyTranslated,
         pivotUsed: result.pivotUsed,
         detectedLanguage: detected.language,
-        sourceLanguage: effectiveSource,
+        sourceLanguage: translateFrom,
         targetLanguage: effectiveTarget,
         isSourceLatin: inputIsLatin,
       }),
