@@ -1,13 +1,44 @@
 // LibreTranslate-inspired Edge Function
 // Self-contained translation system - no external APIs
 // Supports bidirectional translation: Source ↔ English ↔ Target
+// Auto-detects source/target languages from user profile's primary_language
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Supabase client for fetching user profiles
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Helper function to get user's primary language from profile
+async function getUserLanguage(userId: string): Promise<string | null> {
+  if (!userId || !supabaseUrl || !supabaseServiceKey) return null;
+  
+  try {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('primary_language, preferred_language')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error || !data) {
+      console.log(`Could not fetch language for user ${userId}:`, error?.message);
+      return null;
+    }
+    
+    // Prefer primary_language, fallback to preferred_language
+    return data.primary_language || data.preferred_language || null;
+  } catch (err) {
+    console.error('Error fetching user language:', err);
+    return null;
+  }
+}
 
 // ==========================================
 // LANGUAGE CODES & METADATA
@@ -669,8 +700,15 @@ serve(async (req) => {
     
     // POST /chat-translate - Optimized for chat (bidirectional)
     // Supports: Source ↔ English ↔ Target for multilingual chat
+    // Can auto-detect languages from user profiles via userId/partnerId
     if (req.method === 'POST' && path === 'chat-translate') {
-      const { message, userLanguage, partnerLanguage } = await req.json();
+      const { 
+        message, 
+        userLanguage, 
+        partnerLanguage,
+        userId,        // Optional: fetch source language from user's profile
+        partnerId      // Optional: fetch target language from partner's profile
+      } = await req.json();
       
       if (!message) {
         return new Response(
@@ -679,9 +717,36 @@ serve(async (req) => {
         );
       }
       
+      // Detect language from text
       const detectedLang = detectLanguage(message);
-      const sourceLang = userLanguage || detectedLang;
-      const targetLang = partnerLanguage || 'en';
+      
+      // ==========================================
+      // LANGUAGE RESOLUTION PRIORITY:
+      // 1. Explicit userLanguage/partnerLanguage params
+      // 2. User's primary_language from profile (via userId/partnerId)
+      // 3. Auto-detected language from text
+      // 4. Default to English
+      // ==========================================
+      
+      // Fetch languages from profiles if user IDs provided
+      let profileSourceLang: string | null = null;
+      let profileTargetLang: string | null = null;
+      
+      if (userId || partnerId) {
+        const [userLangResult, partnerLangResult] = await Promise.all([
+          userId ? getUserLanguage(userId) : Promise.resolve(null),
+          partnerId ? getUserLanguage(partnerId) : Promise.resolve(null)
+        ]);
+        profileSourceLang = userLangResult;
+        profileTargetLang = partnerLangResult;
+        console.log(`Profile languages - User: ${profileSourceLang}, Partner: ${profileTargetLang}`);
+      }
+      
+      // Resolve final source and target languages
+      const sourceLang = userLanguage || profileSourceLang || detectedLang;
+      const targetLang = partnerLanguage || profileTargetLang || 'en';
+      
+      console.log(`Resolved languages - Source: ${sourceLang}, Target: ${targetLang}`);
       
       // ==========================================
       // FULL BIDIRECTIONAL TRANSLATION PATHS:
@@ -739,6 +804,10 @@ serve(async (req) => {
           detectedLanguage: detectedLang,
           sourceLanguage: sourceLang,
           targetLanguage: targetLang,
+          
+          // Profile-based language info
+          profileSourceLanguage: profileSourceLang,
+          profileTargetLanguage: profileTargetLang,
           
           // Language info
           sourceLanguageInfo: SUPPORTED_LANGUAGES[sourceLang] || { name: sourceLang, nativeName: sourceLang },
