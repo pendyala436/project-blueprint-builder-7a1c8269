@@ -122,53 +122,79 @@ export const useIncomingChats = (
     };
   }, [incomingChats.length, userGender]);
 
-  // Subscribe to new incoming chat sessions
+  // Subscribe to new incoming chat sessions - OPTIMIZED for lakhs of users
   useEffect(() => {
     if (!currentUserId) return;
 
+    let isCheckingRef = false;
+    let lastCheckTime = 0;
+    const MIN_CHECK_INTERVAL = 500; // Throttle to max 2 checks per second
+
     const checkForNewChats = async () => {
-      console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
-      
-      // Get recent active sessions where this user is the target
-      const column = userGender === "male" ? "man_user_id" : "woman_user_id";
-      const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
-      
-      const { data: sessions, error: sessionsError } = await supabase
-        .from("active_chat_sessions")
-        .select("*")
-        .eq(column, currentUserId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+      // Prevent concurrent checks and throttle
+      const now = Date.now();
+      if (isCheckingRef || now - lastCheckTime < MIN_CHECK_INTERVAL) return;
+      isCheckingRef = true;
+      lastCheckTime = now;
 
-      console.log(`[useIncomingChats] Found ${sessions?.length || 0} active sessions`, sessionsError);
+      try {
+        console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
+        
+        const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+        const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
+        
+        // OPTIMIZED: Single query with limit
+        const { data: sessions, error: sessionsError } = await supabase
+          .from("active_chat_sessions")
+          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at`)
+          .eq(column, currentUserId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-      if (!sessions || sessions.length === 0) return;
-
-      // Check if any session has no messages from this user (incoming)
-      for (const session of sessions) {
-        if (acceptedChatsRef.current.has(session.id)) {
-          console.log(`[useIncomingChats] Session ${session.id} already accepted`);
-          continue;
+        if (sessionsError || !sessions || sessions.length === 0) {
+          isCheckingRef = false;
+          return;
         }
 
-        const { count } = await supabase
+        // Filter out already accepted sessions first
+        const pendingSessions = sessions.filter(s => !acceptedChatsRef.current.has(s.id));
+        if (pendingSessions.length === 0) {
+          isCheckingRef = false;
+          return;
+        }
+
+        // BATCH: Get message counts for all pending sessions at once
+        const chatIds = pendingSessions.map(s => s.chat_id);
+        const { data: userMessages } = await supabase
           .from("chat_messages")
-          .select("*", { count: "exact", head: true })
-          .eq("chat_id", session.chat_id)
+          .select("chat_id")
+          .in("chat_id", chatIds)
           .eq("sender_id", currentUserId);
 
-        console.log(`[useIncomingChats] Session ${session.id} has ${count} messages from current user`);
+        const chatsWithMessages = new Set(userMessages?.map(m => m.chat_id) || []);
 
-        // If user hasn't sent any message, it's an incoming chat
-        if (count === 0) {
-          const partnerId = session[partnerColumn];
-          
-          // Get partner info
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, photo_url, primary_language")
-            .eq("user_id", partnerId)
-            .maybeSingle();
+        // Filter sessions where user hasn't sent any message
+        const incomingSessions = pendingSessions.filter(s => !chatsWithMessages.has(s.chat_id));
+        if (incomingSessions.length === 0) {
+          isCheckingRef = false;
+          return;
+        }
+
+        // BATCH: Get all partner profiles at once
+        const partnerIds = incomingSessions.map(s => s[partnerColumn as keyof typeof s] as string);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language")
+          .in("user_id", partnerIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+        // Build incoming chats
+        const newIncomingChats: IncomingChat[] = [];
+        for (const session of incomingSessions) {
+          const partnerId = session[partnerColumn as keyof typeof session] as string;
+          const profile = profileMap.get(partnerId);
 
           const newChat: IncomingChat = {
             sessionId: session.id,
@@ -181,49 +207,52 @@ export const useIncomingChats = (
             startedAt: session.created_at
           };
 
-          console.log(`[useIncomingChats] Adding incoming chat:`, newChat);
+          newIncomingChats.push(newChat);
+        }
 
+        if (newIncomingChats.length > 0) {
           setIncomingChats(prev => {
-            if (prev.some(c => c.sessionId === newChat.sessionId)) return prev;
-            return [...prev, newChat];
+            const existingIds = new Set(prev.map(c => c.sessionId));
+            const uniqueNew = newIncomingChats.filter(c => !existingIds.has(c.sessionId));
+            return [...prev, ...uniqueNew];
           });
         }
+      } catch (error) {
+        console.error("[useIncomingChats] Error checking chats:", error);
+      } finally {
+        isCheckingRef = false;
       }
     };
 
     // Check immediately
     checkForNewChats();
 
-    // Subscribe to new sessions
+    // User-scoped channel for efficient message routing at scale
+    const channelName = `incoming-${currentUserId}-${Date.now()}`;
+    const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+
     const channel = supabase
-      .channel(`incoming-chats-${currentUserId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `${column}=eq.${currentUserId}`
         },
-        (payload) => {
-          const session = payload.new;
-          const column = userGender === "male" ? "man_user_id" : "woman_user_id";
-          
-          if (session[column] === currentUserId) {
-            checkForNewChats();
-          }
-        }
+        () => checkForNewChats()
       )
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `${column}=eq.${currentUserId}`
         },
         (payload) => {
-          const session = payload.new;
-          
-          // Remove from incoming if chat ended
+          const session = payload.new as any;
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
           }
