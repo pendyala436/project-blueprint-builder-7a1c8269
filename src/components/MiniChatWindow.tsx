@@ -210,9 +210,22 @@ const MiniChatWindow = ({
     loadInitialData();
   }, [currentUserId, userGender, ratePerMinute]);
 
-  // Load messages and subscribe
+  // Initialize translation worker and load messages
   useEffect(() => {
-    loadMessages();
+    const init = async () => {
+      // Ensure translation worker is ready
+      if (!isTranslatorReady()) {
+        console.log('[MiniChatWindow] Initializing translation worker...');
+        await initWorker((progress) => {
+          console.log('[MiniChatWindow] Worker load progress:', progress);
+        });
+      }
+      console.log('[MiniChatWindow] Translation worker ready, loading messages');
+      console.log('[MiniChatWindow] Languages - Current:', currentUserLanguage, 'Partner:', partnerLanguage);
+      loadMessages();
+    };
+    
+    init();
     const unsubscribe = subscribeToMessages();
 
     return () => {
@@ -221,7 +234,7 @@ const MiniChatWindow = ({
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
       unsubscribe?.();
     };
-  }, [chatId]);
+  }, [chatId, currentUserLanguage, partnerLanguage]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -300,14 +313,34 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language (WEB WORKER, non-blocking)
-  const translateMessage = useCallback(async (text: string): Promise<{
+  const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
+      // Only translate messages from the partner (not our own messages)
+      if (senderId === currentUserId) {
+        return { translatedMessage: text, isTranslated: false };
+      }
+
+      // Skip if same language
+      if (isSameLanguage(partnerLanguage, currentUserLanguage)) {
+        return { translatedMessage: text, isTranslated: false };
+      }
+
       // Use worker-based translator for non-blocking translation
+      // Translate from partner's language to current user's language
       const result = await translate(text, partnerLanguage, currentUserLanguage);
+      
+      console.log('[MiniChatWindow] Translation:', {
+        original: text,
+        translated: result.text,
+        from: partnerLanguage,
+        to: currentUserLanguage,
+        success: result.success
+      });
+
       return {
         translatedMessage: normalizeUnicode(result.text),
         isTranslated: result.success && result.text !== text,
@@ -317,7 +350,7 @@ const MiniChatWindow = ({
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   // NON-BLOCKING: Load messages with background translation
   const loadMessages = async () => {
@@ -345,7 +378,7 @@ const MiniChatWindow = ({
       runInBackground(async () => {
         const translatedMessages = await Promise.all(
           data.map(async (m) => {
-            const translation = await translateMessage(m.message);
+            const translation = await translateMessage(m.message, m.sender_id);
             return {
               id: m.id,
               senderId: m.sender_id,
@@ -413,7 +446,7 @@ const MiniChatWindow = ({
 
           // BACKGROUND: Translate message without blocking
           runInBackground(async () => {
-            const translation = await translateMessage(newMsg.message);
+            const translation = await translateMessage(newMsg.message, newMsg.sender_id);
             setMessages(prev => prev.map(m => 
               m.id === newMsg.id 
                 ? {
