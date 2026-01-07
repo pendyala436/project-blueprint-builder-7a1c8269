@@ -151,9 +151,13 @@ export {
   isSameLanguage as asyncIsSameLanguage,
   needsScriptConversion as asyncNeedsScriptConversion,
   normalizeLanguage as asyncNormalizeLanguage,
+  autoDetectLanguageSync,
+  autoDetectLanguageAsync,
+  processMessageForChat,
 } from './async-translator';
 
 export type {
   AsyncTranslationResult,
   TranslationTask,
+  AutoDetectedLanguage as AsyncAutoDetectedLanguage,
 } from './async-translator';
