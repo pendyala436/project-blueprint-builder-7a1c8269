@@ -191,7 +191,9 @@ function generateTeluguMapping(): ScriptMapping {
     ['త', 't'], ['థ', 'th'], ['ద', 'd'], ['ధ', 'dh'], ['న', 'n'],
     ['ప', 'p'], ['ఫ', 'ph'], ['బ', 'b'], ['భ', 'bh'], ['మ', 'm'],
     ['య', 'y'], ['ర', 'r'], ['ల', 'l'], ['వ', 'v'], ['శ', 'sh'],
-    ['ష', 'shh'], ['స', 's'], ['హ', 'h'], ['ళ', 'l'], ['క్ష', 'ksh']
+    ['ష', 'shh'], ['స', 's'], ['హ', 'h'], ['ళ', 'l'], ['క్ష', 'ksh'],
+    // Additional mappings for foreign sounds (using closest Telugu equivalents)
+    ['ఫ', 'f'], ['జ', 'z'], ['క', 'c'], ['క', 'q'], ['వ', 'w'], ['క్స', 'x']
   ];
   
   const matras: [string, string][] = [
@@ -741,7 +743,26 @@ function transliterateFromLatin(text: string, targetScript: string): string {
   }
   
   const mapping = getScriptMapping(targetScript);
-  const lower = text.toLowerCase();
+  
+  // Normalize special characters (German, French, Spanish, etc.)
+  const charNormalization: Record<string, string> = {
+    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
+    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o',
+    'ù': 'u', 'ú': 'u', 'û': 'u',
+    'ý': 'y', 'ÿ': 'y',
+    'ñ': 'ny', 'ç': 's', 'ð': 'dh', 'þ': 'th', 'æ': 'ae', 'œ': 'oe'
+  };
+  
+  // Normalize the input
+  let normalizedText = '';
+  for (const char of text) {
+    normalizedText += charNormalization[char] || charNormalization[char.toLowerCase()]?.toLowerCase() || char;
+  }
+  
+  const lower = normalizedText.toLowerCase();
   let result = '';
   let i = 0;
   let prevWasConsonant = false;
@@ -751,7 +772,7 @@ function transliterateFromLatin(text: string, targetScript: string): string {
     
     // Skip non-alphabetic characters
     if (!/[a-z]/.test(char)) {
-      result += text[i];
+      result += normalizedText[i];
       prevWasConsonant = false;
       i++;
       continue;
@@ -787,8 +808,92 @@ function transliterateFromLatin(text: string, targetScript: string): string {
     }
     
     if (!matched) {
-      result += text[i];
+      result += normalizedText[i];
       prevWasConsonant = false;
+      i++;
+    }
+  }
+  
+  return result;
+}
+
+// Force phonetic conversion - character by character mapping for any Latin text
+function forcePhoneticConversion(text: string, targetScript: string): string {
+  const mapping = getScriptMapping(targetScript);
+  
+  // Normalize special characters first (German, French, Spanish, etc.)
+  const charNormalization: Record<string, string> = {
+    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'å': 'a',
+    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ø': 'o',
+    'ù': 'u', 'ú': 'u', 'û': 'u',
+    'ý': 'y', 'ÿ': 'y',
+    'ñ': 'ny', 'ç': 's', 'ð': 'dh', 'þ': 'th', 'æ': 'ae', 'œ': 'oe'
+  };
+  
+  // Normalize the input text first
+  let normalizedText = '';
+  for (const char of text) {
+    normalizedText += charNormalization[char] || charNormalization[char.toLowerCase()] || char;
+  }
+  
+  // Convert to lowercase for processing
+  const lower = normalizedText.toLowerCase();
+  
+  // Multi-character patterns for better phonetic conversion
+  const multiCharPatterns: [string, string][] = [
+    ['sch', 'sh'], ['ch', 'kh'], ['ei', 'ai'], ['ie', 'ii'], ['eu', 'oy'],
+    ['ue', 'u'], ['ae', 'e'], ['oe', 'o'], // Normalized German umlauts
+    ['ck', 'k'], ['ph', 'ph'], ['th', 'th'], ['qu', 'kv'], ['ng', 'ng'],
+    ['nk', 'nk'], ['tz', 'ts'], ['pf', 'pf'], ['st', 'st'], ['sp', 'sp'],
+    ['sh', 'sh'], ['wh', 'v'], ['oo', 'uu'], ['ee', 'ii'], 
+    ['ou', 'au'], ['ow', 'au'], ['ai', 'ai'], ['ay', 'ai'],
+    ['oi', 'oy'], ['oy', 'oy'], ['au', 'au']
+  ];
+  
+  let processedText = lower;
+  
+  // Apply multi-character patterns
+  for (const [pattern, replacement] of multiCharPatterns) {
+    processedText = processedText.split(pattern).join(replacement);
+  }
+  
+  // Now convert each character to target script
+  let result = '';
+  let i = 0;
+  
+  while (i < processedText.length) {
+    const char = processedText[i];
+    
+    // Keep spaces, punctuation, numbers as-is
+    if (!/[a-z]/.test(char)) {
+      result += char;
+      i++;
+      continue;
+    }
+    
+    // Try multi-character matches in mapping (longest first)
+    let matched = false;
+    for (let len = 4; len >= 1; len--) {
+      const substr = processedText.substring(i, i + len);
+      if (mapping.fromLatinMap.has(substr)) {
+        result += mapping.fromLatinMap.get(substr)!;
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+    
+    if (!matched) {
+      // Fallback: try single char mapping
+      if (mapping.fromLatinMap.has(char)) {
+        result += mapping.fromLatinMap.get(char)!;
+      } else {
+        // Last resort: keep the character as is
+        result += char;
+      }
       i++;
     }
   }
@@ -913,15 +1018,25 @@ serve(async (req) => {
     // This reduces 810,000 combinations to just 1,800 mappings (900×2)
     // ═══════════════════════════════════════════════════════════════════════════
     
-    // STEP 1: Source → English (always convert to Latin/English first)
+// STEP 1: Source → English (always convert to Latin/English first)
     const inEnglish = sourceScript !== 'latin' 
       ? transliterateToLatin(inputText)
       : inputText;
     
     // STEP 2: English → Target (convert English/Latin to target script)
-    const inTargetScript = targetScript !== 'latin'
-      ? transliterateFromLatin(inEnglish, targetScript)
-      : inEnglish;
+    // IMPORTANT: Always attempt conversion when target is non-Latin
+    let inTargetScript = inEnglish;
+    if (targetScript !== 'latin') {
+      const converted = transliterateFromLatin(inEnglish, targetScript);
+      // Only use converted result if it actually changed (has non-Latin chars)
+      const convertedScript = detectScriptFromText(converted);
+      if (convertedScript === targetScript || converted !== inEnglish) {
+        inTargetScript = converted;
+      } else {
+        // Force phonetic conversion even for Latin input
+        inTargetScript = forcePhoneticConversion(inEnglish, targetScript);
+      }
+    }
     
     // REVERSE for bidirectional chat:
     // If receiver replies in target language, convert back through English
