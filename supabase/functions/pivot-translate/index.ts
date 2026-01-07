@@ -358,7 +358,7 @@ const TRANSLATION_DICTIONARIES: Record<string, { toEnglish: Record<string, strin
   fr: {
     toEnglish: {
       'bonjour': 'hello', 'merci': 'thank you', 'oui': 'yes', 'non': 'no',
-      's\'il vous plaît': 'please', 'désolé': 'sorry', 'bonjour': 'good morning',
+      's\'il vous plaît': 'please', 'désolé': 'sorry', 'salut': 'hi',
       'bonne nuit': 'good night', 'comment allez-vous': 'how are you', 'je vais bien': 'I am fine',
       'amour': 'love', 'ami': 'friend', 'famille': 'family', 'nourriture': 'food',
       'eau': 'water', 'maison': 'home', 'travail': 'work', 'temps': 'time'
@@ -1298,7 +1298,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Translation failed', 
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Unknown error',
         supportedLanguages: SUPPORTED_LANGUAGES,
         totalLanguages: SUPPORTED_LANGUAGES.length,
         bidirectionalPaths: getLanguagePairCount()
