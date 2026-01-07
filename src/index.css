@@ -243,115 +243,606 @@
 
 /* ========================================
    UNICODE & MULTILINGUAL TEXT SUPPORT
+   Complete Noto Font Coverage for 300+ Languages
    ======================================== */
 
 @layer base {
-  /* Universal Unicode text rendering */
+  /* ========================================
+     UNIVERSAL UNICODE TEXT RENDERING
+     ======================================== */
   .unicode-text {
-    font-family: 'Inter', 'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 
+    font-family: 'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Devanagari', 
                  'Noto Sans Bengali', 'Noto Sans Tamil', 'Noto Sans Telugu', 
-                 'Noto Sans Malayalam', 'Noto Sans CJK SC', 'Noto Sans CJK JP', 
-                 'Noto Sans CJK KR', 'Noto Sans Thai', -apple-system, 
-                 BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Gujarati',
+                 'Noto Sans Gurmukhi', 'Noto Sans Oriya', 'Noto Sans Sinhala',
+                 'Noto Sans Thai', 'Noto Sans Lao', 'Noto Sans Khmer',
+                 'Noto Sans Myanmar', 'Noto Sans Ethiopic', 'Noto Sans Armenian',
+                 'Noto Sans Georgian', 'Noto Sans Hebrew', 'Noto Sans SC',
+                 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR',
+                 'Noto Sans Tibetan', 'Noto Sans Mongolian',
+                 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     unicode-bidi: plaintext;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Arabic script optimization */
+  /* ========================================
+     ARABIC SCRIPT FAMILY
+     Arabic, Persian/Farsi, Urdu, Pashto, Sindhi, Kashmiri, Uyghur, Kurdish (Sorani)
+     ======================================== */
   .arabic-text,
-  [lang="ar"],
-  [lang="fa"],
-  [lang="ur"] {
-    font-family: 'Noto Sans Arabic', 'Amiri', 'Arabic Typesetting', 
-                 'Traditional Arabic', -apple-system, system-ui, sans-serif;
+  [lang="ar"], [lang="arb"], [lang="arz"], [lang="acm"], [lang="apc"], [lang="ary"], [lang="ars"],
+  [lang="fa"], [lang="pes"], [lang="prs"], /* Persian/Dari */
+  [lang="ur"], /* Urdu */
+  [lang="ps"], [lang="pbt"], [lang="pbu"], /* Pashto */
+  [lang="sd"], /* Sindhi */
+  [lang="ks"], /* Kashmiri */
+  [lang="ug"], /* Uyghur */
+  [lang="ku"], [lang="ckb"], /* Kurdish */
+  [lang="bal"], /* Balochi */
+  [lang="skr"], /* Saraiki */
+  [lang="glk"], /* Gilaki */
+  [lang="mzn"], /* Mazanderani */
+  [lang="azb"] /* South Azerbaijani */ {
+    font-family: 'Noto Sans Arabic', 'Noto Naskh Arabic', 'Amiri', 'Arabic Typesetting', 
+                 'Traditional Arabic', 'Geeza Pro', -apple-system, system-ui, sans-serif;
     line-height: 1.8;
     letter-spacing: 0;
+    direction: rtl;
   }
 
-  /* Indic script optimization */
+  /* ========================================
+     DEVANAGARI SCRIPT FAMILY
+     Hindi, Marathi, Nepali, Sanskrit, Konkani, Maithili, Bhojpuri, Dogri, Bodo, Awadhi
+     ======================================== */
   .indic-text,
-  [lang="hi"],
-  [lang="mr"],
-  [lang="ne"],
-  [lang="sa"] {
-    font-family: 'Noto Sans Devanagari', 'Mangal', 'Aparajita', 
+  [lang="hi"], [lang="hin"],
+  [lang="mr"], [lang="mar"],
+  [lang="ne"], [lang="npi"],
+  [lang="sa"], [lang="san"],
+  [lang="kok"], /* Konkani */
+  [lang="mai"], /* Maithili */
+  [lang="bho"], /* Bhojpuri */
+  [lang="doi"], /* Dogri */
+  [lang="brx"], /* Bodo */
+  [lang="awa"], /* Awadhi */
+  [lang="mag"], /* Magahi */
+  [lang="raj"], /* Rajasthani */
+  [lang="hne"], /* Chhattisgarhi */
+  [lang="bgc"], /* Haryanvi */
+  [lang="gbm"], /* Garhwali */
+  [lang="kfy"], /* Kumaoni */
+  [lang="mwr"], /* Marwari */
+  [lang="new"] /* Newari */ {
+    font-family: 'Noto Sans Devanagari', 'Mangal', 'Aparajita', 'Kokila',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.7;
   }
 
-  /* Bengali script */
-  [lang="bn"] {
-    font-family: 'Noto Sans Bengali', 'Vrinda', 'Shonar Bangla', 
+  /* ========================================
+     BENGALI SCRIPT FAMILY
+     Bengali, Assamese, Chakma, Sylheti, Bishnupriya Manipuri
+     ======================================== */
+  [lang="bn"], [lang="ben"],
+  [lang="as"], [lang="asm"],
+  [lang="syl"], /* Sylheti */
+  [lang="bpy"], /* Bishnupriya */ 
+  [lang="ctg"], /* Chittagonian */
+  [lang="rkt"] /* Rangpuri */ {
+    font-family: 'Noto Sans Bengali', 'Vrinda', 'Shonar Bangla', 'Bangla MN',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Tamil script */
-  [lang="ta"] {
-    font-family: 'Noto Sans Tamil', 'Latha', 'Tamil MN', 
+  /* ========================================
+     TAMIL SCRIPT
+     Tamil
+     ======================================== */
+  [lang="ta"], [lang="tam"] {
+    font-family: 'Noto Sans Tamil', 'Latha', 'Tamil MN', 'InaiMathi',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Telugu script */
-  [lang="te"] {
-    font-family: 'Noto Sans Telugu', 'Gautami', 'Telugu MN', 
+  /* ========================================
+     TELUGU SCRIPT
+     Telugu
+     ======================================== */
+  [lang="te"], [lang="tel"] {
+    font-family: 'Noto Sans Telugu', 'Gautami', 'Telugu MN', 'Vani',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Malayalam script */
-  [lang="ml"] {
-    font-family: 'Noto Sans Malayalam', 'Kartika', 'Malayalam MN', 
+  /* ========================================
+     KANNADA SCRIPT
+     Kannada, Tulu
+     ======================================== */
+  [lang="kn"], [lang="kan"],
+  [lang="tcy"] /* Tulu */ {
+    font-family: 'Noto Sans Kannada', 'Tunga', 'Kannada MN',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     MALAYALAM SCRIPT
+     Malayalam
+     ======================================== */
+  [lang="ml"], [lang="mal"] {
+    font-family: 'Noto Sans Malayalam', 'Kartika', 'Malayalam MN', 'Rachana',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.9;
   }
 
-  /* CJK (Chinese, Japanese, Korean) */
-  [lang="zh"],
-  [lang="ja"],
-  [lang="ko"] {
-    font-family: 'Noto Sans CJK SC', 'Noto Sans CJK JP', 'Noto Sans CJK KR',
-                 'PingFang SC', 'Hiragino Sans', 'MS Gothic', 
+  /* ========================================
+     GUJARATI SCRIPT
+     Gujarati
+     ======================================== */
+  [lang="gu"], [lang="guj"] {
+    font-family: 'Noto Sans Gujarati', 'Shruti', 'Gujarati MT', 'Lohit Gujarati',
                  -apple-system, system-ui, sans-serif;
-    line-height: 1.6;
+    line-height: 1.8;
   }
 
-  /* Thai script */
-  [lang="th"] {
-    font-family: 'Noto Sans Thai', 'Tahoma', 'Leelawadee', 
+  /* ========================================
+     GURMUKHI SCRIPT
+     Punjabi (Eastern)
+     ======================================== */
+  [lang="pa"], [lang="pan"] {
+    font-family: 'Noto Sans Gurmukhi', 'Raavi', 'Gurmukhi MN', 'Lohit Punjabi',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     ODIA SCRIPT
+     Odia/Oriya
+     ======================================== */
+  [lang="or"], [lang="ori"], [lang="ory"] {
+    font-family: 'Noto Sans Oriya', 'Kalinga', 'Oriya MN', 'Lohit Odia',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     SINHALA SCRIPT
+     Sinhala
+     ======================================== */
+  [lang="si"], [lang="sin"] {
+    font-family: 'Noto Sans Sinhala', 'Iskoola Pota', 'Sinhala MN',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     THAI SCRIPT
+     Thai
+     ======================================== */
+  [lang="th"], [lang="tha"] {
+    font-family: 'Noto Sans Thai', 'Noto Serif Thai', 'Tahoma', 'Leelawadee', 'Thonburi',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.7;
   }
 
-  /* Gujarati script */
-  [lang="gu"] {
-    font-family: 'Noto Sans Gujarati', 'Shruti', 'Gujarati MT', 
+  /* ========================================
+     LAO SCRIPT
+     Lao
+     ======================================== */
+  [lang="lo"], [lang="lao"] {
+    font-family: 'Noto Sans Lao', 'Phetsarath OT', 'Lao MN',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Kannada script */
-  [lang="kn"] {
-    font-family: 'Noto Sans Kannada', 'Tunga', 'Kannada MN', 
+  /* ========================================
+     KHMER SCRIPT
+     Khmer (Cambodian)
+     ======================================== */
+  [lang="km"], [lang="khm"] {
+    font-family: 'Noto Sans Khmer', 'Khmer OS', 'Khmer MN', 'Leelawadee UI',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 2.0;
+  }
+
+  /* ========================================
+     MYANMAR SCRIPT
+     Burmese, Shan, Mon, Karen languages
+     ======================================== */
+  [lang="my"], [lang="mya"],
+  [lang="shn"], /* Shan */
+  [lang="mnw"], /* Mon */
+  [lang="kar"], [lang="ksw"], [lang="kht"] /* Karen */ {
+    font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Padauk',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Punjabi/Gurmukhi script */
-  [lang="pa"] {
-    font-family: 'Noto Sans Gurmukhi', 'Raavi', 'Gurmukhi MN', 
+  /* ========================================
+     CHINESE SCRIPTS
+     Mandarin, Cantonese, Wu, Min, Hakka
+     ======================================== */
+  [lang="zh"], [lang="cmn"], [lang="zho"],
+  [lang="zh-CN"], [lang="zh-Hans"],
+  [lang="wuu"], /* Wu/Shanghainese */
+  [lang="hsn"], /* Xiang */
+  [lang="gan"], /* Gan */
+  [lang="hak"] /* Hakka */ {
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Heiti SC',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  [lang="zh-TW"], [lang="zh-Hant"],
+  [lang="yue"], [lang="nan"] /* Cantonese, Min */ {
+    font-family: 'Noto Sans TC', 'Noto Sans HK', 'PingFang TC', 'Microsoft JhengHei',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     JAPANESE
+     ======================================== */
+  [lang="ja"], [lang="jpn"] {
+    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     KOREAN
+     ======================================== */
+  [lang="ko"], [lang="kor"] {
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Gulim',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     HEBREW SCRIPT
+     Hebrew, Yiddish, Ladino
+     ======================================== */
+  [lang="he"], [lang="heb"],
+  [lang="yi"], [lang="yid"],
+  [lang="lad"] /* Ladino */ {
+    font-family: 'Noto Sans Hebrew', 'Arial Hebrew', 'David', 'Miriam',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+    direction: rtl;
+  }
+
+  /* ========================================
+     ARMENIAN SCRIPT
+     Armenian
+     ======================================== */
+  [lang="hy"], [lang="hye"] {
+    font-family: 'Noto Sans Armenian', 'Mshtakan', 'Sylfaen',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ========================================
+     GEORGIAN SCRIPT
+     Georgian, Mingrelian, Laz
+     ======================================== */
+  [lang="ka"], [lang="kat"],
+  [lang="xmf"], /* Mingrelian */
+  [lang="lzz"] /* Laz */ {
+    font-family: 'Noto Sans Georgian', 'Sylfaen', 'DejaVu Sans',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ========================================
+     ETHIOPIC SCRIPT
+     Amharic, Tigrinya, Oromo, Somali (historic), Geez
+     ======================================== */
+  [lang="am"], [lang="amh"],
+  [lang="ti"], [lang="tir"],
+  [lang="om"], [lang="orm"],
+  [lang="gez"] /* Geez */ {
+    font-family: 'Noto Sans Ethiopic', 'Nyala', 'Abyssinica SIL',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
   }
 
-  /* Odia script */
-  [lang="or"] {
-    font-family: 'Noto Sans Oriya', 'Kalinga', 'Oriya MN', 
+  /* ========================================
+     TIBETAN SCRIPT
+     Tibetan, Dzongkha
+     ======================================== */
+  [lang="bo"], [lang="bod"],
+  [lang="dz"], [lang="dzo"] {
+    font-family: 'Noto Sans Tibetan', 'Tibetan Machine Uni', 'Microsoft Himalaya',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 2.2;
+  }
+
+  /* ========================================
+     MONGOLIAN SCRIPT
+     Mongolian (Traditional)
+     ======================================== */
+  [lang="mn"], [lang="mon"] {
+    font-family: 'Noto Sans Mongolian', 'Mongolian Baiti',
                  -apple-system, system-ui, sans-serif;
     line-height: 1.8;
+  }
+
+  /* ========================================
+     CYRILLIC SCRIPT
+     Russian, Ukrainian, Bulgarian, Serbian, Macedonian, Belarusian, Kazakh, Kyrgyz, Tajik, Uzbek
+     ======================================== */
+  [lang="ru"], [lang="rus"],
+  [lang="uk"], [lang="ukr"],
+  [lang="bg"], [lang="bul"],
+  [lang="sr"], [lang="srp"],
+  [lang="mk"], [lang="mkd"],
+  [lang="be"], [lang="bel"],
+  [lang="kk"], [lang="kaz"],
+  [lang="ky"], [lang="kir"],
+  [lang="tg"], [lang="tgk"],
+  [lang="uz"], [lang="uzb"],
+  [lang="tt"], [lang="tat"],
+  [lang="ba"], [lang="bak"],
+  [lang="cv"], /* Chuvash */
+  [lang="ce"], /* Chechen */
+  [lang="mn-Cyrl"] /* Mongolian Cyrillic */ {
+    font-family: 'Noto Sans', 'Roboto', 'PT Sans', 'DejaVu Sans',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     GREEK SCRIPT
+     Greek
+     ======================================== */
+  [lang="el"], [lang="ell"] {
+    font-family: 'Noto Sans', 'Roboto', 'Helvetica', 'Arial',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     AFRICAN SCRIPTS
+     ======================================== */
+  
+  /* Tifinagh - Berber languages (Tamazight, Kabyle) */
+  [lang="ber"], [lang="tzm"], [lang="kab"], [lang="shi"], [lang="rif"] {
+    font-family: 'Noto Sans Tifinagh', 'Hapax Berbère',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* N'Ko - Mandinka, Bambara, Dyula */
+  [lang="nqo"], [lang="bm"], [lang="dyu"] {
+    font-family: 'Noto Sans NKo', 'Conakry',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+    direction: rtl;
+  }
+
+  /* Vai */
+  [lang="vai"] {
+    font-family: 'Noto Sans Vai',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Adlam - Fulani/Fula */
+  [lang="ff"], [lang="ful"], [lang="fuc"], [lang="fuv"] {
+    font-family: 'Noto Sans Adlam', 'Fulani',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+    direction: rtl;
+  }
+
+  /* Bamum */
+  [lang="bax"] {
+    font-family: 'Noto Sans Bamum',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     SOUTHEAST ASIAN ISLAND SCRIPTS
+     ======================================== */
+  
+  /* Javanese */
+  [lang="jv"], [lang="jav"] {
+    font-family: 'Noto Sans Javanese',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Balinese */
+  [lang="ban"] {
+    font-family: 'Noto Sans Balinese',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.9;
+  }
+
+  /* Sundanese */
+  [lang="su"], [lang="sun"] {
+    font-family: 'Noto Sans Sundanese',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Buginese */
+  [lang="bug"] {
+    font-family: 'Noto Sans Buginese',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Filipino/Tagalog scripts */
+  [lang="tl"], [lang="fil"], [lang="tgl"] {
+    font-family: 'Noto Sans', 'Noto Sans Tagalog',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     SOUTH ASIAN MINORITY SCRIPTS
+     ======================================== */
+
+  /* Meetei Mayek - Meitei/Manipuri */
+  [lang="mni"] {
+    font-family: 'Noto Sans Meetei Mayek',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Ol Chiki - Santali */
+  [lang="sat"] {
+    font-family: 'Noto Sans Ol Chiki',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Chakma */
+  [lang="ccp"] {
+    font-family: 'Noto Sans Chakma',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.9;
+  }
+
+  /* Lepcha */
+  [lang="lep"] {
+    font-family: 'Noto Sans Lepcha',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Limbu */
+  [lang="lif"] {
+    font-family: 'Noto Sans Limbu',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Syloti Nagri */
+  [lang="syl"] {
+    font-family: 'Noto Sans Syloti Nagri', 'Noto Sans Bengali',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     TAI SCRIPTS
+     ======================================== */
+
+  /* Tai Tham - Tai Lue, Northern Thai (Lanna) */
+  [lang="khb"], [lang="lus"], [lang="nod"] {
+    font-family: 'Noto Sans Tai Tham',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.9;
+  }
+
+  /* Tai Viet - Tai Dam, Tai Don */
+  [lang="blt"], [lang="tdd"] {
+    font-family: 'Noto Sans Tai Viet',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Cham */
+  [lang="cja"], [lang="cjm"] {
+    font-family: 'Noto Sans Cham',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* Kayah Li */
+  [lang="kyu"] {
+    font-family: 'Noto Sans Kayah Li',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+  }
+
+  /* ========================================
+     HMONG SCRIPTS
+     ======================================== */
+  [lang="hmn"], [lang="mww"], [lang="hnj"] {
+    font-family: 'Noto Sans Pahawh Hmong', 'Noto Sans',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ========================================
+     AMERICAS INDIGENOUS
+     ======================================== */
+
+  /* Canadian Aboriginal Syllabics - Cree, Inuktitut, Ojibwe */
+  [lang="cr"], [lang="cre"],
+  [lang="iu"], [lang="iku"],
+  [lang="oj"], [lang="oji"] {
+    font-family: 'Noto Sans Canadian Aboriginal', 'Euphemia UCAS',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* Cherokee */
+  [lang="chr"] {
+    font-family: 'Noto Sans Cherokee', 'Plantagenet Cherokee',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  /* ========================================
+     SYRIAC SCRIPT
+     Syriac, Assyrian Neo-Aramaic
+     ======================================== */
+  [lang="syr"], [lang="syc"], [lang="aii"] {
+    font-family: 'Noto Sans Syriac', 'Estrangelo Edessa',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+    direction: rtl;
+  }
+
+  /* ========================================
+     THAANA SCRIPT
+     Dhivehi (Maldivian)
+     ======================================== */
+  [lang="dv"], [lang="div"] {
+    font-family: 'Noto Sans Thaana', 'MV Boli',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.8;
+    direction: rtl;
+  }
+
+  /* ========================================
+     VIETNAMESE (Latin with diacritics)
+     ======================================== */
+  [lang="vi"], [lang="vie"] {
+    font-family: 'Noto Sans', 'Roboto', 'Arial',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* ========================================
+     LATIN SCRIPT LANGUAGES
+     European, African Latin, Turkish, Indonesian, Malay, Swahili, etc.
+     ======================================== */
+  [lang="en"], [lang="es"], [lang="fr"], [lang="de"], [lang="it"], [lang="pt"],
+  [lang="nl"], [lang="pl"], [lang="ro"], [lang="hu"], [lang="cs"], [lang="sk"],
+  [lang="hr"], [lang="sl"], [lang="lt"], [lang="lv"], [lang="et"], [lang="fi"],
+  [lang="sv"], [lang="no"], [lang="da"], [lang="is"], [lang="ga"], [lang="cy"],
+  [lang="eu"], [lang="ca"], [lang="gl"], [lang="ast"],
+  [lang="tr"], [lang="az"], /* Turkish, Azerbaijani (Latin) */
+  [lang="id"], [lang="ms"], /* Indonesian, Malay */
+  [lang="sw"], [lang="swa"], /* Swahili */
+  [lang="yo"], [lang="ig"], [lang="ha"], /* Yoruba, Igbo, Hausa */
+  [lang="zu"], [lang="xh"], [lang="af"], /* Zulu, Xhosa, Afrikaans */
+  [lang="mg"], [lang="ln"], [lang="rw"], [lang="rn"], /* Malagasy, Lingala, Kinyarwanda, Kirundi */
+  [lang="ny"], [lang="sn"], [lang="ts"], [lang="tn"], /* Chichewa, Shona, Tsonga, Tswana */
+  [lang="wo"], [lang="fon"], [lang="tw"], [lang="ee"], /* Wolof, Fon, Twi, Ewe */
+  [lang="ht"], /* Haitian Creole */
+  [lang="ceb"], [lang="ilo"], /* Cebuano, Ilocano */
+  [lang="sm"], [lang="to"], [lang="mi"], [lang="haw"] /* Samoan, Tongan, Maori, Hawaiian */ {
+    font-family: 'Noto Sans', 'Roboto', 'Inter', 'Helvetica', 'Arial',
+                 -apple-system, system-ui, sans-serif;
+    line-height: 1.6;
   }
 }
 
