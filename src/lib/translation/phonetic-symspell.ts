@@ -461,12 +461,26 @@ export function spellCorrectForChat(
 ): string {
   if (!text || !text.trim()) return text;
   
-  // Step 1: Apply language-specific phonetics
+  // CRITICAL: Do NOT modify text that is already in native script
+  // Only apply spell correction to Latin text
+  const isLatin = /^[\x00-\x7F\s.,!?;:'"()-]*$/.test(text) || 
+                  (text.match(/[a-zA-Z]/g)?.length || 0) > text.length * 0.3;
+  
+  if (!isLatin) {
+    // Text is already in native script - do not modify
+    return text;
+  }
+  
+  // Step 1: Apply language-specific phonetics (Latin text only)
   let corrected = language ? applyLanguagePhonetics(text, language) : text;
   
-  // Step 2: Apply general spell correction
-  const result = correctText(corrected, language);
-  corrected = result.text;
+  // Step 2: Apply general spell correction (Latin text only)
+  // Skip if language uses non-Latin script to prevent breaking transliteration input
+  const latinLanguages = ['english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'dutch', 'polish', 'indonesian', 'malay', 'vietnamese', 'turkish'];
+  if (language && latinLanguages.includes(language.toLowerCase())) {
+    const result = correctText(corrected, language);
+    corrected = result.text;
+  }
   
   return corrected;
 }

@@ -351,9 +351,10 @@ async function translateWithLibre(
 
       if (response.ok) {
         const data = await response.json();
-        if (data.translatedText && data.translatedText !== text) {
+        const translated = data.translatedText?.trim();
+        if (translated && translated !== text) {
           console.log(`[dl-translate] LibreTranslate success via ${mirror}`);
-          return { translatedText: data.translatedText, success: true };
+          return { translatedText: translated, success: true };
         }
       }
     } catch (error) {
@@ -379,11 +380,12 @@ async function translateWithMyMemory(
 
     if (response.ok) {
       const data = await response.json();
-      if (data.responseData?.translatedText && 
-          data.responseData.translatedText !== text &&
-          !data.responseData.translatedText.includes('MYMEMORY WARNING')) {
+      const translated = data.responseData?.translatedText?.trim();
+      if (translated && 
+          translated !== text &&
+          !translated.includes('MYMEMORY WARNING')) {
         console.log('[dl-translate] MyMemory success');
-        return { translatedText: data.responseData.translatedText, success: true };
+        return { translatedText: translated, success: true };
       }
     }
   } catch (error) {
@@ -469,10 +471,11 @@ async function transliterateToNative(
   
   // Check if the result is in native script (not Latin)
   if (result.success) {
-    const detected = detectScriptFromText(result.translatedText);
+    const trimmedResult = result.translatedText.trim();
+    const detected = detectScriptFromText(trimmedResult);
     if (!detected.isLatin) {
-      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${result.translatedText}"`);
-      return { text: result.translatedText, success: true };
+      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${trimmedResult}"`);
+      return { text: trimmedResult, success: true };
     }
   }
   
