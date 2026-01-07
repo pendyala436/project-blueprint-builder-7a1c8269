@@ -471,33 +471,30 @@ async function transliterateViaBrowserWorker(
   text: string,
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
-  console.log('[AsyncTranslator] transliterateViaBrowserWorker:', {
-    text: text.substring(0, 30),
-    targetLanguage,
-    workerReady: isWorkerReady()
-  });
-  
   try {
-    // Non-blocking worker check - if not ready, return original (don't wait)
+    // Non-blocking worker check - if not ready, use fallback immediately
     if (!isWorkerReady()) {
-      // Try to init in background, but don't block
-      console.log('[AsyncTranslator] Worker not ready, initializing...');
-      initWorker().catch((err) => {
-        console.error('[AsyncTranslator] Worker init failed:', err);
-      }); // Fire and forget
+      // Try to init in background, but don't wait
+      initWorker().catch(() => {}); // Fire and forget
+      
+      // Use dynamic transliterator as immediate fallback
+      const { dynamicTransliterate } = await import('./dynamic-transliterator');
+      const fallbackResult = dynamicTransliterate(text, targetLanguage);
+      
+      if (fallbackResult && fallbackResult !== text) {
+        return {
+          text: fallbackResult,
+          originalText: text,
+          isTranslated: true,
+          targetLanguage,
+        };
+      }
+      
       return { text, originalText: text, isTranslated: false };
     }
 
     const normalizedLang = normalizeLanguage(targetLanguage);
-    console.log('[AsyncTranslator] Calling worker.transliterate:', normalizedLang);
-    
     const result = await workerTransliterate(text, normalizedLang);
-    
-    console.log('[AsyncTranslator] Worker transliterate result:', {
-      original: text.substring(0, 20),
-      result: result.text?.substring(0, 20),
-      success: result.success
-    });
 
     return {
       text: result.text || text,
@@ -508,6 +505,24 @@ async function transliterateViaBrowserWorker(
     };
   } catch (error) {
     console.error('[AsyncTranslator] Transliteration error:', error);
+    
+    // Fallback to dynamic transliterator on any error
+    try {
+      const { dynamicTransliterate } = await import('./dynamic-transliterator');
+      const fallbackResult = dynamicTransliterate(text, targetLanguage);
+      
+      if (fallbackResult && fallbackResult !== text) {
+        return {
+          text: fallbackResult,
+          originalText: text,
+          isTranslated: true,
+          targetLanguage,
+        };
+      }
+    } catch {
+      // Ignore fallback error
+    }
+    
     return { text, originalText: text, isTranslated: false, error: String(error) };
   }
 }
@@ -564,18 +579,13 @@ export async function translateAsync(
 
 /**
  * Convert Latin text to native script (for live preview)
- * Non-blocking, uses browser-side worker
+ * Non-blocking, uses browser-side worker with fallback to dynamic transliterator
  */
 export async function convertToNativeScriptAsync(
   text: string,
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
-  
-  console.log('[AsyncTranslator] convertToNativeScriptAsync:', {
-    text: trimmed.substring(0, 30),
-    targetLanguage
-  });
   
   // Empty text
   if (!trimmed) {
@@ -584,13 +594,11 @@ export async function convertToNativeScriptAsync(
   
   // Latin script language - no conversion needed
   if (isLatinScriptLanguage(targetLanguage)) {
-    console.log('[AsyncTranslator] Target uses Latin, no conversion needed');
     return { text: trimmed, originalText: trimmed, isTranslated: false };
   }
   
   // Already in non-Latin - no conversion needed
   if (!isLatinText(trimmed)) {
-    console.log('[AsyncTranslator] Already in non-Latin script');
     return { text: trimmed, originalText: trimmed, isTranslated: false };
   }
   
@@ -598,25 +606,42 @@ export async function convertToNativeScriptAsync(
   const cacheKey = getCacheKey(trimmed, 'english', targetLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    console.log('[AsyncTranslator] Cache hit for native script');
     return cached;
   }
   
-  // Use browser-side worker for transliteration
-  console.log('[AsyncTranslator] Calling worker for transliteration...');
-  const result = await transliterateViaBrowserWorker(trimmed, targetLanguage);
-  
-  console.log('[AsyncTranslator] Transliteration result:', {
-    original: trimmed.substring(0, 20),
-    converted: result.text?.substring(0, 20),
-    isTranslated: result.isTranslated
-  });
-  
-  if (result.isTranslated) {
-    setInCache(cacheKey, result);
+  // Try browser-side worker for transliteration
+  try {
+    const result = await transliterateViaBrowserWorker(trimmed, targetLanguage);
+    
+    if (result.isTranslated && result.text !== trimmed) {
+      setInCache(cacheKey, result);
+      return result;
+    }
+  } catch (err) {
+    console.warn('[AsyncTranslator] Worker transliteration failed, using fallback:', err);
   }
   
-  return result;
+  // FALLBACK: Use dynamic transliterator (sync, instant)
+  // This ensures transliteration works even if worker isn't ready
+  try {
+    const { dynamicTransliterate } = await import('./dynamic-transliterator');
+    const fallbackResult = dynamicTransliterate(trimmed, targetLanguage);
+    
+    if (fallbackResult && fallbackResult !== trimmed) {
+      const result: AsyncTranslationResult = {
+        text: fallbackResult,
+        originalText: trimmed,
+        isTranslated: true,
+        targetLanguage,
+      };
+      setInCache(cacheKey, result);
+      return result;
+    }
+  } catch (err) {
+    console.warn('[AsyncTranslator] Dynamic transliteration fallback failed:', err);
+  }
+  
+  return { text: trimmed, originalText: trimmed, isTranslated: false };
 }
 
 /**
@@ -629,15 +654,8 @@ export function translateInBackground(
   receiverLanguage: string,
   onComplete: (result: AsyncTranslationResult) => void
 ): void {
-  console.log('[AsyncTranslator] translateInBackground:', {
-    text: text.substring(0, 30),
-    senderLanguage,
-    receiverLanguage
-  });
-  
   // Same language - no translation needed, callback immediately
   if (isSameLanguage(senderLanguage, receiverLanguage)) {
-    console.log('[AsyncTranslator] Same language, skipping translation');
     onComplete({ text, originalText: text, isTranslated: false });
     return;
   }
@@ -646,25 +664,21 @@ export function translateInBackground(
   const cacheKey = getCacheKey(text, senderLanguage, receiverLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    console.log('[AsyncTranslator] Cache hit');
     onComplete(cached);
     return;
   }
   
-  // Queue translation in background - don't block
-  console.log('[AsyncTranslator] Queuing translation...');
+  // Queue translation in background
   translateAsync(text, senderLanguage, receiverLanguage, 'normal')
-    .then((result) => {
-      console.log('[AsyncTranslator] Translation complete:', {
-        original: text.substring(0, 20),
-        translated: result.text?.substring(0, 20),
-        isTranslated: result.isTranslated
-      });
+    .then(result => {
+      if (result.isTranslated) {
+        setInCache(cacheKey, result);
+      }
       onComplete(result);
     })
-    .catch((err) => {
-      console.error('[AsyncTranslator] Translation error:', err);
-      onComplete({ text, originalText: text, isTranslated: false });
+    .catch(error => {
+      console.error('[AsyncTranslator] Background translation error:', error);
+      onComplete({ text, originalText: text, isTranslated: false, error: String(error) });
     });
 }
 
