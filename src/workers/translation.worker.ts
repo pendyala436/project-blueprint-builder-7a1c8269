@@ -1329,42 +1329,53 @@ async function processReceiverMessage(
     return { receiverView: text, wasTranslated: false };
   }
 
-  // Detect actual source language from text script
+  // Auto-detect source language from text script - CRITICAL for 300+ languages
   const detected = detectLanguageFromText(originalText);
   
-  // Use detected language if text is in native script, otherwise use sender's language
+  // Determine effective source language:
+  // 1. If text is in native script (non-Latin), trust script detection
+  // 2. If text is Latin, use sender's declared language
   const effectiveSource = detected.isLatin 
     ? senderLanguage 
-    : detected.language; // Trust script detection for non-Latin text
+    : detected.language; // Trust script detection for non-Latin text (Telugu, Hindi, Arabic, etc.)
   
-  console.log('[Worker] processReceiverMessage:', {
+  console.log('[Worker] processReceiverMessage - Auto-detect:', {
     originalText: originalText.substring(0, 50),
-    detected,
+    detectedLanguage: detected.language,
+    detectedScript: detected.script,
+    isLatin: detected.isLatin,
     effectiveSource,
-    receiverLanguage,
-    senderLanguage
+    senderLanguage,
+    receiverLanguage
   });
 
-  // Same language - no translation needed
+  // Same language check - no translation needed, just script conversion if required
   if (isSameLanguage(effectiveSource, receiverLanguage)) {
-    // But if receiver's language is non-Latin and text is Latin, convert
+    // Same language but receiver needs native script and text is Latin
     if (!isLatinScriptLanguage(receiverLanguage) && detected.isLatin) {
       const result = await transliterateToNative(originalText, receiverLanguage);
       return { receiverView: result.text, wasTranslated: false };
     }
+    // Same language, same script or both non-Latin - pass through
     return { receiverView: originalText, wasTranslated: false };
   }
 
-  // Translate from detected/sender language to receiver's language
+  // TRANSLATION REQUIRED: Different languages detected
+  // Translate from detected source to receiver's mother tongue
   const result = await translateText(originalText, effectiveSource, receiverLanguage);
   
-  console.log('[Worker] Translation result:', {
+  console.log('[Worker] Translation complete:', {
+    from: effectiveSource,
+    to: receiverLanguage,
     input: originalText.substring(0, 50),
     output: result.text.substring(0, 50),
-    success: result.success,
-    from: effectiveSource,
-    to: receiverLanguage
+    success: result.success
   });
+  
+  // If translation failed but receiver uses Latin script, return original
+  if (!result.success && isLatinScriptLanguage(receiverLanguage)) {
+    return { receiverView: originalText, wasTranslated: false };
+  }
   
   return {
     receiverView: result.text,
