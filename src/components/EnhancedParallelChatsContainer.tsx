@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DraggableMiniChatWindow from "./DraggableMiniChatWindow";
 import IncomingChatPopup from "./IncomingChatPopup";
@@ -40,6 +40,18 @@ const getInitialPosition = (index: number): { x: number; y: number } => {
   return { x: baseX + (index * offset), y: baseY + (index * offset) };
 };
 
+// Debounce helper for high-frequency updates
+const useDebounce = (callback: () => void, delay: number) => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  return useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => callbackRef.current(), delay);
+  }, [delay]);
+};
+
 const EnhancedParallelChatsContainer = ({ 
   currentUserId, 
   userGender, 
@@ -52,6 +64,8 @@ const EnhancedParallelChatsContainer = ({
   const acceptedSessionsRef = useRef<Set<string>>(new Set());
   const existingPartnersRef = useRef<Set<string>>(new Set());
   const nextZIndexRef = useRef(50);
+  const isLoadingRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
   
   // Get user's parallel chat settings
   const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
@@ -60,158 +74,163 @@ const EnhancedParallelChatsContainer = ({
   // Get incoming chat notifications
   const { incomingChats, acceptChat, rejectChat } = useIncomingChats(currentUserId, userGender);
 
-  // Load active chats - ensuring ONE window per man-woman pair
+  // Load active chats - OPTIMIZED for high concurrency
   const loadActiveChats = useCallback(async () => {
-    if (!currentUserId) return;
-
-    // Get active sessions based on user gender
-    const query = userGender === "male"
-      ? supabase
-          .from("active_chat_sessions")
-          .select("*")
-          .eq("man_user_id", currentUserId)
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
-      : supabase
-          .from("active_chat_sessions")
-          .select("*")
-          .eq("woman_user_id", currentUserId)
-          .eq("status", "active")
-          .order("created_at", { ascending: false });
-
-    const { data: sessions } = await query;
-
-    if (!sessions || sessions.length === 0) {
-      setActiveChats([]);
-      existingPartnersRef.current.clear();
-      return;
-    }
-
-    // Get pricing
-    const { data: pricing } = await supabase
-      .from("chat_pricing")
-      .select("rate_per_minute, women_earning_rate")
-      .eq("is_active", true)
-      .maybeSingle();
-
-    const ratePerMinute = pricing?.rate_per_minute || 2;
-    const earningRatePerMinute = pricing?.women_earning_rate || 2;
-
-    // Get partner IDs
-    const partnerIds = sessions.map(s => 
-      userGender === "male" ? s.woman_user_id : s.man_user_id
-    );
-
-    // Fetch partner profiles
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, photo_url, primary_language")
-      .in("user_id", partnerIds);
-
-    // Fetch online statuses
-    const { data: statuses } = await supabase
-      .from("user_status")
-      .select("user_id, is_online")
-      .in("user_id", partnerIds);
-
-    // Check which sessions have messages from current user (accepted chats)
-    const { data: messages } = await supabase
-      .from("chat_messages")
-      .select("chat_id, sender_id")
-      .in("chat_id", sessions.map(s => s.chat_id))
-      .eq("sender_id", currentUserId);
-
-    const chatsWithUserMessages = new Set(messages?.map(m => m.chat_id) || []);
-
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-    const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
-
-    // CRITICAL: Strictly ONE window per partner - use Map to deduplicate
-    const partnerToSession = new Map<string, typeof sessions[0]>();
+    if (!currentUserId || isLoadingRef.current) return;
     
-    sessions.forEach(session => {
-      const partnerId = userGender === "male" ? session.woman_user_id : session.man_user_id;
+    // Throttle: minimum 500ms between loads for lakhs of users
+    const now = Date.now();
+    if (now - lastLoadTimeRef.current < 500) return;
+    lastLoadTimeRef.current = now;
+    isLoadingRef.current = true;
+
+    try {
+      // Get active sessions based on user gender - SINGLE OPTIMIZED QUERY
+      const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+      const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
       
-      // For MEN: Show chat window immediately (they initiate)
-      // For WOMEN: Only show if they have accepted (sent a message or clicked accept)
-      const isAccepted = userGender === "male" 
-        ? true // Men always see their initiated chats
-        : (chatsWithUserMessages.has(session.chat_id) || acceptedSessionsRef.current.has(session.id));
-      
-      if (!isAccepted) return;
-      
-      // Keep only the most recent session per partner (prevent duplicate windows)
-      const existing = partnerToSession.get(partnerId);
-      if (!existing || new Date(session.created_at) > new Date(existing.created_at)) {
-        partnerToSession.set(partnerId, session);
+      const { data: sessions, error: sessionsError } = await supabase
+        .from("active_chat_sessions")
+        .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at`)
+        .eq(column, currentUserId)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(10); // Cap at 10 for performance
+
+      if (sessionsError || !sessions || sessions.length === 0) {
+        setActiveChats([]);
+        existingPartnersRef.current.clear();
+        isLoadingRef.current = false;
+        return;
       }
-    });
-    
-    // Update existing partners set
-    existingPartnersRef.current = new Set(partnerToSession.keys());
-    
-    // Build chat objects with positions
-    const chats: ActiveChat[] = Array.from(partnerToSession.entries()).map(([partnerId, session], index) => {
-      const profile = profileMap.get(partnerId);
-      
-      // Find existing chat to preserve position
-      const existingChat = activeChats.find(c => c.partnerId === partnerId);
-      
-      return {
-        id: session.id,
-        chatId: session.chat_id,
-        partnerId,
-        partnerName: profile?.full_name || "Anonymous",
-        partnerPhoto: profile?.photo_url || null,
-        partnerLanguage: profile?.primary_language || "Unknown",
-        isPartnerOnline: statusMap.get(partnerId) || false,
-        ratePerMinute: session.rate_per_minute || ratePerMinute,
-        earningRatePerMinute,
-        startedAt: session.created_at,
-        position: existingChat?.position || getInitialPosition(index),
-        zIndex: existingChat?.zIndex || nextZIndexRef.current++
-      };
-    });
 
-    setActiveChats(chats);
+      // Get partner IDs efficiently
+      const partnerIds = [...new Set(sessions.map(s => s[partnerColumn as keyof typeof s] as string))];
+
+      // PARALLEL BATCH QUERIES - critical for lakhs of users
+      const [pricingResult, profilesResult, statusesResult, messagesResult] = await Promise.all([
+        // Pricing - cached query
+        supabase
+          .from("chat_pricing")
+          .select("rate_per_minute, women_earning_rate")
+          .eq("is_active", true)
+          .maybeSingle(),
+        // Partner profiles - batch fetch
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language")
+          .in("user_id", partnerIds),
+        // Online statuses - batch fetch
+        supabase
+          .from("user_status")
+          .select("user_id, is_online")
+          .in("user_id", partnerIds),
+        // User messages check - only for women (to determine accepted chats)
+        userGender === "female" 
+          ? supabase
+              .from("chat_messages")
+              .select("chat_id")
+              .in("chat_id", sessions.map(s => s.chat_id))
+              .eq("sender_id", currentUserId)
+              .limit(100)
+          : Promise.resolve({ data: [] })
+      ]);
+
+      const pricing = pricingResult.data;
+      const profiles = profilesResult.data || [];
+      const statuses = statusesResult.data || [];
+      const messages = messagesResult.data || [];
+
+      const ratePerMinute = pricing?.rate_per_minute || 2;
+      const earningRatePerMinute = pricing?.women_earning_rate || 2;
+
+      const chatsWithUserMessages = new Set(messages.map(m => m.chat_id));
+      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
+      const statusMap = new Map(statuses.map(s => [s.user_id, s.is_online]));
+
+      // CRITICAL: Strictly ONE window per partner - use Map to deduplicate
+      const partnerToSession = new Map<string, typeof sessions[0]>();
+      
+      for (const session of sessions) {
+        const partnerId = session[partnerColumn as keyof typeof session] as string;
+        
+        // For MEN: Show chat window immediately (they initiate)
+        // For WOMEN: Only show if they have accepted (sent a message or clicked accept)
+        const isAccepted = userGender === "male" 
+          ? true 
+          : (chatsWithUserMessages.has(session.chat_id) || acceptedSessionsRef.current.has(session.id));
+        
+        if (!isAccepted) continue;
+        
+        // Keep only the most recent session per partner
+        const existing = partnerToSession.get(partnerId);
+        if (!existing || new Date(session.created_at) > new Date(existing.created_at)) {
+          partnerToSession.set(partnerId, session);
+        }
+      }
+      
+      existingPartnersRef.current = new Set(partnerToSession.keys());
+      
+      // Build chat objects with positions
+      const chats: ActiveChat[] = Array.from(partnerToSession.entries()).map(([partnerId, session], index) => {
+        const profile = profileMap.get(partnerId);
+        const existingChat = activeChats.find(c => c.partnerId === partnerId);
+        
+        return {
+          id: session.id,
+          chatId: session.chat_id,
+          partnerId,
+          partnerName: profile?.full_name || "Anonymous",
+          partnerPhoto: profile?.photo_url || null,
+          partnerLanguage: profile?.primary_language || "Unknown",
+          isPartnerOnline: statusMap.get(partnerId) || false,
+          ratePerMinute: session.rate_per_minute || ratePerMinute,
+          earningRatePerMinute,
+          startedAt: session.created_at,
+          position: existingChat?.position || getInitialPosition(index),
+          zIndex: existingChat?.zIndex || nextZIndexRef.current++
+        };
+      });
+
+      setActiveChats(chats);
+    } catch (error) {
+      console.error("[EnhancedParallelChats] Error loading chats:", error);
+    } finally {
+      isLoadingRef.current = false;
+    }
   }, [currentUserId, userGender, activeChats]);
 
-  // Subscribe to chat changes
+  // Debounced version for real-time updates - prevents overwhelming database
+  const debouncedLoadChats = useDebounce(loadActiveChats, 300);
+
+  // Subscribe to chat changes - OPTIMIZED with user-specific filters
   useEffect(() => {
     if (!currentUserId) return;
     
     loadActiveChats();
 
+    // User-scoped channel name for efficient routing
+    const channelName = `chats-${currentUserId}-${Date.now()}`;
+    const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+
     const channel = supabase
-      .channel(`enhanced-parallel-chats-${currentUserId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `${column}=eq.${currentUserId}`
         },
-        () => {
-          loadActiveChats();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages'
-        },
-        () => {
-          loadActiveChats();
-        }
+        () => debouncedLoadChats()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, loadActiveChats]);
+  }, [currentUserId, userGender, loadActiveChats, debouncedLoadChats]);
 
   // Handle accepting incoming chat - check for duplicate partner
   const handleAcceptChat = useCallback((sessionId: string) => {

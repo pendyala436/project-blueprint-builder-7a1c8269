@@ -74,12 +74,22 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
     }
   }, [currentUserId]);
 
-  // Setup real-time subscription for session changes
+  // Setup real-time subscription for session changes - OPTIMIZED for high concurrency
   useEffect(() => {
     if (!currentUserId) return;
 
+    // Debounce refreshes to prevent overwhelming database at scale
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    const debouncedRefresh = () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => refreshActiveChats(), 300);
+    };
+
+    // User-scoped channels for efficient message routing with lakhs of users
+    const channelName = `sessions-${currentUserId}-${Date.now()}`;
+
     const channel = supabase
-      .channel(`user-sessions-${currentUserId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -96,8 +106,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
               await autoReconnect([session.woman_user_id]);
             }
           }
-          
-          await refreshActiveChats();
+          debouncedRefresh();
         }
       )
       .on(
@@ -108,9 +117,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
           table: 'active_chat_sessions',
           filter: `woman_user_id=eq.${currentUserId}`
         },
-        async () => {
-          await refreshActiveChats();
-        }
+        () => debouncedRefresh()
       )
       .subscribe();
 
@@ -118,6 +125,7 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
     refreshActiveChats();
 
     return () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout);
       supabase.removeChannel(channel);
     };
   }, [currentUserId, refreshActiveChats]);

@@ -56,6 +56,7 @@ interface UseRealtimeSubscriptionOptions {
   filter?: string;
   onUpdate: () => void;
   enabled?: boolean;
+  debounceMs?: number; // Debounce for high-frequency updates
 }
 
 export const useRealtimeSubscription = ({
@@ -63,9 +64,19 @@ export const useRealtimeSubscription = ({
   event = "*",
   filter,
   onUpdate,
-  enabled = true
+  enabled = true,
+  debounceMs = 100 // Default 100ms debounce for high concurrency
 }: UseRealtimeSubscriptionOptions) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+
+  // Debounced update handler for scale
+  const debouncedUpdate = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => onUpdateRef.current(), debounceMs);
+  }, [debounceMs]);
 
   const setupSubscription = useCallback(() => {
     if (!enabled) return;
@@ -75,7 +86,8 @@ export const useRealtimeSubscription = ({
       supabase.removeChannel(channelRef.current);
     }
 
-    const channelName = `realtime-${table}-${Date.now()}`;
+    // Unique channel name with timestamp for clean reconnects
+    const channelName = `rt-${table}-${Date.now()}`;
     
     const subscriptionConfig: any = {
       event,
@@ -90,17 +102,18 @@ export const useRealtimeSubscription = ({
     channelRef.current = supabase
       .channel(channelName)
       .on('postgres_changes', subscriptionConfig, () => {
-        onUpdate();
+        debouncedUpdate();
       })
       .subscribe();
 
     return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [table, event, filter, onUpdate, enabled]);
+  }, [table, event, filter, enabled, debouncedUpdate]);
 
   useEffect(() => {
     const cleanup = setupSubscription();
@@ -112,36 +125,45 @@ export const useRealtimeSubscription = ({
   };
 };
 
-// Hook for multiple table subscriptions
+// Hook for multiple table subscriptions - OPTIMIZED for scale
 export const useMultipleRealtimeSubscriptions = (
   tables: TableName[],
   onUpdate: () => void,
-  enabled = true
+  enabled = true,
+  debounceMs = 150 // Slightly longer debounce for multiple tables
 ) => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+
+  const debouncedUpdate = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => onUpdateRef.current(), debounceMs);
+  }, [debounceMs]);
+
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || tables.length === 0) return;
 
     const channels: RealtimeChannel[] = [];
+    
+    // Use single channel with multiple subscriptions for efficiency
+    const channelName = `multi-rt-${Date.now()}`;
+    const channel = supabase.channel(channelName);
 
-    tables.forEach((table, index) => {
-      const channel = supabase
-        .channel(`multi-realtime-${table}-${index}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table },
-          () => {
-            onUpdate();
-          }
-        )
-        .subscribe();
-      
-      channels.push(channel);
+    tables.forEach((table) => {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        () => debouncedUpdate()
+      );
     });
 
+    channel.subscribe();
+    channels.push(channel);
+
     return () => {
-      channels.forEach(channel => {
-        supabase.removeChannel(channel);
-      });
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
-  }, [tables.join(','), onUpdate, enabled]);
+  }, [tables.join(','), debouncedUpdate, enabled]);
 };

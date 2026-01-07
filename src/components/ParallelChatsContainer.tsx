@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import MiniChatWindow from "./MiniChatWindow";
 
@@ -21,94 +21,113 @@ interface ParallelChatsContainerProps {
 
 const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage = "English" }: ParallelChatsContainerProps) => {
   const [activeChats, setActiveChats] = useState<ActiveChat[]>([]);
+  const isLoadingRef = useRef(false);
+  const lastLoadRef = useRef(0);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // OPTIMIZED: Load with throttling for high concurrency
+  const loadActiveChats = useCallback(async () => {
+    if (!currentUserId || isLoadingRef.current) return;
+    
+    // Throttle: min 500ms between loads
+    const now = Date.now();
+    if (now - lastLoadRef.current < 500) return;
+    lastLoadRef.current = now;
+    isLoadingRef.current = true;
+
+    try {
+      const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+      const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
+
+      // OPTIMIZED: Select only needed columns with limit
+      const { data: sessions, error } = await supabase
+        .from("active_chat_sessions")
+        .select(`id, chat_id, ${partnerColumn}, rate_per_minute`)
+        .eq(column, currentUserId)
+        .eq("status", "active")
+        .limit(10);
+
+      if (error || !sessions || sessions.length === 0) {
+        setActiveChats([]);
+        return;
+      }
+
+      // Get unique partner IDs
+      const partnerIds = [...new Set(sessions.map(s => s[partnerColumn as keyof typeof s] as string))];
+
+      // PARALLEL batch queries for efficiency
+      const [profilesResult, statusesResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url, primary_language")
+          .in("user_id", partnerIds),
+        supabase
+          .from("user_status")
+          .select("user_id, is_online")
+          .in("user_id", partnerIds)
+      ]);
+
+      const profileMap = new Map(profilesResult.data?.map(p => [p.user_id, p]) || []);
+      const statusMap = new Map(statusesResult.data?.map(s => [s.user_id, s.is_online]) || []);
+
+      const chats: ActiveChat[] = sessions.map(session => {
+        const partnerId = session[partnerColumn as keyof typeof session] as string;
+        const profile = profileMap.get(partnerId);
+        
+        return {
+          id: session.id,
+          chatId: session.chat_id,
+          partnerId,
+          partnerName: profile?.full_name || "Anonymous",
+          partnerPhoto: profile?.photo_url || null,
+          partnerLanguage: profile?.primary_language || "Unknown",
+          isPartnerOnline: statusMap.get(partnerId) || false,
+          ratePerMinute: session.rate_per_minute || 5
+        };
+      });
+
+      setActiveChats(chats);
+    } catch (error) {
+      console.error("[ParallelChats] Error:", error);
+    } finally {
+      isLoadingRef.current = false;
+    }
+  }, [currentUserId, userGender]);
+
+  // Debounced load for real-time updates
+  const debouncedLoad = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => loadActiveChats(), 300);
+  }, [loadActiveChats]);
 
   useEffect(() => {
     if (!currentUserId) return;
     
     loadActiveChats();
-    subscribeToChats();
-  }, [currentUserId]);
 
-  const loadActiveChats = async () => {
-    // Get active sessions based on user gender
-    const query = userGender === "male"
-      ? supabase
-          .from("active_chat_sessions")
-          .select("*")
-          .eq("man_user_id", currentUserId)
-          .eq("status", "active")
-      : supabase
-          .from("active_chat_sessions")
-          .select("*")
-          .eq("woman_user_id", currentUserId)
-          .eq("status", "active");
+    // OPTIMIZED: User-scoped channel with filter
+    const column = userGender === "male" ? "man_user_id" : "woman_user_id";
+    const channelName = `parallel-${currentUserId}-${Date.now()}`;
 
-    const { data: sessions } = await query;
-
-    if (!sessions || sessions.length === 0) {
-      setActiveChats([]);
-      return;
-    }
-
-    // Get partner IDs
-    const partnerIds = sessions.map(s => 
-      userGender === "male" ? s.woman_user_id : s.man_user_id
-    );
-
-    // Fetch partner profiles
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, photo_url, primary_language")
-      .in("user_id", partnerIds);
-
-    // Fetch online statuses
-    const { data: statuses } = await supabase
-      .from("user_status")
-      .select("user_id, is_online")
-      .in("user_id", partnerIds);
-
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-    const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
-
-    const chats: ActiveChat[] = sessions.map(session => {
-      const partnerId = userGender === "male" ? session.woman_user_id : session.man_user_id;
-      const profile = profileMap.get(partnerId);
-      
-      return {
-        id: session.id,
-        chatId: session.chat_id,
-        partnerId,
-        partnerName: profile?.full_name || "Anonymous",
-        partnerPhoto: profile?.photo_url || null,
-        partnerLanguage: profile?.primary_language || "Unknown",
-        isPartnerOnline: statusMap.get(partnerId) || false,
-        ratePerMinute: session.rate_per_minute || 5
-      };
-    });
-
-    setActiveChats(chats);
-  };
-
-  const subscribeToChats = () => {
     const channel = supabase
-      .channel(`parallel-chats-${currentUserId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `${column}=eq.${currentUserId}`
         },
-        () => {
-          loadActiveChats();
-        }
+        () => debouncedLoad()
       )
       .subscribe();
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
-  };
+  }, [currentUserId, userGender, loadActiveChats, debouncedLoad]);
 
   const handleCloseChat = (chatId: string) => {
     setActiveChats(prev => prev.filter(c => c.chatId !== chatId));
