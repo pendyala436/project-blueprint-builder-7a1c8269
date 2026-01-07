@@ -1396,22 +1396,9 @@ const DraggableMiniChatWindow = ({
                         // OWN MESSAGE: Show sender's native script (already converted)
                         <p>{msg.message}</p>
                       ) : msg.translatedMessage && msg.isTranslated ? (
-                        // PARTNER MESSAGE: Show in receiver's native language
-                        // For same language: just native script conversion (no original shown)
-                        // For different language: show translated + original
-                        <div className="space-y-0.5">
-                          <p>{msg.translatedMessage}</p>
-                          {/* Only show original if different language (actual translation happened) */}
-                          {!isSameLanguage(msg.detectedLanguage || partnerLanguage, currentUserLanguage) && 
-                           msg.message !== msg.translatedMessage && (
-                            <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
-                              {msg.message}
-                              {msg.detectedLanguage && (
-                                <span className="ml-1 opacity-75">({msg.detectedLanguage})</span>
-                              )}
-                            </p>
-                          )}
-                        </div>
+                        // PARTNER MESSAGE: Show only translated text in receiver's native language
+                        // No original text shown - cleaner UX
+                        <p>{msg.translatedMessage}</p>
                       ) : (
                         // PARTNER MESSAGE: Same language, already in native script
                         <p>{msg.message}</p>
