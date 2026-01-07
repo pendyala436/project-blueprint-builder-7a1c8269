@@ -4,13 +4,14 @@
  * Handles all translation and transliteration off the main thread
  * for non-blocking UI performance.
  * 
- * Features:
- * - NLLB-200 model loading and caching
- * - Latin → Native script transliteration
- * - Full translation between 200+ languages
- * - Unicode NFC normalization
- * - Message queuing with unique IDs
+ * Fixes Applied:
+ * - ICU-style transliteration with phonetic preprocessing
+ * - Unicode NFC normalization throughout
+ * - Message queue with unique IDs (atomic processing)
+ * - Chunked translation for long sentences
+ * - Debounced preview (handled in main thread)
  * - Error handling with fallbacks
+ * - Context-aware language detection
  */
 
 import { pipeline, env } from '@huggingface/transformers';
@@ -25,7 +26,7 @@ env.useBrowserCache = true;
 
 interface WorkerMessage {
   id: string;
-  type: 'init' | 'translate' | 'transliterate' | 'process_chat' | 'detect_language';
+  type: 'init' | 'translate' | 'transliterate' | 'process_chat' | 'detect_language' | 'batch_translate';
   payload: any;
 }
 
@@ -50,11 +51,41 @@ let loadProgress = 0;
 const translationCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 2000;
 
-// Message queue to prevent race conditions
+// Message queue to prevent race conditions (atomic processing)
 const messageQueue = new Map<string, WorkerMessage>();
+let processingQueue = false;
+const pendingQueue: WorkerMessage[] = [];
 
 // ============================================================
-// NLLB LANGUAGE MAPPINGS
+// PHONETIC PREPROCESSING MAPS (ICU-style)
+// ============================================================
+
+// Common romanization patterns → normalized phonemes
+const PHONETIC_PREPROCESSOR: Record<string, string> = {
+  // Doubled vowels → long vowels
+  'aa': 'ā', 'ee': 'ī', 'ii': 'ī', 'oo': 'ū', 'uu': 'ū',
+  'ai': 'ai', 'au': 'au', 'ou': 'ō', 'ei': 'ē',
+  
+  // Aspirated consonants (common in Indic)
+  'kh': 'kʰ', 'gh': 'gʰ', 'ch': 'cʰ', 'jh': 'jʰ',
+  'th': 'tʰ', 'dh': 'dʰ', 'ph': 'pʰ', 'bh': 'bʰ',
+  
+  // Retroflex consonants
+  'tt': 'ṭ', 'dd': 'ḍ', 'nn': 'ṇ', 'rr': 'ṛ', 'll': 'ḷ',
+  
+  // Sibilants and nasals
+  'sh': 'ś', 'ng': 'ṅ', 'ny': 'ñ', 'gn': 'ñ',
+  
+  // Special sounds
+  'zh': 'ẓ', 'ksh': 'kṣ', 'gya': 'gyā', 'tra': 'trā',
+};
+
+// Order matters - process longer patterns first
+const PHONETIC_PATTERNS = Object.entries(PHONETIC_PREPROCESSOR)
+  .sort((a, b) => b[0].length - a[0].length);
+
+// ============================================================
+// NLLB LANGUAGE MAPPINGS (200+ languages)
 // ============================================================
 
 const NLLB_CODES: Record<string, string> = {
@@ -79,6 +110,7 @@ const NLLB_CODES: Record<string, string> = {
   'kashmiri': 'kas_Arab', 'ks': 'kas_Arab',
   'sindhi': 'snd_Arab', 'sd': 'snd_Arab',
   'dogri': 'doi_Deva', 'doi': 'doi_Deva',
+  'sanskrit': 'san_Deva', 'sa': 'san_Deva',
   
   // Major World Languages
   'english': 'eng_Latn', 'en': 'eng_Latn',
@@ -103,16 +135,67 @@ const NLLB_CODES: Record<string, string> = {
   'hebrew': 'heb_Hebr', 'he': 'heb_Hebr',
   'greek': 'ell_Grek', 'el': 'ell_Grek',
   'ukrainian': 'ukr_Cyrl', 'uk': 'ukr_Cyrl',
+  'czech': 'ces_Latn', 'cs': 'ces_Latn',
+  'romanian': 'ron_Latn', 'ro': 'ron_Latn',
+  'hungarian': 'hun_Latn', 'hu': 'hun_Latn',
+  'swedish': 'swe_Latn', 'sv': 'swe_Latn',
+  'danish': 'dan_Latn', 'da': 'dan_Latn',
+  'finnish': 'fin_Latn', 'fi': 'fin_Latn',
+  'norwegian': 'nob_Latn', 'no': 'nob_Latn',
   
   // Southeast Asian
   'tagalog': 'tgl_Latn', 'tl': 'tgl_Latn',
   'burmese': 'mya_Mymr', 'my': 'mya_Mymr',
   'khmer': 'khm_Khmr', 'km': 'khm_Khmr',
   'lao': 'lao_Laoo', 'lo': 'lao_Laoo',
+  'javanese': 'jav_Latn', 'jv': 'jav_Latn',
+  'sundanese': 'sun_Latn', 'su': 'sun_Latn',
+  'cebuano': 'ceb_Latn', 'ceb': 'ceb_Latn',
   
   // African
   'swahili': 'swh_Latn', 'sw': 'swh_Latn',
   'amharic': 'amh_Ethi', 'am': 'amh_Ethi',
+  'yoruba': 'yor_Latn', 'yo': 'yor_Latn',
+  'igbo': 'ibo_Latn', 'ig': 'ibo_Latn',
+  'hausa': 'hau_Latn', 'ha': 'hau_Latn',
+  'zulu': 'zul_Latn', 'zu': 'zul_Latn',
+  'xhosa': 'xho_Latn', 'xh': 'xho_Latn',
+  'afrikaans': 'afr_Latn', 'af': 'afr_Latn',
+  'somali': 'som_Latn', 'so': 'som_Latn',
+  'tigrinya': 'tir_Ethi', 'ti': 'tir_Ethi',
+  
+  // Caucasian
+  'georgian': 'kat_Geor', 'ka': 'kat_Geor',
+  'armenian': 'hye_Armn', 'hy': 'hye_Armn',
+  
+  // Central Asian
+  'kazakh': 'kaz_Cyrl', 'kk': 'kaz_Cyrl',
+  'uzbek': 'uzn_Latn', 'uz': 'uzn_Latn',
+  'tajik': 'tgk_Cyrl', 'tg': 'tgk_Cyrl',
+  'kyrgyz': 'kir_Cyrl', 'ky': 'kir_Cyrl',
+  'turkmen': 'tuk_Latn', 'tk': 'tuk_Latn',
+  'mongolian': 'khk_Cyrl', 'mn': 'khk_Cyrl',
+  
+  // More European
+  'bulgarian': 'bul_Cyrl', 'bg': 'bul_Cyrl',
+  'croatian': 'hrv_Latn', 'hr': 'hrv_Latn',
+  'serbian': 'srp_Cyrl', 'sr': 'srp_Cyrl',
+  'slovak': 'slk_Latn', 'sk': 'slk_Latn',
+  'slovenian': 'slv_Latn', 'sl': 'slv_Latn',
+  'lithuanian': 'lit_Latn', 'lt': 'lit_Latn',
+  'latvian': 'lvs_Latn', 'lv': 'lvs_Latn',
+  'estonian': 'est_Latn', 'et': 'est_Latn',
+  'belarusian': 'bel_Cyrl', 'be': 'bel_Cyrl',
+  'bosnian': 'bos_Latn', 'bs': 'bos_Latn',
+  'macedonian': 'mkd_Cyrl', 'mk': 'mkd_Cyrl',
+  'albanian': 'als_Latn', 'sq': 'als_Latn',
+  'icelandic': 'isl_Latn', 'is': 'isl_Latn',
+  'irish': 'gle_Latn', 'ga': 'gle_Latn',
+  'welsh': 'cym_Latn', 'cy': 'cym_Latn',
+  'basque': 'eus_Latn', 'eu': 'eus_Latn',
+  'catalan': 'cat_Latn', 'ca': 'cat_Latn',
+  'galician': 'glg_Latn', 'gl': 'glg_Latn',
+  'maltese': 'mlt_Latn', 'mt': 'mlt_Latn',
 };
 
 // Latin script languages
@@ -126,6 +209,9 @@ const LATIN_SCRIPT_LANGUAGES = new Set([
   'slovak', 'sk', 'slovenian', 'sl', 'latvian', 'lv', 'lithuanian', 'lt',
   'estonian', 'et', 'bosnian', 'bs', 'albanian', 'sq', 'icelandic', 'is',
   'irish', 'ga', 'welsh', 'cy', 'basque', 'eu', 'catalan', 'ca',
+  'galician', 'gl', 'maltese', 'mt', 'afrikaans', 'af', 'yoruba', 'yo',
+  'igbo', 'ig', 'hausa', 'ha', 'zulu', 'zu', 'xhosa', 'xh', 'somali', 'so',
+  'uzbek', 'uz', 'turkmen', 'tk',
 ]);
 
 // ============================================================
@@ -133,7 +219,8 @@ const LATIN_SCRIPT_LANGUAGES = new Set([
 // ============================================================
 
 const scriptPatterns: Array<{ regex: RegExp; script: string; languages: string[] }> = [
-  { regex: /[\u0900-\u097F]/, script: 'Devanagari', languages: ['hindi', 'marathi', 'nepali', 'sanskrit'] },
+  // South Asian
+  { regex: /[\u0900-\u097F]/, script: 'Devanagari', languages: ['hindi', 'marathi', 'nepali', 'sanskrit', 'konkani', 'maithili', 'dogri'] },
   { regex: /[\u0980-\u09FF]/, script: 'Bengali', languages: ['bengali', 'assamese'] },
   { regex: /[\u0B80-\u0BFF]/, script: 'Tamil', languages: ['tamil'] },
   { regex: /[\u0C00-\u0C7F]/, script: 'Telugu', languages: ['telugu'] },
@@ -142,12 +229,28 @@ const scriptPatterns: Array<{ regex: RegExp; script: string; languages: string[]
   { regex: /[\u0A80-\u0AFF]/, script: 'Gujarati', languages: ['gujarati'] },
   { regex: /[\u0A00-\u0A7F]/, script: 'Gurmukhi', languages: ['punjabi'] },
   { regex: /[\u0B00-\u0B7F]/, script: 'Odia', languages: ['odia'] },
-  { regex: /[\u0600-\u06FF]/, script: 'Arabic', languages: ['arabic', 'urdu', 'persian'] },
-  { regex: /[\u0400-\u04FF]/, script: 'Cyrillic', languages: ['russian', 'ukrainian', 'bulgarian'] },
-  { regex: /[\u4E00-\u9FFF]/, script: 'Han', languages: ['chinese'] },
+  { regex: /[\u0D80-\u0DFF]/, script: 'Sinhala', languages: ['sinhala'] },
+  { regex: /[\u1C50-\u1C7F]/, script: 'Ol_Chiki', languages: ['santali'] },
+  // East Asian
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, script: 'Han', languages: ['chinese'] },
   { regex: /[\u3040-\u309F\u30A0-\u30FF]/, script: 'Japanese', languages: ['japanese'] },
-  { regex: /[\uAC00-\uD7AF]/, script: 'Hangul', languages: ['korean'] },
+  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, script: 'Hangul', languages: ['korean'] },
+  // Southeast Asian
   { regex: /[\u0E00-\u0E7F]/, script: 'Thai', languages: ['thai'] },
+  { regex: /[\u0E80-\u0EFF]/, script: 'Lao', languages: ['lao'] },
+  { regex: /[\u1000-\u109F]/, script: 'Myanmar', languages: ['burmese'] },
+  { regex: /[\u1780-\u17FF]/, script: 'Khmer', languages: ['khmer'] },
+  // Middle Eastern
+  { regex: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/, script: 'Arabic', languages: ['arabic', 'urdu', 'persian', 'sindhi', 'kashmiri'] },
+  { regex: /[\u0590-\u05FF]/, script: 'Hebrew', languages: ['hebrew'] },
+  // European
+  { regex: /[\u0400-\u04FF]/, script: 'Cyrillic', languages: ['russian', 'ukrainian', 'bulgarian', 'serbian', 'macedonian', 'belarusian', 'kazakh', 'kyrgyz', 'tajik', 'mongolian'] },
+  { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, script: 'Greek', languages: ['greek'] },
+  // Caucasian
+  { regex: /[\u10A0-\u10FF]/, script: 'Georgian', languages: ['georgian'] },
+  { regex: /[\u0530-\u058F]/, script: 'Armenian', languages: ['armenian'] },
+  // African
+  { regex: /[\u1200-\u137F]/, script: 'Ethiopic', languages: ['amharic', 'tigrinya'] },
 ];
 
 // ============================================================
@@ -165,10 +268,14 @@ function isLatinScriptLanguage(language: string): boolean {
 function isLatinText(text: string): boolean {
   const cleaned = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
   if (!cleaned) return true;
-  const latinChars = cleaned.match(/[a-zA-Z]/g);
+  const latinChars = cleaned.match(/[a-zA-Z\u00C0-\u024F]/g); // Extended Latin
   return latinChars !== null && (latinChars.length / cleaned.length) > 0.7;
 }
 
+/**
+ * Normalize Unicode to NFC form
+ * Fixes: Combining marks render incorrectly
+ */
 function normalizeUnicode(text: string): string {
   try {
     return text.normalize('NFC');
@@ -177,38 +284,82 @@ function normalizeUnicode(text: string): string {
   }
 }
 
-function normalizeLatinInput(text: string): string {
-  // Normalize case and handle common romanization patterns
-  return text
-    .toLowerCase()
-    // Handle doubled vowels (aa → ā, etc.)
-    .replace(/aa/g, 'ā')
-    .replace(/ee/g, 'ī')
-    .replace(/oo/g, 'ū')
-    .replace(/ii/g, 'ī')
-    // Handle common consonant combinations
-    .replace(/sh/g, 'ś')
-    .replace(/ch/g, 'c')
-    .replace(/th/g, 'ṭ')
-    .replace(/dh/g, 'ḍ')
-    .replace(/ph/g, 'f')
-    .replace(/kh/g, 'k')
-    .replace(/gh/g, 'g')
-    .replace(/bh/g, 'b')
-    .replace(/jh/g, 'j');
+/**
+ * Preprocess Latin input with phonetic normalization
+ * Fixes: Missing diacritics, ambiguous Latin input
+ */
+function preprocessLatinInput(text: string): string {
+  // Normalize case first
+  let result = text.toLowerCase().trim();
+  
+  // Apply phonetic patterns (longer patterns first)
+  for (const [pattern, replacement] of PHONETIC_PATTERNS) {
+    result = result.split(pattern).join(replacement);
+  }
+  
+  // Normalize repeated characters (typo correction)
+  result = result.replace(/(.)\1{2,}/g, '$1$1');
+  
+  return result;
 }
 
-function detectLanguageFromText(text: string): { language: string; script: string; isLatin: boolean } {
-  const trimmed = text.trim();
-  if (!trimmed) return { language: 'english', script: 'Latin', isLatin: true };
+/**
+ * Detect language from text script
+ * Fixes: Mixed-language detection
+ */
+function detectLanguageFromText(text: string): { language: string; script: string; isLatin: boolean; confidence: number } {
+  const trimmed = normalizeUnicode(text.trim());
+  if (!trimmed) return { language: 'english', script: 'Latin', isLatin: true, confidence: 0 };
 
-  for (const pattern of scriptPatterns) {
-    if (pattern.regex.test(trimmed)) {
-      return { language: pattern.languages[0], script: pattern.script, isLatin: false };
+  // Count characters per script
+  const scriptCounts: Record<string, number> = { Latin: 0 };
+  let totalChars = 0;
+  
+  for (const char of trimmed) {
+    if (/[a-zA-Z\u00C0-\u024F]/.test(char)) {
+      scriptCounts['Latin'] = (scriptCounts['Latin'] || 0) + 1;
+      totalChars++;
+      continue;
+    }
+    
+    for (const pattern of scriptPatterns) {
+      if (pattern.regex.test(char)) {
+        scriptCounts[pattern.script] = (scriptCounts[pattern.script] || 0) + 1;
+        totalChars++;
+        break;
+      }
     }
   }
 
-  return { language: 'english', script: 'Latin', isLatin: true };
+  if (totalChars === 0) {
+    return { language: 'english', script: 'Latin', isLatin: true, confidence: 0 };
+  }
+
+  // Find dominant script
+  let maxScript = 'Latin';
+  let maxCount = scriptCounts['Latin'] || 0;
+  
+  for (const [script, count] of Object.entries(scriptCounts)) {
+    if (count > maxCount) {
+      maxScript = script;
+      maxCount = count;
+    }
+  }
+
+  const confidence = maxCount / totalChars;
+
+  if (maxScript === 'Latin') {
+    return { language: 'english', script: 'Latin', isLatin: true, confidence };
+  }
+
+  // Find language for detected script
+  for (const pattern of scriptPatterns) {
+    if (pattern.script === maxScript) {
+      return { language: pattern.languages[0], script: maxScript, isLatin: false, confidence };
+    }
+  }
+
+  return { language: 'english', script: 'Latin', isLatin: true, confidence };
 }
 
 function isSameLanguage(lang1: string, lang2: string): boolean {
@@ -219,6 +370,46 @@ function isSameLanguage(lang1: string, lang2: string): boolean {
   const code1 = getNLLBCode(n1);
   const code2 = getNLLBCode(n2);
   return code1 === code2;
+}
+
+/**
+ * Chunk long text for translation
+ * Fixes: Very long sentences causing slowdown
+ */
+function chunkText(text: string, maxChunkSize: number = 200): string[] {
+  if (text.length <= maxChunkSize) return [text];
+  
+  const chunks: string[] = [];
+  const sentences = text.split(/(?<=[.!?।။။።])\s+/);
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if (currentChunk.length + sentence.length <= maxChunkSize) {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    } else {
+      if (currentChunk) chunks.push(currentChunk);
+      
+      // If single sentence is too long, split by commas/words
+      if (sentence.length > maxChunkSize) {
+        const subParts = sentence.split(/(?<=[,;])\s+/);
+        let subChunk = '';
+        for (const part of subParts) {
+          if (subChunk.length + part.length <= maxChunkSize) {
+            subChunk += (subChunk ? ' ' : '') + part;
+          } else {
+            if (subChunk) chunks.push(subChunk);
+            subChunk = part;
+          }
+        }
+        if (subChunk) chunks.push(subChunk);
+      } else {
+        currentChunk = sentence;
+      }
+    }
+  }
+  
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
 }
 
 // ============================================================
@@ -283,7 +474,7 @@ async function translateText(
   const cacheKey = `${sourceLanguage}|${targetLanguage}|${originalText}`;
   const cached = translationCache.get(cacheKey);
   if (cached) {
-    return { text: cached, success: true, cached: true };
+    return { text: normalizeUnicode(cached), success: true, cached: true };
   }
 
   // Get NLLB codes
@@ -300,16 +491,24 @@ async function translateText(
       return { text: originalText, success: false, cached: false };
     }
 
-    const result = await translationPipeline(originalText, {
-      src_lang: srcCode,
-      tgt_lang: tgtCode,
-    });
+    // Chunk long text
+    const chunks = chunkText(originalText);
+    const translatedChunks: string[] = [];
+    
+    for (const chunk of chunks) {
+      const result = await translationPipeline(chunk, {
+        src_lang: srcCode,
+        tgt_lang: tgtCode,
+      });
 
-    const translatedText = normalizeUnicode(
-      Array.isArray(result)
-        ? result[0]?.translation_text || originalText
-        : result?.translation_text || originalText
-    );
+      const translatedChunk = Array.isArray(result)
+        ? result[0]?.translation_text || chunk
+        : result?.translation_text || chunk;
+      
+      translatedChunks.push(normalizeUnicode(translatedChunk));
+    }
+
+    const translatedText = normalizeUnicode(translatedChunks.join(' '));
 
     // Cache result
     if (translationCache.size >= MAX_CACHE_SIZE) {
@@ -329,35 +528,39 @@ async function transliterateToNative(
   latinText: string,
   targetLanguage: string
 ): Promise<{ text: string; success: boolean }> {
-  const normalized = normalizeLatinInput(latinText.trim());
+  const originalText = latinText.trim();
   
-  if (!normalized) {
+  if (!originalText) {
     return { text: latinText, success: false };
   }
 
   // Target uses Latin script - no conversion needed
   if (isLatinScriptLanguage(targetLanguage)) {
-    return { text: latinText, success: false };
+    return { text: originalText, success: false };
   }
 
   // Already in native script
-  if (!isLatinText(normalized)) {
-    return { text: normalizeUnicode(latinText), success: false };
+  if (!isLatinText(originalText)) {
+    return { text: normalizeUnicode(originalText), success: false };
   }
 
   try {
+    // Preprocess with phonetic normalization
+    const preprocessed = preprocessLatinInput(originalText);
+    
     // Use translation from English to convert to native script
-    const result = await translateText(normalized, 'english', targetLanguage);
+    const result = await translateText(preprocessed, 'english', targetLanguage);
     
     // Verify result is in native script
     const detected = detectLanguageFromText(result.text);
-    if (!detected.isLatin && result.text !== normalized) {
+    if (!detected.isLatin && result.text !== preprocessed && detected.confidence > 0.5) {
       return { text: normalizeUnicode(result.text), success: true };
     }
     
-    return { text: latinText, success: false };
+    // Fallback: return original with NFC normalization
+    return { text: normalizeUnicode(originalText), success: false };
   } catch {
-    return { text: latinText, success: false };
+    return { text: normalizeUnicode(latinText), success: false };
   }
 }
 
@@ -412,7 +615,9 @@ async function processReceiverMessage(
 
   // Detect actual source language from text
   const detected = detectLanguageFromText(originalText);
-  const effectiveSource = detected.isLatin ? 'english' : detected.language || senderLanguage;
+  const effectiveSource = detected.isLatin 
+    ? senderLanguage 
+    : (detected.confidence > 0.7 ? detected.language : senderLanguage);
 
   // Translate to receiver's language
   const result = await translateText(originalText, effectiveSource, receiverLanguage);
@@ -464,15 +669,33 @@ async function processChatMessage(
   };
 }
 
+/**
+ * Batch translate multiple texts
+ * Fixes: Multi-user scenario message overlap
+ */
+async function batchTranslate(
+  items: Array<{ id: string; text: string; sourceLanguage: string; targetLanguage: string }>
+): Promise<Array<{ id: string; text: string; success: boolean }>> {
+  const results: Array<{ id: string; text: string; success: boolean }> = [];
+  
+  for (const item of items) {
+    try {
+      const result = await translateText(item.text, item.sourceLanguage, item.targetLanguage);
+      results.push({ id: item.id, text: result.text, success: result.success });
+    } catch {
+      results.push({ id: item.id, text: item.text, success: false });
+    }
+  }
+  
+  return results;
+}
+
 // ============================================================
-// MESSAGE HANDLER
+// MESSAGE HANDLER (Atomic queue processing)
 // ============================================================
 
-self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
-  const { id, type, payload } = event.data;
-  
-  // Add to queue
-  messageQueue.set(id, event.data);
+async function processMessage(msg: WorkerMessage): Promise<WorkerResponse> {
+  const { id, type, payload } = msg;
   
   let response: WorkerResponse = {
     id,
@@ -518,6 +741,11 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
         response = { id, type, success: true, result: detected };
         break;
 
+      case 'batch_translate':
+        const batchResult = await batchTranslate(payload.items);
+        response = { id, type, success: true, result: batchResult };
+        break;
+
       default:
         response = { id, type, success: false, error: `Unknown message type: ${type}` };
     }
@@ -528,11 +756,41 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
       success: false,
       error: err instanceof Error ? err.message : 'Unknown error',
     };
-  } finally {
-    messageQueue.delete(id);
   }
 
-  self.postMessage(response);
+  return response;
+}
+
+/**
+ * Process queue atomically to prevent race conditions
+ */
+async function processQueue(): Promise<void> {
+  if (processingQueue) return;
+  processingQueue = true;
+  
+  while (pendingQueue.length > 0) {
+    const msg = pendingQueue.shift();
+    if (msg) {
+      const response = await processMessage(msg);
+      messageQueue.delete(msg.id);
+      self.postMessage(response);
+    }
+  }
+  
+  processingQueue = false;
+}
+
+self.onmessage = (event: MessageEvent<WorkerMessage>) => {
+  const msg = event.data;
+  
+  // Add to tracking map
+  messageQueue.set(msg.id, msg);
+  
+  // Add to processing queue
+  pendingQueue.push(msg);
+  
+  // Process queue
+  processQueue();
 };
 
 // Notify that worker is ready

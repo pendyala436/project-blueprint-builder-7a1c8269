@@ -3,12 +3,13 @@
  * =================================
  * Non-blocking translation using Web Worker
  * 
- * Features:
- * - All translation/transliteration happens in Web Worker (off main thread)
- * - Message queue with unique IDs to prevent race conditions
- * - Debounced live preview for typing
- * - Unicode NFC normalization
+ * Fixes Applied:
+ * - Debounced preview (50-100ms throttle)
+ * - Message queue with unique IDs
+ * - Timeout handling
  * - Error handling with fallbacks
+ * - Unicode NFC normalization
+ * - Atomic state updates
  * - NO external APIs - fully in-browser
  */
 
@@ -34,9 +35,22 @@ export interface LanguageDetectionResult {
   language: string;
   script: string;
   isLatin: boolean;
+  confidence: number;
 }
 
-type MessageHandler = (result: any) => void;
+export interface BatchTranslateItem {
+  id: string;
+  text: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+export interface BatchTranslateResult {
+  id: string;
+  text: string;
+  success: boolean;
+}
+
 type ProgressHandler = (progress: number) => void;
 
 // ============================================================
@@ -52,15 +66,21 @@ let workerError: string | null = null;
 const pendingMessages = new Map<string, {
   resolve: (value: any) => void;
   reject: (error: Error) => void;
+  timeout: ReturnType<typeof setTimeout>;
 }>();
 
 const progressHandlers = new Set<ProgressHandler>();
 
+// Message ID counter for uniqueness
+let messageIdCounter = 0;
+
 /**
  * Generate unique message ID
+ * Fixes: Message overlap in multi-user scenario
  */
 function generateMessageId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  messageIdCounter++;
+  return `${Date.now()}-${messageIdCounter}-${Math.random().toString(36).substr(2, 6)}`;
 }
 
 /**
@@ -82,6 +102,12 @@ export async function initWorker(onProgress?: ProgressHandler): Promise<boolean>
           resolve(false);
         }
       }, 100);
+      
+      // Timeout after 60 seconds
+      setTimeout(() => {
+        clearInterval(checkReady);
+        resolve(false);
+      }, 60000);
     });
   }
 
@@ -117,6 +143,7 @@ export async function initWorker(onProgress?: ProgressHandler): Promise<boolean>
       // Handle response to pending message
       const pending = pendingMessages.get(data.id);
       if (pending) {
+        clearTimeout(pending.timeout);
         pendingMessages.delete(data.id);
         if (data.success) {
           pending.resolve(data.result);
@@ -129,10 +156,17 @@ export async function initWorker(onProgress?: ProgressHandler): Promise<boolean>
     worker.onerror = (error) => {
       console.error('[WorkerTranslator] Worker error:', error);
       workerError = error.message;
+      
+      // Reject all pending messages
+      pendingMessages.forEach((pending, id) => {
+        clearTimeout(pending.timeout);
+        pending.reject(new Error('Worker crashed'));
+        pendingMessages.delete(id);
+      });
     };
 
     // Initialize the model in worker
-    const result = await sendToWorker('init', {});
+    const result = await sendToWorker('init', {}, 120000); // 2 min timeout for model load
     isWorkerReady = result.ready;
     
     return isWorkerReady;
@@ -150,6 +184,7 @@ export async function initWorker(onProgress?: ProgressHandler): Promise<boolean>
 
 /**
  * Send message to worker and wait for response
+ * Fixes: Timeout handling, unique message IDs
  */
 async function sendToWorker(type: string, payload: any, timeout = 30000): Promise<any> {
   if (!worker) {
@@ -164,18 +199,17 @@ async function sendToWorker(type: string, payload: any, timeout = 30000): Promis
     const id = generateMessageId();
     const timeoutId = setTimeout(() => {
       pendingMessages.delete(id);
-      reject(new Error('Worker request timeout'));
+      reject(new Error(`Worker request timeout after ${timeout}ms`));
     }, timeout);
 
     pendingMessages.set(id, {
       resolve: (result) => {
-        clearTimeout(timeoutId);
         resolve(result);
       },
       reject: (error) => {
-        clearTimeout(timeoutId);
         reject(error);
       },
+      timeout: timeoutId,
     });
 
     worker!.postMessage({ id, type, payload });
@@ -190,6 +224,13 @@ async function sendToWorker(type: string, payload: any, timeout = 30000): Promis
  * Check if worker is ready
  */
 export function isReady(): boolean {
+  return isWorkerReady;
+}
+
+/**
+ * Check if translator is available (ready or loading)
+ */
+export function isTranslatorReady(): boolean {
   return isWorkerReady;
 }
 
@@ -281,56 +322,102 @@ export async function detectLanguage(text: string): Promise<LanguageDetectionRes
   try {
     return await sendToWorker('detect_language', { text });
   } catch (err) {
-    return { language: 'english', script: 'Latin', isLatin: true };
+    return { language: 'english', script: 'Latin', isLatin: true, confidence: 0 };
+  }
+}
+
+/**
+ * Batch translate multiple items
+ * Fixes: Multi-user scenario with overlapping messages
+ */
+export async function batchTranslate(items: BatchTranslateItem[]): Promise<BatchTranslateResult[]> {
+  try {
+    return await sendToWorker('batch_translate', { items }, 60000);
+  } catch (err) {
+    console.error('[WorkerTranslator] Batch translate error:', err);
+    return items.map(item => ({ id: item.id, text: item.text, success: false }));
   }
 }
 
 // ============================================================
 // DEBOUNCED LIVE PREVIEW
+// Fixes: Preview lags during typing, flickering
 // ============================================================
+
+interface DebouncedPreviewHandler {
+  update: (text: string, targetLanguage: string) => Promise<string>;
+  cancel: () => void;
+}
 
 /**
  * Create debounced live preview handler
  * For real-time typing → native script preview
+ * 
+ * @param debounceMs - Debounce delay (50-100ms recommended)
  */
-export function createDebouncedPreview(
-  debounceMs: number = 100
-): {
-  update: (text: string, targetLanguage: string) => Promise<string>;
-  cancel: () => void;
-} {
-  let timeoutId: NodeJS.Timeout | null = null;
+export function createDebouncedPreview(debounceMs: number = 75): DebouncedPreviewHandler {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let lastText = '';
-  let currentPromise: Promise<string> | null = null;
+  let lastResult = '';
+  let pendingResolve: ((value: string) => void) | null = null;
 
   return {
     update: async (text: string, targetLanguage: string): Promise<string> => {
       const trimmed = text.trim();
       
-      // If same as last, return cached
-      if (trimmed === lastText && currentPromise) {
-        return currentPromise;
+      // If empty, return empty
+      if (!trimmed) {
+        lastText = '';
+        lastResult = '';
+        return '';
+      }
+      
+      // If same as last, return cached result
+      if (trimmed === lastText && lastResult) {
+        return lastResult;
       }
 
       // Cancel previous timeout
       if (timeoutId) {
         clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      // Cancel previous pending resolve
+      if (pendingResolve) {
+        pendingResolve(trimmed);
+        pendingResolve = null;
       }
 
       return new Promise((resolve) => {
+        pendingResolve = resolve;
+        
         timeoutId = setTimeout(async () => {
           lastText = trimmed;
           
-          if (!trimmed) {
-            resolve('');
-            return;
-          }
-
           try {
+            // Quick check if target is Latin script
+            if (isLatinScriptLanguage(targetLanguage)) {
+              lastResult = trimmed;
+              resolve(trimmed);
+              return;
+            }
+            
+            // Check if text is already in native script
+            if (!isLatinText(trimmed)) {
+              lastResult = normalizeUnicode(trimmed);
+              resolve(lastResult);
+              return;
+            }
+            
             const result = await transliterateToNative(trimmed, targetLanguage);
+            lastResult = result.text;
             resolve(result.text);
           } catch {
+            lastResult = trimmed;
             resolve(trimmed);
+          } finally {
+            pendingResolve = null;
           }
         }, debounceMs);
       });
@@ -340,8 +427,12 @@ export function createDebouncedPreview(
         clearTimeout(timeoutId);
         timeoutId = null;
       }
+      if (pendingResolve) {
+        pendingResolve(lastText);
+        pendingResolve = null;
+      }
       lastText = '';
-      currentPromise = null;
+      lastResult = '';
     },
   };
 }
@@ -354,6 +445,15 @@ const LATIN_SCRIPT_LANGUAGES = new Set([
   'english', 'en', 'spanish', 'es', 'french', 'fr', 'german', 'de',
   'italian', 'it', 'portuguese', 'pt', 'dutch', 'nl', 'polish', 'pl',
   'turkish', 'tr', 'vietnamese', 'vi', 'indonesian', 'id', 'malay', 'ms',
+  'tagalog', 'tl', 'swahili', 'sw', 'javanese', 'jv', 'cebuano', 'ceb',
+  'romanian', 'ro', 'czech', 'cs', 'hungarian', 'hu', 'swedish', 'sv',
+  'danish', 'da', 'finnish', 'fi', 'norwegian', 'no', 'croatian', 'hr',
+  'slovak', 'sk', 'slovenian', 'sl', 'latvian', 'lv', 'lithuanian', 'lt',
+  'estonian', 'et', 'bosnian', 'bs', 'albanian', 'sq', 'icelandic', 'is',
+  'irish', 'ga', 'welsh', 'cy', 'basque', 'eu', 'catalan', 'ca',
+  'galician', 'gl', 'maltese', 'mt', 'afrikaans', 'af', 'yoruba', 'yo',
+  'igbo', 'ig', 'hausa', 'ha', 'zulu', 'zu', 'xhosa', 'xh', 'somali', 'so',
+  'uzbek', 'uz', 'turkmen', 'tk',
 ]);
 
 /**
@@ -365,11 +465,12 @@ export function isLatinScriptLanguage(language: string): boolean {
 
 /**
  * Check if text is primarily Latin (sync)
+ * Fixes: Extended Latin characters support
  */
 export function isLatinText(text: string): boolean {
   const cleaned = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
   if (!cleaned) return true;
-  const latinChars = cleaned.match(/[a-zA-Z]/g);
+  const latinChars = cleaned.match(/[a-zA-Z\u00C0-\u024F]/g);
   return latinChars !== null && (latinChars.length / cleaned.length) > 0.7;
 }
 
@@ -384,6 +485,7 @@ export function isSameLanguage(lang1: string, lang2: string): boolean {
 
 /**
  * Normalize Unicode to NFC (sync)
+ * Fixes: Combining marks render incorrectly
  */
 export function normalizeUnicode(text: string): string {
   try {
@@ -391,6 +493,39 @@ export function normalizeUnicode(text: string): string {
   } catch {
     return text;
   }
+}
+
+/**
+ * Sync language detection (for quick UI checks)
+ */
+export function detectLanguageSync(text: string): { language: string; script: string; isLatin: boolean } {
+  const trimmed = text.trim();
+  if (!trimmed) return { language: 'english', script: 'Latin', isLatin: true };
+  
+  // Quick script patterns
+  const patterns = [
+    { regex: /[\u0900-\u097F]/, language: 'hindi', script: 'Devanagari' },
+    { regex: /[\u0980-\u09FF]/, language: 'bengali', script: 'Bengali' },
+    { regex: /[\u0B80-\u0BFF]/, language: 'tamil', script: 'Tamil' },
+    { regex: /[\u0C00-\u0C7F]/, language: 'telugu', script: 'Telugu' },
+    { regex: /[\u0C80-\u0CFF]/, language: 'kannada', script: 'Kannada' },
+    { regex: /[\u0D00-\u0D7F]/, language: 'malayalam', script: 'Malayalam' },
+    { regex: /[\u0A80-\u0AFF]/, language: 'gujarati', script: 'Gujarati' },
+    { regex: /[\u0A00-\u0A7F]/, language: 'punjabi', script: 'Gurmukhi' },
+    { regex: /[\u0600-\u06FF]/, language: 'arabic', script: 'Arabic' },
+    { regex: /[\u0400-\u04FF]/, language: 'russian', script: 'Cyrillic' },
+    { regex: /[\u4E00-\u9FFF]/, language: 'chinese', script: 'Han' },
+    { regex: /[\uAC00-\uD7AF]/, language: 'korean', script: 'Hangul' },
+    { regex: /[\u0E00-\u0E7F]/, language: 'thai', script: 'Thai' },
+  ];
+  
+  for (const { regex, language, script } of patterns) {
+    if (regex.test(trimmed)) {
+      return { language, script, isLatin: false };
+    }
+  }
+  
+  return { language: 'english', script: 'Latin', isLatin: true };
 }
 
 // ============================================================
@@ -402,11 +537,20 @@ export function normalizeUnicode(text: string): string {
  */
 export function terminateWorker(): void {
   if (worker) {
+    // Clear all pending messages
+    pendingMessages.forEach((pending, id) => {
+      clearTimeout(pending.timeout);
+      pending.reject(new Error('Worker terminated'));
+    });
+    pendingMessages.clear();
+    
     worker.terminate();
     worker = null;
     isWorkerReady = false;
     isWorkerLoading = false;
-    pendingMessages.clear();
+    workerLoadProgress = 0;
+    workerError = null;
+    messageIdCounter = 0;
   }
 }
 
