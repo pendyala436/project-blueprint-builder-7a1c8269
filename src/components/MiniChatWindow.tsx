@@ -41,6 +41,7 @@ import {
   isReady as isTranslatorReady,
   initWorker,
   normalizeUnicode,
+  spellCorrectForChat,
 } from "@/lib/translation";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
@@ -315,6 +316,7 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language (WEB WORKER, non-blocking)
+  // SPELL CORRECTION: Applied before translation for better accuracy
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -331,21 +333,28 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Use worker-based translator for non-blocking translation
-      // Translate from partner's language to current user's language
-      const result = await translate(text, partnerLanguage, currentUserLanguage);
+      // STEP 1: Apply spell correction before translation (better translation accuracy)
+      const correctedText = spellCorrectForChat(text, partnerLanguage);
+
+      // STEP 2: Use worker-based translator for non-blocking translation
+      const result = await translate(correctedText, partnerLanguage, currentUserLanguage);
+      
+      // STEP 3: Apply spell correction to translated result (receiver's language)
+      const finalText = spellCorrectForChat(result.text, currentUserLanguage);
       
       console.log('[MiniChatWindow] Translation:', {
         original: text,
+        corrected: correctedText,
         translated: result.text,
+        final: finalText,
         from: partnerLanguage,
         to: currentUserLanguage,
         success: result.success
       });
 
       return {
-        translatedMessage: normalizeUnicode(result.text),
-        isTranslated: result.success && result.text !== text,
+        translatedMessage: normalizeUnicode(finalText),
+        isTranslated: result.success && finalText !== text,
         detectedLanguage: partnerLanguage
       };
     } catch (error) {
@@ -548,13 +557,17 @@ const MiniChatWindow = ({
       try {
         let processedMessage = messageText;
         
+        // SPELL CORRECTION: Apply before conversion/sending
+        const correctedText = spellCorrectForChat(messageText, currentUserLanguage);
+        
         // If we have preview text, use it; otherwise convert in background
         if (previewText) {
-          processedMessage = previewText;
+          // Also spell-correct the preview
+          processedMessage = spellCorrectForChat(previewText, currentUserLanguage);
         } else if (shouldConvert) {
           try {
-            const converted = await transliterateToNative(messageText, currentUserLanguage);
-            processedMessage = converted.text || messageText;
+            const converted = await transliterateToNative(correctedText, currentUserLanguage);
+            processedMessage = converted.text || correctedText;
             console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
             
             // Update optimistic message with converted text
@@ -564,6 +577,8 @@ const MiniChatWindow = ({
           } catch (err) {
             console.error('[MiniChatWindow] Script conversion error:', err);
           }
+        } else {
+          processedMessage = correctedText;
         }
         
         const { error } = await supabase
@@ -909,12 +924,14 @@ const MiniChatWindow = ({
                   if (transliterationEnabled && needsScriptConversion && isLatinText(val) && val.trim()) {
                     setLivePreview(prev => ({ ...prev, isLoading: true }));
                     previewTimeoutRef.current = setTimeout(() => {
-                      // BACKGROUND: Convert script without blocking typing
+                      // BACKGROUND: Spell correct + convert script without blocking typing
                       runInBackground(async () => {
                         try {
-                          const result = await transliterateToNative(val, currentUserLanguage);
+                          // SPELL CORRECTION: Apply before transliteration
+                          const correctedVal = spellCorrectForChat(val, currentUserLanguage);
+                          const result = await transliterateToNative(correctedVal, currentUserLanguage);
                           // Only update if input hasn't changed
-                          setLivePreview({ text: result.text || val, isLoading: false });
+                          setLivePreview({ text: result.text || correctedVal, isLoading: false });
                         } catch {
                           setLivePreview({ text: '', isLoading: false });
                         }
