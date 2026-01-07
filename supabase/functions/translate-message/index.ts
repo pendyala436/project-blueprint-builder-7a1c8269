@@ -1178,53 +1178,124 @@ serve(async (req) => {
     const targetScript = getTargetScriptFromLanguage(toLang);
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // ENGLISH PIVOT ARCHITECTURE FOR ALL 900+ LANGUAGES
+    // SEMANTIC TRANSLATION + TRANSLITERATION VIA LIBRE-TRANSLATE
     // ═══════════════════════════════════════════════════════════════════════════
-    // Step 1: ANY SOURCE → ENGLISH (Latin script)
-    // Step 2: ENGLISH → ANY TARGET (Target script)
-    // This reduces 810,000 combinations to just 1,800 mappings (900×2)
+    // Step 1: Source → English (SEMANTIC translation, not just script)
+    // Step 2: English → Target (SEMANTIC translation to target language)
     // ═══════════════════════════════════════════════════════════════════════════
     
-// STEP 1: Source → English (always convert to Latin/English first)
-    const inEnglish = sourceScript !== 'latin' 
+    // Call libre-translate for REAL semantic translation
+    async function callLibreTranslate(text: string, source: string, target: string): Promise<string> {
+      try {
+        const url = `${supabaseUrl}/functions/v1/libre-translate/translate`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({ q: text, source, target }),
+        });
+        
+        if (!response.ok) {
+          console.error('[LibreTranslate] Failed:', response.status);
+          return text;
+        }
+        
+        const result = await response.json();
+        console.log(`[LibreTranslate] ${source} → ${target}: "${text}" → "${result.translatedText}"`);
+        return result.translatedText || text;
+      } catch (error) {
+        console.error('[LibreTranslate] Error:', error);
+        return text;
+      }
+    }
+    
+    // Map language codes for libre-translate
+    function normalizeToCode(lang: string): string {
+      const langMap: Record<string, string> = {
+        'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
+        'kannada': 'kn', 'malayalam': 'ml', 'bengali': 'bn', 'gujarati': 'gu',
+        'marathi': 'mr', 'punjabi': 'pa', 'odia': 'or', 'urdu': 'ur',
+        'german': 'de', 'french': 'fr', 'spanish': 'es', 'italian': 'it',
+        'portuguese': 'pt', 'russian': 'ru', 'chinese': 'zh', 'japanese': 'ja',
+        'korean': 'ko', 'arabic': 'ar', 'turkish': 'tr', 'dutch': 'nl',
+        'polish': 'pl', 'thai': 'th', 'vietnamese': 'vi', 'indonesian': 'id',
+        'malay': 'ms', 'swahili': 'sw', 'hebrew': 'he', 'greek': 'el',
+      };
+      if (lang.length === 2) return lang;
+      return langMap[lang.toLowerCase()] || lang;
+    }
+    
+    // Detect language from script when auto-detecting
+    function detectLangFromScript(script: string): string {
+      const scriptToLang: Record<string, string> = {
+        'devanagari': 'hi', 'telugu': 'te', 'tamil': 'ta', 'kannada': 'kn',
+        'malayalam': 'ml', 'bengali': 'bn', 'gujarati': 'gu', 'gurmukhi': 'pa',
+        'oriya': 'or', 'arabic': 'ar', 'hebrew': 'he', 'cyrillic': 'ru',
+        'greek': 'el', 'thai': 'th', 'han': 'zh', 'hangul': 'ko',
+        'hiragana': 'ja', 'katakana': 'ja', 'latin': 'en'
+      };
+      return scriptToLang[script] || 'en';
+    }
+    
+    const sourceCode = normalizeToCode(fromLang === 'auto' ? detectLangFromScript(sourceScript) : fromLang);
+    const targetCode = normalizeToCode(toLang);
+    
+    console.log(`[TranslateMessage] Starting semantic translation: ${sourceCode} → ${targetCode}`);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SEMANTIC TRANSLATION FLOW (Real meaning, not just phonetics)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // STEP 1: Source → English (semantic meaning)
+    let semanticEnglish = inputText;
+    if (sourceCode !== 'en') {
+      semanticEnglish = await callLibreTranslate(inputText, sourceCode, 'en');
+    }
+    
+    // STEP 2: English → Target (semantic meaning)
+    let semanticTarget = semanticEnglish;
+    if (targetCode !== 'en') {
+      semanticTarget = await callLibreTranslate(semanticEnglish, 'en', targetCode);
+    }
+    
+    // Also keep transliterated versions for display in native scripts
+    const transliteratedToLatin = sourceScript !== 'latin' 
       ? transliterateToLatin(inputText)
       : inputText;
     
-    // STEP 2: English → Target (convert English/Latin to target script)
-    // IMPORTANT: Always attempt conversion when target is non-Latin
-    let inTargetScript = inEnglish;
+    let transliteratedToTarget = semanticTarget;
     if (targetScript !== 'latin') {
-      const converted = transliterateFromLatin(inEnglish, targetScript);
-      // Only use converted result if it actually changed (has non-Latin chars)
+      const converted = transliterateFromLatin(semanticTarget, targetScript);
       const convertedScript = detectScriptFromText(converted);
-      if (convertedScript === targetScript || converted !== inEnglish) {
-        inTargetScript = converted;
-      } else {
-        // Force phonetic conversion even for Latin input
-        inTargetScript = forcePhoneticConversion(inEnglish, targetScript);
+      if (convertedScript === targetScript || converted !== semanticTarget) {
+        transliteratedToTarget = converted;
       }
     }
     
-    // REVERSE for bidirectional chat:
-    // If receiver replies in target language, convert back through English
-    const targetToEnglish = targetScript !== 'latin'
-      ? transliterateToLatin(inTargetScript)
-      : inTargetScript;
+    // Reverse translation: Target → English → Source
+    let reverseToEnglish = semanticTarget;
+    if (targetCode !== 'en') {
+      reverseToEnglish = await callLibreTranslate(semanticTarget, targetCode, 'en');
+    }
     
-    // COMPLETE REVERSE: English → Source (for target user's reply to reach source user)
+    let reverseToSource = reverseToEnglish;
+    if (sourceCode !== 'en') {
+      reverseToSource = await callLibreTranslate(reverseToEnglish, 'en', sourceCode);
+    }
+    
+    // Also transliterate reverse to source script
     const sourceScriptName = getTargetScriptFromLanguage(fromLang);
-    let englishToSource = inEnglish;
     if (sourceScriptName !== 'latin') {
-      const converted = transliterateFromLatin(inEnglish, sourceScriptName);
+      const converted = transliterateFromLatin(reverseToSource, sourceScriptName);
       const convertedScript = detectScriptFromText(converted);
-      if (convertedScript === sourceScriptName || converted !== inEnglish) {
-        englishToSource = converted;
-      } else {
-        englishToSource = forcePhoneticConversion(inEnglish, sourceScriptName);
+      if (convertedScript === sourceScriptName || converted !== reverseToSource) {
+        reverseToSource = converted;
       }
     }
     
-    // Full response with English pivot architecture
+    // Full response with SEMANTIC translation via English pivot
     const response: Record<string, any> = {
       success: true,
       
@@ -1233,25 +1304,25 @@ serve(async (req) => {
       originalScript: sourceScript,
       
       // ═══════════════════════════════════════════════════════════════════
-      // ENGLISH PIVOT TRANSLATIONS
+      // SEMANTIC TRANSLATIONS (Real meaning, not just phonetics)
       // ═══════════════════════════════════════════════════════════════════
       
-      // Step 1 Result: Source → English
-      sourceToEnglish: inEnglish,
-      inEnglish: inEnglish,
-      inLatin: inEnglish,
+      // Step 1 Result: Source → English (MEANING)
+      sourceToEnglish: semanticEnglish,
+      inEnglish: semanticEnglish,
+      inLatin: semanticEnglish,
       
-      // Step 2 Result: English → Target  
-      englishToTarget: inTargetScript,
-      inTargetScript: inTargetScript,
-      translated: inTargetScript,
-      translatedText: inTargetScript,
+      // Step 2 Result: English → Target (MEANING)
+      englishToTarget: semanticTarget,
+      inTargetScript: transliteratedToTarget,
+      translated: semanticTarget,
+      translatedText: semanticTarget,
       
       // Reverse: Target → English (for replies)
-      targetToEnglish: targetToEnglish,
+      targetToEnglish: reverseToEnglish,
       
       // Complete Reverse: English → Source (for target user replying back)
-      englishToSource: englishToSource,
+      englishToSource: reverseToSource,
       
       // ═══════════════════════════════════════════════════════════════════
       // BIDIRECTIONAL CHAT FIELDS (Source ↔ English ↔ Target)
@@ -1263,37 +1334,37 @@ serve(async (req) => {
         
         // PIVOT: Always through English
         pivot: 'english',
-        pivotText: inEnglish,
+        pivotText: semanticEnglish,
         
         // ═══════════════════════════════════════════════════════════════
-        // FORWARD PATH: Source → English → Target
+        // FORWARD PATH: Source → English → Target (SEMANTIC)
         // ═══════════════════════════════════════════════════════════════
-        sourceToEnglish: inEnglish,
-        englishToTarget: inTargetScript,
+        sourceToEnglish: semanticEnglish,
+        englishToTarget: semanticTarget,
         
         // ═══════════════════════════════════════════════════════════════
         // REVERSE PATH: Target → English → Source  
         // ═══════════════════════════════════════════════════════════════
-        targetToEnglish: targetToEnglish,
-        englishToSource: englishToSource,
+        targetToEnglish: reverseToEnglish,
+        englishToSource: reverseToSource,
         
         // For English/Latin speaker to read
-        forEnglishReader: inEnglish,
+        forEnglishReader: semanticEnglish,
         
-        // For source language speaker to read
-        forSourceReader: englishToSource,
+        // For source language speaker to read (in their script)
+        forSourceReader: reverseToSource,
         
-        // For target language speaker to read
-        forTargetReader: inTargetScript,
+        // For target language speaker to read (in their script)
+        forTargetReader: transliteratedToTarget,
         
         // Reverse communication paths
-        reverseToEnglish: targetToEnglish,
-        reverseToSource: englishToSource
+        reverseToEnglish: reverseToEnglish,
+        reverseToSource: reverseToSource
       },
       
       // Metadata
-      sourceLang: fromLang,
-      targetLang: toLang,
+      sourceLang: sourceCode,
+      targetLang: targetCode,
       sourceScript: sourceScript,
       targetScript: targetScript,
       sourceScriptName: sourceScriptName,
@@ -1305,14 +1376,13 @@ serve(async (req) => {
       languageSource: profileSourceLang ? 'profile' : (sourceLang || source_language ? 'explicit' : 'auto-detected'),
       
       // Architecture info
-      method: 'english_pivot_transliteration',
-      architecture: 'source ↔ english ↔ target',
-      supportedLanguages: 900,
-      totalCombinations: '810,000+',
-      actualMappings: '1,800 (900×2 via English pivot)'
+      method: 'semantic_translation_via_libre_translate',
+      architecture: 'source ↔ english ↔ target (SEMANTIC)',
+      translationType: 'MEANING (not just phonetics)',
+      supportedLanguages: 50,
     };
     
-    console.log(`[English Pivot] "${inputText.substring(0, 15)}..." [${sourceScript}] → English: "${inEnglish.substring(0, 15)}..." → [${targetScript}]: "${inTargetScript.substring(0, 15)}..." | Reverse: "${englishToSource.substring(0, 15)}..."`);
+    console.log(`[Semantic Translation] "${inputText.substring(0, 15)}..." [${sourceCode}] → English: "${semanticEnglish.substring(0, 20)}..." → [${targetCode}]: "${semanticTarget.substring(0, 20)}..."`);
     
     return new Response(
       JSON.stringify(response),
