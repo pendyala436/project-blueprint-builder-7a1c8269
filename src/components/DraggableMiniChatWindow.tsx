@@ -69,6 +69,7 @@ interface Message {
   message: string;
   translatedMessage?: string;
   isTranslated?: boolean;
+  isTranslating?: boolean;
   detectedLanguage?: string;
   createdAt: string;
 }
@@ -839,6 +840,8 @@ const DraggableMiniChatWindow = ({
           // STEP 1: IMMEDIATE - Add message to UI instantly (no translation yet)
           // Auto-detect language from message content
           const detected = autoDetectLanguage(newMsg.message);
+          const isPartnerMessage = newMsg.sender_id !== currentUserId;
+          const needsTranslationCheck = isPartnerMessage && !isSameLanguage(detected.language, currentUserLanguage);
           
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -848,6 +851,7 @@ const DraggableMiniChatWindow = ({
               message: newMsg.message,
               translatedMessage: undefined, // Will be filled by background
               isTranslated: false,
+              isTranslating: needsTranslationCheck, // Show loading for partner messages needing translation
               detectedLanguage: detected.language,
               createdAt: newMsg.created_at
             }];
@@ -895,21 +899,30 @@ const DraggableMiniChatWindow = ({
               
               convertToNativeScript(correctedMsg, targetLanguage)
                 .then(result => {
-                  if (result.isTranslated && result.text) {
-                    // DO NOT apply spell correction to native script result
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === newMsg.id 
-                        ? { 
-                            ...msg, 
-                            translatedMessage: result.text, 
-                            isTranslated: true,
-                            detectedLanguage: sourceLanguage
-                          }
-                        : msg
-                    ));
-                  }
+                  // DO NOT apply spell correction to native script result
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === newMsg.id 
+                      ? { 
+                          ...msg, 
+                          translatedMessage: result.isTranslated ? result.text : undefined, 
+                          isTranslated: result.isTranslated,
+                          isTranslating: false, // Translation complete
+                          detectedLanguage: sourceLanguage
+                        }
+                      : msg
+                  ));
                 })
-                .catch(() => {}); // Non-blocking, fail silently
+                .catch(() => {
+                  // Translation failed - mark as complete
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
+                  ));
+                });
+            } else {
+              // Same language, same script - no processing needed
+              setMessages(prev => prev.map(msg => 
+                msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
+              ));
             }
           } else {
             // DIFFERENT LANGUAGE: Translate via Edge Function
@@ -946,12 +959,18 @@ const DraggableMiniChatWindow = ({
                         ...msg,
                         translatedMessage: finalText,
                         isTranslated: result.isTranslated,
+                        isTranslating: false, // Translation complete
                         detectedLanguage: result.detectedLanguage || sourceLanguage
                       }
                     : msg
                 ));
               })
-              .catch(() => {}); // Non-blocking
+              .catch(() => {
+                // Translation failed - mark as complete
+                setMessages(prev => prev.map(msg => 
+                  msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
+                ));
+              });
           }
         }
       )
@@ -1523,13 +1542,15 @@ const DraggableMiniChatWindow = ({
                       ) : msg.senderId === currentUserId ? (
                         // OWN MESSAGE: Show sender's native script (already converted)
                         <p>{msg.message}</p>
-                      ) : msg.translatedMessage && msg.isTranslated ? (
-                        // PARTNER MESSAGE: Show only translated text in receiver's native language
-                        // No original text shown - cleaner UX
-                        <p>{msg.translatedMessage}</p>
+                      ) : msg.isTranslating ? (
+                        // PARTNER MESSAGE: Translation in progress - show loading indicator
+                        <div className="flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="opacity-70 italic">{msg.message}</span>
+                        </div>
                       ) : (
-                        // PARTNER MESSAGE: Same language, already in native script
-                        <p>{msg.message}</p>
+                        // PARTNER MESSAGE: Show translated if available, else original
+                        <p>{msg.translatedMessage || msg.message}</p>
                       )}
                     </div>
                   </div>
