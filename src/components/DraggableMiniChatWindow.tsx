@@ -56,6 +56,7 @@ import {
   autoDetectLanguageSync,
   processMessageForChat,
 } from "@/lib/translation/async-translator";
+import { spellCorrectForChat } from "@/lib/translation/phonetic-symspell";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -612,6 +613,7 @@ const DraggableMiniChatWindow = ({
 
   // NON-BLOCKING: Auto-translate partner's messages using async translator
   // Supports 300+ languages, massive scale, background processing
+  // SPELL CORRECTION: Applied before and after translation
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -628,10 +630,17 @@ const DraggableMiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Use async translator for non-blocking translation
-      const result = await translateAsync(text, partnerLanguage, currentUserLanguage, 'normal');
+      // STEP 1: Apply spell correction to source text (partner's language)
+      const correctedText = spellCorrectForChat(text, partnerLanguage);
+
+      // STEP 2: Use async translator for non-blocking translation
+      const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage, 'normal');
+      
+      // STEP 3: Apply spell correction to translated result (receiver's language)
+      const finalText = spellCorrectForChat(result.text, currentUserLanguage);
+      
       return {
-        translatedMessage: result.text,
+        translatedMessage: finalText,
         isTranslated: result.isTranslated,
         detectedLanguage: result.sourceLanguage || partnerLanguage
       };
@@ -979,11 +988,16 @@ const DraggableMiniChatWindow = ({
     try {
       let finalSenderMessage = senderViewMessage;
       
+      // SPELL CORRECTION: Apply before conversion/sending
+      const correctedText = spellCorrectForChat(senderViewMessage, currentUserLanguage);
+      
       // If no preview but transliteration enabled and needs conversion
       // Process the FULL message text without any truncation
       if (!hasValidPreview && transliterationEnabled && needsScriptConversion && asyncIsLatinText(messageText)) {
         try {
-          const converted = await convertToNativeScriptAsync(messageText, currentUserLanguage);
+          // Apply spell correction before native script conversion
+          const correctedInput = spellCorrectForChat(messageText, currentUserLanguage);
+          const converted = await convertToNativeScriptAsync(correctedInput, currentUserLanguage);
           if (converted.isTranslated && converted.text) {
             finalSenderMessage = converted.text;
             // Update optimistic message with FULL converted text
@@ -993,8 +1007,11 @@ const DraggableMiniChatWindow = ({
           }
         } catch (err) {
           console.error('[DraggableMiniChatWindow] Script conversion error:', err);
-          // On error, still use the original message - never lose data
+          // On error, still use the corrected message - never lose data
+          finalSenderMessage = correctedText;
         }
+      } else {
+        finalSenderMessage = correctedText;
       }
       
       // BACKGROUND: Send the FULL message to database
@@ -1596,7 +1613,10 @@ const DraggableMiniChatWindow = ({
                       
                       // Use requestIdleCallback for true non-blocking background work
                       const runPreview = () => {
-                        convertToNativeScriptAsync(capturedValue, currentUserLanguage)
+                        // SPELL CORRECTION: Apply before native script conversion
+                        const correctedValue = spellCorrectForChat(capturedValue, currentUserLanguage);
+                        
+                        convertToNativeScriptAsync(correctedValue, currentUserLanguage)
                           .then(result => {
                             // Only update if result is valid and meaningful
                             if (result.isTranslated && result.text && result.text !== capturedValue) {
