@@ -350,18 +350,34 @@ class TranslationQueue {
   private workerInitialized = false;
 
   private async ensureWorkerReady(): Promise<boolean> {
+    console.log('[TranslationQueue] ensureWorkerReady:', {
+      workerInitialized: this.workerInitialized,
+      isWorkerReady: isWorkerReady()
+    });
+    
     if (this.workerInitialized && isWorkerReady()) {
       return true;
     }
     try {
+      console.log('[TranslationQueue] Initializing worker...');
       this.workerInitialized = await initWorker();
+      console.log('[TranslationQueue] Worker initialized:', this.workerInitialized);
       return this.workerInitialized;
-    } catch {
+    } catch (err) {
+      console.error('[TranslationQueue] Worker init failed:', err);
       return false;
     }
   }
 
   async add(task: Omit<TranslationTask, 'id' | 'timestamp' | 'resolve' | 'reject'>): Promise<AsyncTranslationResult> {
+    console.log('[TranslationQueue] Adding task:', {
+      text: task.text.substring(0, 30),
+      source: task.sourceLanguage,
+      target: task.targetLanguage,
+      priority: task.priority,
+      queueLength: this.queue.length
+    });
+    
     return new Promise((resolve, reject) => {
       const fullTask: TranslationTask = {
         ...task,
@@ -383,17 +399,26 @@ class TranslationQueue {
   }
 
   private async processQueue() {
-    if (this.isProcessing || this.activeCount >= this.concurrentLimit) return;
+    if (this.isProcessing || this.activeCount >= this.concurrentLimit) {
+      console.log('[TranslationQueue] Skipping processQueue:', {
+        isProcessing: this.isProcessing,
+        activeCount: this.activeCount,
+        concurrentLimit: this.concurrentLimit
+      });
+      return;
+    }
     
     this.isProcessing = true;
     
     // Ensure worker is ready
-    await this.ensureWorkerReady();
+    const workerReady = await this.ensureWorkerReady();
+    console.log('[TranslationQueue] Worker ready for processing:', workerReady);
     
     while (this.queue.length > 0 && this.activeCount < this.concurrentLimit) {
       const task = this.queue.shift();
       if (!task) continue;
       
+      console.log('[TranslationQueue] Processing task:', task.id);
       this.activeCount++;
       
       // Process in background - don't await
@@ -411,13 +436,20 @@ class TranslationQueue {
 
   private async processTask(task: TranslationTask): Promise<void> {
     try {
+      console.log('[TranslationQueue] Calling translateViaBrowserWorker for task:', task.id);
       const result = await translateViaBrowserWorker(
         task.text,
         task.sourceLanguage,
         task.targetLanguage
       );
+      console.log('[TranslationQueue] Task completed:', {
+        taskId: task.id,
+        isTranslated: result.isTranslated,
+        resultText: result.text?.substring(0, 30)
+      });
       task.resolve(result);
     } catch (error) {
+      console.error('[TranslationQueue] Task failed:', task.id, error);
       task.reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -439,20 +471,34 @@ async function translateViaBrowserWorker(
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<AsyncTranslationResult> {
+  console.log('[AsyncTranslator] translateViaBrowserWorker called:', {
+    text: text.substring(0, 30),
+    sourceLanguage,
+    targetLanguage,
+    workerReady: isWorkerReady()
+  });
+  
   try {
     // Non-blocking worker check - if not ready, start init but queue for later
     if (!isWorkerReady()) {
+      console.log('[AsyncTranslator] Worker not ready, initiating and returning original');
       // Fire and forget init - let the queue handle retries
       initWorker().catch(() => {});
       // Return original for now - caller can retry
       return { text, originalText: text, isTranslated: false };
     }
 
+    console.log('[AsyncTranslator] Calling workerTranslate...');
     const result = await workerTranslate(
       text,
       normalizeLanguage(sourceLanguage),
       normalizeLanguage(targetLanguage)
     );
+    
+    console.log('[AsyncTranslator] workerTranslate result:', {
+      success: result.success,
+      resultText: result.text?.substring(0, 30)
+    });
 
     return {
       text: result.text || text,
@@ -541,15 +587,25 @@ export async function translateAsync(
   targetLanguage: string,
   priority: 'high' | 'normal' | 'low' = 'normal'
 ): Promise<AsyncTranslationResult> {
+  console.log('[AsyncTranslator] translateAsync called:', {
+    text: text.substring(0, 30),
+    sourceLanguage,
+    targetLanguage,
+    priority,
+    workerReady: isWorkerReady()
+  });
+  
   const trimmed = text.trim();
   
   // Empty text - instant return
   if (!trimmed) {
+    console.log('[AsyncTranslator] Empty text, returning');
     return { text, originalText: text, isTranslated: false };
   }
   
   // Same language - instant return
   if (isSameLanguage(sourceLanguage, targetLanguage)) {
+    console.log('[AsyncTranslator] Same language, skipping');
     return { text: trimmed, originalText: trimmed, isTranslated: false };
   }
   
@@ -557,16 +613,23 @@ export async function translateAsync(
   const cacheKey = getCacheKey(trimmed, sourceLanguage, targetLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    console.log('[AsyncTranslator] Cache hit');
+    console.log('[AsyncTranslator] Cache hit, returning cached');
     return cached;
   }
   
   // Queue for background processing
+  console.log('[AsyncTranslator] Queueing to translationQueue...');
   const result = await translationQueue.add({
     text: trimmed,
     sourceLanguage,
     targetLanguage,
     priority
+  });
+  
+  console.log('[AsyncTranslator] translationQueue returned:', {
+    original: trimmed.substring(0, 30),
+    translated: result.text?.substring(0, 30),
+    isTranslated: result.isTranslated
   });
   
   // Cache successful translations
@@ -661,8 +724,16 @@ export function translateInBackground(
   receiverLanguage: string,
   onComplete: (result: AsyncTranslationResult) => void
 ): void {
+  console.log('[AsyncTranslator] translateInBackground called:', {
+    text: text.substring(0, 30),
+    senderLanguage,
+    receiverLanguage,
+    workerReady: isWorkerReady()
+  });
+  
   // Same language - no translation needed, callback immediately
   if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    console.log('[AsyncTranslator] Same language, skipping translation');
     onComplete({ text, originalText: text, isTranslated: false });
     return;
   }
@@ -671,13 +742,20 @@ export function translateInBackground(
   const cacheKey = getCacheKey(text, senderLanguage, receiverLanguage);
   const cached = getFromCache(cacheKey);
   if (cached) {
+    console.log('[AsyncTranslator] Cache hit, returning cached translation');
     onComplete(cached);
     return;
   }
   
   // Queue translation in background
+  console.log('[AsyncTranslator] Queueing translation via translateAsync...');
   translateAsync(text, senderLanguage, receiverLanguage, 'normal')
     .then(result => {
+      console.log('[AsyncTranslator] translateAsync resolved:', {
+        original: text.substring(0, 30),
+        translated: result.text?.substring(0, 30),
+        isTranslated: result.isTranslated
+      });
       if (result.isTranslated) {
         setInCache(cacheKey, result);
       }
