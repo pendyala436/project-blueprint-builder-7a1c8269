@@ -843,6 +843,12 @@ const MiniChatWindow = ({
 
           {/* Input area - Mother tongue via Gboard, all processing in background */}
           <div className="p-1.5 border-t space-y-1">
+            {/* GBoard tip for better communication */}
+            {messages.length === 0 && (
+              <div className="px-2 py-1 bg-primary/10 rounded text-[9px] text-primary border border-primary/20">
+                💡 Tip: Use GBoard (Google Keyboard) & select your mother tongue for best communication
+              </div>
+            )}
             {/* Same language indicator */}
             {!needsTranslation && newMessage.trim() && (
               <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
