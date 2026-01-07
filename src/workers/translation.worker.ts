@@ -752,35 +752,43 @@ async function translateText(
     return { text, success: false, cached: false };
   }
 
+  // Get NLLB codes first
+  const srcCode = getNLLBCode(sourceLanguage);
+  const tgtCode = getNLLBCode(targetLanguage);
+
+  console.log('[Worker] translateText:', {
+    input: originalText.substring(0, 30),
+    sourceLanguage,
+    targetLanguage,
+    srcCode,
+    tgtCode
+  });
+
   // Same language - no translation
-  if (isSameLanguage(sourceLanguage, targetLanguage)) {
+  if (isSameLanguage(sourceLanguage, targetLanguage) || srcCode === tgtCode) {
     return { text: originalText, success: true, cached: false };
   }
 
   // Check cache
-  const cacheKey = `${sourceLanguage}|${targetLanguage}|${originalText}`;
+  const cacheKey = `${srcCode}|${tgtCode}|${originalText}`;
   const cached = translationCache.get(cacheKey);
   if (cached) {
+    console.log('[Worker] Cache hit for:', originalText.substring(0, 20));
     return { text: normalizeUnicode(cached), success: true, cached: true };
-  }
-
-  // Get NLLB codes
-  const srcCode = getNLLBCode(sourceLanguage);
-  const tgtCode = getNLLBCode(targetLanguage);
-
-  if (srcCode === tgtCode) {
-    return { text: originalText, success: true, cached: false };
   }
 
   try {
     const ready = await initModel();
     if (!ready || !translationPipeline) {
+      console.error('[Worker] Model not ready for translation');
       return { text: originalText, success: false, cached: false };
     }
 
-    // Chunk long text
-    const chunks = chunkText(originalText);
+    // Chunk long text for better translation quality
+    const chunks = chunkText(originalText, 150);
     const translatedChunks: string[] = [];
+    
+    console.log('[Worker] Translating', chunks.length, 'chunks from', srcCode, 'to', tgtCode);
     
     for (const chunk of chunks) {
       const result = await translationPipeline(chunk, {
@@ -796,6 +804,11 @@ async function translateText(
     }
 
     const translatedText = normalizeUnicode(translatedChunks.join(' '));
+
+    console.log('[Worker] Translation complete:', {
+      input: originalText.substring(0, 30),
+      output: translatedText.substring(0, 30)
+    });
 
     // Cache result
     if (translationCache.size >= MAX_CACHE_SIZE) {
@@ -1127,24 +1140,43 @@ async function processReceiverMessage(
     return { receiverView: text, wasTranslated: false };
   }
 
+  // Detect actual source language from text script
+  const detected = detectLanguageFromText(originalText);
+  
+  // Use detected language if text is in native script, otherwise use sender's language
+  const effectiveSource = detected.isLatin 
+    ? senderLanguage 
+    : detected.language; // Trust script detection for non-Latin text
+  
+  console.log('[Worker] processReceiverMessage:', {
+    originalText: originalText.substring(0, 50),
+    detected,
+    effectiveSource,
+    receiverLanguage,
+    senderLanguage
+  });
+
   // Same language - no translation needed
-  if (isSameLanguage(senderLanguage, receiverLanguage)) {
+  if (isSameLanguage(effectiveSource, receiverLanguage)) {
     // But if receiver's language is non-Latin and text is Latin, convert
-    if (!isLatinScriptLanguage(receiverLanguage) && isLatinText(originalText)) {
+    if (!isLatinScriptLanguage(receiverLanguage) && detected.isLatin) {
       const result = await transliterateToNative(originalText, receiverLanguage);
       return { receiverView: result.text, wasTranslated: false };
     }
     return { receiverView: originalText, wasTranslated: false };
   }
 
-  // Detect actual source language from text
-  const detected = detectLanguageFromText(originalText);
-  const effectiveSource = detected.isLatin 
-    ? senderLanguage 
-    : (detected.confidence > 0.7 ? detected.language : senderLanguage);
-
-  // Translate to receiver's language
+  // Translate from detected/sender language to receiver's language
   const result = await translateText(originalText, effectiveSource, receiverLanguage);
+  
+  console.log('[Worker] Translation result:', {
+    input: originalText.substring(0, 50),
+    output: result.text.substring(0, 50),
+    success: result.success,
+    from: effectiveSource,
+    to: receiverLanguage
+  });
+  
   return {
     receiverView: result.text,
     wasTranslated: result.success && result.text !== originalText,
