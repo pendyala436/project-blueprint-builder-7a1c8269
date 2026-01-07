@@ -727,10 +727,22 @@ function chunkText(text: string, maxChunkSize: number = 150): string[] {
 }
 
 /**
- * Chunk text for preview - smaller chunks for faster real-time response
+ * Chunk text for preview - optimized for FULL message preview
+ * Handles small to very large messages
  */
 function chunkTextForPreview(text: string): string[] {
-  return chunkText(text, 80); // Smaller chunks for faster preview
+  // For preview, use moderate chunk size to ensure FULL message is processed
+  // Smaller chunks = faster individual processing, but must process ALL chunks
+  return chunkText(text, 100);
+}
+
+/**
+ * Chunk text for transliteration - preserves FULL message
+ * Handles any message size from small to very large
+ */
+function chunkTextForTransliteration(text: string): string[] {
+  // For transliteration, can use larger chunks since it's faster
+  return chunkText(text, 200);
 }
 
 // ============================================================
