@@ -668,6 +668,7 @@ serve(async (req) => {
     }
     
     // POST /chat-translate - Optimized for chat (bidirectional)
+    // Supports: Source ↔ English ↔ Target for multilingual chat
     if (req.method === 'POST' && path === 'chat-translate') {
       const { message, userLanguage, partnerLanguage } = await req.json();
       
@@ -679,29 +680,69 @@ serve(async (req) => {
       }
       
       const detectedLang = detectLanguage(message);
-      const userLang = userLanguage || detectedLang;
-      const partnerLang = partnerLanguage || 'en';
+      const sourceLang = userLanguage || detectedLang;
+      const targetLang = partnerLanguage || 'en';
       
-      // Translate message for the partner
-      const forPartner = userLang !== partnerLang 
-        ? translate(message, userLang, partnerLang)
+      // ==========================================
+      // FULL BIDIRECTIONAL TRANSLATION PATHS:
+      // 1. Source → English (for storage/moderation)
+      // 2. English → Target (if target is not English)
+      // 3. Source → Target (direct or via English pivot)
+      // 4. Target → English (reverse path)
+      // 5. English → Source (reverse path)
+      // ==========================================
+      
+      // Source → English
+      const sourceToEnglish = sourceLang !== 'en' 
+        ? translate(message, sourceLang, 'en')
         : message;
       
-      // Also provide English translation if neither language is English
-      const toEnglish = userLang !== 'en' 
-        ? translate(message, userLang, 'en')
+      // English → Target (if target is not English)
+      const englishToTarget = targetLang !== 'en'
+        ? translate(sourceToEnglish, 'en', targetLang)
+        : sourceToEnglish;
+      
+      // Direct Source → Target translation
+      const forPartner = sourceLang !== targetLang 
+        ? translate(message, sourceLang, targetLang)
         : message;
       
-      console.log(`Chat translation: ${userLang} -> ${partnerLang}`);
+      // Target → English (for reverse direction chat)
+      const targetToEnglish = targetLang !== 'en'
+        ? translate(forPartner, targetLang, 'en')
+        : forPartner;
+      
+      // English → Source (for reverse direction)
+      const englishToSource = sourceLang !== 'en'
+        ? translate(sourceToEnglish, 'en', sourceLang)
+        : sourceToEnglish;
+      
+      console.log(`Chat translation: ${sourceLang} ↔ en ↔ ${targetLang}`);
+      console.log(`Paths: source→en: "${sourceToEnglish}", en→target: "${englishToTarget}"`);
       
       return new Response(
         JSON.stringify({
+          // Original message
           original: message,
-          forPartner,
-          toEnglish,
+          
+          // Primary translations
+          forPartner,                    // Translated for partner's language
+          toEnglish: sourceToEnglish,    // Source → English
+          
+          // Full bidirectional paths
+          sourceToEnglish,               // Source language → English
+          englishToTarget,               // English → Target language
+          targetToEnglish,               // Target language → English
+          englishToSource,               // English → Source language
+          
+          // Language metadata
           detectedLanguage: detectedLang,
-          userLanguage: userLang,
-          partnerLanguage: partnerLang
+          sourceLanguage: sourceLang,
+          targetLanguage: targetLang,
+          
+          // Language info
+          sourceLanguageInfo: SUPPORTED_LANGUAGES[sourceLang] || { name: sourceLang, nativeName: sourceLang },
+          targetLanguageInfo: SUPPORTED_LANGUAGES[targetLang] || { name: targetLang, nativeName: targetLang }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
