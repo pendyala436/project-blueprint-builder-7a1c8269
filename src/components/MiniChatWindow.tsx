@@ -110,6 +110,15 @@ const MiniChatWindow = ({
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
   const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
 
+  // Background task queue for non-blocking operations
+  const backgroundTasksRef = useRef<Set<Promise<void>>>(new Set());
+  const runInBackground = useCallback((task: () => Promise<void>) => {
+    const promise = task().finally(() => {
+      backgroundTasksRef.current.delete(promise);
+    });
+    backgroundTasksRef.current.add(promise);
+  }, []);
+
   // Real-time typing indicator with translation
   const {
     sendTypingIndicator,
@@ -305,6 +314,7 @@ const MiniChatWindow = ({
     }
   }, [partnerLanguage, currentUserLanguage]);
 
+  // NON-BLOCKING: Load messages with background translation
   const loadMessages = async () => {
     const { data } = await supabase
       .from("chat_messages")
@@ -314,26 +324,40 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      // Translate ALL messages to current user's language
-      const translatedMessages = await Promise.all(
-        data.map(async (m) => {
-          // Translate to current user's language
-          const translation = await translateMessage(m.message);
-          return {
-            id: m.id,
-            senderId: m.sender_id,
-            message: m.message, // Original message (in sender's language)
-            translatedMessage: translation.translatedMessage, // In current user's language
-            isTranslated: translation.isTranslated,
-            detectedLanguage: translation.detectedLanguage,
-            createdAt: m.created_at
-          };
-        })
-      );
-      setMessages(translatedMessages);
+      // IMMEDIATE: Show messages first without translation
+      const initialMessages = data.map((m) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        message: m.message,
+        translatedMessage: undefined, // Will be filled by background task
+        isTranslated: false,
+        detectedLanguage: undefined,
+        createdAt: m.created_at
+      }));
+      setMessages(initialMessages);
+
+      // BACKGROUND: Translate all messages without blocking UI
+      runInBackground(async () => {
+        const translatedMessages = await Promise.all(
+          data.map(async (m) => {
+            const translation = await translateMessage(m.message);
+            return {
+              id: m.id,
+              senderId: m.sender_id,
+              message: m.message,
+              translatedMessage: translation.translatedMessage,
+              isTranslated: translation.isTranslated,
+              detectedLanguage: translation.detectedLanguage,
+              createdAt: m.created_at
+            };
+          })
+        );
+        setMessages(translatedMessages);
+      });
     }
   };
 
+  // NON-BLOCKING: Subscribe to new messages with background translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`mini-chat-${chatId}`)
@@ -345,21 +369,29 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        async (payload: any) => {
+        (payload: any) => {
           const newMsg = payload.new;
           
-          // Translate message for display
-          const translation = await translateMessage(newMsg.message);
-          
+          // IMMEDIATE: Replace temp message or add new one (non-blocking)
           setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, {
+            // Check if this message already exists (real or temp)
+            const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
+            if (existingRealIndex >= 0) return prev;
+            
+            // Remove any temp messages from same sender (our optimistic messages)
+            // and add the real message
+            const filtered = prev.filter(m => 
+              !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id && 
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 5000)
+            );
+            
+            return [...filtered, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: translation.translatedMessage,
-              isTranslated: translation.isTranslated,
-              detectedLanguage: translation.detectedLanguage,
+              translatedMessage: undefined, // Will be filled by background
+              isTranslated: false,
+              detectedLanguage: undefined,
               createdAt: newMsg.created_at
             }];
           });
@@ -373,6 +405,21 @@ const MiniChatWindow = ({
           if (isMinimized && newMsg.sender_id !== currentUserId) {
             setUnreadCount(prev => prev + 1);
           }
+
+          // BACKGROUND: Translate message without blocking
+          runInBackground(async () => {
+            const translation = await translateMessage(newMsg.message);
+            setMessages(prev => prev.map(m => 
+              m.id === newMsg.id 
+                ? {
+                    ...m,
+                    translatedMessage: translation.translatedMessage,
+                    isTranslated: translation.isTranslated,
+                    detectedLanguage: translation.detectedLanguage
+                  }
+                : m
+            ));
+          });
         }
       )
       .subscribe();
@@ -411,6 +458,7 @@ const MiniChatWindow = ({
   // Security: Maximum message length to prevent abuse
   const MAX_MESSAGE_LENGTH = 2000;
 
+  // NON-BLOCKING: Send message with optimistic UI
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
@@ -431,48 +479,83 @@ const MiniChatWindow = ({
       return;
     }
 
+    // IMMEDIATE: Clear input and update UI (non-blocking)
     setNewMessage("");
-    setLivePreview({ text: '', isLoading: false }); // Clear live preview
-    stopTyping(); // Stop typing indicator on send
-    setIsSending(true);
+    setLivePreview({ text: '', isLoading: false });
+    stopTyping();
     setLastActivityTime(Date.now());
 
-    try {
-      // Convert to user's native script using dl-translate
-      let processedMessage = messageText;
-      
-      // If user types in Latin and their language uses non-Latin script, convert
-      if (transliterationEnabled && needsScriptConversion && isLatinScript(messageText)) {
-        try {
-          const converted = await convertToNativeScript(messageText, currentUserLanguage);
-          processedMessage = converted.text || messageText;
-          console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
-        } catch (err) {
-          console.error('[MiniChatWindow] Script conversion error:', err);
-        }
-      }
-      
-      const { error } = await supabase
-        .from("chat_messages")
-        .insert({
-          chat_id: chatId,
-          sender_id: currentUserId,
-          receiver_id: partnerId,
-          message: processedMessage // Store in sender's native script
-        });
+    // Determine if we need script conversion
+    const shouldConvert = transliterationEnabled && needsScriptConversion && isLatinScript(messageText);
+    
+    // Use preview text if available (already converted), otherwise use original
+    const previewText = livePreview.text && livePreview.text !== messageText ? livePreview.text : null;
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setNewMessage(messageText);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSending(false);
-    }
+    // OPTIMISTIC: Add message to UI immediately with temp ID
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      message: previewText || messageText, // Show preview if available
+      translatedMessage: undefined,
+      isTranslated: false,
+      createdAt: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    // BACKGROUND: Convert and send without blocking UI
+    runInBackground(async () => {
+      try {
+        let processedMessage = messageText;
+        
+        // If we have preview text, use it; otherwise convert in background
+        if (previewText) {
+          processedMessage = previewText;
+        } else if (shouldConvert) {
+          try {
+            const converted = await convertToNativeScript(messageText, currentUserLanguage);
+            processedMessage = converted.text || messageText;
+            console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
+            
+            // Update optimistic message with converted text
+            setMessages(prev => prev.map(m => 
+              m.id === tempId ? { ...m, message: processedMessage } : m
+            ));
+          } catch (err) {
+            console.error('[MiniChatWindow] Script conversion error:', err);
+          }
+        }
+        
+        const { error } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: processedMessage
+          });
+
+        if (error) {
+          console.error("Error sending message:", error);
+          // Remove optimistic message on error
+          setMessages(prev => prev.filter(m => m.id !== tempId));
+          toast({
+            title: "Error",
+            description: "Failed to send message",
+            variant: "destructive"
+          });
+        }
+        // Note: The real message will come through subscription and replace the temp
+      } catch (error) {
+        console.error("Error sending message:", error);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        toast({
+          title: "Error",
+          description: "Failed to send message",
+          variant: "destructive"
+        });
+      }
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -743,23 +826,32 @@ const MiniChatWindow = ({
               <Input
                 placeholder="Type in any language..."
                 value={newMessage}
-              onChange={(e) => {
+                onChange={(e) => {
                   const val = e.target.value;
+                  // IMMEDIATE: Update input value - never blocked
                   setNewMessage(val);
+                  
+                  // NON-BLOCKING: Typing indicator in background
                   handleTyping();
-                  // Update live preview with debounce
+                  
+                  // NON-BLOCKING: Update live preview with debounce
                   if (previewTimeoutRef.current) {
                     clearTimeout(previewTimeoutRef.current);
                   }
+                  
                   if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
-                    setLivePreview({ text: '', isLoading: true });
-                    previewTimeoutRef.current = setTimeout(async () => {
-                      try {
-                        const result = await convertToNativeScript(val, currentUserLanguage);
-                        setLivePreview({ text: result.text || val, isLoading: false });
-                      } catch {
-                        setLivePreview({ text: '', isLoading: false });
-                      }
+                    setLivePreview(prev => ({ ...prev, isLoading: true }));
+                    previewTimeoutRef.current = setTimeout(() => {
+                      // BACKGROUND: Convert script without blocking typing
+                      runInBackground(async () => {
+                        try {
+                          const result = await convertToNativeScript(val, currentUserLanguage);
+                          // Only update if input hasn't changed
+                          setLivePreview({ text: result.text || val, isLoading: false });
+                        } catch {
+                          setLivePreview({ text: '', isLoading: false });
+                        }
+                      });
                     }, 300);
                   } else {
                     setLivePreview({ text: '', isLoading: false });
@@ -767,19 +859,14 @@ const MiniChatWindow = ({
                 }}
                 onKeyDown={handleKeyPress}
                 className="h-7 text-[11px]"
-                disabled={isSending}
               />
               <Button
                 size="icon"
                 className="h-7 w-7"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending}
+                disabled={!newMessage.trim()}
               >
-                {isSending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Send className="h-3 w-3" />
-                )}
+                <Send className="h-3 w-3" />
               </Button>
             </div>
           </div>
