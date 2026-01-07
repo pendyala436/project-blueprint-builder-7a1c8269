@@ -132,3 +132,28 @@ export type {
   LivePreviewResult,
   AutoDetectedLanguage,
 } from '@/hooks/useRealtimeChatTranslation';
+
+// ============================================================
+// ASYNC TRANSLATOR (Massive Scale - Lakhs of users)
+// Non-blocking, background queue, parallel processing
+// ============================================================
+
+export {
+  translateAsync,
+  translateInBackground,
+  convertToNativeScriptAsync,
+  batchTranslateAsync,
+  createLivePreviewHandler,
+  getQueueStatus,
+  clearTranslationCache,
+  isLatinScriptLanguage as asyncIsLatinScriptLanguage,
+  isLatinText as asyncIsLatinText,
+  isSameLanguage as asyncIsSameLanguage,
+  needsScriptConversion as asyncNeedsScriptConversion,
+  normalizeLanguage as asyncNormalizeLanguage,
+} from './async-translator';
+
+export type {
+  AsyncTranslationResult,
+  TranslationTask,
+} from './async-translator';
