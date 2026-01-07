@@ -875,53 +875,10 @@ async function translateText(
 // ============================================================
 
 // Telugu phonetic map (Latin sounds → Telugu script)
-// Comprehensive mapping for accurate Romanized Telugu → Native script conversion
+// PURE PHONETIC SYLLABLE MAPPING - NO hardcoded words
+// Uses only consonant+vowel combinations for dynamic transliteration
 const TELUGU_TRANSLITERATION: Record<string, string> = {
-  // === COMMON TELUGU PHRASES (highest priority - exact match) ===
-  'nuvvu ekkada unnavu': 'నువ్వు ఎక్కడ ఉన్నావు',
-  'nuvvu ekkada vunnavu': 'నువ్వు ఎక్కడ ఉన్నావు',
-  'nenu office lo unna': 'నేను ఆఫీస్ లో ఉన్నా',
-  'nenu intlo unnanu': 'నేను ఇంట్లో ఉన్నాను',
-  'ela unnaru': 'ఎలా ఉన్నారు', 'ela unnav': 'ఎలా ఉన్నావ్',
-  
-  // === COMMON TELUGU WORDS (highest priority - exact match) ===
-  'bagunnava': 'బాగున్నావా', 'bagunnaru': 'బాగున్నారు', 'bagunnanu': 'బాగున్నాను',
-  'bagundi': 'బాగుంది', 'baga': 'బాగా', 'bagunna': 'బాగున్న',
-  'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'vanakkam': 'వణక్కం',
-  'hello': 'హలో', 'bye': 'బై', 'ok': 'ఓకే', 'yes': 'యెస్',
-  'thanks': 'థాంక్స్', 'please': 'ప్లీజ్', 'sorry': 'సారీ',
-  
-  // Question words
-  'ela': 'ఎలా', 'undi': 'ఉంది', 'enta': 'ఎంత', 'evaru': 'ఎవరు',
-  'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు', 'emiti': 'ఏమిటి', 'emi': 'ఏమి',
-  
-  // Pronouns
-  'nenu': 'నేను', 'neevu': 'నీవు', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 
-  'vaaru': 'వారు', 'atanu': 'అతను', 'aame': 'ఆమె', 'manam': 'మనం',
-  
-  // Verbs / verb forms
-  'unnanu': 'ఉన్నాను', 'unnavu': 'ఉన్నావు', 'unnaru': 'ఉన్నారు', 
-  'vunnanu': 'ఉన్నాను', 'vunnavu': 'ఉన్నావు', 'vunnaru': 'ఉన్నారు',
-  'unna': 'ఉన్న', 'vunna': 'ఉన్న',
-  'raanu': 'రాను', 'velthanu': 'వెళ్తాను', 'chusthanu': 'చూస్తాను',
-  'vasthanu': 'వస్తాను', 'vasthaa': 'వస్తా', 'vachchi': 'వచ్చి',
-  'velthunna': 'వెళ్తున్నా', 'vastunna': 'వస్తున్నా',
-  
-  // Common nouns / places
-  'office': 'ఆఫీస్', 'intlo': 'ఇంట్లో', 'inti': 'ఇంటి', 'illu': 'ఇల్లు',
-  'school': 'స్కూల్', 'college': 'కాలేజ్', 'hospital': 'హాస్పిటల్',
-  
-  // Postpositions (longer forms to avoid conflict with consonant+vowel)
-  'nunchi': 'నుంచి', 'meeda': 'మీద', 'kinda': 'కింద', 'kosam': 'కోసం',
-  
-  // Adjectives / adverbs
-  'manchi': 'మంచి', 'chala': 'చాలా', 'koncham': 'కొంచెం',
-  'avunu': 'అవును', 'kadu': 'కాదు', 'ledhu': 'లేదు', 'ledu': 'లేదు',
-  
-  // Location words
-  'ikkada': 'ఇక్కడ', 'akkada': 'అక్కడ', 'appudu': 'అప్పుడు',
-  'ippudu': 'ఇప్పుడు', 'epudu': 'ఎప్పుడు',
-  // === VOWELS ===
+  // === VOWELS (standalone) ===
   'a': 'అ', 'aa': 'ఆ', 'aaa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ', 
   'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
   'o': 'ఒ', 'au': 'ఔ', 'ou': 'ఔ', 'ae': 'ఏ',
@@ -1056,9 +1013,6 @@ const HINDI_TRANSLITERATION: Record<string, string> = {
   'k': 'क्', 'g': 'ग्', 'j': 'ज्', 't': 'ट्', 'd': 'ड्',
   'n': 'न्', 'p': 'प्', 'b': 'ब्', 'm': 'म्', 'y': 'य्',
   'r': 'र्', 'l': 'ल्', 'v': 'व्', 's': 'स्', 'h': 'ह्',
-  // Common words (priority - checked first via exact match)
-  'hello': 'हेलो', 'hi': 'हाय', 'bye': 'बाय', 'ok': 'ओके', 'yes': 'येस',
-  'thanks': 'थैंक्स', 'please': 'प्लीज', 'sorry': 'सॉरी',
 };
 
 // Tamil phonetic map
@@ -1071,8 +1025,6 @@ const TAMIL_TRANSLITERATION: Record<string, string> = {
   'ma': 'ம', 'ya': 'ய', 'ra': 'ர', 'la': 'ல', 'va': 'வ',
   'sha': 'ஷ', 'sa': 'ச', 'ha': 'ஹ',
   'he': 'ஹெ', 'ho': 'ஹோ',
-  // Common words
-  'hello': 'ஹலோ', 'hi': 'ஹாய்', 'bye': 'பை', 'ok': 'ஓகே',
 };
 
 // Kannada phonetic map
@@ -1086,8 +1038,6 @@ const KANNADA_TRANSLITERATION: Record<string, string> = {
   'ya': 'ಯ', 'ra': 'ರ', 'la': 'ಲ', 'va': 'ವ',
   'sha': 'ಶ', 'sa': 'ಸ', 'ha': 'ಹ',
   'he': 'ಹೆ', 'ho': 'ಹೋ',
-  // Common words
-  'hello': 'ಹಲೋ', 'hi': 'ಹಾಯ್', 'bye': 'ಬೈ', 'ok': 'ಓಕೆ',
 };
 
 // Malayalam phonetic map
@@ -1101,8 +1051,6 @@ const MALAYALAM_TRANSLITERATION: Record<string, string> = {
   'ya': 'യ', 'ra': 'ര', 'la': 'ല', 'va': 'വ',
   'sha': 'ശ', 'sa': 'സ', 'ha': 'ഹ',
   'he': 'ഹെ', 'ho': 'ഹോ',
-  // Common words
-  'hello': 'ഹലോ', 'hi': 'ഹായ്', 'bye': 'ബൈ', 'ok': 'ഓകെ',
 };
 
 // Bengali phonetic map
@@ -1116,8 +1064,6 @@ const BENGALI_TRANSLITERATION: Record<string, string> = {
   'ya': 'য', 'ra': 'র', 'la': 'ল', 'va': 'ভ',
   'sha': 'শ', 'sa': 'স', 'ha': 'হ',
   'he': 'হে', 'ho': 'হো',
-  // Common words
-  'hello': 'হ্যালো', 'hi': 'হাই', 'bye': 'বাই', 'ok': 'ওকে',
 };
 
 // Gujarati phonetic map
@@ -1131,8 +1077,6 @@ const GUJARATI_TRANSLITERATION: Record<string, string> = {
   'ya': 'ય', 'ra': 'ર', 'la': 'લ', 'va': 'વ',
   'sha': 'શ', 'sa': 'સ', 'ha': 'હ',
   'he': 'હે', 'ho': 'હો',
-  // Common words
-  'hello': 'હેલો', 'hi': 'હાય', 'bye': 'બાય', 'ok': 'ઓકે',
 };
 
 // Marathi uses Devanagari, same as Hindi

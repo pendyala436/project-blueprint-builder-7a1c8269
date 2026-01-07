@@ -197,6 +197,9 @@ export async function translate(
  * Used when user types in English/romanized text but their native language uses non-Latin script
  * 
  * Example: User types "namaste" → Converted to "नमस्ते" (if user's language is Hindi)
+ * 
+ * CRITICAL: Uses dynamic transliteration as INSTANT fallback for 300+ languages
+ * NO hardcoded words - pure phonetic algorithm
  */
 export async function convertToNativeScript(
   text: string,
@@ -251,6 +254,36 @@ export async function convertToNativeScript(
     }
   }
 
+  // INSTANT FALLBACK: Use dynamic transliteration FIRST for immediate preview
+  // This ensures 300+ language support without any edge function dependency
+  try {
+    const { dynamicTransliterate } = await import('@/lib/translation/dynamic-transliterator');
+    const dynamicResult = dynamicTransliterate(trimmed, targetLanguage);
+    
+    if (dynamicResult && dynamicResult !== trimmed) {
+      const result: TranslationResult = {
+        text: dynamicResult,
+        originalText: trimmed,
+        source: 'english',
+        target: targetLanguage,
+        sourceCode: 'en',
+        targetCode: getCode(targetLanguage),
+        isTranslated: true,
+        mode: 'convert'
+      };
+      
+      // Cache successful conversions
+      if (config.cacheEnabled) {
+        setInCache(cacheKey, result);
+      }
+      
+      return result;
+    }
+  } catch (err) {
+    console.warn('[dl-translate] Dynamic transliteration error:', err);
+  }
+
+  // Try Edge Function as secondary (for potentially better quality)
   try {
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
@@ -261,46 +294,38 @@ export async function convertToNativeScript(
       },
     });
 
-    if (error) {
-      console.error('[dl-translate] Conversion error:', error);
-      return {
-        text: trimmed,
+    if (!error && data?.translatedText && data?.isTranslated) {
+      const result: TranslationResult = {
+        text: data.translatedText,
         originalText: trimmed,
         source: 'english',
         target: targetLanguage,
-        isTranslated: false,
-        mode: 'passthrough'
+        sourceCode: 'en',
+        targetCode: getCode(targetLanguage),
+        isTranslated: true,
+        mode: 'convert'
       };
+
+      // Cache successful conversions
+      if (config.cacheEnabled) {
+        setInCache(cacheKey, result);
+      }
+
+      return result;
     }
-
-    const result: TranslationResult = {
-      text: data?.translatedText || trimmed,
-      originalText: trimmed,
-      source: 'english',
-      target: targetLanguage,
-      sourceCode: 'en',
-      targetCode: getCode(targetLanguage),
-      isTranslated: data?.isTranslated || false,
-      mode: 'convert'
-    };
-
-    // Cache successful conversions
-    if (result.isTranslated && config.cacheEnabled) {
-      setInCache(cacheKey, result);
-    }
-
-    return result;
   } catch (error) {
-    console.error('[dl-translate] Conversion error:', error);
-    return {
-      text: trimmed,
-      originalText: trimmed,
-      source: 'english',
-      target: targetLanguage,
-      isTranslated: false,
-      mode: 'passthrough'
-    };
+    console.warn('[dl-translate] Edge function conversion error:', error);
   }
+
+  // Final fallback - return original
+  return {
+    text: trimmed,
+    originalText: trimmed,
+    source: 'english',
+    target: targetLanguage,
+    isTranslated: false,
+    mode: 'passthrough'
+  };
 }
 
 /**

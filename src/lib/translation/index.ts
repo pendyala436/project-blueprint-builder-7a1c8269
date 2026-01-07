@@ -142,6 +142,7 @@ export {
   translateAsync,
   translateInBackground,
   convertToNativeScriptAsync,
+  convertToNativeScriptSync,
   batchTranslateAsync,
   createLivePreviewHandler,
   getQueueStatus,
