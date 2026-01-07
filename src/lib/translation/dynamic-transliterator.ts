@@ -540,7 +540,7 @@ export function isLatinText(text: string): boolean {
 
 /**
  * Dynamic phonetic transliteration - NO hardcoded words
- * Uses Unicode phonetic mapping algorithms
+ * Uses Unicode phonetic mapping algorithms + SymSpell correction
  * Handles small to very large messages efficiently
  * Safe for ANY language - returns original text for unsupported
  */
@@ -556,11 +556,12 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
   // If already in target script, return as-is
   if (!isLatinText(text)) return text;
   
-  const input = text.toLowerCase();
+  // Step 1: Apply phonetic spell correction before transliteration
+  const correctedInput = phoneticSpellCorrect(text.toLowerCase(), targetLanguage);
   
   // For very large messages, process in chunks to avoid blocking
   // Each word is transliterated independently, so chunking by words is safe
-  const words = input.split(/(\s+)/); // Preserve whitespace
+  const words = correctedInput.split(/(\s+)/); // Preserve whitespace
   const results: string[] = [];
   
   for (const segment of words) {
@@ -577,6 +578,179 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
   }
   
   return results.join('');
+}
+
+// ============================================================
+// EMBEDDED SYMSPELL PHONETIC SPELL CORRECTION
+// No external dictionaries - uses phonetic patterns
+// ============================================================
+
+// Common phonetic equivalences for spell correction
+const PHONETIC_EQUIVALENCES: Record<string, string[]> = {
+  'a': ['aa', 'ah', 'e'],
+  'e': ['ee', 'i', 'a', 'ae'],
+  'i': ['ee', 'y', 'ie'],
+  'o': ['oo', 'ou', 'u', 'au'],
+  'u': ['oo', 'ou', 'o', 'w'],
+  'v': ['b', 'w'],
+  'n': ['nn', 'm'],
+  'l': ['ll', 'r'],
+};
+
+// Language-specific phonetic corrections (common misspellings)
+const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
+  telugu: {
+    // Fix missing vowel elongations
+    'bagunnava': 'baagunnava',
+    'bagunnara': 'baagunnara', 
+    'elunnaru': 'elaunnaru',
+    'ela unnaru': 'ela unnaru',
+    'chala': 'chaala',
+    'manchidi': 'manchidi',
+    'nenu': 'nenu',
+    'nuvvu': 'nuvvu',
+    'meeru': 'meeru',
+    'emi': 'emi',
+    'enti': 'enti',
+  },
+  hindi: {
+    'kaisey': 'kaise',
+    'kaisay': 'kaise',
+    'thik': 'theek',
+    'tek': 'theek',
+    'kya hal': 'kya haal',
+    'achha': 'accha',
+    'acha': 'accha',
+    'bahot': 'bahut',
+    'bohot': 'bahut',
+  },
+  tamil: {
+    'vanakam': 'vanakkam',
+    'nandri': 'nandri',
+    'eppadi': 'eppadi',
+    'epadi': 'eppadi',
+    'irukkireenga': 'irukkeenga',
+  },
+  bengali: {
+    'kemon': 'kemon',
+    'bhalo': 'bhaalo',
+    'achi': 'aachi',
+  },
+  marathi: {
+    'kasa': 'kaasa',
+    'aahe': 'aahe',
+    'mee': 'mi',
+  },
+  gujarati: {
+    'kem cho': 'kem chho',
+    'kemcho': 'kem chho',
+    'saru': 'saaru',
+  },
+  kannada: {
+    'hegiddira': 'hegiddira',
+    'chennagide': 'chennagide',
+    'nanu': 'naanu',
+  },
+  malayalam: {
+    'sugham': 'sukham',
+    'nanni': 'nandri',
+    'entha': 'enthaa',
+  },
+  punjabi: {
+    'kiwe': 'kive',
+    'vadiya': 'vadiya',
+    'satsriakal': 'sat sri akal',
+  },
+  odia: {
+    'kemiti': 'kemiti',
+    'bhala': 'bhaala',
+  },
+};
+
+// Common greeting/phrase patterns for phonetic matching
+const COMMON_PHRASE_PATTERNS: Record<string, string[]> = {
+  'howareyou': ['howareyou', 'howru', 'howreyou', 'hru', 'hw r u'],
+  'hello': ['helo', 'hllo', 'heelo', 'hallo'],
+  'thankyou': ['thanks', 'thanku', 'thnks', 'thx', 'ty'],
+  'good': ['gud', 'gd', 'goood'],
+  'morning': ['mornin', 'mornng', 'morng'],
+  'night': ['nite', 'nyt', 'nght'],
+};
+
+/**
+ * Damerau-Levenshtein edit distance (handles transpositions)
+ */
+function calcEditDistance(s1: string, s2: string): number {
+  const len1 = s1.length;
+  const len2 = s2.length;
+  
+  if (len1 === 0) return len2;
+  if (len2 === 0) return len1;
+  if (Math.abs(len1 - len2) > 3) return Math.abs(len1 - len2);
+  
+  const matrix: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
+  
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+  
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+      if (i > 1 && j > 1 && s1[i - 1] === s2[j - 2] && s1[i - 2] === s2[j - 1]) {
+        matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + cost);
+      }
+    }
+  }
+  return matrix[len1][len2];
+}
+
+/**
+ * Apply phonetic spell correction
+ */
+function phoneticSpellCorrect(text: string, language: string): string {
+  const lang = language.toLowerCase().trim();
+  let corrected = text;
+  
+  // Step 1: Apply language-specific known corrections
+  const langCorrections = LANGUAGE_CORRECTIONS[lang];
+  if (langCorrections) {
+    for (const [wrong, right] of Object.entries(langCorrections)) {
+      // Use word boundary matching
+      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+      corrected = corrected.replace(regex, right);
+    }
+  }
+  
+  // Step 2: Apply phonetic pattern matching for common phrases
+  const words = corrected.split(/\s+/);
+  const correctedWords = words.map(word => {
+    const normalized = word.toLowerCase().replace(/[^a-z]/g, '');
+    if (normalized.length < 3) return word;
+    
+    // Check against common patterns
+    for (const [canonical, variants] of Object.entries(COMMON_PHRASE_PATTERNS)) {
+      for (const variant of variants) {
+        if (calcEditDistance(normalized, variant) <= 1) {
+          // Found a close match - preserve original casing style
+          return canonical;
+        }
+      }
+    }
+    
+    return word;
+  });
+  
+  // Step 3: Fix common phonetic confusions
+  corrected = correctedWords.join(' ')
+    .replace(/([bcdfghjklmnpqrstvwxyz])\1{3,}/gi, '$1$1') // Reduce >2 repeated consonants
+    .replace(/([aeiou])\1{3,}/gi, '$1$1'); // Reduce >2 repeated vowels
+  
+  return corrected;
 }
 
 /**

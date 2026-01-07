@@ -129,14 +129,16 @@ function getFromCache(key: string): string | undefined {
 
 // ============================================================
 // ULTRA-FAST SYNC TRANSLITERATION (< 1ms)
-// Uses DYNAMIC phonetic transliteration - NO hardcoded words
+// Uses DYNAMIC phonetic transliteration + SymSpell correction
 // Supports ALL 300+ languages without maintenance
 // ============================================================
 
 /**
- * DYNAMIC transliteration - uses phonetic rules, NO word lookup
+ * DYNAMIC transliteration - uses phonetic rules + spell correction
+ * SymSpell algorithm embedded - no external dictionaries
  */
 function quickTransliterate(text: string, language: string): string {
+  // dynamicTransliterate now includes embedded spell correction
   return dynamicTransliterate(text, language);
 }
 

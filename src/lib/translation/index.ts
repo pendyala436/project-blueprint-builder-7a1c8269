@@ -162,3 +162,19 @@ export type {
   TranslationTask,
   AutoDetectedLanguage as AsyncAutoDetectedLanguage,
 } from './async-translator';
+
+// ============================================================
+// PHONETIC SYMSPELL - Spell correction for 300+ languages
+// Embedded algorithm - no external dictionaries
+// ============================================================
+
+export {
+  correctWord,
+  correctText,
+  getSuggestions,
+  spellCorrectForChat,
+  applyLanguagePhonetics,
+  editDistance,
+  phoneticNormalize,
+  generatePhoneticVariations,
+} from './phonetic-symspell';
