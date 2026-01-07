@@ -295,8 +295,8 @@ const UniversalChatPage: React.FC = () => {
     // Use sync getLivePreview for instant response
     const result = getLivePreview(input, userLanguage);
     
-    // Only show preview if different from input
-    if (result.preview && result.preview !== input && result.isLatin) {
+    // Show preview if transliteration produced different output
+    if (result.preview && result.preview !== input) {
       setLivePreview(result.preview);
     } else {
       setLivePreview('');

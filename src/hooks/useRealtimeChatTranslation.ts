@@ -268,7 +268,9 @@ export function useRealtimeChatTranslation(
    */
   const getLivePreview = useCallback((text: string, language?: string): LivePreviewResult => {
     const startTime = performance.now();
-    const targetLang = language?.toLowerCase() || senderLang;
+    // Normalize language - handle capitalized names like 'Telugu' -> 'telugu'
+    const rawLang = language || senderLanguage || 'english';
+    const targetLang = rawLang.toLowerCase().trim();
 
     if (!text || !text.trim()) {
       return { preview: '', isLatin: true, processingTime: 0 };
@@ -276,11 +278,20 @@ export function useRealtimeChatTranslation(
 
     const isLatin = isQuickLatinText(text);
 
-    // Latin script language - no conversion
+    // Latin script language - no conversion needed
     if (isLatinScriptLanguage(targetLang)) {
       return {
         preview: text,
         isLatin,
+        processingTime: performance.now() - startTime
+      };
+    }
+
+    // Already native script - no conversion needed
+    if (!isLatin) {
+      return {
+        preview: text,
+        isLatin: false,
         processingTime: performance.now() - startTime
       };
     }
@@ -305,7 +316,7 @@ export function useRealtimeChatTranslation(
       };
     }
 
-    // Transliterate
+    // Transliterate Latin text to native script
     const preview = quickTransliterate(text, targetLang);
     addToCache(previewCache, cacheKey, preview);
 
@@ -314,7 +325,7 @@ export function useRealtimeChatTranslation(
       isLatin: true,
       processingTime: performance.now() - startTime
     };
-  }, [senderLang]);
+  }, [senderLanguage]);
 
   // Alias for backwards compatibility
   const getInstantPreview = getLivePreview;
@@ -333,8 +344,9 @@ export function useRealtimeChatTranslation(
     toLanguage?: string
   ): Promise<ChatMessageResult> => {
     const startTime = performance.now();
-    const srcLang = fromLanguage?.toLowerCase() || senderLang;
-    const dstLang = toLanguage?.toLowerCase() || receiverLang;
+    // Normalize languages - handle capitalized names
+    const srcLang = (fromLanguage || senderLanguage || 'english').toLowerCase().trim();
+    const dstLang = (toLanguage || receiverLanguage || 'english').toLowerCase().trim();
 
     if (!text || !text.trim()) {
       return {
@@ -394,7 +406,7 @@ export function useRealtimeChatTranslation(
       wasTranslated,
       processingTime: performance.now() - startTime
     };
-  }, [senderLang, receiverLang, isReady]);
+  }, [senderLanguage, receiverLanguage, isReady]);
 
   // ============================================================
   // TRANSLATE TEXT (async)
@@ -411,8 +423,9 @@ export function useRealtimeChatTranslation(
     if (!text || !text.trim()) return '';
 
     const trimmedText = text.trim();
-    const fromLang = fromLanguage?.toLowerCase() || 'english';
-    const toLang = toLanguage?.toLowerCase() || 'english';
+    // Normalize languages - handle capitalized names
+    const fromLang = (fromLanguage || 'english').toLowerCase().trim();
+    const toLang = (toLanguage || 'english').toLowerCase().trim();
 
     if (isSameLanguage(fromLang, toLang)) {
       if (isQuickLatinText(trimmedText) && !isLatinScriptLanguage(toLang)) {
@@ -444,18 +457,20 @@ export function useRealtimeChatTranslation(
     if (!text || !text.trim()) return '';
 
     const trimmedText = text.trim();
-    const fromLang = fromLanguage?.toLowerCase() || 'english';
+    // Normalize languages - handle capitalized names
+    const fromLang = (fromLanguage || 'english').toLowerCase().trim();
+    const myLang = (senderLanguage || 'english').toLowerCase().trim();
 
-    if (isSameLanguage(fromLang, senderLang)) {
-      if (isQuickLatinText(trimmedText) && !isLatinScriptLanguage(senderLang)) {
-        return quickTransliterate(trimmedText, senderLang);
+    if (isSameLanguage(fromLang, myLang)) {
+      if (isQuickLatinText(trimmedText) && !isLatinScriptLanguage(myLang)) {
+        return quickTransliterate(trimmedText, myLang);
       }
       return trimmedText;
     }
 
     try {
       if (isReady) {
-        const result = await translate(trimmedText, fromLang, senderLang);
+        const result = await translate(trimmedText, fromLang, myLang);
         return result.text || trimmedText;
       }
       return trimmedText;
@@ -463,7 +478,7 @@ export function useRealtimeChatTranslation(
       console.error('Translate incoming error:', err);
       return trimmedText;
     }
-  }, [senderLang, isReady]);
+  }, [senderLanguage, isReady]);
 
   // ============================================================
   // DEBOUNCED PREVIEW
