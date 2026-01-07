@@ -63,18 +63,31 @@ const TRANSLATION_DICTIONARIES: Record<string, { toEnglish: Record<string, strin
   },
   te: {
     toEnglish: {
-      'నమస్కారం': 'hello', 'ధన్యవాదాలు': 'thank you', 'అవును': 'yes', 'కాదు': 'no',
+      'నమస్కారం': 'hello', 'నమస్తే': 'hello', 'హలో': 'hello', 'హాయ్': 'hi',
+      'ధన్యవాదాలు': 'thank you', 'థాంక్స్': 'thanks', 'అవును': 'yes', 'కాదు': 'no',
       'దయచేసి': 'please', 'క్షమించండి': 'sorry', 'శుభోదయం': 'good morning',
-      'శుభ రాత్రి': 'good night', 'మీరు ఎలా ఉన్నారు': 'how are you', 'నేను బాగున్నాను': 'I am fine',
-      'ప్రేమ': 'love', 'స్నేహితుడు': 'friend', 'కుటుంబం': 'family', 'ఆహారం': 'food',
-      'నీరు': 'water', 'ఇల్లు': 'home', 'పని': 'work', 'సమయం': 'time'
+      'శుభ రాత్రి': 'good night', 
+      // Formal and informal "how are you"
+      'మీరు ఎలా ఉన్నారు': 'how are you', 'ఎలా ఉన్నారు': 'how are you',
+      'బాగున్నావా': 'how are you', 'బాగున్నావా?': 'how are you',
+      'ఎలా ఉన్నావు': 'how are you', 'ఏం చేస్తున్నావు': 'what are you doing',
+      // Responses
+      'నేను బాగున్నాను': 'I am fine', 'బాగున్నాను': 'I am fine', 'బాగానే ఉన్నా': 'I am fine',
+      'ప్రేమ': 'love', 'ఇష్టం': 'love', 'స్నేహితుడు': 'friend', 'ఫ్రెండ్': 'friend',
+      'కుటుంబం': 'family', 'ఆహారం': 'food', 'తిండి': 'food',
+      'నీరు': 'water', 'నీళ్ళు': 'water', 'ఇల్లు': 'home', 'ఇంటికి': 'home',
+      'పని': 'work', 'సమయం': 'time', 'వెళ్తున్నా': 'goodbye', 'వస్తా': 'coming',
+      'అర్థమైంది': 'understood', 'సరే': 'okay', 'ఓకే': 'okay'
     },
     fromEnglish: {
-      'hello': 'నమస్కారం', 'thank you': 'ధన్యవాదాలు', 'yes': 'అవును', 'no': 'కాదు',
-      'please': 'దయచేసి', 'sorry': 'క్షమించండి', 'good morning': 'శుభోదయం',
-      'good night': 'శుభ రాత్రి', 'how are you': 'మీరు ఎలా ఉన్నారు', 'I am fine': 'నేను బాగున్నాను',
+      'hello': 'నమస్కారం', 'hi': 'హాయ్', 'thank you': 'ధన్యవాదాలు', 'thanks': 'థాంక్స్',
+      'yes': 'అవును', 'no': 'కాదు', 'please': 'దయచేసి', 'sorry': 'క్షమించండి',
+      'good morning': 'శుభోదయం', 'good night': 'శుభ రాత్రి',
+      'how are you': 'బాగున్నావా', 'what are you doing': 'ఏం చేస్తున్నావు',
+      'I am fine': 'బాగున్నాను', 'fine': 'బాగా', 'okay': 'సరే',
       'love': 'ప్రేమ', 'friend': 'స్నేహితుడు', 'family': 'కుటుంబం', 'food': 'ఆహారం',
-      'water': 'నీరు', 'home': 'ఇల్లు', 'work': 'పని', 'time': 'సమయం'
+      'water': 'నీరు', 'home': 'ఇల్లు', 'work': 'పని', 'time': 'సమయం',
+      'goodbye': 'వెళ్తున్నా', 'coming': 'వస్తా', 'understood': 'అర్థమైంది'
     }
   },
   mr: {
@@ -1141,11 +1154,43 @@ const TRANSLATION_DICTIONARIES: Record<string, { toEnglish: Record<string, strin
   }
 };
 
+// Normalize text for matching - removes punctuation and extra spaces
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[?!.,;:'"।॥؟،。？！、]+$/g, '') // Remove trailing punctuation
+    .replace(/\s+/g, ' '); // Normalize whitespace
+}
+
+// Find best match in dictionary with fuzzy matching
+function findInDictionary(text: string, dict: Record<string, string>): string | null {
+  const normalized = normalizeText(text);
+  
+  // Try exact match first
+  if (dict[text]) return dict[text];
+  if (dict[normalized]) return dict[normalized];
+  
+  // Try without trailing punctuation
+  const noPunct = text.replace(/[?!.,;:'"।॥؟،。？！、]+$/g, '').trim();
+  if (dict[noPunct]) return dict[noPunct];
+  
+  // Try each dictionary key for partial match
+  for (const [key, value] of Object.entries(dict)) {
+    const normalizedKey = normalizeText(key);
+    if (normalizedKey === normalized) return value;
+    // Check if input contains the key or vice versa
+    if (normalized.includes(normalizedKey) || normalizedKey.includes(normalized)) {
+      return value;
+    }
+  }
+  
+  return null;
+}
+
 // Bidirectional translation function
 // Supports: Source → English → Target AND Target → English → Source
 function translateText(text: string, sourceLang: string, targetLang: string): string {
-  const lowerText = text.toLowerCase().trim();
-  
   // If source and target are the same, return original
   if (sourceLang === targetLang) {
     return text;
@@ -1154,8 +1199,9 @@ function translateText(text: string, sourceLang: string, targetLang: string): st
   // If source is English, translate directly to target
   if (sourceLang === 'en') {
     const targetDict = TRANSLATION_DICTIONARIES[targetLang];
-    if (targetDict?.fromEnglish[lowerText]) {
-      return targetDict.fromEnglish[lowerText];
+    if (targetDict) {
+      const result = findInDictionary(text, targetDict.fromEnglish);
+      if (result) return result;
     }
     return text; // Return original if no translation found
   }
@@ -1163,8 +1209,9 @@ function translateText(text: string, sourceLang: string, targetLang: string): st
   // If target is English, translate directly from source
   if (targetLang === 'en') {
     const sourceDict = TRANSLATION_DICTIONARIES[sourceLang];
-    if (sourceDict?.toEnglish[text] || sourceDict?.toEnglish[lowerText]) {
-      return sourceDict.toEnglish[text] || sourceDict.toEnglish[lowerText];
+    if (sourceDict) {
+      const result = findInDictionary(text, sourceDict.toEnglish);
+      if (result) return result;
     }
     return text;
   }
@@ -1179,7 +1226,7 @@ function translateText(text: string, sourceLang: string, targetLang: string): st
   }
   
   // Step 1: Source → English
-  const englishText = sourceDict.toEnglish[text] || sourceDict.toEnglish[lowerText];
+  const englishText = findInDictionary(text, sourceDict.toEnglish);
   
   if (!englishText) {
     console.log(`No translation found from ${sourceLang} to English for: ${text}`);
@@ -1187,11 +1234,11 @@ function translateText(text: string, sourceLang: string, targetLang: string): st
   }
   
   // Step 2: English → Target
-  const translatedText = targetDict.fromEnglish[englishText.toLowerCase()];
+  const translatedText = findInDictionary(englishText, targetDict.fromEnglish);
   
   if (!translatedText) {
     console.log(`No translation found from English to ${targetLang} for: ${englishText}`);
-    return text;
+    return englishText; // Return English if target translation not found
   }
   
   return translatedText;
