@@ -791,11 +791,18 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Show translated message in current user's language */}
-                    {msg.translatedMessage ? (
+                    {/* 
+                      For YOUR OWN messages: always show what you typed (original)
+                      For PARTNER messages: show translated version in your language
+                    */}
+                    {msg.senderId === currentUserId ? (
+                      // Own message - show exactly what you typed
+                      <p>{msg.message}</p>
+                    ) : msg.translatedMessage && msg.isTranslated ? (
+                      // Partner message with translation - show translated text
                       <div className="space-y-0.5">
                         <p>{msg.translatedMessage}</p>
-                        {msg.isTranslated && msg.message !== msg.translatedMessage && (
+                        {msg.message !== msg.translatedMessage && (
                           <p className="text-[9px] opacity-60 italic border-t border-current/20 pt-0.5 mt-0.5">
                             {msg.message}
                             {msg.detectedLanguage && (
@@ -805,7 +812,8 @@ const MiniChatWindow = ({
                         )}
                       </div>
                     ) : (
-                      msg.message
+                      // Partner message without translation (same language)
+                      <p>{msg.message}</p>
                     )}
                   </div>
                 </div>
