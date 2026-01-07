@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Wallet,
   AlertTriangle,
-  Languages
+  Languages,
+  MoreHorizontal
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
@@ -92,6 +93,7 @@ const MiniChatWindow = ({
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true); // Start minimized by default
+  const [areButtonsExpanded, setAreButtonsExpanded] = useState(false); // Buttons minimized by default
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
@@ -721,31 +723,50 @@ const MiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          {/* Gift Button - only men can send */}
-          {userGender === "male" && (
-            <GiftSendButton
-              senderId={currentUserId}
-              receiverId={partnerId}
-              receiverName={partnerName}
-              disabled={!billingStarted}
-            />
-          )}
-          {/* Relationship Actions (Block/Friend) */}
-          <ChatRelationshipActions
-            currentUserId={currentUserId}
-            targetUserId={partnerId}
-            targetUserName={partnerName}
-            onBlock={handleClose}
-            className="h-5 w-5"
-          />
+          {/* Toggle button to show/hide action buttons */}
           <Button
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            onClick={(e) => { e.stopPropagation(); openFullChat(); }}
+            onClick={(e) => { e.stopPropagation(); setAreButtonsExpanded(!areButtonsExpanded); }}
+            title={areButtonsExpanded ? "Hide actions" : "Show actions"}
           >
-            <Maximize2 className="h-2.5 w-2.5" />
+            <MoreHorizontal className="h-2.5 w-2.5" />
           </Button>
+          
+          {/* Expandable action buttons */}
+          {areButtonsExpanded && (
+            <>
+              {/* Gift Button - only men can send */}
+              {userGender === "male" && (
+                <GiftSendButton
+                  senderId={currentUserId}
+                  receiverId={partnerId}
+                  receiverName={partnerName}
+                  disabled={!billingStarted}
+                />
+              )}
+              {/* Relationship Actions (Block/Friend) */}
+              <ChatRelationshipActions
+                currentUserId={currentUserId}
+                targetUserId={partnerId}
+                targetUserName={partnerName}
+                onBlock={handleClose}
+                className="h-5 w-5"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={(e) => { e.stopPropagation(); openFullChat(); }}
+                title="Open full chat"
+              >
+                <Maximize2 className="h-2.5 w-2.5" />
+              </Button>
+            </>
+          )}
+          
+          {/* Always visible: minimize/maximize and close */}
           <Button
             variant="ghost"
             size="icon"
