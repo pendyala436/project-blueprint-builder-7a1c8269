@@ -12,7 +12,7 @@
  *    - If man selects non-Indian NLLB language: sees ONLY women with Indian NLLB languages (worldwide)
  */
 
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES } from "@/data/languages";
 
 export type ProfileVisibility = "low" | "medium" | "high" | "very_high";
 
