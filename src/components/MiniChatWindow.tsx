@@ -845,8 +845,10 @@ const MiniChatWindow = ({
           <div className="p-1.5 border-t space-y-1">
             {/* GBoard tip for better communication */}
             {messages.length === 0 && (
-              <div className="px-2 py-1 bg-primary/10 rounded text-[9px] text-primary border border-primary/20">
-                💡 Tip: Use GBoard (Google Keyboard) & select your mother tongue for best communication
+              <div className="px-2 py-1.5 bg-primary/10 rounded text-[9px] text-primary border border-primary/20 space-y-1">
+                <div>💡 <strong>Tip:</strong> Use GBoard (Google Keyboard) for best experience</div>
+                <div className="text-[8px] opacity-80">• Select your mother tongue in GBoard settings</div>
+                <div className="text-[8px] opacity-80">• Tap 🎤 mic icon on keyboard for voice-to-text</div>
               </div>
             )}
             {/* Same language indicator */}
