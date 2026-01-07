@@ -43,11 +43,10 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useRealtimeTranslation } from "@/lib/translation";
-// 100% EMBEDDED TRANSLATOR - No external APIs, no Edge Functions
-// Supports ALL 300+ languages with instant response (< 2ms)
+// HYBRID TRANSLATION:
+// - Embedded: Instant preview, script conversion, spell correction (< 2ms)
+// - Edge Function: Actual translation between languages (async)
 import {
-  translate,
-  translateInBackground,
   convertToNativeScript,
   transliterateToNative,
   autoDetectLanguage,
@@ -57,8 +56,9 @@ import {
   needsScriptConversion as checkNeedsScriptConversion,
   spellCorrectForChat,
 } from "@/lib/translation";
+import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 100% embedded translation, 300+ languages');
+console.log('[DraggableMiniChatWindow] Module loaded - Hybrid: embedded preview + Edge Function translation');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -763,41 +763,30 @@ const DraggableMiniChatWindow = ({
               .catch(() => {}); // Non-blocking
           }
         } else {
-          // DIFFERENT LANGUAGE: Translate to receiver's language + native script
-          // SYMSPELL CORRECTION: Apply to source before translation (LOAD - diff lang)
+          // DIFFERENT LANGUAGE: Translate via Edge Function
           console.log('[DraggableMiniChatWindow] Starting translation for msgId:', m.id);
           const correctedSource = spellCorrectForChat(m.message, sourceLanguage);
-          console.log('[DraggableMiniChatWindow] SymSpell corrected source:', correctedSource.substring(0, 30));
           
-          translateInBackground(
-            correctedSource,
-            sourceLanguage,
-            targetLanguage,
-            async (result) => {
-              console.log('[DraggableMiniChatWindow] translateInBackground callback received:', {
+          // Use async translator that calls Edge Function
+          translateAsync(correctedSource, sourceLanguage, targetLanguage)
+            .then(async (result) => {
+              console.log('[DraggableMiniChatWindow] Edge Function result:', {
                 msgId: m.id,
-                original: m.message.substring(0, 30),
                 translated: result.text?.substring(0, 30),
                 isTranslated: result.isTranslated
               });
               
-              // SYMSPELL CORRECTION: Apply to translated result
               let finalText = spellCorrectForChat(result.text, targetLanguage);
-              console.log('[DraggableMiniChatWindow] SymSpell corrected result:', finalText.substring(0, 30));
               
               // Convert to native script if needed
               if (result.isTranslated && checkNeedsScriptConversion(targetLanguage) && isLatinText(finalText)) {
-                console.log('[DraggableMiniChatWindow] Converting to native script:', targetLanguage);
                 try {
                   const nativeResult = await convertToNativeScript(finalText, targetLanguage);
                   if (nativeResult.isTranslated && nativeResult.text) {
-                    // SYMSPELL CORRECTION: Apply after native conversion
                     finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
-                    console.log('[DraggableMiniChatWindow] Native script result:', finalText.substring(0, 30));
                   }
                 } catch (err) {
                   console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
-                  // Keep translated text
                 }
               }
               
@@ -806,14 +795,13 @@ const DraggableMiniChatWindow = ({
                   ? {
                       ...msg,
                       translatedMessage: finalText,
-                      isTranslated: true,
+                      isTranslated: result.isTranslated,
                       detectedLanguage: result.detectedLanguage || sourceLanguage
                     }
                   : msg
               ));
-              console.log('[DraggableMiniChatWindow] Message updated with translation for msgId:', m.id);
-            }
-          );
+            })
+            .catch(() => {}); // Non-blocking
         }
       });
     }
@@ -912,60 +900,46 @@ const DraggableMiniChatWindow = ({
                 .catch(() => {}); // Non-blocking, fail silently
             }
           } else {
-            // DIFFERENT LANGUAGE: Translate to receiver's language + native script
+            // DIFFERENT LANGUAGE: Translate via Edge Function
             console.log('[DraggableMiniChatWindow] Diff lang - Translating:', sourceLanguage, '→', targetLanguage);
-            
-            // SYMSPELL CORRECTION: Apply to source text before translation (RECEIVER)
-            console.log('[DraggableMiniChatWindow] Diff lang - Applying SymSpell to source:', sourceLanguage);
             const correctedSource = spellCorrectForChat(newMsg.message, sourceLanguage);
-            console.log('[DraggableMiniChatWindow] Diff lang - SymSpell source result:', correctedSource.substring(0, 30));
             
-            translateInBackground(
-              correctedSource,
-              sourceLanguage,
-              targetLanguage,
-              async (result) => {
+            // Use async translator that calls Edge Function
+            translateAsync(correctedSource, sourceLanguage, targetLanguage)
+              .then(async (result) => {
                 console.log('[DraggableMiniChatWindow] Translation result:', {
-                  original: newMsg.message.substring(0, 30),
                   translated: result.text?.substring(0, 30),
                   isTranslated: result.isTranslated
                 });
                 
-                // SYMSPELL CORRECTION: Apply to translated result (RECEIVER)
-                console.log('[DraggableMiniChatWindow] Diff lang - Applying SymSpell to result:', targetLanguage);
                 let finalText = spellCorrectForChat(result.text, targetLanguage);
-                console.log('[DraggableMiniChatWindow] Diff lang - SymSpell result text:', finalText.substring(0, 30));
                 
-                // If translation successful and target language needs native script
+                // Convert to native script if needed
                 if (result.isTranslated && checkNeedsScriptConversion(targetLanguage)) {
                   try {
-                    // Convert translated text to native script if it's in Latin
                     if (isLatinText(finalText)) {
                       const nativeResult = await convertToNativeScript(finalText, targetLanguage);
                       if (nativeResult.isTranslated && nativeResult.text) {
-                        // SYMSPELL CORRECTION: Apply after native conversion
                         finalText = spellCorrectForChat(nativeResult.text, targetLanguage);
                       }
                     }
                   } catch (err) {
                     console.error('[DraggableMiniChatWindow] Native conversion failed:', err);
-                    // Keep translated text if native conversion fails
                   }
                 }
                 
-                // Update message with translated + native script text
                 setMessages(prev => prev.map(msg => 
                   msg.id === newMsg.id 
                     ? {
                         ...msg,
                         translatedMessage: finalText,
-                        isTranslated: true,
+                        isTranslated: result.isTranslated,
                         detectedLanguage: result.detectedLanguage || sourceLanguage
                       }
                     : msg
                 ));
-              }
-            );
+              })
+              .catch(() => {}); // Non-blocking
           }
         }
       )

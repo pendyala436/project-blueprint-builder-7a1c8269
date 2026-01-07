@@ -29,20 +29,18 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-// Worker-based translation - NO external APIs, NO Docker, NON-BLOCKING
+// HYBRID: Embedded for preview + Edge Function for translation
 import { 
-  translate,
   transliterateToNative,
-  processChatMessage,
   isSameLanguage,
   isLatinText,
   isLatinScriptLanguage,
-  createDebouncedPreview,
   isReady as isTranslatorReady,
   initWorker,
   normalizeUnicode,
   spellCorrectForChat,
 } from "@/lib/translation";
+import { translateAsync } from "@/lib/translation/async-translator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -314,15 +312,14 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
-  // Auto-translate a message to current user's language (embedded translator, non-blocking)
-  // NATIVE SCRIPT: Convert to receiver's native script based on mother tongue
+  // Auto-translate a message to current user's language via Edge Function
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Only process messages from the partner (not our own messages)
+      // Only process messages from the partner
       if (senderId === currentUserId) {
         return { translatedMessage: text, isTranslated: false };
       }
@@ -330,40 +327,31 @@ const MiniChatWindow = ({
       // Check if same language
       const sameLanguage = isSameLanguage(partnerLanguage, currentUserLanguage);
       
-      // STEP 1: Apply spell correction
+      // Apply spell correction
       const correctedText = spellCorrectForChat(text, partnerLanguage);
       
       let finalText = correctedText;
       let wasTranslated = false;
       
       if (sameLanguage) {
-        // Same language - no translation, but convert to receiver's native script if needed
+        // Same language - just convert to native script if needed
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(correctedText)) {
           finalText = transliterateToNative(correctedText, currentUserLanguage);
         }
       } else {
-        // Different languages - translate to receiver's language
-        const result = await translate(correctedText, partnerLanguage, currentUserLanguage);
+        // Different languages - translate via Edge Function
+        const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage);
         finalText = result.text;
         wasTranslated = result.isTranslated;
         
-        // Convert translated text to receiver's native script if needed
+        // Convert to native script if needed
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(finalText)) {
           finalText = transliterateToNative(finalText, currentUserLanguage);
         }
       }
       
-      // STEP 2: Apply spell correction to final result
+      // Apply spell correction to result
       finalText = spellCorrectForChat(finalText, currentUserLanguage);
-      
-      console.log('[MiniChatWindow] Translation:', {
-        original: text,
-        final: finalText,
-        from: partnerLanguage,
-        to: currentUserLanguage,
-        sameLanguage,
-        wasTranslated
-      });
 
       return {
         translatedMessage: normalizeUnicode(finalText),
