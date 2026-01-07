@@ -877,18 +877,48 @@ async function translateText(
 // Telugu phonetic map (Latin sounds → Telugu script)
 // Comprehensive mapping for accurate Romanized Telugu → Native script conversion
 const TELUGU_TRANSLITERATION: Record<string, string> = {
+  // === COMMON TELUGU PHRASES (highest priority - exact match) ===
+  'nuvvu ekkada unnavu': 'నువ్వు ఎక్కడ ఉన్నావు',
+  'nuvvu ekkada vunnavu': 'నువ్వు ఎక్కడ ఉన్నావు',
+  'nenu office lo unna': 'నేను ఆఫీస్ లో ఉన్నా',
+  'nenu intlo unnanu': 'నేను ఇంట్లో ఉన్నాను',
+  'ela unnaru': 'ఎలా ఉన్నారు', 'ela unnav': 'ఎలా ఉన్నావ్',
+  
   // === COMMON TELUGU WORDS (highest priority - exact match) ===
   'bagunnava': 'బాగున్నావా', 'bagunnaru': 'బాగున్నారు', 'bagunnanu': 'బాగున్నాను',
   'bagundi': 'బాగుంది', 'baga': 'బాగా', 'bagunna': 'బాగున్న',
   'namaste': 'నమస్తే', 'namaskar': 'నమస్కారం', 'vanakkam': 'వణక్కం',
   'hello': 'హలో', 'bye': 'బై', 'ok': 'ఓకే', 'yes': 'యెస్',
   'thanks': 'థాంక్స్', 'please': 'ప్లీజ్', 'sorry': 'సారీ',
+  
+  // Question words
   'ela': 'ఎలా', 'undi': 'ఉంది', 'enta': 'ఎంత', 'evaru': 'ఎవరు',
-  'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు', 'emiti': 'ఏమిటి',
-  'nenu': 'నేను', 'neevu': 'నీవు', 'meeru': 'మీరు', 'vaaru': 'వారు',
+  'ekkada': 'ఎక్కడ', 'enduku': 'ఎందుకు', 'emiti': 'ఏమిటి', 'emi': 'ఏమి',
+  
+  // Pronouns
+  'nenu': 'నేను', 'neevu': 'నీవు', 'nuvvu': 'నువ్వు', 'meeru': 'మీరు', 
+  'vaaru': 'వారు', 'atanu': 'అతను', 'aame': 'ఆమె', 'manam': 'మనం',
+  
+  // Verbs / verb forms
+  'unnanu': 'ఉన్నాను', 'unnavu': 'ఉన్నావు', 'unnaru': 'ఉన్నారు', 
+  'vunnanu': 'ఉన్నాను', 'vunnavu': 'ఉన్నావు', 'vunnaru': 'ఉన్నారు',
+  'unna': 'ఉన్న', 'vunna': 'ఉన్న',
   'raanu': 'రాను', 'velthanu': 'వెళ్తాను', 'chusthanu': 'చూస్తాను',
+  'vasthanu': 'వస్తాను', 'vasthaa': 'వస్తా', 'vachchi': 'వచ్చి',
+  'velthunna': 'వెళ్తున్నా', 'vastunna': 'వస్తున్నా',
+  
+  // Common nouns / places
+  'office': 'ఆఫీస్', 'intlo': 'ఇంట్లో', 'inti': 'ఇంటి', 'illu': 'ఇల్లు',
+  'school': 'స్కూల్', 'college': 'కాలేజ్', 'hospital': 'హాస్పిటల్',
+  
+  // Postpositions (longer forms to avoid conflict with consonant+vowel)
+  'nunchi': 'నుంచి', 'meeda': 'మీద', 'kinda': 'కింద', 'kosam': 'కోసం',
+  
+  // Adjectives / adverbs
   'manchi': 'మంచి', 'chala': 'చాలా', 'koncham': 'కొంచెం',
   'avunu': 'అవును', 'kadu': 'కాదు', 'ledhu': 'లేదు', 'ledu': 'లేదు',
+  
+  // Location words
   'ikkada': 'ఇక్కడ', 'akkada': 'అక్కడ', 'appudu': 'అప్పుడు',
   'ippudu': 'ఇప్పుడు', 'epudu': 'ఎప్పుడు',
   // === VOWELS ===
@@ -1249,6 +1279,8 @@ const TRANSLITERATION_MAPS: Record<string, Record<string, string>> = {
 
 /**
  * Apply phonetic transliteration (sound-based, not meaning-based)
+ * ENHANCED: Processes word-by-word first, then syllable-by-syllable
+ * Supports all 300+ languages with proper word boundary handling
  */
 function applyPhoneticTransliteration(text: string, targetLanguage: string): string | null {
   const langLower = targetLanguage.toLowerCase();
@@ -1258,42 +1290,66 @@ function applyPhoneticTransliteration(text: string, targetLanguage: string): str
   
   const lowerText = text.toLowerCase().trim();
   
-  // First try exact word match
+  // First try exact phrase match (for common phrases)
   if (map[lowerText]) {
     return map[lowerText];
   }
   
-  // Build result by matching patterns (longest first)
-  const patterns = Object.keys(map).sort((a, b) => b.length - a.length);
-  let result = '';
-  let i = 0;
+  // STEP 1: Split into words and process each word
+  // This handles phrases like "nuvvu ekkada vunnavu" properly
+  const words = lowerText.split(/\s+/);
+  const transliteratedWords: string[] = [];
   
-  while (i < lowerText.length) {
-    let matched = false;
+  // Build patterns array once (longest first for efficiency)
+  const patterns = Object.keys(map).sort((a, b) => b.length - a.length);
+  
+  for (const word of words) {
+    // Skip empty words
+    if (!word) continue;
     
-    // Try to match longest pattern first
-    for (const pattern of patterns) {
-      if (lowerText.substring(i, i + pattern.length) === pattern) {
-        result += map[pattern];
-        i += pattern.length;
-        matched = true;
-        break;
+    // Try exact word match first (highest priority)
+    if (map[word]) {
+      transliteratedWords.push(map[word]);
+      continue;
+    }
+    
+    // Word not found as whole - transliterate syllable by syllable
+    let wordResult = '';
+    let i = 0;
+    
+    while (i < word.length) {
+      let matched = false;
+      
+      // Try to match longest pattern first
+      for (const pattern of patterns) {
+        if (word.substring(i, i + pattern.length) === pattern) {
+          wordResult += map[pattern];
+          i += pattern.length;
+          matched = true;
+          break;
+        }
+      }
+      
+      // If no pattern matched, keep original character or try single char
+      if (!matched) {
+        const char = word[i];
+        if (map[char]) {
+          wordResult += map[char];
+        } else {
+          // Keep original for unmapped chars (numbers, punctuation)
+          wordResult += char;
+        }
+        i++;
       }
     }
     
-    // If no pattern matched, keep original character
-    if (!matched) {
-      // Check for single char
-      const char = lowerText[i];
-      if (map[char]) {
-        result += map[char];
-      } else {
-        result += lowerText[i];
-      }
-      i++;
-    }
+    transliteratedWords.push(wordResult);
   }
   
+  // Join with space - preserving word boundaries
+  const result = transliteratedWords.join(' ');
+  
+  // Only return if we actually converted something
   return result !== lowerText ? result : null;
 }
 
