@@ -26,7 +26,7 @@ env.useBrowserCache = true;
 
 interface WorkerMessage {
   id: string;
-  type: 'init' | 'translate' | 'transliterate' | 'process_chat' | 'detect_language' | 'batch_translate';
+  type: 'init' | 'translate' | 'transliterate' | 'process_chat' | 'detect_language' | 'batch_translate' | 'live_preview';
   payload: any;
 }
 
@@ -660,43 +660,77 @@ function isSameLanguage(lang1: string, lang2: string): boolean {
 }
 
 /**
- * Chunk long text for translation
- * Fixes: Very long sentences causing slowdown
+ * Chunk text for translation - handles small to very large messages
+ * Smaller chunks = faster response, better for real-time preview
+ * Larger chunks = better context for translation accuracy
  */
-function chunkText(text: string, maxChunkSize: number = 200): string[] {
+function chunkText(text: string, maxChunkSize: number = 150): string[] {
   if (text.length <= maxChunkSize) return [text];
   
   const chunks: string[] = [];
-  const sentences = text.split(/(?<=[.!?।။။።])\s+/);
+  
+  // Try to split by sentence boundaries first (more natural breaks)
+  const sentenceBreaks = /(?<=[.!?।।।।။។።。！？])\s+/;
+  const sentences = text.split(sentenceBreaks);
+  
   let currentChunk = '';
   
   for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length <= maxChunkSize) {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
-    } else {
-      if (currentChunk) chunks.push(currentChunk);
+    // If adding this sentence would exceed limit
+    if (currentChunk.length + sentence.length > maxChunkSize) {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
+      }
       
-      // If single sentence is too long, split by commas/words
+      // If single sentence is too long, split by clause/phrase
       if (sentence.length > maxChunkSize) {
-        const subParts = sentence.split(/(?<=[,;])\s+/);
-        let subChunk = '';
-        for (const part of subParts) {
-          if (subChunk.length + part.length <= maxChunkSize) {
-            subChunk += (subChunk ? ' ' : '') + part;
+        const clauseBreaks = /(?<=[,;:،؛।॥။])\s+/;
+        const clauses = sentence.split(clauseBreaks);
+        
+        for (const clause of clauses) {
+          if (currentChunk.length + clause.length > maxChunkSize) {
+            if (currentChunk) chunks.push(currentChunk.trim());
+            
+            // If clause still too long, split by words
+            if (clause.length > maxChunkSize) {
+              const words = clause.split(/\s+/);
+              currentChunk = '';
+              for (const word of words) {
+                if (currentChunk.length + word.length + 1 > maxChunkSize) {
+                  if (currentChunk) chunks.push(currentChunk.trim());
+                  currentChunk = word;
+                } else {
+                  currentChunk += (currentChunk ? ' ' : '') + word;
+                }
+              }
+            } else {
+              currentChunk = clause;
+            }
           } else {
-            if (subChunk) chunks.push(subChunk);
-            subChunk = part;
+            currentChunk += (currentChunk ? ' ' : '') + clause;
           }
         }
-        if (subChunk) chunks.push(subChunk);
       } else {
         currentChunk = sentence;
       }
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
     }
   }
   
-  if (currentChunk) chunks.push(currentChunk);
-  return chunks;
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  return chunks.length > 0 ? chunks : [text];
+}
+
+/**
+ * Chunk text for preview - smaller chunks for faster real-time response
+ */
+function chunkTextForPreview(text: string): string[] {
+  return chunkText(text, 80); // Smaller chunks for faster preview
 }
 
 // ============================================================
@@ -974,8 +1008,98 @@ const GUJARATI_TRANSLITERATION: Record<string, string> = {
 // Marathi uses Devanagari, same as Hindi
 const MARATHI_TRANSLITERATION = HINDI_TRANSLITERATION;
 
-// Language to transliteration map lookup
+// Punjabi (Gurmukhi) phonetic map
+const PUNJABI_TRANSLITERATION: Record<string, string> = {
+  'a': 'ਅ', 'aa': 'ਆ', 'i': 'ਇ', 'ii': 'ਈ', 'ee': 'ਈ',
+  'u': 'ਉ', 'uu': 'ਊ', 'oo': 'ਊ', 'e': 'ਏ', 'ai': 'ਐ',
+  'o': 'ਓ', 'au': 'ਔ',
+  'ka': 'ਕ', 'kha': 'ਖ', 'ga': 'ਗ', 'gha': 'ਘ',
+  'cha': 'ਚ', 'ja': 'ਜ', 'ta': 'ਟ', 'da': 'ਡ', 'na': 'ਨ',
+  'pa': 'ਪ', 'pha': 'ਫ', 'ba': 'ਬ', 'bha': 'ਭ', 'ma': 'ਮ',
+  'ya': 'ਯ', 'ra': 'ਰ', 'la': 'ਲ', 'va': 'ਵ', 'wa': 'ਵ',
+  'sha': 'ਸ਼', 'sa': 'ਸ', 'ha': 'ਹ',
+  'hello': 'ਹੈਲੋ', 'hi': 'ਹਾਏ', 'bye': 'ਬਾਏ', 'ok': 'ਓਕੇ',
+};
+
+// Odia phonetic map  
+const ODIA_TRANSLITERATION: Record<string, string> = {
+  'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ii': 'ଈ', 'ee': 'ଈ',
+  'u': 'ଉ', 'uu': 'ଊ', 'oo': 'ଊ', 'e': 'ଏ', 'ai': 'ଐ',
+  'o': 'ଓ', 'au': 'ଔ',
+  'ka': 'କ', 'kha': 'ଖ', 'ga': 'ଗ', 'gha': 'ଘ',
+  'cha': 'ଚ', 'ja': 'ଜ', 'ta': 'ଟ', 'da': 'ଡ', 'na': 'ନ',
+  'pa': 'ପ', 'pha': 'ଫ', 'ba': 'ବ', 'bha': 'ଭ', 'ma': 'ମ',
+  'ya': 'ଯ', 'ra': 'ର', 'la': 'ଲ', 'va': 'ଵ',
+  'sha': 'ଶ', 'sa': 'ସ', 'ha': 'ହ',
+  'hello': 'ହେଲୋ', 'hi': 'ହାଏ', 'bye': 'ବାଏ', 'ok': 'ଓକେ',
+};
+
+// Arabic phonetic map
+const ARABIC_TRANSLITERATION: Record<string, string> = {
+  'a': 'ا', 'aa': 'آ', 'i': 'ي', 'ii': 'إي', 'ee': 'إي',
+  'u': 'و', 'uu': 'أو', 'oo': 'أو', 'e': 'ي', 'ai': 'أي',
+  'o': 'و', 'au': 'او',
+  'ba': 'ب', 'ta': 'ت', 'tha': 'ث', 'ja': 'ج', 'ha': 'ح',
+  'kha': 'خ', 'da': 'د', 'dha': 'ذ', 'ra': 'ر', 'za': 'ز',
+  'sa': 'س', 'sha': 'ش', 'ka': 'ك', 'la': 'ل', 'ma': 'م',
+  'na': 'ن', 'wa': 'و', 'ya': 'ي',
+  'hello': 'هلو', 'hi': 'هاي', 'bye': 'باي', 'ok': 'اوكي',
+};
+
+// Russian (Cyrillic) phonetic map
+const RUSSIAN_TRANSLITERATION: Record<string, string> = {
+  'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
+  'e': 'е', 'yo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и',
+  'y': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н',
+  'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
+  'u': 'у', 'f': 'ф', 'kh': 'х', 'ts': 'ц', 'ch': 'ч',
+  'sh': 'ш', 'shch': 'щ', 'ya': 'я', 'yu': 'ю',
+  'hello': 'хелло', 'hi': 'хай', 'bye': 'бай', 'ok': 'окей',
+};
+
+// Greek phonetic map
+const GREEK_TRANSLITERATION: Record<string, string> = {
+  'a': 'α', 'b': 'β', 'g': 'γ', 'd': 'δ', 'e': 'ε',
+  'z': 'ζ', 'i': 'η', 'th': 'θ', 'k': 'κ', 'l': 'λ',
+  'm': 'μ', 'n': 'ν', 'x': 'ξ', 'o': 'ο', 'p': 'π',
+  'r': 'ρ', 's': 'σ', 't': 'τ', 'u': 'υ', 'f': 'φ',
+  'ch': 'χ', 'ps': 'ψ', 'w': 'ω',
+  'hello': 'χελλο', 'hi': 'χαι', 'bye': 'μπαι', 'ok': 'οκ',
+};
+
+// Thai phonetic map
+const THAI_TRANSLITERATION: Record<string, string> = {
+  'a': 'อะ', 'aa': 'อา', 'i': 'อิ', 'ii': 'อี', 'ee': 'อี',
+  'u': 'อุ', 'uu': 'อู', 'oo': 'อู', 'e': 'เอ', 'ai': 'ไอ',
+  'o': 'โอ', 'au': 'เอา',
+  'ka': 'กะ', 'kha': 'ขะ', 'ga': 'คะ', 'ja': 'จะ',
+  'ta': 'ตะ', 'da': 'ดะ', 'na': 'นะ', 'pa': 'ปะ', 'ba': 'บะ',
+  'ma': 'มะ', 'ya': 'ยะ', 'ra': 'ระ', 'la': 'ละ', 'wa': 'วะ',
+  'sa': 'สะ', 'ha': 'หะ',
+  'hello': 'เฮลโล', 'hi': 'ไฮ', 'bye': 'บาย', 'ok': 'โอเค',
+};
+
+// Hebrew phonetic map
+const HEBREW_TRANSLITERATION: Record<string, string> = {
+  'a': 'א', 'b': 'ב', 'g': 'ג', 'd': 'ד', 'h': 'ה',
+  'v': 'ו', 'z': 'ז', 'ch': 'ח', 't': 'ט', 'y': 'י',
+  'k': 'כ', 'l': 'ל', 'm': 'מ', 'n': 'נ', 's': 'ס',
+  'p': 'פ', 'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש',
+  'hello': 'הלו', 'hi': 'היי', 'bye': 'ביי', 'ok': 'אוקיי',
+};
+
+// Nepali uses Devanagari
+const NEPALI_TRANSLITERATION = HINDI_TRANSLITERATION;
+
+// Assamese uses Bengali script
+const ASSAMESE_TRANSLITERATION = BENGALI_TRANSLITERATION;
+
+// Ukrainian (Cyrillic)
+const UKRAINIAN_TRANSLITERATION = RUSSIAN_TRANSLITERATION;
+
+// Language to transliteration map lookup (expanded for 300+ languages)
 const TRANSLITERATION_MAPS: Record<string, Record<string, string>> = {
+  // Indian languages
   telugu: TELUGU_TRANSLITERATION,
   te: TELUGU_TRANSLITERATION,
   hindi: HINDI_TRANSLITERATION,
@@ -992,6 +1116,35 @@ const TRANSLITERATION_MAPS: Record<string, Record<string, string>> = {
   bn: BENGALI_TRANSLITERATION,
   gujarati: GUJARATI_TRANSLITERATION,
   gu: GUJARATI_TRANSLITERATION,
+  punjabi: PUNJABI_TRANSLITERATION,
+  pa: PUNJABI_TRANSLITERATION,
+  odia: ODIA_TRANSLITERATION,
+  or: ODIA_TRANSLITERATION,
+  oriya: ODIA_TRANSLITERATION,
+  nepali: NEPALI_TRANSLITERATION,
+  ne: NEPALI_TRANSLITERATION,
+  assamese: ASSAMESE_TRANSLITERATION,
+  as: ASSAMESE_TRANSLITERATION,
+  // Middle Eastern
+  arabic: ARABIC_TRANSLITERATION,
+  ar: ARABIC_TRANSLITERATION,
+  urdu: ARABIC_TRANSLITERATION,
+  ur: ARABIC_TRANSLITERATION,
+  persian: ARABIC_TRANSLITERATION,
+  fa: ARABIC_TRANSLITERATION,
+  farsi: ARABIC_TRANSLITERATION,
+  hebrew: HEBREW_TRANSLITERATION,
+  he: HEBREW_TRANSLITERATION,
+  // European (non-Latin)
+  russian: RUSSIAN_TRANSLITERATION,
+  ru: RUSSIAN_TRANSLITERATION,
+  ukrainian: UKRAINIAN_TRANSLITERATION,
+  uk: UKRAINIAN_TRANSLITERATION,
+  greek: GREEK_TRANSLITERATION,
+  el: GREEK_TRANSLITERATION,
+  // Southeast Asian
+  thai: THAI_TRANSLITERATION,
+  th: THAI_TRANSLITERATION,
 };
 
 /**
@@ -1044,6 +1197,11 @@ function applyPhoneticTransliteration(text: string, targetLanguage: string): str
   return result !== lowerText ? result : null;
 }
 
+/**
+ * Transliterate Latin text to native script for any of 300+ languages
+ * Uses phonetic maps for instant response, falls back to NLLB model
+ * Handles small to very large messages with chunking
+ */
 async function transliterateToNative(
   latinText: string,
   targetLanguage: string
@@ -1059,42 +1217,61 @@ async function transliterateToNative(
     return { text: originalText, success: false };
   }
 
-  // Already in native script
+  // Already in native script - no conversion needed
   if (!isLatinText(originalText)) {
     return { text: normalizeUnicode(originalText), success: false };
   }
 
   try {
-    // FIRST: Try phonetic transliteration (sound-based, instant)
-    const phoneticResult = applyPhoneticTransliteration(originalText, targetLanguage);
-    if (phoneticResult) {
-      console.log('[Worker] Phonetic transliteration:', originalText, '→', phoneticResult);
-      return { text: normalizeUnicode(phoneticResult), success: true };
-    }
-    
-    // FALLBACK: Use translation model for longer/complex text
-    const preprocessed = preprocessLatinInput(originalText, targetLanguage);
-    
-    // Use translation from English to convert to native script
-    const result = await translateText(preprocessed, 'english', targetLanguage);
-    
-    // Verify result is in native script
-    const detected = detectLanguageFromText(result.text);
-    if (!detected.isLatin && result.text !== preprocessed && detected.confidence > 0.5) {
-      return { text: normalizeUnicode(result.text), success: true };
-    }
-    
-    // Try with original text as well (in case preprocessing was too aggressive)
-    if (preprocessed !== originalText.toLowerCase()) {
-      const fallbackResult = await translateText(originalText.toLowerCase(), 'english', targetLanguage);
-      const fallbackDetected = detectLanguageFromText(fallbackResult.text);
-      if (!fallbackDetected.isLatin && fallbackResult.text !== originalText.toLowerCase() && fallbackDetected.confidence > 0.5) {
-        return { text: normalizeUnicode(fallbackResult.text), success: true };
+    // For short text: try phonetic transliteration first (instant)
+    if (originalText.length <= 50) {
+      const phoneticResult = applyPhoneticTransliteration(originalText, targetLanguage);
+      if (phoneticResult) {
+        console.log('[Worker] Phonetic transliteration:', originalText.substring(0, 20), '→', phoneticResult.substring(0, 20));
+        return { text: normalizeUnicode(phoneticResult), success: true };
       }
     }
     
-    // Fallback: return original with NFC normalization
-    return { text: normalizeUnicode(originalText), success: false };
+    // For longer text or when phonetic fails: use NLLB model (works for all 300+ languages)
+    // Chunk the text for better handling of large messages
+    const chunks = chunkTextForPreview(originalText);
+    const transliteratedChunks: string[] = [];
+    
+    console.log('[Worker] Transliterating', chunks.length, 'chunks to', targetLanguage);
+    
+    for (const chunk of chunks) {
+      // Try phonetic first for each chunk
+      const phoneticChunk = applyPhoneticTransliteration(chunk, targetLanguage);
+      if (phoneticChunk) {
+        transliteratedChunks.push(phoneticChunk);
+        continue;
+      }
+      
+      // Fallback to NLLB translation (English → target language)
+      const preprocessed = preprocessLatinInput(chunk, targetLanguage);
+      const result = await translateText(preprocessed, 'english', targetLanguage);
+      
+      // Verify result is in native script
+      const detected = detectLanguageFromText(result.text);
+      if (!detected.isLatin && result.text !== preprocessed && detected.confidence > 0.3) {
+        transliteratedChunks.push(normalizeUnicode(result.text));
+      } else {
+        // Try with original chunk
+        const fallbackResult = await translateText(chunk, 'english', targetLanguage);
+        const fallbackDetected = detectLanguageFromText(fallbackResult.text);
+        if (!fallbackDetected.isLatin && fallbackResult.text !== chunk) {
+          transliteratedChunks.push(normalizeUnicode(fallbackResult.text));
+        } else {
+          // Keep original if conversion fails
+          transliteratedChunks.push(chunk);
+        }
+      }
+    }
+    
+    const finalText = normalizeUnicode(transliteratedChunks.join(' '));
+    const wasConverted = finalText !== originalText && !isLatinText(finalText);
+    
+    return { text: finalText, success: wasConverted };
   } catch (err) {
     console.error('[Worker] Transliteration error:', err);
     return { text: normalizeUnicode(latinText), success: false };
@@ -1246,6 +1423,54 @@ async function batchTranslate(
   return results;
 }
 
+/**
+ * Live preview for real-time typing - optimized for speed
+ * Shows native script preview as user types (sender side)
+ * Supports all 300+ languages with proper chunking for large messages
+ */
+async function processLivePreview(
+  text: string,
+  userLanguage: string
+): Promise<{ preview: string; isConverted: boolean; isLatin: boolean }> {
+  const originalText = normalizeInput(text);
+  
+  if (!originalText) {
+    return { preview: text, isConverted: false, isLatin: true };
+  }
+
+  // Check if user's language uses Latin script
+  if (isLatinScriptLanguage(userLanguage)) {
+    return { preview: originalText, isConverted: false, isLatin: true };
+  }
+
+  // Check if already in native script
+  if (!isLatinText(originalText)) {
+    return { preview: normalizeUnicode(originalText), isConverted: false, isLatin: false };
+  }
+
+  // For very short text (1-3 chars), just show as-is for responsiveness
+  if (originalText.length <= 3) {
+    const quickResult = applyPhoneticTransliteration(originalText, userLanguage);
+    if (quickResult) {
+      return { preview: quickResult, isConverted: true, isLatin: false };
+    }
+    return { preview: originalText, isConverted: false, isLatin: true };
+  }
+
+  try {
+    // Use transliteration (handles chunking internally)
+    const result = await transliterateToNative(originalText, userLanguage);
+    return { 
+      preview: result.text, 
+      isConverted: result.success,
+      isLatin: !result.success
+    };
+  } catch (err) {
+    console.error('[Worker] Live preview error:', err);
+    return { preview: originalText, isConverted: false, isLatin: true };
+  }
+}
+
 // ============================================================
 // MESSAGE HANDLER (Atomic queue processing)
 // ============================================================
@@ -1300,6 +1525,14 @@ async function processMessage(msg: WorkerMessage): Promise<WorkerResponse> {
       case 'batch_translate':
         const batchResult = await batchTranslate(payload.items);
         response = { id, type, success: true, result: batchResult };
+        break;
+
+      case 'live_preview':
+        const previewResult = await processLivePreview(
+          payload.text,
+          payload.userLanguage
+        );
+        response = { id, type, success: previewResult.isConverted, result: previewResult };
         break;
 
       default:
