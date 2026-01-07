@@ -903,8 +903,8 @@ const ChatScreen = () => {
   /**
    * translateMessage Function
    * 
-   * Calls the translate-message edge function to translate text.
-   * Uses NLLB-200 neural machine translation model supporting 200+ languages.
+   * Uses browser-side NLLB-200 translation via Web Worker.
+   * Supports 300+ languages with non-blocking performance.
    * 
    * @param message - Text to translate
    * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
@@ -913,24 +913,24 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Call Supabase Edge Function for NLLB-200 translation
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message, 
-          targetLanguage,
-          sourceLanguage: sourceLanguage || currentUserLanguage // Use current user's language as source
-        }
-      });
-
-      if (error) throw error;
+      // Import browser-side translation
+      const { translateAsync, isSameLanguage } = await import('@/lib/translation/async-translator');
       
-      // Translation completed successfully
+      const source = sourceLanguage || currentUserLanguage;
+      
+      // Skip if same language
+      if (isSameLanguage(source, targetLanguage)) {
+        return { translatedMessage: message, isTranslated: false, detectedLanguage: source, translationPair: "" };
+      }
+      
+      // Use browser-side Web Worker translation (non-blocking, 300+ languages)
+      const result = await translateAsync(message, source, targetLanguage, 'normal');
       
       return { 
-        translatedMessage: data.translatedMessage, 
-        isTranslated: data.isTranslated,
-        detectedLanguage: data.detectedLanguage,
-        translationPair: data.translationPair || `${data.detectedLanguage} → ${targetLanguage}`
+        translatedMessage: result.text, 
+        isTranslated: result.isTranslated,
+        detectedLanguage: result.sourceLanguage || source,
+        translationPair: result.isTranslated ? `${source} → ${targetLanguage}` : ""
       };
     } catch (error) {
       console.error("Translation error:", error);
@@ -957,7 +957,7 @@ const ChatScreen = () => {
   /**
    * convertMessageToTargetLanguage Function
    * 
-   * Converts English typing to the target language script.
+   * Converts English typing to the target language script using browser-side Web Worker.
    * Example: "bagunnava" → బాగున్నావా (Telugu)
    * Example: "kaise ho" → कैसे हो (Hindi)
    * 
@@ -967,20 +967,17 @@ const ChatScreen = () => {
    */
   const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
     try {
-      const { data, error } = await supabase.functions.invoke("translate-message", {
-        body: { 
-          message, 
-          targetLanguage,
-          mode: "convert" // Force conversion mode for outgoing messages
-        }
-      });
-
-      if (error) {
-        console.error("Conversion error:", error);
+      // Import browser-side transliteration
+      const { convertToNativeScriptAsync, isLatinScriptLanguage, isLatinText } = await import('@/lib/translation/async-translator');
+      
+      // Skip if target is Latin script or input is already native
+      if (isLatinScriptLanguage(targetLanguage) || !isLatinText(message)) {
         return message;
       }
       
-      return data.convertedMessage || data.translatedMessage || message;
+      // Use browser-side Web Worker for transliteration (non-blocking)
+      const result = await convertToNativeScriptAsync(message, targetLanguage);
+      return result.text || message;
     } catch (error) {
       console.error("Conversion failed:", error);
       return message;
