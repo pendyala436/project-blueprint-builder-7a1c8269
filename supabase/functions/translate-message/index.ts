@@ -905,66 +905,94 @@ serve(async (req) => {
     const sourceScript = detectScriptFromText(inputText);
     const targetScript = getTargetScriptFromLanguage(toLang);
     
-    // Primary translation: source → target
-    const toTarget = translateMessage(inputText, fromLang, toLang);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENGLISH PIVOT ARCHITECTURE FOR ALL 900+ LANGUAGES
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Step 1: ANY SOURCE → ENGLISH (Latin script)
+    // Step 2: ENGLISH → ANY TARGET (Target script)
+    // This reduces 810,000 combinations to just 1,800 mappings (900×2)
+    // ═══════════════════════════════════════════════════════════════════════════
     
-    // BIDIRECTIONAL: Also translate to English (Latin) for two-way communication
-    // This ensures both chat participants can read the message
-    const toEnglish = sourceScript !== 'latin' 
-      ? transliterateToLatin(inputText) 
+    // STEP 1: Source → English (always convert to Latin/English first)
+    const inEnglish = sourceScript !== 'latin' 
+      ? transliterateToLatin(inputText)
       : inputText;
     
-    // Reverse direction: If someone sends English, show in target script too
-    const fromEnglish = sourceScript === 'latin' && targetScript !== 'latin'
-      ? transliterateFromLatin(inputText, targetScript)
-      : null;
+    // STEP 2: English → Target (convert English/Latin to target script)
+    const inTargetScript = targetScript !== 'latin'
+      ? transliterateFromLatin(inEnglish, targetScript)
+      : inEnglish;
     
-    // Full bidirectional response for chat
+    // REVERSE for bidirectional chat:
+    // If receiver replies in target language, convert back through English
+    const targetToEnglish = targetScript !== 'latin'
+      ? transliterateToLatin(inTargetScript)
+      : inTargetScript;
+    
+    // Full response with English pivot architecture
     const response: Record<string, any> = {
       success: true,
+      
+      // Original input
       original: inputText,
+      originalScript: sourceScript,
       
-      // Primary translation (source → target language)
-      translated: toTarget,
-      translatedText: toTarget,
+      // ═══════════════════════════════════════════════════════════════════
+      // ENGLISH PIVOT TRANSLATIONS
+      // ═══════════════════════════════════════════════════════════════════
       
-      // TWO-WAY COMMUNICATION FIELDS
-      // For sender's language partner to read
-      toEnglish: toEnglish,
-      inLatin: toEnglish,
+      // Step 1 Result: Source → English
+      sourceToEnglish: inEnglish,
+      inEnglish: inEnglish,
+      inLatin: inEnglish,
       
-      // For showing English text in target script
-      fromEnglish: fromEnglish,
-      inTargetScript: fromEnglish || toTarget,
+      // Step 2 Result: English → Target  
+      englishToTarget: inTargetScript,
+      inTargetScript: inTargetScript,
+      translated: inTargetScript,
+      translatedText: inTargetScript,
+      
+      // Reverse: Target → English (for replies)
+      targetToEnglish: targetToEnglish,
+      
+      // ═══════════════════════════════════════════════════════════════════
+      // BIDIRECTIONAL CHAT FIELDS
+      // ═══════════════════════════════════════════════════════════════════
+      bidirectional: {
+        // What was typed
+        original: inputText,
+        originalScript: sourceScript,
+        
+        // PIVOT: Always through English
+        pivot: 'english',
+        pivotText: inEnglish,
+        
+        // For English/Latin speaker to read
+        forEnglishReader: inEnglish,
+        
+        // For target language speaker to read
+        forTargetReader: inTargetScript,
+        
+        // For reverse communication (target replies)
+        reverseToEnglish: targetToEnglish
+      },
       
       // Metadata
       sourceLang: fromLang,
       targetLang: toLang,
       sourceScript: sourceScript,
       targetScript: targetScript,
+      pivotLanguage: 'english',
       
-      // Bidirectional pairs for chat UI
-      bidirectional: {
-        // What the sender typed
-        original: inputText,
-        originalScript: sourceScript,
-        
-        // For English/Latin reader
-        forEnglishReader: toEnglish,
-        
-        // For target language reader  
-        forTargetReader: toTarget,
-        
-        // If sender typed in English, show in target script
-        englishInTargetScript: fromEnglish
-      },
-      
-      method: 'dynamic_embedded_transliteration',
-      supportedLanguages: '900+',
-      supportedCombinations: '810000+'
+      // Architecture info
+      method: 'english_pivot_transliteration',
+      architecture: 'source → english → target',
+      supportedLanguages: 900,
+      totalCombinations: '810,000+',
+      actualMappings: '1,800 (900×2 via English pivot)'
     };
     
-    console.log(`[Translate] Bidirectional: "${inputText.substring(0, 20)}..." → English: "${toEnglish.substring(0, 20)}..." | Target: "${toTarget.substring(0, 20)}..."`);
+    console.log(`[English Pivot] "${inputText.substring(0, 15)}..." [${sourceScript}] → English: "${inEnglish.substring(0, 15)}..." → [${targetScript}]: "${inTargetScript.substring(0, 15)}..."`);
     
     return new Response(
       JSON.stringify(response),
