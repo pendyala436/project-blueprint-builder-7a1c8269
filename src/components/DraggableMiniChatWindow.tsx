@@ -844,14 +844,22 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
+    // CRITICAL: Capture the current preview BEFORE clearing state
+    // This ensures we use the preview that matches the current input
+    const currentPreview = livePreview.text;
+    const hasPreview = currentPreview && currentPreview !== messageText && transliterationEnabled;
+    const messageToSend = hasPreview ? currentPreview : messageText;
+
     // IMMEDIATE: Clear input and update UI (non-blocking)
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
     setLastActivityTime(Date.now());
     
-    // Use live preview if available, otherwise use original text
-    const hasPreview = livePreview.text && livePreview.text !== messageText && transliterationEnabled;
-    const messageToSend = hasPreview ? livePreview.text : messageText;
+    // Clear any pending preview timeout to prevent stale updates
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
     
     // OPTIMISTIC: Add message to UI immediately
     const tempId = `temp-${Date.now()}`;
