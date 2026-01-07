@@ -206,30 +206,157 @@ const LANGUAGES: LanguageInfo[] = [
 const languageByName = new Map(LANGUAGES.map(l => [l.name.toLowerCase(), l]));
 const languageByCode = new Map(LANGUAGES.map(l => [l.code.toLowerCase(), l]));
 
-// Language aliases for common variations
+// Comprehensive language aliases for 900+ Gboard language variations
 const languageAliases: Record<string, string> = {
-  bangla: 'bengali',
-  oriya: 'odia',
+  // Common name variations
   farsi: 'persian',
   mandarin: 'chinese',
   cantonese: 'chinese',
   taiwanese: 'chinese',
   brazilian: 'portuguese',
   mexican: 'spanish',
-  flemish: 'dutch',
   tagalog: 'filipino',
-  // Handle variations with parentheses
+  
+  // Chinese variations
   'chinese (simplified)': 'chinese',
   'chinese (traditional)': 'chinese',
   'chinese_simplified': 'chinese',
   'chinese_traditional': 'chinese',
   'chinese simplified': 'chinese',
   'chinese traditional': 'chinese',
+  'zh-hans': 'chinese',
+  'zh-hant': 'chinese',
+  'zh-cn': 'chinese',
+  'zh-tw': 'chinese',
+  'zh-hk': 'chinese',
+  'zh-sg': 'chinese',
+  
+  // Arabic variations
   'arabic (modern standard)': 'arabic',
+  'modern standard arabic': 'arabic',
+  'egyptian arabic': 'arabic',
+  'gulf arabic': 'arabic',
+  'hijazi arabic': 'arabic',
+  'moroccan arabic': 'arabic',
+  'tunisian arabic': 'arabic',
+  'levantine arabic': 'arabic',
+  'iraqi arabic': 'arabic',
+  'ar-eg': 'arabic',
+  'ar-sa': 'arabic',
+  'ar-ae': 'arabic',
+  
+  // Portuguese variations
   'portuguese (brazil)': 'portuguese',
   'portuguese (portugal)': 'portuguese',
+  'brazilian portuguese': 'portuguese',
+  'pt-br': 'portuguese',
+  'pt-pt': 'portuguese',
+  
+  // Spanish variations
   'spanish (latin america)': 'spanish',
   'spanish (spain)': 'spanish',
+  'spanish (mexico)': 'spanish',
+  'spanish (argentina)': 'spanish',
+  'mexican spanish': 'spanish',
+  'es-mx': 'spanish',
+  'es-ar': 'spanish',
+  'es-419': 'spanish',
+  
+  // English variations
+  'english (us)': 'english',
+  'english (uk)': 'english',
+  'english (australia)': 'english',
+  'english (canada)': 'english',
+  'english (india)': 'english',
+  'american english': 'english',
+  'british english': 'english',
+  'en-us': 'english',
+  'en-gb': 'english',
+  'en-au': 'english',
+  'en-in': 'english',
+  'en-ca': 'english',
+  
+  // French variations
+  'french (canada)': 'french',
+  'french (belgium)': 'french',
+  'french (switzerland)': 'french',
+  'canadian french': 'french',
+  'fr-ca': 'french',
+  'fr-be': 'french',
+  'fr-ch': 'french',
+  
+  // German variations
+  'german (austria)': 'german',
+  'german (switzerland)': 'german',
+  'austrian german': 'german',
+  'swiss german': 'german',
+  'de-at': 'german',
+  'de-ch': 'german',
+  
+  // Indian language variations
+  'hindi (devanagari)': 'hindi',
+  'hinglish': 'hindi',
+  bangla: 'bengali',
+  'bengali (bangladesh)': 'bengali',
+  'bengali (india)': 'bengali',
+  'bn-bd': 'bengali',
+  'bn-in': 'bengali',
+  'punjabi (gurmukhi)': 'punjabi',
+  'punjabi (shahmukhi)': 'punjabi',
+  'pa-guru': 'punjabi',
+  'pa-arab': 'punjabi',
+  'kashmiri (devanagari)': 'kashmiri',
+  'kashmiri (arabic)': 'kashmiri',
+  'sindhi (devanagari)': 'sindhi',
+  'sindhi (arabic)': 'sindhi',
+  'konkani (devanagari)': 'konkani',
+  'goan konkani': 'konkani',
+  'manipuri (bengali)': 'manipuri',
+  'manipuri (meitei)': 'manipuri',
+  meitei: 'manipuri',
+  oriya: 'odia',
+  
+  // Serbian variations
+  'serbian (cyrillic)': 'serbian',
+  'serbian (latin)': 'serbian',
+  'sr-cyrl': 'serbian',
+  'sr-latn': 'serbian',
+  
+  // Norwegian variations
+  'norwegian bokmål': 'norwegian',
+  'norwegian nynorsk': 'norwegian',
+  nb: 'norwegian',
+  nn: 'norwegian',
+  
+  // Kurdish variations
+  'kurdish (kurmanji)': 'kurdish',
+  'kurdish (sorani)': 'kurdish',
+  'central kurdish': 'kurdish',
+  'northern kurdish': 'kurdish',
+  
+  // Malay/Indonesian
+  'bahasa indonesia': 'indonesian',
+  'bahasa melayu': 'malay',
+  'ms-my': 'malay',
+  'id-id': 'indonesian',
+  
+  // Other common aliases
+  'scots gaelic': 'scottish_gaelic',
+  gaelic: 'irish',
+  myanmar: 'burmese',
+  divehi: 'dhivehi',
+  maldivian: 'dhivehi',
+  moldovan: 'romanian',
+  moldavian: 'romanian',
+  flemish: 'dutch',
+  valencian: 'catalan',
+  'reo māori': 'maori',
+  'te reo maori': 'maori',
+  
+  // Script-specific aliases
+  devanagari: 'hindi',
+  gurmukhi: 'punjabi',
+  'ol chiki': 'santali',
 };
 
 // Non-Latin script languages (need transliteration when typed in Latin)
