@@ -324,24 +324,35 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Check if same language
-      const sameLanguage = isSameLanguage(partnerLanguage, currentUserLanguage);
+      // Detect the actual script/language of the incoming message
+      // The stored message may be in partner's native script (e.g., Hindi देवनागरी)
+      // or in Latin (English) - we need to detect this for proper translation
+      const messageIsLatin = isLatinText(text);
+      
+      // Determine actual source language based on message script
+      // If message is in Latin, treat as English for translation
+      // If message is non-Latin, use partner's language
+      const actualSourceLanguage = messageIsLatin ? 'english' : partnerLanguage;
+      
+      // Check if same language (after determining actual source)
+      const sameLanguage = isSameLanguage(actualSourceLanguage, currentUserLanguage);
       
       // Apply spell correction to Latin text only BEFORE processing
-      const inputIsLatin = isLatinText(text);
-      const correctedText = inputIsLatin ? spellCorrectForChat(text, partnerLanguage) : text;
+      const correctedText = messageIsLatin ? spellCorrectForChat(text, 'english') : text;
       
       let finalText = correctedText;
       let wasTranslated = false;
       
       if (sameLanguage) {
         // Same language - just convert to native script if needed
-        if (!isLatinScriptLanguage(currentUserLanguage) && inputIsLatin) {
+        if (!isLatinScriptLanguage(currentUserLanguage) && messageIsLatin) {
           finalText = transliterateToNative(correctedText, currentUserLanguage);
         }
       } else {
         // Different languages - translate via Edge Function
-        const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage);
+        // IMPORTANT: Use actualSourceLanguage (detected from message) not partnerLanguage
+        console.log(`[MiniChatWindow] Translating: ${actualSourceLanguage} -> ${currentUserLanguage}`);
+        const result = await translateAsync(correctedText, actualSourceLanguage, currentUserLanguage);
         finalText = result.text;
         wasTranslated = result.isTranslated;
         
@@ -356,7 +367,7 @@ const MiniChatWindow = ({
       return {
         translatedMessage: normalizeUnicode(finalText),
         isTranslated: wasTranslated || finalText !== text,
-        detectedLanguage: partnerLanguage
+        detectedLanguage: actualSourceLanguage
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);

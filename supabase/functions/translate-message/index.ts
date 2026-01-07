@@ -338,6 +338,9 @@ async function translateWithLibre(
     try {
       console.log(`[dl-translate] Trying LibreTranslate: ${mirror}`);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      
       const response = await fetch(`${mirror}/translate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,7 +350,10 @@ async function translateWithLibre(
           target: targetCode,
           format: "text",
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -374,22 +380,74 @@ async function translateWithMyMemory(
   try {
     console.log('[dl-translate] Trying MyMemory fallback...');
     const langPair = `${sourceCode}|${targetCode}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    
     const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`,
+      { signal: controller.signal }
     );
+    
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
       const translated = data.responseData?.translatedText?.trim();
       if (translated && 
           translated !== text &&
-          !translated.includes('MYMEMORY WARNING')) {
+          !translated.includes('MYMEMORY WARNING') &&
+          translated.toLowerCase() !== text.toLowerCase()) {
         console.log('[dl-translate] MyMemory success');
         return { translatedText: translated, success: true };
       }
     }
   } catch (error) {
     console.log('[dl-translate] MyMemory failed');
+  }
+
+  return { translatedText: text, success: false };
+}
+
+// Translate using Google Translate (unofficial free API)
+async function translateWithGoogle(
+  text: string,
+  sourceCode: string,
+  targetCode: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
+    console.log('[dl-translate] Trying Google Translate fallback...');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    
+    // Using the free Google Translate API endpoint
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceCode}&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+    
+    const response = await fetch(url, { signal: controller.signal });
+    
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      // Google returns array format: [[["translated text","original text",null,null,10]],null,"en",null,null,null,null,[]]
+      if (data && Array.isArray(data) && data[0]) {
+        const translations = data[0];
+        let translated = '';
+        for (const t of translations) {
+          if (t && t[0]) {
+            translated += t[0];
+          }
+        }
+        translated = translated.trim();
+        if (translated && translated !== text && translated.toLowerCase() !== text.toLowerCase()) {
+          console.log('[dl-translate] Google Translate success');
+          return { translatedText: translated, success: true };
+        }
+      }
+    }
+  } catch (error) {
+    console.log('[dl-translate] Google Translate failed:', error);
   }
 
   return { translatedText: text, success: false };
@@ -409,14 +467,18 @@ async function translateText(
 
   console.log(`[dl-translate] Translating: ${sourceCode} -> ${targetCode}`);
 
-  // Try direct translation first
+  // Try direct translation first (LibreTranslate -> MyMemory -> Google)
   let result = await translateWithLibre(text, sourceCode, targetCode);
   if (result.success) {
     return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
 
-  // Try MyMemory fallback for direct translation
   result = await translateWithMyMemory(text, sourceCode, targetCode);
+  if (result.success) {
+    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
+  }
+
+  result = await translateWithGoogle(text, sourceCode, targetCode);
   if (result.success) {
     return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
   }
@@ -426,7 +488,7 @@ async function translateText(
     console.log('[dl-translate] Using English pivot translation');
     
     // Step 1: Translate source -> English
-    let pivotResult = await translateWithLibre(text, sourceCode, 'en');
+    let pivotResult = await translateWithGoogle(text, sourceCode, 'en');
     if (!pivotResult.success) {
       pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
     }
@@ -435,7 +497,7 @@ async function translateText(
       const englishText = pivotResult.translatedText.trim();
       
       // Step 2: Translate English -> target
-      let finalResult = await translateWithLibre(englishText, 'en', targetCode);
+      let finalResult = await translateWithGoogle(englishText, 'en', targetCode);
       if (!finalResult.success) {
         finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
       }
