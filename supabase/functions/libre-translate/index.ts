@@ -405,6 +405,74 @@ const GUJARATI_TO_ENGLISH: Record<string, string> = {
   'હું તને પ્રેમ કરું છું': 'i love you', 'મળીને આનંદ થયો': 'nice to meet you',
 };
 
+// Kannada Dictionary
+const KANNADA_TO_ENGLISH: Record<string, string> = {
+  'ನಮಸ್ಕಾರ': 'hello', 'ಹಾಯ್': 'hi', 'ಹಲೋ': 'hello',
+  'ಶುಭೋದಯ': 'good morning', 'ಶುಭ ರಾತ್ರಿ': 'good night', 'ಶುಭ ಸಂಜೆ': 'good evening',
+  'ಹೋಗಿ ಬರುತ್ತೇನೆ': 'goodbye', 'ಮತ್ತೆ ಸಿಗೋಣ': 'see you again',
+  'ಹೇಗಿದ್ದೀರಿ': 'how are you', 'ನೀವು ಹೇಗಿದ್ದೀರಿ': 'how are you', 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ': 'i am fine',
+  'ಧನ್ಯವಾದಗಳು': 'thank you', 'ದಯವಿಟ್ಟು': 'please', 'ಕ್ಷಮಿಸಿ': 'sorry',
+  'ಹೌದು': 'yes', 'ಇಲ್ಲ': 'no', 'ಸರಿ': 'okay',
+  'ನಾನು': 'i', 'ನೀನು': 'you', 'ನೀವು': 'you (formal)', 'ಅವನು': 'he', 'ಅವಳು': 'she', 'ಅವರು': 'they', 'ನಾವು': 'we',
+  'ಏನು': 'what', 'ಯಾರು': 'who', 'ಎಲ್ಲಿ': 'where', 'ಯಾವಾಗ': 'when', 'ಏಕೆ': 'why', 'ಹೇಗೆ': 'how',
+  'ಒಳ್ಳೆಯ': 'good', 'ಕೆಟ್ಟ': 'bad', 'ಸುಂದರ': 'beautiful', 'ದೊಡ್ಡ': 'big', 'ಚಿಕ್ಕ': 'small',
+  'ಇಂದು': 'today', 'ನಾಳೆ': 'tomorrow', 'ನಿನ್ನೆ': 'yesterday', 'ಈಗ': 'now', 'ನಂತರ': 'later',
+  'ಒಂದು': 'one', 'ಎರಡು': 'two', 'ಮೂರು': 'three', 'ನಾಲ್ಕು': 'four', 'ಐದು': 'five',
+  'ನಿಮ್ಮ ಹೆಸರೇನು': 'what is your name', 'ನೀವು ಎಲ್ಲಿಂದ ಬಂದಿದ್ದೀರಿ': 'where are you from',
+  'ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ': 'i love you', 'ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು': 'nice to meet you',
+};
+
+// Malayalam Dictionary
+const MALAYALAM_TO_ENGLISH: Record<string, string> = {
+  'നമസ്കാരം': 'hello', 'ഹായ്': 'hi', 'ഹലോ': 'hello',
+  'സുപ്രഭാതം': 'good morning', 'ശുഭ രാത്രി': 'good night', 'ശുഭ സന്ധ്യ': 'good evening',
+  'വിട': 'goodbye', 'വീണ്ടും കാണാം': 'see you again',
+  'സുഖമാണോ': 'how are you', 'എങ്ങനെയുണ്ട്': 'how are you', 'ഞാൻ സുഖമായിരിക്കുന്നു': 'i am fine',
+  'നന്ദി': 'thank you', 'ദയവായി': 'please', 'ക്ഷമിക്കണം': 'sorry',
+  'അതെ': 'yes', 'ഇല്ല': 'no', 'ശരി': 'okay',
+  'ഞാൻ': 'i', 'നീ': 'you', 'നിങ്ങൾ': 'you (formal)', 'അവൻ': 'he', 'അവൾ': 'she', 'അവർ': 'they', 'ഞങ്ങൾ': 'we',
+  'എന്ത്': 'what', 'ആര്': 'who', 'എവിടെ': 'where', 'എപ്പോൾ': 'when', 'എന്തുകൊണ്ട്': 'why', 'എങ്ങനെ': 'how',
+  'നല്ല': 'good', 'മോശം': 'bad', 'സുന്ദരമായ': 'beautiful', 'വലിയ': 'big', 'ചെറിയ': 'small',
+  'ഇന്ന്': 'today', 'നാളെ': 'tomorrow', 'ഇന്നലെ': 'yesterday', 'ഇപ്പോൾ': 'now', 'പിന്നീട്': 'later',
+  'ഒന്ന്': 'one', 'രണ്ട്': 'two', 'മൂന്ന്': 'three', 'നാല്': 'four', 'അഞ്ച്': 'five',
+  'നിങ്ങളുടെ പേര് എന്താണ്': 'what is your name', 'നിങ്ങൾ എവിടെ നിന്നാണ്': 'where are you from',
+  'ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു': 'i love you', 'കണ്ടതിൽ സന്തോഷം': 'nice to meet you',
+};
+
+// Punjabi Dictionary
+const PUNJABI_TO_ENGLISH: Record<string, string> = {
+  'ਸਤ ਸ੍ਰੀ ਅਕਾਲ': 'hello', 'ਨਮਸਕਾਰ': 'greetings', 'ਹਾਇ': 'hi',
+  'ਸ਼ੁਭ ਸਵੇਰ': 'good morning', 'ਸ਼ੁਭ ਰਾਤ': 'good night', 'ਸ਼ੁਭ ਸ਼ਾਮ': 'good evening',
+  'ਅਲਵਿਦਾ': 'goodbye', 'ਫਿਰ ਮਿਲਾਂਗੇ': 'see you again',
+  'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ': 'how are you', 'ਕਿਵੇਂ ਹੋ': 'how are you', 'ਮੈਂ ਠੀਕ ਹਾਂ': 'i am fine',
+  'ਧੰਨਵਾਦ': 'thank you', 'ਕਿਰਪਾ ਕਰਕੇ': 'please', 'ਮਾਫ਼ ਕਰਨਾ': 'sorry',
+  'ਹਾਂ': 'yes', 'ਨਹੀਂ': 'no', 'ਠੀਕ ਹੈ': 'okay',
+  'ਮੈਂ': 'i', 'ਤੂੰ': 'you', 'ਤੁਸੀਂ': 'you (formal)', 'ਉਹ': 'he/she/they', 'ਅਸੀਂ': 'we',
+  'ਕੀ': 'what', 'ਕੌਣ': 'who', 'ਕਿੱਥੇ': 'where', 'ਕਦੋਂ': 'when', 'ਕਿਉਂ': 'why', 'ਕਿਵੇਂ': 'how',
+  'ਚੰਗਾ': 'good', 'ਮਾੜਾ': 'bad', 'ਸੁੰਦਰ': 'beautiful', 'ਵੱਡਾ': 'big', 'ਛੋਟਾ': 'small',
+  'ਅੱਜ': 'today', 'ਕੱਲ੍ਹ': 'tomorrow/yesterday', 'ਹੁਣ': 'now', 'ਬਾਅਦ ਵਿੱਚ': 'later',
+  'ਇੱਕ': 'one', 'ਦੋ': 'two', 'ਤਿੰਨ': 'three', 'ਚਾਰ': 'four', 'ਪੰਜ': 'five',
+  'ਤੁਹਾਡਾ ਨਾਮ ਕੀ ਹੈ': 'what is your name', 'ਤੁਸੀਂ ਕਿੱਥੋਂ ਹੋ': 'where are you from',
+  'ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ': 'i love you', 'ਮਿਲ ਕੇ ਖੁਸ਼ੀ ਹੋਈ': 'nice to meet you',
+};
+
+// Odia Dictionary
+const ODIA_TO_ENGLISH: Record<string, string> = {
+  'ନମସ୍କାର': 'hello', 'ହାଏ': 'hi', 'ହେଲୋ': 'hello',
+  'ସୁପ୍ରଭାତ': 'good morning', 'ଶୁଭ ରାତ୍ରି': 'good night', 'ଶୁଭ ସନ୍ଧ୍ୟା': 'good evening',
+  'ବିଦାୟ': 'goodbye', 'ପୁନର୍ବାର ଭେଟିବା': 'see you again',
+  'ଆପଣ କେମିତି ଅଛନ୍ତି': 'how are you', 'କେମିତି ଅଛ': 'how are you', 'ମୁଁ ଭଲ ଅଛି': 'i am fine',
+  'ଧନ୍ୟବାଦ': 'thank you', 'ଦୟାକରି': 'please', 'କ୍ଷମା କରନ୍ତୁ': 'sorry',
+  'ହଁ': 'yes', 'ନାହିଁ': 'no', 'ଠିକ ଅଛି': 'okay',
+  'ମୁଁ': 'i', 'ତୁ': 'you', 'ଆପଣ': 'you (formal)', 'ସେ': 'he/she', 'ସେମାନେ': 'they', 'ଆମେ': 'we',
+  'କଣ': 'what', 'କିଏ': 'who', 'କେଉଁଠି': 'where', 'କେବେ': 'when', 'କାହିଁକି': 'why', 'କେମିତି': 'how',
+  'ଭଲ': 'good', 'ଖରାପ': 'bad', 'ସୁନ୍ଦର': 'beautiful', 'ବଡ଼': 'big', 'ଛୋଟ': 'small',
+  'ଆଜି': 'today', 'କାଲି': 'tomorrow', 'ଗତକାଲି': 'yesterday', 'ବର୍ତ୍ତମାନ': 'now', 'ପରେ': 'later',
+  'ଏକ': 'one', 'ଦୁଇ': 'two', 'ତିନି': 'three', 'ଚାରି': 'four', 'ପାଞ୍ଚ': 'five',
+  'ଆପଣଙ୍କ ନାମ କଣ': 'what is your name', 'ଆପଣ କେଉଁଠୁ': 'where are you from',
+  'ମୁଁ ତୁମକୁ ଭଲ ପାଏ': 'i love you', 'ଭେଟି ଖୁସି ଲାଗିଲା': 'nice to meet you',
+};
+
 // Create reverse dictionaries (English to other languages)
 function createReverseDictionary(dict: Record<string, string>): Record<string, string> {
   const reverse: Record<string, string> = {};
@@ -429,6 +497,10 @@ const DICTIONARIES: Record<string, Record<string, string>> = {
   'ta': TAMIL_TO_ENGLISH,
   'mr': MARATHI_TO_ENGLISH,
   'gu': GUJARATI_TO_ENGLISH,
+  'kn': KANNADA_TO_ENGLISH,
+  'ml': MALAYALAM_TO_ENGLISH,
+  'pa': PUNJABI_TO_ENGLISH,
+  'or': ODIA_TO_ENGLISH,
   'es': SPANISH_TO_ENGLISH,
   'fr': FRENCH_TO_ENGLISH,
   'de': GERMAN_TO_ENGLISH,
