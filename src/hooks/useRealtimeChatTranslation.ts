@@ -1,72 +1,51 @@
 /**
- * Ultra-Fast Real-Time Chat Translation Hook
- * ============================================
- * Production-ready, < 2ms UI response time
- * 
- * NO HARDCODED WORDS - Dynamic phonetic transliteration
- * Supports ALL 300+ languages without maintenance
+ * Real-Time Chat Translation Hook
+ * ================================
+ * Uses Edge Function for translation (server-side NLLB)
+ * Dynamic phonetic transliteration for instant previews (client-side)
  * 
  * ARCHITECTURE:
  * - Main thread: Instant sync transliteration using dynamic phonetic mapping
- * - Web Worker: Heavy translation (non-blocking)
- * - Dual cache: Preview cache + Translation cache
+ * - Edge Function: Translation via Supabase (server-side NLLB)
+ * - Caching for performance
  * 
  * FLOW:
- * 1. Sender types Latin → Instant native preview (sync, dynamic)
+ * 1. Sender types Latin → Instant native preview (sync, dynamic transliterator)
  * 2. Sender sends → Native text shown immediately
- * 3. Background: Translation to receiver language
+ * 3. Background: Translation via Edge Function
  * 4. Receiver sees translated native text
- * 5. Bi-directional: Same flow reversed
- * 
- * GUARANTEES:
- * - UI response < 2ms (sync operations)
- * - Typing never blocked by translation
- * - Same language = transliteration only (no translation)
- * - All 300+ NLLB-200 languages supported
- * - Auto language detection from script
- * - NO hardcoded words - works for ANY text
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  initWorker,
-  isReady as isWorkerReady,
-  getLoadingStatus,
-  transliterateToNative,
-  translate,
-  processChatMessage,
-  detectLanguage,
-  isLatinText as workerIsLatinText,
-  normalizeUnicode,
-  terminateWorker,
-} from '@/lib/translation';
-
-// Import dynamic transliterator - NO hardcoded words
-import {
-  dynamicTransliterate,
-  isLatinScriptLanguage,
+  translateAsync,
+  convertToNativeScriptAsync,
+  getNativeScriptPreview,
   isSameLanguage,
-  detectScriptFromText,
+  isLatinText,
+  isLatinScriptLanguage,
   needsScriptConversion,
-} from '@/lib/translation/dynamic-transliterator';
+  autoDetectLanguageSync,
+} from '@/lib/translation/async-translator';
+import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
 
 // ============================================================
 // TYPES
 // ============================================================
 
 export interface ChatMessageResult {
-  senderView: string;       // What sender sees (native script in their language)
-  receiverView: string;     // What receiver sees (translated + native script in their language)
-  originalText: string;     // Raw Latin input
+  senderView: string;
+  receiverView: string;
+  originalText: string;
   wasTransliterated: boolean;
   wasTranslated: boolean;
-  processingTime: number;   // ms (for monitoring)
+  processingTime: number;
 }
 
 export interface LivePreviewResult {
-  preview: string;          // Native script preview
-  isLatin: boolean;         // Input is Latin
-  processingTime: number;   // ms (target < 2ms for UI)
+  preview: string;
+  isLatin: boolean;
+  processingTime: number;
 }
 
 export interface AutoDetectedLanguage {
@@ -77,183 +56,71 @@ export interface AutoDetectedLanguage {
 }
 
 // ============================================================
-// ULTRA-HIGH-PERFORMANCE CACHES (< 0.05ms access)
-// Pre-allocated arrays for O(1) eviction, no GC pressure
+// CACHE
 // ============================================================
 
-// Use object for faster key lookup vs Map
-const previewCacheObj: Record<string, string> = Object.create(null);
-const detectionCacheObj: Record<string, AutoDetectedLanguage> = Object.create(null);
-
-// Fallback Maps for compatibility
 const previewCache = new Map<string, string>();
 const MAX_CACHE = 2000;
 
-// Key pool for cache eviction (ring buffer - O(1) eviction)
-const previewKeyQueue: string[] = [];
-let previewKeyIdx = 0;
-
-/**
- * Ultra-fast cache key generation (< 0.1ms)
- */
 function getCacheKey(text: string, lang: string): string {
   return text.length <= 50 ? `${lang}|${text}` : `${lang}|${text.slice(0, 50)}`;
 }
 
-/**
- * O(1) cache add with ring buffer eviction
- */
-function addToCache(cache: Map<string, string>, key: string, value: string): void {
-  previewCacheObj[key] = value;
-  
-  if (cache.size >= MAX_CACHE) {
-    const evictKey = previewKeyQueue[previewKeyIdx];
-    if (evictKey) {
-      cache.delete(evictKey);
-      delete previewCacheObj[evictKey];
-    }
-    previewKeyQueue[previewKeyIdx] = key;
-    previewKeyIdx = (previewKeyIdx + 1) % MAX_CACHE;
-  } else {
-    previewKeyQueue.push(key);
-  }
-  cache.set(key, value);
-}
-
-/**
- * Ultra-fast cache lookup (< 0.05ms)
- */
-function getFromCache(key: string): string | undefined {
-  return previewCacheObj[key];
-}
-
 // ============================================================
-// ULTRA-FAST SYNC TRANSLITERATION (< 1ms)
-// Uses DYNAMIC phonetic transliteration + SymSpell correction
-// Supports ALL 300+ languages without maintenance
+// QUICK HELPER FUNCTIONS (Sync, instant)
 // ============================================================
 
-/**
- * DYNAMIC transliteration - uses phonetic rules + spell correction
- * SymSpell algorithm embedded - no external dictionaries
- */
 function quickTransliterate(text: string, language: string): string {
-  // dynamicTransliterate now includes embedded spell correction
-  return dynamicTransliterate(text, language);
+  try {
+    const result = dynamicTransliterate(text, language);
+    return result || text;
+  } catch {
+    return text;
+  }
 }
 
-/**
- * Ultra-fast check if text is Latin (< 0.1ms)
- */
 function isQuickLatinText(text: string): boolean {
-  if (!text) return true;
-  const checkLen = Math.min(text.length, 20);
-  let latinCount = 0;
-  for (let i = 0; i < checkLen; i++) {
-    const code = text.charCodeAt(i);
-    if ((code >= 0x0020 && code <= 0x007F) || 
-        (code >= 0x00A0 && code <= 0x00FF) ||
-        (code >= 0x0100 && code <= 0x024F)) {
-      latinCount++;
-    }
+  if (!text.trim()) return true;
+  const sample = text.slice(0, 100);
+  let latinChars = 0;
+  let nonAscii = 0;
+  for (let i = 0; i < sample.length; i++) {
+    const c = sample.charCodeAt(i);
+    if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) latinChars++;
+    else if (c > 127) nonAscii++;
   }
-  return latinCount / checkLen > 0.7;
-}
-
-/**
- * Ultra-fast language detection from text (< 0.5ms)
- */
-function quickDetectLanguage(text: string): AutoDetectedLanguage {
-  if (!text || !text.trim()) {
-    return { language: 'english', script: 'latin', isLatin: true, confidence: 0.5 };
-  }
-
-  const cacheKey = text.slice(0, 30);
-  const cached = detectionCacheObj[cacheKey];
-  if (cached) return cached;
-
-  const scriptInfo = detectScriptFromText(text);
-  
-  const result: AutoDetectedLanguage = {
-    language: scriptInfo.language,
-    script: scriptInfo.script,
-    isLatin: scriptInfo.isLatin,
-    confidence: 0.9 // Default high confidence for script detection
-  };
-
-  detectionCacheObj[cacheKey] = result;
-  return result;
+  return latinChars > nonAscii;
 }
 
 // ============================================================
-// MAIN HOOK
+// HOOK
 // ============================================================
 
 export function useRealtimeChatTranslation(
   senderLanguage?: string,
   receiverLanguage?: string
 ) {
-  // State
+  const [isReady, setIsReady] = useState(true); // Always ready (Edge Function based)
   const [isModelLoading, setIsModelLoading] = useState(false);
-  const [modelLoadProgress, setModelLoadProgress] = useState(0);
-  const [isReady, setIsReady] = useState(false);
+  const [modelLoadProgress, setModelLoadProgress] = useState(100);
   const [error, setError] = useState<string | null>(null);
 
-  // Refs
   const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPreviewTextRef = useRef<string>('');
   const mountedRef = useRef(true);
 
-  // Normalized language codes - handle any input gracefully
   const normalizeLang = (lang?: string): string => {
     if (!lang || typeof lang !== 'string') return 'english';
-    const trimmed = lang.toLowerCase().trim();
-    return trimmed || 'english';
+    return lang.toLowerCase().trim() || 'english';
   };
-  
+
   const senderLang = normalizeLang(senderLanguage);
   const receiverLang = normalizeLang(receiverLanguage);
-
-  // Same language check
   const sameLanguage = isSameLanguage(senderLang, receiverLang);
 
-  // Initialize worker on mount
   useEffect(() => {
     mountedRef.current = true;
-    
-    if (isWorkerReady()) {
-      setIsReady(true);
-      return;
-    }
-
-    const initializeWorker = async () => {
-      try {
-        setIsModelLoading(true);
-        
-        await initWorker((progress) => {
-          if (mountedRef.current) {
-            setModelLoadProgress(Math.round(progress * 100));
-          }
-        });
-
-        if (mountedRef.current) {
-          setIsReady(true);
-          setIsModelLoading(false);
-        }
-      } catch (err) {
-        if (mountedRef.current) {
-          console.error('Worker init error:', err);
-          setError('Translation initialization failed');
-          setIsModelLoading(false);
-        }
-      }
-    };
-
-    const timer = setTimeout(initializeWorker, 100);
-
     return () => {
       mountedRef.current = false;
-      clearTimeout(timer);
       if (previewDebounceRef.current) {
         clearTimeout(previewDebounceRef.current);
       }
@@ -261,18 +128,12 @@ export function useRealtimeChatTranslation(
   }, []);
 
   // ============================================================
-  // INSTANT PREVIEW (< 3ms, sync, non-blocking)
+  // INSTANT PREVIEW (Sync, dynamic transliterator)
   // ============================================================
 
-  /**
-   * Get instant native script preview while typing
-   * Compatible with both 1-arg and 2-arg calls
-   */
   const getLivePreview = useCallback((text: string, language?: string): LivePreviewResult => {
     const startTime = performance.now();
-    // Normalize language - handle capitalized names like 'Telugu' -> 'telugu'
-    const rawLang = language || senderLanguage || 'english';
-    const targetLang = rawLang.toLowerCase().trim();
+    const targetLang = normalizeLang(language || senderLanguage);
 
     if (!text || !text.trim()) {
       return { preview: '', isLatin: true, processingTime: 0 };
@@ -282,205 +143,147 @@ export function useRealtimeChatTranslation(
 
     // Latin script language - no conversion needed
     if (isLatinScriptLanguage(targetLang)) {
-      return {
-        preview: text,
-        isLatin,
-        processingTime: performance.now() - startTime
-      };
-    }
-
-    // Already native script - no conversion needed
-    if (!isLatin) {
-      return {
-        preview: text,
-        isLatin: false,
-        processingTime: performance.now() - startTime
-      };
+      return { preview: text, isLatin, processingTime: performance.now() - startTime };
     }
 
     // Already native script
     if (!isLatin) {
-      return {
-        preview: text,
-        isLatin: false,
-        processingTime: performance.now() - startTime
-      };
+      return { preview: text, isLatin: false, processingTime: performance.now() - startTime };
     }
 
     // Check cache
     const cacheKey = getCacheKey(text, targetLang);
-    const cached = getFromCache(cacheKey);
+    const cached = previewCache.get(cacheKey);
     if (cached) {
-      return {
-        preview: cached,
-        isLatin: true,
-        processingTime: performance.now() - startTime
-      };
+      return { preview: cached, isLatin: true, processingTime: performance.now() - startTime };
     }
 
-    // Transliterate Latin text to native script
+    // Transliterate
     const preview = quickTransliterate(text, targetLang);
-    addToCache(previewCache, cacheKey, preview);
+    
+    // Cache with LRU eviction
+    if (previewCache.size >= MAX_CACHE) {
+      const firstKey = previewCache.keys().next().value;
+      if (firstKey) previewCache.delete(firstKey);
+    }
+    previewCache.set(cacheKey, preview);
 
-    return {
-      preview,
-      isLatin: true,
-      processingTime: performance.now() - startTime
-    };
+    return { preview, isLatin: true, processingTime: performance.now() - startTime };
   }, [senderLanguage]);
 
-  // Alias for backwards compatibility
   const getInstantPreview = getLivePreview;
 
   // ============================================================
-  // PROCESS MESSAGE FOR SENDING
+  // PROCESS MESSAGE (Async, Edge Function)
   // ============================================================
 
-  /**
-   * Process message for sending
-   * Compatible with both 1-arg and 3-arg calls
-   */
   const processMessage = useCallback(async (
     text: string,
     fromLanguage?: string,
     toLanguage?: string
   ): Promise<ChatMessageResult> => {
     const startTime = performance.now();
-    // Normalize languages - handle capitalized names
-    const srcLang = (fromLanguage || senderLanguage || 'english').toLowerCase().trim();
-    const dstLang = (toLanguage || receiverLanguage || 'english').toLowerCase().trim();
+    const srcLang = normalizeLang(fromLanguage || senderLanguage);
+    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
 
     if (!text || !text.trim()) {
       return {
         senderView: '',
         receiverView: '',
-        originalText: text,
+        originalText: '',
         wasTransliterated: false,
         wasTranslated: false,
-        processingTime: 0
+        processingTime: 0,
       };
     }
 
-    const trimmedText = text.trim();
-    const isLatin = isQuickLatinText(trimmedText);
-
-    // Step 1: Get sender view
-    let senderView = trimmedText;
+    const trimmed = text.trim();
+    let senderView = trimmed;
     let wasTransliterated = false;
 
-    if (isLatin && !isLatinScriptLanguage(srcLang)) {
-      senderView = quickTransliterate(trimmedText, srcLang);
-      wasTransliterated = true;
+    // Convert to sender's native script if needed
+    if (needsScriptConversion(srcLang) && isLatinText(trimmed)) {
+      const result = await convertToNativeScriptAsync(trimmed, srcLang);
+      if (result.isTranslated) {
+        senderView = result.text;
+        wasTransliterated = true;
+      }
     }
 
-    // Step 2: Get receiver view
+    // If same language, receiver sees same as sender
+    if (isSameLanguage(srcLang, tgtLang)) {
+      return {
+        senderView,
+        receiverView: senderView,
+        originalText: trimmed,
+        wasTransliterated,
+        wasTranslated: false,
+        processingTime: performance.now() - startTime,
+      };
+    }
+
+    // Translate via Edge Function
     let receiverView = senderView;
     let wasTranslated = false;
 
-    const areSameLanguage = isSameLanguage(srcLang, dstLang);
+    try {
+      const result = await translateAsync(senderView, srcLang, tgtLang);
+      if (result.isTranslated) {
+        receiverView = result.text;
+        wasTranslated = true;
 
-    if (areSameLanguage) {
-      if (!isLatinScriptLanguage(dstLang) && isLatin) {
-        receiverView = quickTransliterate(trimmedText, dstLang);
-      }
-    } else {
-      try {
-        if (isReady) {
-          const result = await processChatMessage(trimmedText, srcLang, dstLang);
-          receiverView = result.receiverView;
-          wasTranslated = result.wasTranslated;
-        } else {
-          if (!isLatinScriptLanguage(dstLang)) {
-            receiverView = quickTransliterate(trimmedText, dstLang);
+        // Convert to receiver's native script if needed
+        if (needsScriptConversion(tgtLang) && isLatinText(receiverView)) {
+          const nativeResult = await convertToNativeScriptAsync(receiverView, tgtLang);
+          if (nativeResult.isTranslated) {
+            receiverView = nativeResult.text;
           }
         }
-      } catch (err) {
-        console.error('Translation error:', err);
-        receiverView = senderView;
       }
+    } catch (err) {
+      console.error('[useRealtimeChatTranslation] Translation error:', err);
     }
 
     return {
       senderView,
       receiverView,
-      originalText: trimmedText,
+      originalText: trimmed,
       wasTransliterated,
       wasTranslated,
-      processingTime: performance.now() - startTime
+      processingTime: performance.now() - startTime,
     };
-  }, [senderLanguage, receiverLanguage, isReady]);
+  }, [senderLanguage, receiverLanguage]);
 
   // ============================================================
-  // TRANSLATE TEXT (async)
+  // TRANSLATE TEXT (Async, Edge Function)
   // ============================================================
 
-  /**
-   * Translate text between languages
-   */
   const translateText = useCallback(async (
     text: string,
     fromLanguage: string,
     toLanguage: string
   ): Promise<string> => {
-    if (!text || !text.trim()) return '';
+    const from = normalizeLang(fromLanguage);
+    const to = normalizeLang(toLanguage);
 
-    const trimmedText = text.trim();
-    // Normalize languages - handle capitalized names
-    const fromLang = (fromLanguage || 'english').toLowerCase().trim();
-    const toLang = (toLanguage || 'english').toLowerCase().trim();
-
-    if (isSameLanguage(fromLang, toLang)) {
-      if (isQuickLatinText(trimmedText) && !isLatinScriptLanguage(toLang)) {
-        return quickTransliterate(trimmedText, toLang);
-      }
-      return trimmedText;
+    if (!text.trim() || isSameLanguage(from, to)) {
+      return text;
     }
 
     try {
-      if (isReady) {
-        const result = await translate(trimmedText, fromLang, toLang);
-        return result.text || trimmedText;
-      }
-      return trimmedText;
-    } catch (err) {
-      console.error('Translate error:', err);
-      return trimmedText;
+      const result = await translateAsync(text, from, to);
+      return result.isTranslated ? result.text : text;
+    } catch {
+      return text;
     }
-  }, [isReady]);
-
-  // ============================================================
-  // TRANSLATE INCOMING MESSAGE
-  // ============================================================
+  }, []);
 
   const translateIncoming = useCallback(async (
     text: string,
     fromLanguage: string
   ): Promise<string> => {
-    if (!text || !text.trim()) return '';
-
-    const trimmedText = text.trim();
-    // Normalize languages - handle capitalized names
-    const fromLang = (fromLanguage || 'english').toLowerCase().trim();
-    const myLang = (senderLanguage || 'english').toLowerCase().trim();
-
-    if (isSameLanguage(fromLang, myLang)) {
-      if (isQuickLatinText(trimmedText) && !isLatinScriptLanguage(myLang)) {
-        return quickTransliterate(trimmedText, myLang);
-      }
-      return trimmedText;
-    }
-
-    try {
-      if (isReady) {
-        const result = await translate(trimmedText, fromLang, myLang);
-        return result.text || trimmedText;
-      }
-      return trimmedText;
-    } catch (err) {
-      console.error('Translate incoming error:', err);
-      return trimmedText;
-    }
-  }, [senderLanguage, isReady]);
+    return translateText(text, fromLanguage, senderLang);
+  }, [translateText, senderLang]);
 
   // ============================================================
   // DEBOUNCED PREVIEW
@@ -488,104 +291,87 @@ export function useRealtimeChatTranslation(
 
   const updatePreviewDebounced = useCallback((
     text: string,
-    callback: (preview: string) => void
-  ): void => {
-    lastPreviewTextRef.current = text;
-
+    language: string,
+    callback: (preview: LivePreviewResult) => void,
+    debounceMs: number = 50
+  ) => {
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
     }
 
-    const instantResult = getLivePreview(text);
-    callback(instantResult.preview);
-
-    previewDebounceRef.current = setTimeout(async () => {
-      if (lastPreviewTextRef.current !== text) return;
-    }, 150);
+    previewDebounceRef.current = setTimeout(() => {
+      const result = getLivePreview(text, language);
+      callback(result);
+    }, debounceMs);
   }, [getLivePreview]);
 
-  const cancelPreview = useCallback((): void => {
+  const cancelPreview = useCallback(() => {
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
       previewDebounceRef.current = null;
     }
-    lastPreviewTextRef.current = '';
   }, []);
 
   // ============================================================
-  // UTILITY FUNCTIONS - Exposed for external use
+  // UTILITY FUNCTIONS
   // ============================================================
 
   const detectInputLanguage = useCallback((text: string): AutoDetectedLanguage => {
-    return quickDetectLanguage(text);
+    return autoDetectLanguageSync(text);
   }, []);
-
-  const autoDetectLanguage = detectInputLanguage;
 
   const checkIsLatinText = useCallback((text: string): boolean => {
-    return isQuickLatinText(text);
+    return isLatinText(text);
   }, []);
 
-  const checkIsLatinScriptLanguage = useCallback((language: string): boolean => {
-    return isLatinScriptLanguage(language);
+  const checkIsLatinScriptLanguage = useCallback((lang: string): boolean => {
+    return isLatinScriptLanguage(normalizeLang(lang));
   }, []);
 
   const checkSameLanguage = useCallback((lang1: string, lang2: string): boolean => {
-    return isSameLanguage(lang1, lang2);
+    return isSameLanguage(normalizeLang(lang1), normalizeLang(lang2));
   }, []);
-
-  // ============================================================
-  // RETURN - All functions needed by consumers
-  // ============================================================
 
   return {
     // State
-    isModelLoading,
-    modelLoadProgress,
     isReady,
+    isModelLoading,
+    isLoading: isModelLoading,
+    modelLoadProgress,
+    loadProgress: modelLoadProgress,
     error,
     sameLanguage,
-    
-    // Aliases for backwards compatibility
-    isLoading: isModelLoading,
-    loadProgress: modelLoadProgress,
 
-    // Core functions
+    // Preview (instant)
     getLivePreview,
     getInstantPreview,
+    updatePreviewDebounced,
+    cancelPreview,
+
+    // Message processing (async)
     processMessage,
     translateText,
     translateIncoming,
 
-    // Preview management
-    updatePreviewDebounced,
-    cancelPreview,
-
-    // Utilities - function-based
+    // Utilities
     detectInputLanguage,
-    autoDetectLanguage,
-    
-    // Utilities - exposed as functions matching consumer expectations
-    isLatinText: checkIsLatinText,
-    isLatinScriptLanguage: checkIsLatinScriptLanguage,
-    isSameLanguage: checkSameLanguage,
-    
-    // Also expose check* versions
+    autoDetectLanguage: detectInputLanguage,
     checkIsLatinText,
+    isLatinText: checkIsLatinText,
     checkIsLatinScriptLanguage,
     checkSameLanguage,
-
-    // Unicode normalization
+    isLatinScriptLanguage: checkIsLatinScriptLanguage,
+    isSameLanguage: checkSameLanguage,
     normalizeUnicode: (text: string) => text.normalize('NFC'),
-
-    // Direct access to transliteration
-    quickTransliterate,
   };
 }
 
-// Export utility functions for direct use
-export {
-  quickTransliterate as transliterate,
-  isLatinScriptLanguage,
-  isSameLanguage,
-};
+// ============================================================
+// EXPORTED UTILITY FUNCTIONS
+// ============================================================
+
+export function transliterate(text: string, language: string): string {
+  return quickTransliterate(text, language);
+}
+
+export { isLatinScriptLanguage, isSameLanguage };

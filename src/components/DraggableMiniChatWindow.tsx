@@ -42,32 +42,20 @@ import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { 
-  convertToNativeScript, 
   isSameLanguage,
-  isLatinScript,
   isLatinScriptLanguage
 } from "@/lib/dl-translate";
 import {
-  translateAsync,
   translateInBackground,
   convertToNativeScriptAsync,
+  getNativeScriptPreview,
   isLatinText as asyncIsLatinText,
   needsScriptConversion as asyncNeedsScriptConversion,
   autoDetectLanguageSync,
-  processMessageForChat,
 } from "@/lib/translation/async-translator";
 import { spellCorrectForChat } from "@/lib/translation/phonetic-symspell";
-import { initWorker as initTranslationWorker, isReady as isTranslatorReady, getLoadingStatus } from "@/lib/translation/worker-translator";
 
-// Initialize translation worker on module load (non-blocking)
-console.log('[DraggableMiniChatWindow] Module loaded, initiating translation worker...');
-initTranslationWorker()
-  .then(ready => {
-    console.log('[DraggableMiniChatWindow] Translation worker initialized:', ready ? 'SUCCESS' : 'FAILED');
-  })
-  .catch(err => {
-    console.error('[DraggableMiniChatWindow] Translation worker init error:', err);
-  });
+console.log('[DraggableMiniChatWindow] Module loaded - using Edge Function translation');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -656,9 +644,10 @@ const DraggableMiniChatWindow = ({
       const correctedText = spellCorrectForChat(text, partnerLanguage);
       console.log('[DraggableMiniChatWindow] SymSpell corrected:', correctedText.substring(0, 50));
 
-      // STEP 2: Use async translator for non-blocking translation
+      // STEP 2: Use async translator for non-blocking translation via Edge Function
       console.log('[DraggableMiniChatWindow] Starting translation:', partnerLanguage, '→', currentUserLanguage);
-      const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage, 'normal');
+      const { translateAsync } = await import('@/lib/translation/async-translator');
+      const result = await translateAsync(correctedText, partnerLanguage, currentUserLanguage);
       console.log('[DraggableMiniChatWindow] Translation result:', {
         translated: result.text?.substring(0, 50),
         isTranslated: result.isTranslated
@@ -683,10 +672,7 @@ const DraggableMiniChatWindow = ({
   // NON-BLOCKING: Load messages with optimistic display first, then background translation
   // BI-DIRECTIONAL: Auto-detect language, translate to receiver's mother tongue, show native script
   const loadMessages = async () => {
-    console.log('[DraggableMiniChatWindow] loadMessages called, checking worker status:', {
-      isReady: isTranslatorReady(),
-      loadingStatus: getLoadingStatus()
-    });
+    console.log('[DraggableMiniChatWindow] loadMessages called - using Edge Function translation');
     
     const { data } = await supabase
       .from("chat_messages")

@@ -134,32 +134,28 @@ export type {
 } from '@/hooks/useRealtimeChatTranslation';
 
 // ============================================================
-// ASYNC TRANSLATOR (Massive Scale - Lakhs of users)
-// Non-blocking, background queue, parallel processing
+// ASYNC TRANSLATOR (Edge Function based)
+// Simple, reliable server-side translation
 // ============================================================
 
 export {
   translateAsync,
   translateInBackground,
   convertToNativeScriptAsync,
-  convertToNativeScriptSync,
-  batchTranslateAsync,
-  createLivePreviewHandler,
-  getQueueStatus,
+  getNativeScriptPreview,
   clearTranslationCache,
+  getCacheStats,
   isLatinScriptLanguage as asyncIsLatinScriptLanguage,
   isLatinText as asyncIsLatinText,
   isSameLanguage as asyncIsSameLanguage,
   needsScriptConversion as asyncNeedsScriptConversion,
   normalizeLanguage as asyncNormalizeLanguage,
   autoDetectLanguageSync,
-  autoDetectLanguageAsync,
   processMessageForChat,
 } from './async-translator';
 
 export type {
   AsyncTranslationResult,
-  TranslationTask,
   AutoDetectedLanguage as AsyncAutoDetectedLanguage,
 } from './async-translator';
 
