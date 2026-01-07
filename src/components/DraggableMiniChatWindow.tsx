@@ -891,7 +891,7 @@ const DraggableMiniChatWindow = ({
           console.error('[DraggableMiniChatWindow] Script conversion error:', err);
         }
       } else if (hasPreview) {
-        processedMessage = livePreview.text;
+        processedMessage = currentPreview; // Use captured preview, not stale state
       }
       
       const { error } = await supabase
