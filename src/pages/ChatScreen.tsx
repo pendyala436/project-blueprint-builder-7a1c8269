@@ -903,8 +903,8 @@ const ChatScreen = () => {
   /**
    * translateMessage Function
    * 
-   * Uses browser-side NLLB-200 translation via Web Worker.
-   * Supports 300+ languages with non-blocking performance.
+   * Uses Edge Function translation via Supabase.
+   * Supports 200+ languages with server-side NLLB.
    * 
    * @param message - Text to translate
    * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
@@ -913,7 +913,7 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Import browser-side translation
+      // Import Edge Function-based translation
       const { translateAsync, isSameLanguage } = await import('@/lib/translation/async-translator');
       
       const source = sourceLanguage || currentUserLanguage;
@@ -923,8 +923,8 @@ const ChatScreen = () => {
         return { translatedMessage: message, isTranslated: false, detectedLanguage: source, translationPair: "" };
       }
       
-      // Use browser-side Web Worker translation (non-blocking, 300+ languages)
-      const result = await translateAsync(message, source, targetLanguage, 'normal');
+      // Use Edge Function translation (server-side NLLB)
+      const result = await translateAsync(message, source, targetLanguage);
       
       return { 
         translatedMessage: result.text, 
