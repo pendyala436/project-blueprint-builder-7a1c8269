@@ -131,6 +131,7 @@ const MiniChatWindow = ({
   const {
     sendTypingIndicator,
     stopTyping,
+    senderNativePreview,
     partnerTyping
   } = useRealtimeTranslation({
     currentUserId,
@@ -862,21 +863,21 @@ const MiniChatWindow = ({
 
           {/* Input area with live translation preview */}
           <div className="p-1.5 border-t space-y-1">
-            {/* Live translation preview - shows text in user's native language */}
-            {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-              <div className="px-2 py-1 bg-primary/5 rounded text-[10px] text-primary/80 border border-primary/10">
-                <div className="flex items-center gap-1">
-                  <Languages className="h-3 w-3 shrink-0" />
-                  <span className="font-medium">{currentUserLanguage}:</span>
+            {/* Live native script preview - sender sees their mother tongue preview */}
+            {transliterationEnabled && (senderNativePreview || livePreview.text) && newMessage.trim() && (
+              <div className="px-2 py-1.5 bg-primary/10 border-l-2 border-primary/50 rounded-r text-sm">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Languages className="h-3 w-3 shrink-0 text-primary/70" />
+                  <span className="text-xs text-muted-foreground">Preview ({currentUserLanguage}):</span>
+                  {livePreview.isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                 </div>
-                <p className="mt-0.5 pl-4">{livePreview.text}</p>
-                {livePreview.isLoading && <Loader2 className="inline h-2 w-2 ml-1 animate-spin" />}
+                <p className="text-foreground">{senderNativePreview || livePreview.text}</p>
               </div>
             )}
-            {/* Same language indicator */}
-            {!needsTranslation && newMessage.trim() && (
+            {/* Same language indicator - but still show native script */}
+            {!needsTranslation && !needsScriptConversion && newMessage.trim() && (
               <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
-                Same language - no translation needed
+                Same language - direct chat
               </div>
             )}
             <div className="flex items-center gap-1">
