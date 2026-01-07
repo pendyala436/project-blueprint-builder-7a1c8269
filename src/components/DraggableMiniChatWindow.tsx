@@ -132,8 +132,20 @@ const DraggableMiniChatWindow = ({
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
   const needsScriptConversion = !isLatinScriptLanguage(currentUserLanguage);
 
-  // Dragging state
-  const [position, setPosition] = useState(initialPosition);
+  // Dragging state - use left/top for absolute positioning anywhere on screen
+  const [position, setPosition] = useState(() => {
+    // Default to bottom-right if initialPosition is default {20, 20}
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 640;
+      const defaultWidth = isMobile ? 280 : 320;
+      const defaultHeight = isMobile ? 350 : 400;
+      return {
+        x: initialPosition.x === 20 ? window.innerWidth - defaultWidth - 20 : initialPosition.x,
+        y: initialPosition.y === 20 ? window.innerHeight - defaultHeight - 20 : initialPosition.y
+      };
+    }
+    return initialPosition;
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const windowRef = useRef<HTMLDivElement>(null);
@@ -149,7 +161,7 @@ const DraggableMiniChatWindow = ({
   
   const [size, setSize] = useState(getResponsiveSize);
   const [isResizing, setIsResizing] = useState(false);
-  const resizeRef = useRef<{ startWidth: number; startHeight: number; startX: number; startY: number } | null>(null);
+  const resizeRef = useRef<{ startWidth: number; startHeight: number; startX: number; startY: number; corner: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -202,9 +214,13 @@ const DraggableMiniChatWindow = ({
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
       
+      // Constrain to viewport bounds
+      const maxX = window.innerWidth - size.width;
+      const maxY = window.innerHeight - (isMinimized ? 48 : size.height);
+      
       setPosition({
-        x: Math.max(0, dragRef.current.startPosX + deltaX),
-        y: Math.max(0, dragRef.current.startPosY + deltaY)
+        x: Math.max(0, Math.min(maxX, dragRef.current.startPosX + deltaX)),
+        y: Math.max(0, Math.min(maxY, dragRef.current.startPosY + deltaY))
       });
     };
 
@@ -226,32 +242,74 @@ const DraggableMiniChatWindow = ({
       document.removeEventListener("touchmove", handleMove);
       document.removeEventListener("touchend", handleEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, size, isMinimized]);
 
-  // Resize handlers
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  // Resize handlers - support touch and multiple corners
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent, corner: string = 'se') => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
     resizeRef.current = {
       startWidth: size.width,
       startHeight: size.height,
-      startX: e.clientX,
-      startY: e.clientY
+      startX: clientX,
+      startY: clientY,
+      corner
     };
   }, [size]);
 
   useEffect(() => {
-    const handleResizeMove = (e: MouseEvent) => {
+    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeRef.current) return;
       
-      const deltaX = e.clientX - resizeRef.current.startX;
-      const deltaY = e.clientY - resizeRef.current.startY;
+      const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
       
-      setSize({
-        width: Math.max(280, Math.min(600, resizeRef.current.startWidth + deltaX)),
-        height: Math.max(300, Math.min(600, resizeRef.current.startHeight + deltaY))
-      });
+      const deltaX = clientX - resizeRef.current.startX;
+      const deltaY = clientY - resizeRef.current.startY;
+      
+      const minWidth = 280;
+      const minHeight = 300;
+      const maxWidth = Math.min(600, window.innerWidth - 40);
+      const maxHeight = Math.min(600, window.innerHeight - 40);
+      
+      let newWidth = resizeRef.current.startWidth;
+      let newHeight = resizeRef.current.startHeight;
+      let newX = position.x;
+      let newY = position.y;
+      
+      const corner = resizeRef.current.corner;
+      
+      // Handle different corner resizing
+      if (corner.includes('e')) {
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeRef.current.startWidth + deltaX));
+      }
+      if (corner.includes('w')) {
+        const widthDelta = -deltaX;
+        newWidth = Math.max(minWidth, Math.min(maxWidth, resizeRef.current.startWidth + widthDelta));
+        if (newWidth !== resizeRef.current.startWidth) {
+          newX = position.x + (resizeRef.current.startWidth - newWidth);
+        }
+      }
+      if (corner.includes('s')) {
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeRef.current.startHeight + deltaY));
+      }
+      if (corner.includes('n')) {
+        const heightDelta = -deltaY;
+        newHeight = Math.max(minHeight, Math.min(maxHeight, resizeRef.current.startHeight + heightDelta));
+        if (newHeight !== resizeRef.current.startHeight) {
+          newY = position.y + (resizeRef.current.startHeight - newHeight);
+        }
+      }
+      
+      setSize({ width: newWidth, height: newHeight });
+      if (newX !== position.x || newY !== position.y) {
+        setPosition({ x: Math.max(0, newX), y: Math.max(0, newY) });
+      }
     };
 
     const handleResizeEnd = () => {
@@ -262,13 +320,17 @@ const DraggableMiniChatWindow = ({
     if (isResizing) {
       document.addEventListener("mousemove", handleResizeMove);
       document.addEventListener("mouseup", handleResizeEnd);
+      document.addEventListener("touchmove", handleResizeMove, { passive: false });
+      document.addEventListener("touchend", handleResizeEnd);
     }
 
     return () => {
       document.removeEventListener("mousemove", handleResizeMove);
       document.removeEventListener("mouseup", handleResizeEnd);
+      document.removeEventListener("touchmove", handleResizeMove);
+      document.removeEventListener("touchend", handleResizeEnd);
     };
-  }, [isResizing]);
+  }, [isResizing, position]);
 
   // Load initial data
   useEffect(() => {
@@ -972,8 +1034,8 @@ const DraggableMiniChatWindow = ({
         }
       : { 
           position: 'fixed' as const,
-          right: position.x, 
-          bottom: position.y, 
+          left: position.x, 
+          top: position.y, 
           width: isMinimized ? 240 : size.width, 
           height: isMinimized ? 48 : size.height,
           zIndex
@@ -1419,14 +1481,54 @@ const DraggableMiniChatWindow = ({
             </div>
           </div>
 
-          {/* Resize handle */}
+          {/* Resize handles - all corners and edges */}
           {!isMaximized && (
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center"
-              onMouseDown={handleResizeStart}
-            >
-              <GripVertical className="h-3 w-3 text-muted-foreground rotate-[-45deg]" />
-            </div>
+            <>
+              {/* Corner handles */}
+              <div
+                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'se')}
+                onTouchStart={(e) => handleResizeStart(e, 'se')}
+              >
+                <GripVertical className="h-3 w-3 text-muted-foreground rotate-[-45deg]" />
+              </div>
+              <div
+                className="absolute bottom-0 left-0 w-4 h-4 cursor-sw-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'sw')}
+                onTouchStart={(e) => handleResizeStart(e, 'sw')}
+              />
+              <div
+                className="absolute top-0 right-0 w-4 h-4 cursor-ne-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'ne')}
+                onTouchStart={(e) => handleResizeStart(e, 'ne')}
+              />
+              <div
+                className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'nw')}
+                onTouchStart={(e) => handleResizeStart(e, 'nw')}
+              />
+              {/* Edge handles */}
+              <div
+                className="absolute top-0 left-4 right-4 h-1.5 cursor-n-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'n')}
+                onTouchStart={(e) => handleResizeStart(e, 'n')}
+              />
+              <div
+                className="absolute bottom-0 left-4 right-4 h-1.5 cursor-s-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 's')}
+                onTouchStart={(e) => handleResizeStart(e, 's')}
+              />
+              <div
+                className="absolute left-0 top-4 bottom-4 w-1.5 cursor-w-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'w')}
+                onTouchStart={(e) => handleResizeStart(e, 'w')}
+              />
+              <div
+                className="absolute right-0 top-4 bottom-4 w-1.5 cursor-e-resize touch-none"
+                onMouseDown={(e) => handleResizeStart(e, 'e')}
+                onTouchStart={(e) => handleResizeStart(e, 'e')}
+              />
+            </>
           )}
         </>
       )}
