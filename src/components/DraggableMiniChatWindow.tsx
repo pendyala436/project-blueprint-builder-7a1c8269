@@ -1487,29 +1487,30 @@ const DraggableMiniChatWindow = ({
 
               {/* Text input with live native script preview */}
               <div className="flex-1 relative">
-                {/* Live native script preview - shows text in sender's native script */}
+                {/* Live native script preview - shows FULL text in sender's native script */}
                 {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
-                  <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1.5 bg-primary/10 rounded text-[10px] text-primary border border-primary/20 max-h-20 overflow-y-auto">
                     {livePreview.isLoading ? (
                       <span className="flex items-center gap-1">
                         <Loader2 className="h-2.5 w-2.5 animate-spin" />
                         Converting to native script...
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1">
-                        <Languages className="h-2.5 w-2.5" />
-                        <span className="font-medium">{currentUserLanguage}:</span>
-                        <span className="truncate">{livePreview.text}</span>
-                        {!needsTranslation && (
-                          <span className="text-[8px] opacity-70 ml-1">(same language)</span>
-                        )}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="flex items-center gap-1 text-[9px] opacity-70">
+                          <Languages className="h-2.5 w-2.5 shrink-0" />
+                          <span className="font-medium">{currentUserLanguage}</span>
+                          {!needsTranslation && <span>(same language)</span>}
+                        </span>
+                        {/* Full preview text - no truncation, wraps naturally */}
+                        <span className="break-words whitespace-pre-wrap leading-relaxed">{livePreview.text}</span>
+                      </div>
                     )}
                   </div>
                 )}
                 {/* Same language indicator - only show when no native preview needed */}
                 {!needsTranslation && newMessage.trim() && !livePreview.text && !livePreview.isLoading && !needsScriptConversion && (
-                  <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                     Same language - direct display
                   </div>
                 )}
