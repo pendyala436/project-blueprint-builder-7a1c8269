@@ -28,20 +28,19 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-// In-memory translation - NO external APIs, NO Docker
+// Worker-based translation - NO external APIs, NO Docker, NON-BLOCKING
 import { 
   translate,
   transliterateToNative,
-  processSenderMessage,
-  processReceiverMessage,
+  processChatMessage,
   isSameLanguage,
   isLatinText,
   isLatinScriptLanguage,
-  detectLanguageFromText,
-  createLivePreview,
-  isPipelineReady,
-  initPipeline,
-} from "@/lib/translation/realtime-chat-translator";
+  createDebouncedPreview,
+  isReady as isTranslatorReady,
+  initWorker,
+  normalizeUnicode,
+} from "@/lib/translation";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -300,20 +299,19 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
-  // Auto-translate a message to current user's language (IN-MEMORY, no external API)
+  // Auto-translate a message to current user's language (WEB WORKER, non-blocking)
   const translateMessage = useCallback(async (text: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Use in-memory realtime translator
-      const result = await processReceiverMessage(text, partnerLanguage, currentUserLanguage);
-      const detected = detectLanguageFromText(text);
+      // Use worker-based translator for non-blocking translation
+      const result = await translate(text, partnerLanguage, currentUserLanguage);
       return {
-        translatedMessage: result.receiverView,
-        isTranslated: result.wasTranslated,
-        detectedLanguage: detected.language
+        translatedMessage: normalizeUnicode(result.text),
+        isTranslated: result.success && result.text !== text,
+        detectedLanguage: partnerLanguage
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
