@@ -75,8 +75,8 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
     consonantMap: {
       'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
       'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ',
-      'tt': 'ట', 'tth': 'ఠ', 'dd': 'డ', 'ddh': 'ఢ', 'nn': 'ణ',
-      't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న',
+      'tt': 'ట', 'tth': 'ఠ', 'dd': 'డ', 'ddh': 'ఢ',
+      't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న', 'N': 'ణ',
       'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
       'y': 'య', 'r': 'ర', 'l': 'ల', 'v': 'వ', 'w': 'వ',
       'sh': 'శ', 'shh': 'ష', 's': 'స', 'h': 'హ',
@@ -557,8 +557,8 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
   if (!isLatinText(text)) return text;
   
   // Step 1: Apply phonetic spell correction before transliteration
-  const correctedInput = phoneticSpellCorrect(text.toLowerCase(), targetLanguage);
-  
+  // NOTE: Keep original casing so advanced romanization cues (e.g. "N" for ణ) can work.
+  const correctedInput = phoneticSpellCorrect(text, targetLanguage);
   // For very large messages, process in chunks to avoid blocking
   // Each word is transliterated independently, so chunking by words is safe
   const words = correctedInput.split(/(\s+)/); // Preserve whitespace
@@ -770,45 +770,50 @@ function transliterateWord(word: string, script: ScriptBlock): string {
     // Try multi-character patterns first (4, 3, 2, 1)
     for (let len = Math.min(4, word.length - i); len >= 1; len--) {
       const pattern = word.substring(i, i + len);
-      
+      const patternLower = pattern.toLowerCase();
+
       // Check consonants first (they're more specific)
-      if (script.consonantMap[pattern]) {
+      const consonant = script.consonantMap[pattern] ?? script.consonantMap[patternLower];
+      if (consonant) {
         // Handle previous consonant
         if (pendingConsonant) {
           result += pendingConsonant;
           if (script.virama) result += script.virama;
         }
-        pendingConsonant = script.consonantMap[pattern];
+        pendingConsonant = consonant;
         lastWasConsonant = true;
         i += len;
         matched = true;
         break;
       }
-      
+
       // Check vowels
-      if (script.vowelMap[pattern]) {
+      const vowel = script.vowelMap[pattern] ?? script.vowelMap[patternLower];
+      if (vowel) {
+        const vowelKey = script.vowelMap[pattern] ? pattern : patternLower;
+
         if (lastWasConsonant && pendingConsonant) {
           // Use modifier if available, otherwise full vowel
-          const modifier = script.modifiers[pattern];
-          if (modifier && pattern !== 'a') {
+          const modifier = script.modifiers[vowelKey];
+          if (modifier && vowelKey !== 'a') {
             result += pendingConsonant + modifier;
-          } else if (pattern === 'a') {
+          } else if (vowelKey === 'a') {
             // Inherent 'a' vowel in Indic scripts
             result += pendingConsonant;
           } else {
-            result += pendingConsonant + script.vowelMap[pattern];
+            result += pendingConsonant + vowel;
           }
           pendingConsonant = '';
         } else {
-          result += script.vowelMap[pattern];
+          result += vowel;
         }
+
         lastWasConsonant = false;
         i += len;
         matched = true;
         break;
       }
     }
-    
     // No match - keep original character
     if (!matched) {
       if (pendingConsonant) {
