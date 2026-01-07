@@ -218,6 +218,18 @@ const languageAliases: Record<string, string> = {
   mexican: 'spanish',
   flemish: 'dutch',
   tagalog: 'filipino',
+  // Handle variations with parentheses
+  'chinese (simplified)': 'chinese',
+  'chinese (traditional)': 'chinese',
+  'chinese_simplified': 'chinese',
+  'chinese_traditional': 'chinese',
+  'chinese simplified': 'chinese',
+  'chinese traditional': 'chinese',
+  'arabic (modern standard)': 'arabic',
+  'portuguese (brazil)': 'portuguese',
+  'portuguese (portugal)': 'portuguese',
+  'spanish (latin america)': 'spanish',
+  'spanish (spain)': 'spanish',
 };
 
 // Non-Latin script languages (need transliteration when typed in Latin)
@@ -271,8 +283,27 @@ const scriptPatterns: Array<{ regex: RegExp; script: string; language: string }>
 ];
 
 function normalizeLanguage(lang: string): string {
-  const normalized = lang.toLowerCase().trim().replace(/[_-]/g, '_');
-  return languageAliases[normalized] || normalized;
+  // First lowercase and trim
+  let normalized = lang.toLowerCase().trim();
+  
+  // Check full string in aliases first (handles "chinese (simplified)" etc.)
+  if (languageAliases[normalized]) {
+    return languageAliases[normalized];
+  }
+  
+  // Replace dashes/underscores
+  normalized = normalized.replace(/[_-]/g, '_');
+  if (languageAliases[normalized]) {
+    return languageAliases[normalized];
+  }
+  
+  // Strip parentheses content as last resort (e.g., "chinese (simplified)" -> "chinese")
+  const withoutParens = normalized.replace(/\s*\([^)]*\)/g, '').trim();
+  if (languageAliases[withoutParens]) {
+    return languageAliases[withoutParens];
+  }
+  
+  return withoutParens || normalized;
 }
 
 function getLanguageInfo(language: string): LanguageInfo | undefined {
