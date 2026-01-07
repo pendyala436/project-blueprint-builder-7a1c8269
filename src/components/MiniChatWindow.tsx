@@ -216,14 +216,12 @@ const MiniChatWindow = ({
   // Initialize translation worker and load messages
   useEffect(() => {
     const init = async () => {
-      // Ensure translation worker is ready
+      // Translation is always ready now (embedded, no model loading)
       if (!isTranslatorReady()) {
-        console.log('[MiniChatWindow] Initializing translation worker...');
-        await initWorker((progress) => {
-          console.log('[MiniChatWindow] Worker load progress:', progress);
-        });
+        console.log('[MiniChatWindow] Initializing translation...');
+        await initWorker();
       }
-      console.log('[MiniChatWindow] Translation worker ready, loading messages');
+      console.log('[MiniChatWindow] Translation ready, loading messages');
       console.log('[MiniChatWindow] Languages - Current:', currentUserLanguage, 'Partner:', partnerLanguage);
       loadMessages();
     };
@@ -349,12 +347,12 @@ const MiniChatWindow = ({
         final: finalText,
         from: partnerLanguage,
         to: currentUserLanguage,
-        success: result.success
+        success: result.isTranslated
       });
 
       return {
         translatedMessage: normalizeUnicode(finalText),
-        isTranslated: result.success && finalText !== text,
+        isTranslated: result.isTranslated && finalText !== text,
         detectedLanguage: partnerLanguage
       };
     } catch (error) {
@@ -566,8 +564,8 @@ const MiniChatWindow = ({
           processedMessage = spellCorrectForChat(previewText, currentUserLanguage);
         } else if (shouldConvert) {
           try {
-            const converted = await transliterateToNative(correctedText, currentUserLanguage);
-            processedMessage = converted.text || correctedText;
+            const converted = transliterateToNative(correctedText, currentUserLanguage);
+            processedMessage = converted || correctedText;
             console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
             
             // Update optimistic message with converted text
@@ -929,9 +927,9 @@ const MiniChatWindow = ({
                         try {
                           // SPELL CORRECTION: Apply before transliteration
                           const correctedVal = spellCorrectForChat(val, currentUserLanguage);
-                          const result = await transliterateToNative(correctedVal, currentUserLanguage);
+                          const result = transliterateToNative(correctedVal, currentUserLanguage);
                           // Only update if input hasn't changed
-                          setLivePreview({ text: result.text || correctedVal, isLoading: false });
+                          setLivePreview({ text: result || correctedVal, isLoading: false });
                         } catch {
                           setLivePreview({ text: '', isLoading: false });
                         }
