@@ -44,6 +44,7 @@ export type ScriptType =
   | 'malayalam'
   | 'gujarati'
   | 'punjabi'
+  | 'gurmukhi'
   | 'odia'
   | 'thai'
   | 'khmer'
@@ -58,7 +59,17 @@ export type ScriptType =
   | 'katakana'
   | 'bopomofo'
   | 'sinhala'
-  | 'mongolian';
+  | 'mongolian'
+  | 'han'
+  | 'chakma'
+  | 'ol-chiki'
+  | 'meitei'
+  | 'thaana'
+  | 'tifinagh'
+  | 'cherokee'
+  | 'canadian-aboriginal'
+  | 'lepcha'
+  | 'warang-citi';
 
 export interface GBoardState {
   isOpen: boolean;

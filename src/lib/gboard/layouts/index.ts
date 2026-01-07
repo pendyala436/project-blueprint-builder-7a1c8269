@@ -173,3 +173,14 @@ export { cyrillicLayouts } from './cyrillic';
 export { asianLayouts } from './asian';
 export { cjkLayouts } from './cjk';
 export { otherLayouts } from './other';
+
+// Export comprehensive language mappings (500+ languages)
+export { 
+  comprehensiveLanguageMappings,
+  getLayoutIdForLanguage,
+  getScriptForLanguage,
+  getLanguagesForScript,
+  searchLanguagesMappings,
+  isRTLLanguage,
+  scriptToLayoutFallback
+} from '../language-mappings';
