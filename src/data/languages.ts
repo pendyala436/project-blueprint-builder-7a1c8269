@@ -1,4 +1,4 @@
-// Top 58 Languages by Native Speakers - Indian + World Languages
+// Top 70 Languages by Native Speakers - 12 Indian + 58 World Languages
 // Used for registration and profile selection
 
 export interface Language {
@@ -33,9 +33,10 @@ export const INDIAN_LANGUAGES: Language[] = [
 ];
 
 // ==========================================
-// TOP WORLD LANGUAGES (46 languages)
+// 58 TOP WORLD LANGUAGES (by native speakers)
 // ==========================================
 export const WORLD_LANGUAGES: Language[] = [
+  // Top 10
   { code: "zh", name: "Mandarin Chinese", nativeName: "普通话", script: "Han", speakers: "920M+", region: "China" },
   { code: "es", name: "Spanish", nativeName: "Español", script: "Latin", speakers: "480M+", region: "Global" },
   { code: "en", name: "English", nativeName: "English", script: "Latin", speakers: "380M+", region: "Global" },
@@ -46,6 +47,7 @@ export const WORLD_LANGUAGES: Language[] = [
   { code: "tr", name: "Turkish", nativeName: "Türkçe", script: "Latin", speakers: "80M+", region: "Turkey" },
   { code: "ko", name: "Korean", nativeName: "한국어", script: "Hangul", speakers: "77M+", region: "Korea" },
   { code: "fr", name: "French", nativeName: "Français", script: "Latin", speakers: "77M+", region: "Global" },
+  // 11-20
   { code: "de", name: "German", nativeName: "Deutsch", script: "Latin", speakers: "76M+", region: "Europe" },
   { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", script: "Latin", speakers: "76M+", region: "Vietnam" },
   { code: "jv", name: "Javanese", nativeName: "Basa Jawa", script: "Latin", speakers: "68M+", region: "Indonesia" },
@@ -56,6 +58,7 @@ export const WORLD_LANGUAGES: Language[] = [
   { code: "nan", name: "Southern Min", nativeName: "閩南語", script: "Han", speakers: "50M+", region: "China" },
   { code: "hak", name: "Hakka", nativeName: "客家话", script: "Han", speakers: "48M+", region: "China" },
   { code: "cjy", name: "Jin Chinese", nativeName: "晋语", script: "Han", speakers: "45M+", region: "China" },
+  // 21-30
   { code: "ha", name: "Hausa", nativeName: "Hausa", script: "Latin", speakers: "44M+", region: "Africa" },
   { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", script: "Latin", speakers: "43M+", region: "Indonesia" },
   { code: "pl", name: "Polish", nativeName: "Polski", script: "Latin", speakers: "40M+", region: "Europe" },
@@ -66,6 +69,7 @@ export const WORLD_LANGUAGES: Language[] = [
   { code: "su", name: "Sundanese", nativeName: "Basa Sunda", script: "Latin", speakers: "32M+", region: "Indonesia" },
   { code: "apd", name: "Sudanese Arabic", nativeName: "عربي سوداني", script: "Arabic", speakers: "32M+", region: "Sudan" },
   { code: "arq", name: "Algerian Arabic", nativeName: "الدارجة", script: "Arabic", speakers: "31M+", region: "Algeria" },
+  // 31-40
   { code: "ary", name: "Moroccan Arabic", nativeName: "الدارجة المغربية", script: "Arabic", speakers: "30M+", region: "Morocco" },
   { code: "uk", name: "Ukrainian", nativeName: "Українська", script: "Cyrillic", speakers: "30M+", region: "Europe" },
   { code: "ig", name: "Igbo", nativeName: "Igbo", script: "Latin", speakers: "27M+", region: "Africa" },
@@ -76,15 +80,30 @@ export const WORLD_LANGUAGES: Language[] = [
   { code: "tl", name: "Tagalog", nativeName: "Tagalog", script: "Latin", speakers: "24M+", region: "Philippines" },
   { code: "nl", name: "Dutch", nativeName: "Nederlands", script: "Latin", speakers: "23M+", region: "Europe" },
   { code: "gan", name: "Gan Chinese", nativeName: "赣语", script: "Han", speakers: "22M+", region: "China" },
+  // 41-50
   { code: "am", name: "Amharic", nativeName: "አማርኛ", script: "Ethiopic", speakers: "22M+", region: "Ethiopia" },
   { code: "ps", name: "Pashto", nativeName: "پښتو", script: "Arabic", speakers: "21M+", region: "Afghanistan/Pakistan" },
   { code: "mag", name: "Magahi", nativeName: "मगही", script: "Devanagari", speakers: "21M+", region: "India" },
   { code: "th", name: "Thai", nativeName: "ไทย", script: "Thai", speakers: "20M+", region: "Thailand" },
   { code: "skr", name: "Saraiki", nativeName: "سرائیکی", script: "Arabic", speakers: "20M+", region: "Pakistan" },
+  { code: "ms", name: "Malay", nativeName: "Bahasa Melayu", script: "Latin", speakers: "19M+", region: "Malaysia" },
+  { code: "km", name: "Khmer", nativeName: "ភាសាខ្មែរ", script: "Khmer", speakers: "16M+", region: "Cambodia" },
+  { code: "ne", name: "Nepali", nativeName: "नेपाली", script: "Devanagari", speakers: "16M+", region: "Nepal" },
+  { code: "si", name: "Sinhala", nativeName: "සිංහල", script: "Sinhala", speakers: "16M+", region: "Sri Lanka" },
+  { code: "hu", name: "Hungarian", nativeName: "Magyar", script: "Latin", speakers: "13M+", region: "Europe" },
+  // 51-58
+  { code: "el", name: "Greek", nativeName: "Ελληνικά", script: "Greek", speakers: "13M+", region: "Europe" },
+  { code: "cs", name: "Czech", nativeName: "Čeština", script: "Latin", speakers: "10M+", region: "Europe" },
+  { code: "sv", name: "Swedish", nativeName: "Svenska", script: "Latin", speakers: "10M+", region: "Europe" },
+  { code: "az", name: "Azerbaijani", nativeName: "Azərbaycan", script: "Latin", speakers: "10M+", region: "Central Asia" },
+  { code: "he", name: "Hebrew", nativeName: "עברית", script: "Hebrew", speakers: "9M+", region: "Israel" },
+  { code: "ar", name: "Arabic (MSA)", nativeName: "العربية الفصحى", script: "Arabic", speakers: "300M+", region: "Middle East" },
+  { code: "sw", name: "Swahili", nativeName: "Kiswahili", script: "Latin", speakers: "16M+", region: "Africa" },
+  { code: "zu", name: "Zulu", nativeName: "isiZulu", script: "Latin", speakers: "12M+", region: "Africa" },
 ];
 
 // ==========================================
-// COMBINED LIST - ALL 58 LANGUAGES
+// COMBINED LIST - ALL 70 LANGUAGES (12 Indian + 58 World)
 // ==========================================
 export const ALL_LANGUAGES: Language[] = [...INDIAN_LANGUAGES, ...WORLD_LANGUAGES];
 
