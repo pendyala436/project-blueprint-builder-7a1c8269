@@ -52,6 +52,8 @@ export const ALL_LANGUAGES: Language[] = [
   { code: "kha", name: "Khasi", nativeName: "Ka Ktien Khasi", script: "Latin", isIndian: true, region: "Northeast India" },
   { code: "grt", name: "Garo", nativeName: "A·chik", script: "Latin", isIndian: true, region: "Northeast India" },
   { code: "tcy", name: "Tulu", nativeName: "ತುಳು", script: "Kannada", isIndian: true, region: "South India" },
+  { code: "kfa", name: "Kodava", nativeName: "ಕೊಡವ ತಕ್ಕ್", script: "Kannada", isIndian: true, region: "South India" },
+  { code: "lbj", name: "Ladakhi", nativeName: "ལ་དྭགས་སྐད", script: "Tibetan", isIndian: true, region: "North India" },
   { code: "gom", name: "Goan Konkani", nativeName: "गोंयची कोंकणी", script: "Devanagari", isIndian: true, region: "West India" },
   { code: "hoc", name: "Ho", nativeName: "𑢹𑣉", script: "Warang Citi", isIndian: true, region: "East India" },
   { code: "mun", name: "Mundari", nativeName: "मुंडारी", script: "Devanagari", isIndian: true, region: "East India" },
