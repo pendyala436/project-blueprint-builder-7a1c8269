@@ -1414,9 +1414,14 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-
               {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
               <div className="flex-1 relative">
+                {/* GBoard voice tip - show when no messages */}
+                {messages.length === 0 && !newMessage.trim() && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/10 rounded text-[8px] text-primary border border-primary/20">
+                    💡 Use GBoard 🎤 mic for voice-to-text in your language
+                  </div>
+                )}
                 {/* Same language indicator */}
                 {!needsTranslation && newMessage.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
