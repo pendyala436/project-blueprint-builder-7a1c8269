@@ -1494,29 +1494,32 @@ const DraggableMiniChatWindow = ({
                 className="h-8 w-8 shrink-0"
               />
 
-              {/* Text input with live translation preview */}
+              {/* Text input with live native script preview */}
               <div className="flex-1 relative">
-                {/* Live translation preview - shows text in sender's native language */}
+                {/* Live native script preview - shows text in sender's native script */}
                 {transliterationEnabled && livePreview.text && livePreview.text !== newMessage && newMessage.trim() && (
                   <div className="absolute -top-7 left-0 right-0 px-2 py-1 bg-primary/10 rounded-t text-[10px] text-primary border border-b-0 border-primary/20">
                     {livePreview.isLoading ? (
                       <span className="flex items-center gap-1">
                         <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                        Converting...
+                        Converting to native script...
                       </span>
                     ) : (
                       <span className="flex items-center gap-1">
                         <Languages className="h-2.5 w-2.5" />
                         <span className="font-medium">{currentUserLanguage}:</span>
                         <span className="truncate">{livePreview.text}</span>
+                        {!needsTranslation && (
+                          <span className="text-[8px] opacity-70 ml-1">(same language)</span>
+                        )}
                       </span>
                     )}
                   </div>
                 )}
-                {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && !livePreview.text && (
+                {/* Same language indicator - only show when no native preview needed */}
+                {!needsTranslation && newMessage.trim() && !livePreview.text && !livePreview.isLoading && !needsScriptConversion && (
                   <div className="absolute -top-5 left-0 right-0 px-2 py-0.5 bg-muted/50 rounded-t text-[9px] text-muted-foreground">
-                    Same language - no translation
+                    Same language - direct display
                   </div>
                 )}
                 <Input
