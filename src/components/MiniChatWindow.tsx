@@ -127,10 +127,10 @@ const MiniChatWindow = ({
     backgroundTasksRef.current.add(promise);
   }, []);
 
-  // Real-time typing indicator with translation
+  // Real-time typing indicator with translation - FULLY ASYNC
   const {
     sendTypingIndicator,
-    stopTyping,
+    clearPreview,
     senderNativePreview,
     partnerTyping
   } = useRealtimeTranslation({
@@ -544,7 +544,7 @@ const MiniChatWindow = ({
     // IMMEDIATE: Clear input and update UI (non-blocking)
     setNewMessage("");
     setLivePreview({ text: '', isLoading: false });
-    stopTyping();
+    clearPreview(); // Clear typing preview - auto handled, no button
     setLastActivityTime(Date.now());
 
     // Determine if we need script conversion
