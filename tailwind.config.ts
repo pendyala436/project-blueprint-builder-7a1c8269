@@ -148,8 +148,40 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        display: ['Quicksand', 'system-ui', 'sans-serif'],
+        // Noto Sans as primary - supports 300+ languages/scripts
+        sans: [
+          'Noto Sans',
+          'Noto Sans Devanagari',
+          'Noto Sans Bengali',
+          'Noto Sans Tamil',
+          'Noto Sans Telugu',
+          'Noto Sans Kannada',
+          'Noto Sans Malayalam',
+          'Noto Sans Gujarati',
+          'Noto Sans Gurmukhi',
+          'Noto Sans Arabic',
+          'Noto Sans Hebrew',
+          'Noto Sans Thai',
+          'Noto Sans SC',
+          'Noto Sans JP',
+          'Noto Sans KR',
+          'system-ui',
+          '-apple-system',
+          'sans-serif'
+        ],
+        display: [
+          'Noto Sans',
+          'Noto Sans Devanagari',
+          'Noto Sans Arabic',
+          'Noto Sans SC',
+          'system-ui',
+          'sans-serif'
+        ],
+        mono: [
+          'Noto Sans Mono',
+          'ui-monospace',
+          'monospace'
+        ],
       },
       colors: {
         border: "hsl(var(--border))",
