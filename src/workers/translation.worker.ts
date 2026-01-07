@@ -1082,7 +1082,7 @@ const GUJARATI_TRANSLITERATION: Record<string, string> = {
 // Marathi uses Devanagari, same as Hindi
 const MARATHI_TRANSLITERATION = HINDI_TRANSLITERATION;
 
-// Punjabi (Gurmukhi) phonetic map
+// Punjabi (Gurmukhi) phonetic map - PURE PHONETIC, no hardcoded words
 const PUNJABI_TRANSLITERATION: Record<string, string> = {
   'a': 'ਅ', 'aa': 'ਆ', 'i': 'ਇ', 'ii': 'ਈ', 'ee': 'ਈ',
   'u': 'ਉ', 'uu': 'ਊ', 'oo': 'ਊ', 'e': 'ਏ', 'ai': 'ਐ',
@@ -1092,10 +1092,9 @@ const PUNJABI_TRANSLITERATION: Record<string, string> = {
   'pa': 'ਪ', 'pha': 'ਫ', 'ba': 'ਬ', 'bha': 'ਭ', 'ma': 'ਮ',
   'ya': 'ਯ', 'ra': 'ਰ', 'la': 'ਲ', 'va': 'ਵ', 'wa': 'ਵ',
   'sha': 'ਸ਼', 'sa': 'ਸ', 'ha': 'ਹ',
-  'hello': 'ਹੈਲੋ', 'hi': 'ਹਾਏ', 'bye': 'ਬਾਏ', 'ok': 'ਓਕੇ',
 };
 
-// Odia phonetic map  
+// Odia phonetic map - PURE PHONETIC, no hardcoded words
 const ODIA_TRANSLITERATION: Record<string, string> = {
   'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ii': 'ଈ', 'ee': 'ଈ',
   'u': 'ଉ', 'uu': 'ଊ', 'oo': 'ଊ', 'e': 'ଏ', 'ai': 'ଐ',
@@ -1105,10 +1104,9 @@ const ODIA_TRANSLITERATION: Record<string, string> = {
   'pa': 'ପ', 'pha': 'ଫ', 'ba': 'ବ', 'bha': 'ଭ', 'ma': 'ମ',
   'ya': 'ଯ', 'ra': 'ର', 'la': 'ଲ', 'va': 'ଵ',
   'sha': 'ଶ', 'sa': 'ସ', 'ha': 'ହ',
-  'hello': 'ହେଲୋ', 'hi': 'ହାଏ', 'bye': 'ବାଏ', 'ok': 'ଓକେ',
 };
 
-// Arabic phonetic map
+// Arabic phonetic map - PURE PHONETIC, no hardcoded words
 const ARABIC_TRANSLITERATION: Record<string, string> = {
   'a': 'ا', 'aa': 'آ', 'i': 'ي', 'ii': 'إي', 'ee': 'إي',
   'u': 'و', 'uu': 'أو', 'oo': 'أو', 'e': 'ي', 'ai': 'أي',
@@ -1117,10 +1115,9 @@ const ARABIC_TRANSLITERATION: Record<string, string> = {
   'kha': 'خ', 'da': 'د', 'dha': 'ذ', 'ra': 'ر', 'za': 'ز',
   'sa': 'س', 'sha': 'ش', 'ka': 'ك', 'la': 'ل', 'ma': 'م',
   'na': 'ن', 'wa': 'و', 'ya': 'ي',
-  'hello': 'هلو', 'hi': 'هاي', 'bye': 'باي', 'ok': 'اوكي',
 };
 
-// Russian (Cyrillic) phonetic map
+// Russian (Cyrillic) phonetic map - PURE PHONETIC, no hardcoded words
 const RUSSIAN_TRANSLITERATION: Record<string, string> = {
   'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д',
   'e': 'е', 'yo': 'ё', 'zh': 'ж', 'z': 'з', 'i': 'и',
@@ -1128,20 +1125,18 @@ const RUSSIAN_TRANSLITERATION: Record<string, string> = {
   'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
   'u': 'у', 'f': 'ф', 'kh': 'х', 'ts': 'ц', 'ch': 'ч',
   'sh': 'ш', 'shch': 'щ', 'ya': 'я', 'yu': 'ю',
-  'hello': 'хелло', 'hi': 'хай', 'bye': 'бай', 'ok': 'окей',
 };
 
-// Greek phonetic map
+// Greek phonetic map - PURE PHONETIC, no hardcoded words
 const GREEK_TRANSLITERATION: Record<string, string> = {
   'a': 'α', 'b': 'β', 'g': 'γ', 'd': 'δ', 'e': 'ε',
   'z': 'ζ', 'i': 'η', 'th': 'θ', 'k': 'κ', 'l': 'λ',
   'm': 'μ', 'n': 'ν', 'x': 'ξ', 'o': 'ο', 'p': 'π',
   'r': 'ρ', 's': 'σ', 't': 'τ', 'u': 'υ', 'f': 'φ',
   'ch': 'χ', 'ps': 'ψ', 'w': 'ω',
-  'hello': 'χελλο', 'hi': 'χαι', 'bye': 'μπαι', 'ok': 'οκ',
 };
 
-// Thai phonetic map
+// Thai phonetic map - PURE PHONETIC, no hardcoded words
 const THAI_TRANSLITERATION: Record<string, string> = {
   'a': 'อะ', 'aa': 'อา', 'i': 'อิ', 'ii': 'อี', 'ee': 'อี',
   'u': 'อุ', 'uu': 'อู', 'oo': 'อู', 'e': 'เอ', 'ai': 'ไอ',
@@ -1150,16 +1145,14 @@ const THAI_TRANSLITERATION: Record<string, string> = {
   'ta': 'ตะ', 'da': 'ดะ', 'na': 'นะ', 'pa': 'ปะ', 'ba': 'บะ',
   'ma': 'มะ', 'ya': 'ยะ', 'ra': 'ระ', 'la': 'ละ', 'wa': 'วะ',
   'sa': 'สะ', 'ha': 'หะ',
-  'hello': 'เฮลโล', 'hi': 'ไฮ', 'bye': 'บาย', 'ok': 'โอเค',
 };
 
-// Hebrew phonetic map
+// Hebrew phonetic map - PURE PHONETIC, no hardcoded words
 const HEBREW_TRANSLITERATION: Record<string, string> = {
   'a': 'א', 'b': 'ב', 'g': 'ג', 'd': 'ד', 'h': 'ה',
   'v': 'ו', 'z': 'ז', 'ch': 'ח', 't': 'ט', 'y': 'י',
   'k': 'כ', 'l': 'ל', 'm': 'מ', 'n': 'נ', 's': 'ס',
   'p': 'פ', 'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש',
-  'hello': 'הלו', 'hi': 'היי', 'bye': 'ביי', 'ok': 'אוקיי',
 };
 
 // Nepali uses Devanagari
