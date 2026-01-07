@@ -346,25 +346,27 @@ const EnhancedParallelChatsContainer = ({
         </Popover>
       </div>
 
-      {/* Incoming chat popups - fixed position, highest z-index */}
-      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
-        {pendingIncomingChats.map((incoming) => (
-          <IncomingChatPopup
-            key={incoming.sessionId}
-            sessionId={incoming.sessionId}
-            chatId={incoming.chatId}
-            partnerId={incoming.partnerId}
-            partnerName={incoming.partnerName}
-            partnerPhoto={incoming.partnerPhoto}
-            partnerLanguage={incoming.partnerLanguage}
-            ratePerMinute={incoming.ratePerMinute}
-            startedAt={incoming.startedAt}
-            userGender={userGender}
-            onAccept={handleAcceptChat}
-            onReject={handleRejectChat}
-          />
-        ))}
-      </div>
+      {/* Incoming chat popups - ONLY for women (accept/reject) */}
+      {userGender === "female" && (
+        <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
+          {pendingIncomingChats.map((incoming) => (
+            <IncomingChatPopup
+              key={incoming.sessionId}
+              sessionId={incoming.sessionId}
+              chatId={incoming.chatId}
+              partnerId={incoming.partnerId}
+              partnerName={incoming.partnerName}
+              partnerPhoto={incoming.partnerPhoto}
+              partnerLanguage={incoming.partnerLanguage}
+              ratePerMinute={incoming.ratePerMinute}
+              startedAt={incoming.startedAt}
+              userGender={userGender}
+              onAccept={handleAcceptChat}
+              onReject={handleRejectChat}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Active chat windows - responsive side by side layout for all devices */}
       <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">

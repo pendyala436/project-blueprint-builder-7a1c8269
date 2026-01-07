@@ -29,7 +29,8 @@ import {
   FileText,
   Mic,
   Square,
-  Languages
+  Languages,
+  MoreHorizontal
 } from "lucide-react";
 import {
   Popover,
@@ -110,6 +111,7 @@ const DraggableMiniChatWindow = ({
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [areButtonsExpanded, setAreButtonsExpanded] = useState(false); // Action buttons minimized by default
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
@@ -1069,32 +1071,53 @@ const DraggableMiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1" onMouseDown={e => e.stopPropagation()}>
-          {userGender === "male" && (
-            <GiftSendButton
-              senderId={currentUserId}
-              receiverId={partnerId}
-              receiverName={partnerName}
-              disabled={!billingStarted}
-            />
-          )}
-          <MiniChatActions
-            currentUserId={currentUserId}
-            targetUserId={partnerId}
-            targetUserName={partnerName}
-            isPartnerOnline={isPartnerOnline}
-            onBlock={handleClose}
-            onStopChat={handleClose}
-            onLogOff={handleClose}
-          />
+        <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+          {/* Toggle button to show/hide action buttons */}
           <Button
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            onClick={toggleMaximize}
+            onClick={(e) => { e.stopPropagation(); setAreButtonsExpanded(!areButtonsExpanded); }}
+            title={areButtonsExpanded ? "Hide actions" : "Show actions"}
           >
-            {isMaximized ? <Minimize2 className="h-2.5 w-2.5" /> : <Maximize2 className="h-2.5 w-2.5" />}
+            <MoreHorizontal className="h-2.5 w-2.5" />
           </Button>
+          
+          {/* Expandable action buttons - hidden by default */}
+          {areButtonsExpanded && (
+            <>
+              {/* Gift Button - only men can send */}
+              {userGender === "male" && (
+                <GiftSendButton
+                  senderId={currentUserId}
+                  receiverId={partnerId}
+                  receiverName={partnerName}
+                  disabled={!billingStarted}
+                />
+              )}
+              {/* Relationship Actions (Block/Unblock/Friend/Unfriend/Stop) */}
+              <MiniChatActions
+                currentUserId={currentUserId}
+                targetUserId={partnerId}
+                targetUserName={partnerName}
+                isPartnerOnline={isPartnerOnline}
+                onBlock={handleClose}
+                onStopChat={handleClose}
+                onLogOff={handleClose}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={toggleMaximize}
+                title={isMaximized ? "Restore size" : "Maximize"}
+              >
+                {isMaximized ? <Minimize2 className="h-2.5 w-2.5" /> : <Maximize2 className="h-2.5 w-2.5" />}
+              </Button>
+            </>
+          )}
+          
+          {/* Always visible: minimize/expand and close */}
           <Button
             variant="ghost"
             size="icon"
