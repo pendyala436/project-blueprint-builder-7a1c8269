@@ -619,18 +619,21 @@ serve(async (req) => {
     // ================================================================
     // CASE 1: Latin input for non-Latin source language
     // User typed romanized text (e.g., "bagunnava" for Telugu)
-    // Need to: 1) Transliterate to source script 2) Translate to target
+    // CRITICAL: Use English pivot for all non-English to non-English pairs
+    // Flow: Romanized Telugu → English → Chinese (not Telugu → Chinese directly)
     // ================================================================
     if (inputIsLatin && isNonLatinLanguage(effectiveSource) && !isSameLanguage(effectiveSource, effectiveTarget)) {
       console.log(`[dl-translate] Romanized input detected for ${effectiveSource}`);
+      console.log(`[dl-translate] Target language: ${effectiveTarget}`);
       
-      // Step 1: Transliterate Latin to source language native script
+      // Step 1: Try to transliterate Latin to source language native script
       const transliterated = await transliterateToNative(inputText, effectiveSource);
       
       if (transliterated.success) {
         console.log(`[dl-translate] Transliterated: "${inputText}" -> "${transliterated.text}"`);
         
         // Step 2: Translate from source native script to target language
+        // translateText already handles English pivot for non-English pairs
         const translated = await translateText(transliterated.text, effectiveSource, effectiveTarget);
         const cleanedTranslation = cleanTextOutput(translated.translatedText);
 
@@ -652,8 +655,37 @@ serve(async (req) => {
         );
       }
       
-      // Transliteration failed, fall through to direct translation
-      console.log(`[dl-translate] Transliteration failed, trying direct translation`);
+      // Transliteration failed - IMPORTANT: Still use English pivot!
+      // Treat romanized input as English phonetic approximation
+      // Flow: Latin text → translate as English → target language
+      console.log(`[dl-translate] Transliteration failed, using English as source for pivot`);
+      
+      // Check if target is also non-English - use English pivot
+      const targetCode = getLibreCode(effectiveTarget);
+      if (targetCode !== 'en') {
+        console.log(`[dl-translate] English pivot: en -> ${targetCode}`);
+        
+        // Translate Latin/English input directly to target
+        const result = await translateText(inputText, 'english', effectiveTarget);
+        const cleanedResult = cleanTextOutput(result.translatedText);
+        
+        return new Response(
+          JSON.stringify({
+            translatedText: cleanedResult,
+            translatedMessage: cleanedResult,
+            originalText: inputText,
+            isTranslated: result.success,
+            wasTransliterated: false,
+            pivotUsed: false, // Direct English → target
+            detectedLanguage: 'english',
+            sourceLanguage: 'english',
+            targetLanguage: effectiveTarget,
+            isSourceLatin: true,
+            note: 'Romanized input treated as English',
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // ================================================================
@@ -698,8 +730,37 @@ serve(async (req) => {
     }
 
     // ================================================================
-    // CASE 3: Standard translation between different languages
-    // This is the main translation path: English -> Telugu, Hindi -> English, etc.
+    // CASE 3: Non-Latin to Non-Latin (different languages)
+    // CRITICAL: Always use English pivot for reliability
+    // Example: Chinese → English → Telugu, Telugu → English → Chinese
+    // ================================================================
+    if (!inputIsLatin && isNonLatinLanguage(effectiveSource) && isNonLatinLanguage(effectiveTarget)) {
+      console.log(`[dl-translate] Non-Latin to Non-Latin: ${effectiveSource} -> ${effectiveTarget}`);
+      console.log(`[dl-translate] Using English pivot for reliability`);
+      
+      // translateText already handles English pivot internally
+      const result = await translateText(inputText, effectiveSource, effectiveTarget);
+      const cleanedResult = cleanTextOutput(result.translatedText);
+      
+      return new Response(
+        JSON.stringify({
+          translatedText: cleanedResult,
+          translatedMessage: cleanedResult,
+          originalText: inputText,
+          isTranslated: result.success,
+          pivotUsed: result.pivotUsed,
+          detectedLanguage: detected.language,
+          sourceLanguage: effectiveSource,
+          targetLanguage: effectiveTarget,
+          isSourceLatin: false,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
+    // CASE 4: Standard translation (English involved directly)
+    // English -> Telugu, Telugu -> English, etc.
     // ================================================================
     
     // Determine effective source for translation
