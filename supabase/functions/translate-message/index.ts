@@ -889,7 +889,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, message, sourceLang, targetLang, source_language, target_language } = await req.json();
+    const { text, message, sourceLang, targetLang, source_language, target_language, bidirectional } = await req.json();
     
     const inputText = text || message;
     const fromLang = sourceLang || source_language || 'auto';
@@ -902,21 +902,72 @@ serve(async (req) => {
       );
     }
     
-    const translated = translateMessage(inputText, fromLang, toLang);
+    const sourceScript = detectScriptFromText(inputText);
+    const targetScript = getTargetScriptFromLanguage(toLang);
+    
+    // Primary translation: source → target
+    const toTarget = translateMessage(inputText, fromLang, toLang);
+    
+    // BIDIRECTIONAL: Also translate to English (Latin) for two-way communication
+    // This ensures both chat participants can read the message
+    const toEnglish = sourceScript !== 'latin' 
+      ? transliterateToLatin(inputText) 
+      : inputText;
+    
+    // Reverse direction: If someone sends English, show in target script too
+    const fromEnglish = sourceScript === 'latin' && targetScript !== 'latin'
+      ? transliterateFromLatin(inputText, targetScript)
+      : null;
+    
+    // Full bidirectional response for chat
+    const response: Record<string, any> = {
+      success: true,
+      original: inputText,
+      
+      // Primary translation (source → target language)
+      translated: toTarget,
+      translatedText: toTarget,
+      
+      // TWO-WAY COMMUNICATION FIELDS
+      // For sender's language partner to read
+      toEnglish: toEnglish,
+      inLatin: toEnglish,
+      
+      // For showing English text in target script
+      fromEnglish: fromEnglish,
+      inTargetScript: fromEnglish || toTarget,
+      
+      // Metadata
+      sourceLang: fromLang,
+      targetLang: toLang,
+      sourceScript: sourceScript,
+      targetScript: targetScript,
+      
+      // Bidirectional pairs for chat UI
+      bidirectional: {
+        // What the sender typed
+        original: inputText,
+        originalScript: sourceScript,
+        
+        // For English/Latin reader
+        forEnglishReader: toEnglish,
+        
+        // For target language reader  
+        forTargetReader: toTarget,
+        
+        // If sender typed in English, show in target script
+        englishInTargetScript: fromEnglish
+      },
+      
+      method: 'dynamic_embedded_transliteration',
+      supportedLanguages: '900+',
+      supportedCombinations: '810000+'
+    };
+    
+    console.log(`[Translate] Bidirectional: "${inputText.substring(0, 20)}..." → English: "${toEnglish.substring(0, 20)}..." | Target: "${toTarget.substring(0, 20)}..."`);
     
     return new Response(
-      JSON.stringify({
-        success: true,
-        original: inputText,
-        translated,
-        translatedText: translated,
-        sourceLang: fromLang,
-        targetLang: toLang,
-        sourceScript: detectScriptFromText(inputText),
-        targetScript: getTargetScriptFromLanguage(toLang),
-        method: 'dynamic_embedded_transliteration',
-        supportedLanguages: '900+'
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
