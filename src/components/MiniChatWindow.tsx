@@ -28,14 +28,20 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
+// In-memory translation - NO external APIs, NO Docker
 import { 
-  translate, 
-  convertToNativeScript, 
-  processIncomingMessage as dlProcessIncoming,
+  translate,
+  transliterateToNative,
+  processSenderMessage,
+  processReceiverMessage,
   isSameLanguage,
-  isLatinScript,
-  isLatinScriptLanguage
-} from "@/lib/dl-translate";
+  isLatinText,
+  isLatinScriptLanguage,
+  detectLanguageFromText,
+  createLivePreview,
+  isPipelineReady,
+  initPipeline,
+} from "@/lib/translation/realtime-chat-translator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -294,19 +300,20 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
-  // Auto-translate a message to current user's language using dl-translate
+  // Auto-translate a message to current user's language (IN-MEMORY, no external API)
   const translateMessage = useCallback(async (text: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Use dl-translate to process incoming message
-      const result = await dlProcessIncoming(text, partnerLanguage, currentUserLanguage);
+      // Use in-memory realtime translator
+      const result = await processReceiverMessage(text, partnerLanguage, currentUserLanguage);
+      const detected = detectLanguageFromText(text);
       return {
-        translatedMessage: result.text,
-        isTranslated: result.isTranslated,
-        detectedLanguage: result.detectedLanguage
+        translatedMessage: result.receiverView,
+        isTranslated: result.wasTranslated,
+        detectedLanguage: detected.language
       };
     } catch (error) {
       console.error('[MiniChatWindow] Translation error:', error);
@@ -486,7 +493,7 @@ const MiniChatWindow = ({
     setLastActivityTime(Date.now());
 
     // Determine if we need script conversion
-    const shouldConvert = transliterationEnabled && needsScriptConversion && isLatinScript(messageText);
+    const shouldConvert = transliterationEnabled && needsScriptConversion && isLatinText(messageText);
     
     // Use preview text if available (already converted), otherwise use original
     const previewText = livePreview.text && livePreview.text !== messageText ? livePreview.text : null;
@@ -513,7 +520,7 @@ const MiniChatWindow = ({
           processedMessage = previewText;
         } else if (shouldConvert) {
           try {
-            const converted = await convertToNativeScript(messageText, currentUserLanguage);
+            const converted = await transliterateToNative(messageText, currentUserLanguage);
             processedMessage = converted.text || messageText;
             console.log('[MiniChatWindow] Converted:', messageText, '->', processedMessage);
             
@@ -839,13 +846,13 @@ const MiniChatWindow = ({
                     clearTimeout(previewTimeoutRef.current);
                   }
                   
-                  if (transliterationEnabled && needsScriptConversion && isLatinScript(val) && val.trim()) {
+                  if (transliterationEnabled && needsScriptConversion && isLatinText(val) && val.trim()) {
                     setLivePreview(prev => ({ ...prev, isLoading: true }));
                     previewTimeoutRef.current = setTimeout(() => {
                       // BACKGROUND: Convert script without blocking typing
                       runInBackground(async () => {
                         try {
-                          const result = await convertToNativeScript(val, currentUserLanguage);
+                          const result = await transliterateToNative(val, currentUserLanguage);
                           // Only update if input hasn't changed
                           setLivePreview({ text: result.text || val, isLoading: false });
                         } catch {

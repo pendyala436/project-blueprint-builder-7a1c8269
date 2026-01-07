@@ -286,15 +286,15 @@ const UniversalChatPage: React.FC = () => {
         const partnerMessage: Message = {
           id: `partner-${Date.now()}`,
           text: partnerText,
-          translatedText: translatedForUser.translatedText,
+          translatedText: translatedForUser.text,
           sourceLanguage: partnerLanguage,
           targetLanguage: userLanguage,
           isTranslated: translatedForUser.isTranslated,
           showOriginal: false,
           sender: 'partner',
           timestamp: new Date(),
-          model: translatedForUser.model,
-          usedPivot: false, // In-memory translator doesn't use pivot
+          model: 'nllb-200-browser',
+          usedPivot: false,
         };
         
         setMessages(prev => [...prev, partnerMessage]);

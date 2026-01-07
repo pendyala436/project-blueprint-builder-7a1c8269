@@ -1,39 +1,40 @@
 /**
  * Translation Service Hook
+ * =========================
  * Fully in-memory, browser-based translation
  * Uses @huggingface/transformers NLLB-200 model
+ * 
  * NO external APIs, NO Docker, NO hardcoding
+ * Supports 200+ languages dynamically
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   translate,
   transliterateToNative,
-  processMessage,
-  detectLanguageFromScript,
+  processSenderMessage,
+  processReceiverMessage,
+  processChatMessage,
+  detectLanguageFromText,
   isLatinText,
-  isNonLatinScript,
+  isLatinScriptLanguage,
+  isSameLanguage,
   initPipeline,
   isPipelineReady,
   getLoadingStatus,
-  getAvailableLanguages,
+  getLanguages,
   clearCache,
+  createLivePreview,
   type TranslationResult,
+  type ChatProcessResult,
   type LanguageInfo,
-} from '@/lib/translation/in-memory-translator';
+} from '@/lib/translation/realtime-chat-translator';
 
-export type { TranslationResult, LanguageInfo };
+export type { TranslationResult, ChatProcessResult, LanguageInfo };
 
 export interface ConversionResult {
   converted: string;
   isConverted: boolean;
-}
-
-export interface MessageProcessResult {
-  senderView: string;
-  receiverView: string;
-  wasTransliterated: boolean;
-  wasTranslated: boolean;
 }
 
 export function useTranslationService() {
@@ -43,14 +44,14 @@ export function useTranslationService() {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(isPipelineReady());
   
-  // Track pending operations for non-blocking
-  const pendingOps = useRef<Map<string, AbortController>>(new Map());
+  // Live preview helper
+  const livePreviewRef = useRef(createLivePreview(150));
 
   // Preload model on first use
   useEffect(() => {
     if (!isReady && !isModelLoading) {
-      const { isLoading } = getLoadingStatus();
-      if (!isLoading) {
+      const status = getLoadingStatus();
+      if (!status.isLoading) {
         setIsModelLoading(true);
         initPipeline((progress) => {
           setModelLoadProgress(progress);
@@ -66,8 +67,8 @@ export function useTranslationService() {
   }, [isReady, isModelLoading]);
 
   // Get all available languages dynamically
-  const getLanguages = useCallback((): LanguageInfo[] => {
-    return getAvailableLanguages();
+  const getAllLanguages = useCallback((): LanguageInfo[] => {
+    return getLanguages();
   }, []);
 
   // Translate text (in-memory, non-blocking)
@@ -78,26 +79,24 @@ export function useTranslationService() {
   ): Promise<TranslationResult> => {
     if (!text.trim()) {
       return {
-        translatedText: text,
+        text,
         originalText: text,
         sourceLanguage,
         targetLanguage,
         isTranslated: false,
         wasTransliterated: false,
-        model: 'none',
       };
     }
 
     // Same language - no translation needed
-    if (sourceLanguage.toLowerCase() === targetLanguage.toLowerCase()) {
+    if (isSameLanguage(sourceLanguage, targetLanguage)) {
       return {
-        translatedText: text,
+        text,
         originalText: text,
         sourceLanguage,
         targetLanguage,
         isTranslated: false,
         wasTransliterated: false,
-        model: 'none',
       };
     }
 
@@ -105,13 +104,7 @@ export function useTranslationService() {
     setError(null);
 
     try {
-      const result = await translate(
-        text,
-        sourceLanguage,
-        targetLanguage,
-        (progress) => setModelLoadProgress(progress)
-      );
-
+      const result = await translate(text, sourceLanguage, targetLanguage);
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Translation failed';
@@ -119,13 +112,12 @@ export function useTranslationService() {
       setError(message);
       
       return {
-        translatedText: text,
+        text,
         originalText: text,
         sourceLanguage,
         targetLanguage,
         isTranslated: false,
         wasTransliterated: false,
-        model: 'error',
       };
     } finally {
       setIsTranslating(false);
@@ -147,7 +139,7 @@ export function useTranslationService() {
     }
 
     // Check if target language uses non-Latin script
-    if (!isNonLatinScript(targetLanguage)) {
+    if (isLatinScriptLanguage(targetLanguage)) {
       return { converted: text, isConverted: false };
     }
 
@@ -162,22 +154,30 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Process message for chat (handles both transliteration and translation)
+  // Process outgoing message (sender's view)
+  const processOutgoing = useCallback(async (
+    text: string,
+    senderLanguage: string
+  ) => {
+    return processSenderMessage(text, senderLanguage);
+  }, []);
+
+  // Process incoming message (receiver's view)
+  const processIncoming = useCallback(async (
+    text: string,
+    senderLanguage: string,
+    receiverLanguage: string
+  ) => {
+    return processReceiverMessage(text, senderLanguage, receiverLanguage);
+  }, []);
+
+  // Full chat message processing
   const processMessageForChat = useCallback(async (
     text: string,
     senderLanguage: string,
     receiverLanguage: string
-  ): Promise<MessageProcessResult> => {
-    try {
-      return await processMessage(text, senderLanguage, receiverLanguage);
-    } catch {
-      return {
-        senderView: text,
-        receiverView: text,
-        wasTransliterated: false,
-        wasTranslated: false,
-      };
-    }
+  ): Promise<ChatProcessResult> => {
+    return processChatMessage(text, senderLanguage, receiverLanguage);
   }, []);
 
   // Detect language from text (in-memory, instant)
@@ -185,13 +185,27 @@ export function useTranslationService() {
     const trimmed = text.trim();
     if (!trimmed) return { language: 'english', isLatin: true };
 
-    const detected = detectLanguageFromScript(trimmed);
+    const detected = detectLanguageFromText(trimmed);
     return { language: detected.language, isLatin: detected.isLatin };
+  }, []);
+
+  // Update live preview (debounced, non-blocking)
+  const updateLivePreview = useCallback((
+    text: string,
+    targetLanguage: string,
+    callback: (preview: string) => void
+  ) => {
+    livePreviewRef.current.update(text, targetLanguage, callback);
+  }, []);
+
+  // Cancel live preview
+  const cancelLivePreview = useCallback(() => {
+    livePreviewRef.current.cancel();
   }, []);
 
   // Check if language uses non-Latin script
   const checkNonLatinScript = useCallback((language: string): boolean => {
-    return isNonLatinScript(language);
+    return !isLatinScriptLanguage(language);
   }, []);
 
   // Clear translation cache
@@ -203,12 +217,19 @@ export function useTranslationService() {
     // Core translation functions
     translate: translateText,
     convertToNativeScript,
+    processOutgoing,
+    processIncoming,
     processMessageForChat,
     detectLanguage,
     
+    // Live preview
+    updateLivePreview,
+    cancelLivePreview,
+    
     // Utility functions
-    getLanguages,
+    getLanguages: getAllLanguages,
     checkNonLatinScript,
+    isSameLanguage,
     clearTranslationCache,
     
     // State
