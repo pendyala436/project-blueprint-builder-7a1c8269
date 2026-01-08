@@ -1,14 +1,14 @@
 /**
  * Embedded Translation Engine - English Pivot System
  * ===================================================
- * 100% in-browser, 65 languages (23 Indian + 42 World)
+ * 100% in-browser, 386+ languages (All from languages.ts)
  * 
  * BIDIRECTIONAL TRANSLATION via English Pivot:
  * ============================================
  * Forward:  Source → English → Target
  * Reverse:  Target → English → Source
  * 
- * Total: 65 languages × 64 targets = 4,160 translation pairs
+ * Total: 386 languages × 385 targets = 148,610 translation pairs
  * (Skip pivot if source or target is English = direct translation)
  * 
  * FEATURES:
@@ -22,9 +22,10 @@
 
 import { dynamicTransliterate } from './dynamic-transliterator';
 import { spellCorrectForChat } from './phonetic-symspell';
+import { languages as allLanguages, type Language } from '@/data/languages';
 
 // ============================================================
-// 65 LANGUAGE DATABASE (23 Indian + 42 World)
+// 386+ LANGUAGE DATABASE (All from languages.ts)
 // ============================================================
 
 export interface LanguageInfo {
@@ -37,80 +38,20 @@ export interface LanguageInfo {
   family?: string;
 }
 
-// 23 Indian Languages
-const INDIAN_LANGUAGES: LanguageInfo[] = [
-  { name: 'hindi', code: 'hi', nllbCode: 'hin_Deva', native: 'हिन्दी', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'bengali', code: 'bn', nllbCode: 'ben_Beng', native: 'বাংলা', script: 'Bengali', family: 'Indo-Aryan' },
-  { name: 'telugu', code: 'te', nllbCode: 'tel_Telu', native: 'తెలుగు', script: 'Telugu', family: 'Dravidian' },
-  { name: 'marathi', code: 'mr', nllbCode: 'mar_Deva', native: 'मराठी', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'tamil', code: 'ta', nllbCode: 'tam_Taml', native: 'தமிழ்', script: 'Tamil', family: 'Dravidian' },
-  { name: 'gujarati', code: 'gu', nllbCode: 'guj_Gujr', native: 'ગુજરાતી', script: 'Gujarati', family: 'Indo-Aryan' },
-  { name: 'kannada', code: 'kn', nllbCode: 'kan_Knda', native: 'ಕನ್ನಡ', script: 'Kannada', family: 'Dravidian' },
-  { name: 'malayalam', code: 'ml', nllbCode: 'mal_Mlym', native: 'മലയാളം', script: 'Malayalam', family: 'Dravidian' },
-  { name: 'odia', code: 'or', nllbCode: 'ory_Orya', native: 'ଓଡ଼ିଆ', script: 'Odia', family: 'Indo-Aryan' },
-  { name: 'punjabi', code: 'pa', nllbCode: 'pan_Guru', native: 'ਪੰਜਾਬੀ', script: 'Gurmukhi', family: 'Indo-Aryan' },
-  { name: 'assamese', code: 'as', nllbCode: 'asm_Beng', native: 'অসমীয়া', script: 'Bengali', family: 'Indo-Aryan' },
-  { name: 'maithili', code: 'mai', nllbCode: 'mai_Deva', native: 'मैथिली', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'sanskrit', code: 'sa', nllbCode: 'san_Deva', native: 'संस्कृतम्', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'kashmiri', code: 'ks', nllbCode: 'kas_Arab', native: 'کٲشُر', script: 'Arabic', rtl: true, family: 'Indo-Aryan' },
-  { name: 'nepali', code: 'ne', nllbCode: 'npi_Deva', native: 'नेपाली', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'sindhi', code: 'sd', nllbCode: 'snd_Arab', native: 'سنڌي', script: 'Arabic', rtl: true, family: 'Indo-Aryan' },
-  { name: 'konkani', code: 'kok', nllbCode: 'kok_Deva', native: 'कोंकणी', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'dogri', code: 'doi', nllbCode: 'doi_Deva', native: 'डोगरी', script: 'Devanagari', family: 'Indo-Aryan' },
-  { name: 'manipuri', code: 'mni', nllbCode: 'mni_Beng', native: 'মৈতৈলোন্', script: 'Bengali', family: 'Sino-Tibetan' },
-  { name: 'santali', code: 'sat', nllbCode: 'sat_Olck', native: 'ᱥᱟᱱᱛᱟᱲᱤ', script: 'Ol_Chiki', family: 'Austroasiatic' },
-  { name: 'bodo', code: 'brx', nllbCode: 'brx_Deva', native: 'बड़ो', script: 'Devanagari', family: 'Sino-Tibetan' },
-  { name: 'mizo', code: 'lus', nllbCode: 'lus_Latn', native: 'Mizo ṭawng', script: 'Latin', family: 'Sino-Tibetan' },
-  { name: 'urdu', code: 'ur', nllbCode: 'urd_Arab', native: 'اردو', script: 'Arabic', rtl: true, family: 'Indo-Aryan' },
-];
+// Convert Language from data/languages.ts to LanguageInfo format
+function convertToLanguageInfo(lang: Language): LanguageInfo {
+  return {
+    name: lang.name.toLowerCase().replace(/[()]/g, '').trim(),
+    code: lang.code,
+    nllbCode: `${lang.code}_${lang.script?.substring(0, 4) || 'Latn'}`,
+    native: lang.nativeName,
+    script: lang.script || 'Latin',
+    rtl: lang.rtl,
+  };
+}
 
-// 42 World Languages (sorted by speaker count)
-const WORLD_LANGUAGES: LanguageInfo[] = [
-  { name: 'english', code: 'en', nllbCode: 'eng_Latn', native: 'English', script: 'Latin', family: 'Germanic' },
-  { name: 'mandarin', code: 'zh', nllbCode: 'zho_Hans', native: '中文', script: 'Han', family: 'Sino-Tibetan' },
-  { name: 'spanish', code: 'es', nllbCode: 'spa_Latn', native: 'Español', script: 'Latin', family: 'Romance' },
-  { name: 'french', code: 'fr', nllbCode: 'fra_Latn', native: 'Français', script: 'Latin', family: 'Romance' },
-  { name: 'arabic', code: 'ar', nllbCode: 'arb_Arab', native: 'العربية', script: 'Arabic', rtl: true, family: 'Semitic' },
-  { name: 'portuguese', code: 'pt', nllbCode: 'por_Latn', native: 'Português', script: 'Latin', family: 'Romance' },
-  { name: 'russian', code: 'ru', nllbCode: 'rus_Cyrl', native: 'Русский', script: 'Cyrillic', family: 'Slavic' },
-  { name: 'japanese', code: 'ja', nllbCode: 'jpn_Jpan', native: '日本語', script: 'Japanese', family: 'Japonic' },
-  { name: 'german', code: 'de', nllbCode: 'deu_Latn', native: 'Deutsch', script: 'Latin', family: 'Germanic' },
-  { name: 'javanese', code: 'jv', nllbCode: 'jav_Latn', native: 'Basa Jawa', script: 'Latin', family: 'Austronesian' },
-  { name: 'korean', code: 'ko', nllbCode: 'kor_Hang', native: '한국어', script: 'Hangul', family: 'Koreanic' },
-  { name: 'vietnamese', code: 'vi', nllbCode: 'vie_Latn', native: 'Tiếng Việt', script: 'Latin', family: 'Austroasiatic' },
-  { name: 'turkish', code: 'tr', nllbCode: 'tur_Latn', native: 'Türkçe', script: 'Latin', family: 'Turkic' },
-  { name: 'italian', code: 'it', nllbCode: 'ita_Latn', native: 'Italiano', script: 'Latin', family: 'Romance' },
-  { name: 'thai', code: 'th', nllbCode: 'tha_Thai', native: 'ไทย', script: 'Thai', family: 'Kra-Dai' },
-  { name: 'persian', code: 'fa', nllbCode: 'pes_Arab', native: 'فارسی', script: 'Arabic', rtl: true, family: 'Iranian' },
-  { name: 'polish', code: 'pl', nllbCode: 'pol_Latn', native: 'Polski', script: 'Latin', family: 'Slavic' },
-  { name: 'ukrainian', code: 'uk', nllbCode: 'ukr_Cyrl', native: 'Українська', script: 'Cyrillic', family: 'Slavic' },
-  { name: 'malay', code: 'ms', nllbCode: 'zsm_Latn', native: 'Bahasa Melayu', script: 'Latin', family: 'Austronesian' },
-  { name: 'burmese', code: 'my', nllbCode: 'mya_Mymr', native: 'မြန်မာ', script: 'Myanmar', family: 'Sino-Tibetan' },
-  { name: 'tagalog', code: 'tl', nllbCode: 'tgl_Latn', native: 'Tagalog', script: 'Latin', family: 'Austronesian' },
-  { name: 'swahili', code: 'sw', nllbCode: 'swh_Latn', native: 'Kiswahili', script: 'Latin', family: 'Bantu' },
-  { name: 'sundanese', code: 'su', nllbCode: 'sun_Latn', native: 'Basa Sunda', script: 'Latin', family: 'Austronesian' },
-  { name: 'romanian', code: 'ro', nllbCode: 'ron_Latn', native: 'Română', script: 'Latin', family: 'Romance' },
-  { name: 'dutch', code: 'nl', nllbCode: 'nld_Latn', native: 'Nederlands', script: 'Latin', family: 'Germanic' },
-  { name: 'greek', code: 'el', nllbCode: 'ell_Grek', native: 'Ελληνικά', script: 'Greek', family: 'Hellenic' },
-  { name: 'hungarian', code: 'hu', nllbCode: 'hun_Latn', native: 'Magyar', script: 'Latin', family: 'Uralic' },
-  { name: 'czech', code: 'cs', nllbCode: 'ces_Latn', native: 'Čeština', script: 'Latin', family: 'Slavic' },
-  { name: 'swedish', code: 'sv', nllbCode: 'swe_Latn', native: 'Svenska', script: 'Latin', family: 'Germanic' },
-  { name: 'hebrew', code: 'he', nllbCode: 'heb_Hebr', native: 'עברית', script: 'Hebrew', rtl: true, family: 'Semitic' },
-  { name: 'zulu', code: 'zu', nllbCode: 'zul_Latn', native: 'isiZulu', script: 'Latin', family: 'Bantu' },
-  { name: 'kinyarwanda', code: 'rw', nllbCode: 'kin_Latn', native: 'Ikinyarwanda', script: 'Latin', family: 'Bantu' },
-  { name: 'yoruba', code: 'yo', nllbCode: 'yor_Latn', native: 'Yorùbá', script: 'Latin', family: 'Niger-Congo' },
-  { name: 'igbo', code: 'ig', nllbCode: 'ibo_Latn', native: 'Igbo', script: 'Latin', family: 'Niger-Congo' },
-  { name: 'hausa', code: 'ha', nllbCode: 'hau_Latn', native: 'Hausa', script: 'Latin', family: 'Afroasiatic' },
-  { name: 'amharic', code: 'am', nllbCode: 'amh_Ethi', native: 'አማርኛ', script: 'Ethiopic', family: 'Semitic' },
-  { name: 'somali', code: 'so', nllbCode: 'som_Latn', native: 'Soomaali', script: 'Latin', family: 'Cushitic' },
-  { name: 'khmer', code: 'km', nllbCode: 'khm_Khmr', native: 'ខ្មែរ', script: 'Khmer', family: 'Austroasiatic' },
-  { name: 'sinhala', code: 'si', nllbCode: 'sin_Sinh', native: 'සිංහල', script: 'Sinhala', family: 'Indo-Aryan' },
-  { name: 'azerbaijani', code: 'az', nllbCode: 'azj_Latn', native: 'Azərbaycan', script: 'Latin', family: 'Turkic' },
-  { name: 'uzbek', code: 'uz', nllbCode: 'uzn_Latn', native: "O'zbek", script: 'Latin', family: 'Turkic' },
-];
-
-// Combined 65 languages
-export const LANGUAGES: LanguageInfo[] = [...INDIAN_LANGUAGES, ...WORLD_LANGUAGES];
+// All 386+ languages from the main languages database
+export const LANGUAGES: LanguageInfo[] = allLanguages.map(convertToLanguageInfo);
 
 // ============================================================
 // LANGUAGE LOOKUP MAPS
@@ -119,17 +60,45 @@ export const LANGUAGES: LanguageInfo[] = [...INDIAN_LANGUAGES, ...WORLD_LANGUAGE
 const languageByName = new Map(LANGUAGES.map(l => [l.name.toLowerCase(), l]));
 const languageByCode = new Map(LANGUAGES.map(l => [l.code.toLowerCase(), l]));
 
+// Comprehensive language aliases for normalization
 const languageAliases: Record<string, string> = {
-  bangla: 'bengali', oriya: 'odia', farsi: 'persian',
-  chinese: 'mandarin', hindustani: 'hindi',
+  'bangla': 'bengali', 'oriya': 'odia', 'farsi': 'persian',
+  'chinese': 'chinese (mandarin)', 'hindustani': 'hindi',
+  'mandarin': 'chinese (mandarin)', 'cantonese': 'cantonese',
+  'burmese': 'burmese', 'myanmar': 'burmese',
+  'tagalog': 'tagalog', 'filipino': 'tagalog',
+  'punjabi': 'punjabi', 'panjabi': 'punjabi',
+  'sinhala': 'sinhala', 'sinhalese': 'sinhala',
+  'javanese': 'javanese', 'jawa': 'javanese',
+  'korean': 'korean', 'hangul': 'korean',
+  'japanese': 'japanese', 'nihongo': 'japanese',
+  'thai': 'thai', 'siamese': 'thai',
+  'vietnamese': 'vietnamese', 'tieng viet': 'vietnamese',
+  'hebrew': 'hebrew', 'ivrit': 'hebrew',
+  'greek': 'greek', 'ellinika': 'greek',
+  'russian': 'russian', 'russkiy': 'russian',
+  'ukrainian': 'ukrainian', 'ukrainska': 'ukrainian',
+  'kazakh': 'kazakh', 'qazaq': 'kazakh',
+  'uzbek': 'uzbek', 'ozbek': 'uzbek',
+  'azerbaijani': 'azerbaijani', 'azeri': 'azerbaijani',
+  'turkish': 'turkish', 'turkce': 'turkish',
+  'assamese': 'assamese', 'asamiya': 'assamese',
+  'maithili': 'maithili', 'mithila': 'maithili',
+  'konkani': 'konkani', 'koknni': 'konkani',
+  'marwari': 'marwari', 'marvari': 'marwari',
+  'bhojpuri': 'bhojpuri', 'bhojpuriya': 'bhojpuri',
+  'magahi': 'magahi', 'magadhi': 'magahi',
+  'nepali': 'nepali', 'gorkhali': 'nepali',
+  'dzongkha': 'dzongkha', 'bhutanese': 'dzongkha',
+  'tibetan': 'tibetan', 'bodskad': 'tibetan',
 };
 
 // ============================================================
-// SCRIPT DETECTION
+// SCRIPT DETECTION (Extended for all scripts)
 // ============================================================
 
 const SCRIPT_PATTERNS: Array<{ regex: RegExp; language: string; script: string }> = [
-  // South Asian
+  // South Asian Indic scripts
   { regex: /[\u0900-\u097F]/, language: 'hindi', script: 'Devanagari' },
   { regex: /[\u0980-\u09FF]/, language: 'bengali', script: 'Bengali' },
   { regex: /[\u0A00-\u0A7F]/, language: 'punjabi', script: 'Gurmukhi' },
@@ -141,32 +110,43 @@ const SCRIPT_PATTERNS: Array<{ regex: RegExp; language: string; script: string }
   { regex: /[\u0D00-\u0D7F]/, language: 'malayalam', script: 'Malayalam' },
   { regex: /[\u0D80-\u0DFF]/, language: 'sinhala', script: 'Sinhala' },
   // East Asian
-  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: 'mandarin', script: 'Han' },
-  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese', script: 'Kana' },
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: 'chinese (mandarin)', script: 'Han' },
+  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese', script: 'Japanese' },
   { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: 'korean', script: 'Hangul' },
   // Southeast Asian
   { regex: /[\u0E00-\u0E7F]/, language: 'thai', script: 'Thai' },
+  { regex: /[\u0E80-\u0EFF]/, language: 'lao', script: 'Lao' },
   { regex: /[\u1000-\u109F]/, language: 'burmese', script: 'Myanmar' },
   { regex: /[\u1780-\u17FF]/, language: 'khmer', script: 'Khmer' },
   // Middle Eastern
   { regex: /[\u0600-\u06FF]/, language: 'arabic', script: 'Arabic' },
   { regex: /[\u0590-\u05FF]/, language: 'hebrew', script: 'Hebrew' },
+  { regex: /[\u0780-\u07BF]/, language: 'dhivehi', script: 'Thaana' },
   // European
   { regex: /[\u0400-\u04FF]/, language: 'russian', script: 'Cyrillic' },
   { regex: /[\u0370-\u03FF]/, language: 'greek', script: 'Greek' },
+  { regex: /[\u0530-\u058F]/, language: 'armenian', script: 'Armenian' },
+  { regex: /[\u10A0-\u10FF]/, language: 'georgian', script: 'Georgian' },
   // African
   { regex: /[\u1200-\u137F]/, language: 'amharic', script: 'Ethiopic' },
   // Indian special scripts
   { regex: /[\u1C50-\u1C7F]/, language: 'santali', script: 'Ol_Chiki' },
+  { regex: /[\u1900-\u194F]/, language: 'limbu', script: 'Limbu' },
+  { regex: /[\u1C00-\u1C4F]/, language: 'lepcha', script: 'Lepcha' },
+  // Tibetan
+  { regex: /[\u0F00-\u0FFF]/, language: 'tibetan', script: 'Tibetan' },
+  // Yi
+  { regex: /[\uA000-\uA48F]/, language: 'yi', script: 'Yi' },
+  // Lisu
+  { regex: /[\uA4D0-\uA4FF]/, language: 'lisu', script: 'Lisu' },
 ];
 
-// Latin script languages
-const LATIN_SCRIPT_LANGUAGES = new Set([
-  'english', 'spanish', 'french', 'portuguese', 'german', 'italian', 'dutch',
-  'polish', 'romanian', 'swedish', 'czech', 'hungarian', 'turkish', 'vietnamese',
-  'malay', 'tagalog', 'swahili', 'javanese', 'sundanese', 'zulu', 'kinyarwanda',
-  'yoruba', 'igbo', 'hausa', 'somali', 'azerbaijani', 'uzbek', 'mizo'
-]);
+// All Latin script languages - dynamically built from the database
+const LATIN_SCRIPT_LANGUAGES = new Set(
+  LANGUAGES
+    .filter(l => l.script === 'Latin')
+    .map(l => l.name.toLowerCase())
+);
 
 // ============================================================
 // TRANSLATION CACHE
@@ -748,7 +728,7 @@ export function getLoadingStatus(): { ready: boolean; progress: number } {
 // ============================================================
 
 /**
- * Get all supported translation pairs (130 combinations for 65 languages via English pivot)
+ * Get all supported translation pairs (386+ languages via English pivot)
  */
 export function getSupportedPairs(): Array<{ source: string; target: string }> {
   const pairs: Array<{ source: string; target: string }> = [];
@@ -771,4 +751,11 @@ export function isPairSupported(source: string, target: string): boolean {
   return isLanguageSupported(source) && isLanguageSupported(target);
 }
 
-console.log('[EmbeddedTranslator] Module loaded - 65 languages, English pivot system, 100% embedded');
+/**
+ * Get total language count
+ */
+export function getTotalLanguageCount(): number {
+  return LANGUAGES.length;
+}
+
+console.log(`[EmbeddedTranslator] Module loaded - ${LANGUAGES.length} languages, English pivot system, 100% embedded`);
