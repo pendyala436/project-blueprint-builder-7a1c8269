@@ -46,6 +46,7 @@ export {
   transliterateToNative,
   getNativeScriptPreview,
   processMessageForChat,
+  processIncomingMessage,
   
   // Bidirectional translation (Source ↔ Target via English)
   translateBidirectional,
