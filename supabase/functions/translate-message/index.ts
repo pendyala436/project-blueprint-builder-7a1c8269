@@ -698,12 +698,26 @@ serve(async (req) => {
 
     // Detect source script
     const detected = detectScriptFromText(inputText);
-    const effectiveSource = sourceLanguage || senderLanguage || detected.language;
-    const effectiveTarget = targetLanguage || receiverLanguage || "english";
     const inputIsLatin = detected.isLatin;
+    
+    // AUTO-DETECTION MODE: When source isn't explicitly provided or "auto" is specified
+    // Use detected language from script analysis
+    const autoDetectMode = !sourceLanguage && !senderLanguage;
+    let effectiveSource: string;
+    
+    if (autoDetectMode) {
+      // No source language provided - auto-detect from text script
+      effectiveSource = detected.language;
+      console.log(`[dl-translate] Auto-detect mode: detected ${effectiveSource} from script`);
+    } else {
+      // Use provided source language
+      effectiveSource = sourceLanguage || senderLanguage || detected.language;
+    }
+    
+    const effectiveTarget = targetLanguage || receiverLanguage || "english";
 
     console.log(`[dl-translate] Detected: ${detected.language} (${detected.script}), isLatin: ${inputIsLatin}`);
-    console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}`);
+    console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}, autoDetect: ${autoDetectMode}`);
 
     // ================================================================
     // HELPER: Detect if Latin text is likely English words vs romanized Indian text

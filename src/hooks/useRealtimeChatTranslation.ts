@@ -174,7 +174,7 @@ export function useRealtimeChatTranslation(
   const getInstantPreview = getLivePreview;
 
   // ============================================================
-  // PROCESS MESSAGE (Async, Edge Function)
+  // PROCESS MESSAGE (Async, Edge Function with Auto-Detection)
   // ============================================================
 
   const processMessage = useCallback(async (
@@ -183,8 +183,6 @@ export function useRealtimeChatTranslation(
     toLanguage?: string
   ): Promise<ChatMessageResult> => {
     const startTime = performance.now();
-    const srcLang = normalizeLang(fromLanguage || senderLanguage);
-    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
 
     if (!text || !text.trim()) {
       return {
@@ -198,12 +196,38 @@ export function useRealtimeChatTranslation(
     }
 
     const trimmed = text.trim();
+    
+    // AUTO-DETECT source language from actual text typed
+    const detected = autoDetectLanguageSync(trimmed);
+    const detectedSourceLang = detected.language;
+    
+    // Use detected language if it's a specific non-Latin script, 
+    // otherwise fall back to explicit source language or 'english' for Latin text
+    let srcLang: string;
+    if (!detected.isLatin && detected.confidence > 0.8) {
+      // Non-Latin script detected with high confidence - use it
+      srcLang = detectedSourceLang;
+      console.log(`[useRealtimeChatTranslation] Auto-detected source: ${srcLang} (${detected.script})`);
+    } else if (detected.isLatin) {
+      // Latin text - could be English or romanized text
+      // Default to English for translation purposes
+      srcLang = 'english';
+      console.log(`[useRealtimeChatTranslation] Latin text, assuming English source`);
+    } else {
+      // Fall back to provided language
+      srcLang = normalizeLang(fromLanguage || senderLanguage);
+    }
+    
+    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
+
     let senderView = trimmed;
     let wasTransliterated = false;
 
-    // Convert to sender's native script if needed
-    if (needsScriptConversion(srcLang) && isLatinText(trimmed)) {
-      const result = await convertToNativeScriptAsync(trimmed, srcLang);
+    // If sender specified a non-Latin language but typed in Latin,
+    // convert to sender's native script for their view
+    const explicitSenderLang = normalizeLang(fromLanguage || senderLanguage);
+    if (needsScriptConversion(explicitSenderLang) && isLatinText(trimmed)) {
+      const result = await convertToNativeScriptAsync(trimmed, explicitSenderLang);
       if (result.isTranslated) {
         senderView = result.text;
         wasTransliterated = true;
@@ -222,12 +246,13 @@ export function useRealtimeChatTranslation(
       };
     }
 
-    // Translate via Edge Function
+    // Translate via Edge Function with auto-detected source
     let receiverView = senderView;
     let wasTranslated = false;
 
     try {
-      const result = await translateAsync(senderView, srcLang, tgtLang);
+      // Pass the original text for translation (Edge Function will auto-detect too)
+      const result = await translateAsync(trimmed, srcLang, tgtLang);
       if (result.isTranslated) {
         receiverView = result.text;
         wasTranslated = true;
