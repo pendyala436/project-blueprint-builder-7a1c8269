@@ -1275,7 +1275,8 @@ function translateText(text: string, sourceCode: string, targetCode: string): Tr
 }
 
 // ============================================================
-// PROFILE-BASED LANGUAGE DETECTION
+// PROFILE-BASED LANGUAGE DETECTION (82 Languages Support)
+// Fetches mother tongue from male_profiles, female_profiles, or profiles
 // ============================================================
 
 async function getUserLanguageFromProfile(userId: string): Promise<string | null> {
@@ -1283,23 +1284,74 @@ async function getUserLanguageFromProfile(userId: string): Promise<string | null
   
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data, error } = await supabase
-      .from('profiles')
+    
+    // Try male_profiles first (has primary_language = mother tongue)
+    const { data: maleProfile } = await supabase
+      .from('male_profiles')
       .select('primary_language, preferred_language')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     
-    if (error || !data) {
-      console.log(`[LibreTranslate] Could not fetch language for user ${userId}:`, error?.message);
-      return null;
+    if (maleProfile?.primary_language || maleProfile?.preferred_language) {
+      const lang = maleProfile.primary_language || maleProfile.preferred_language;
+      console.log(`[LibreTranslate] Found male profile language: ${lang}`);
+      return lang;
     }
     
-    // Prefer primary_language (mother tongue), fallback to preferred_language
-    return data.primary_language || data.preferred_language || null;
+    // Try female_profiles (has primary_language = mother tongue)
+    const { data: femaleProfile } = await supabase
+      .from('female_profiles')
+      .select('primary_language, preferred_language')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (femaleProfile?.primary_language || femaleProfile?.preferred_language) {
+      const lang = femaleProfile.primary_language || femaleProfile.preferred_language;
+      console.log(`[LibreTranslate] Found female profile language: ${lang}`);
+      return lang;
+    }
+    
+    // Fallback to profiles table (generic)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('preferred_language')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (profile?.preferred_language) {
+      console.log(`[LibreTranslate] Found generic profile language: ${profile.preferred_language}`);
+      return profile.preferred_language;
+    }
+    
+    console.log(`[LibreTranslate] No language found for user ${userId}`);
+    return null;
   } catch (err) {
     console.error('[LibreTranslate] Error fetching user language:', err);
     return null;
   }
+}
+
+// Get language code for chat between two users (sender and receiver)
+async function getChatLanguages(senderId: string, receiverId: string): Promise<{
+  senderLanguage: string;
+  receiverLanguage: string;
+  senderCode: string;
+  receiverCode: string;
+}> {
+  const [senderLang, receiverLang] = await Promise.all([
+    getUserLanguageFromProfile(senderId),
+    getUserLanguageFromProfile(receiverId)
+  ]);
+  
+  const senderLanguage = senderLang || 'English';
+  const receiverLanguage = receiverLang || 'English';
+  
+  return {
+    senderLanguage,
+    receiverLanguage,
+    senderCode: normalizeLanguageCode(senderLanguage),
+    receiverCode: normalizeLanguageCode(receiverLanguage)
+  };
 }
 
 // ============================================================

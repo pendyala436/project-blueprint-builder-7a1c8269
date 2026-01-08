@@ -306,6 +306,7 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language via Edge Function
+  // Uses profile-based mother tongue detection for all 82 languages
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -326,7 +327,9 @@ const MiniChatWindow = ({
       console.log('[MiniChatWindow] translateMessage:', {
         text: text.substring(0, 30),
         sourceLanguage,
-        targetLanguage
+        targetLanguage,
+        senderId: partnerId,
+        receiverId: currentUserId
       });
       
       // Same language - no translation needed
@@ -337,9 +340,13 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
       
-      // Different languages - translate via Edge Function
+      // Different languages - translate via Edge Function with user IDs
+      // Edge function will fetch mother tongue from male_profiles/female_profiles
       console.log(`[MiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
-      const result = await translateAsync(text, sourceLanguage, targetLanguage);
+      const result = await translateAsync(text, sourceLanguage, targetLanguage, {
+        senderId: partnerId,      // Partner sent the message
+        receiverId: currentUserId  // Current user receives the message
+      });
       
       if (result.isTranslated && result.text) {
         console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
@@ -358,7 +365,7 @@ const MiniChatWindow = ({
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId, partnerId]);
 
   // NON-BLOCKING: Load messages with background translation
   const loadMessages = async () => {
