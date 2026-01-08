@@ -1,14 +1,13 @@
 /**
- * Enhanced Bidirectional 65-Language Translation Edge Function
- * Optimized for real-time chat with parallel processing
+ * Embedded Transliteration Edge Function
+ * =======================================
+ * NO external APIs - purely embedded phonetic conversion
  * 
  * Features:
- * 1. 65 core languages with full bidirectional support
- * 2. Auto-detect ANY input language (Latin + non-Latin)
- * 3. Parallel translation for sender/receiver views
- * 4. English pivot for all non-English pairs
- * 5. Romanized input → native script conversion
- * 6. Batch translation support
+ * 1. Latin → Native script conversion (transliteration)
+ * 2. Script detection for 65+ languages
+ * 3. No translation (same meaning in different language)
+ * 4. Pure Unicode-based phonetic mapping
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -20,7 +19,7 @@ const corsHeaders = {
 };
 
 // ============================================================
-// 65 CORE LANGUAGES - Optimized for bidirectional chat
+// LANGUAGE DEFINITIONS
 // ============================================================
 
 interface LanguageInfo {
@@ -31,20 +30,8 @@ interface LanguageInfo {
   rtl?: boolean;
 }
 
-const LANGUAGES_65: LanguageInfo[] = [
-  // Major World Languages (10)
+const LANGUAGES: LanguageInfo[] = [
   { name: 'english', code: 'en', native: 'English', script: 'Latin' },
-  { name: 'chinese', code: 'zh', native: '中文', script: 'Han' },
-  { name: 'spanish', code: 'es', native: 'Español', script: 'Latin' },
-  { name: 'arabic', code: 'ar', native: 'العربية', script: 'Arabic', rtl: true },
-  { name: 'french', code: 'fr', native: 'Français', script: 'Latin' },
-  { name: 'portuguese', code: 'pt', native: 'Português', script: 'Latin' },
-  { name: 'russian', code: 'ru', native: 'Русский', script: 'Cyrillic' },
-  { name: 'japanese', code: 'ja', native: '日本語', script: 'Japanese' },
-  { name: 'german', code: 'de', native: 'Deutsch', script: 'Latin' },
-  { name: 'korean', code: 'ko', native: '한국어', script: 'Hangul' },
-
-  // South Asian Languages (15)
   { name: 'hindi', code: 'hi', native: 'हिंदी', script: 'Devanagari' },
   { name: 'bengali', code: 'bn', native: 'বাংলা', script: 'Bengali' },
   { name: 'telugu', code: 'te', native: 'తెలుగు', script: 'Telugu' },
@@ -57,84 +44,50 @@ const LANGUAGES_65: LanguageInfo[] = [
   { name: 'odia', code: 'or', native: 'ଓଡ଼ିଆ', script: 'Odia' },
   { name: 'urdu', code: 'ur', native: 'اردو', script: 'Arabic', rtl: true },
   { name: 'nepali', code: 'ne', native: 'नेपाली', script: 'Devanagari' },
-  { name: 'sinhala', code: 'si', native: 'සිංහල', script: 'Sinhala' },
-  { name: 'assamese', code: 'as', native: 'অসমীয়া', script: 'Bengali' },
-  { name: 'bhojpuri', code: 'bho', native: 'भोजपुरी', script: 'Devanagari' },
-
-  // Southeast Asian Languages (8)
+  { name: 'arabic', code: 'ar', native: 'العربية', script: 'Arabic', rtl: true },
+  { name: 'russian', code: 'ru', native: 'Русский', script: 'Cyrillic' },
+  { name: 'chinese', code: 'zh', native: '中文', script: 'Han' },
+  { name: 'japanese', code: 'ja', native: '日本語', script: 'Japanese' },
+  { name: 'korean', code: 'ko', native: '한국어', script: 'Hangul' },
   { name: 'thai', code: 'th', native: 'ไทย', script: 'Thai' },
+  { name: 'greek', code: 'el', native: 'Ελληνικά', script: 'Greek' },
+  { name: 'hebrew', code: 'he', native: 'עברית', script: 'Hebrew', rtl: true },
+  { name: 'persian', code: 'fa', native: 'فارسی', script: 'Arabic', rtl: true },
+  { name: 'spanish', code: 'es', native: 'Español', script: 'Latin' },
+  { name: 'french', code: 'fr', native: 'Français', script: 'Latin' },
+  { name: 'german', code: 'de', native: 'Deutsch', script: 'Latin' },
+  { name: 'portuguese', code: 'pt', native: 'Português', script: 'Latin' },
+  { name: 'italian', code: 'it', native: 'Italiano', script: 'Latin' },
+  { name: 'turkish', code: 'tr', native: 'Türkçe', script: 'Latin' },
   { name: 'vietnamese', code: 'vi', native: 'Tiếng Việt', script: 'Latin' },
   { name: 'indonesian', code: 'id', native: 'Bahasa Indonesia', script: 'Latin' },
-  { name: 'malay', code: 'ms', native: 'Bahasa Melayu', script: 'Latin' },
-  { name: 'tagalog', code: 'tl', native: 'Tagalog', script: 'Latin' },
+  { name: 'ukrainian', code: 'uk', native: 'Українська', script: 'Cyrillic' },
+  { name: 'polish', code: 'pl', native: 'Polski', script: 'Latin' },
+  { name: 'dutch', code: 'nl', native: 'Nederlands', script: 'Latin' },
+  { name: 'swahili', code: 'sw', native: 'Kiswahili', script: 'Latin' },
+  { name: 'amharic', code: 'am', native: 'አማርኛ', script: 'Ethiopic' },
   { name: 'burmese', code: 'my', native: 'မြန်မာ', script: 'Myanmar' },
   { name: 'khmer', code: 'km', native: 'ខ្មែរ', script: 'Khmer' },
   { name: 'lao', code: 'lo', native: 'ລາວ', script: 'Lao' },
-
-  // Middle Eastern Languages (8)
-  { name: 'persian', code: 'fa', native: 'فارسی', script: 'Arabic', rtl: true },
-  { name: 'turkish', code: 'tr', native: 'Türkçe', script: 'Latin' },
-  { name: 'hebrew', code: 'he', native: 'עברית', script: 'Hebrew', rtl: true },
-  { name: 'kurdish', code: 'ku', native: 'Kurdî', script: 'Latin' },
-  { name: 'pashto', code: 'ps', native: 'پښتو', script: 'Arabic', rtl: true },
-  { name: 'azerbaijani', code: 'az', native: 'Azərbaycan', script: 'Latin' },
-  { name: 'uzbek', code: 'uz', native: 'Oʻzbek', script: 'Latin' },
-  { name: 'kazakh', code: 'kk', native: 'Қазақ', script: 'Cyrillic' },
-
-  // European Languages (16)
-  { name: 'italian', code: 'it', native: 'Italiano', script: 'Latin' },
-  { name: 'dutch', code: 'nl', native: 'Nederlands', script: 'Latin' },
-  { name: 'polish', code: 'pl', native: 'Polski', script: 'Latin' },
-  { name: 'ukrainian', code: 'uk', native: 'Українська', script: 'Cyrillic' },
-  { name: 'czech', code: 'cs', native: 'Čeština', script: 'Latin' },
-  { name: 'romanian', code: 'ro', native: 'Română', script: 'Latin' },
-  { name: 'hungarian', code: 'hu', native: 'Magyar', script: 'Latin' },
-  { name: 'swedish', code: 'sv', native: 'Svenska', script: 'Latin' },
-  { name: 'danish', code: 'da', native: 'Dansk', script: 'Latin' },
-  { name: 'finnish', code: 'fi', native: 'Suomi', script: 'Latin' },
-  { name: 'norwegian', code: 'no', native: 'Norsk', script: 'Latin' },
-  { name: 'greek', code: 'el', native: 'Ελληνικά', script: 'Greek' },
-  { name: 'bulgarian', code: 'bg', native: 'Български', script: 'Cyrillic' },
-  { name: 'croatian', code: 'hr', native: 'Hrvatski', script: 'Latin' },
-  { name: 'serbian', code: 'sr', native: 'Српски', script: 'Cyrillic' },
-  { name: 'slovak', code: 'sk', native: 'Slovenčina', script: 'Latin' },
-
-  // African Languages (5)
-  { name: 'swahili', code: 'sw', native: 'Kiswahili', script: 'Latin' },
-  { name: 'amharic', code: 'am', native: 'አማርኛ', script: 'Ethiopic' },
-  { name: 'yoruba', code: 'yo', native: 'Yorùbá', script: 'Latin' },
-  { name: 'hausa', code: 'ha', native: 'Hausa', script: 'Latin' },
-  { name: 'zulu', code: 'zu', native: 'isiZulu', script: 'Latin' },
-
-  // Others (3)
+  { name: 'sinhala', code: 'si', native: 'සිංහල', script: 'Sinhala' },
   { name: 'georgian', code: 'ka', native: 'ქართული', script: 'Georgian' },
-  { name: 'armenian', code: 'hy', native: 'Հայdelays', script: 'Armenian' },
-  { name: 'mongolian', code: 'mn', native: 'Монгол', script: 'Cyrillic' },
+  { name: 'armenian', code: 'hy', native: 'Հdelays', script: 'Armenian' },
 ];
 
-// ============================================================
-// FAST LOOKUP MAPS
-// ============================================================
-
-const langByName = new Map(LANGUAGES_65.map(l => [l.name.toLowerCase(), l]));
-const langByCode = new Map(LANGUAGES_65.map(l => [l.code.toLowerCase(), l]));
+const langByName = new Map(LANGUAGES.map(l => [l.name.toLowerCase(), l]));
+const langByCode = new Map(LANGUAGES.map(l => [l.code.toLowerCase(), l]));
 
 const languageAliases: Record<string, string> = {
   bangla: 'bengali', oriya: 'odia', farsi: 'persian', mandarin: 'chinese',
-  cantonese: 'chinese', taiwanese: 'chinese', brazilian: 'portuguese',
-  mexican: 'spanish', flemish: 'dutch', filipino: 'tagalog',
 };
 
-const nonLatinScripts = new Set(
-  LANGUAGES_65.filter(l => l.script !== 'Latin').map(l => l.name)
-);
+const nonLatinScripts = new Set(LANGUAGES.filter(l => l.script !== 'Latin').map(l => l.name));
 
 // ============================================================
-// SCRIPT DETECTION - All 65 languages
+// SCRIPT DETECTION
 // ============================================================
 
 const SCRIPT_PATTERNS: Array<{ regex: RegExp; script: string; lang: string }> = [
-  // South Asian
   { regex: /[\u0900-\u097F]/, script: 'Devanagari', lang: 'hindi' },
   { regex: /[\u0980-\u09FF]/, script: 'Bengali', lang: 'bengali' },
   { regex: /[\u0B80-\u0BFF]/, script: 'Tamil', lang: 'tamil' },
@@ -145,31 +98,21 @@ const SCRIPT_PATTERNS: Array<{ regex: RegExp; script: string; lang: string }> = 
   { regex: /[\u0A00-\u0A7F]/, script: 'Gurmukhi', lang: 'punjabi' },
   { regex: /[\u0B00-\u0B7F]/, script: 'Odia', lang: 'odia' },
   { regex: /[\u0D80-\u0DFF]/, script: 'Sinhala', lang: 'sinhala' },
-  // East Asian
   { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, script: 'Han', lang: 'chinese' },
   { regex: /[\u3040-\u309F\u30A0-\u30FF]/, script: 'Japanese', lang: 'japanese' },
   { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, script: 'Hangul', lang: 'korean' },
-  // Southeast Asian
   { regex: /[\u0E00-\u0E7F]/, script: 'Thai', lang: 'thai' },
   { regex: /[\u0E80-\u0EFF]/, script: 'Lao', lang: 'lao' },
   { regex: /[\u1000-\u109F]/, script: 'Myanmar', lang: 'burmese' },
   { regex: /[\u1780-\u17FF]/, script: 'Khmer', lang: 'khmer' },
-  // Middle Eastern
   { regex: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/, script: 'Arabic', lang: 'arabic' },
   { regex: /[\u0590-\u05FF]/, script: 'Hebrew', lang: 'hebrew' },
-  // European
   { regex: /[\u0400-\u04FF]/, script: 'Cyrillic', lang: 'russian' },
   { regex: /[\u0370-\u03FF\u1F00-\u1FFF]/, script: 'Greek', lang: 'greek' },
-  // Caucasian
   { regex: /[\u10A0-\u10FF]/, script: 'Georgian', lang: 'georgian' },
   { regex: /[\u0530-\u058F]/, script: 'Armenian', lang: 'armenian' },
-  // African
   { regex: /[\u1200-\u137F\u1380-\u139F]/, script: 'Ethiopic', lang: 'amharic' },
 ];
-
-// ============================================================
-// LANGUAGE UTILITIES
-// ============================================================
 
 function normalize(lang: string): string {
   const n = lang.toLowerCase().trim().replace(/[_-]/g, '_');
@@ -179,10 +122,6 @@ function normalize(lang: string): string {
 function getLang(language: string): LanguageInfo | undefined {
   const n = normalize(language);
   return langByName.get(n) || langByCode.get(n);
-}
-
-function getCode(language: string): string {
-  return getLang(language)?.code || 'en';
 }
 
 function isNonLatin(language: string): boolean {
@@ -209,632 +148,567 @@ function detectScript(text: string): { lang: string; script: string; isLatin: bo
 }
 
 // ============================================================
-// LATIN LANGUAGE DETECTION (Enhanced)
+// PHONETIC MAPPING - Embedded transliteration rules
 // ============================================================
 
-const LATIN_WORDS: Record<string, Set<string>> = {
-  english: new Set([
-    'hello', 'hi', 'hey', 'bye', 'goodbye', 'good', 'morning', 'evening', 'night',
-    'how', 'are', 'you', 'what', 'is', 'the', 'a', 'an', 'this', 'that', 'it', 'to', 'for', 'and', 'or', 'but',
-    'yes', 'no', 'ok', 'okay', 'please', 'thank', 'thanks', 'sorry', 'welcome',
-    'love', 'like', 'nice', 'great', 'happy', 'fine', 'beautiful', 'miss', 'want', 'need',
-    'where', 'when', 'why', 'who', 'which', 'can', 'will', 'would', 'could', 'should',
-    'i', 'me', 'my', 'we', 'us', 'our', 'they', 'them', 'their', 'he', 'she', 'his', 'her',
-    'do', 'does', 'did', 'have', 'has', 'had', 'am', 'was', 'were', 'be', 'been',
-    'go', 'going', 'come', 'see', 'look', 'know', 'think', 'feel', 'call', 'tell', 'say',
-  ]),
-  french: new Set([
-    'bonjour', 'salut', 'bonsoir', 'merci', 'beaucoup', 'oui', 'non', 'je', 'tu', 'il', 'elle',
-    'nous', 'vous', 'comment', 'allez', 'bien', 'très', 'ça', 'va', 'quoi', 'qui', 'où',
-    'amour', 'avec', 'pour', 'dans', 'sur', 'le', 'la', 'les', 'un', 'une', 'et', 'ou', 'mais',
-  ]),
-  german: new Set([
-    'hallo', 'guten', 'morgen', 'tag', 'danke', 'bitte', 'ja', 'nein', 'ich', 'du', 'er', 'sie',
-    'wir', 'wie', 'geht', 'gut', 'sehr', 'was', 'wer', 'wo', 'liebe', 'mit', 'für', 'in', 'auf',
-    'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'aber', 'nicht',
-  ]),
-  spanish: new Set([
-    'hola', 'buenos', 'buenas', 'gracias', 'por', 'favor', 'sí', 'no', 'yo', 'tú', 'él', 'ella',
-    'nosotros', 'cómo', 'estás', 'bien', 'muy', 'qué', 'quién', 'dónde', 'amor', 'con', 'para',
-    'el', 'la', 'los', 'las', 'un', 'una', 'y', 'o', 'pero', 'porque',
-  ]),
-  portuguese: new Set([
-    'olá', 'oi', 'bom', 'dia', 'boa', 'obrigado', 'obrigada', 'sim', 'não', 'eu', 'tu', 'ele',
-    'ela', 'nós', 'como', 'está', 'bem', 'muito', 'que', 'quem', 'onde', 'amor', 'com', 'para',
-    'o', 'a', 'os', 'as', 'um', 'uma', 'e', 'ou', 'mas',
-  ]),
-  italian: new Set([
-    'ciao', 'buongiorno', 'buonasera', 'grazie', 'prego', 'sì', 'no', 'io', 'tu', 'lui', 'lei',
-    'noi', 'come', 'stai', 'bene', 'molto', 'che', 'chi', 'dove', 'amore', 'con', 'in', 'su',
-    'il', 'la', 'lo', 'i', 'le', 'un', 'una', 'e', 'o', 'ma',
-  ]),
-  dutch: new Set([
-    'hallo', 'goedemorgen', 'dank', 'ja', 'nee', 'ik', 'jij', 'hij', 'zij', 'wij', 'hoe', 'gaat',
-    'het', 'goed', 'wat', 'wie', 'waar', 'liefde', 'met', 'voor', 'in', 'op', 'de', 'een', 'en', 'of', 'maar',
-  ]),
-  turkish: new Set([
-    'merhaba', 'selam', 'günaydın', 'teşekkür', 'evet', 'hayır', 'ben', 'sen', 'o', 'biz', 'siz',
-    'nasıl', 'iyi', 'ne', 'kim', 'nerede', 'aşk', 'ile', 'için', 've', 'veya', 'ama',
-  ]),
-  indonesian: new Set([
-    'halo', 'selamat', 'pagi', 'terima', 'kasih', 'ya', 'tidak', 'saya', 'kamu', 'dia', 'kami',
-    'bagaimana', 'baik', 'apa', 'siapa', 'dimana', 'cinta', 'dengan', 'untuk', 'dan', 'atau', 'tapi',
-  ]),
-  vietnamese: new Set([
-    'xin', 'chào', 'cảm', 'ơn', 'vâng', 'không', 'tôi', 'bạn', 'anh', 'chị', 'ấy', 'chúng',
-    'thế', 'nào', 'tốt', 'gì', 'ai', 'đâu', 'yêu', 'với', 'cho', 'và', 'hoặc', 'nhưng',
-  ]),
-  swahili: new Set([
-    'habari', 'jambo', 'asante', 'sana', 'ndiyo', 'hapana', 'mimi', 'wewe', 'yeye', 'sisi', 'wao',
-    'vipi', 'vizuri', 'nini', 'nani', 'wapi', 'upendo', 'na', 'kwa', 'lakini',
-  ]),
+interface ScriptBlock {
+  virama?: string;
+  vowelMap: Record<string, string>;
+  consonantMap: Record<string, string>;
+  modifiers: Record<string, string>;
+}
+
+const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
+  devanagari: {
+    virama: '्',
+    vowelMap: {
+      'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ii': 'ई', 'ee': 'ई',
+      'u': 'उ', 'uu': 'ऊ', 'oo': 'ऊ', 'e': 'ए', 'ai': 'ऐ',
+      'o': 'ओ', 'au': 'औ', 'ri': 'ऋ', 'am': 'अं', 'ah': 'अः'
+    },
+    consonantMap: {
+      'k': 'क', 'kh': 'ख', 'g': 'ग', 'gh': 'घ', 'ng': 'ङ',
+      'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jh': 'झ', 'ny': 'ञ',
+      't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न',
+      'p': 'प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bh': 'भ', 'm': 'म',
+      'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'w': 'व',
+      'sh': 'श', 's': 'स', 'h': 'ह', 'x': 'क्ष', 'q': 'क़', 'z': 'ज़'
+    },
+    modifiers: {
+      'aa': 'ा', 'i': 'ि', 'ii': 'ी', 'ee': 'ी',
+      'u': 'ु', 'uu': 'ू', 'oo': 'ू', 'e': 'े', 'ai': 'ै',
+      'o': 'ो', 'au': 'ौ', 'ri': 'ृ', 'am': 'ं', 'ah': 'ः'
+    }
+  },
+  bengali: {
+    virama: '্',
+    vowelMap: {
+      'a': 'অ', 'aa': 'আ', 'i': 'ই', 'ii': 'ঈ', 'ee': 'ঈ',
+      'u': 'উ', 'uu': 'ঊ', 'oo': 'ঊ', 'e': 'এ', 'ai': 'ঐ',
+      'o': 'ও', 'au': 'ঔ', 'ri': 'ঋ', 'am': 'অং', 'ah': 'অঃ'
+    },
+    consonantMap: {
+      'k': 'ক', 'kh': 'খ', 'g': 'গ', 'gh': 'ঘ', 'ng': 'ঙ',
+      'ch': 'চ', 'chh': 'ছ', 'j': 'জ', 'jh': 'ঝ', 'ny': 'ঞ',
+      't': 'ত', 'th': 'থ', 'd': 'দ', 'dh': 'ধ', 'n': 'ন',
+      'p': 'প', 'ph': 'ফ', 'f': 'ফ', 'b': 'ব', 'bh': 'ভ', 'm': 'ম',
+      'y': 'য', 'r': 'র', 'l': 'ল', 'v': 'ভ', 'w': 'ও',
+      'sh': 'শ', 's': 'স', 'h': 'হ', 'x': 'ক্ষ', 'q': 'ক', 'z': 'জ'
+    },
+    modifiers: {
+      'aa': 'া', 'i': 'ি', 'ii': 'ী', 'ee': 'ী',
+      'u': 'ু', 'uu': 'ূ', 'oo': 'ূ', 'e': 'ে', 'ai': 'ৈ',
+      'o': 'ো', 'au': 'ৌ', 'ri': 'ৃ', 'am': 'ং', 'ah': 'ঃ'
+    }
+  },
+  telugu: {
+    virama: '్',
+    vowelMap: {
+      'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ',
+      'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
+      'o': 'ఒ', 'au': 'ఔ', 'ri': 'ఋ', 'am': 'అం', 'ah': 'అః'
+    },
+    consonantMap: {
+      'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
+      'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ',
+      't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న',
+      'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
+      'y': 'య', 'r': 'ర', 'l': 'ల', 'v': 'వ', 'w': 'వ',
+      'sh': 'శ', 's': 'స', 'h': 'హ', 'x': 'క్ష', 'q': 'క', 'z': 'జ'
+    },
+    modifiers: {
+      'aa': 'ా', 'i': 'ి', 'ii': 'ీ', 'ee': 'ీ',
+      'u': 'ు', 'uu': 'ూ', 'oo': 'ూ', 'e': 'ె', 'ai': 'ై',
+      'o': 'ొ', 'au': 'ౌ', 'ri': 'ృ', 'am': 'ం', 'ah': 'ః'
+    }
+  },
+  tamil: {
+    virama: '்',
+    vowelMap: {
+      'a': 'அ', 'aa': 'ஆ', 'i': 'இ', 'ii': 'ஈ', 'ee': 'ஈ',
+      'u': 'உ', 'uu': 'ஊ', 'oo': 'ஊ', 'e': 'எ', 'ai': 'ஐ',
+      'o': 'ஒ', 'au': 'ஔ', 'am': 'அம்', 'ah': 'அஃ'
+    },
+    consonantMap: {
+      'k': 'க', 'g': 'க', 'ng': 'ங', 'ch': 'ச', 'j': 'ஜ', 's': 'ச',
+      't': 'த', 'd': 'த', 'n': 'ந', 'p': 'ப', 'b': 'ப', 'f': 'ப', 'm': 'ம',
+      'y': 'ய', 'r': 'ர', 'l': 'ல', 'v': 'வ', 'w': 'வ',
+      'zh': 'ழ', 'sh': 'ஷ', 'h': 'ஹ', 'x': 'க்ஷ', 'z': 'ஜ', 'q': 'க'
+    },
+    modifiers: {
+      'aa': 'ா', 'i': 'ி', 'ii': 'ீ', 'ee': 'ீ',
+      'u': 'ு', 'uu': 'ூ', 'oo': 'ூ', 'e': 'ெ', 'ai': 'ை',
+      'o': 'ொ', 'au': 'ௌ', 'am': 'ம்', 'ah': 'ஃ'
+    }
+  },
+  kannada: {
+    virama: '್',
+    vowelMap: {
+      'a': 'ಅ', 'aa': 'ಆ', 'i': 'ಇ', 'ii': 'ಈ', 'ee': 'ಈ',
+      'u': 'ಉ', 'uu': 'ಊ', 'oo': 'ಊ', 'e': 'ಎ', 'ai': 'ಐ',
+      'o': 'ಒ', 'au': 'ಔ', 'ri': 'ಋ', 'am': 'ಅಂ', 'ah': 'ಅಃ'
+    },
+    consonantMap: {
+      'k': 'ಕ', 'kh': 'ಖ', 'g': 'ಗ', 'gh': 'ಘ', 'ng': 'ಙ',
+      'ch': 'ಚ', 'chh': 'ಛ', 'j': 'ಜ', 'jh': 'ಝ', 'ny': 'ಞ',
+      't': 'ತ', 'th': 'ಥ', 'd': 'ದ', 'dh': 'ಧ', 'n': 'ನ',
+      'p': 'ಪ', 'ph': 'ಫ', 'f': 'ಫ', 'b': 'ಬ', 'bh': 'ಭ', 'm': 'ಮ',
+      'y': 'ಯ', 'r': 'ರ', 'l': 'ಲ', 'v': 'ವ', 'w': 'ವ',
+      'sh': 'ಶ', 's': 'ಸ', 'h': 'ಹ', 'x': 'ಕ್ಷ', 'q': 'ಕ', 'z': 'ಜ'
+    },
+    modifiers: {
+      'aa': 'ಾ', 'i': 'ಿ', 'ii': 'ೀ', 'ee': 'ೀ',
+      'u': 'ು', 'uu': 'ೂ', 'oo': 'ೂ', 'e': 'ೆ', 'ai': 'ೈ',
+      'o': 'ೊ', 'au': 'ೌ', 'ri': 'ೃ', 'am': 'ಂ', 'ah': 'ಃ'
+    }
+  },
+  malayalam: {
+    virama: '്',
+    vowelMap: {
+      'a': 'അ', 'aa': 'ആ', 'i': 'ഇ', 'ii': 'ഈ', 'ee': 'ഈ',
+      'u': 'ഉ', 'uu': 'ഊ', 'oo': 'ഊ', 'e': 'എ', 'ai': 'ഐ',
+      'o': 'ഒ', 'au': 'ഔ', 'ri': 'ഋ', 'am': 'അം', 'ah': 'അഃ'
+    },
+    consonantMap: {
+      'k': 'ക', 'kh': 'ഖ', 'g': 'ഗ', 'gh': 'ഘ', 'ng': 'ങ',
+      'ch': 'ച', 'chh': 'ഛ', 'j': 'ജ', 'jh': 'ഝ', 'ny': 'ഞ',
+      't': 'ത', 'th': 'ഥ', 'd': 'ദ', 'dh': 'ധ', 'n': 'ന',
+      'p': 'പ', 'ph': 'ഫ', 'f': 'ഫ', 'b': 'ബ', 'bh': 'ഭ', 'm': 'മ',
+      'y': 'യ', 'r': 'ര', 'l': 'ല', 'v': 'വ', 'w': 'വ', 'zh': 'ഴ',
+      'sh': 'ശ', 's': 'സ', 'h': 'ഹ', 'x': 'ക്ഷ', 'q': 'ക', 'z': 'ജ'
+    },
+    modifiers: {
+      'aa': 'ാ', 'i': 'ി', 'ii': 'ീ', 'ee': 'ീ',
+      'u': 'ു', 'uu': 'ൂ', 'oo': 'ൂ', 'e': 'െ', 'ai': 'ൈ',
+      'o': 'ൊ', 'au': 'ൌ', 'ri': 'ൃ', 'am': 'ം', 'ah': 'ഃ'
+    }
+  },
+  gujarati: {
+    virama: '્',
+    vowelMap: {
+      'a': 'અ', 'aa': 'આ', 'i': 'ઇ', 'ii': 'ઈ', 'ee': 'ઈ',
+      'u': 'ઉ', 'uu': 'ઊ', 'oo': 'ઊ', 'e': 'એ', 'ai': 'ઐ',
+      'o': 'ઓ', 'au': 'ઔ', 'ri': 'ઋ', 'am': 'અં', 'ah': 'અઃ'
+    },
+    consonantMap: {
+      'k': 'ક', 'kh': 'ખ', 'g': 'ગ', 'gh': 'ઘ', 'ng': 'ઙ',
+      'ch': 'ચ', 'chh': 'છ', 'j': 'જ', 'jh': 'ઝ', 'ny': 'ઞ',
+      't': 'ત', 'th': 'થ', 'd': 'દ', 'dh': 'ધ', 'n': 'ન',
+      'p': 'પ', 'ph': 'ફ', 'f': 'ફ', 'b': 'બ', 'bh': 'ભ', 'm': 'મ',
+      'y': 'ય', 'r': 'ર', 'l': 'લ', 'v': 'વ', 'w': 'વ',
+      'sh': 'શ', 's': 'સ', 'h': 'હ', 'x': 'ક્ષ', 'q': 'ક', 'z': 'જ'
+    },
+    modifiers: {
+      'aa': 'ા', 'i': 'િ', 'ii': 'ી', 'ee': 'ી',
+      'u': 'ુ', 'uu': 'ૂ', 'oo': 'ૂ', 'e': 'ે', 'ai': 'ૈ',
+      'o': 'ો', 'au': 'ૌ', 'ri': 'ૃ', 'am': 'ં', 'ah': 'ઃ'
+    }
+  },
+  punjabi: {
+    virama: '੍',
+    vowelMap: {
+      'a': 'ਅ', 'aa': 'ਆ', 'i': 'ਇ', 'ii': 'ਈ', 'ee': 'ਈ',
+      'u': 'ਉ', 'uu': 'ਊ', 'oo': 'ਊ', 'e': 'ਏ', 'ai': 'ਐ',
+      'o': 'ਓ', 'au': 'ਔ', 'am': 'ਅਂ', 'ah': 'ਅਃ'
+    },
+    consonantMap: {
+      'k': 'ਕ', 'kh': 'ਖ', 'g': 'ਗ', 'gh': 'ਘ', 'ng': 'ਙ',
+      'ch': 'ਚ', 'chh': 'ਛ', 'j': 'ਜ', 'jh': 'ਝ', 'ny': 'ਞ',
+      't': 'ਤ', 'th': 'ਥ', 'd': 'ਦ', 'dh': 'ਧ', 'n': 'ਨ',
+      'p': 'ਪ', 'ph': 'ਫ', 'f': 'ਫ', 'b': 'ਬ', 'bh': 'ਭ', 'm': 'ਮ',
+      'y': 'ਯ', 'r': 'ਰ', 'l': 'ਲ', 'v': 'ਵ', 'w': 'ਵ',
+      'sh': 'ਸ਼', 's': 'ਸ', 'h': 'ਹ', 'x': 'ਕ੍ਸ਼', 'z': 'ਜ਼', 'q': 'ਕ'
+    },
+    modifiers: {
+      'aa': 'ਾ', 'i': 'ਿ', 'ii': 'ੀ', 'ee': 'ੀ',
+      'u': 'ੁ', 'uu': 'ੂ', 'oo': 'ੂ', 'e': 'ੇ', 'ai': 'ੈ',
+      'o': 'ੋ', 'au': 'ੌ', 'am': 'ਂ', 'ah': 'ਃ'
+    }
+  },
+  odia: {
+    virama: '୍',
+    vowelMap: {
+      'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ii': 'ଈ', 'ee': 'ଈ',
+      'u': 'ଉ', 'uu': 'ଊ', 'oo': 'ଊ', 'e': 'ଏ', 'ai': 'ଐ',
+      'o': 'ଓ', 'au': 'ଔ', 'ri': 'ଋ', 'am': 'ଅଂ', 'ah': 'ଅଃ'
+    },
+    consonantMap: {
+      'k': 'କ', 'kh': 'ଖ', 'g': 'ଗ', 'gh': 'ଘ', 'ng': 'ଙ',
+      'ch': 'ଚ', 'chh': 'ଛ', 'j': 'ଜ', 'jh': 'ଝ', 'ny': 'ଞ',
+      't': 'ତ', 'th': 'ଥ', 'd': 'ଦ', 'dh': 'ଧ', 'n': 'ନ',
+      'p': 'ପ', 'ph': 'ଫ', 'f': 'ଫ', 'b': 'ବ', 'bh': 'ଭ', 'm': 'ମ',
+      'y': 'ଯ', 'r': 'ର', 'l': 'ଲ', 'v': 'ୱ', 'w': 'ୱ',
+      'sh': 'ଶ', 's': 'ସ', 'h': 'ହ', 'x': 'କ୍ଷ', 'q': 'କ', 'z': 'ଜ'
+    },
+    modifiers: {
+      'aa': 'ା', 'i': 'ି', 'ii': 'ୀ', 'ee': 'ୀ',
+      'u': 'ୁ', 'uu': 'ୂ', 'oo': 'ୂ', 'e': 'େ', 'ai': 'ୈ',
+      'o': 'ୋ', 'au': 'ୌ', 'ri': 'ୃ', 'am': 'ଂ', 'ah': 'ଃ'
+    }
+  },
+  arabic: {
+    vowelMap: {
+      'a': 'ا', 'aa': 'آ', 'i': 'إ', 'ii': 'ي', 'ee': 'ي',
+      'u': 'أ', 'uu': 'و', 'oo': 'و', 'e': 'ي', 'ai': 'ي', 'o': 'و', 'au': 'و'
+    },
+    consonantMap: {
+      'b': 'ب', 't': 'ت', 'th': 'ث', 'j': 'ج', 'h': 'ح', 'kh': 'خ',
+      'd': 'د', 'dh': 'ذ', 'r': 'ر', 'z': 'ز', 's': 'س', 'sh': 'ش',
+      'f': 'ف', 'q': 'ق', 'k': 'ك', 'l': 'ل', 'm': 'م', 'n': 'ن',
+      'w': 'و', 'y': 'ي', 'v': 'ف', 'p': 'ب', 'g': 'غ', 'x': 'كس', 'ch': 'تش'
+    },
+    modifiers: {}
+  },
+  russian: {
+    vowelMap: {
+      'a': 'а', 'e': 'е', 'i': 'и', 'o': 'о', 'u': 'у',
+      'y': 'ы', 'yo': 'ё', 'ya': 'я', 'yu': 'ю', 'ye': 'е'
+    },
+    consonantMap: {
+      'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'zh': 'ж', 'z': 'з',
+      'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'p': 'п', 'r': 'р',
+      's': 'с', 't': 'т', 'f': 'ф', 'kh': 'х', 'ts': 'ц', 'ch': 'ч',
+      'sh': 'ш', 'shch': 'щ', 'j': 'й', 'w': 'в', 'h': 'х', 'x': 'кс', 'q': 'к', 'c': 'ц'
+    },
+    modifiers: {}
+  },
+  greek: {
+    vowelMap: {
+      'a': 'α', 'e': 'ε', 'i': 'ι', 'o': 'ο', 'u': 'υ', 'ee': 'η', 'oo': 'ω'
+    },
+    consonantMap: {
+      'b': 'β', 'g': 'γ', 'd': 'δ', 'z': 'ζ', 'th': 'θ',
+      'k': 'κ', 'l': 'λ', 'm': 'μ', 'n': 'ν', 'x': 'ξ',
+      'p': 'π', 'r': 'ρ', 's': 'σ', 't': 'τ', 'f': 'φ',
+      'ch': 'χ', 'ps': 'ψ', 'v': 'β', 'w': 'ω', 'h': 'η', 'j': 'ι', 'q': 'κ', 'c': 'κ'
+    },
+    modifiers: {}
+  },
+  hebrew: {
+    vowelMap: { 'a': 'א', 'e': 'א', 'i': 'י', 'o': 'ו', 'u': 'ו' },
+    consonantMap: {
+      'b': 'ב', 'g': 'ג', 'd': 'ד', 'h': 'ה', 'v': 'ו', 'w': 'ו',
+      'z': 'ז', 'ch': 'ח', 't': 'ט', 'y': 'י', 'k': 'כ', 'kh': 'ח',
+      'l': 'ל', 'm': 'מ', 'n': 'נ', 's': 'ס', 'p': 'פ', 'f': 'פ',
+      'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש', 'j': 'ג', 'x': 'קס'
+    },
+    modifiers: {}
+  },
+  thai: {
+    vowelMap: {
+      'a': 'อ', 'aa': 'อา', 'i': 'อิ', 'ii': 'อี', 'ee': 'อี',
+      'u': 'อุ', 'uu': 'อู', 'oo': 'อู', 'e': 'เอ', 'ai': 'ไอ', 'o': 'โอ', 'au': 'เอา'
+    },
+    consonantMap: {
+      'k': 'ก', 'kh': 'ข', 'g': 'ก', 'ng': 'ง', 'ch': 'ช', 'j': 'จ', 's': 'ส',
+      't': 'ต', 'th': 'ท', 'd': 'ด', 'n': 'น',
+      'p': 'ป', 'ph': 'พ', 'f': 'ฟ', 'b': 'บ', 'm': 'ม',
+      'y': 'ย', 'r': 'ร', 'l': 'ล', 'w': 'ว', 'v': 'ว', 'h': 'ห', 'x': 'กซ', 'z': 'ซ', 'q': 'ก'
+    },
+    modifiers: {}
+  }
 };
 
-function detectLatinLang(text: string): { lang: string; confidence: number } | null {
-  const clean = text.toLowerCase().trim();
-  const words = clean.split(/\s+/).filter(w => w.length > 1);
-  if (words.length === 0) return null;
+// Language to script mapping
+const LANG_TO_SCRIPT: Record<string, string> = {
+  hindi: 'devanagari', marathi: 'devanagari', nepali: 'devanagari',
+  bengali: 'bengali', assamese: 'bengali',
+  telugu: 'telugu', tamil: 'tamil', kannada: 'kannada', malayalam: 'malayalam',
+  gujarati: 'gujarati', punjabi: 'punjabi', odia: 'odia',
+  arabic: 'arabic', urdu: 'arabic', persian: 'arabic',
+  russian: 'russian', ukrainian: 'russian',
+  greek: 'greek', hebrew: 'hebrew', thai: 'thai'
+};
 
-  // Diacritics hints
-  const hints: Record<string, boolean> = {
-    french: /[éèêëàâùûôîïç]/i.test(clean),
-    german: /[äöüß]/i.test(clean),
-    spanish: /[ñ¿¡áéíóú]/i.test(clean),
-    portuguese: /[ãõç]/i.test(clean),
-    turkish: /[ığüşöç]/i.test(clean),
-    vietnamese: /[ăâêôơưđ]/i.test(clean),
-  };
+// ============================================================
+// TRANSLITERATION ENGINE
+// ============================================================
 
-  const scores: Record<string, number> = {};
-  for (const [lang, wordSet] of Object.entries(LATIN_WORDS)) {
-    let count = 0;
-    for (const word of words) {
-      const c = word.replace(/[.,!?;:'"]/g, '');
-      if (wordSet.has(c)) count++;
-    }
-    scores[lang] = count / words.length;
-    if (hints[lang]) scores[lang] += 0.35;
-  }
-
-  let best = 'english';
-  let bestScore = 0;
-  for (const [lang, score] of Object.entries(scores)) {
-    if (score > bestScore) { bestScore = score; best = lang; }
-  }
-
-  const threshold = words.length === 1 ? 1.0 : 0.25;
-  if (bestScore >= threshold) {
-    return { lang: best, confidence: bestScore };
-  }
-
-  // Single word check
-  if (words.length === 1) {
-    const w = words[0].replace(/[.,!?;:'"]/g, '');
-    for (const [lang, wordSet] of Object.entries(LATIN_WORDS)) {
-      if (wordSet.has(w)) return { lang, confidence: 1.0 };
-    }
-  }
-
-  return null;
+function getScriptBlock(language: string): ScriptBlock | null {
+  const lang = normalize(language);
+  const scriptKey = LANG_TO_SCRIPT[lang];
+  return scriptKey ? SCRIPT_BLOCKS[scriptKey] : null;
 }
 
-// ============================================================
-// TRANSLATION APIs (with parallel execution)
-// ============================================================
+function transliterate(latinText: string, targetLanguage: string): string {
+  const script = getScriptBlock(targetLanguage);
+  if (!script) return latinText;
 
-async function translateGoogle(text: string, from: string, to: string): Promise<string | null> {
-  try {
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 4000);
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timeout);
+  const text = latinText.toLowerCase();
+  let result = '';
+  let i = 0;
+  let lastWasConsonant = false;
+  let lastConsonant = '';
+
+  while (i < text.length) {
+    const char = text[i];
     
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.[0]) {
-        let result = '';
-        for (const t of data[0]) { if (t?.[0]) result += t[0]; }
-        const trimmed = result.trim();
-        if (trimmed && trimmed.toLowerCase() !== text.toLowerCase()) return trimmed;
+    // Skip non-alphabetic
+    if (!/[a-z]/.test(char)) {
+      result += char;
+      lastWasConsonant = false;
+      i++;
+      continue;
+    }
+
+    // Try multi-char consonants first (3, 2 chars)
+    let matched = false;
+    for (const len of [4, 3, 2]) {
+      if (i + len <= text.length) {
+        const chunk = text.slice(i, i + len);
+        if (script.consonantMap[chunk]) {
+          if (lastWasConsonant && script.virama) {
+            result += script.virama;
+          }
+          result += script.consonantMap[chunk];
+          lastConsonant = chunk;
+          lastWasConsonant = true;
+          i += len;
+          matched = true;
+          break;
+        }
+        // Check for consonant + vowel modifier
+        for (const cLen of [3, 2, 1]) {
+          if (cLen < len) {
+            const consonant = text.slice(i, i + cLen);
+            const vowel = text.slice(i + cLen, i + len);
+            if (script.consonantMap[consonant] && script.modifiers[vowel]) {
+              if (lastWasConsonant && script.virama) {
+                result += script.virama;
+              }
+              result += script.consonantMap[consonant] + script.modifiers[vowel];
+              lastWasConsonant = false;
+              i += len;
+              matched = true;
+              break;
+            }
+          }
+        }
+        if (matched) break;
       }
     }
-  } catch { /* silent */ }
-  return null;
-}
+    if (matched) continue;
 
-async function translateMyMemory(text: string, from: string, to: string): Promise<string | null> {
-  try {
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 4000);
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timeout);
-    
-    if (res.ok) {
-      const data = await res.json();
-      const translated = data.responseData?.translatedText?.trim();
-      if (translated && !translated.includes('MYMEMORY') && translated.toLowerCase() !== text.toLowerCase()) {
-        return translated;
+    // Single consonant
+    if (script.consonantMap[char]) {
+      if (lastWasConsonant && script.virama) {
+        result += script.virama;
+      }
+      result += script.consonantMap[char];
+      lastConsonant = char;
+      lastWasConsonant = true;
+      i++;
+      continue;
+    }
+
+    // Vowel handling
+    for (const len of [2, 1]) {
+      if (i + len <= text.length) {
+        const chunk = text.slice(i, i + len);
+        if (lastWasConsonant && script.modifiers[chunk]) {
+          result += script.modifiers[chunk];
+          lastWasConsonant = false;
+          i += len;
+          matched = true;
+          break;
+        }
+        if (script.vowelMap[chunk]) {
+          if (lastWasConsonant && chunk === 'a') {
+            // Implicit 'a' - don't add virama
+            lastWasConsonant = false;
+          } else {
+            if (lastWasConsonant && script.virama) {
+              result += script.virama;
+            }
+            result += script.vowelMap[chunk];
+            lastWasConsonant = false;
+          }
+          i += len;
+          matched = true;
+          break;
+        }
       }
     }
-  } catch { /* silent */ }
-  return null;
-}
+    if (matched) continue;
 
-async function translateLibre(text: string, from: string, to: string): Promise<string | null> {
-  const mirrors = [
-    "https://libretranslate.com",
-    "https://translate.argosopentech.com",
-  ];
-  
-  for (const mirror of mirrors) {
-    try {
-      const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 4000);
-      const res = await fetch(`${mirror}/translate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: text, source: from, target: to, format: "text" }),
-        signal: ctrl.signal,
-      });
-      clearTimeout(timeout);
-      
-      if (res.ok) {
-        const data = await res.json();
-        const translated = data.translatedText?.trim();
-        if (translated && translated !== text) return translated;
-      }
-    } catch { /* silent */ }
+    // Fallback - just add the character
+    result += char;
+    lastWasConsonant = false;
+    i++;
   }
-  return null;
+
+  // Add final virama if ended on consonant (optional based on language)
+  // For now, leave as-is for natural reading
+
+  return result;
 }
 
 // ============================================================
-// CORE TRANSLATION ENGINE
-// ============================================================
-
-async function translate(
-  text: string,
-  fromLang: string,
-  toLang: string
-): Promise<{ result: string; success: boolean; pivot: boolean }> {
-  const from = getCode(fromLang);
-  const to = getCode(toLang);
-  
-  console.log(`[bidir-65] Translating: ${from} → ${to}`);
-  
-  // Non-English pairs: use English pivot
-  if (from !== 'en' && to !== 'en') {
-    console.log('[bidir-65] Using English pivot');
-    
-    // Step 1: Source → English
-    let english = await translateGoogle(text, from, 'en');
-    if (!english) english = await translateMyMemory(text, from, 'en');
-    if (!english) english = await translateLibre(text, from, 'en');
-    
-    if (english && english !== text) {
-      console.log(`[bidir-65] Pivot 1 (${from}→en): ${english.substring(0, 40)}...`);
-      
-      // Step 2: English → Target
-      let final = await translateGoogle(english, 'en', to);
-      if (!final) final = await translateMyMemory(english, 'en', to);
-      if (!final) final = await translateLibre(english, 'en', to);
-      
-      if (final) {
-        console.log(`[bidir-65] Pivot 2 (en→${to}): ${final.substring(0, 40)}...`);
-        return { result: final.trim(), success: true, pivot: true };
-      }
-      return { result: english.trim(), success: true, pivot: true };
-    }
-  }
-  
-  // Direct translation
-  let result = await translateGoogle(text, from, to);
-  if (result) return { result: result.trim(), success: true, pivot: false };
-  
-  result = await translateMyMemory(text, from, to);
-  if (result) return { result: result.trim(), success: true, pivot: false };
-  
-  result = await translateLibre(text, from, to);
-  if (result) return { result: result.trim(), success: true, pivot: false };
-  
-  console.log('[bidir-65] All translation attempts failed');
-  return { result: text.trim(), success: false, pivot: false };
-}
-
-// ============================================================
-// TRANSLITERATION (Latin → Native Script)
-// ============================================================
-
-async function transliterate(latinText: string, targetLang: string): Promise<{ text: string; success: boolean }> {
-  const to = getCode(targetLang);
-  console.log(`[bidir-65] Transliterating to ${targetLang}`);
-  
-  // Use translation from English to trigger script conversion
-  const result = await translateGoogle(latinText, 'en', to);
-  if (result) {
-    const detected = detectScript(result);
-    if (!detected.isLatin) {
-      console.log(`[bidir-65] Transliteration success: ${result.substring(0, 40)}`);
-      return { text: result.trim(), success: true };
-    }
-  }
-  
-  return { text: latinText.trim(), success: false };
-}
-
-// ============================================================
-// BIDIRECTIONAL TRANSLATION (Parallel)
+// BIDIRECTIONAL MESSAGE PROCESSING
 // ============================================================
 
 interface BidirResult {
-  senderView: {
-    text: string;
-    nativeScript: string | null;
-    wasTransliterated: boolean;
-  };
-  receiverView: {
-    text: string;
-    wasTranslated: boolean;
-    pivotUsed: boolean;
-  };
-  detectedSource: string;
+  senderView: string;
+  receiverView: string;
   originalText: string;
+  senderLanguage: string;
+  receiverLanguage: string;
+  wasTransliterated: boolean;
+  method: string;
 }
 
-async function translateBidirectional(
+function processMessage(
   text: string,
-  senderLang: string,
-  receiverLang: string,
-  motherTongue?: string
-): Promise<BidirResult> {
+  senderLanguage: string,
+  receiverLanguage: string
+): BidirResult {
   const detected = detectScript(text);
-  const isLatin = detected.isLatin;
+  const senderNonLatin = isNonLatin(senderLanguage);
+  const receiverNonLatin = isNonLatin(receiverLanguage);
   
-  // Determine effective source language
-  let effectiveSource = detected.lang;
-  let senderNativeScript: string | null = null;
+  let senderView = text;
+  let receiverView = text;
   let wasTransliterated = false;
-  
-  if (isLatin) {
-    // Check if it's a known Latin-script language
-    const latinDetected = detectLatinLang(text);
-    if (latinDetected) {
-      effectiveSource = latinDetected.lang;
-      console.log(`[bidir-65] Detected Latin language: ${effectiveSource}`);
-    } else if (motherTongue && isNonLatin(motherTongue)) {
-      // Likely romanized text in mother tongue
-      effectiveSource = motherTongue;
-      console.log(`[bidir-65] Assuming romanized ${motherTongue}`);
-      
-      // Try to transliterate to native script for sender view
-      const translit = await transliterate(text, motherTongue);
-      if (translit.success) {
-        senderNativeScript = translit.text;
-        wasTransliterated = true;
-      }
-    } else if (senderLang && isNonLatin(senderLang)) {
-      effectiveSource = senderLang;
-      const translit = await transliterate(text, senderLang);
-      if (translit.success) {
-        senderNativeScript = translit.text;
-        wasTransliterated = true;
-      }
-    }
-  } else {
-    effectiveSource = detected.lang;
+
+  // If input is Latin and sender uses non-Latin script, transliterate for sender
+  if (detected.isLatin && senderNonLatin) {
+    senderView = transliterate(text, senderLanguage);
+    wasTransliterated = true;
   }
-  
-  // Skip translation if same language
-  if (isSame(effectiveSource, receiverLang)) {
-    return {
-      senderView: { text: senderNativeScript || text, nativeScript: senderNativeScript, wasTransliterated },
-      receiverView: { text: senderNativeScript || text, wasTranslated: false, pivotUsed: false },
-      detectedSource: effectiveSource,
-      originalText: text,
-    };
+
+  // If input is Latin and receiver uses non-Latin script, transliterate for receiver
+  if (detected.isLatin && receiverNonLatin) {
+    receiverView = transliterate(text, receiverLanguage);
+    wasTransliterated = true;
   }
-  
-  // Translate for receiver
-  const textToTranslate = senderNativeScript || text;
-  const { result, success, pivot } = await translate(textToTranslate, effectiveSource, receiverLang);
-  
+
+  // If same language, both see the transliterated version
+  if (isSame(senderLanguage, receiverLanguage)) {
+    receiverView = senderView;
+  }
+
   return {
-    senderView: { text: senderNativeScript || text, nativeScript: senderNativeScript, wasTransliterated },
-    receiverView: { text: result, wasTranslated: success, pivotUsed: pivot },
-    detectedSource: effectiveSource,
+    senderView,
+    receiverView,
     originalText: text,
+    senderLanguage: normalize(senderLanguage),
+    receiverLanguage: normalize(receiverLanguage),
+    wasTransliterated,
+    method: wasTransliterated ? 'transliteration' : 'passthrough'
   };
 }
 
 // ============================================================
-// BATCH TRANSLATION
-// ============================================================
-
-async function translateBatch(
-  texts: string[],
-  fromLang: string,
-  toLang: string
-): Promise<Array<{ original: string; translated: string; success: boolean }>> {
-  const results = await Promise.all(
-    texts.map(async (text) => {
-      const { result, success } = await translate(text, fromLang, toLang);
-      return { original: text, translated: result, success };
-    })
-  );
-  return results;
-}
-
-// ============================================================
-// CLEAN TEXT OUTPUT
-// ============================================================
-
-function clean(text: string): string {
-  if (!text) return text;
-  return text.replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-// ============================================================
-// MAIN REQUEST HANDLER
+// HTTP HANDLER
 // ============================================================
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const body = await req.json();
     const { 
-      text, message, texts, // Single text or batch
-      sourceLanguage, targetLanguage,
-      senderLanguage, receiverLanguage,
-      motherTongue,
-      mode = "translate"
+      text, 
+      senderLanguage, 
+      receiverLanguage, 
+      targetLanguage,
+      mode = 'bidirectional',
+      texts
     } = body;
 
-    const inputText = text || message;
-    console.log(`[bidir-65] Mode: ${mode}`);
-
-    // ================================================================
-    // MODE: bidirectional - Full chat message processing
-    // ================================================================
-    if (mode === "bidirectional" || mode === "chat") {
-      const sender = senderLanguage || sourceLanguage || motherTongue || "english";
-      const receiver = receiverLanguage || targetLanguage || "english";
-      
-      console.log(`[bidir-65] Bidirectional: sender=${sender}, receiver=${receiver}, motherTongue=${motherTongue}`);
-      
-      const result = await translateBidirectional(inputText, sender, receiver, motherTongue);
-      
+    // Mode: languages - return supported languages
+    if (mode === 'languages') {
       return new Response(
-        JSON.stringify({
-          senderView: clean(result.senderView.text),
-          senderNativeScript: result.senderView.nativeScript ? clean(result.senderView.nativeScript) : null,
-          wasTransliterated: result.senderView.wasTransliterated,
-          receiverView: clean(result.receiverView.text),
-          wasTranslated: result.receiverView.wasTranslated,
-          pivotUsed: result.receiverView.pivotUsed,
-          detectedLanguage: result.detectedSource,
-          originalText: inputText,
-          mode: "bidirectional",
+        JSON.stringify({ 
+          success: true, 
+          languages: LANGUAGES,
+          total: LANGUAGES.length
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // ================================================================
-    // MODE: batch - Multiple texts at once
-    // ================================================================
-    if (mode === "batch" && texts && Array.isArray(texts)) {
-      const from = sourceLanguage || senderLanguage || "english";
-      const to = targetLanguage || receiverLanguage || "english";
-      
-      console.log(`[bidir-65] Batch: ${texts.length} texts, ${from} → ${to}`);
-      
-      const results = await translateBatch(texts, from, to);
-      
-      return new Response(
-        JSON.stringify({ results, mode: "batch" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ================================================================
-    // MODE: languages - List all 65 supported languages
-    // ================================================================
-    if (mode === "languages") {
-      return new Response(
-        JSON.stringify({
-          count: LANGUAGES_65.length,
-          languages: LANGUAGES_65.map(l => ({
-            name: l.name,
-            code: l.code,
-            native: l.native,
-            script: l.script,
-            rtl: l.rtl || false,
-          })),
-          totalPairs: 65 * 64,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ================================================================
-    // MODE: test - Quick translation test
-    // ================================================================
-    if (mode === "test") {
-      const from = sourceLanguage || "english";
-      const to = targetLanguage || "telugu";
-      const testText = inputText || "hello how are you";
-      
-      console.log(`[bidir-65] Test: "${testText}" ${from} → ${to}`);
-      
-      const { result, success, pivot } = await translate(testText, from, to);
-      
-      return new Response(
-        JSON.stringify({
-          input: testText,
-          output: clean(result),
-          from, to,
-          success,
-          pivotUsed: pivot,
-          mode: "test",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ================================================================
-    // MODE: detect - Auto-detect language
-    // ================================================================
-    if (mode === "detect") {
-      const detected = detectScript(inputText);
-      const latinLang = detected.isLatin ? detectLatinLang(inputText) : null;
-      
-      return new Response(
-        JSON.stringify({
-          text: inputText,
-          detected: {
-            language: latinLang?.lang || detected.lang,
-            script: detected.script,
-            isLatin: detected.isLatin,
-            confidence: latinLang?.confidence || 1.0,
-          },
-          mode: "detect",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // ================================================================
-    // MODE: translate (default) - Standard translation
-    // ================================================================
-    if (!inputText) {
-      return new Response(
-        JSON.stringify({ error: "Text is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const detected = detectScript(inputText);
-    let effectiveSource = sourceLanguage || senderLanguage;
-    
-    // Auto-detect if no source provided
-    if (!effectiveSource) {
-      if (detected.isLatin) {
-        const latinLang = detectLatinLang(inputText);
-        if (latinLang) {
-          effectiveSource = latinLang.lang;
-        } else if (motherTongue && isNonLatin(motherTongue)) {
-          effectiveSource = motherTongue;
-        } else {
-          effectiveSource = "english";
-        }
-      } else {
-        effectiveSource = detected.lang;
-      }
-    }
-    
-    const effectiveTarget = targetLanguage || receiverLanguage || "english";
-    
-    console.log(`[bidir-65] Translate: ${effectiveSource} → ${effectiveTarget}`);
-    
-    // Handle romanized input for non-Latin languages
-    if (detected.isLatin && isNonLatin(effectiveSource) && !isSame(effectiveSource, effectiveTarget)) {
-      // Check if it's actually a known Latin language
-      const latinCheck = detectLatinLang(inputText);
-      if (latinCheck) {
-        // It's English/French/etc., translate directly
-        const { result, success, pivot } = await translate(inputText, latinCheck.lang, effectiveTarget);
+    // Mode: detect - detect script/language
+    if (mode === 'detect') {
+      if (!text) {
         return new Response(
-          JSON.stringify({
-            translatedText: clean(result),
-            originalText: inputText,
-            isTranslated: success,
-            pivotUsed: pivot,
-            detectedLanguage: latinCheck.lang,
-            sourceLanguage: latinCheck.lang,
-            targetLanguage: effectiveTarget,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: 'Text required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      // Romanized input - transliterate first
-      const translit = await transliterate(inputText, effectiveSource);
-      const textToTranslate = translit.success ? translit.text : inputText;
-      const { result, success, pivot } = await translate(textToTranslate, effectiveSource, effectiveTarget);
-      
+      const detected = detectScript(text);
       return new Response(
-        JSON.stringify({
-          translatedText: clean(result),
-          originalText: inputText,
-          nativeScriptText: translit.success ? translit.text : null,
-          isTranslated: success,
-          wasTransliterated: translit.success,
-          pivotUsed: pivot,
-          sourceLanguage: effectiveSource,
-          targetLanguage: effectiveTarget,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, ...detected }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Same language check
-    if (isSame(effectiveSource, effectiveTarget)) {
-      // Script conversion if needed
-      if (detected.isLatin && isNonLatin(effectiveTarget)) {
-        const translit = await transliterate(inputText, effectiveTarget);
+
+    // Mode: transliterate - convert Latin to native script
+    if (mode === 'transliterate') {
+      if (!text || !targetLanguage) {
         return new Response(
-          JSON.stringify({
-            translatedText: clean(translit.success ? translit.text : inputText),
-            originalText: inputText,
-            isTranslated: false,
-            wasTransliterated: translit.success,
-            sourceLanguage: effectiveSource,
-            targetLanguage: effectiveTarget,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: 'Text and targetLanguage required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+      const result = transliterate(text, targetLanguage);
       return new Response(
-        JSON.stringify({
-          translatedText: clean(inputText),
-          originalText: inputText,
-          isTranslated: false,
-          sourceLanguage: effectiveSource,
-          targetLanguage: effectiveTarget,
+        JSON.stringify({ 
+          success: true, 
+          text: result, 
+          original: text,
+          targetLanguage: normalize(targetLanguage)
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Standard translation
-    const { result, success, pivot } = await translate(inputText, effectiveSource, effectiveTarget);
-    
+
+    // Mode: batch - process multiple texts
+    if (mode === 'batch') {
+      if (!texts || !Array.isArray(texts)) {
+        return new Response(
+          JSON.stringify({ error: 'Texts array required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const results = texts.map((item: { text: string; targetLanguage: string }) => ({
+        original: item.text,
+        result: transliterate(item.text, item.targetLanguage),
+        targetLanguage: item.targetLanguage
+      }));
+      return new Response(
+        JSON.stringify({ success: true, results }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Mode: bidirectional (default) - process for chat
+    if (!text) {
+      return new Response(
+        JSON.stringify({ error: 'Text required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const sender = senderLanguage || 'english';
+    const receiver = receiverLanguage || 'english';
+    const result = processMessage(text, sender, receiver);
+
     return new Response(
-      JSON.stringify({
-        translatedText: clean(result),
-        translatedMessage: clean(result),
-        originalText: inputText,
-        isTranslated: success && clean(result).toLowerCase() !== inputText.toLowerCase(),
-        pivotUsed: pivot,
-        detectedLanguage: detected.lang,
-        sourceLanguage: effectiveSource,
-        targetLanguage: effectiveTarget,
-        isSourceLatin: detected.isLatin,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: true, ...result }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error("[bidir-65] Error:", error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        error: 'Processing failed', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
