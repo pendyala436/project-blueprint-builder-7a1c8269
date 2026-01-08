@@ -291,7 +291,7 @@ export async function translateAsync(
     return cached;
   }
 
-  console.log('[AsyncTranslator] Calling Edge Function translate-message:', {
+  console.log('[AsyncTranslator] Calling Edge Function libre-translate:', {
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
@@ -300,7 +300,7 @@ export async function translateAsync(
   });
 
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
+    const { data, error } = await supabase.functions.invoke('libre-translate', {
       body: {
         text: trimmed,
         sourceLanguage: normSource,
@@ -413,11 +413,11 @@ export async function convertToNativeScriptAsync(
 
   // Fallback to Edge Function
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
+    const { data, error } = await supabase.functions.invoke('libre-translate', {
       body: {
         text: trimmed,
-        sourceLanguage: 'english',
-        targetLanguage,
+        source: 'en',
+        target: targetLanguage,
         mode: 'convert',
       },
     });
