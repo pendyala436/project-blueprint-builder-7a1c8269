@@ -970,12 +970,24 @@ const ChatScreen = () => {
       // Import browser-side transliteration
       const { convertToNativeScriptAsync, isLatinScriptLanguage, isLatinText } = await import('@/lib/translation/async-translator');
       
-      // Skip if target is Latin script or input is already native
+      // Skip if target is Latin script or input is already native script
       if (isLatinScriptLanguage(targetLanguage) || !isLatinText(message)) {
         return message;
       }
       
-      // Use browser-side Web Worker for transliteration (non-blocking)
+      // IMPORTANT: Only transliterate if sender's language is the SAME as target
+      // If sender types German (Latin) → Telugu (non-Latin), we need TRANSLATION, not transliteration
+      // Transliteration is only for romanized input like "bagunnava" → బాగున్నావా when both are Telugu
+      const senderUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
+      
+      if (senderUsesLatinScript) {
+        // Sender's language uses Latin script (German, French, English, etc.)
+        // Don't transliterate - let the translation handle it
+        return message;
+      }
+      
+      // Sender's language is non-Latin (Hindi, Telugu, etc.) but typed in Latin
+      // This is romanized input that needs transliteration
       const result = await convertToNativeScriptAsync(message, targetLanguage);
       return result.text || message;
     } catch (error) {
