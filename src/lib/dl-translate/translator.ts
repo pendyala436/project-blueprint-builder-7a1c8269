@@ -381,15 +381,18 @@ export async function translateForChat(
   }
 
   // Different languages - need translation
-  // First, determine the actual source language
+  // IMPORTANT: Use sender's language, NOT auto-detect for Latin scripts
+  // Because German, French, Spanish etc. all use Latin script
+  // If sender's profile says "german", trust that over script detection
   let effectiveSource: string;
   
   if (isLatin) {
-    // Typing in Latin - could be English or romanized text
-    // Assume English as source for translation purposes
-    effectiveSource = 'english';
+    // Typing in Latin script - use sender's language from their profile
+    // This handles German, French, Spanish, English, etc. correctly
+    effectiveSource = senderLanguage;
   } else {
-    // Typing in native script - use detected language or sender's language
+    // Typing in native script (Hindi, Telugu, Arabic, etc.)
+    // Use detected language or fall back to sender's language
     effectiveSource = detected.language !== 'english' ? detected.language : senderLanguage;
   }
 
