@@ -436,44 +436,42 @@ export async function translate(
 
 // ============================================================
 // TRANSLATION HELPER FUNCTIONS
-// Uses Universal Semantic Translator for cross-language translation
+// These use phonetic/transliteration rules for now
+// Can be extended to use actual translation models
 // ============================================================
-
-import { translateSemanticUniversal } from './universal-semantic-translator';
 
 /**
  * Translate from any language to English
- * Uses phonetic-semantic pattern matching
+ * Currently uses phonetic mapping, can be extended with ML models
  */
 function translateToEnglish(text: string, sourceLanguage: string): string {
-  // For Latin script languages, check for semantic patterns to translate
-  const semanticResult = translateSemanticUniversal(text, 'english', sourceLanguage);
-  if (semanticResult.wasTranslated) {
-    return semanticResult.translatedText;
+  // For Latin script languages, text is already readable
+  if (isLatinScriptLanguage(sourceLanguage)) {
+    return text;
   }
   
-  // For non-Latin scripts or no semantic match, keep original
-  return text;
+  // For non-Latin scripts, attempt reverse transliteration
+  // This is a simplified version - can be enhanced with actual translation
+  try {
+    // Keep original for now - this would use a proper translation model
+    return text;
+  } catch {
+    return text;
+  }
 }
 
 /**
  * Translate from English to any language
- * Uses phonetic-semantic pattern matching + transliteration
+ * Currently uses transliteration for non-Latin scripts
  */
 function translateFromEnglish(text: string, targetLanguage: string): string {
-  // Semantic translation
-  const semanticResult = translateSemanticUniversal(text, targetLanguage, 'english');
-  
-  if (semanticResult.wasTranslated) {
-    return semanticResult.translatedText;
+  // For Latin script languages, minimal processing needed
+  if (isLatinScriptLanguage(targetLanguage)) {
+    return text;
   }
   
-  // For non-Latin scripts without semantic match, transliterate
-  if (!isLatinScriptLanguage(targetLanguage)) {
-    return transliterateToNative(text, targetLanguage);
-  }
-  
-  return text;
+  // For non-Latin scripts, transliterate
+  return transliterateToNative(text, targetLanguage);
 }
 
 // ============================================================
@@ -656,7 +654,7 @@ export interface ChatProcessResult {
 
 /**
  * Process a chat message for both sender and receiver views
- * Auto-detects language from text and translates bidirectionally
+ * Uses English pivot for cross-language translation
  */
 export async function processMessageForChat(
   text: string,
@@ -677,36 +675,29 @@ export async function processMessageForChat(
 
   // Apply spell correction
   const corrected = spellCorrectForChat(trimmed, senderLanguage);
-  
-  // AUTO-DETECT actual language from text (supports all 65 languages)
-  const detected = autoDetectLanguage(corrected);
-  const actualSourceLanguage = detected.isLatin 
-    ? senderLanguage  // If Latin, use the provided sender language
-    : detected.language;  // If non-Latin script, use detected language
 
-  // SENDER VIEW: Convert to sender's native script (based on actual detected language)
+  // SENDER VIEW: Convert to sender's native script
   let senderView = corrected;
   let wasTransliterated = false;
 
-  if (needsScriptConversion(actualSourceLanguage) && isLatinText(corrected)) {
-    const nativeResult = transliterateToNative(corrected, actualSourceLanguage);
+  if (needsScriptConversion(senderLanguage) && isLatinText(corrected)) {
+    const nativeResult = transliterateToNative(corrected, senderLanguage);
     if (nativeResult !== corrected) {
       senderView = nativeResult;
       wasTransliterated = true;
     }
   }
 
-  // RECEIVER VIEW: Translate to receiver's language using semantic translation
+  // RECEIVER VIEW: Translate via English pivot + convert to receiver's native script
   let receiverView = senderView;
   let wasTranslated = false;
   let englishPivot: string | undefined;
 
-  if (!isSameLanguage(actualSourceLanguage, receiverLanguage)) {
-    // Use semantic translation with auto-detected source language
-    const translateResult = await translate(corrected, actualSourceLanguage, receiverLanguage);
-    if (translateResult.isTranslated || translateResult.isTransliterated) {
+  if (!isSameLanguage(senderLanguage, receiverLanguage)) {
+    const translateResult = await translate(senderView, senderLanguage, receiverLanguage);
+    if (translateResult.isTranslated) {
       receiverView = translateResult.text;
-      wasTranslated = translateResult.isTranslated;
+      wasTranslated = true;
       englishPivot = translateResult.englishPivot;
     }
   } else if (needsScriptConversion(receiverLanguage) && isLatinText(senderView)) {
@@ -721,60 +712,6 @@ export async function processMessageForChat(
     receiverView,
     originalText: trimmed,
     wasTransliterated,
-    wasTranslated,
-    englishPivot,
-  };
-}
-
-/**
- * Process incoming message - auto-detect any language and translate to target
- * Used when receiver types in any language and sender needs translation
- */
-export async function processIncomingMessage(
-  text: string,
-  targetLanguage: string
-): Promise<ChatProcessResult> {
-  const trimmed = text.trim();
-
-  if (!trimmed) {
-    return {
-      senderView: '',
-      receiverView: '',
-      originalText: '',
-      wasTransliterated: false,
-      wasTranslated: false,
-    };
-  }
-
-  // Auto-detect source language from text (all 65 languages)
-  const detected = autoDetectLanguage(trimmed);
-  const detectedLanguage = detected.language;
-  
-  // Original view in detected language script
-  let originalView = trimmed;
-  if (needsScriptConversion(detectedLanguage) && isLatinText(trimmed)) {
-    originalView = transliterateToNative(trimmed, detectedLanguage);
-  }
-
-  // Translate to target language
-  let translatedView = originalView;
-  let wasTranslated = false;
-  let englishPivot: string | undefined;
-
-  if (!isSameLanguage(detectedLanguage, targetLanguage)) {
-    const translateResult = await translate(trimmed, detectedLanguage, targetLanguage);
-    if (translateResult.isTranslated || translateResult.isTransliterated) {
-      translatedView = translateResult.text;
-      wasTranslated = translateResult.isTranslated;
-      englishPivot = translateResult.englishPivot;
-    }
-  }
-
-  return {
-    senderView: originalView,
-    receiverView: translatedView,
-    originalText: trimmed,
-    wasTransliterated: originalView !== trimmed,
     wasTranslated,
     englishPivot,
   };

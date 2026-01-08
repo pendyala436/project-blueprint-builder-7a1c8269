@@ -46,7 +46,6 @@ export {
   transliterateToNative,
   getNativeScriptPreview,
   processMessageForChat,
-  processIncomingMessage,
   
   // Bidirectional translation (Source ↔ Target via English)
   translateBidirectional,
@@ -131,21 +130,6 @@ export {
   detectScriptFromText,
   getScriptForLanguage,
 } from './dynamic-transliterator';
-
-// ============================================================
-// UNIVERSAL SEMANTIC TRANSLATOR - Cross-language translation
-// ============================================================
-
-export {
-  translateSemanticUniversal,
-  processUniversalChatMessage,
-  hasTranslatableSemantics,
-  getSupportedSemanticCategories,
-} from './universal-semantic-translator';
-
-export type {
-  SemanticTranslationResult,
-} from './universal-semantic-translator';
 
 // ============================================================
 // LEGACY EXPORTS (for backward compatibility)
