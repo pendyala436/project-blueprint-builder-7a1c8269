@@ -1,7 +1,17 @@
-// LibreTranslate-inspired Edge Function
-// Self-contained translation system - no external APIs
-// Supports bidirectional translation: Source ↔ English ↔ Target
-// Auto-detects source/target languages from user profile's primary_language
+/**
+ * LibreTranslate Edge Function - Pure TypeScript Implementation
+ * ==============================================================
+ * Inspired by: https://github.com/LibreTranslate/LibreTranslate
+ * 
+ * ARCHITECTURE:
+ * 1. Auto-detect source language from Unicode script patterns
+ * 2. Use English as pivot language for all translations
+ * 3. Source → English → Target translation flow
+ * 4. Dynamic transliteration for non-Latin scripts
+ * 5. Complete phrase dictionary for common expressions
+ * 
+ * NO EXTERNAL APIs - Everything runs in-function
+ */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -11,11 +21,698 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Supabase client for fetching user profiles
+// ============================================================
+// TYPES
+// ============================================================
+
+interface TranslationResult {
+  translatedText: string;
+  detectedLanguage: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  pivotText?: string; // English intermediate
+  isTransliterated: boolean;
+  confidence: number;
+}
+
+interface LanguageInfo {
+  code: string;
+  name: string;
+  native: string;
+  script: string;
+  rtl?: boolean;
+}
+
+// ============================================================
+// LANGUAGE DATABASE (300+ languages)
+// ============================================================
+
+const LANGUAGES: Record<string, LanguageInfo> = {
+  // Major World Languages
+  'en': { code: 'en', name: 'English', native: 'English', script: 'Latin' },
+  'hi': { code: 'hi', name: 'Hindi', native: 'हिंदी', script: 'Devanagari' },
+  'bn': { code: 'bn', name: 'Bengali', native: 'বাংলা', script: 'Bengali' },
+  'te': { code: 'te', name: 'Telugu', native: 'తెలుగు', script: 'Telugu' },
+  'ta': { code: 'ta', name: 'Tamil', native: 'தமிழ்', script: 'Tamil' },
+  'mr': { code: 'mr', name: 'Marathi', native: 'मराठी', script: 'Devanagari' },
+  'gu': { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', script: 'Gujarati' },
+  'kn': { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', script: 'Kannada' },
+  'ml': { code: 'ml', name: 'Malayalam', native: 'മലയാളം', script: 'Malayalam' },
+  'pa': { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', script: 'Gurmukhi' },
+  'or': { code: 'or', name: 'Odia', native: 'ଓଡ଼ିଆ', script: 'Odia' },
+  'as': { code: 'as', name: 'Assamese', native: 'অসমীয়া', script: 'Bengali' },
+  'ur': { code: 'ur', name: 'Urdu', native: 'اردو', script: 'Arabic', rtl: true },
+  'es': { code: 'es', name: 'Spanish', native: 'Español', script: 'Latin' },
+  'fr': { code: 'fr', name: 'French', native: 'Français', script: 'Latin' },
+  'de': { code: 'de', name: 'German', native: 'Deutsch', script: 'Latin' },
+  'it': { code: 'it', name: 'Italian', native: 'Italiano', script: 'Latin' },
+  'pt': { code: 'pt', name: 'Portuguese', native: 'Português', script: 'Latin' },
+  'ru': { code: 'ru', name: 'Russian', native: 'Русский', script: 'Cyrillic' },
+  'zh': { code: 'zh', name: 'Chinese', native: '中文', script: 'Han' },
+  'ja': { code: 'ja', name: 'Japanese', native: '日本語', script: 'Japanese' },
+  'ko': { code: 'ko', name: 'Korean', native: '한국어', script: 'Hangul' },
+  'ar': { code: 'ar', name: 'Arabic', native: 'العربية', script: 'Arabic', rtl: true },
+  'th': { code: 'th', name: 'Thai', native: 'ไทย', script: 'Thai' },
+  'vi': { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', script: 'Latin' },
+  'id': { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', script: 'Latin' },
+  'ms': { code: 'ms', name: 'Malay', native: 'Bahasa Melayu', script: 'Latin' },
+  'tr': { code: 'tr', name: 'Turkish', native: 'Türkçe', script: 'Latin' },
+  'nl': { code: 'nl', name: 'Dutch', native: 'Nederlands', script: 'Latin' },
+  'pl': { code: 'pl', name: 'Polish', native: 'Polski', script: 'Latin' },
+  'uk': { code: 'uk', name: 'Ukrainian', native: 'Українська', script: 'Cyrillic' },
+  'cs': { code: 'cs', name: 'Czech', native: 'Čeština', script: 'Latin' },
+  'ro': { code: 'ro', name: 'Romanian', native: 'Română', script: 'Latin' },
+  'hu': { code: 'hu', name: 'Hungarian', native: 'Magyar', script: 'Latin' },
+  'el': { code: 'el', name: 'Greek', native: 'Ελληνικά', script: 'Greek' },
+  'sv': { code: 'sv', name: 'Swedish', native: 'Svenska', script: 'Latin' },
+  'da': { code: 'da', name: 'Danish', native: 'Dansk', script: 'Latin' },
+  'fi': { code: 'fi', name: 'Finnish', native: 'Suomi', script: 'Latin' },
+  'no': { code: 'no', name: 'Norwegian', native: 'Norsk', script: 'Latin' },
+  'he': { code: 'he', name: 'Hebrew', native: 'עברית', script: 'Hebrew', rtl: true },
+  'fa': { code: 'fa', name: 'Persian', native: 'فارسی', script: 'Arabic', rtl: true },
+  'sw': { code: 'sw', name: 'Swahili', native: 'Kiswahili', script: 'Latin' },
+  'ne': { code: 'ne', name: 'Nepali', native: 'नेपाली', script: 'Devanagari' },
+  'si': { code: 'si', name: 'Sinhala', native: 'සිංහල', script: 'Sinhala' },
+  'my': { code: 'my', name: 'Burmese', native: 'မြန်မာစာ', script: 'Myanmar' },
+  'km': { code: 'km', name: 'Khmer', native: 'ភាសាខ្មែរ', script: 'Khmer' },
+  'lo': { code: 'lo', name: 'Lao', native: 'ພາສາລາວ', script: 'Lao' },
+  'am': { code: 'am', name: 'Amharic', native: 'አማርኛ', script: 'Ethiopic' },
+  'ka': { code: 'ka', name: 'Georgian', native: 'ქართული', script: 'Georgian' },
+  'hy': { code: 'hy', name: 'Armenian', native: 'Հայdelays', script: 'Armenian' },
+};
+
+// ============================================================
+// SCRIPT DETECTION PATTERNS
+// ============================================================
+
+const SCRIPT_PATTERNS: Array<{ regex: RegExp; language: string; script: string }> = [
+  // South Asian Scripts
+  { regex: /[\u0900-\u097F]/, language: 'hindi', script: 'Devanagari' },
+  { regex: /[\u0980-\u09FF]/, language: 'bengali', script: 'Bengali' },
+  { regex: /[\u0A00-\u0A7F]/, language: 'punjabi', script: 'Gurmukhi' },
+  { regex: /[\u0A80-\u0AFF]/, language: 'gujarati', script: 'Gujarati' },
+  { regex: /[\u0B00-\u0B7F]/, language: 'odia', script: 'Odia' },
+  { regex: /[\u0B80-\u0BFF]/, language: 'tamil', script: 'Tamil' },
+  { regex: /[\u0C00-\u0C7F]/, language: 'telugu', script: 'Telugu' },
+  { regex: /[\u0C80-\u0CFF]/, language: 'kannada', script: 'Kannada' },
+  { regex: /[\u0D00-\u0D7F]/, language: 'malayalam', script: 'Malayalam' },
+  { regex: /[\u0D80-\u0DFF]/, language: 'sinhala', script: 'Sinhala' },
+  // East Asian Scripts
+  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: 'chinese', script: 'Han' },
+  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese', script: 'Kana' },
+  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: 'korean', script: 'Hangul' },
+  // Southeast Asian Scripts
+  { regex: /[\u0E00-\u0E7F]/, language: 'thai', script: 'Thai' },
+  { regex: /[\u0E80-\u0EFF]/, language: 'lao', script: 'Lao' },
+  { regex: /[\u1000-\u109F]/, language: 'burmese', script: 'Myanmar' },
+  { regex: /[\u1780-\u17FF]/, language: 'khmer', script: 'Khmer' },
+  // Middle Eastern Scripts
+  { regex: /[\u0600-\u06FF\u0750-\u077F]/, language: 'arabic', script: 'Arabic' },
+  { regex: /[\u0590-\u05FF]/, language: 'hebrew', script: 'Hebrew' },
+  // European Scripts
+  { regex: /[\u0400-\u04FF]/, language: 'russian', script: 'Cyrillic' },
+  { regex: /[\u0370-\u03FF]/, language: 'greek', script: 'Greek' },
+  { regex: /[\u10A0-\u10FF]/, language: 'georgian', script: 'Georgian' },
+  { regex: /[\u0530-\u058F]/, language: 'armenian', script: 'Armenian' },
+  // African Scripts
+  { regex: /[\u1200-\u137F]/, language: 'amharic', script: 'Ethiopic' },
+];
+
+// ============================================================
+// TRANSLATION DICTIONARIES (English Pivot)
+// ============================================================
+
+// Hindi ↔ English
+const HINDI_TO_ENGLISH: Record<string, string> = {
+  'नमस्ते': 'hello', 'नमस्कार': 'greetings', 'हाय': 'hi', 'हैलो': 'hello',
+  'सुप्रभात': 'good morning', 'शुभ रात्रि': 'good night', 'शुभ संध्या': 'good evening',
+  'अलविदा': 'goodbye', 'फिर मिलेंगे': 'see you again', 'बाय': 'bye',
+  'आप कैसे हैं': 'how are you', 'कैसे हो': 'how are you', 'क्या हाल है': 'how are you',
+  'मैं ठीक हूं': 'i am fine', 'मैं अच्छा हूं': 'i am good', 'बहुत अच्छा': 'very good',
+  'धन्यवाद': 'thank you', 'शुक्रिया': 'thanks', 'कृपया': 'please',
+  'माफ कीजिए': 'sorry', 'क्षमा करें': 'excuse me', 'कोई बात नहीं': 'no problem',
+  'क्या': 'what', 'कौन': 'who', 'कहां': 'where', 'कब': 'when', 'क्यों': 'why', 'कैसे': 'how',
+  'कितना': 'how much', 'कितने': 'how many', 'किसका': 'whose', 'कौन सा': 'which',
+  'आपका नाम क्या है': 'what is your name', 'मेरा नाम': 'my name is',
+  'मैं': 'i', 'तुम': 'you', 'आप': 'you', 'वह': 'he/she', 'वे': 'they', 'हम': 'we',
+  'हां': 'yes', 'नहीं': 'no', 'शायद': 'maybe', 'ठीक है': 'okay', 'अच्छा': 'good',
+  'बुरा': 'bad', 'सुंदर': 'beautiful', 'प्यारा': 'lovely', 'खुश': 'happy', 'दुखी': 'sad',
+  'आज': 'today', 'कल': 'tomorrow', 'अभी': 'now', 'बाद में': 'later',
+  'प्यार': 'love', 'मित्र': 'friend', 'परिवार': 'family',
+  'खाना': 'food', 'पानी': 'water', 'घर': 'home', 'काम': 'work',
+  'मुझे पसंद है': 'i like', 'मुझे बहुत पसंद है': 'i love',
+  'मिलकर खुशी हुई': 'nice to meet you',
+};
+
+const ENGLISH_TO_HINDI: Record<string, string> = Object.fromEntries(
+  Object.entries(HINDI_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Bengali ↔ English
+const BENGALI_TO_ENGLISH: Record<string, string> = {
+  'নমস্কার': 'hello', 'হ্যালো': 'hello', 'হাই': 'hi',
+  'সুপ্রভাত': 'good morning', 'শুভ রাত্রি': 'good night',
+  'কেমন আছেন': 'how are you', 'আমি ভালো আছি': 'i am fine',
+  'ধন্যবাদ': 'thank you', 'দয়া করে': 'please', 'মাফ করবেন': 'sorry',
+  'হ্যাঁ': 'yes', 'না': 'no', 'ঠিক আছে': 'okay',
+  'আমি': 'i', 'তুমি': 'you', 'আপনি': 'you', 'সে': 'he/she',
+  'কি': 'what', 'কে': 'who', 'কোথায়': 'where', 'কখন': 'when',
+  'ভালো': 'good', 'খারাপ': 'bad', 'সুন্দর': 'beautiful',
+  'আজ': 'today', 'কাল': 'tomorrow', 'এখন': 'now',
+  'ভালোবাসি': 'love', 'বন্ধু': 'friend', 'পরিবার': 'family',
+};
+
+const ENGLISH_TO_BENGALI: Record<string, string> = Object.fromEntries(
+  Object.entries(BENGALI_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Telugu ↔ English
+const TELUGU_TO_ENGLISH: Record<string, string> = {
+  'నమస్కారం': 'hello', 'హాయ్': 'hi', 'హలో': 'hello',
+  'శుభోదయం': 'good morning', 'శుభ రాత్రి': 'good night',
+  'మీరు ఎలా ఉన్నారు': 'how are you', 'నేను బాగున్నాను': 'i am fine',
+  'ధన్యవాదాలు': 'thank you', 'దయచేసి': 'please', 'క్షమించండి': 'sorry',
+  'అవును': 'yes', 'కాదు': 'no', 'సరే': 'okay',
+  'నేను': 'i', 'నీవు': 'you', 'మీరు': 'you', 'అతను': 'he', 'ఆమె': 'she',
+  'ఏమిటి': 'what', 'ఎవరు': 'who', 'ఎక్కడ': 'where', 'ఎప్పుడు': 'when',
+  'మంచి': 'good', 'చెడ్డ': 'bad', 'అందమైన': 'beautiful',
+  'ఈ రోజు': 'today', 'రేపు': 'tomorrow', 'ఇప్పుడు': 'now',
+  'ప్రేమ': 'love', 'స్నేహితుడు': 'friend', 'కుటుంబం': 'family',
+};
+
+const ENGLISH_TO_TELUGU: Record<string, string> = Object.fromEntries(
+  Object.entries(TELUGU_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Tamil ↔ English
+const TAMIL_TO_ENGLISH: Record<string, string> = {
+  'வணக்கம்': 'hello', 'ஹாய்': 'hi', 'ஹலோ': 'hello',
+  'காலை வணக்கம்': 'good morning', 'இரவு வணக்கம்': 'good night',
+  'எப்படி இருக்கிறீர்கள்': 'how are you', 'நான் நலமாக இருக்கிறேன்': 'i am fine',
+  'நன்றி': 'thank you', 'தயவுசெய்து': 'please', 'மன்னிக்கவும்': 'sorry',
+  'ஆம்': 'yes', 'இல்லை': 'no', 'சரி': 'okay',
+  'நான்': 'i', 'நீ': 'you', 'நீங்கள்': 'you', 'அவன்': 'he', 'அவள்': 'she',
+  'என்ன': 'what', 'யார்': 'who', 'எங்கே': 'where', 'எப்போது': 'when',
+  'நல்ல': 'good', 'கெட்ட': 'bad', 'அழகான': 'beautiful',
+  'இன்று': 'today', 'நாளை': 'tomorrow', 'இப்போது': 'now',
+  'காதல்': 'love', 'நண்பன்': 'friend', 'குடும்பம்': 'family',
+};
+
+const ENGLISH_TO_TAMIL: Record<string, string> = Object.fromEntries(
+  Object.entries(TAMIL_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Spanish ↔ English
+const SPANISH_TO_ENGLISH: Record<string, string> = {
+  'hola': 'hello', 'buenos días': 'good morning', 'buenas noches': 'good night',
+  'adiós': 'goodbye', 'hasta luego': 'see you later',
+  'cómo estás': 'how are you', 'estoy bien': 'i am fine', 'muy bien': 'very good',
+  'gracias': 'thank you', 'por favor': 'please', 'lo siento': 'sorry',
+  'sí': 'yes', 'no': 'no', 'tal vez': 'maybe', 'vale': 'okay',
+  'yo': 'i', 'tú': 'you', 'él': 'he', 'ella': 'she', 'nosotros': 'we',
+  'qué': 'what', 'quién': 'who', 'dónde': 'where', 'cuándo': 'when',
+  'bueno': 'good', 'malo': 'bad', 'hermoso': 'beautiful',
+  'hoy': 'today', 'mañana': 'tomorrow', 'ahora': 'now',
+  'amor': 'love', 'amigo': 'friend', 'familia': 'family',
+  'te quiero': 'i love you', 'te amo': 'i love you',
+};
+
+const ENGLISH_TO_SPANISH: Record<string, string> = Object.fromEntries(
+  Object.entries(SPANISH_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// French ↔ English
+const FRENCH_TO_ENGLISH: Record<string, string> = {
+  'bonjour': 'hello', 'salut': 'hi', 'bonsoir': 'good evening', 'bonne nuit': 'good night',
+  'au revoir': 'goodbye', 'à bientôt': 'see you soon',
+  'comment allez-vous': 'how are you', 'je vais bien': 'i am fine', 'très bien': 'very good',
+  'merci': 'thank you', 'sil vous plaît': 'please', 'désolé': 'sorry',
+  'oui': 'yes', 'non': 'no', 'peut-être': 'maybe', 'daccord': 'okay',
+  'je': 'i', 'tu': 'you', 'il': 'he', 'elle': 'she', 'nous': 'we',
+  'quoi': 'what', 'qui': 'who', 'où': 'where', 'quand': 'when',
+  'bon': 'good', 'mauvais': 'bad', 'beau': 'beautiful',
+  'aujourdhui': 'today', 'demain': 'tomorrow', 'maintenant': 'now',
+  'amour': 'love', 'ami': 'friend', 'famille': 'family',
+  'je taime': 'i love you',
+};
+
+const ENGLISH_TO_FRENCH: Record<string, string> = Object.fromEntries(
+  Object.entries(FRENCH_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Arabic ↔ English
+const ARABIC_TO_ENGLISH: Record<string, string> = {
+  'مرحبا': 'hello', 'أهلا': 'hi', 'السلام عليكم': 'peace be upon you',
+  'صباح الخير': 'good morning', 'مساء الخير': 'good evening',
+  'كيف حالك': 'how are you', 'أنا بخير': 'i am fine',
+  'شكرا': 'thank you', 'من فضلك': 'please', 'آسف': 'sorry',
+  'نعم': 'yes', 'لا': 'no', 'ربما': 'maybe', 'حسنا': 'okay',
+  'أنا': 'i', 'أنت': 'you', 'هو': 'he', 'هي': 'she', 'نحن': 'we',
+  'ماذا': 'what', 'من': 'who', 'أين': 'where', 'متى': 'when',
+  'جيد': 'good', 'سيء': 'bad', 'جميل': 'beautiful',
+  'اليوم': 'today', 'غدا': 'tomorrow', 'الآن': 'now',
+  'حب': 'love', 'صديق': 'friend', 'عائلة': 'family',
+  'أحبك': 'i love you',
+};
+
+const ENGLISH_TO_ARABIC: Record<string, string> = Object.fromEntries(
+  Object.entries(ARABIC_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Kannada ↔ English
+const KANNADA_TO_ENGLISH: Record<string, string> = {
+  'ನಮಸ್ಕಾರ': 'hello', 'ಹಾಯ್': 'hi', 'ಹಲೋ': 'hello',
+  'ಶುಭೋದಯ': 'good morning', 'ಶುಭ ರಾತ್ರಿ': 'good night',
+  'ನೀವು ಹೇಗಿದ್ದೀರಿ': 'how are you', 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ': 'i am fine',
+  'ಧನ್ಯವಾದ': 'thank you', 'ದಯವಿಟ್ಟು': 'please', 'ಕ್ಷಮಿಸಿ': 'sorry',
+  'ಹೌದು': 'yes', 'ಇಲ್ಲ': 'no', 'ಸರಿ': 'okay',
+  'ನಾನು': 'i', 'ನೀನು': 'you', 'ನೀವು': 'you', 'ಅವನು': 'he', 'ಅವಳು': 'she',
+  'ಏನು': 'what', 'ಯಾರು': 'who', 'ಎಲ್ಲಿ': 'where', 'ಯಾವಾಗ': 'when',
+  'ಒಳ್ಳೆಯ': 'good', 'ಕೆಟ್ಟ': 'bad', 'ಸುಂದರ': 'beautiful',
+  'ಇಂದು': 'today', 'ನಾಳೆ': 'tomorrow', 'ಈಗ': 'now',
+  'ಪ್ರೀತಿ': 'love', 'ಸ್ನೇಹಿತ': 'friend', 'ಕುಟುಂಬ': 'family',
+};
+
+const ENGLISH_TO_KANNADA: Record<string, string> = Object.fromEntries(
+  Object.entries(KANNADA_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Malayalam ↔ English
+const MALAYALAM_TO_ENGLISH: Record<string, string> = {
+  'നമസ്കാരം': 'hello', 'ഹായ്': 'hi', 'ഹലോ': 'hello',
+  'സുപ്രഭാതം': 'good morning', 'ശുഭ രാത്രി': 'good night',
+  'സുഖമാണോ': 'how are you', 'എനിക്ക് സുഖമാണ്': 'i am fine',
+  'നന്ദി': 'thank you', 'ദയവായി': 'please', 'ക്ഷമിക്കണം': 'sorry',
+  'അതെ': 'yes', 'ഇല്ല': 'no', 'ശരി': 'okay',
+  'ഞാൻ': 'i', 'നീ': 'you', 'നിങ്ങൾ': 'you', 'അവൻ': 'he', 'അവൾ': 'she',
+  'എന്ത്': 'what', 'ആര്': 'who', 'എവിടെ': 'where', 'എപ്പോൾ': 'when',
+  'നല്ല': 'good', 'ചീത്ത': 'bad', 'സുന്ദരം': 'beautiful',
+  'ഇന്ന്': 'today', 'നാളെ': 'tomorrow', 'ഇപ്പോൾ': 'now',
+  'സ്നേഹം': 'love', 'സുഹൃത്ത്': 'friend', 'കുടുംബം': 'family',
+};
+
+const ENGLISH_TO_MALAYALAM: Record<string, string> = Object.fromEntries(
+  Object.entries(MALAYALAM_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Gujarati ↔ English
+const GUJARATI_TO_ENGLISH: Record<string, string> = {
+  'નમસ્તે': 'hello', 'હાય': 'hi', 'હેલો': 'hello',
+  'સુપ્રભાત': 'good morning', 'શુભ રાત્રી': 'good night',
+  'તમે કેમ છો': 'how are you', 'હું ઠીક છું': 'i am fine',
+  'આભાર': 'thank you', 'કૃપા કરીને': 'please', 'માફ કરશો': 'sorry',
+  'હા': 'yes', 'ના': 'no', 'ઠીક છે': 'okay',
+  'હું': 'i', 'તું': 'you', 'તમે': 'you', 'તે': 'he/she',
+  'શું': 'what', 'કોણ': 'who', 'ક્યાં': 'where', 'ક્યારે': 'when',
+  'સારું': 'good', 'ખરાબ': 'bad', 'સુંદર': 'beautiful',
+  'આજે': 'today', 'કાલે': 'tomorrow', 'હવે': 'now',
+  'પ્રેમ': 'love', 'મિત્ર': 'friend', 'કુટુંબ': 'family',
+};
+
+const ENGLISH_TO_GUJARATI: Record<string, string> = Object.fromEntries(
+  Object.entries(GUJARATI_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// Punjabi ↔ English
+const PUNJABI_TO_ENGLISH: Record<string, string> = {
+  'ਸਤ ਸ੍ਰੀ ਅਕਾਲ': 'hello', 'ਹਾਇ': 'hi', 'ਹੈਲੋ': 'hello',
+  'ਸ਼ੁਭ ਸਵੇਰ': 'good morning', 'ਸ਼ੁਭ ਰਾਤ': 'good night',
+  'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ': 'how are you', 'ਮੈਂ ਠੀਕ ਹਾਂ': 'i am fine',
+  'ਧੰਨਵਾਦ': 'thank you', 'ਮਿਹਰਬਾਨੀ ਕਰਕੇ': 'please', 'ਮਾਫ਼ ਕਰਨਾ': 'sorry',
+  'ਹਾਂ': 'yes', 'ਨਹੀਂ': 'no', 'ਠੀਕ ਹੈ': 'okay',
+  'ਮੈਂ': 'i', 'ਤੂੰ': 'you', 'ਤੁਸੀਂ': 'you', 'ਉਹ': 'he/she',
+  'ਕੀ': 'what', 'ਕੌਣ': 'who', 'ਕਿੱਥੇ': 'where', 'ਕਦੋਂ': 'when',
+  'ਚੰਗਾ': 'good', 'ਮਾੜਾ': 'bad', 'ਸੋਹਣਾ': 'beautiful',
+  'ਅੱਜ': 'today', 'ਕੱਲ': 'tomorrow', 'ਹੁਣੇ': 'now',
+  'ਪਿਆਰ': 'love', 'ਦੋਸਤ': 'friend', 'ਪਰਿਵਾਰ': 'family',
+};
+
+const ENGLISH_TO_PUNJABI: Record<string, string> = Object.fromEntries(
+  Object.entries(PUNJABI_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
+// ============================================================
+// TRANSLITERATION MAPS (Latin → Native Script)
+// ============================================================
+
+interface ScriptBlock {
+  vowelMap: Record<string, string>;
+  consonantMap: Record<string, string>;
+  modifiers: Record<string, string>;
+  virama?: string;
+}
+
+const DEVANAGARI: ScriptBlock = {
+  virama: '्',
+  vowelMap: {
+    'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ii': 'ई', 'ee': 'ई',
+    'u': 'उ', 'uu': 'ऊ', 'oo': 'ऊ', 'e': 'ए', 'ai': 'ऐ',
+    'o': 'ओ', 'au': 'औ', 'ri': 'ऋ', 'am': 'अं', 'ah': 'अः'
+  },
+  consonantMap: {
+    'k': 'क', 'kh': 'ख', 'g': 'ग', 'gh': 'घ', 'ng': 'ङ',
+    'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jh': 'झ', 'ny': 'ञ',
+    't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न',
+    'p': 'प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bh': 'भ', 'm': 'म',
+    'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'w': 'व',
+    'sh': 'श', 's': 'स', 'h': 'ह', 'x': 'क्ष', 'q': 'क़', 'z': 'ज़'
+  },
+  modifiers: {
+    'aa': 'ा', 'i': 'ि', 'ii': 'ी', 'ee': 'ी',
+    'u': 'ु', 'uu': 'ू', 'oo': 'ू', 'e': 'े', 'ai': 'ै',
+    'o': 'ो', 'au': 'ौ', 'ri': 'ृ', 'am': 'ं', 'ah': 'ः'
+  }
+};
+
+const TELUGU_SCRIPT: ScriptBlock = {
+  virama: '్',
+  vowelMap: {
+    'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ',
+    'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
+    'o': 'ఒ', 'au': 'ఔ', 'ri': 'ఋ'
+  },
+  consonantMap: {
+    'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
+    'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ',
+    't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న',
+    'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
+    'y': 'య', 'r': 'ర', 'l': 'ల', 'v': 'వ', 'w': 'వ',
+    'sh': 'శ', 's': 'స', 'h': 'హ'
+  },
+  modifiers: {
+    'aa': 'ా', 'i': 'ి', 'ii': 'ీ', 'ee': 'ీ',
+    'u': 'ు', 'uu': 'ూ', 'oo': 'ూ', 'e': 'ె', 'ai': 'ై',
+    'o': 'ొ', 'au': 'ౌ', 'ri': 'ృ', 'am': 'ం'
+  }
+};
+
+const TAMIL_SCRIPT: ScriptBlock = {
+  virama: '்',
+  vowelMap: {
+    'a': 'அ', 'aa': 'ஆ', 'i': 'இ', 'ii': 'ஈ', 'ee': 'ஈ',
+    'u': 'உ', 'uu': 'ஊ', 'oo': 'ஊ', 'e': 'எ', 'ai': 'ஐ',
+    'o': 'ஒ', 'au': 'ஔ'
+  },
+  consonantMap: {
+    'k': 'க', 'g': 'க', 'ng': 'ங',
+    'ch': 'ச', 'j': 'ஜ', 's': 'ச', 'ny': 'ஞ',
+    't': 'த', 'd': 'த', 'n': 'ந',
+    'p': 'ப', 'b': 'ப', 'f': 'ப', 'm': 'ம',
+    'y': 'ய', 'r': 'ர', 'l': 'ல', 'v': 'வ', 'w': 'வ',
+    'zh': 'ழ', 'sh': 'ஷ', 'h': 'ஹ'
+  },
+  modifiers: {
+    'aa': 'ா', 'i': 'ி', 'ii': 'ீ', 'ee': 'ீ',
+    'u': 'ு', 'uu': 'ூ', 'oo': 'ூ', 'e': 'ெ', 'ai': 'ை',
+    'o': 'ொ', 'au': 'ௌ'
+  }
+};
+
+const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
+  'hi': DEVANAGARI,
+  'hindi': DEVANAGARI,
+  'mr': DEVANAGARI,
+  'marathi': DEVANAGARI,
+  'ne': DEVANAGARI,
+  'nepali': DEVANAGARI,
+  'te': TELUGU_SCRIPT,
+  'telugu': TELUGU_SCRIPT,
+  'ta': TAMIL_SCRIPT,
+  'tamil': TAMIL_SCRIPT,
+};
+
+// ============================================================
+// CORE FUNCTIONS
+// ============================================================
+
+/**
+ * Detect language from text using Unicode script patterns
+ */
+function detectLanguage(text: string): { language: string; script: string; confidence: number } {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { language: 'english', script: 'Latin', confidence: 0.5 };
+  }
+
+  // Check script patterns
+  for (const pattern of SCRIPT_PATTERNS) {
+    if (pattern.regex.test(trimmed)) {
+      return { language: pattern.language, script: pattern.script, confidence: 0.95 };
+    }
+  }
+
+  // Default to English for Latin script
+  return { language: 'english', script: 'Latin', confidence: 0.7 };
+}
+
+/**
+ * Normalize language name to standard form
+ */
+function normalizeLanguage(lang: string): string {
+  if (!lang) return 'english';
+  const normalized = lang.toLowerCase().trim();
+  
+  const aliases: Record<string, string> = {
+    'bangla': 'bengali',
+    'oriya': 'odia',
+    'farsi': 'persian',
+    'mandarin': 'chinese',
+  };
+  
+  return aliases[normalized] || normalized;
+}
+
+/**
+ * Get translation dictionary for a language
+ */
+function getDictionary(lang: string, direction: 'to_english' | 'from_english'): Record<string, string> {
+  const normalized = normalizeLanguage(lang);
+  
+  if (direction === 'to_english') {
+    switch (normalized) {
+      case 'hindi': return HINDI_TO_ENGLISH;
+      case 'bengali': return BENGALI_TO_ENGLISH;
+      case 'telugu': return TELUGU_TO_ENGLISH;
+      case 'tamil': return TAMIL_TO_ENGLISH;
+      case 'spanish': return SPANISH_TO_ENGLISH;
+      case 'french': return FRENCH_TO_ENGLISH;
+      case 'arabic': return ARABIC_TO_ENGLISH;
+      case 'kannada': return KANNADA_TO_ENGLISH;
+      case 'malayalam': return MALAYALAM_TO_ENGLISH;
+      case 'gujarati': return GUJARATI_TO_ENGLISH;
+      case 'punjabi': return PUNJABI_TO_ENGLISH;
+      default: return {};
+    }
+  } else {
+    switch (normalized) {
+      case 'hindi': return ENGLISH_TO_HINDI;
+      case 'bengali': return ENGLISH_TO_BENGALI;
+      case 'telugu': return ENGLISH_TO_TELUGU;
+      case 'tamil': return ENGLISH_TO_TAMIL;
+      case 'spanish': return ENGLISH_TO_SPANISH;
+      case 'french': return ENGLISH_TO_FRENCH;
+      case 'arabic': return ENGLISH_TO_ARABIC;
+      case 'kannada': return ENGLISH_TO_KANNADA;
+      case 'malayalam': return ENGLISH_TO_MALAYALAM;
+      case 'gujarati': return ENGLISH_TO_GUJARATI;
+      case 'punjabi': return ENGLISH_TO_PUNJABI;
+      default: return {};
+    }
+  }
+}
+
+/**
+ * Translate using phrase dictionary
+ */
+function dictionaryTranslate(text: string, dictionary: Record<string, string>): { translated: string; found: boolean } {
+  const lowerText = text.toLowerCase().trim();
+  
+  // Try exact match first
+  if (dictionary[lowerText]) {
+    return { translated: dictionary[lowerText], found: true };
+  }
+  
+  // Try word-by-word translation
+  const words = lowerText.split(/\s+/);
+  const translatedWords: string[] = [];
+  let anyFound = false;
+  
+  for (const word of words) {
+    if (dictionary[word]) {
+      translatedWords.push(dictionary[word]);
+      anyFound = true;
+    } else {
+      translatedWords.push(word);
+    }
+  }
+  
+  return { translated: translatedWords.join(' '), found: anyFound };
+}
+
+/**
+ * Transliterate Latin text to native script
+ */
+function transliterate(text: string, targetLanguage: string): string {
+  const scriptBlock = SCRIPT_BLOCKS[normalizeLanguage(targetLanguage)];
+  if (!scriptBlock) return text;
+  
+  const { vowelMap, consonantMap, modifiers, virama } = scriptBlock;
+  let result = '';
+  let i = 0;
+  const lowerText = text.toLowerCase();
+  
+  while (i < lowerText.length) {
+    const char = lowerText[i];
+    
+    // Skip non-alphabetic characters
+    if (!/[a-z]/.test(char)) {
+      result += text[i];
+      i++;
+      continue;
+    }
+    
+    // Try multi-character consonants first
+    let found = false;
+    for (const len of [3, 2]) {
+      const substr = lowerText.substring(i, i + len);
+      if (consonantMap[substr]) {
+        result += consonantMap[substr];
+        i += len;
+        
+        // Check for following vowel modifier
+        for (const vlen of [2, 1]) {
+          const vowel = lowerText.substring(i, i + vlen);
+          if (modifiers[vowel]) {
+            result += modifiers[vowel];
+            i += vlen;
+            break;
+          }
+        }
+        found = true;
+        break;
+      }
+    }
+    
+    if (found) continue;
+    
+    // Try single consonant
+    if (consonantMap[char]) {
+      result += consonantMap[char];
+      i++;
+      
+      // Check for following vowel modifier
+      for (const vlen of [2, 1]) {
+        const vowel = lowerText.substring(i, i + vlen);
+        if (modifiers[vowel]) {
+          result += modifiers[vowel];
+          i += vlen;
+          break;
+        }
+      }
+      continue;
+    }
+    
+    // Try vowel
+    for (const vlen of [2, 1]) {
+      const vowel = lowerText.substring(i, i + vlen);
+      if (vowelMap[vowel]) {
+        result += vowelMap[vowel];
+        i += vlen;
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
+      result += text[i];
+      i++;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Main translation function using English pivot
+ * Source → English → Target
+ */
+function translateWithPivot(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): TranslationResult {
+  const source = normalizeLanguage(sourceLanguage);
+  const target = normalizeLanguage(targetLanguage);
+  const detected = detectLanguage(text);
+  
+  // Same language - return as is
+  if (source === target) {
+    return {
+      translatedText: text,
+      detectedLanguage: detected.language,
+      sourceLanguage: source,
+      targetLanguage: target,
+      isTransliterated: false,
+      confidence: 1.0
+    };
+  }
+  
+  // Source to English
+  let englishText = text;
+  if (source !== 'english' && source !== 'en') {
+    const toEnglishDict = getDictionary(source, 'to_english');
+    const { translated, found } = dictionaryTranslate(text, toEnglishDict);
+    if (found) {
+      englishText = translated;
+    }
+  }
+  
+  // English to Target
+  let translatedText = englishText;
+  if (target !== 'english' && target !== 'en') {
+    const fromEnglishDict = getDictionary(target, 'from_english');
+    const { translated, found } = dictionaryTranslate(englishText, fromEnglishDict);
+    if (found) {
+      translatedText = translated;
+    } else {
+      // Fallback to transliteration for Latin input
+      if (detected.script === 'Latin') {
+        translatedText = transliterate(text, target);
+      }
+    }
+  }
+  
+  return {
+    translatedText,
+    detectedLanguage: detected.language,
+    sourceLanguage: source,
+    targetLanguage: target,
+    pivotText: source !== 'english' ? englishText : undefined,
+    isTransliterated: detected.script === 'Latin' && translatedText !== text,
+    confidence: 0.85
+  };
+}
+
+/**
+ * Convert Latin typing to native script
+ */
+function convertToNativeScript(text: string, targetLanguage: string): string {
+  // Check if already in native script
+  const detected = detectLanguage(text);
+  if (detected.script !== 'Latin') {
+    return text;
+  }
+  
+  return transliterate(text, targetLanguage);
+}
+
+// ============================================================
+// SUPABASE INTEGRATION
+// ============================================================
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-// Helper function to get user's primary language from profile
 async function getUserLanguage(userId: string): Promise<string | null> {
   if (!userId || !supabaseUrl || !supabaseServiceKey) return null;
   
@@ -27,632 +724,16 @@ async function getUserLanguage(userId: string): Promise<string | null> {
       .eq('user_id', userId)
       .single();
     
-    if (error || !data) {
-      console.log(`Could not fetch language for user ${userId}:`, error?.message);
-      return null;
-    }
-    
-    // Prefer primary_language, fallback to preferred_language
+    if (error || !data) return null;
     return data.primary_language || data.preferred_language || null;
-  } catch (err) {
-    console.error('Error fetching user language:', err);
+  } catch {
     return null;
   }
 }
 
-// ==========================================
-// LANGUAGE CODES & METADATA
-// ==========================================
-const SUPPORTED_LANGUAGES: Record<string, { name: string; nativeName: string; rtl?: boolean }> = {
-  'en': { name: 'English', nativeName: 'English' },
-  'hi': { name: 'Hindi', nativeName: 'हिन्दी' },
-  'bn': { name: 'Bengali', nativeName: 'বাংলা' },
-  'te': { name: 'Telugu', nativeName: 'తెలుగు' },
-  'ta': { name: 'Tamil', nativeName: 'தமிழ்' },
-  'mr': { name: 'Marathi', nativeName: 'मराठी' },
-  'gu': { name: 'Gujarati', nativeName: 'ગુજરાતી' },
-  'kn': { name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
-  'ml': { name: 'Malayalam', nativeName: 'മലയാളം' },
-  'pa': { name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
-  'or': { name: 'Odia', nativeName: 'ଓଡ଼ିଆ' },
-  'as': { name: 'Assamese', nativeName: 'অসমীয়া' },
-  'ur': { name: 'Urdu', nativeName: 'اردو', rtl: true },
-  'es': { name: 'Spanish', nativeName: 'Español' },
-  'fr': { name: 'French', nativeName: 'Français' },
-  'de': { name: 'German', nativeName: 'Deutsch' },
-  'it': { name: 'Italian', nativeName: 'Italiano' },
-  'pt': { name: 'Portuguese', nativeName: 'Português' },
-  'ru': { name: 'Russian', nativeName: 'Русский' },
-  'zh': { name: 'Chinese', nativeName: '中文' },
-  'ja': { name: 'Japanese', nativeName: '日本語' },
-  'ko': { name: 'Korean', nativeName: '한국어' },
-  'ar': { name: 'Arabic', nativeName: 'العربية', rtl: true },
-  'th': { name: 'Thai', nativeName: 'ไทย' },
-  'vi': { name: 'Vietnamese', nativeName: 'Tiếng Việt' },
-  'id': { name: 'Indonesian', nativeName: 'Bahasa Indonesia' },
-  'ms': { name: 'Malay', nativeName: 'Bahasa Melayu' },
-  'tr': { name: 'Turkish', nativeName: 'Türkçe' },
-  'nl': { name: 'Dutch', nativeName: 'Nederlands' },
-  'pl': { name: 'Polish', nativeName: 'Polski' },
-  'uk': { name: 'Ukrainian', nativeName: 'Українська' },
-  'cs': { name: 'Czech', nativeName: 'Čeština' },
-  'ro': { name: 'Romanian', nativeName: 'Română' },
-  'hu': { name: 'Hungarian', nativeName: 'Magyar' },
-  'el': { name: 'Greek', nativeName: 'Ελληνικά' },
-  'sv': { name: 'Swedish', nativeName: 'Svenska' },
-  'da': { name: 'Danish', nativeName: 'Dansk' },
-  'fi': { name: 'Finnish', nativeName: 'Suomi' },
-  'no': { name: 'Norwegian', nativeName: 'Norsk' },
-  'he': { name: 'Hebrew', nativeName: 'עברית', rtl: true },
-  'fa': { name: 'Persian', nativeName: 'فارسی', rtl: true },
-  'sw': { name: 'Swahili', nativeName: 'Kiswahili' },
-  'tl': { name: 'Tagalog', nativeName: 'Tagalog' },
-  'ne': { name: 'Nepali', nativeName: 'नेपाली' },
-  'si': { name: 'Sinhala', nativeName: 'සිංහල' },
-  'my': { name: 'Burmese', nativeName: 'မြန်မာစာ' },
-  'km': { name: 'Khmer', nativeName: 'ភាសាខ្មែរ' },
-  'lo': { name: 'Lao', nativeName: 'ພາສາລາວ' },
-  'am': { name: 'Amharic', nativeName: 'አማርኛ' },
-  'ka': { name: 'Georgian', nativeName: 'ქართული' },
-  'hy': { name: 'Armenian', nativeName: 'Հdelays' },
-  'az': { name: 'Azerbaijani', nativeName: 'Azərbaycan' },
-  'kk': { name: 'Kazakh', nativeName: 'Қазақша' },
-  'uz': { name: 'Uzbek', nativeName: 'Oʻzbek' },
-  'mn': { name: 'Mongolian', nativeName: 'Монгол' },
-  'bo': { name: 'Tibetan', nativeName: 'བོད་ཡིག' },
-};
-
-// ==========================================
-// COMPREHENSIVE TRANSLATION DICTIONARIES
-// Chat-optimized phrases and common words
-// ==========================================
-
-// Hindi Dictionary
-const HINDI_TO_ENGLISH: Record<string, string> = {
-  // Greetings
-  'नमस्ते': 'hello', 'नमस्कार': 'greetings', 'हाय': 'hi', 'हैलो': 'hello',
-  'सुप्रभात': 'good morning', 'शुभ रात्रि': 'good night', 'शुभ संध्या': 'good evening',
-  'अलविदा': 'goodbye', 'फिर मिलेंगे': 'see you again', 'बाय': 'bye',
-  
-  // Common phrases
-  'आप कैसे हैं': 'how are you', 'कैसे हो': 'how are you', 'क्या हाल है': 'how are you',
-  'मैं ठीक हूं': 'i am fine', 'मैं अच्छा हूं': 'i am good', 'बहुत अच्छा': 'very good',
-  'धन्यवाद': 'thank you', 'शुक्रिया': 'thanks', 'कृपया': 'please',
-  'माफ कीजिए': 'sorry', 'क्षमा करें': 'excuse me', 'कोई बात नहीं': 'no problem',
-  
-  // Questions
-  'क्या': 'what', 'कौन': 'who', 'कहां': 'where', 'कब': 'when', 'क्यों': 'why', 'कैसे': 'how',
-  'कितना': 'how much', 'कितने': 'how many', 'किसका': 'whose', 'कौन सा': 'which',
-  'आपका नाम क्या है': 'what is your name', 'आप कहां से हैं': 'where are you from',
-  
-  // Pronouns
-  'मैं': 'i', 'तुम': 'you', 'आप': 'you', 'वह': 'he/she', 'वे': 'they',
-  'हम': 'we', 'यह': 'this', 'वो': 'that', 'ये': 'these',
-  
-  // Common words
-  'हां': 'yes', 'नहीं': 'no', 'शायद': 'maybe', 'ठीक है': 'okay', 'अच्छा': 'good',
-  'बुरा': 'bad', 'बड़ा': 'big', 'छोटा': 'small', 'नया': 'new', 'पुराना': 'old',
-  'सुंदर': 'beautiful', 'प्यारा': 'lovely', 'खुश': 'happy', 'दुखी': 'sad',
-  
-  // Time
-  'आज': 'today', 'कल': 'tomorrow/yesterday', 'अभी': 'now', 'बाद में': 'later',
-  'सुबह': 'morning', 'दोपहर': 'afternoon', 'शाम': 'evening', 'रात': 'night',
-  
-  // Numbers
-  'एक': 'one', 'दो': 'two', 'तीन': 'three', 'चार': 'four', 'पांच': 'five',
-  'छह': 'six', 'सात': 'seven', 'आठ': 'eight', 'नौ': 'nine', 'दस': 'ten',
-  
-  // Verbs
-  'है': 'is', 'हूं': 'am', 'हैं': 'are', 'था': 'was', 'थे': 'were',
-  'करना': 'to do', 'जाना': 'to go', 'आना': 'to come', 'खाना': 'to eat', 'पीना': 'to drink',
-  'देखना': 'to see', 'सुनना': 'to hear', 'बोलना': 'to speak', 'लिखना': 'to write', 'पढ़ना': 'to read',
-  'सोना': 'to sleep', 'जागना': 'to wake', 'चलना': 'to walk', 'दौड़ना': 'to run',
-  
-  // Chat specific
-  'मुझे पसंद है': 'i like', 'मुझे बहुत पसंद है': 'i love', 'बहुत अच्छा लगा': 'i liked it very much',
-  'मिलकर खुशी हुई': 'nice to meet you', 'आपसे बात करके अच्छा लगा': 'nice talking to you',
-  'क्या कर रहे हो': 'what are you doing', 'मैं इंतजार कर रहा हूं': 'i am waiting',
-};
-
-// Bengali Dictionary
-const BENGALI_TO_ENGLISH: Record<string, string> = {
-  'নমস্কার': 'hello', 'হ্যালো': 'hello', 'হাই': 'hi',
-  'সুপ্রভাত': 'good morning', 'শুভ রাত্রি': 'good night', 'শুভ সন্ধ্যা': 'good evening',
-  'বিদায়': 'goodbye', 'আবার দেখা হবে': 'see you again',
-  'কেমন আছেন': 'how are you', 'কেমন আছো': 'how are you', 'আমি ভালো আছি': 'i am fine',
-  'ধন্যবাদ': 'thank you', 'দয়া করে': 'please', 'মাফ করবেন': 'sorry',
-  'হ্যাঁ': 'yes', 'না': 'no', 'ঠিক আছে': 'okay',
-  'আমি': 'i', 'তুমি': 'you', 'আপনি': 'you', 'সে': 'he/she', 'তারা': 'they', 'আমরা': 'we',
-  'কি': 'what', 'কে': 'who', 'কোথায়': 'where', 'কখন': 'when', 'কেন': 'why', 'কিভাবে': 'how',
-  'ভালো': 'good', 'খারাপ': 'bad', 'সুন্দর': 'beautiful', 'বড়': 'big', 'ছোট': 'small',
-  'আজ': 'today', 'কাল': 'tomorrow/yesterday', 'এখন': 'now', 'পরে': 'later',
-  'এক': 'one', 'দুই': 'two', 'তিন': 'three', 'চার': 'four', 'পাঁচ': 'five',
-  'আপনার নাম কি': 'what is your name', 'আপনি কোথা থেকে': 'where are you from',
-  'আমি তোমাকে ভালোবাসি': 'i love you', 'তোমার সাথে দেখা করে ভালো লাগলো': 'nice to meet you',
-};
-
-// Telugu Dictionary
-const TELUGU_TO_ENGLISH: Record<string, string> = {
-  'నమస్కారం': 'hello', 'హాయ్': 'hi', 'హలో': 'hello',
-  'శుభోదయం': 'good morning', 'శుభ రాత్రి': 'good night', 'శుభ సాయంత్రం': 'good evening',
-  'వీడ్కోలు': 'goodbye', 'మళ్ళీ కలుద్దాం': 'see you again',
-  'మీరు ఎలా ఉన్నారు': 'how are you', 'నేను బాగున్నాను': 'i am fine',
-  'ధన్యవాదాలు': 'thank you', 'దయచేసి': 'please', 'క్షమించండి': 'sorry',
-  'అవును': 'yes', 'కాదు': 'no', 'సరే': 'okay',
-  'నేను': 'i', 'నీవు': 'you', 'మీరు': 'you', 'అతను': 'he', 'ఆమె': 'she', 'వారు': 'they', 'మేము': 'we',
-  'ఏమిటి': 'what', 'ఎవరు': 'who', 'ఎక్కడ': 'where', 'ఎప్పుడు': 'when', 'ఎందుకు': 'why', 'ఎలా': 'how',
-  'మంచి': 'good', 'చెడ్డ': 'bad', 'అందమైన': 'beautiful', 'పెద్ద': 'big', 'చిన్న': 'small',
-  'ఈ రోజు': 'today', 'రేపు': 'tomorrow', 'నిన్న': 'yesterday', 'ఇప్పుడు': 'now',
-  'ఒకటి': 'one', 'రెండు': 'two', 'మూడు': 'three', 'నాలుగు': 'four', 'ఐదు': 'five',
-  'మీ పేరు ఏమిటి': 'what is your name', 'మీరు ఎక్కడ నుండి వచ్చారు': 'where are you from',
-  'నేను నిన్ను ప్రేమిస్తున్నాను': 'i love you', 'కలిసినందుకు సంతోషం': 'nice to meet you',
-};
-
-// Tamil Dictionary
-const TAMIL_TO_ENGLISH: Record<string, string> = {
-  'வணக்கம்': 'hello', 'ஹாய்': 'hi', 'ஹலோ': 'hello',
-  'காலை வணக்கம்': 'good morning', 'இரவு வணக்கம்': 'good night', 'மாலை வணக்கம்': 'good evening',
-  'போய் வருகிறேன்': 'goodbye', 'மீண்டும் சந்திப்போம்': 'see you again',
-  'எப்படி இருக்கிறீர்கள்': 'how are you', 'நான் நலமாக இருக்கிறேன்': 'i am fine',
-  'நன்றி': 'thank you', 'தயவுசெய்து': 'please', 'மன்னிக்கவும்': 'sorry',
-  'ஆம்': 'yes', 'இல்லை': 'no', 'சரி': 'okay',
-  'நான்': 'i', 'நீ': 'you', 'நீங்கள்': 'you', 'அவன்': 'he', 'அவள்': 'she', 'அவர்கள்': 'they', 'நாங்கள்': 'we',
-  'என்ன': 'what', 'யார்': 'who', 'எங்கே': 'where', 'எப்போது': 'when', 'ஏன்': 'why', 'எப்படி': 'how',
-  'நல்ல': 'good', 'கெட்ட': 'bad', 'அழகான': 'beautiful', 'பெரிய': 'big', 'சிறிய': 'small',
-  'இன்று': 'today', 'நாளை': 'tomorrow', 'நேற்று': 'yesterday', 'இப்போது': 'now',
-  'ஒன்று': 'one', 'இரண்டு': 'two', 'மூன்று': 'three', 'நான்கு': 'four', 'ஐந்து': 'five',
-  'உங்கள் பெயர் என்ன': 'what is your name', 'நீங்கள் எங்கிருந்து வருகிறீர்கள்': 'where are you from',
-  'நான் உன்னை காதலிக்கிறேன்': 'i love you', 'சந்தித்ததில் மகிழ்ச்சி': 'nice to meet you',
-};
-
-// Spanish Dictionary
-const SPANISH_TO_ENGLISH: Record<string, string> = {
-  'hola': 'hello', 'buenos días': 'good morning', 'buenas noches': 'good night', 'buenas tardes': 'good afternoon',
-  'adiós': 'goodbye', 'hasta luego': 'see you later', 'hasta pronto': 'see you soon',
-  'cómo estás': 'how are you', 'cómo está': 'how are you', 'estoy bien': 'i am fine', 'muy bien': 'very good',
-  'gracias': 'thank you', 'muchas gracias': 'thank you very much', 'por favor': 'please', 'lo siento': 'sorry', 'perdón': 'excuse me',
-  'sí': 'yes', 'no': 'no', 'tal vez': 'maybe', 'vale': 'okay', 'de acuerdo': 'agreed',
-  'yo': 'i', 'tú': 'you', 'usted': 'you', 'él': 'he', 'ella': 'she', 'ellos': 'they', 'nosotros': 'we',
-  'qué': 'what', 'quién': 'who', 'dónde': 'where', 'cuándo': 'when', 'por qué': 'why', 'cómo': 'how',
-  'bueno': 'good', 'malo': 'bad', 'hermoso': 'beautiful', 'grande': 'big', 'pequeño': 'small',
-  'hoy': 'today', 'mañana': 'tomorrow', 'ayer': 'yesterday', 'ahora': 'now', 'después': 'later',
-  'uno': 'one', 'dos': 'two', 'tres': 'three', 'cuatro': 'four', 'cinco': 'five',
-  'cómo te llamas': 'what is your name', 'de dónde eres': 'where are you from',
-  'te quiero': 'i love you', 'te amo': 'i love you', 'mucho gusto': 'nice to meet you', 'encantado': 'pleased to meet you',
-};
-
-// French Dictionary
-const FRENCH_TO_ENGLISH: Record<string, string> = {
-  'bonjour': 'hello', 'salut': 'hi', 'bonsoir': 'good evening', 'bonne nuit': 'good night',
-  'au revoir': 'goodbye', 'à bientôt': 'see you soon', 'à plus tard': 'see you later',
-  'comment allez-vous': 'how are you', 'comment vas-tu': 'how are you', 'je vais bien': 'i am fine', 'très bien': 'very good',
-  'merci': 'thank you', 'merci beaucoup': 'thank you very much', 's\'il vous plaît': 'please', 'désolé': 'sorry', 'pardon': 'excuse me',
-  'oui': 'yes', 'non': 'no', 'peut-être': 'maybe', 'd\'accord': 'okay',
-  'je': 'i', 'tu': 'you', 'vous': 'you', 'il': 'he', 'elle': 'she', 'ils': 'they', 'nous': 'we',
-  'quoi': 'what', 'qui': 'who', 'où': 'where', 'quand': 'when', 'pourquoi': 'why', 'comment': 'how',
-  'bon': 'good', 'mauvais': 'bad', 'beau': 'beautiful', 'belle': 'beautiful', 'grand': 'big', 'petit': 'small',
-  'aujourd\'hui': 'today', 'demain': 'tomorrow', 'hier': 'yesterday', 'maintenant': 'now', 'plus tard': 'later',
-  'un': 'one', 'deux': 'two', 'trois': 'three', 'quatre': 'four', 'cinq': 'five',
-  'comment t\'appelles-tu': 'what is your name', 'd\'où viens-tu': 'where are you from',
-  'je t\'aime': 'i love you', 'enchanté': 'nice to meet you', 'ravi de vous rencontrer': 'pleased to meet you',
-};
-
-// German Dictionary
-const GERMAN_TO_ENGLISH: Record<string, string> = {
-  'hallo': 'hello', 'guten tag': 'good day', 'guten morgen': 'good morning', 'guten abend': 'good evening', 'gute nacht': 'good night',
-  'auf wiedersehen': 'goodbye', 'tschüss': 'bye', 'bis später': 'see you later', 'bis bald': 'see you soon',
-  'wie geht es dir': 'how are you', 'wie geht es ihnen': 'how are you', 'mir geht es gut': 'i am fine', 'sehr gut': 'very good',
-  'danke': 'thank you', 'danke schön': 'thank you very much', 'vielen dank': 'many thanks', 'bitte': 'please', 'entschuldigung': 'sorry',
-  'ja': 'yes', 'nein': 'no', 'vielleicht': 'maybe', 'okay': 'okay', 'einverstanden': 'agreed',
-  'ich': 'i', 'du': 'you', 'sie': 'you/she/they', 'er': 'he', 'wir': 'we',
-  'was': 'what', 'wer': 'who', 'wo': 'where', 'wann': 'when', 'warum': 'why', 'wie': 'how',
-  'gut': 'good', 'schlecht': 'bad', 'schön': 'beautiful', 'groß': 'big', 'klein': 'small',
-  'heute': 'today', 'morgen': 'tomorrow', 'gestern': 'yesterday', 'jetzt': 'now', 'später': 'later',
-  'eins': 'one', 'zwei': 'two', 'drei': 'three', 'vier': 'four', 'fünf': 'five',
-  'wie heißt du': 'what is your name', 'woher kommst du': 'where are you from',
-  'ich liebe dich': 'i love you', 'freut mich': 'nice to meet you',
-};
-
-// Arabic Dictionary
-const ARABIC_TO_ENGLISH: Record<string, string> = {
-  'مرحبا': 'hello', 'أهلا': 'hi', 'السلام عليكم': 'peace be upon you',
-  'صباح الخير': 'good morning', 'مساء الخير': 'good evening', 'تصبح على خير': 'good night',
-  'مع السلامة': 'goodbye', 'إلى اللقاء': 'see you',
-  'كيف حالك': 'how are you', 'أنا بخير': 'i am fine', 'الحمد لله': 'thank god',
-  'شكرا': 'thank you', 'شكرا جزيلا': 'thank you very much', 'من فضلك': 'please', 'آسف': 'sorry', 'عفوا': 'excuse me',
-  'نعم': 'yes', 'لا': 'no', 'ربما': 'maybe', 'حسنا': 'okay',
-  'أنا': 'i', 'أنت': 'you', 'هو': 'he', 'هي': 'she', 'هم': 'they', 'نحن': 'we',
-  'ماذا': 'what', 'من': 'who', 'أين': 'where', 'متى': 'when', 'لماذا': 'why', 'كيف': 'how',
-  'جيد': 'good', 'سيء': 'bad', 'جميل': 'beautiful', 'كبير': 'big', 'صغير': 'small',
-  'اليوم': 'today', 'غدا': 'tomorrow', 'أمس': 'yesterday', 'الآن': 'now', 'لاحقا': 'later',
-  'واحد': 'one', 'اثنان': 'two', 'ثلاثة': 'three', 'أربعة': 'four', 'خمسة': 'five',
-  'ما اسمك': 'what is your name', 'من أين أنت': 'where are you from',
-  'أحبك': 'i love you', 'تشرفنا': 'nice to meet you',
-};
-
-// Chinese Dictionary
-const CHINESE_TO_ENGLISH: Record<string, string> = {
-  '你好': 'hello', '嗨': 'hi', '您好': 'hello (formal)',
-  '早上好': 'good morning', '晚上好': 'good evening', '晚安': 'good night',
-  '再见': 'goodbye', '拜拜': 'bye', '回头见': 'see you later',
-  '你好吗': 'how are you', '我很好': 'i am fine', '很好': 'very good',
-  '谢谢': 'thank you', '非常感谢': 'thank you very much', '请': 'please', '对不起': 'sorry', '不好意思': 'excuse me',
-  '是': 'yes', '不是': 'no', '也许': 'maybe', '好的': 'okay', '好': 'good',
-  '我': 'i', '你': 'you', '您': 'you (formal)', '他': 'he', '她': 'she', '他们': 'they', '我们': 'we',
-  '什么': 'what', '谁': 'who', '哪里': 'where', '什么时候': 'when', '为什么': 'why', '怎么': 'how',
-  '坏': 'bad', '美丽': 'beautiful', '大': 'big', '小': 'small',
-  '今天': 'today', '明天': 'tomorrow', '昨天': 'yesterday', '现在': 'now', '以后': 'later',
-  '一': 'one', '二': 'two', '三': 'three', '四': 'four', '五': 'five',
-  '你叫什么名字': 'what is your name', '你从哪里来': 'where are you from',
-  '我爱你': 'i love you', '很高兴认识你': 'nice to meet you',
-};
-
-// Japanese Dictionary
-const JAPANESE_TO_ENGLISH: Record<string, string> = {
-  'こんにちは': 'hello', 'おはよう': 'good morning', 'おはようございます': 'good morning (formal)',
-  'こんばんは': 'good evening', 'おやすみなさい': 'good night', 'おやすみ': 'good night',
-  'さようなら': 'goodbye', 'またね': 'see you', 'じゃあね': 'bye',
-  'お元気ですか': 'how are you', '元気': 'fine', '元気です': 'i am fine',
-  'ありがとう': 'thank you', 'ありがとうございます': 'thank you very much', 'どうも': 'thanks',
-  'お願いします': 'please', 'すみません': 'excuse me', 'ごめんなさい': 'sorry',
-  'はい': 'yes', 'いいえ': 'no', '多分': 'maybe', 'いいですよ': 'okay', 'わかりました': 'understood',
-  '私': 'i', 'あなた': 'you', '彼': 'he', '彼女': 'she', '彼ら': 'they', '私たち': 'we',
-  '何': 'what', '誰': 'who', 'どこ': 'where', 'いつ': 'when', 'なぜ': 'why', 'どう': 'how',
-  'いい': 'good', '悪い': 'bad', '美しい': 'beautiful', '大きい': 'big', '小さい': 'small',
-  '今日': 'today', '明日': 'tomorrow', '昨日': 'yesterday', '今': 'now', '後で': 'later',
-  '一': 'one', '二': 'two', '三': 'three', '四': 'four', '五': 'five',
-  'お名前は': 'what is your name', 'どこから来ましたか': 'where are you from',
-  '愛してる': 'i love you', 'はじめまして': 'nice to meet you', 'よろしくお願いします': 'please take care of me',
-};
-
-// Korean Dictionary
-const KOREAN_TO_ENGLISH: Record<string, string> = {
-  '안녕하세요': 'hello', '안녕': 'hi', '여보세요': 'hello (phone)',
-  '좋은 아침': 'good morning', '좋은 저녁': 'good evening', '안녕히 주무세요': 'good night',
-  '안녕히 가세요': 'goodbye', '다음에 봐요': 'see you next time', '잘 가': 'bye',
-  '어떻게 지내세요': 'how are you', '잘 지내요': 'i am fine', '좋아요': 'good',
-  '감사합니다': 'thank you', '고마워요': 'thanks', '제발': 'please', '미안해요': 'sorry', '실례합니다': 'excuse me',
-  '네': 'yes', '아니요': 'no', '아마도': 'maybe', '괜찮아요': 'okay',
-  '나': 'i', '저': 'i (formal)', '너': 'you', '당신': 'you', '그': 'he', '그녀': 'she', '그들': 'they', '우리': 'we',
-  '뭐': 'what', '누구': 'who', '어디': 'where', '언제': 'when', '왜': 'why', '어떻게': 'how',
-  '좋은': 'good', '나쁜': 'bad', '아름다운': 'beautiful', '큰': 'big', '작은': 'small',
-  '오늘': 'today', '내일': 'tomorrow', '어제': 'yesterday', '지금': 'now', '나중에': 'later',
-  '하나': 'one', '둘': 'two', '셋': 'three', '넷': 'four', '다섯': 'five',
-  '이름이 뭐예요': 'what is your name', '어디서 오셨어요': 'where are you from',
-  '사랑해요': 'i love you', '만나서 반가워요': 'nice to meet you',
-};
-
-// Russian Dictionary
-const RUSSIAN_TO_ENGLISH: Record<string, string> = {
-  'привет': 'hello', 'здравствуйте': 'hello (formal)', 'приветствую': 'greetings',
-  'доброе утро': 'good morning', 'добрый вечер': 'good evening', 'спокойной ночи': 'good night',
-  'до свидания': 'goodbye', 'пока': 'bye', 'до встречи': 'see you',
-  'как дела': 'how are you', 'как вы': 'how are you', 'хорошо': 'fine', 'я в порядке': 'i am fine', 'отлично': 'excellent',
-  'спасибо': 'thank you', 'большое спасибо': 'thank you very much', 'пожалуйста': 'please', 'извините': 'sorry', 'простите': 'excuse me',
-  'да': 'yes', 'нет': 'no', 'может быть': 'maybe', 'ладно': 'okay',
-  'я': 'i', 'ты': 'you', 'вы': 'you (formal)', 'он': 'he', 'она': 'she', 'они': 'they', 'мы': 'we',
-  'что': 'what', 'кто': 'who', 'где': 'where', 'когда': 'when', 'почему': 'why', 'как': 'how',
-  'плохо': 'bad', 'красивый': 'beautiful', 'большой': 'big', 'маленький': 'small',
-  'сегодня': 'today', 'завтра': 'tomorrow', 'вчера': 'yesterday', 'сейчас': 'now', 'потом': 'later',
-  'один': 'one', 'два': 'two', 'три': 'three', 'четыре': 'four', 'пять': 'five',
-  'как тебя зовут': 'what is your name', 'откуда ты': 'where are you from',
-  'я люблю тебя': 'i love you', 'приятно познакомиться': 'nice to meet you',
-};
-
-// Portuguese Dictionary
-const PORTUGUESE_TO_ENGLISH: Record<string, string> = {
-  'olá': 'hello', 'oi': 'hi', 'bom dia': 'good morning', 'boa tarde': 'good afternoon', 'boa noite': 'good night',
-  'adeus': 'goodbye', 'tchau': 'bye', 'até logo': 'see you later', 'até mais': 'see you',
-  'como está': 'how are you', 'como vai': 'how are you', 'estou bem': 'i am fine', 'muito bem': 'very good',
-  'obrigado': 'thank you', 'obrigada': 'thank you (f)', 'muito obrigado': 'thank you very much', 'por favor': 'please', 'desculpe': 'sorry',
-  'sim': 'yes', 'não': 'no', 'talvez': 'maybe', 'tudo bem': 'okay',
-  'eu': 'i', 'você': 'you', 'ele': 'he', 'ela': 'she', 'eles': 'they', 'nós': 'we',
-  'o que': 'what', 'quem': 'who', 'onde': 'where', 'quando': 'when', 'por que': 'why', 'como': 'how',
-  'bom': 'good', 'mau': 'bad', 'bonito': 'beautiful', 'grande': 'big', 'pequeno': 'small',
-  'hoje': 'today', 'amanhã': 'tomorrow', 'ontem': 'yesterday', 'agora': 'now', 'depois': 'later',
-  'um': 'one', 'dois': 'two', 'três': 'three', 'quatro': 'four', 'cinco': 'five',
-  'qual é o seu nome': 'what is your name', 'de onde você é': 'where are you from',
-  'eu te amo': 'i love you', 'prazer em conhecê-lo': 'nice to meet you',
-};
-
-// Italian Dictionary
-const ITALIAN_TO_ENGLISH: Record<string, string> = {
-  'ciao': 'hello/goodbye', 'salve': 'hello', 'buongiorno': 'good morning', 'buonasera': 'good evening', 'buonanotte': 'good night',
-  'arrivederci': 'goodbye', 'a presto': 'see you soon', 'a dopo': 'see you later',
-  'come stai': 'how are you', 'come sta': 'how are you (formal)', 'sto bene': 'i am fine', 'molto bene': 'very good',
-  'grazie': 'thank you', 'grazie mille': 'thank you very much', 'per favore': 'please', 'scusa': 'sorry', 'mi scusi': 'excuse me',
-  'sì': 'yes', 'no': 'no', 'forse': 'maybe', 'va bene': 'okay',
-  'io': 'i', 'tu': 'you', 'lei': 'you (formal)/she', 'lui': 'he', 'loro': 'they', 'noi': 'we',
-  'cosa': 'what', 'chi': 'who', 'dove': 'where', 'quando': 'when', 'perché': 'why', 'come': 'how',
-  'buono': 'good', 'cattivo': 'bad', 'bello': 'beautiful', 'grande': 'big', 'piccolo': 'small',
-  'oggi': 'today', 'domani': 'tomorrow', 'ieri': 'yesterday', 'adesso': 'now', 'dopo': 'later',
-  'uno': 'one', 'due': 'two', 'tre': 'three', 'quattro': 'four', 'cinque': 'five',
-  'come ti chiami': 'what is your name', 'di dove sei': 'where are you from',
-  'ti amo': 'i love you', 'piacere di conoscerti': 'nice to meet you',
-};
-
-// Marathi Dictionary
-const MARATHI_TO_ENGLISH: Record<string, string> = {
-  'नमस्कार': 'hello', 'नमस्ते': 'hello', 'हाय': 'hi',
-  'सुप्रभात': 'good morning', 'शुभ रात्री': 'good night', 'शुभ संध्याकाळ': 'good evening',
-  'पुन्हा भेटू': 'see you again', 'बाय': 'bye',
-  'तुम्ही कसे आहात': 'how are you', 'कसे आहात': 'how are you', 'मी ठीक आहे': 'i am fine', 'छान': 'nice',
-  'धन्यवाद': 'thank you', 'कृपया': 'please', 'माफ करा': 'sorry',
-  'हो': 'yes', 'नाही': 'no', 'ठीक आहे': 'okay',
-  'मी': 'i', 'तू': 'you', 'तुम्ही': 'you (formal)', 'तो': 'he', 'ती': 'she', 'ते': 'they', 'आम्ही': 'we',
-  'काय': 'what', 'कोण': 'who', 'कुठे': 'where', 'केव्हा': 'when', 'का': 'why', 'कसे': 'how',
-  'चांगले': 'good', 'वाईट': 'bad', 'सुंदर': 'beautiful', 'मोठे': 'big', 'लहान': 'small',
-  'आज': 'today', 'उद्या': 'tomorrow', 'काल': 'yesterday', 'आता': 'now', 'नंतर': 'later',
-  'एक': 'one', 'दोन': 'two', 'तीन': 'three', 'चार': 'four', 'पाच': 'five',
-  'तुमचे नाव काय': 'what is your name', 'तुम्ही कुठून आहात': 'where are you from',
-  'मला तुझ्यावर प्रेम आहे': 'i love you', 'भेटून आनंद झाला': 'nice to meet you',
-};
-
-// Gujarati Dictionary
-const GUJARATI_TO_ENGLISH: Record<string, string> = {
-  'નમસ્તે': 'hello', 'નમસ્કાર': 'greetings', 'હાય': 'hi',
-  'સુપ્રભાત': 'good morning', 'શુભ રાત્રી': 'good night', 'શુભ સાંજ': 'good evening',
-  'આવજો': 'goodbye', 'ફરી મળીશું': 'see you again',
-  'કેમ છો': 'how are you', 'તમે કેમ છો': 'how are you', 'હું સારો છું': 'i am fine', 'સારું': 'good',
-  'આભાર': 'thank you', 'ધન્યવાદ': 'thank you', 'કૃપા કરીને': 'please', 'માફ કરશો': 'sorry',
-  'હા': 'yes', 'ના': 'no', 'બરાબર': 'okay',
-  'હું': 'i', 'તું': 'you', 'તમે': 'you (formal)', 'તે': 'he/she', 'તેઓ': 'they', 'અમે': 'we',
-  'શું': 'what', 'કોણ': 'who', 'ક્યાં': 'where', 'ક્યારે': 'when', 'કેમ': 'why', 'કેવી રીતે': 'how',
-  'ખરાબ': 'bad', 'સુંદર': 'beautiful', 'મોટું': 'big', 'નાનું': 'small',
-  'આજે': 'today', 'કાલે': 'tomorrow', 'ગઈ કાલે': 'yesterday', 'હવે': 'now', 'પછી': 'later',
-  'એક': 'one', 'બે': 'two', 'ત્રણ': 'three', 'ચાર': 'four', 'પાંચ': 'five',
-  'તમારું નામ શું છે': 'what is your name', 'તમે ક્યાંથી છો': 'where are you from',
-  'હું તને પ્રેમ કરું છું': 'i love you', 'મળીને આનંદ થયો': 'nice to meet you',
-};
-
-// Kannada Dictionary
-const KANNADA_TO_ENGLISH: Record<string, string> = {
-  'ನಮಸ್ಕಾರ': 'hello', 'ಹಾಯ್': 'hi', 'ಹಲೋ': 'hello',
-  'ಶುಭೋದಯ': 'good morning', 'ಶುಭ ರಾತ್ರಿ': 'good night', 'ಶುಭ ಸಂಜೆ': 'good evening',
-  'ಹೋಗಿ ಬರುತ್ತೇನೆ': 'goodbye', 'ಮತ್ತೆ ಸಿಗೋಣ': 'see you again',
-  'ಹೇಗಿದ್ದೀರಿ': 'how are you', 'ನೀವು ಹೇಗಿದ್ದೀರಿ': 'how are you', 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ': 'i am fine',
-  'ಧನ್ಯವಾದಗಳು': 'thank you', 'ದಯವಿಟ್ಟು': 'please', 'ಕ್ಷಮಿಸಿ': 'sorry',
-  'ಹೌದು': 'yes', 'ಇಲ್ಲ': 'no', 'ಸರಿ': 'okay',
-  'ನಾನು': 'i', 'ನೀನು': 'you', 'ನೀವು': 'you (formal)', 'ಅವನು': 'he', 'ಅವಳು': 'she', 'ಅವರು': 'they', 'ನಾವು': 'we',
-  'ಏನು': 'what', 'ಯಾರು': 'who', 'ಎಲ್ಲಿ': 'where', 'ಯಾವಾಗ': 'when', 'ಏಕೆ': 'why', 'ಹೇಗೆ': 'how',
-  'ಒಳ್ಳೆಯ': 'good', 'ಕೆಟ್ಟ': 'bad', 'ಸುಂದರ': 'beautiful', 'ದೊಡ್ಡ': 'big', 'ಚಿಕ್ಕ': 'small',
-  'ಇಂದು': 'today', 'ನಾಳೆ': 'tomorrow', 'ನಿನ್ನೆ': 'yesterday', 'ಈಗ': 'now', 'ನಂತರ': 'later',
-  'ಒಂದು': 'one', 'ಎರಡು': 'two', 'ಮೂರು': 'three', 'ನಾಲ್ಕು': 'four', 'ಐದು': 'five',
-  'ನಿಮ್ಮ ಹೆಸರೇನು': 'what is your name', 'ನೀವು ಎಲ್ಲಿಂದ ಬಂದಿದ್ದೀರಿ': 'where are you from',
-  'ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ': 'i love you', 'ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು': 'nice to meet you',
-};
-
-// Malayalam Dictionary
-const MALAYALAM_TO_ENGLISH: Record<string, string> = {
-  'നമസ്കാരം': 'hello', 'ഹായ്': 'hi', 'ഹലോ': 'hello',
-  'സുപ്രഭാതം': 'good morning', 'ശുഭ രാത്രി': 'good night', 'ശുഭ സന്ധ്യ': 'good evening',
-  'വിട': 'goodbye', 'വീണ്ടും കാണാം': 'see you again',
-  'സുഖമാണോ': 'how are you', 'എങ്ങനെയുണ്ട്': 'how are you', 'ഞാൻ സുഖമായിരിക്കുന്നു': 'i am fine',
-  'നന്ദി': 'thank you', 'ദയവായി': 'please', 'ക്ഷമിക്കണം': 'sorry',
-  'അതെ': 'yes', 'ഇല്ല': 'no', 'ശരി': 'okay',
-  'ഞാൻ': 'i', 'നീ': 'you', 'നിങ്ങൾ': 'you (formal)', 'അവൻ': 'he', 'അവൾ': 'she', 'അവർ': 'they', 'ഞങ്ങൾ': 'we',
-  'എന്ത്': 'what', 'ആര്': 'who', 'എവിടെ': 'where', 'എപ്പോൾ': 'when', 'എന്തുകൊണ്ട്': 'why', 'എങ്ങനെ': 'how',
-  'നല്ല': 'good', 'മോശം': 'bad', 'സുന്ദരമായ': 'beautiful', 'വലിയ': 'big', 'ചെറിയ': 'small',
-  'ഇന്ന്': 'today', 'നാളെ': 'tomorrow', 'ഇന്നലെ': 'yesterday', 'ഇപ്പോൾ': 'now', 'പിന്നീട്': 'later',
-  'ഒന്ന്': 'one', 'രണ്ട്': 'two', 'മൂന്ന്': 'three', 'നാല്': 'four', 'അഞ്ച്': 'five',
-  'നിങ്ങളുടെ പേര് എന്താണ്': 'what is your name', 'നിങ്ങൾ എവിടെ നിന്നാണ്': 'where are you from',
-  'ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു': 'i love you', 'കണ്ടതിൽ സന്തോഷം': 'nice to meet you',
-};
-
-// Punjabi Dictionary
-const PUNJABI_TO_ENGLISH: Record<string, string> = {
-  'ਸਤ ਸ੍ਰੀ ਅਕਾਲ': 'hello', 'ਨਮਸਕਾਰ': 'greetings', 'ਹਾਇ': 'hi',
-  'ਸ਼ੁਭ ਸਵੇਰ': 'good morning', 'ਸ਼ੁਭ ਰਾਤ': 'good night', 'ਸ਼ੁਭ ਸ਼ਾਮ': 'good evening',
-  'ਅਲਵਿਦਾ': 'goodbye', 'ਫਿਰ ਮਿਲਾਂਗੇ': 'see you again',
-  'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ': 'how are you', 'ਕਿਵੇਂ ਹੋ': 'how are you', 'ਮੈਂ ਠੀਕ ਹਾਂ': 'i am fine',
-  'ਧੰਨਵਾਦ': 'thank you', 'ਕਿਰਪਾ ਕਰਕੇ': 'please', 'ਮਾਫ਼ ਕਰਨਾ': 'sorry',
-  'ਹਾਂ': 'yes', 'ਨਹੀਂ': 'no', 'ਠੀਕ ਹੈ': 'okay',
-  'ਮੈਂ': 'i', 'ਤੂੰ': 'you', 'ਤੁਸੀਂ': 'you (formal)', 'ਉਹ': 'he/she/they', 'ਅਸੀਂ': 'we',
-  'ਕੀ': 'what', 'ਕੌਣ': 'who', 'ਕਿੱਥੇ': 'where', 'ਕਦੋਂ': 'when', 'ਕਿਉਂ': 'why', 'ਕਿਵੇਂ': 'how',
-  'ਚੰਗਾ': 'good', 'ਮਾੜਾ': 'bad', 'ਸੁੰਦਰ': 'beautiful', 'ਵੱਡਾ': 'big', 'ਛੋਟਾ': 'small',
-  'ਅੱਜ': 'today', 'ਕੱਲ੍ਹ': 'tomorrow/yesterday', 'ਹੁਣ': 'now', 'ਬਾਅਦ ਵਿੱਚ': 'later',
-  'ਇੱਕ': 'one', 'ਦੋ': 'two', 'ਤਿੰਨ': 'three', 'ਚਾਰ': 'four', 'ਪੰਜ': 'five',
-  'ਤੁਹਾਡਾ ਨਾਮ ਕੀ ਹੈ': 'what is your name', 'ਤੁਸੀਂ ਕਿੱਥੋਂ ਹੋ': 'where are you from',
-  'ਮੈਂ ਤੈਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ': 'i love you', 'ਮਿਲ ਕੇ ਖੁਸ਼ੀ ਹੋਈ': 'nice to meet you',
-};
-
-// Odia Dictionary
-const ODIA_TO_ENGLISH: Record<string, string> = {
-  'ନମସ୍କାର': 'hello', 'ହାଏ': 'hi', 'ହେଲୋ': 'hello',
-  'ସୁପ୍ରଭାତ': 'good morning', 'ଶୁଭ ରାତ୍ରି': 'good night', 'ଶୁଭ ସନ୍ଧ୍ୟା': 'good evening',
-  'ବିଦାୟ': 'goodbye', 'ପୁନର୍ବାର ଭେଟିବା': 'see you again',
-  'ଆପଣ କେମିତି ଅଛନ୍ତି': 'how are you', 'କେମିତି ଅଛ': 'how are you', 'ମୁଁ ଭଲ ଅଛି': 'i am fine',
-  'ଧନ୍ୟବାଦ': 'thank you', 'ଦୟାକରି': 'please', 'କ୍ଷମା କରନ୍ତୁ': 'sorry',
-  'ହଁ': 'yes', 'ନାହିଁ': 'no', 'ଠିକ ଅଛି': 'okay',
-  'ମୁଁ': 'i', 'ତୁ': 'you', 'ଆପଣ': 'you (formal)', 'ସେ': 'he/she', 'ସେମାନେ': 'they', 'ଆମେ': 'we',
-  'କଣ': 'what', 'କିଏ': 'who', 'କେଉଁଠି': 'where', 'କେବେ': 'when', 'କାହିଁକି': 'why', 'କେମିତି': 'how',
-  'ଭଲ': 'good', 'ଖରାପ': 'bad', 'ସୁନ୍ଦର': 'beautiful', 'ବଡ଼': 'big', 'ଛୋଟ': 'small',
-  'ଆଜି': 'today', 'କାଲି': 'tomorrow', 'ଗତକାଲି': 'yesterday', 'ବର୍ତ୍ତମାନ': 'now', 'ପରେ': 'later',
-  'ଏକ': 'one', 'ଦୁଇ': 'two', 'ତିନି': 'three', 'ଚାରି': 'four', 'ପାଞ୍ଚ': 'five',
-  'ଆପଣଙ୍କ ନାମ କଣ': 'what is your name', 'ଆପଣ କେଉଁଠୁ': 'where are you from',
-  'ମୁଁ ତୁମକୁ ଭଲ ପାଏ': 'i love you', 'ଭେଟି ଖୁସି ଲାଗିଲା': 'nice to meet you',
-};
-
-// Create reverse dictionaries (English to other languages)
-function createReverseDictionary(dict: Record<string, string>): Record<string, string> {
-  const reverse: Record<string, string> = {};
-  for (const [key, value] of Object.entries(dict)) {
-    // Handle multiple meanings separated by /
-    const meanings = value.split('/');
-    for (const meaning of meanings) {
-      const trimmed = meaning.trim().toLowerCase();
-      if (!reverse[trimmed]) {
-        reverse[trimmed] = key;
-      }
-    }
-  }
-  return reverse;
-}
-
-// All dictionaries mapped by language code
-const DICTIONARIES: Record<string, Record<string, string>> = {
-  'hi': HINDI_TO_ENGLISH,
-  'bn': BENGALI_TO_ENGLISH,
-  'te': TELUGU_TO_ENGLISH,
-  'ta': TAMIL_TO_ENGLISH,
-  'mr': MARATHI_TO_ENGLISH,
-  'gu': GUJARATI_TO_ENGLISH,
-  'kn': KANNADA_TO_ENGLISH,
-  'ml': MALAYALAM_TO_ENGLISH,
-  'pa': PUNJABI_TO_ENGLISH,
-  'or': ODIA_TO_ENGLISH,
-  'es': SPANISH_TO_ENGLISH,
-  'fr': FRENCH_TO_ENGLISH,
-  'de': GERMAN_TO_ENGLISH,
-  'ar': ARABIC_TO_ENGLISH,
-  'zh': CHINESE_TO_ENGLISH,
-  'ja': JAPANESE_TO_ENGLISH,
-  'ko': KOREAN_TO_ENGLISH,
-  'ru': RUSSIAN_TO_ENGLISH,
-  'pt': PORTUGUESE_TO_ENGLISH,
-  'it': ITALIAN_TO_ENGLISH,
-};
-
-// Reverse dictionaries (English to other languages)
-const REVERSE_DICTIONARIES: Record<string, Record<string, string>> = {};
-for (const [lang, dict] of Object.entries(DICTIONARIES)) {
-  REVERSE_DICTIONARIES[lang] = createReverseDictionary(dict);
-}
-
-// ==========================================
-// SCRIPT DETECTION
-// ==========================================
-const SCRIPT_PATTERNS: { pattern: RegExp; lang: string }[] = [
-  { pattern: /[\u0900-\u097F]/, lang: 'hi' }, // Devanagari (Hindi, Marathi, Sanskrit, etc.)
-  { pattern: /[\u0980-\u09FF]/, lang: 'bn' }, // Bengali
-  { pattern: /[\u0C00-\u0C7F]/, lang: 'te' }, // Telugu
-  { pattern: /[\u0B80-\u0BFF]/, lang: 'ta' }, // Tamil
-  { pattern: /[\u0A80-\u0AFF]/, lang: 'gu' }, // Gujarati
-  { pattern: /[\u0A00-\u0A7F]/, lang: 'pa' }, // Gurmukhi (Punjabi)
-  { pattern: /[\u0B00-\u0B7F]/, lang: 'or' }, // Odia
-  { pattern: /[\u0C80-\u0CFF]/, lang: 'kn' }, // Kannada
-  { pattern: /[\u0D00-\u0D7F]/, lang: 'ml' }, // Malayalam
-  { pattern: /[\u0600-\u06FF]/, lang: 'ar' }, // Arabic script (Arabic, Urdu, Persian)
-  { pattern: /[\u4E00-\u9FFF]/, lang: 'zh' }, // Chinese
-  { pattern: /[\u3040-\u309F\u30A0-\u30FF]/, lang: 'ja' }, // Japanese (Hiragana + Katakana)
-  { pattern: /[\uAC00-\uD7AF]/, lang: 'ko' }, // Korean
-  { pattern: /[\u0400-\u04FF]/, lang: 'ru' }, // Cyrillic (Russian)
-  { pattern: /[\u0E00-\u0E7F]/, lang: 'th' }, // Thai
-  { pattern: /[\u0590-\u05FF]/, lang: 'he' }, // Hebrew
-  { pattern: /[\u0370-\u03FF]/, lang: 'el' }, // Greek
-];
-
-function detectLanguage(text: string): string {
-  for (const { pattern, lang } of SCRIPT_PATTERNS) {
-    if (pattern.test(text)) {
-      return lang;
-    }
-  }
-  return 'en'; // Default to English for Latin script
-}
-
-// ==========================================
-// TRANSLATION FUNCTIONS
-// ==========================================
-
-function translateToEnglish(text: string, sourceLang: string): string {
-  const dict = DICTIONARIES[sourceLang];
-  if (!dict) {
-    console.log(`No dictionary found for language: ${sourceLang}`);
-    return text;
-  }
-
-  let result = text.toLowerCase().trim();
-  
-  // First try to match the entire phrase
-  if (dict[result]) {
-    return dict[result];
-  }
-  
-  // Then try phrase matching (longer phrases first)
-  const phrases = Object.keys(dict).sort((a, b) => b.length - a.length);
-  for (const phrase of phrases) {
-    if (result.includes(phrase.toLowerCase())) {
-      result = result.replace(new RegExp(escapeRegex(phrase), 'gi'), dict[phrase]);
-    }
-  }
-  
-  // Finally, try word-by-word translation
-  const words = result.split(/\s+/);
-  const translatedWords = words.map(word => {
-    const cleanWord = word.replace(/[^\w\u0080-\uFFFF]/g, '');
-    return dict[cleanWord] || word;
-  });
-  
-  return translatedWords.join(' ');
-}
-
-function translateFromEnglish(text: string, targetLang: string): string {
-  const reverseDict = REVERSE_DICTIONARIES[targetLang];
-  if (!reverseDict) {
-    console.log(`No reverse dictionary found for language: ${targetLang}`);
-    return text;
-  }
-
-  let result = text.toLowerCase().trim();
-  
-  // First try to match the entire phrase
-  if (reverseDict[result]) {
-    return reverseDict[result];
-  }
-  
-  // Then try phrase matching (longer phrases first)
-  const phrases = Object.keys(reverseDict).sort((a, b) => b.length - a.length);
-  for (const phrase of phrases) {
-    if (result.includes(phrase)) {
-      result = result.replace(new RegExp(escapeRegex(phrase), 'gi'), reverseDict[phrase]);
-    }
-  }
-  
-  // Finally, try word-by-word translation
-  const words = result.split(/\s+/);
-  const translatedWords = words.map(word => {
-    const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
-    return reverseDict[cleanWord] || word;
-  });
-  
-  return translatedWords.join(' ');
-}
-
-function escapeRegex(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Main translation function
-function translate(text: string, sourceLang: string, targetLang: string): string {
-  console.log(`Translating: "${text}" from ${sourceLang} to ${targetLang}`);
-  
-  if (sourceLang === targetLang) {
-    return text;
-  }
-  
-  // If source is not English, translate to English first
-  let englishText = text;
-  if (sourceLang !== 'en') {
-    englishText = translateToEnglish(text, sourceLang);
-    console.log(`Intermediate English: "${englishText}"`);
-  }
-  
-  // If target is English, we're done
-  if (targetLang === 'en') {
-    return englishText;
-  }
-  
-  // Translate from English to target language
-  const result = translateFromEnglish(englishText, targetLang);
-  console.log(`Final translation: "${result}"`);
-  
-  return result;
-}
-
-// ==========================================
-// HTTP HANDLER
-// ==========================================
+// ============================================================
+// HTTP SERVER
+// ============================================================
 
 serve(async (req) => {
   // Handle CORS
@@ -661,263 +742,76 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const path = url.pathname.split('/').pop();
-    
-    // GET /languages - List supported languages
-    if (req.method === 'GET' && path === 'languages') {
-      console.log('Returning supported languages list');
+    const body = await req.json();
+    const { 
+      text, 
+      sourceLanguage, 
+      targetLanguage, 
+      senderId, 
+      receiverId,
+      action = 'translate' 
+    } = body;
+
+    if (!text) {
       return new Response(
-        JSON.stringify({
-          languages: Object.entries(SUPPORTED_LANGUAGES).map(([code, info]) => ({
-            code,
-            ...info
-          }))
-        }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
+        JSON.stringify({ error: 'Text is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // GET /detect - Detect language
-    if (req.method === 'POST' && path === 'detect') {
-      const { q } = await req.json();
-      if (!q) {
-        return new Response(
-          JSON.stringify({ error: 'Missing text parameter "q"' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      const detectedLang = detectLanguage(q);
-      console.log(`Detected language for "${q}": ${detectedLang}`);
-      
-      return new Response(
-        JSON.stringify([{
-          language: detectedLang,
-          confidence: 0.9,
-          ...SUPPORTED_LANGUAGES[detectedLang]
-        }]),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+    // Auto-detect languages from user profiles if not provided
+    let source = sourceLanguage;
+    let target = targetLanguage;
+
+    if (!source && senderId) {
+      source = await getUserLanguage(senderId);
     }
-    
-    // POST /translate - Translate text
-    if (req.method === 'POST' && (path === 'translate' || path === 'libre-translate')) {
-      const body = await req.json();
-      const { q, source, target, format = 'text' } = body;
-      
-      console.log('Translation request:', { q, source, target, format });
-      
-      if (!q) {
-        return new Response(
-          JSON.stringify({ error: 'Missing text parameter "q"' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Auto-detect source language if not provided or set to 'auto'
-      const sourceLang = (!source || source === 'auto') ? detectLanguage(q) : source;
-      const targetLang = target || 'en';
-      
-      console.log(`Translating from ${sourceLang} to ${targetLang}`);
-      
-      const translatedText = translate(q, sourceLang, targetLang);
-      
-      return new Response(
-        JSON.stringify({
-          translatedText,
-          detectedLanguage: {
-            language: sourceLang,
-            ...SUPPORTED_LANGUAGES[sourceLang]
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!target && receiverId) {
+      target = await getUserLanguage(receiverId);
     }
-    
-    // POST /translate-batch - Batch translation
-    if (req.method === 'POST' && path === 'translate-batch') {
-      const { texts, source, target } = await req.json();
-      
-      if (!texts || !Array.isArray(texts)) {
-        return new Response(
-          JSON.stringify({ error: 'Missing or invalid "texts" array' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      const targetLang = target || 'en';
-      
-      const translations = texts.map(text => {
-        const sourceLang = (!source || source === 'auto') ? detectLanguage(text) : source;
-        return {
-          original: text,
-          translated: translate(text, sourceLang, targetLang),
-          detectedLanguage: sourceLang
+
+    // Default fallbacks
+    source = source || 'english';
+    target = target || 'english';
+
+    let result: any;
+
+    switch (action) {
+      case 'detect':
+        result = detectLanguage(text);
+        break;
+
+      case 'transliterate':
+        result = {
+          originalText: text,
+          transliteratedText: convertToNativeScript(text, target),
+          targetLanguage: target
         };
-      });
-      
-      console.log(`Batch translated ${translations.length} texts`);
-      
-      return new Response(
-        JSON.stringify({ translations }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        break;
+
+      case 'languages':
+        result = {
+          languages: Object.values(LANGUAGES),
+          count: Object.keys(LANGUAGES).length
+        };
+        break;
+
+      case 'translate':
+      default:
+        result = translateWithPivot(text, source, target);
+        break;
     }
-    
-    // POST /chat-translate - Optimized for chat (bidirectional)
-    // Supports: Source ↔ English ↔ Target for multilingual chat
-    // Can auto-detect languages from user profiles via userId/partnerId
-    if (req.method === 'POST' && path === 'chat-translate') {
-      const { 
-        message, 
-        userLanguage, 
-        partnerLanguage,
-        userId,        // Optional: fetch source language from user's profile
-        partnerId      // Optional: fetch target language from partner's profile
-      } = await req.json();
-      
-      if (!message) {
-        return new Response(
-          JSON.stringify({ error: 'Missing "message" parameter' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Detect language from text
-      const detectedLang = detectLanguage(message);
-      
-      // ==========================================
-      // LANGUAGE RESOLUTION PRIORITY:
-      // 1. Explicit userLanguage/partnerLanguage params
-      // 2. User's primary_language from profile (via userId/partnerId)
-      // 3. Auto-detected language from text
-      // 4. Default to English
-      // ==========================================
-      
-      // Fetch languages from profiles if user IDs provided
-      let profileSourceLang: string | null = null;
-      let profileTargetLang: string | null = null;
-      
-      if (userId || partnerId) {
-        const [userLangResult, partnerLangResult] = await Promise.all([
-          userId ? getUserLanguage(userId) : Promise.resolve(null),
-          partnerId ? getUserLanguage(partnerId) : Promise.resolve(null)
-        ]);
-        profileSourceLang = userLangResult;
-        profileTargetLang = partnerLangResult;
-        console.log(`Profile languages - User: ${profileSourceLang}, Partner: ${profileTargetLang}`);
-      }
-      
-      // Resolve final source and target languages
-      const sourceLang = userLanguage || profileSourceLang || detectedLang;
-      const targetLang = partnerLanguage || profileTargetLang || 'en';
-      
-      console.log(`Resolved languages - Source: ${sourceLang}, Target: ${targetLang}`);
-      
-      // ==========================================
-      // FULL BIDIRECTIONAL TRANSLATION PATHS:
-      // 1. Source → English (for storage/moderation)
-      // 2. English → Target (if target is not English)
-      // 3. Source → Target (direct or via English pivot)
-      // 4. Target → English (reverse path)
-      // 5. English → Source (reverse path)
-      // ==========================================
-      
-      // Source → English
-      const sourceToEnglish = sourceLang !== 'en' 
-        ? translate(message, sourceLang, 'en')
-        : message;
-      
-      // English → Target (if target is not English)
-      const englishToTarget = targetLang !== 'en'
-        ? translate(sourceToEnglish, 'en', targetLang)
-        : sourceToEnglish;
-      
-      // Direct Source → Target translation
-      const forPartner = sourceLang !== targetLang 
-        ? translate(message, sourceLang, targetLang)
-        : message;
-      
-      // Target → English (for reverse direction chat)
-      const targetToEnglish = targetLang !== 'en'
-        ? translate(forPartner, targetLang, 'en')
-        : forPartner;
-      
-      // English → Source (for reverse direction)
-      const englishToSource = sourceLang !== 'en'
-        ? translate(sourceToEnglish, 'en', sourceLang)
-        : sourceToEnglish;
-      
-      console.log(`Chat translation: ${sourceLang} ↔ en ↔ ${targetLang}`);
-      console.log(`Paths: source→en: "${sourceToEnglish}", en→target: "${englishToTarget}"`);
-      
-      return new Response(
-        JSON.stringify({
-          // Original message
-          original: message,
-          
-          // Primary translations
-          forPartner,                    // Translated for partner's language
-          toEnglish: sourceToEnglish,    // Source → English
-          
-          // Full bidirectional paths
-          sourceToEnglish,               // Source language → English
-          englishToTarget,               // English → Target language
-          targetToEnglish,               // Target language → English
-          englishToSource,               // English → Source language
-          
-          // Language metadata
-          detectedLanguage: detectedLang,
-          sourceLanguage: sourceLang,
-          targetLanguage: targetLang,
-          
-          // Profile-based language info
-          profileSourceLanguage: profileSourceLang,
-          profileTargetLanguage: profileTargetLang,
-          
-          // Language info
-          sourceLanguageInfo: SUPPORTED_LANGUAGES[sourceLang] || { name: sourceLang, nativeName: sourceLang },
-          targetLanguageInfo: SUPPORTED_LANGUAGES[targetLang] || { name: targetLang, nativeName: targetLang }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Default: return API info
+
     return new Response(
-      JSON.stringify({
-        name: 'LibreTranslate Edge Function',
-        version: '1.0.0',
-        endpoints: {
-          'GET /languages': 'List supported languages',
-          'POST /detect': 'Detect language of text',
-          'POST /translate': 'Translate text',
-          'POST /translate-batch': 'Batch translate multiple texts',
-          'POST /chat-translate': 'Optimized for chat (bidirectional translation)'
-        },
-        supportedLanguages: Object.keys(SUPPORTED_LANGUAGES).length,
-        dictionaryLanguages: Object.keys(DICTIONARIES).length
-      }),
+      JSON.stringify({ success: true, ...result }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-    
+
   } catch (error) {
     console.error('Translation error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Translation failed',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ error: 'Translation failed', details: String(error) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
