@@ -317,6 +317,127 @@ function isNonLatinLanguage(language: string): boolean {
   return nonLatinScriptLanguages.has(normalized);
 }
 
+// ================================================================
+// LATIN TEXT LANGUAGE DETECTION (English, French, German, Spanish, etc.)
+// ================================================================
+
+// Common words by language for detection
+const LATIN_LANGUAGE_WORDS: Record<string, Set<string>> = {
+  english: new Set([
+    'hello', 'hi', 'hey', 'bye', 'goodbye', 'good', 'morning', 'evening', 'night', 'afternoon',
+    'how', 'are', 'you', 'what', 'is', 'the', 'a', 'an', 'this', 'that', 'it', 'to', 'for', 'and', 'or', 'but',
+    'yes', 'no', 'ok', 'okay', 'please', 'thank', 'thanks', 'sorry', 'welcome',
+    'love', 'like', 'nice', 'great', 'bad', 'happy', 'sad', 'fine', 'beautiful',
+    'where', 'when', 'why', 'who', 'which', 'can', 'will', 'would', 'could', 'should',
+    'i', 'me', 'my', 'we', 'us', 'our', 'they', 'them', 'their', 'he', 'she', 'his', 'her',
+    'do', 'does', 'did', 'have', 'has', 'had', 'am', 'was', 'were', 'be', 'been',
+    'go', 'going', 'come', 'coming', 'see', 'look', 'want', 'need', 'help', 'know',
+    'friend', 'family', 'name', 'work', 'home', 'food', 'water', 'life', 'world',
+  ]),
+  french: new Set([
+    'bonjour', 'salut', 'bonsoir', 'bonne', 'nuit', 'merci', 'beaucoup', 'sil', 'vous', 'plait',
+    'oui', 'non', 'je', 'tu', 'il', 'elle', 'nous', 'vous', 'ils', 'elles', 'suis', 'es', 'est',
+    'comment', 'allez', 'vas', 'bien', 'très', 'ça', 'va', 'quoi', 'qui', 'où', 'quand', 'pourquoi',
+    'amour', 'aimer', 'avec', 'sans', 'pour', 'dans', 'sur', 'sous', 'entre', 'chez',
+    'au', 'aux', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'et', 'ou', 'mais',
+  ]),
+  german: new Set([
+    'hallo', 'guten', 'morgen', 'tag', 'abend', 'nacht', 'danke', 'bitte', 'ja', 'nein',
+    'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'bin', 'bist', 'ist', 'sind', 'seid',
+    'wie', 'geht', 'gut', 'sehr', 'was', 'wer', 'wo', 'wann', 'warum', 'welche',
+    'liebe', 'lieben', 'mit', 'ohne', 'für', 'in', 'auf', 'unter', 'zwischen', 'bei',
+    'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'aber', 'nicht', 'kein',
+  ]),
+  spanish: new Set([
+    'hola', 'buenos', 'buenas', 'días', 'tardes', 'noches', 'gracias', 'por', 'favor',
+    'sí', 'no', 'yo', 'tú', 'él', 'ella', 'nosotros', 'ellos', 'ellas', 'soy', 'eres', 'es', 'somos', 'son',
+    'cómo', 'estás', 'está', 'bien', 'muy', 'qué', 'quién', 'dónde', 'cuándo',
+    'amor', 'amar', 'con', 'sin', 'para', 'en', 'sobre', 'bajo', 'entre', 'hacia',
+    'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'y', 'o', 'pero', 'porque',
+  ]),
+  portuguese: new Set([
+    'olá', 'oi', 'bom', 'dia', 'boa', 'tarde', 'noite', 'obrigado', 'obrigada', 'por', 'favor',
+    'sim', 'não', 'eu', 'tu', 'ele', 'ela', 'nós', 'eles', 'elas', 'sou', 'és', 'é', 'somos', 'são',
+    'como', 'está', 'bem', 'muito', 'que', 'quem', 'onde', 'quando', 'porquê',
+    'amor', 'amar', 'com', 'sem', 'para', 'em', 'sobre', 'entre',
+    'o', 'a', 'os', 'as', 'um', 'uma', 'e', 'ou', 'mas',
+  ]),
+  italian: new Set([
+    'ciao', 'buongiorno', 'buonasera', 'buonanotte', 'grazie', 'prego', 'per', 'favore',
+    'sì', 'no', 'io', 'tu', 'lui', 'lei', 'noi', 'loro', 'sono', 'sei', 'è', 'siamo',
+    'come', 'stai', 'sta', 'bene', 'molto', 'che', 'chi', 'dove', 'quando', 'perché',
+    'amore', 'amare', 'con', 'senza', 'in', 'su', 'sotto', 'tra',
+    'il', 'la', 'lo', 'i', 'le', 'gli', 'un', 'una', 'e', 'o', 'ma',
+  ]),
+  dutch: new Set([
+    'hallo', 'goedemorgen', 'goedemiddag', 'goedenavond', 'dank', 'alstublieft', 'ja', 'nee',
+    'ik', 'jij', 'hij', 'zij', 'wij', 'jullie', 'ben', 'bent', 'is', 'zijn',
+    'hoe', 'gaat', 'het', 'goed', 'heel', 'wat', 'wie', 'waar', 'wanneer', 'waarom',
+    'liefde', 'met', 'zonder', 'voor', 'in', 'op', 'onder', 'tussen',
+    'de', 'een', 'en', 'of', 'maar', 'niet', 'geen',
+  ]),
+};
+
+function detectLatinTextLanguage(text: string): { language: string; confidence: number } | null {
+  const cleanText = text.toLowerCase().trim();
+  const words = cleanText.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return null;
+  
+  // Check diacritics for language hints
+  const hasFrenchDiacritics = /[éèêëàâùûôîïç]/i.test(cleanText);
+  const hasGermanDiacritics = /[äöüß]/i.test(cleanText);
+  const hasSpanishDiacritics = /[ñ¿¡áéíóú]/i.test(cleanText);
+  const hasPortugueseDiacritics = /[ãõç]/i.test(cleanText);
+  
+  // Score each language
+  const scores: Record<string, number> = {};
+  
+  for (const [lang, wordSet] of Object.entries(LATIN_LANGUAGE_WORDS)) {
+    let matchCount = 0;
+    for (const word of words) {
+      const cleaned = word.replace(/[.,!?;:'"]/g, '');
+      if (wordSet.has(cleaned)) matchCount++;
+    }
+    scores[lang] = matchCount / words.length;
+    
+    // Boost score based on diacritics
+    if (lang === 'french' && hasFrenchDiacritics) scores[lang] += 0.3;
+    if (lang === 'german' && hasGermanDiacritics) scores[lang] += 0.3;
+    if (lang === 'spanish' && hasSpanishDiacritics) scores[lang] += 0.3;
+    if (lang === 'portuguese' && hasPortugueseDiacritics) scores[lang] += 0.3;
+  }
+  
+  // Find best match
+  let bestLang = 'english';
+  let bestScore = 0;
+  for (const [lang, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestLang = lang;
+    }
+  }
+  
+  // If score is high enough, return detected language
+  const threshold = words.length === 1 ? 1.0 : 0.3;
+  if (bestScore >= threshold) {
+    console.log(`[dl-translate] Detected Latin language: ${bestLang} (${bestScore.toFixed(2)})`);
+    return { language: bestLang, confidence: bestScore };
+  }
+  
+  // For single words, check if it's in any language word list
+  if (words.length === 1) {
+    const word = words[0].replace(/[.,!?;:'"]/g, '');
+    for (const [lang, wordSet] of Object.entries(LATIN_LANGUAGE_WORDS)) {
+      if (wordSet.has(word)) {
+        console.log(`[dl-translate] Single word "${word}" matched ${lang}`);
+        return { language: lang, confidence: 1.0 };
+      }
+    }
+  }
+  
+  return null; // Likely romanized text, not a known Latin-script language
+}
+
 // ============================================================
 // TRANSLATION API IMPLEMENTATIONS
 // ============================================================
@@ -716,14 +837,15 @@ serve(async (req) => {
         effectiveSource = detected.language;
         console.log(`[dl-translate] Auto-detect: non-Latin script detected as ${effectiveSource}`);
       } else if (inputIsLatin) {
-        // Latin text - need to determine if English or romanized mother tongue
-        const isEnglish = isLikelyEnglishText(inputText);
-        if (isEnglish) {
-          effectiveSource = 'english';
-          detectedAsEnglish = true;
-          console.log(`[dl-translate] Auto-detect: Latin text detected as English`);
+        // Latin text - detect which language (English, French, German, Spanish, etc.)
+        const latinLangDetected = detectLatinTextLanguage(inputText);
+        if (latinLangDetected) {
+          // Detected a known Latin-script language
+          effectiveSource = latinLangDetected.language;
+          detectedAsEnglish = latinLangDetected.language === 'english';
+          console.log(`[dl-translate] Auto-detect: Latin text detected as ${latinLangDetected.language} (confidence: ${latinLangDetected.confidence.toFixed(2)})`);
         } else if (userMotherTongue && isNonLatinLanguage(userMotherTongue)) {
-          // Romanized text in user's mother tongue
+          // Not a known language - likely romanized text in user's mother tongue
           effectiveSource = userMotherTongue;
           console.log(`[dl-translate] Auto-detect: Latin text likely romanized ${userMotherTongue}`);
         } else {
@@ -746,70 +868,20 @@ serve(async (req) => {
     console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}, motherTongue: ${userMotherTongue}, autoDetect: ${autoDetectMode}`);
 
     // ================================================================
-    // HELPER: Detect if Latin text is likely English (improved)
-    // ================================================================
-    function isLikelyEnglishText(text: string): boolean {
-      const cleanText = text.toLowerCase().trim();
-      // Comprehensive English word list
-      const englishWords = new Set([
-        // Greetings
-        'hello', 'hi', 'hey', 'bye', 'goodbye', 'good', 'morning', 'evening', 'night', 'afternoon',
-        // Common words
-        'how', 'are', 'you', 'what', 'is', 'the', 'a', 'an', 'this', 'that', 'it', 'to', 'for', 'and', 'or', 'but',
-        'yes', 'no', 'ok', 'okay', 'please', 'thank', 'thanks', 'sorry', 'welcome', 'excuse',
-        'love', 'like', 'nice', 'great', 'bad', 'happy', 'sad', 'fine', 'beautiful', 'handsome',
-        'where', 'when', 'why', 'who', 'which', 'can', 'will', 'would', 'could', 'should', 'shall',
-        'i', 'me', 'my', 'we', 'us', 'our', 'they', 'them', 'their', 'he', 'she', 'his', 'her', 'its',
-        'do', 'does', 'did', 'have', 'has', 'had', 'am', 'was', 'were', 'be', 'been', 'being',
-        'go', 'going', 'come', 'coming', 'see', 'look', 'want', 'need', 'help', 'know', 'think',
-        'call', 'chat', 'talk', 'meet', 'send', 'give', 'take', 'get', 'make', 'tell', 'ask',
-        'time', 'day', 'week', 'month', 'year', 'today', 'tomorrow', 'yesterday',
-        'now', 'later', 'soon', 'always', 'never', 'sometimes', 'here', 'there', 'very', 'much',
-        'friend', 'family', 'name', 'age', 'work', 'home', 'food', 'water', 'life', 'world',
-        'photo', 'video', 'message', 'reply', 'online', 'offline', 'busy', 'free',
-        'miss', 'wait', 'ready', 'sure', 'maybe', 'really', 'actually', 'just', 'only', 'also',
-        'new', 'old', 'big', 'small', 'long', 'short', 'high', 'low', 'first', 'last',
-        'from', 'with', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-        'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
-        'man', 'woman', 'boy', 'girl', 'people', 'child', 'children',
-      ]);
-      
-      const words = cleanText.split(/\s+/).filter(w => w.length > 0);
-      if (words.length === 0) return false;
-      
-      // Single word check
-      if (words.length === 1) {
-        const word = words[0].replace(/[.,!?;:'"]/g, '');
-        return englishWords.has(word);
-      }
-      
-      // Multi-word: check percentage
-      const englishWordCount = words.filter(w => {
-        const cleaned = w.replace(/[.,!?;:'"]/g, '');
-        return englishWords.has(cleaned);
-      }).length;
-      
-      const ratio = englishWordCount / words.length;
-      console.log(`[dl-translate] English word ratio: ${englishWordCount}/${words.length} = ${ratio.toFixed(2)}`);
-      
-      // If more than 40% are English words, treat as English
-      return ratio >= 0.4;
-    }
-
-    // ================================================================
     // CASE 1: Latin input for non-Latin source language
     // User typed romanized text (e.g., "bagunnava" for Telugu)
     // Need to: 1) Transliterate to source script 2) Translate to target
-    // BUT: Skip transliteration if it's clearly English words
+    // BUT: Skip transliteration if it's a known Latin-script language (English, French, etc.)
     // ================================================================
     if (inputIsLatin && isNonLatinLanguage(effectiveSource) && !isSameLanguage(effectiveSource, effectiveTarget)) {
-      // Check if input looks like English words rather than romanized text
-      // (This is also checked in auto-detect, but re-check here for explicit source language cases)
-      if (isLikelyEnglishText(inputText)) {
-        console.log(`[dl-translate] English words in non-Latin source context, translating as English`);
+      // Check if input is a known Latin-script language rather than romanized text
+      const latinLangCheck = detectLatinTextLanguage(inputText);
+      if (latinLangCheck) {
+        const detectedLang = latinLangCheck.language;
+        console.log(`[dl-translate] ${detectedLang} words in non-Latin source context, translating as ${detectedLang}`);
         
-        // Translate from English to target language directly
-        const translated = await translateText(inputText, 'english', effectiveTarget);
+        // Translate from detected Latin language to target language directly
+        const translated = await translateText(inputText, detectedLang, effectiveTarget);
         const cleanedTranslation = cleanTextOutput(translated.translatedText);
 
         return new Response(
@@ -820,11 +892,11 @@ serve(async (req) => {
             isTranslated: translated.success,
             wasTransliterated: false,
             pivotUsed: translated.pivotUsed,
-            detectedLanguage: 'english',
-            sourceLanguage: 'english',
+            detectedLanguage: detectedLang,
+            sourceLanguage: detectedLang,
             targetLanguage: effectiveTarget,
             isSourceLatin: true,
-            englishWordsDetected: true,
+            autoDetectedLatinLanguage: detectedLang,
             motherTongue: userMotherTongue,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
