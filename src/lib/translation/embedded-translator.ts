@@ -20,7 +20,7 @@
  * - Reply translation: Receiver can reply in their language
  */
 
-import { dynamicTransliterate } from './dynamic-transliterator';
+import { dynamicTransliterate, reverseTransliterate } from './dynamic-transliterator';
 import { spellCorrectForChat } from './phonetic-symspell';
 import { languages as allLanguages, type Language } from '@/data/languages';
 
@@ -416,42 +416,77 @@ export async function translate(
 
 // ============================================================
 // TRANSLATION HELPER FUNCTIONS
-// These use phonetic/transliteration rules for now
-// Can be extended to use actual translation models
+// Bidirectional: Source ↔ English ↔ Target
+// Uses reverse transliteration for Target → English → Source
 // ============================================================
+
+
 
 /**
  * Translate from any language to English
- * Currently uses phonetic mapping, can be extended with ML models
+ * For non-Latin scripts: reverse transliterate to Latin/English
+ * For Latin scripts: return as-is (already readable)
  */
 function translateToEnglish(text: string, sourceLanguage: string): string {
-  // For Latin script languages, text is already readable
+  if (!text.trim()) return text;
+  
+  // For Latin script languages, text is already readable as English phonetics
   if (isLatinScriptLanguage(sourceLanguage)) {
     return text;
   }
   
-  // For non-Latin scripts, attempt reverse transliteration
-  // This is a simplified version - can be enhanced with actual translation
+  // For non-Latin scripts, reverse transliterate to Latin/English
   try {
-    // Keep original for now - this would use a proper translation model
-    return text;
-  } catch {
+    const reversed = reverseTransliterate(text, sourceLanguage);
+    return reversed || text;
+  } catch (err) {
+    console.warn('[EmbeddedTranslator] Reverse transliteration failed:', err);
     return text;
   }
 }
 
 /**
  * Translate from English to any language
- * Currently uses transliteration for non-Latin scripts
+ * For non-Latin scripts: transliterate to native script
+ * For Latin scripts: return as-is
  */
 function translateFromEnglish(text: string, targetLanguage: string): string {
+  if (!text.trim()) return text;
+  
   // For Latin script languages, minimal processing needed
   if (isLatinScriptLanguage(targetLanguage)) {
     return text;
   }
   
-  // For non-Latin scripts, transliterate
+  // For non-Latin scripts, transliterate to native script
   return transliterateToNative(text, targetLanguage);
+}
+
+/**
+ * Full bidirectional translation: Target → English → Source
+ * Used when receiver replies in their language and sender needs to see in their language
+ */
+export function translateTargetToSource(
+  text: string,
+  targetLanguage: string,
+  sourceLanguage: string
+): string {
+  if (!text.trim()) return text;
+  
+  // Same language - no translation needed
+  if (isSameLanguage(targetLanguage, sourceLanguage)) {
+    return needsScriptConversion(sourceLanguage) && isLatinText(text)
+      ? transliterateToNative(text, sourceLanguage)
+      : text;
+  }
+  
+  // Target → English
+  const english = translateToEnglish(text, targetLanguage);
+  
+  // English → Source
+  const sourceText = translateFromEnglish(english, sourceLanguage);
+  
+  return sourceText;
 }
 
 // ============================================================
