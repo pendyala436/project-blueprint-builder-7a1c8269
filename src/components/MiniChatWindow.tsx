@@ -28,6 +28,7 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useRealtimeTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
+// Translation utilities - Gboard native input, no Latin conversion needed
 import { 
   isSameLanguage,
   isLatinScriptLanguage,
@@ -306,7 +307,7 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Auto-translate a message to current user's language via Edge Function
-  // Uses profile-based mother tongue detection for all 82 languages
+  // GBOARD-FIRST: Users type in their mother tongue, so use profile language
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -321,15 +322,13 @@ const MiniChatWindow = ({
       // Partner's message - translate to current user's language
       // Source = partner's mother tongue (from profile)
       // Target = current user's mother tongue (from profile)
-      const sourceLanguage = partnerLanguage;
+      const sourceLanguage = partnerLanguage; // Partner typed in their mother tongue via Gboard
       const targetLanguage = currentUserLanguage;
       
       console.log('[MiniChatWindow] translateMessage:', {
         text: text.substring(0, 30),
         sourceLanguage,
-        targetLanguage,
-        senderId: partnerId,
-        receiverId: currentUserId
+        targetLanguage
       });
       
       // Same language - no translation needed
@@ -340,13 +339,9 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
       
-      // Different languages - translate via Edge Function with user IDs
-      // Edge function will fetch mother tongue from male_profiles/female_profiles
+      // Different languages - translate via Edge Function
       console.log(`[MiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
-      const result = await translateAsync(text, sourceLanguage, targetLanguage, {
-        senderId: partnerId,      // Partner sent the message
-        receiverId: currentUserId  // Current user receives the message
-      });
+      const result = await translateAsync(text, sourceLanguage, targetLanguage);
       
       if (result.isTranslated && result.text) {
         console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
@@ -365,7 +360,7 @@ const MiniChatWindow = ({
       console.error('[MiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId, partnerId]);
+  }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
   // NON-BLOCKING: Load messages with background translation
   const loadMessages = async () => {
@@ -543,7 +538,8 @@ const MiniChatWindow = ({
     clearPreview(); // Clear typing preview
     setLastActivityTime(Date.now());
 
-    // User types in native script directly - just send what user typed
+    // GBOARD-FIRST: User types in native script directly via Gboard
+    // No Latin-to-native conversion - just send what user typed
 
     // OPTIMISTIC: Add message to UI immediately with temp ID
     const tempId = `temp-${Date.now()}`;
@@ -845,7 +841,7 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area */}
+          {/* Input area - Mother tongue via Gboard, all processing in background */}
           <div className="p-1.5 border-t space-y-1">
             {/* Same language indicator */}
             {!needsTranslation && newMessage.trim() && (

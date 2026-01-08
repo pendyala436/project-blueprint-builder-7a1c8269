@@ -19,7 +19,7 @@ import {
   NON_INDIAN_NLLB200_LANGUAGES,
   NLLB200Language,
   getTotalLanguageCount
-} from "@/data/languages";
+} from "@/data/nllb200Languages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 

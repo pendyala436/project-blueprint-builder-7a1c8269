@@ -37,12 +37,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
+import { VoiceMessageRecorder } from "@/components/VoiceMessageRecorder";
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useRealtimeTranslation } from "@/lib/translation";
+// GBOARD-FIRST: Users type in native script, no Latin conversion needed
 import {
   isSameLanguage,
   isLatinScriptLanguage,
@@ -50,7 +51,7 @@ import {
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - native input + Edge Function translation');
+console.log('[DraggableMiniChatWindow] Module loaded - Gboard native input + Edge Function translation');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -620,7 +621,8 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // Auto-translate partner's messages using profile languages
+  // GBOARD-FIRST: Auto-translate partner's messages using profile languages
+  // Users type in native script via Gboard - no Latin detection needed
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -670,7 +672,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
-  // Load messages with immediate display + background translation
+  // GBOARD-FIRST: Load messages with immediate display + background translation
   const loadMessages = async () => {
     console.log('[DraggableMiniChatWindow] loadMessages called');
     
@@ -706,11 +708,8 @@ const DraggableMiniChatWindow = ({
           return;
         }
         
-        // Different languages - translate via Edge Function with profile-based language detection
-        translateAsync(m.message, partnerLanguage, currentUserLanguage, {
-          senderId: partnerId,
-          receiverId: currentUserId
-        })
+        // Different languages - translate via Edge Function
+        translateAsync(m.message, partnerLanguage, currentUserLanguage)
           .then((result) => {
             setMessages(prev => prev.map(msg => 
               msg.id === m.id 
@@ -732,7 +731,7 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  // Subscribe to new messages with immediate display + background translation
+  // GBOARD-FIRST: Subscribe to new messages with immediate display + background translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -771,10 +770,7 @@ const DraggableMiniChatWindow = ({
             
             // STEP 2: BACKGROUND - Translate partner message
             if (needsTranslation) {
-              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage, {
-                senderId: partnerId,
-                receiverId: currentUserId
-              })
+              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage)
                 .then((result) => {
                   setMessages(prev => prev.map(msg => 
                     msg.id === newMsg.id 
@@ -861,7 +857,7 @@ const DraggableMiniChatWindow = ({
 
   // NON-BLOCKING: Send message with optimistic UI update
   // Bi-directional: Sender sees native script, receiver sees translated native script
-  // Send message directly - user types in native script
+  // GBOARD-FIRST: Send message directly - user types in native script
   const sendMessage = async () => {
     const messageText = newMessage.trim();
     if (!messageText || isSending) return;
@@ -892,7 +888,7 @@ const DraggableMiniChatWindow = ({
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText, // Native input - show as-is
+      message: messageText, // Gboard native input - show as-is
       translatedMessage: undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
@@ -1418,7 +1414,17 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Simple text input */}
+              {/* Voice recorder */}
+              <VoiceMessageRecorder
+                chatId={chatId}
+                currentUserId={currentUserId}
+                partnerId={partnerId}
+                onMessageSent={() => setLastActivityTime(Date.now())}
+                disabled={isSending}
+                className="h-8 w-8 shrink-0"
+              />
+
+              {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
               <div className="flex-1 relative">
                 {/* Same language indicator */}
                 {!needsTranslation && newMessage.trim() && (

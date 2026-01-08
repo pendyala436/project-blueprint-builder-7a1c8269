@@ -259,11 +259,7 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
 export async function translateAsync(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string,
-  options?: {
-    senderId?: string;
-    receiverId?: string;
-  }
+  targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
 
@@ -291,24 +287,19 @@ export async function translateAsync(
     return cached;
   }
 
-  console.log('[AsyncTranslator] Calling Edge Function libre-translate:', {
+  console.log('[AsyncTranslator] Calling Edge Function translate-message:', {
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
-    senderId: options?.senderId,
-    receiverId: options?.receiverId,
   });
 
   try {
-    const { data, error } = await supabase.functions.invoke('libre-translate', {
+    const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
         text: trimmed,
         sourceLanguage: normSource,
         targetLanguage: normTarget,
         mode: 'translate',
-        // Pass user IDs for profile-based mother tongue detection
-        senderId: options?.senderId,
-        receiverId: options?.receiverId,
       },
     });
 
@@ -320,9 +311,9 @@ export async function translateAsync(
     const result: AsyncTranslationResult = {
       text: data?.translatedText || trimmed,
       originalText: trimmed,
-      isTranslated: data?.isTranslated !== false && data?.translatedText !== trimmed,
-      sourceLanguage: data?.sourceLang || normSource,
-      targetLanguage: data?.targetLang || normTarget,
+      isTranslated: data?.isTranslated || false,
+      sourceLanguage: data?.sourceLanguage || normSource,
+      targetLanguage: data?.targetLanguage || normTarget,
       detectedLanguage: data?.detectedLanguage,
     };
 
@@ -333,8 +324,6 @@ export async function translateAsync(
     console.log('[AsyncTranslator] Edge function result:', {
       translated: result.text?.substring(0, 30),
       isTranslated: result.isTranslated,
-      profileSource: data?.profileSourceLanguage,
-      profileTarget: data?.profileTargetLanguage,
     });
 
     return result;
@@ -413,11 +402,11 @@ export async function convertToNativeScriptAsync(
 
   // Fallback to Edge Function
   try {
-    const { data, error } = await supabase.functions.invoke('libre-translate', {
+    const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
         text: trimmed,
-        source: 'en',
-        target: targetLanguage,
+        sourceLanguage: 'english',
+        targetLanguage,
         mode: 'convert',
       },
     });

@@ -6,7 +6,7 @@ import {
   INDIAN_NLLB200_LANGUAGES, 
   NON_INDIAN_NLLB200_LANGUAGES,
   ALL_NLLB200_LANGUAGES 
-} from '@/data/languages';
+} from '@/data/nllb200Languages';
 
 // Super user balance bypass is handled at the database level via RPC functions
 

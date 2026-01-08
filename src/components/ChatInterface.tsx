@@ -178,7 +178,7 @@ export const ChatInterface = ({
             userId: partnerId,
             userName: profile?.full_name || "Anonymous",
             userPhoto: profile?.photo_url,
-            userLanguage: profile?.primary_language || "en",
+            userLanguage: profile?.primary_language || "Unknown",
             isBlocked: blockedSet.has(partnerId),
             isFriend: friendSet.has(partnerId)
           };
@@ -214,7 +214,7 @@ export const ChatInterface = ({
               fromUserId: match.user_id,
               fromUserName: profile?.full_name || "Anonymous",
               fromUserPhoto: profile?.photo_url || null,
-              fromUserLanguage: profile?.primary_language || "en",
+              fromUserLanguage: profile?.primary_language || "Unknown",
               status: "pending",
               createdAt: match.created_at
             };

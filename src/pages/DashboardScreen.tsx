@@ -57,7 +57,7 @@ import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget"
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 
 import { useTranslation } from "@/contexts/TranslationContext";
-import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/languages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
