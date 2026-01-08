@@ -600,6 +600,95 @@ serve(async (req) => {
     console.log(`[dl-translate] Mode: ${mode}, Input: "${inputText?.substring(0, 50)}..."`);
     console.log(`[dl-translate] Params: source=${sourceLanguage || senderLanguage}, target=${targetLanguage || receiverLanguage}`);
 
+    // ================================================================
+    // MODE: bidirectional - Translate both directions in one call
+    // Source → English → Target AND Target → English → Source
+    // ================================================================
+    if (mode === "bidirectional") {
+      const langA = sourceLanguage || senderLanguage || "english";
+      const langB = targetLanguage || receiverLanguage || "english";
+      
+      console.log(`[dl-translate] Bidirectional: ${langA} ↔ ${langB}`);
+      
+      // Forward: A → English → B
+      const forward = await translateText(inputText, langA, langB);
+      
+      // Reverse: B → English → A (translate the forward result back)
+      const reverse = await translateText(forward.translatedText, langB, langA);
+      
+      return new Response(
+        JSON.stringify({
+          forward: {
+            translatedText: cleanTextOutput(forward.translatedText),
+            originalText: inputText,
+            sourceLanguage: langA,
+            targetLanguage: langB,
+            isTranslated: forward.success,
+            pivotUsed: forward.pivotUsed,
+          },
+          reverse: {
+            translatedText: cleanTextOutput(reverse.translatedText),
+            originalText: forward.translatedText,
+            sourceLanguage: langB,
+            targetLanguage: langA,
+            isTranslated: reverse.success,
+            pivotUsed: reverse.pivotUsed,
+          },
+          mode: "bidirectional",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
+    // MODE: test - Test translation for a specific language pair
+    // ================================================================
+    if (mode === "test") {
+      const source = sourceLanguage || "telugu";
+      const target = targetLanguage || "english";
+      const testText = inputText || "bagunnava";
+      
+      console.log(`[dl-translate] Testing: "${testText}" from ${source} to ${target}`);
+      
+      const result = await translateText(testText, source, target);
+      
+      return new Response(
+        JSON.stringify({
+          test: true,
+          input: testText,
+          output: cleanTextOutput(result.translatedText),
+          sourceLanguage: source,
+          targetLanguage: target,
+          success: result.success,
+          pivotUsed: result.pivotUsed,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ================================================================
+    // MODE: languages - Return list of supported 65 languages
+    // ================================================================
+    if (mode === "languages") {
+      const supportedLanguages = LANGUAGES.slice(0, 65).map(l => ({
+        name: l.name,
+        code: l.code,
+        nllbCode: l.nllbCode,
+        native: l.native,
+        script: l.script,
+        rtl: l.rtl || false,
+      }));
+      
+      return new Response(
+        JSON.stringify({
+          count: supportedLanguages.length,
+          languages: supportedLanguages,
+          totalCombinations: 65 * 64, // 4160 pairs
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!inputText) {
       return new Response(
         JSON.stringify({ error: "Text or message is required" }),
