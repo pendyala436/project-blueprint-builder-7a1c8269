@@ -802,14 +802,17 @@ const MiniChatWindow = ({
                         : "bg-muted rounded-bl-sm"
                     )}
                   >
-                    {/* Sender/Receiver name label */}
+                    {/* Sender/Receiver name with language label */}
                     <p className={cn(
                       "text-[9px] font-medium mb-0.5",
                       msg.senderId === currentUserId
                         ? "text-primary-foreground/70"
                         : "text-muted-foreground"
                     )}>
-                      {msg.senderId === currentUserId ? "You" : partnerName}
+                      {msg.senderId === currentUserId 
+                        ? `You (${needsTranslation ? currentUserLanguage : "Same language"})`
+                        : `${partnerName} (${needsTranslation ? partnerLanguage : "Same language"})`
+                      }
                     </p>
                     {/* 
                       For YOUR OWN messages: always show what you typed (in your native script)
