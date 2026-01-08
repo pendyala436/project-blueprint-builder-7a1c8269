@@ -1283,6 +1283,15 @@ const DraggableMiniChatWindow = ({
                           : "bg-muted rounded-bl-sm"
                       )}
                     >
+                      {/* Sender/Receiver name label */}
+                      <p className={cn(
+                        "text-[9px] font-medium mb-0.5",
+                        msg.senderId === currentUserId
+                          ? "text-primary-foreground/70"
+                          : "text-muted-foreground"
+                      )}>
+                        {msg.senderId === currentUserId ? "You" : partnerName}
+                      </p>
                       {isVoice && fileUrl ? (
                         <div className="flex items-center gap-2">
                           <Mic className="h-3 w-3" />
