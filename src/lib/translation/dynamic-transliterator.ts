@@ -1097,6 +1097,121 @@ export function isSameLanguage(lang1: string, lang2: string): boolean {
   return norm1 === norm2;
 }
 
+// ============================================================
+// REVERSE TRANSLITERATION: Native Script → Latin
+// Used for Target → English translation path
+// ============================================================
+
+/**
+ * Build reverse map from native script to Latin
+ */
+function buildReverseMap(block: ScriptBlock): Map<string, string> {
+  const reverseMap = new Map<string, string>();
+  
+  // Reverse consonant map
+  for (const [latin, native] of Object.entries(block.consonantMap)) {
+    reverseMap.set(native, latin);
+  }
+  
+  // Reverse vowel map
+  for (const [latin, native] of Object.entries(block.vowelMap)) {
+    reverseMap.set(native, latin);
+  }
+  
+  // Reverse modifier map
+  for (const [latin, native] of Object.entries(block.modifiers)) {
+    reverseMap.set(native, latin);
+  }
+  
+  return reverseMap;
+}
+
+// Cache reverse maps for performance
+const reverseMapsCache = new Map<string, Map<string, string>>();
+
+function getReverseMap(scriptKey: string): Map<string, string> | null {
+  if (reverseMapsCache.has(scriptKey)) {
+    return reverseMapsCache.get(scriptKey)!;
+  }
+  
+  const block = SCRIPT_BLOCKS[scriptKey];
+  if (!block) return null;
+  
+  const reverseMap = buildReverseMap(block);
+  reverseMapsCache.set(scriptKey, reverseMap);
+  return reverseMap;
+}
+
+/**
+ * Reverse transliterate: Convert native script text to Latin
+ * Used in Target → English translation path
+ * 
+ * @param text - Native script text to convert
+ * @param sourceLanguage - Language of the native text
+ * @returns Latin/romanized text
+ */
+export function reverseTransliterate(text: string, sourceLanguage: string): string {
+  if (!text || !text.trim()) return text;
+  
+  const normalized = normalizeLanguage(sourceLanguage);
+  const scriptKey = LANGUAGE_SCRIPT_MAP[normalized];
+  
+  // If no script mapping or Latin script, return as-is
+  if (!scriptKey || isLatinScriptLanguage(sourceLanguage)) {
+    return text;
+  }
+  
+  const reverseMap = getReverseMap(scriptKey);
+  if (!reverseMap || reverseMap.size === 0) {
+    return text;
+  }
+  
+  // Get the script block for virama detection
+  const block = SCRIPT_BLOCKS[scriptKey];
+  const virama = block?.virama || '';
+  
+  let result = '';
+  let i = 0;
+  const chars = [...text]; // Handle Unicode properly
+  
+  while (i < chars.length) {
+    let matched = false;
+    
+    // Try to match longer sequences first (up to 4 chars)
+    for (let len = Math.min(4, chars.length - i); len > 0; len--) {
+      const substr = chars.slice(i, i + len).join('');
+      
+      if (reverseMap.has(substr)) {
+        result += reverseMap.get(substr);
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+    
+    if (!matched) {
+      const char = chars[i];
+      
+      // Skip virama (halant) - consonant already handled
+      if (char === virama) {
+        i++;
+        continue;
+      }
+      
+      // Check individual character
+      if (reverseMap.has(char)) {
+        result += reverseMap.get(char);
+      } else {
+        // Keep character as-is (spaces, punctuation, etc.)
+        result += char;
+      }
+      i++;
+    }
+  }
+  
+  return result.trim();
+}
+
 // Export all functions
 export {
   SCRIPT_BLOCKS,
