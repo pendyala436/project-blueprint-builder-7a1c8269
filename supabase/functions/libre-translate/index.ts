@@ -543,6 +543,165 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
       's': '사', 'j': '자', 'ch': '차', 'h': '하'
     },
     modifiers: {}
+  },
+
+  // Sinhala script (Sri Lanka)
+  sinhala: {
+    name: 'Sinhala',
+    virama: '්',
+    vowelMap: {
+      'a': 'අ', 'aa': 'ආ', 'i': 'ඉ', 'ii': 'ඊ', 'ee': 'ඊ',
+      'u': 'උ', 'uu': 'ඌ', 'oo': 'ඌ', 'e': 'එ', 'ai': 'ඓ',
+      'o': 'ඔ', 'au': 'ඖ', 'ri': 'ඍ', 'am': 'අං', 'ah': 'අඃ'
+    },
+    consonantMap: {
+      'k': 'ක', 'kh': 'ඛ', 'g': 'ග', 'gh': 'ඝ', 'ng': 'ඞ',
+      'ch': 'ච', 'chh': 'ඡ', 'j': 'ජ', 'jh': 'ඣ', 'ny': 'ඤ',
+      'tt': 'ට', 'tth': 'ඨ', 'dd': 'ඩ', 'ddh': 'ඪ',
+      't': 'ත', 'th': 'ථ', 'd': 'ද', 'dh': 'ධ', 'n': 'න', 'N': 'ණ',
+      'p': 'ප', 'ph': 'ඵ', 'f': 'ෆ', 'b': 'බ', 'bh': 'භ', 'm': 'ම',
+      'y': 'ය', 'r': 'ර', 'l': 'ල', 'v': 'ව', 'w': 'ව',
+      'sh': 'ශ', 'shh': 'ෂ', 's': 'ස', 'h': 'හ',
+      'x': 'ක්ෂ', 'z': 'ස', 'q': 'ක'
+    },
+    modifiers: {
+      'aa': 'ා', 'i': 'ි', 'ii': 'ී', 'ee': 'ී',
+      'u': 'ු', 'uu': 'ූ', 'oo': 'ූ', 'e': 'ෙ', 'ai': 'ෛ',
+      'o': 'ො', 'au': 'ෞ', 'ri': 'ෘ', 'am': 'ං', 'ah': 'ඃ'
+    }
+  },
+
+  // Myanmar/Burmese script
+  myanmar: {
+    name: 'Myanmar',
+    virama: '်',
+    vowelMap: {
+      'a': 'အ', 'aa': 'အာ', 'i': 'ဣ', 'ii': 'ဤ', 'ee': 'ဤ',
+      'u': 'ဥ', 'uu': 'ဦ', 'oo': 'ဦ', 'e': 'ဧ', 'ai': 'ဧ',
+      'o': 'ဩ', 'au': 'ဪ'
+    },
+    consonantMap: {
+      'k': 'က', 'kh': 'ခ', 'g': 'ဂ', 'gh': 'ဃ', 'ng': 'င',
+      'ch': 'စ', 's': 'စ', 'j': 'ဂျ', 'z': 'ဇ', 'ny': 'ည',
+      'tt': 'ဋ', 'tth': 'ဌ', 'dd': 'ဍ', 'ddh': 'ဎ',
+      't': 'တ', 'th': 'ထ', 'd': 'ဒ', 'dh': 'ဓ', 'n': 'န', 'N': 'ဏ',
+      'p': 'ပ', 'ph': 'ဖ', 'f': 'ဖ', 'b': 'ဗ', 'bh': 'ဘ', 'm': 'မ',
+      'y': 'ယ', 'r': 'ရ', 'l': 'လ', 'v': 'ဝ', 'w': 'ဝ',
+      'sh': 'ရှ', 'h': 'ဟ', 'x': 'ကျ', 'q': 'က'
+    },
+    modifiers: {
+      'aa': 'ာ', 'i': 'ိ', 'ii': 'ီ', 'ee': 'ီ',
+      'u': 'ု', 'uu': 'ူ', 'oo': 'ူ', 'e': 'ေ', 'ai': 'ဲ',
+      'o': 'ော', 'au': 'ော်', 'am': 'ံ'
+    }
+  },
+
+  // Khmer/Cambodian script
+  khmer: {
+    name: 'Khmer',
+    virama: '្',
+    vowelMap: {
+      'a': 'អ', 'aa': 'អា', 'i': 'ឥ', 'ii': 'ឦ', 'ee': 'ឦ',
+      'u': 'ឧ', 'uu': 'ឩ', 'oo': 'ឩ', 'e': 'ឯ', 'ai': 'ឰ',
+      'o': 'ឱ', 'au': 'ឳ'
+    },
+    consonantMap: {
+      'k': 'ក', 'kh': 'ខ', 'g': 'គ', 'gh': 'ឃ', 'ng': 'ង',
+      'ch': 'ច', 'chh': 'ឆ', 'j': 'ជ', 'jh': 'ឈ', 'ny': 'ញ',
+      'tt': 'ដ', 'tth': 'ឋ', 'dd': 'ឌ', 'ddh': 'ឍ',
+      't': 'ត', 'th': 'ថ', 'd': 'ទ', 'dh': 'ធ', 'n': 'ន', 'N': 'ណ',
+      'p': 'ប', 'ph': 'ផ', 'f': 'ផ', 'b': 'ព', 'bh': 'ភ', 'm': 'ម',
+      'y': 'យ', 'r': 'រ', 'l': 'ល', 'v': 'វ', 'w': 'វ',
+      'sh': 'ស', 's': 'ស', 'h': 'ហ', 'x': 'ក្ស', 'z': 'ហ្ស', 'q': 'ក'
+    },
+    modifiers: {
+      'aa': 'ា', 'i': 'ិ', 'ii': 'ី', 'ee': 'ី',
+      'u': 'ុ', 'uu': 'ូ', 'oo': 'ូ', 'e': 'េ', 'ai': 'ៃ',
+      'o': 'ោ', 'au': 'ៅ', 'am': 'ំ', 'ah': 'ះ'
+    }
+  },
+
+  // Lao script
+  lao: {
+    name: 'Lao',
+    vowelMap: {
+      'a': 'ອ', 'aa': 'ອາ', 'i': 'ອິ', 'ii': 'ອີ', 'ee': 'ອີ',
+      'u': 'ອຸ', 'uu': 'ອູ', 'oo': 'ອູ', 'e': 'ເອ', 'ai': 'ໄອ',
+      'o': 'ໂອ', 'au': 'ເອົາ'
+    },
+    consonantMap: {
+      'k': 'ກ', 'kh': 'ຂ', 'g': 'ກ', 'ng': 'ງ',
+      'ch': 'ຈ', 's': 'ສ', 'j': 'ຈ', 'ny': 'ຍ',
+      't': 'ຕ', 'th': 'ທ', 'd': 'ດ', 'n': 'ນ',
+      'p': 'ປ', 'ph': 'ພ', 'f': 'ຟ', 'b': 'ບ', 'm': 'ມ',
+      'y': 'ຍ', 'r': 'ຣ', 'l': 'ລ', 'v': 'ວ', 'w': 'ວ',
+      'h': 'ຫ', 'x': 'ກຊ', 'z': 'ຊ', 'q': 'ກ'
+    },
+    modifiers: {}
+  },
+
+  // Ethiopic/Amharic script (Ge'ez)
+  ethiopic: {
+    name: 'Ethiopic',
+    vowelMap: {
+      'a': 'አ', 'aa': 'ዓ', 'i': 'ኢ', 'ii': 'ኢ', 'ee': 'ኤ',
+      'u': 'ኡ', 'uu': 'ኡ', 'oo': 'ኦ', 'e': 'እ', 'o': 'ኦ'
+    },
+    consonantMap: {
+      'h': 'ሀ', 'l': 'ለ', 'hh': 'ሐ', 'm': 'መ', 'sh': 'ሸ', 'r': 'ረ',
+      's': 'ሰ', 'q': 'ቀ', 'b': 'በ', 'v': 'ቨ', 't': 'ተ', 'ch': 'ቸ',
+      'n': 'ነ', 'ny': 'ኘ', 'k': 'ከ', 'kh': 'ኸ', 'w': 'ወ', 'z': 'ዘ',
+      'zh': 'ዠ', 'y': 'የ', 'd': 'ደ', 'j': 'ጀ', 'g': 'ገ', 'th': 'ጠ',
+      'p': 'ጰ', 'ts': 'ጸ', 'f': 'ፈ', 'x': 'ክስ'
+    },
+    modifiers: {}
+  },
+
+  // Georgian script
+  georgian: {
+    name: 'Georgian',
+    vowelMap: {
+      'a': 'ა', 'e': 'ე', 'i': 'ი', 'o': 'ო', 'u': 'უ'
+    },
+    consonantMap: {
+      'b': 'ბ', 'g': 'გ', 'd': 'დ', 'v': 'ვ', 'z': 'ზ',
+      'th': 'თ', 'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ',
+      'p': 'პ', 'zh': 'ჟ', 'r': 'რ', 's': 'ს', 't': 'ტ',
+      'f': 'ფ', 'kh': 'ქ', 'gh': 'ღ', 'q': 'ყ', 'sh': 'შ',
+      'ch': 'ჩ', 'ts': 'ც', 'dz': 'ძ', 'w': 'წ', 'h': 'ხ',
+      'j': 'ჯ', 'x': 'ხს', 'y': 'ი'
+    },
+    modifiers: {}
+  },
+
+  // Armenian script (proper Unicode U+0530-U+058F)
+  armenian: {
+    name: 'Armenian',
+    vowelMap: {
+      'a': 'ա', 'e': 'է', 'i': ' delays', 'o': 'օ', 'u': 'ու'
+    },
+    consonantMap: {
+      'b': 'բ', 'g': 'գ', 'd': 'դ', 'z': 'զ', 'zh': 'ժ', 'l': 'ց', 'kh': 'խ',
+      'ts': ' delays', 'k': 'կ', 'h': 'հ', 'dz': 'ձ', 'gh': 'ղ', 'ch': ' delays',
+      'm': 'մ', 'y': 'յ', 'n': ' delays', 'sh': 'շ', 'p': 'պ', 'j': 'ջ', 'r': 'ր',
+      's': 'ս', 'v': 'delays', 't': ' dims', 'f': 'feld', 'w': 'delays', 'x': 'qs', 'c': 'delays'
+    },
+    modifiers: {}
+  },
+
+  // Chinese Pinyin (simplified phonetic representation)
+  chinese: {
+    name: 'Hanzi',
+    vowelMap: {
+      'a': '阿', 'e': '额', 'i': '伊', 'o': '哦', 'u': '乌'
+    },
+    consonantMap: {
+      'b': '巴', 'p': '帕', 'm': '马', 'f': '发', 'd': '达', 't': '他',
+      'n': '那', 'l': '拉', 'g': '嘎', 'k': '卡', 'h': '哈', 'j': '加',
+      'q': '奇', 'x': '希', 'zh': '知', 'ch': '吃', 'sh': '师', 'r': '日',
+      'z': '资', 'c': '此', 's': '斯', 'y': '呀', 'w': '哇', 'v': '呢'
+    },
+    modifiers: {}
   }
 };
 
@@ -584,8 +743,11 @@ function normalizeLanguage(lang: string): string {
 function getScriptBlock(language: string): ScriptBlock | null {
   const lang = normalizeLanguage(language);
   
+  // Complete mapping for all 82 languages to their script blocks
   const scriptMapping: Record<string, string> = {
+    // South Asian - Devanagari script
     'hindi': 'devanagari', 'marathi': 'devanagari', 'nepali': 'devanagari', 'sanskrit': 'devanagari',
+    // South Asian - Other scripts
     'bengali': 'bengali', 'assamese': 'bengali',
     'telugu': 'telugu',
     'tamil': 'tamil',
@@ -594,13 +756,39 @@ function getScriptBlock(language: string): ScriptBlock | null {
     'gujarati': 'gujarati',
     'punjabi': 'punjabi',
     'odia': 'odia',
-    'arabic': 'arabic', 'urdu': 'arabic', 'persian': 'arabic', 'pashto': 'arabic',
-    'russian': 'cyrillic', 'ukrainian': 'cyrillic', 'bulgarian': 'cyrillic', 'serbian': 'cyrillic', 'macedonian': 'cyrillic', 'mongolian': 'cyrillic', 'kazakh': 'cyrillic', 'kyrgyz': 'cyrillic', 'tajik': 'cyrillic',
-    'greek': 'greek',
+    'sinhala': 'sinhala',
+    // Middle Eastern - Arabic script
+    'arabic': 'arabic', 'urdu': 'arabic', 'persian': 'arabic', 'pashto': 'arabic', 'kurdish': 'arabic',
+    // Middle Eastern - Hebrew
     'hebrew': 'hebrew',
+    // East European - Cyrillic script
+    'russian': 'cyrillic', 'ukrainian': 'cyrillic', 'bulgarian': 'cyrillic', 
+    'serbian': 'cyrillic', 'macedonian': 'cyrillic', 'belarusian': 'cyrillic',
+    // Central Asian - Cyrillic script
+    'mongolian': 'cyrillic', 'kazakh': 'cyrillic', 'kyrgyz': 'cyrillic', 'tajik': 'cyrillic',
+    // European - Greek script
+    'greek': 'greek',
+    // Caucasus scripts
+    'georgian': 'georgian',
+    'armenian': 'armenian',
+    // Southeast Asian scripts
     'thai': 'thai',
+    'burmese': 'myanmar', 'myanmar': 'myanmar',
+    'khmer': 'khmer', 'cambodian': 'khmer',
+    'lao': 'lao',
+    // East Asian scripts
     'japanese': 'japanese',
     'korean': 'korean',
+    'chinese': 'chinese', 'mandarin': 'chinese',
+    // African scripts
+    'amharic': 'ethiopic', 'tigrinya': 'ethiopic',
+    // Latin script languages (no transliteration needed, passthrough)
+    // Spanish, French, German, Italian, Portuguese, Dutch, Polish, Czech, Romanian,
+    // Hungarian, Swedish, Danish, Finnish, Norwegian, Vietnamese, Indonesian, Malay,
+    // Turkish, Croatian, Slovak, Slovenian, Lithuanian, Latvian, Estonian, Albanian,
+    // Bosnian, Maltese, Icelandic, Irish, Welsh, Basque, Catalan, Galician, Afrikaans,
+    // Yoruba, Igbo, Hausa, Zulu, Xhosa, Somali, Tagalog, Javanese, Sundanese, Uzbek,
+    // Azerbaijani, Turkmen, Swahili
   };
 
   const scriptName = scriptMapping[lang];
