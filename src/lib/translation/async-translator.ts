@@ -259,9 +259,7 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
 export async function translateAsync(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string,
-  autoDetect: boolean = false,
-  motherTongue?: string
+  targetLanguage: string
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
 
@@ -269,27 +267,10 @@ export async function translateAsync(
     return { text: '', originalText: '', isTranslated: false };
   }
 
-  let normSource = normalizeLanguage(sourceLanguage);
+  const normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
-  const normMotherTongue = motherTongue ? normalizeLanguage(motherTongue) : undefined;
 
-  // Auto-detect source language from text if enabled or if source is 'auto'
-  if (autoDetect || sourceLanguage === 'auto') {
-    const detected = autoDetectLanguageSync(trimmed);
-    if (!detected.isLatin && detected.confidence > 0.8) {
-      // Non-Latin script detected - use detected language
-      normSource = detected.language;
-      console.log(`[AsyncTranslator] Auto-detected source: ${normSource}`);
-    } else if (detected.isLatin) {
-      // Latin text - check if it's English or romanized text based on mother tongue
-      // Let the edge function decide with mother tongue context
-      normSource = 'auto';
-      console.log(`[AsyncTranslator] Latin text, letting edge function auto-detect with mother tongue: ${normMotherTongue}`);
-    }
-  }
-
-  // Skip same language check if auto-detecting (edge function will handle)
-  if (normSource !== 'auto' && isSameLanguage(normSource, normTarget)) {
+  if (isSameLanguage(normSource, normTarget)) {
     return {
       text: trimmed,
       originalText: trimmed,
@@ -310,17 +291,14 @@ export async function translateAsync(
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
-    autoDetect,
-    motherTongue: normMotherTongue,
   });
 
   try {
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
         text: trimmed,
-        sourceLanguage: normSource === 'auto' ? undefined : normSource,
+        sourceLanguage: normSource,
         targetLanguage: normTarget,
-        motherTongue: normMotherTongue,
         mode: 'translate',
       },
     });

@@ -174,7 +174,7 @@ export function useRealtimeChatTranslation(
   const getInstantPreview = getLivePreview;
 
   // ============================================================
-  // PROCESS MESSAGE (Async, Edge Function with Auto-Detection)
+  // PROCESS MESSAGE (Async, Edge Function)
   // ============================================================
 
   const processMessage = useCallback(async (
@@ -183,6 +183,8 @@ export function useRealtimeChatTranslation(
     toLanguage?: string
   ): Promise<ChatMessageResult> => {
     const startTime = performance.now();
+    const srcLang = normalizeLang(fromLanguage || senderLanguage);
+    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
 
     if (!text || !text.trim()) {
       return {
@@ -196,57 +198,20 @@ export function useRealtimeChatTranslation(
     }
 
     const trimmed = text.trim();
-    
-    // AUTO-DETECT source language from actual text typed
-    const detected = autoDetectLanguageSync(trimmed);
-    const detectedSourceLang = detected.language;
-    
-    // Sender's mother tongue (profile language)
-    const motherTongue = normalizeLang(fromLanguage || senderLanguage);
-    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
-    
-    // Determine effective source language:
-    // 1. If non-Latin script detected with high confidence, use detected language
-    // 2. If Latin text typed by non-English mother tongue user, let edge function decide
-    // 3. If Latin text by English user, use English
-    let srcLang: string;
-    let autoDetectFromText = false;
-    
-    if (!detected.isLatin && detected.confidence > 0.8) {
-      // Non-Latin script detected with high confidence - use it
-      srcLang = detectedSourceLang;
-      console.log(`[useRealtimeChatTranslation] Auto-detected source: ${srcLang} (${detected.script})`);
-    } else if (detected.isLatin) {
-      // Latin text - let edge function auto-detect based on mother tongue
-      // Pass 'auto' to signal the edge function to make the decision
-      srcLang = 'auto';
-      autoDetectFromText = true;
-      console.log(`[useRealtimeChatTranslation] Latin text by ${motherTongue} speaker, auto-detecting`);
-    } else {
-      // Fall back to mother tongue
-      srcLang = motherTongue;
-    }
-
     let senderView = trimmed;
     let wasTransliterated = false;
 
-    // If sender has a non-Latin mother tongue but typed in Latin,
-    // check if it's English or romanized text for their view
-    if (needsScriptConversion(motherTongue) && isLatinText(trimmed)) {
-      // Only transliterate if it doesn't look like English
-      const looksLikeEnglish = isLikelyEnglishWords(trimmed);
-      if (!looksLikeEnglish) {
-        const result = await convertToNativeScriptAsync(trimmed, motherTongue);
-        if (result.isTranslated) {
-          senderView = result.text;
-          wasTransliterated = true;
-        }
+    // Convert to sender's native script if needed
+    if (needsScriptConversion(srcLang) && isLatinText(trimmed)) {
+      const result = await convertToNativeScriptAsync(trimmed, srcLang);
+      if (result.isTranslated) {
+        senderView = result.text;
+        wasTransliterated = true;
       }
     }
 
     // If same language, receiver sees same as sender
-    const effectiveSrc = autoDetectFromText ? motherTongue : srcLang;
-    if (isSameLanguage(effectiveSrc, tgtLang) && !autoDetectFromText) {
+    if (isSameLanguage(srcLang, tgtLang)) {
       return {
         senderView,
         receiverView: senderView,
@@ -257,19 +222,12 @@ export function useRealtimeChatTranslation(
       };
     }
 
-    // Translate via Edge Function with mother tongue context
+    // Translate via Edge Function
     let receiverView = senderView;
     let wasTranslated = false;
 
     try {
-      // Pass original text, auto-detect signal, and mother tongue for context
-      const result = await translateAsync(
-        trimmed, 
-        autoDetectFromText ? 'auto' : srcLang, 
-        tgtLang,
-        true, // autoDetect flag
-        motherTongue // pass mother tongue for context
-      );
+      const result = await translateAsync(senderView, srcLang, tgtLang);
       if (result.isTranslated) {
         receiverView = result.text;
         wasTranslated = true;
@@ -295,32 +253,6 @@ export function useRealtimeChatTranslation(
       processingTime: performance.now() - startTime,
     };
   }, [senderLanguage, receiverLanguage]);
-
-  // Helper to detect English words in Latin text
-  const isLikelyEnglishWords = (text: string): boolean => {
-    const cleanText = text.toLowerCase().trim();
-    const englishWords = new Set([
-      'hello', 'hi', 'hey', 'bye', 'good', 'morning', 'evening', 'night', 'afternoon',
-      'how', 'are', 'you', 'what', 'is', 'the', 'a', 'an', 'this', 'that', 'it',
-      'yes', 'no', 'ok', 'okay', 'please', 'thank', 'thanks', 'sorry', 'welcome',
-      'love', 'like', 'nice', 'great', 'bad', 'happy', 'sad', 'fine',
-      'where', 'when', 'why', 'who', 'which', 'can', 'will', 'would', 'could', 'should',
-      'i', 'me', 'my', 'we', 'us', 'our', 'they', 'them', 'their', 'he', 'she',
-      'do', 'does', 'did', 'have', 'has', 'had', 'am', 'was', 'were',
-      'go', 'going', 'come', 'coming', 'see', 'look', 'want', 'need', 'help',
-    ]);
-    
-    const words = cleanText.split(/\s+/);
-    const englishWordCount = words.filter(w => englishWords.has(w.toLowerCase())).length;
-    
-    // Single word English check
-    if (words.length === 1 && englishWords.has(cleanText)) {
-      return true;
-    }
-    
-    // If more than 40% are English words
-    return words.length > 0 && englishWordCount / words.length >= 0.4;
-  };
 
   // ============================================================
   // TRANSLATE TEXT (Async, Edge Function)
