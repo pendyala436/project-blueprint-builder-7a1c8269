@@ -1,252 +1,174 @@
 /**
  * useLibreTranslate React Hook
- * ============================
- * Pure TypeScript translation hook inspired by LibreTranslate
- * Provides sync/async translation with English pivot
+ * Bidirectional translation with English as mandatory pivot
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
-import {
-  detectLanguage,
-  isLatinScript,
-  normalizeLanguage,
-  transliterate,
-  translateLocal,
-  convertToNativeScript,
-  translate,
-  processMessageForChat,
-  type TranslationResult,
-  type DetectionResult,
-} from './libre-translate';
+import { useState, useCallback, useMemo } from 'react';
+import { type Language, PIVOT, LANGUAGE_NAMES, isSupported, getLanguageCode } from './languages';
+
+const EDGE_FUNCTION_URL = "https://tvneohngeracipjajzos.supabase.co/functions/v1/libre-translate";
+
+/** Detect language from text using Unicode patterns */
+function detectLanguage(text: string): Language {
+  if (!text?.trim()) return "en";
+  
+  const patterns: [RegExp, Language][] = [
+    [/[\u0900-\u097F]/, "hi"],
+    [/[\u0C00-\u0C7F]/, "te"],
+    [/[\u0B80-\u0BFF]/, "ta"],
+    [/[\u0C80-\u0CFF]/, "kn"],
+    [/[\u0D00-\u0D7F]/, "ml"],
+    [/[\u0980-\u09FF]/, "bn"],
+    [/[\u0A80-\u0AFF]/, "gu"],
+    [/[\u0A00-\u0A7F]/, "pa"],
+    [/[\u0B00-\u0B7F]/, "or"],
+    [/[\u0600-\u06FF]/, "ar"],
+    [/[\u4E00-\u9FFF]/, "zh"],
+    [/[\u3040-\u30FF]/, "ja"],
+    [/[\uAC00-\uD7AF]/, "ko"],
+    [/[\u0E00-\u0E7F]/, "th"],
+    [/[\u0590-\u05FF]/, "he"],
+    [/[\u0400-\u04FF]/, "ru"],
+  ];
+  
+  for (const [pattern, lang] of patterns) {
+    if (pattern.test(text)) return lang;
+  }
+  
+  return "en";
+}
+
+/** Check if text is Latin script */
+function isLatinScript(text: string): boolean {
+  if (!text?.trim()) return true;
+  const latinPattern = /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\s\p{P}\p{N}]+$/u;
+  return latinPattern.test(text);
+}
+
+/** Normalize language name to code */
+function normalizeLanguage(lang: string): Language {
+  if (isSupported(lang)) return lang;
+  return getLanguageCode(lang) || "en";
+}
+
+export interface TranslationResult {
+  translated: string;
+  source: Language;
+  target: Language;
+  pivot: Language | null;
+}
 
 export interface UseLibreTranslateOptions {
   userLanguage?: string;
   partnerLanguage?: string;
-  enableLivePreview?: boolean;
-}
-
-export interface LivePreview {
-  text: string;
-  nativeScript: string;
-  targetLanguage: string;
-  timestamp: number;
 }
 
 export interface UseLibreTranslateReturn {
-  // State
   isTranslating: boolean;
   error: string | null;
-  livePreview: LivePreview | null;
   
-  // Sync functions (instant, <5ms)
-  detect: (text: string) => DetectionResult;
-  isLatin: (text: string) => boolean;
-  normalize: (lang: string) => string;
-  toNativeScript: (text: string, language: string) => string;
-  translateSync: (text: string, source: string, target: string) => TranslationResult;
-  
-  // Async functions
-  translateAsync: (text: string, source?: string, target?: string) => Promise<TranslationResult>;
-  processForChat: (text: string, senderLang: string, receiverLang: string) => Promise<{
+  // Translation
+  translate: (text: string, source?: Language, target?: Language) => Promise<TranslationResult>;
+  translateForChat: (text: string, senderLang: string, receiverLang: string) => Promise<{
     senderView: string;
     receiverView: string;
-    wasTransliterated: boolean;
-    wasTranslated: boolean;
   }>;
   
-  // Live preview
-  updateLivePreview: (text: string, targetLanguage?: string) => void;
-  clearLivePreview: () => void;
-  
   // Utilities
+  detect: (text: string) => Language;
+  isLatin: (text: string) => boolean;
+  normalize: (lang: string) => Language;
   isSameLanguage: (lang1: string, lang2: string) => boolean;
-  needsTranslation: (senderLang: string, receiverLang: string) => boolean;
+  getLanguageName: (code: Language) => string;
 }
 
 export function useLibreTranslate(options: UseLibreTranslateOptions = {}): UseLibreTranslateReturn {
-  const { userLanguage = 'english', partnerLanguage = 'english', enableLivePreview = true } = options;
+  const { userLanguage = 'en', partnerLanguage = 'en' } = options;
   
-  // State
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [livePreview, setLivePreview] = useState<LivePreview | null>(null);
-  
-  // Refs for debouncing
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // ============================================================
-  // SYNC FUNCTIONS (Instant)
-  // ============================================================
-  
-  const detect = useCallback((text: string): DetectionResult => {
-    return detectLanguage(text);
-  }, []);
-  
-  const isLatin = useCallback((text: string): boolean => {
-    return isLatinScript(text);
-  }, []);
-  
-  const normalize = useCallback((lang: string): string => {
-    return normalizeLanguage(lang);
-  }, []);
-  
-  const toNativeScript = useCallback((text: string, language: string): string => {
-    return convertToNativeScript(text, language);
-  }, []);
-  
-  const translateSync = useCallback((text: string, source: string, target: string): TranslationResult => {
-    return translateLocal(text, source, target);
-  }, []);
-  
-  const isSameLanguage = useCallback((lang1: string, lang2: string): boolean => {
-    return normalizeLanguage(lang1) === normalizeLanguage(lang2);
-  }, []);
-  
-  const needsTranslation = useCallback((senderLang: string, receiverLang: string): boolean => {
-    return !isSameLanguage(senderLang, receiverLang);
-  }, [isSameLanguage]);
-  
-  // ============================================================
-  // ASYNC FUNCTIONS
-  // ============================================================
-  
-  const translateAsync = useCallback(async (
+
+  /** Call edge function for translation */
+  const translate = useCallback(async (
     text: string,
-    source?: string,
-    target?: string
+    source?: Language,
+    target?: Language
   ): Promise<TranslationResult> => {
+    const tgt = target || normalizeLanguage(partnerLanguage);
+    const src = source || detectLanguage(text);
+    
+    if (!text?.trim() || src === tgt) {
+      return { translated: text, source: src, target: tgt, pivot: null };
+    }
+    
     setIsTranslating(true);
     setError(null);
     
     try {
-      const result = await translate(
-        text,
-        source || userLanguage,
-        target || partnerLanguage
-      );
-      return result;
+      const res = await fetch(EDGE_FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, source: src, target: tgt }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      const json = await res.json();
+      return {
+        translated: json.translated || text,
+        source: json.source || src,
+        target: tgt,
+        pivot: json.pivot || null
+      };
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Translation failed';
-      setError(errorMsg);
-      // Fallback to sync
-      return translateLocal(text, source || userLanguage, target || partnerLanguage);
+      const msg = err instanceof Error ? err.message : 'Translation failed';
+      setError(msg);
+      return { translated: text, source: src, target: tgt, pivot: null };
     } finally {
       setIsTranslating(false);
     }
-  }, [userLanguage, partnerLanguage]);
-  
-  const processForChat = useCallback(async (
+  }, [partnerLanguage]);
+
+  /** Translate for chat: returns both sender and receiver views */
+  const translateForChat = useCallback(async (
     text: string,
     senderLang: string,
     receiverLang: string
   ) => {
-    setIsTranslating(true);
-    setError(null);
+    const srcLang = normalizeLanguage(senderLang);
+    const tgtLang = normalizeLanguage(receiverLang);
     
-    try {
-      const result = await processMessageForChat(text, senderLang, receiverLang);
-      return {
-        senderView: result.senderView,
-        receiverView: result.receiverView,
-        wasTransliterated: result.wasTransliterated,
-        wasTranslated: result.wasTranslated
-      };
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Processing failed';
-      setError(errorMsg);
-      return {
-        senderView: text,
-        receiverView: text,
-        wasTransliterated: false,
-        wasTranslated: false
-      };
-    } finally {
-      setIsTranslating(false);
+    if (srcLang === tgtLang) {
+      return { senderView: text, receiverView: text };
     }
+
+    const result = await translate(text, srcLang, tgtLang);
+    return { senderView: text, receiverView: result.translated };
+  }, [translate]);
+
+  const detect = useCallback((text: string) => detectLanguage(text), []);
+  const isLatin = useCallback((text: string) => isLatinScript(text), []);
+  const normalize = useCallback((lang: string) => normalizeLanguage(lang), []);
+  
+  const isSameLanguage = useCallback((lang1: string, lang2: string) => {
+    return normalizeLanguage(lang1) === normalizeLanguage(lang2);
   }, []);
   
-  // ============================================================
-  // LIVE PREVIEW
-  // ============================================================
-  
-  const updateLivePreview = useCallback((text: string, targetLanguage?: string) => {
-    if (!enableLivePreview) return;
-    
-    // Clear existing timeout
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-    }
-    
-    // Debounce preview generation
-    previewTimeoutRef.current = setTimeout(() => {
-      const target = targetLanguage || userLanguage;
-      const detected = detectLanguage(text);
-      
-      if (detected.script === 'Latin' && target !== 'english') {
-        const nativeScript = convertToNativeScript(text, target);
-        setLivePreview({
-          text,
-          nativeScript,
-          targetLanguage: target,
-          timestamp: Date.now()
-        });
-      } else {
-        setLivePreview(null);
-      }
-    }, 100); // 100ms debounce
-  }, [userLanguage, enableLivePreview]);
-  
-  const clearLivePreview = useCallback(() => {
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-    }
-    setLivePreview(null);
+  const getLanguageName = useCallback((code: Language) => {
+    return LANGUAGE_NAMES[code] || code;
   }, []);
-  
-  // ============================================================
-  // RETURN
-  // ============================================================
-  
+
   return useMemo(() => ({
-    // State
     isTranslating,
     error,
-    livePreview,
-    
-    // Sync functions
+    translate,
+    translateForChat,
     detect,
     isLatin,
     normalize,
-    toNativeScript,
-    translateSync,
-    
-    // Async functions
-    translateAsync,
-    processForChat,
-    
-    // Live preview
-    updateLivePreview,
-    clearLivePreview,
-    
-    // Utilities
     isSameLanguage,
-    needsTranslation
-  }), [
-    isTranslating,
-    error,
-    livePreview,
-    detect,
-    isLatin,
-    normalize,
-    toNativeScript,
-    translateSync,
-    translateAsync,
-    processForChat,
-    updateLivePreview,
-    clearLivePreview,
-    isSameLanguage,
-    needsTranslation
-  ]);
+    getLanguageName
+  }), [isTranslating, error, translate, translateForChat, detect, isLatin, normalize, isSameLanguage, getLanguageName]);
 }
 
 export default useLibreTranslate;
