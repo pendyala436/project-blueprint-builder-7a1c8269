@@ -460,35 +460,107 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
 };
 
 // ============================================================
-// LANGUAGE TO SCRIPT MAPPING - Dynamic
+// LANGUAGE TO SCRIPT MAPPING - Extended for 386+ languages
+// Maps language names to script block names
 // ============================================================
 
 const LANGUAGE_SCRIPT_MAP: Record<string, string> = {
-  // Indic languages
-  hindi: 'devanagari', marathi: 'devanagari', sanskrit: 'devanagari',
-  nepali: 'devanagari', konkani: 'devanagari', bodo: 'devanagari',
-  dogri: 'devanagari', maithili: 'devanagari', sindhi: 'devanagari',
-  telugu: 'telugu', tamil: 'tamil', kannada: 'kannada', tulu: 'kannada',
-  malayalam: 'malayalam', bengali: 'bengali', assamese: 'bengali',
-  gujarati: 'gujarati', punjabi: 'punjabi', odia: 'odia', oriya: 'odia',
-  manipuri: 'bengali',
+  // Indic languages - Devanagari script
+  'hindi': 'devanagari', 'marathi': 'devanagari', 'sanskrit': 'devanagari',
+  'nepali': 'devanagari', 'konkani': 'devanagari', 'bodo': 'devanagari',
+  'dogri': 'devanagari', 'maithili': 'devanagari', 'bhojpuri': 'devanagari',
+  'chhattisgarhi': 'devanagari', 'rajasthani': 'devanagari', 'marwari': 'devanagari',
+  'mewari': 'devanagari', 'haryanvi': 'devanagari', 'magahi': 'devanagari',
+  'angika': 'devanagari', 'bajjika': 'devanagari', 'awadhi': 'devanagari',
+  'bundeli': 'devanagari', 'bagheli': 'devanagari', 'garhwali': 'devanagari',
+  'kumaoni': 'devanagari', 'pahari': 'devanagari', 'kanauji': 'devanagari',
+  'bhili': 'devanagari', 'gondi': 'devanagari', 'lambadi': 'devanagari',
+  'nagpuri': 'devanagari', 'kurukh': 'devanagari', 'mundari': 'devanagari',
+  'ho': 'devanagari', 'kharia': 'devanagari', 'halbi': 'devanagari',
+  'newari': 'devanagari', 'tamang': 'devanagari', 'gurung': 'devanagari',
+  'magar': 'devanagari', 'tharu': 'devanagari', 'rai': 'devanagari',
+  'pali': 'devanagari', 'warli': 'devanagari',
   
-  // Middle Eastern
-  arabic: 'arabic', urdu: 'arabic', persian: 'arabic', farsi: 'arabic',
-  hebrew: 'hebrew', yiddish: 'hebrew',
+  // Indic languages - other scripts
+  'telugu': 'telugu', 'tamil': 'tamil', 'kannada': 'kannada', 'tulu': 'kannada',
+  'malayalam': 'malayalam', 'bengali': 'bengali', 'assamese': 'bengali',
+  'gujarati': 'gujarati', 'punjabi': 'punjabi', 'odia': 'odia', 'oriya': 'odia',
+  'manipuri': 'bengali', 'meitei': 'bengali', 'chittagonian': 'bengali',
+  'sylheti': 'bengali', 'kodava': 'kannada', 'badaga': 'kannada',
+  'toda': 'tamil', 'irula': 'tamil', 'kuruma': 'malayalam',
   
-  // East Asian
-  thai: 'thai', lao: 'thai',
-  russian: 'russian', ukrainian: 'russian', bulgarian: 'russian',
-  serbian: 'russian', macedonian: 'russian', belarusian: 'russian',
-  greek: 'greek',
-  japanese: 'japanese', korean: 'korean', chinese: 'chinese',
+  // Middle Eastern & Arabic script
+  'arabic': 'arabic', 'urdu': 'arabic', 'persian': 'arabic', 'farsi': 'arabic',
+  'pashto': 'arabic', 'dari': 'arabic', 'uighur': 'arabic', 'sindhi': 'arabic',
+  'kashmiri': 'arabic', 'balochi': 'arabic', 'brahui': 'arabic', 'saraiki': 'arabic',
+  'hindko': 'arabic', 'shina': 'arabic', 'burushaski': 'arabic', 'khowar': 'arabic',
+  'kalasha': 'arabic', 'rohingya': 'arabic', 'egyptian arabic': 'arabic',
+  'levantine arabic': 'arabic', 'gulf arabic': 'arabic', 'maghrebi arabic': 'arabic',
+  'sudanese arabic': 'arabic',
   
-  // Latin script languages - return empty (no conversion needed)
-  english: '', spanish: '', french: '', german: '', italian: '',
-  portuguese: '', dutch: '', polish: '', czech: '', romanian: '',
-  hungarian: '', turkish: '', vietnamese: '', indonesian: '',
-  malay: '', tagalog: '', filipino: '', swahili: ''
+  // Hebrew script
+  'hebrew': 'hebrew', 'yiddish': 'hebrew',
+  
+  // East Asian scripts
+  'thai': 'thai', 'lao': 'thai',
+  'japanese': 'japanese', 'korean': 'korean', 
+  'chinese (mandarin)': 'chinese', 'chinese': 'chinese', 'mandarin': 'chinese',
+  'cantonese': 'chinese', 'wu chinese': 'chinese', 'min nan': 'chinese',
+  'hakka': 'chinese', 'xiang': 'chinese', 'gan': 'chinese',
+  
+  // Cyrillic script
+  'russian': 'russian', 'ukrainian': 'russian', 'bulgarian': 'russian',
+  'serbian': 'russian', 'macedonian': 'russian', 'belarusian': 'russian',
+  'kazakh': 'russian', 'kyrgyz': 'russian', 'tajik': 'russian',
+  'tatar': 'russian', 'bashkir': 'russian', 'chuvash': 'russian',
+  'sakha': 'russian', 'buryat': 'russian', 'kalmyk': 'russian',
+  'mongolian': 'russian', 'chechen': 'russian', 'avar': 'russian',
+  'rusyn': 'russian',
+  
+  // Greek script
+  'greek': 'greek',
+  
+  // Other scripts (no transliteration available - will passthrough)
+  'burmese': 'myanmar', 'shan': 'myanmar', 'karen': 'myanmar', 'mon': 'myanmar',
+  'khmer': 'khmer', 'sinhala': 'sinhala', 'sinhalese': 'sinhala',
+  'amharic': 'ethiopic', 'tigrinya': 'ethiopic',
+  'georgian': 'georgian', 'armenian': 'armenian',
+  'tibetan': 'tibetan', 'dzongkha': 'tibetan', 'sherpa': 'tibetan', 'bhutia': 'tibetan',
+  'santali': 'ol_chiki', 'limbu': 'limbu', 'lepcha': 'lepcha',
+  'yi': 'yi', 'lisu': 'lisu', 'dhivehi': 'thaana',
+  'chakma': 'chakma',
+  
+  // Latin script languages - empty string means no conversion needed
+  'english': '', 'spanish': '', 'french': '', 'german': '', 'italian': '',
+  'portuguese': '', 'dutch': '', 'polish': '', 'czech': '', 'romanian': '',
+  'hungarian': '', 'turkish': '', 'vietnamese': '', 'indonesian': '',
+  'malay': '', 'tagalog': '', 'filipino': '', 'swahili': '', 'javanese': '',
+  'sundanese': '', 'cebuano': '', 'ilocano': '', 'minangkabau': '', 'acehnese': '',
+  'balinese': '', 'banjar': '', 'kurdish': '', 'turkmen': '', 'uzbek': '',
+  'azerbaijani': '', 'albanian': '', 'bosnian': '', 'croatian': '', 'slovenian': '',
+  'slovak': '', 'lithuanian': '', 'latvian': '', 'estonian': '', 'finnish': '',
+  'swedish': '', 'norwegian': '', 'danish': '', 'icelandic': '', 'irish': '',
+  'welsh': '', 'scottish gaelic': '', 'basque': '', 'catalan': '', 'galician': '',
+  'maltese': '', 'luxembourgish': '', 'occitan': '', 'breton': '', 'frisian': '',
+  'faroese': '', 'aragonese': '', 'asturian': '', 'corsican': '', 'sardinian': '',
+  'friulian': '', 'ligurian': '', 'lombard': '', 'sicilian': '', 'venetian': '',
+  'sorbian': '', 'kashubian': '', 'silesian': '', 'afrikaans': '', 'zulu': '',
+  'xhosa': '', 'yoruba': '', 'igbo': '', 'hausa': '', 'somali': '', 'oromo': '',
+  'shona': '', 'setswana': '', 'sesotho': '', 'kinyarwanda': '', 'kirundi': '',
+  'luganda': '', 'chichewa': '', 'malagasy': '', 'wolof': '', 'fulani': '',
+  'bambara': '', 'lingala': '', 'twi': '', 'ewe': '', 'akan': '', 'fon': '',
+  'moore': '', 'kikuyu': '', 'luo': '', 'kanuri': '', 'ndebele': '', 'siswati': '',
+  'venda': '', 'tsonga': '', 'sepedi': '', 'dinka': '', 'nuer': '', 'lozi': '',
+  'tumbuka': '', 'bemba': '', 'quechua': '', 'guarani': '', 'aymara': '',
+  'haitian creole': '', 'nahuatl': '', 'maya': '', 'mapudungun': '', 'hawaiian': '',
+  'maori': '', 'samoan': '', 'tongan': '', 'fijian': '', 'tahitian': '',
+  'tok pisin': '', 'bislama': '', 'crimean tatar': '', 'karakalpak': '',
+  'hmong': '', 'zhuang': '', 'naxi': '', 'bai': '', 'esperanto': '', 'latin': '',
+  'romani': '', 'ladino': '', 'mizo': '', 'khasi': '', 'garo': '', 'karbi': '',
+  'kokborok': '', 'rabha': '', 'mishing': '', 'nyishi': '', 'apatani': '', 'adi': '',
+  'ao': '', 'lotha': '', 'sumi': '', 'angami': '', 'tangkhul': '', 'paite': '',
+  'thadou': '', 'rongmei': '', 'tangsa': '', 'wancho': '', 'nocte': '', 'nicobarese': '',
+  'cham': '',
 };
 
 // ============================================================
@@ -507,7 +579,7 @@ function getScriptForLanguage(language: string): ScriptBlock | null {
 
 /**
  * Check if language uses Latin script
- * Returns true ONLY for known Latin-script languages
+ * Returns true for Latin-script languages
  * Returns false for known non-Latin languages (so they get transliterated)
  */
 export function isLatinScriptLanguage(language: string): boolean {
@@ -515,27 +587,19 @@ export function isLatinScriptLanguage(language: string): boolean {
   const normalized = language.toLowerCase().trim();
   if (!normalized) return true;
   
-  // If we have a script mapping for this language, it's NON-Latin
+  // If we have a script mapping for this language and it's NOT empty, it's NON-Latin
   const scriptName = LANGUAGE_SCRIPT_MAP[normalized];
   if (scriptName && scriptName !== '') {
-    return false; // Has a script mapping = non-Latin
+    return false; // Has a non-empty script mapping = non-Latin
   }
   
-  // Known Latin-script languages (explicit list)
-  const KNOWN_LATIN_LANGUAGES = new Set([
-    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
-    'dutch', 'polish', 'romanian', 'czech', 'hungarian', 'swedish',
-    'danish', 'finnish', 'norwegian', 'croatian', 'slovak', 'slovenian',
-    'latvian', 'lithuanian', 'estonian', 'bosnian', 'albanian', 'icelandic',
-    'irish', 'welsh', 'basque', 'catalan', 'galician', 'maltese',
-    'turkish', 'vietnamese', 'indonesian', 'malay', 'tagalog', 'filipino',
-    'javanese', 'sundanese', 'cebuano', 'swahili', 'afrikaans', 'yoruba',
-    'igbo', 'hausa', 'zulu', 'xhosa', 'somali', 'uzbek', 'turkmen',
-    'azerbaijani', 'maori', 'samoan', 'tongan', 'fijian', 'hawaiian',
-    'esperanto', 'latin'
-  ]);
+  // If the mapping exists and is empty string, it's Latin
+  if (scriptName === '') {
+    return true;
+  }
   
-  return KNOWN_LATIN_LANGUAGES.has(normalized);
+  // Default: unknown language - assume Latin (no conversion)
+  return true;
 }
 
 /**
@@ -916,20 +980,111 @@ export function normalizeLanguage(lang: string): string {
   if (!lang || typeof lang !== 'string') return 'english';
   const l = lang.toLowerCase().trim();
   if (!l) return 'english';
+  
+  // Comprehensive language code to name mapping
   const aliases: Record<string, string> = {
+    // Common codes
     'en': 'english', 'eng': 'english', 'hi': 'hindi', 'hin': 'hindi',
     'te': 'telugu', 'tel': 'telugu', 'ta': 'tamil', 'tam': 'tamil',
     'kn': 'kannada', 'kan': 'kannada', 'ml': 'malayalam', 'mal': 'malayalam',
-    'bn': 'bengali', 'ben': 'bengali', 'gu': 'gujarati', 'guj': 'gujarati',
-    'pa': 'punjabi', 'pan': 'punjabi', 'or': 'odia', 'ori': 'odia', 'oriya': 'odia',
-    'mr': 'marathi', 'mar': 'marathi', 'as': 'assamese', 'asm': 'assamese',
-    'ar': 'arabic', 'ara': 'arabic', 'ur': 'urdu', 'urd': 'urdu',
-    'ru': 'russian', 'rus': 'russian', 'zh': 'chinese', 'zho': 'chinese',
-    'ja': 'japanese', 'jpn': 'japanese', 'ko': 'korean', 'kor': 'korean',
-    'th': 'thai', 'tha': 'thai', 'he': 'hebrew', 'heb': 'hebrew',
-    'el': 'greek', 'ell': 'greek', 'es': 'spanish', 'spa': 'spanish',
-    'fr': 'french', 'fra': 'french', 'de': 'german', 'deu': 'german'
+    'bn': 'bengali', 'ben': 'bengali', 'bangla': 'bengali',
+    'gu': 'gujarati', 'guj': 'gujarati',
+    'pa': 'punjabi', 'pan': 'punjabi', 'panjabi': 'punjabi',
+    'or': 'odia', 'ori': 'odia', 'oriya': 'odia',
+    'mr': 'marathi', 'mar': 'marathi',
+    'as': 'assamese', 'asm': 'assamese', 'asamiya': 'assamese',
+    'ar': 'arabic', 'ara': 'arabic',
+    'ur': 'urdu', 'urd': 'urdu',
+    'ru': 'russian', 'rus': 'russian',
+    'zh': 'chinese (mandarin)', 'zho': 'chinese (mandarin)', 'chinese': 'chinese (mandarin)', 'mandarin': 'chinese (mandarin)',
+    'ja': 'japanese', 'jpn': 'japanese',
+    'ko': 'korean', 'kor': 'korean',
+    'th': 'thai', 'tha': 'thai',
+    'he': 'hebrew', 'heb': 'hebrew',
+    'el': 'greek', 'ell': 'greek',
+    'es': 'spanish', 'spa': 'spanish',
+    'fr': 'french', 'fra': 'french',
+    'de': 'german', 'deu': 'german',
+    'pt': 'portuguese', 'por': 'portuguese',
+    'it': 'italian', 'ita': 'italian',
+    'nl': 'dutch', 'nld': 'dutch',
+    'pl': 'polish', 'pol': 'polish',
+    'ro': 'romanian', 'ron': 'romanian',
+    'sv': 'swedish', 'swe': 'swedish',
+    'cs': 'czech', 'ces': 'czech',
+    'hu': 'hungarian', 'hun': 'hungarian',
+    'tr': 'turkish', 'tur': 'turkish',
+    'vi': 'vietnamese', 'vie': 'vietnamese',
+    'id': 'indonesian', 'ind': 'indonesian',
+    'ms': 'malay', 'msa': 'malay',
+    'tl': 'tagalog', 'tgl': 'tagalog', 'filipino': 'tagalog',
+    'sw': 'swahili', 'swa': 'swahili',
+    'uk': 'ukrainian', 'ukr': 'ukrainian',
+    'fa': 'persian', 'fas': 'persian', 'farsi': 'persian',
+    'ne': 'nepali', 'nep': 'nepali',
+    'si': 'sinhala', 'sin': 'sinhala', 'sinhalese': 'sinhala',
+    'my': 'burmese', 'mya': 'burmese', 'myanmar': 'burmese',
+    'km': 'khmer', 'khm': 'khmer',
+    'lo': 'lao', 'lao': 'lao',
+    'ka': 'georgian', 'kat': 'georgian',
+    'hy': 'armenian', 'hye': 'armenian',
+    'am': 'amharic', 'amh': 'amharic',
+    'ti': 'tigrinya', 'tir': 'tigrinya',
+    'sd': 'sindhi', 'snd': 'sindhi',
+    'ks': 'kashmiri', 'kas': 'kashmiri',
+    'bo': 'tibetan', 'bod': 'tibetan',
+    'dz': 'dzongkha', 'dzo': 'dzongkha',
+    'ps': 'pashto', 'pus': 'pashto',
+    'ku': 'kurdish', 'kur': 'kurdish',
+    'az': 'azerbaijani', 'aze': 'azerbaijani', 'azeri': 'azerbaijani',
+    'uz': 'uzbek', 'uzb': 'uzbek',
+    'kk': 'kazakh', 'kaz': 'kazakh',
+    'ky': 'kyrgyz', 'kir': 'kyrgyz',
+    'tg': 'tajik', 'tgk': 'tajik',
+    'tk': 'turkmen', 'tuk': 'turkmen',
+    'mn': 'mongolian', 'mon': 'mongolian',
+    'bg': 'bulgarian', 'bul': 'bulgarian',
+    'sr': 'serbian', 'srp': 'serbian',
+    'hr': 'croatian', 'hrv': 'croatian',
+    'sl': 'slovenian', 'slv': 'slovenian',
+    'sk': 'slovak', 'slk': 'slovak',
+    'lt': 'lithuanian', 'lit': 'lithuanian',
+    'lv': 'latvian', 'lav': 'latvian',
+    'et': 'estonian', 'est': 'estonian',
+    'fi': 'finnish', 'fin': 'finnish',
+    'da': 'danish', 'dan': 'danish',
+    'no': 'norwegian', 'nor': 'norwegian',
+    'is': 'icelandic', 'isl': 'icelandic',
+    'ga': 'irish', 'gle': 'irish',
+    'cy': 'welsh', 'cym': 'welsh',
+    'eu': 'basque', 'eus': 'basque',
+    'ca': 'catalan', 'cat': 'catalan',
+    'gl': 'galician', 'glg': 'galician',
+    'mt': 'maltese', 'mlt': 'maltese',
+    'sq': 'albanian', 'sqi': 'albanian',
+    'bs': 'bosnian', 'bos': 'bosnian',
+    'mk': 'macedonian', 'mkd': 'macedonian',
+    'be': 'belarusian', 'bel': 'belarusian',
+    'yo': 'yoruba', 'yor': 'yoruba',
+    'ig': 'igbo', 'ibo': 'igbo',
+    'ha': 'hausa', 'hau': 'hausa',
+    'zu': 'zulu', 'zul': 'zulu',
+    'xh': 'xhosa', 'xho': 'xhosa',
+    'so': 'somali', 'som': 'somali',
+    'rw': 'kinyarwanda', 'kin': 'kinyarwanda',
+    'mg': 'malagasy', 'mlg': 'malagasy',
+    'jv': 'javanese', 'jav': 'javanese',
+    'su': 'sundanese', 'sun': 'sundanese',
+    'mi': 'maori', 'mri': 'maori',
+    'sm': 'samoan', 'smo': 'samoan',
+    'haw': 'hawaiian',
+    'eo': 'esperanto', 'epo': 'esperanto',
+    'la': 'latin', 'lat': 'latin',
+    'yi': 'yiddish', 'yid': 'yiddish',
+    'ug': 'uighur', 'uig': 'uighur',
+    'af': 'afrikaans', 'afr': 'afrikaans',
   };
+  
   return aliases[l] || l;
 }
 
