@@ -298,6 +298,44 @@ export default function TranslationTestPage() {
         </Card>
       )}
 
+      {/* Telugu to French Test */}
+      <Card className="border-2 border-primary">
+        <CardHeader>
+          <CardTitle className="text-primary">🧪 Telugu → French Test</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { telugu: 'నమస్కారం', romanized: 'namaskaram', meaning: 'hello/greeting' },
+              { telugu: 'ధన్యవాదాలు', romanized: 'dhanyavaadaalu', meaning: 'thank you' },
+              { telugu: 'వీడ్కోలు', romanized: 'veedkolu', meaning: 'goodbye' },
+              { telugu: 'అవును', romanized: 'avunu', meaning: 'yes' },
+              { telugu: 'కాదు', romanized: 'kaadu', meaning: 'no' },
+              { telugu: 'క్షమించండి', romanized: 'kshaminchhandi', meaning: 'sorry' },
+              { telugu: 'ప్రేమ', romanized: 'prema', meaning: 'love' },
+              { telugu: 'మీరు ఎలా ఉన్నారు', romanized: 'meeru ela unnaru', meaning: 'how are you' },
+            ].map((item, idx) => {
+              const result = translateSemanticUniversal(item.telugu, 'french', 'telugu');
+              const detected = autoDetectLanguage(item.telugu);
+              return (
+                <div key={idx} className="p-3 rounded-lg border bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+                  <div className="text-lg font-semibold text-amber-800 dark:text-amber-300">{item.telugu}</div>
+                  <div className="text-xs text-muted-foreground italic">{item.romanized} ({item.meaning})</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xl">→</span>
+                    <span className="text-lg font-medium text-blue-700 dark:text-blue-300">{result.translatedText}</span>
+                  </div>
+                  <div className="mt-1 flex gap-1 flex-wrap">
+                    <Badge variant="outline" className="text-xs">Detected: {detected.language}</Badge>
+                    {result.wasTranslated && <Badge className="bg-green-500 text-xs">Translated</Badge>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Sample Phrases Quick Test */}
       <Card>
         <CardHeader>
