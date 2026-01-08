@@ -279,6 +279,29 @@ const ENGLISH_TO_ARABIC: Record<string, string> = Object.fromEntries(
   Object.entries(ARABIC_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
 );
 
+// Persian (Farsi) ↔ English
+const PERSIAN_TO_ENGLISH: Record<string, string> = {
+  'سلام': 'hello', 'سلام علیکم': 'peace be upon you', 'درود': 'greetings',
+  'صبح بخیر': 'good morning', 'شب بخیر': 'good night', 'عصر بخیر': 'good evening',
+  'خداحافظ': 'goodbye', 'به امید دیدار': 'see you soon', 'بای': 'bye',
+  'حالت چطوره': 'how are you', 'چطوری': 'how are you', 'خوبی': 'are you well',
+  'من خوبم': 'i am fine', 'ممنون': 'thanks', 'متشکرم': 'thank you', 'سپاس': 'thanks',
+  'لطفا': 'please', 'ببخشید': 'sorry', 'معذرت': 'excuse me',
+  'بله': 'yes', 'آره': 'yes', 'نه': 'no', 'نخیر': 'no', 'شاید': 'maybe', 'باشه': 'okay',
+  'من': 'i', 'تو': 'you', 'شما': 'you', 'او': 'he/she', 'ما': 'we', 'آنها': 'they',
+  'چی': 'what', 'کی': 'who', 'کجا': 'where', 'وقتی': 'when', 'چرا': 'why', 'چطور': 'how',
+  'خوب': 'good', 'بد': 'bad', 'زیبا': 'beautiful', 'قشنگ': 'beautiful',
+  'امروز': 'today', 'فردا': 'tomorrow', 'دیروز': 'yesterday', 'الان': 'now',
+  'عشق': 'love', 'دوست': 'friend', 'رفیق': 'buddy', 'خانواده': 'family',
+  'دوستت دارم': 'i love you', 'عاشقتم': 'i love you',
+  'آب': 'water', 'غذا': 'food', 'نان': 'bread', 'خانه': 'home', 'کار': 'work',
+  'خوش آمدید': 'welcome', 'کمک': 'help', 'بیا': 'come', 'برو': 'go',
+};
+
+const ENGLISH_TO_PERSIAN: Record<string, string> = Object.fromEntries(
+  Object.entries(PERSIAN_TO_ENGLISH).map(([k, v]) => [v.toLowerCase(), k])
+);
+
 // Kannada ↔ English
 const KANNADA_TO_ENGLISH: Record<string, string> = {
   'ನಮಸ್ಕಾರ': 'hello', 'ಹಾಯ್': 'hi', 'ಹಲೋ': 'hello',
@@ -501,6 +524,7 @@ function getDictionary(lang: string, direction: 'to_english' | 'from_english'): 
       case 'malayalam': return MALAYALAM_TO_ENGLISH;
       case 'gujarati': return GUJARATI_TO_ENGLISH;
       case 'punjabi': return PUNJABI_TO_ENGLISH;
+      case 'persian': return PERSIAN_TO_ENGLISH;
       default: return {};
     }
   } else {
@@ -516,6 +540,7 @@ function getDictionary(lang: string, direction: 'to_english' | 'from_english'): 
       case 'malayalam': return ENGLISH_TO_MALAYALAM;
       case 'gujarati': return ENGLISH_TO_GUJARATI;
       case 'punjabi': return ENGLISH_TO_PUNJABI;
+      case 'persian': return ENGLISH_TO_PERSIAN;
       default: return {};
     }
   }
