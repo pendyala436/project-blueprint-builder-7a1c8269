@@ -55,6 +55,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
+import GboardHintMarquee from "@/components/GboardHintMarquee";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
@@ -1051,6 +1052,9 @@ const DashboardScreen = () => {
           </div>
         </div>
       </header>
+
+      {/* Gboard Hint Marquee */}
+      <GboardHintMarquee />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
