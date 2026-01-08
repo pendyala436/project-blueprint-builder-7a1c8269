@@ -52,6 +52,7 @@ import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 import { AIElectionPanel } from "@/components/AIElectionPanel";
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
+import GboardHintMarquee from "@/components/GboardHintMarquee";
 
 interface Notification {
   id: string;
@@ -837,6 +838,9 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
       </header>
+
+      {/* Gboard Hint Marquee */}
+      <GboardHintMarquee />
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Section 1: Welcome & Status */}
