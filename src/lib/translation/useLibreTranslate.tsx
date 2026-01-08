@@ -4,7 +4,9 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { type Language, PIVOT, LANGUAGE_NAMES, isSupported, getLanguageCode } from './languages';
+import { type Language, PIVOT, LANGUAGE_NAMES, isSupported, getLanguageCode, LANGUAGES } from './languages';
+
+export { LANGUAGES, LANGUAGE_NAMES, type Language };
 
 const EDGE_FUNCTION_URL = "https://tvneohngeracipjajzos.supabase.co/functions/v1/libre-translate";
 
