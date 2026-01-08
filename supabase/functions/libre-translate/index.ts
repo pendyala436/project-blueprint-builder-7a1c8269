@@ -1103,8 +1103,12 @@ function transliterateSimpleScript(text: string, block: ScriptBlock): string {
 
 // ============================================================
 // BIDIRECTIONAL TRANSLATION ENGINE
-// Source → English (pivot) → Target
-// Target → English (pivot) → Source
+// Logic:
+// - Source = English → Translate directly English → Target
+// - Target = English → Translate directly Source → English
+// - Source ≠ English & Target ≠ English → Source → English → Target (pivot)
+// 
+// English pivot runs in BACKGROUND for all non-English pairs
 // ============================================================
 
 function translateBidirectional(
@@ -1116,28 +1120,84 @@ function translateBidirectional(
   const targetScript = getScriptForLanguage(targetCode);
   const inputScript = detectScriptFromText(text);
   
-  console.log(`[LibreTranslate] Bidirectional: ${sourceCode}(${sourceScript}) → ${targetCode}(${targetScript}), input script: ${inputScript}`);
+  const isSourceEnglish = sourceCode === 'en';
+  const isTargetEnglish = targetCode === 'en';
   
-  // STEP 1: Source → English (convert to Latin/English representation)
+  console.log(`[LibreTranslate] Bidirectional: ${sourceCode}(${sourceScript}) → ${targetCode}(${targetScript})`);
+  console.log(`[LibreTranslate] Source is English: ${isSourceEnglish}, Target is English: ${isTargetEnglish}`);
+  
   let sourceToEnglish = text;
-  if (inputScript !== 'latin') {
-    sourceToEnglish = transliterateToLatin(text, inputScript);
+  let englishToTarget = text;
+  let targetToEnglish = text;
+  let englishToSource = text;
+  
+  // CASE 1: Source is English → Direct translation to Target (no pivot needed)
+  if (isSourceEnglish) {
+    console.log(`[LibreTranslate] Case 1: English → ${targetCode} (direct, no pivot)`);
+    sourceToEnglish = text; // Already in English
+    
+    if (targetScript !== 'latin') {
+      englishToTarget = transliterateFromLatin(text, targetScript);
+    } else {
+      englishToTarget = text; // Target is also Latin
+    }
+    
+    // Reverse: Target → English (for replies)
+    targetToEnglish = text; // Would be transliterated back if needed
+    englishToSource = text; // Source is English, so no conversion needed
   }
-  
-  // STEP 2: English → Target (convert to target script)
-  let englishToTarget = sourceToEnglish;
-  if (targetScript !== 'latin') {
-    englishToTarget = transliterateFromLatin(sourceToEnglish, targetScript);
+  // CASE 2: Target is English → Direct translation to English (no pivot needed)
+  else if (isTargetEnglish) {
+    console.log(`[LibreTranslate] Case 2: ${sourceCode} → English (direct, no pivot)`);
+    
+    // Convert source script to Latin/English
+    if (inputScript !== 'latin') {
+      sourceToEnglish = transliterateToLatin(text, inputScript);
+    } else {
+      sourceToEnglish = text;
+    }
+    
+    englishToTarget = sourceToEnglish; // Target is English
+    targetToEnglish = sourceToEnglish;
+    
+    // Reverse: English → Source (for sender to see their message in their script)
+    if (sourceScript !== 'latin') {
+      englishToSource = transliterateFromLatin(sourceToEnglish, sourceScript);
+    } else {
+      englishToSource = sourceToEnglish;
+    }
   }
-  
-  // STEP 3: Target → English (for reverse direction - replies)
-  // This would be the same as sourceToEnglish if they replied with target script
-  let targetToEnglish = sourceToEnglish;
-  
-  // STEP 4: English → Source (for reverse direction)
-  let englishToSource = sourceToEnglish;
-  if (sourceScript !== 'latin') {
-    englishToSource = transliterateFromLatin(sourceToEnglish, sourceScript);
+  // CASE 3: Neither is English → Use English as pivot (background translation)
+  else {
+    console.log(`[LibreTranslate] Case 3: ${sourceCode} → English → ${targetCode} (English pivot in background)`);
+    
+    // STEP 1: Source → English (convert to Latin/English representation)
+    if (inputScript !== 'latin') {
+      sourceToEnglish = transliterateToLatin(text, inputScript);
+    } else {
+      // Even Latin languages need to go through English pivot
+      sourceToEnglish = text; // Already Latin, treat as English phonetic
+    }
+    
+    console.log(`[LibreTranslate] Pivot (English): "${sourceToEnglish.substring(0, 50)}..."`);
+    
+    // STEP 2: English → Target (convert from English to target script)
+    if (targetScript !== 'latin') {
+      englishToTarget = transliterateFromLatin(sourceToEnglish, targetScript);
+    } else {
+      // Target is Latin script - pass through the English pivot
+      englishToTarget = sourceToEnglish;
+    }
+    
+    // STEP 3: For reverse direction (replies) - Target → English → Source
+    targetToEnglish = sourceToEnglish; // Same English pivot
+    
+    // STEP 4: English → Source (for reverse direction / confirmations)
+    if (sourceScript !== 'latin') {
+      englishToSource = transliterateFromLatin(sourceToEnglish, sourceScript);
+    } else {
+      englishToSource = sourceToEnglish;
+    }
   }
   
   return {
@@ -1145,12 +1205,12 @@ function translateBidirectional(
     originalScript: inputScript,
     pivotLanguage: 'english',
     
-    // Forward path
+    // Forward path: Source → English → Target
     sourceToEnglish,
     englishToTarget,
     forTargetReader: englishToTarget,
     
-    // Reverse path
+    // Reverse path: Target → English → Source
     targetToEnglish,
     englishToSource,
     forSourceReader: englishToSource,
@@ -1161,6 +1221,9 @@ function translateText(text: string, sourceCode: string, targetCode: string): Tr
   const sourceScript = getScriptForLanguage(sourceCode);
   const targetScript = getScriptForLanguage(targetCode);
   const inputScript = detectScriptFromText(text);
+  
+  const isSourceEnglish = sourceCode === 'en';
+  const isTargetEnglish = targetCode === 'en';
   
   // Same language - no translation needed
   if (sourceCode === targetCode) {
@@ -1176,8 +1239,16 @@ function translateText(text: string, sourceCode: string, targetCode: string): Tr
     };
   }
   
-  // Translate via English pivot
+  // Translate via appropriate method
   const bidi = translateBidirectional(text, sourceCode, targetCode);
+  
+  // Determine method based on language pair
+  let method = 'english_pivot_background';
+  if (isSourceEnglish) {
+    method = 'direct_english_to_target';
+  } else if (isTargetEnglish) {
+    method = 'direct_source_to_english';
+  }
   
   return {
     translatedText: bidi.forTargetReader,
@@ -1187,8 +1258,8 @@ function translateText(text: string, sourceCode: string, targetCode: string): Tr
     pivotText: bidi.sourceToEnglish,
     isTransliterated: inputScript !== targetScript,
     isTranslated: true,
-    confidence: 0.9,
-    method: 'english_pivot',
+    confidence: isSourceEnglish || isTargetEnglish ? 0.95 : 0.9,
+    method,
   };
 }
 
