@@ -259,7 +259,8 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
 export async function translateAsync(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  autoDetect: boolean = false
 ): Promise<AsyncTranslationResult> {
   const trimmed = text.trim();
 
@@ -267,8 +268,17 @@ export async function translateAsync(
     return { text: '', originalText: '', isTranslated: false };
   }
 
-  const normSource = normalizeLanguage(sourceLanguage);
+  let normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
+
+  // Auto-detect source language from text if enabled or if source is 'auto' or 'english' for non-Latin text
+  if (autoDetect || sourceLanguage === 'auto') {
+    const detected = autoDetectLanguageSync(trimmed);
+    if (!detected.isLatin && detected.confidence > 0.8) {
+      normSource = detected.language;
+      console.log(`[AsyncTranslator] Auto-detected source: ${normSource}`);
+    }
+  }
 
   if (isSameLanguage(normSource, normTarget)) {
     return {
@@ -291,6 +301,7 @@ export async function translateAsync(
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
+    autoDetect,
   });
 
   try {
