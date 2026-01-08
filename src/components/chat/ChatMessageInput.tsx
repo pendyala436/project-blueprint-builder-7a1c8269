@@ -125,8 +125,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         </div>
       )}
 
+      {/* Gboard hint */}
+      <div className="px-4 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5">
+        <span>💡</span>
+        <span>{t('chat.gboardHint', 'Use Gboard & select your mother tongue for best typing experience')}</span>
+      </div>
+
       {/* Input area */}
-      <div className="p-3 flex items-end gap-2">
+      <div className="p-3 pt-0 flex items-end gap-2">
         {/* Message input */}
         <div className="flex-1 relative">
           <Textarea
