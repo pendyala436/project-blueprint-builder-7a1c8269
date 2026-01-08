@@ -4,7 +4,8 @@
  * Fully embedded, browser-based translation
  * 100% in-browser, NO external APIs, NO Docker
  * 
- * Supports 300+ languages with instant response
+ * Supports 386+ languages with instant response
+ * Bidirectional: Source ↔ English ↔ Target
  * Non-blocking - all operations are synchronous or fast async
  */
 
