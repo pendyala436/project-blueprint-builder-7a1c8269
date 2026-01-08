@@ -792,11 +792,15 @@ serve(async (req) => {
     // ================================================================
     
     // Determine effective source for translation
-    // If input is Latin script, treat as English for translation
-    const translateFrom = inputIsLatin ? 'english' : effectiveSource;
+    // CRITICAL: Only default to English if NO source language was explicitly provided
+    // If user passed sourceLanguage (e.g., 'german'), respect it even for Latin script
+    const wasSourceExplicitlyProvided = !!(sourceLanguage || senderLanguage);
+    const translateFrom = wasSourceExplicitlyProvided 
+      ? effectiveSource 
+      : (inputIsLatin ? 'english' : effectiveSource);
     
     console.log(`[dl-translate] Standard translation: ${translateFrom} -> ${effectiveTarget}`);
-    console.log(`[dl-translate] Input text for translation: "${inputText}"`);
+    console.log(`[dl-translate] Source explicit: ${wasSourceExplicitlyProvided}, Input: "${inputText.substring(0, 50)}"`);
     
     const result = await translateText(inputText, translateFrom, effectiveTarget);
 
