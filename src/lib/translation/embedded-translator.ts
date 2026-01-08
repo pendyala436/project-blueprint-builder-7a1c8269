@@ -436,42 +436,44 @@ export async function translate(
 
 // ============================================================
 // TRANSLATION HELPER FUNCTIONS
-// These use phonetic/transliteration rules for now
-// Can be extended to use actual translation models
+// Uses Universal Semantic Translator for cross-language translation
 // ============================================================
+
+import { translateSemanticUniversal } from './universal-semantic-translator';
 
 /**
  * Translate from any language to English
- * Currently uses phonetic mapping, can be extended with ML models
+ * Uses phonetic-semantic pattern matching
  */
 function translateToEnglish(text: string, sourceLanguage: string): string {
-  // For Latin script languages, text is already readable
-  if (isLatinScriptLanguage(sourceLanguage)) {
-    return text;
+  // For Latin script languages, check for semantic patterns to translate
+  const semanticResult = translateSemanticUniversal(text, 'english', sourceLanguage);
+  if (semanticResult.wasTranslated) {
+    return semanticResult.translatedText;
   }
   
-  // For non-Latin scripts, attempt reverse transliteration
-  // This is a simplified version - can be enhanced with actual translation
-  try {
-    // Keep original for now - this would use a proper translation model
-    return text;
-  } catch {
-    return text;
-  }
+  // For non-Latin scripts or no semantic match, keep original
+  return text;
 }
 
 /**
  * Translate from English to any language
- * Currently uses transliteration for non-Latin scripts
+ * Uses phonetic-semantic pattern matching + transliteration
  */
 function translateFromEnglish(text: string, targetLanguage: string): string {
-  // For Latin script languages, minimal processing needed
-  if (isLatinScriptLanguage(targetLanguage)) {
-    return text;
+  // Semantic translation
+  const semanticResult = translateSemanticUniversal(text, targetLanguage, 'english');
+  
+  if (semanticResult.wasTranslated) {
+    return semanticResult.translatedText;
   }
   
-  // For non-Latin scripts, transliterate
-  return transliterateToNative(text, targetLanguage);
+  // For non-Latin scripts without semantic match, transliterate
+  if (!isLatinScriptLanguage(targetLanguage)) {
+    return transliterateToNative(text, targetLanguage);
+  }
+  
+  return text;
 }
 
 // ============================================================
