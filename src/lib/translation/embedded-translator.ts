@@ -2,10 +2,14 @@
  * Embedded Translation Engine - English Pivot System
  * ===================================================
  * 100% in-browser, 65 languages (23 Indian + 42 World)
- * All translations pivot through English:
- * - Source → English → Target
- * - Target → English → Source
- * (Skip pivot if source or target is English)
+ * 
+ * BIDIRECTIONAL TRANSLATION via English Pivot:
+ * ============================================
+ * Forward:  Source → English → Target
+ * Reverse:  Target → English → Source
+ * 
+ * Total: 65 languages × 64 targets = 4,160 translation pairs
+ * (Skip pivot if source or target is English = direct translation)
  * 
  * FEATURES:
  * - Typing: Latin letters based on mother tongue
@@ -13,6 +17,7 @@
  * - Send: Translation in background, sender sees native
  * - Receive: Message in receiver's mother tongue
  * - Bi-directional: Both parties see their native language
+ * - Reply translation: Receiver can reply in their language
  */
 
 import { dynamicTransliterate } from './dynamic-transliterator';
@@ -467,6 +472,79 @@ function translateFromEnglish(text: string, targetLanguage: string): string {
   
   // For non-Latin scripts, transliterate
   return transliterateToNative(text, targetLanguage);
+}
+
+// ============================================================
+// BIDIRECTIONAL TRANSLATION
+// Source → English → Target AND Target → English → Source
+// ============================================================
+
+export interface BidirectionalTranslationResult {
+  forward: EmbeddedTranslationResult;  // Source → English → Target
+  reverse: EmbeddedTranslationResult;  // Target → English → Source
+}
+
+/**
+ * Translate bidirectionally between two languages via English pivot
+ * Returns both forward (source→target) and reverse (target→source) translations
+ * 
+ * Example: Hindi ↔ Spanish conversation
+ * - Forward: Hindi → English → Spanish (for Spanish reader)
+ * - Reverse: Spanish → English → Hindi (for Hindi reader to see reply)
+ */
+export async function translateBidirectional(
+  text: string,
+  languageA: string,
+  languageB: string
+): Promise<BidirectionalTranslationResult> {
+  const [forward, reverse] = await Promise.all([
+    translate(text, languageA, languageB),  // A → English → B
+    translate(text, languageB, languageA),  // B → English → A
+  ]);
+
+  return { forward, reverse };
+}
+
+/**
+ * Translate a reply from receiver back to sender
+ * Target → English → Source
+ */
+export async function translateReply(
+  replyText: string,
+  receiverLanguage: string,
+  senderLanguage: string
+): Promise<EmbeddedTranslationResult> {
+  // This is simply: Target → English → Source
+  return translate(replyText, receiverLanguage, senderLanguage);
+}
+
+/**
+ * Background bidirectional translation
+ */
+export function translateBidirectionalInBackground(
+  text: string,
+  languageA: string,
+  languageB: string,
+  callback: (result: BidirectionalTranslationResult) => void
+): void {
+  setTimeout(async () => {
+    try {
+      const result = await translateBidirectional(text, languageA, languageB);
+      callback(result);
+    } catch (err) {
+      console.error('[EmbeddedTranslator] Bidirectional translation error:', err);
+      const emptyResult: EmbeddedTranslationResult = {
+        text,
+        originalText: text,
+        isTranslated: false,
+        isTransliterated: false,
+        sourceLanguage: languageA,
+        targetLanguage: languageB,
+        confidence: 0,
+      };
+      callback({ forward: emptyResult, reverse: { ...emptyResult, sourceLanguage: languageB, targetLanguage: languageA } });
+    }
+  }, 0);
 }
 
 // ============================================================
