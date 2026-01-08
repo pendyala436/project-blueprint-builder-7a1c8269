@@ -94,7 +94,7 @@ import { getNativeScriptPreview, isLatinText } from './embedded-translator';
 
 export type {
   EmbeddedTranslationResult,
-  AutoDetectedLanguage,
+  LanguageDetectionResult as AutoDetectedLanguage,
   ChatProcessResult,
   LanguageInfo,
 } from './embedded-translator';
