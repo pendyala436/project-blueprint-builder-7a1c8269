@@ -1139,41 +1139,45 @@ const DashboardScreen = () => {
                 </div>
                 
                 {sameLanguageWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                     {sameLanguageWomen.map((woman) => (
                       <Card
                         key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
+                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
-                          )} />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-success/20 text-success rounded-full">
-                          {woman.primary_language}
-                        </span>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="w-10 h-10 border-2 border-background shadow-md">
+                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm">
+                                {woman.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={cn(
+                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
+                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm text-foreground truncate">
+                                {woman.full_name || "Anonymous"}
+                              </p>
+                              {woman.age && (
+                                <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
+                              )}
+                            </div>
+                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-success/20 text-success rounded-full">
+                              {woman.primary_language}
+                            </span>
+                          </div>
                           <Button
                             variant="aurora"
                             size="sm"
                             className={cn(
-                              "flex-1 gap-1 text-xs h-7",
+                              "gap-1 text-xs h-8",
                               (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
@@ -1209,47 +1213,51 @@ const DashboardScreen = () => {
                 </div>
                 
                 {indianTranslatedWomen.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                     {indianTranslatedWomen.map((woman) => (
                       <Card
                         key={woman.id}
-                        className="p-3 text-center hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
+                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
-                        <div className="relative mx-auto mb-2">
-                          <Avatar className="w-12 h-12 mx-auto border-2 border-background shadow-md">
-                            <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                            <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-sm">
-                              {woman.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-                            (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                            (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
-                          )} />
-                        </div>
-                        <p className="font-medium text-xs text-foreground truncate">
-                          {woman.full_name || "Anonymous"}
-                        </p>
-                        {woman.age && (
-                          <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                        )}
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-info/20 text-info rounded-full">
-                            {woman.primary_language}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground">→</span>
-                          <span className="px-1.5 py-0.5 text-[9px] font-medium bg-primary/20 text-primary rounded-full">
-                            {userLanguage}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Avatar className="w-10 h-10 border-2 border-background shadow-md">
+                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
+                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-sm">
+                                {woman.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={cn(
+                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
+                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm text-foreground truncate">
+                                {woman.full_name || "Anonymous"}
+                              </p>
+                              {woman.age && (
+                                <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info/20 text-info rounded-full">
+                                {woman.primary_language}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">→</span>
+                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
+                                {userLanguage}
+                              </span>
+                            </div>
+                          </div>
                           <Button
                             variant="aurora"
                             size="sm"
                             className={cn(
-                              "flex-1 gap-1 text-xs h-7",
+                              "gap-1 text-xs h-8",
                               (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                             )}
                             disabled={(woman.active_chat_count || 0) >= 3}
