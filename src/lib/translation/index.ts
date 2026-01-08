@@ -47,6 +47,11 @@ export {
   getNativeScriptPreview,
   processMessageForChat,
   
+  // Bidirectional translation (Source ↔ Target via English)
+  translateBidirectional,
+  translateReply,
+  translateBidirectionalInBackground,
+  
   // Language detection
   autoDetectLanguage,
   
@@ -57,6 +62,7 @@ export {
   isSameLanguage,
   needsScriptConversion,
   getLanguageInfo,
+  isEnglish,
   
   // Status (always ready - no model loading)
   isReady,
@@ -97,6 +103,7 @@ export type {
   LanguageDetectionResult as AutoDetectedLanguage,
   ChatProcessResult,
   LanguageInfo,
+  BidirectionalTranslationResult,
 } from './embedded-translator';
 
 // ============================================================
