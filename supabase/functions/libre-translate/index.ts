@@ -902,40 +902,51 @@ function transliterateToLatin(text: string, sourceScript: string): string {
   const block = getScriptBlock(sourceScript);
   if (!block) return text;
   
+  // Create reverse modifier map (matra → latin vowel)
+  const reverseModifierMap: Record<string, string> = {};
+  if (block.modifiers) {
+    for (const [latin, native] of Object.entries(block.modifiers)) {
+      if (native && !reverseModifierMap[native]) {
+        reverseModifierMap[native] = latin;
+      }
+    }
+  }
+  
   let result = '';
   
   for (const char of text) {
+    // Check if it's a virama (halant) - skip it
+    if (block.virama && char === block.virama) {
+      continue;
+    }
+    
     // Try reverse consonant map first
     if (block.reverseConsonantMap[char]) {
       result += block.reverseConsonantMap[char];
+      // Add implicit 'a' vowel for consonants without following vowel
+      // This will be handled by checking next character
     }
-    // Try reverse vowel map
+    // Try reverse vowel map (independent vowels)
     else if (block.reverseVowelMap[char]) {
       result += block.reverseVowelMap[char];
     }
-    // Try modifiers
-    else if (block.modifiers) {
-      let found = false;
-      for (const [mod, latin] of Object.entries(block.modifiers)) {
-        if (char === mod) {
-          result += latin;
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        // Check if it's a virama
-        if (block.virama && char === block.virama) {
-          // Skip virama (consonant cluster marker)
-          continue;
-        }
-        result += char;
-      }
+    // Try reverse modifier map (dependent vowels/matras)
+    else if (reverseModifierMap[char]) {
+      result += reverseModifierMap[char];
     }
+    // Pass through other characters (punctuation, numbers, spaces)
     else {
       result += char;
     }
   }
+  
+  // Clean up double vowels and normalize
+  result = result
+    .replace(/aa+/g, 'aa')
+    .replace(/ii+/g, 'ii')
+    .replace(/uu+/g, 'uu')
+    .replace(/ee+/g, 'ee')
+    .replace(/oo+/g, 'oo');
   
   return result;
 }
