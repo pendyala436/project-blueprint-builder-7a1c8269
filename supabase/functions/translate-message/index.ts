@@ -589,24 +589,30 @@ serve(async (req) => {
     const { 
       text, 
       message,
-      sourceLanguage, 
+      sourceLanguage,
+      source,  // Alternative parameter name
       targetLanguage,
+      target,  // Alternative parameter name  
       senderLanguage,
       receiverLanguage,
       mode = "translate" 
     } = body;
 
+    // Support both 'source/target' and 'sourceLanguage/targetLanguage' params
+    const effectiveSourceParam = sourceLanguage || source || senderLanguage;
+    const effectiveTargetParam = targetLanguage || target || receiverLanguage;
+
     const inputText = text || message;
     console.log(`[dl-translate] Mode: ${mode}, Input: "${inputText?.substring(0, 50)}..."`);
-    console.log(`[dl-translate] Params: source=${sourceLanguage || senderLanguage}, target=${targetLanguage || receiverLanguage}`);
+    console.log(`[dl-translate] Params: source=${effectiveSourceParam}, target=${effectiveTargetParam}`);
 
     // ================================================================
     // MODE: bidirectional - Translate both directions in one call
     // Source → English → Target AND Target → English → Source
     // ================================================================
     if (mode === "bidirectional") {
-      const langA = sourceLanguage || senderLanguage || "english";
-      const langB = targetLanguage || receiverLanguage || "english";
+      const langA = effectiveSourceParam || "english";
+      const langB = effectiveTargetParam || "english";
       
       console.log(`[dl-translate] Bidirectional: ${langA} ↔ ${langB}`);
       
@@ -644,21 +650,21 @@ serve(async (req) => {
     // MODE: test - Test translation for a specific language pair
     // ================================================================
     if (mode === "test") {
-      const source = sourceLanguage || "telugu";
-      const target = targetLanguage || "english";
+      const testSource = effectiveSourceParam || "telugu";
+      const testTarget = effectiveTargetParam || "english";
       const testText = inputText || "bagunnava";
       
-      console.log(`[dl-translate] Testing: "${testText}" from ${source} to ${target}`);
+      console.log(`[dl-translate] Testing: "${testText}" from ${testSource} to ${testTarget}`);
       
-      const result = await translateText(testText, source, target);
+      const result = await translateText(testText, testSource, testTarget);
       
       return new Response(
         JSON.stringify({
           test: true,
           input: testText,
           output: cleanTextOutput(result.translatedText),
-          sourceLanguage: source,
-          targetLanguage: target,
+          sourceLanguage: testSource,
+          targetLanguage: testTarget,
           success: result.success,
           pivotUsed: result.pivotUsed,
         }),
@@ -698,8 +704,8 @@ serve(async (req) => {
 
     // Detect source script
     const detected = detectScriptFromText(inputText);
-    const effectiveSource = sourceLanguage || senderLanguage || detected.language;
-    const effectiveTarget = targetLanguage || receiverLanguage || "english";
+    const effectiveSource = effectiveSourceParam || detected.language;
+    const effectiveTarget = effectiveTargetParam || "english";
     const inputIsLatin = detected.isLatin;
 
     console.log(`[dl-translate] Detected: ${detected.language} (${detected.script}), isLatin: ${inputIsLatin}`);
@@ -793,8 +799,8 @@ serve(async (req) => {
     
     // Determine effective source for translation
     // CRITICAL: Only default to English if NO source language was explicitly provided
-    // If user passed sourceLanguage (e.g., 'german'), respect it even for Latin script
-    const wasSourceExplicitlyProvided = !!(sourceLanguage || senderLanguage);
+    // If user passed sourceLanguage/source (e.g., 'german'), respect it even for Latin script
+    const wasSourceExplicitlyProvided = !!effectiveSourceParam;
     const translateFrom = wasSourceExplicitlyProvided 
       ? effectiveSource 
       : (inputIsLatin ? 'english' : effectiveSource);
