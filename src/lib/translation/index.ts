@@ -2,11 +2,14 @@
  * Translation Module Exports
  * ==========================
  * 
- * 100% EMBEDDED, NO EXTERNAL APIs - LibreTranslate-Inspired
+ * 100% EMBEDDED, NO EXTERNAL APIs
+ * 386+ Languages via English Pivot System
  * 
  * Features:
- * - 300+ language support
+ * - 386+ language support (all from languages.ts)
+ * - Bidirectional: Source ↔ English ↔ Target
  * - Real-time transliteration (< 2ms)
+ * - Reverse transliteration for Target → English
  * - Auto language detection
  * - Phonetic spell correction
  * - Native script preview
@@ -17,20 +20,20 @@
  * - Preview: Live transliteration into native script
  * - Send: Translation in background, sender sees native
  * - Receive: Message in receiver's mother tongue
+ * - Reply: Target → English → Source for bidirectional chat
  * - Non-blocking: All operations async
  * 
  * @example
  * ```tsx
- * import { translate, getNativeScriptPreview, processMessageForChat } from '@/lib/translation';
+ * import { translate, translateTargetToSource, getNativeScriptPreview } from '@/lib/translation';
  * 
  * // Instant preview (< 2ms)
  * const preview = getNativeScriptPreview('namaste', 'hindi');
  * // Returns: नमस्ते
  * 
- * // Full chat processing
- * const result = await processMessageForChat('hello', 'english', 'hindi');
- * // result.senderView = 'hello'
- * // result.receiverView = 'हैलो'
+ * // Full bidirectional translation
+ * const toReceiver = await translate('hello', 'english', 'hindi');
+ * const backToSender = translateTargetToSource(replyText, 'hindi', 'english');
  * ```
  */
 
@@ -51,6 +54,7 @@ export {
   translateBidirectional,
   translateReply,
   translateBidirectionalInBackground,
+  translateTargetToSource, // Target → English → Source
   
   // Language detection
   autoDetectLanguage,
@@ -63,6 +67,12 @@ export {
   needsScriptConversion,
   getLanguageInfo,
   isEnglish,
+  isRTL,
+  getSupportedLanguages,
+  isLanguageSupported,
+  isPairSupported,
+  getTotalLanguageCount,
+  getSupportedPairs,
   
   // Status (always ready - no model loading)
   isReady,
@@ -122,11 +132,12 @@ export {
 } from './phonetic-symspell';
 
 // ============================================================
-// DYNAMIC TRANSLITERATOR - Script conversion
+// DYNAMIC TRANSLITERATOR - Script conversion for 386+ languages
 // ============================================================
 
 export {
   dynamicTransliterate,
+  reverseTransliterate,
   detectScriptFromText,
   getScriptForLanguage,
 } from './dynamic-transliterator';
@@ -149,8 +160,8 @@ export type {
 export {
   getNLLBCode,
   isIndianLanguage,
-  getSupportedLanguages,
-  isLanguageSupported,
+  // getSupportedLanguages, // Now exported from embedded-translator with 386+ languages
+  // isLanguageSupported,   // Now exported from embedded-translator with 386+ languages
   LANGUAGE_TO_NLLB,
   SCRIPT_PATTERNS,
   INDIAN_LANGUAGES,
