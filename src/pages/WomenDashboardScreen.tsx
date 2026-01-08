@@ -965,7 +965,7 @@ const WomenDashboardScreen = () => {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
                 {rechargedMen.map((user, index) => (
                   <div 
                     key={user.userId}
@@ -991,7 +991,7 @@ const WomenDashboardScreen = () => {
                 <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
                 {nonRechargedMen.map((user, index) => (
                   <div 
                     key={user.userId}
