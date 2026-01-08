@@ -706,82 +706,11 @@ serve(async (req) => {
     console.log(`[dl-translate] Effective: ${effectiveSource} -> ${effectiveTarget}`);
 
     // ================================================================
-    // HELPER: Detect if Latin text is likely English words vs romanized Indian text
-    // English words: hello, how, are, you, good, morning, etc.
-    // Romanized: bagunnava, namaste, kaise, etc.
-    // ================================================================
-    const isLikelyEnglishWord = (text: string): boolean => {
-      const cleanText = text.toLowerCase().trim();
-      // Common English words that should NOT be transliterated
-      const englishWords = new Set([
-        'hello', 'hi', 'hey', 'bye', 'good', 'morning', 'evening', 'night', 'afternoon',
-        'how', 'are', 'you', 'what', 'is', 'the', 'a', 'an', 'this', 'that', 'it',
-        'yes', 'no', 'ok', 'okay', 'please', 'thank', 'thanks', 'sorry', 'welcome',
-        'love', 'like', 'nice', 'great', 'good', 'bad', 'happy', 'sad', 'fine',
-        'where', 'when', 'why', 'who', 'which', 'can', 'will', 'would', 'could', 'should',
-        'i', 'me', 'my', 'we', 'us', 'our', 'they', 'them', 'their', 'he', 'she',
-        'do', 'does', 'did', 'have', 'has', 'had', 'am', 'is', 'are', 'was', 'were',
-        'go', 'going', 'come', 'coming', 'see', 'look', 'want', 'need', 'help',
-        'call', 'chat', 'talk', 'meet', 'send', 'give', 'take', 'get', 'make',
-        'time', 'day', 'week', 'month', 'year', 'today', 'tomorrow', 'yesterday',
-        'now', 'later', 'soon', 'always', 'never', 'sometimes', 'here', 'there',
-        'very', 'much', 'many', 'more', 'less', 'too', 'also', 'only', 'just',
-        'friend', 'family', 'name', 'age', 'work', 'home', 'food', 'water',
-        'photo', 'video', 'message', 'reply', 'online', 'offline', 'busy',
-      ]);
-      
-      // Check if ANY word in the text is a common English word
-      const words = cleanText.split(/\s+/);
-      const englishWordCount = words.filter(w => englishWords.has(w.toLowerCase())).length;
-      
-      // If more than 30% of words are English, treat as English text
-      if (words.length > 0 && englishWordCount / words.length >= 0.3) {
-        console.log(`[dl-translate] Detected English words: ${englishWordCount}/${words.length}`);
-        return true;
-      }
-      
-      // Single word check - if it's a known English word
-      if (words.length === 1 && englishWords.has(cleanText)) {
-        console.log(`[dl-translate] Single English word detected: "${cleanText}"`);
-        return true;
-      }
-      
-      return false;
-    };
-
-    // ================================================================
     // CASE 1: Latin input for non-Latin source language
     // User typed romanized text (e.g., "bagunnava" for Telugu)
     // Need to: 1) Transliterate to source script 2) Translate to target
-    // BUT: Skip transliteration if it's clearly English words
     // ================================================================
     if (inputIsLatin && isNonLatinLanguage(effectiveSource) && !isSameLanguage(effectiveSource, effectiveTarget)) {
-      // Check if input looks like English words rather than romanized text
-      if (isLikelyEnglishWord(inputText)) {
-        console.log(`[dl-translate] English words in non-Latin source context, translating as English`);
-        
-        // Translate from English to target language directly
-        const translated = await translateText(inputText, 'english', effectiveTarget);
-        const cleanedTranslation = cleanTextOutput(translated.translatedText);
-
-        return new Response(
-          JSON.stringify({
-            translatedText: cleanedTranslation,
-            translatedMessage: cleanedTranslation,
-            originalText: inputText,
-            isTranslated: translated.success,
-            wasTransliterated: false,
-            pivotUsed: translated.pivotUsed,
-            detectedLanguage: 'english',
-            sourceLanguage: 'english',
-            targetLanguage: effectiveTarget,
-            isSourceLatin: true,
-            englishWordsDetected: true,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
       console.log(`[dl-translate] Romanized input detected for ${effectiveSource}`);
       
       // Step 1: Transliterate Latin to source language native script
