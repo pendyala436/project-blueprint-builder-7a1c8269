@@ -20,12 +20,14 @@
  * - Reply translation: Receiver can reply in their language
  */
 
-import { dynamicTransliterate, reverseTransliterate } from './dynamic-transliterator';
+import { dynamicTransliterate, reverseTransliterate, isSameLanguage as dynamicIsSameLanguage, isLatinScriptLanguage as dynamicIsLatinScript } from './dynamic-transliterator';
 import { spellCorrectForChat } from './phonetic-symspell';
-import { languages as allLanguages, type Language } from '@/data/languages';
+import { languages as allLanguages, type Language, getTotalLanguageCount } from '@/data/languages';
 
 // ============================================================
-// 386+ LANGUAGE DATABASE (All from languages.ts)
+// 386+ LANGUAGE DATABASE (Single Source of Truth: @/data/languages.ts)
+// English Pivot Translation: Source → English → Target
+// Supports: 386 × 385 = 148,610 translation pairs
 // ============================================================
 
 export interface LanguageInfo {
@@ -40,8 +42,14 @@ export interface LanguageInfo {
 
 // Convert Language from data/languages.ts to LanguageInfo format
 function convertToLanguageInfo(lang: Language): LanguageInfo {
+  // Normalize name for consistent lookup
+  const normalizedName = lang.name
+    .toLowerCase()
+    .replace(/[()]/g, '')
+    .trim();
+  
   return {
-    name: lang.name.toLowerCase().replace(/[()]/g, '').trim(),
+    name: normalizedName,
     code: lang.code,
     nllbCode: `${lang.code}_${lang.script?.substring(0, 4) || 'Latn'}`,
     native: lang.nativeName,
@@ -50,8 +58,11 @@ function convertToLanguageInfo(lang: Language): LanguageInfo {
   };
 }
 
-// All 386+ languages from the main languages database
+// All 386+ languages from the main languages database (single source of truth)
 export const LANGUAGES: LanguageInfo[] = allLanguages.map(convertToLanguageInfo);
+
+// Log language count on module load
+const TOTAL_LANGUAGES = getTotalLanguageCount();
 
 // ============================================================
 // LANGUAGE LOOKUP MAPS
@@ -789,8 +800,12 @@ export function isPairSupported(source: string, target: string): boolean {
 /**
  * Get total language count
  */
-export function getTotalLanguageCount(): number {
+export function getEmbeddedLanguageCount(): number {
   return LANGUAGES.length;
 }
 
-console.log(`[EmbeddedTranslator] Module loaded - ${LANGUAGES.length} languages, English pivot system, 100% embedded`);
+// Alias for backward compatibility
+export { getEmbeddedLanguageCount as getTotalLanguageCount };
+
+// Log module initialization
+console.log(`[EmbeddedTranslator] ✓ Loaded ${TOTAL_LANGUAGES} languages | English-pivot system | Pairs: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`);
