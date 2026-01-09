@@ -1,19 +1,22 @@
 /**
- * Async Translation Service - Edge Function Only
- * ===============================================
- * Clean, simple translation using Supabase Edge Function only.
- * NO browser-based NLLB model - all translation via server.
+ * Async Translation Service - Universal 386 Language Support
+ * ===========================================================
+ * Hybrid translation using:
+ * 1. Client-side semantic engine (instant, offline-capable)
+ * 2. Supabase Edge Function (server-side NLLB for accuracy)
  * 
  * FEATURES:
- * 1. Supports ALL 200+ NLLB languages via Edge Function
- * 2. Auto-detect source language from script
- * 3. Live native script preview (instant, via dynamic transliterator)
- * 4. Background translation via Edge Function
- * 5. Caching for performance
+ * 1. Supports ALL 386 languages dynamically
+ * 2. English semantic pivot for all language pairs
+ * 3. Auto-detect source language from script
+ * 4. Live native script preview (instant)
+ * 5. Background translation with caching
+ * 6. Graceful fallback: client → server
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
+import { semanticTranslate } from '@/lib/translation/semantic-translate';
 
 // ============================================================
 // TYPES
@@ -287,12 +290,35 @@ export async function translateAsync(
     return cached;
   }
 
-  console.log('[AsyncTranslator] Calling Edge Function translate-message:', {
+  console.log('[AsyncTranslator] Translating:', {
     text: trimmed.substring(0, 30),
     source: normSource,
     target: normTarget,
   });
 
+  // STRATEGY: Try client-side semantic translation first (instant, offline-capable)
+  // Then fall back to Edge Function for accuracy
+  try {
+    // 1. Try client-side semantic translation (uses English pivot)
+    const semanticResult = await semanticTranslate(trimmed, normSource, normTarget);
+    
+    if (semanticResult.isTranslated && semanticResult.text !== trimmed) {
+      const result: AsyncTranslationResult = {
+        text: semanticResult.text,
+        originalText: trimmed,
+        isTranslated: true,
+        sourceLanguage: semanticResult.sourceLanguage,
+        targetLanguage: semanticResult.targetLanguage,
+      };
+      setInCache(cacheKey, result);
+      console.log('[AsyncTranslator] Semantic translation success:', result.text?.substring(0, 30));
+      return result;
+    }
+  } catch (semanticError) {
+    console.warn('[AsyncTranslator] Semantic translation failed, trying Edge Function:', semanticError);
+  }
+
+  // 2. Fallback to Edge Function (server-side NLLB)
   try {
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
