@@ -404,13 +404,6 @@ export function getNLLBCode(language: string): NLLBLanguageCode | null {
 }
 
 /**
- * Get language code from language name (alias for compatibility)
- */
-export function getLanguageCode(language: string): string | null {
-  return getNLLBCode(language);
-}
-
-/**
  * Check if a language is Indian
  */
 export function isIndianLanguage(language: string): boolean {

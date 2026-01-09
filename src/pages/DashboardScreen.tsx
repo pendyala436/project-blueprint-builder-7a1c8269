@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import MenProfileEditDialog from "@/components/MenProfileEditDialog";
+import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -58,7 +58,7 @@ import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
 
 import { useTranslation } from "@/contexts/TranslationContext";
-import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/profileLanguages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
@@ -113,15 +113,15 @@ const DashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userCountry, setUserCountry] = useState("IN");
-  const [userCountryName, setUserCountryName] = useState(""); // Full country name for translation feature
+  const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
-  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language code
+  const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // NLLB-200 language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
-  const [isNonIndianTranslatedUser, setIsNonIndianTranslatedUser] = useState(false); // Is man's language non-Indian but translation supported
+  const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -451,7 +451,7 @@ const DashboardScreen = () => {
       // Use country from main profiles table
       const userCountryValue = mainProfile?.country;
       if (userCountryValue) {
-        setUserCountryName(userCountryValue); // Store full country name for translation feature
+        setUserCountryName(userCountryValue); // Store full country name for NLLB feature
         // Map country name to code
         const countryCodeMap: Record<string, string> = {
           "India": "IN", "United States": "US", "United Kingdom": "GB",
@@ -1201,7 +1201,7 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: All Women with Auto-Translation */}
+              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
@@ -1624,7 +1624,7 @@ const DashboardScreen = () => {
       </Dialog>
 
       {/* Profile Edit Dialog */}
-      <MenProfileEditDialog
+      <ProfileEditDialog
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}

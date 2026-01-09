@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { isIndianLanguage } from "@/data/profileLanguages";
+import { isIndianLanguage } from "@/data/nllb200Languages";
 
 // Super user email patterns - they bypass balance requirements
 const SUPER_USER_PATTERNS = {

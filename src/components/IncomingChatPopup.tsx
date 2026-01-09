@@ -145,25 +145,21 @@ const IncomingChatPopup = ({
   if (!isVisible) return null;
 
   return (
-    <>
-      {/* Backdrop overlay for visibility */}
-      <div className="fixed inset-0 bg-black/40 z-[9998] animate-in fade-in duration-200" />
-      
-      <Card className={cn(
-        "w-80 p-5 shadow-2xl border-2 border-primary bg-background",
-        "animate-in zoom-in-95 slide-in-from-bottom-5 fade-in duration-300",
-        "z-[9999] relative",
-        isExiting && "animate-out zoom-out-95 slide-out-to-bottom fade-out duration-200"
-      )}>
-        {/* Pulsing indicator with sound icon */}
-        <div className="absolute -top-2 -right-2 flex items-center gap-1">
-          <span className="relative flex h-5 w-5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-            <span className="relative inline-flex rounded-full h-5 w-5 bg-green-500 items-center justify-center">
-              <Volume2 className="h-3 w-3 text-white" />
-            </span>
+    <Card className={cn(
+      "w-72 p-4 shadow-2xl border-2 border-primary/50 bg-background",
+      "animate-in slide-in-from-bottom-5 fade-in duration-300",
+      "z-[9999] relative",
+      isExiting && "animate-out slide-out-to-right fade-out duration-200"
+    )}>
+      {/* Pulsing indicator with sound icon */}
+      <div className="absolute -top-1 -right-1 flex items-center gap-1">
+        <span className="relative flex h-4 w-4">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-primary items-center justify-center">
+            <Volume2 className="h-2.5 w-2.5 text-primary-foreground" />
           </span>
-        </div>
+        </span>
+      </div>
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
@@ -236,7 +232,6 @@ const IncomingChatPopup = ({
         </p>
       )}
     </Card>
-    </>
   );
 };
 

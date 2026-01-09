@@ -2,12 +2,12 @@
  * Language Data for Profile Selection
  * ====================================
  * Dynamically sources all 386+ languages from languages.ts
- * Uses embedded translator via English pivot - NO external APIs
+ * NO hardcoded NLLB-200 codes - uses embedded translator via English pivot
  */
 
 import { languages, type Language } from './languages';
 
-export interface ProfileLanguage {
+export interface NLLB200Language {
   code: string; // Language code (e.g., "en", "hi")
   name: string; // Human-readable name
   isIndian: boolean; // Whether this is an Indian language
@@ -35,8 +35,8 @@ const INDIAN_LANGUAGE_CODES = new Set([
   "dv", "bo", "dz", "pi", "caq", "si"
 ]);
 
-// Convert Language to ProfileLanguage format
-function convertToProfileLanguage(lang: Language): ProfileLanguage {
+// Convert Language to NLLB200Language format
+function convertToNLLB200(lang: Language): NLLB200Language {
   return {
     code: lang.code,
     name: lang.name,
@@ -48,58 +48,58 @@ function convertToProfileLanguage(lang: Language): ProfileLanguage {
 }
 
 // All 386+ languages from languages.ts
-export const ALL_LANGUAGES: ProfileLanguage[] = languages.map(convertToProfileLanguage);
+export const ALL_NLLB200_LANGUAGES: NLLB200Language[] = languages.map(convertToNLLB200);
 
 // Indian languages (filtered from all languages)
-export const INDIAN_LANGUAGES: ProfileLanguage[] = ALL_LANGUAGES.filter(l => l.isIndian);
+export const INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = ALL_NLLB200_LANGUAGES.filter(l => l.isIndian);
 
 // Non-Indian languages (filtered from all languages)
-export const NON_INDIAN_LANGUAGES: ProfileLanguage[] = ALL_LANGUAGES.filter(l => !l.isIndian);
+export const NON_INDIAN_NLLB200_LANGUAGES: NLLB200Language[] = ALL_NLLB200_LANGUAGES.filter(l => !l.isIndian);
 
 // Helper functions
 export function isIndianLanguage(languageName: string): boolean {
   const normalized = languageName.toLowerCase().trim();
-  return INDIAN_LANGUAGES.some(
+  return INDIAN_NLLB200_LANGUAGES.some(
     lang => lang.name.toLowerCase() === normalized
   );
 }
 
-export function getLanguageCode(languageName: string): string | null {
+export function getNLLB200Code(languageName: string): string | null {
   const normalized = languageName.toLowerCase().trim();
-  const found = ALL_LANGUAGES.find(
+  const found = ALL_NLLB200_LANGUAGES.find(
     lang => lang.name.toLowerCase() === normalized
   );
   return found?.code || null;
 }
 
-export function getLanguageByCode(code: string): ProfileLanguage | null {
-  return ALL_LANGUAGES.find(lang => lang.code === code) || null;
+export function getLanguageByCode(code: string): NLLB200Language | null {
+  return ALL_NLLB200_LANGUAGES.find(lang => lang.code === code) || null;
 }
 
-export function getLanguageByName(name: string): ProfileLanguage | null {
+export function getLanguageByName(name: string): NLLB200Language | null {
   const normalized = name.toLowerCase().trim();
-  return ALL_LANGUAGES.find(
+  return ALL_NLLB200_LANGUAGES.find(
     lang => lang.name.toLowerCase() === normalized
   ) || null;
 }
 
 export function getIndianLanguageNames(): string[] {
-  return INDIAN_LANGUAGES.map(lang => lang.name);
+  return INDIAN_NLLB200_LANGUAGES.map(lang => lang.name);
 }
 
 export function getNonIndianLanguageNames(): string[] {
-  return NON_INDIAN_LANGUAGES.map(lang => lang.name);
+  return NON_INDIAN_NLLB200_LANGUAGES.map(lang => lang.name);
 }
 
 // Get total language count
 export function getTotalLanguageCount(): number {
-  return ALL_LANGUAGES.length;
+  return ALL_NLLB200_LANGUAGES.length;
 }
 
 // Search languages by name or native name
-export function searchLanguages(query: string): ProfileLanguage[] {
+export function searchLanguages(query: string): NLLB200Language[] {
   const q = query.toLowerCase();
-  return ALL_LANGUAGES.filter(lang =>
+  return ALL_NLLB200_LANGUAGES.filter(lang =>
     lang.name.toLowerCase().includes(q) ||
     (lang.nativeName && lang.nativeName.toLowerCase().includes(q)) ||
     lang.code.toLowerCase().includes(q)
@@ -118,12 +118,3 @@ export const LANGUAGE_NAME_ALIASES: Record<string, string> = {
   "burmese": "my",
   "malay": "ms",
 };
-
-// =========================================================
-// BACKWARD COMPATIBILITY EXPORTS (for existing imports)
-// =========================================================
-export const ALL_NLLB200_LANGUAGES = ALL_LANGUAGES;
-export const INDIAN_NLLB200_LANGUAGES = INDIAN_LANGUAGES;
-export const NON_INDIAN_NLLB200_LANGUAGES = NON_INDIAN_LANGUAGES;
-export type NLLB200Language = ProfileLanguage;
-export const getNLLB200Code = getLanguageCode;

@@ -31,12 +31,12 @@ import {
   Users2
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
-import WomenProfileEditDialog from "@/components/WomenProfileEditDialog";
+import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { isIndianLanguage, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES, ALL_LANGUAGES } from "@/data/profileLanguages";
+import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed - Women cannot initiate chats
@@ -76,7 +76,7 @@ interface OnlineMan {
   hasRecharged: boolean;
   lastSeen: string;
   isSameLanguage: boolean;
-  isTranslationSupported: boolean;
+  isNllbLanguage: boolean;
   activeChatCount?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
@@ -390,8 +390,8 @@ const WomenDashboardScreen = () => {
       const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
-      // Set all supported languages for women (386+ languages from languages.ts)
-      setSupportedLanguages(ALL_LANGUAGES.map(l => l.name));
+      // Set all supported NLLB languages for women
+      setSupportedLanguages(ALL_NLLB200_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
       await Promise.all([
@@ -465,7 +465,7 @@ const WomenDashboardScreen = () => {
           hasRecharged,
           lastSeen: man.last_seen || new Date().toISOString(),
           isSameLanguage,
-          isTranslationSupported: true, // All languages supported with translation
+          isNllbLanguage: true, // All languages supported with translation
           activeChatCount: man.active_chat_count || 0
         };
       });
@@ -725,7 +725,7 @@ const WomenDashboardScreen = () => {
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
               </div>
-              {user.isTranslationSupported && !user.isSameLanguage && (
+              {user.isNllbLanguage && !user.isSameLanguage && (
                 <Badge variant="outline" className="text-[10px]">
                   <Globe className="h-2.5 w-2.5 mr-1" />
                   {t('autoTranslateMessages', 'Auto-translate')}
@@ -1221,7 +1221,7 @@ const WomenDashboardScreen = () => {
       </main>
 
       {/* Profile Edit Dialog */}
-      <WomenProfileEditDialog
+      <ProfileEditDialog
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
