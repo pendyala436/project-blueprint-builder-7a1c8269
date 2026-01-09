@@ -8,6 +8,7 @@ import AdminNav from "@/components/AdminNav";
 import { AdminTransactionHistoryWidget } from "@/components/AdminTransactionHistoryWidget";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
+import { runAllCleanups } from "@/services/cleanup.service";
 import { toast } from "sonner";
 import {
   Users,
@@ -28,7 +29,8 @@ import {
   ChevronRight,
   TrendingUp,
   MessageCircle,
-  UserPlus
+  UserPlus,
+  Trash2
 } from "lucide-react";
 
 interface DashboardStats {
@@ -54,6 +56,32 @@ const AdminDashboard = () => {
     policyAlerts: 0
   });
   const [seedingUsers, setSeedingUsers] = useState(false);
+  const [runningCleanup, setRunningCleanup] = useState(false);
+
+  const handleRunCleanup = async () => {
+    setRunningCleanup(true);
+    try {
+      const results = await runAllCleanups();
+      
+      const successCount = [results.dataCleanup, results.groupCleanup, results.videoCleanup]
+        .filter(r => r.success).length;
+      
+      if (successCount === 3) {
+        toast.success("All cleanup tasks completed successfully!");
+      } else if (successCount > 0) {
+        toast.warning(`${successCount}/3 cleanup tasks completed`);
+      } else {
+        toast.error("Cleanup tasks failed");
+      }
+      
+      loadStats();
+    } catch (error) {
+      console.error("Cleanup error:", error);
+      toast.error("Failed to run cleanup tasks");
+    } finally {
+      setRunningCleanup(false);
+    }
+  };
 
   const handleSeedSuperUsers = async () => {
     setSeedingUsers(true);
@@ -307,14 +335,24 @@ const AdminDashboard = () => {
               Manage and monitor the Meow Meow platform • {adminEmail}
             </p>
           </div>
-          <Button 
-            onClick={handleSeedSuperUsers} 
-            disabled={seedingUsers}
-            className="bg-gradient-to-r from-primary to-secondary"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            {seedingUsers ? "Seeding..." : "Seed Super Users"}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleRunCleanup} 
+              disabled={runningCleanup}
+              variant="outline"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {runningCleanup ? "Cleaning..." : "Run Cleanup"}
+            </Button>
+            <Button 
+              onClick={handleSeedSuperUsers} 
+              disabled={seedingUsers}
+              className="bg-gradient-to-r from-primary to-secondary"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              {seedingUsers ? "Seeding..." : "Seed Super Users"}
+            </Button>
+          </div>
         </div>
 
         {/* Quick Stats */}
