@@ -2,43 +2,68 @@
  * Translation Module Exports
  * ==========================
  * 
- * 100% EMBEDDED, NO EXTERNAL APIs
- * 386+ Languages via English Pivot System
+ * UNIVERSAL SEMANTIC TRANSLATION SYSTEM
+ * - Language-agnostic engine
+ * - Dynamically discovers available languages
+ * - Scales to ANY number of languages (10, 50, 386, 1000+)
+ * - Uses English as semantic pivot
+ * - NO hard-coded language lists in translation logic
+ * - 100% EMBEDDED, NO EXTERNAL APIs
  * 
- * Features:
- * - 386+ language support (all from languages.ts)
- * - Bidirectional: Source ↔ English ↔ Target
- * - Real-time transliteration (< 2ms)
- * - Reverse transliteration for Target → English
- * - Auto language detection
- * - Phonetic spell correction
- * - Native script preview
- * - Bi-directional chat translation
- * 
- * ARCHITECTURE:
- * - Typing: Latin letters based on mother tongue
- * - Preview: Live transliteration into native script
- * - Send: Translation in background, sender sees native
- * - Receive: Message in receiver's mother tongue
- * - Reply: Target → English → Source for bidirectional chat
- * - Non-blocking: All operations async
+ * Architecture:
+ * - engine.ts: Universal engine contract
+ * - semantic-translate.ts: Meaning-only pivot logic
+ * - embedded-translator.ts: Legacy compatibility layer
  * 
  * @example
  * ```tsx
- * import { translate, translateTargetToSource, getNativeScriptPreview } from '@/lib/translation';
+ * import { semanticTranslate, getSupportedLanguages } from '@/lib/translation';
  * 
- * // Instant preview (< 2ms)
- * const preview = getNativeScriptPreview('namaste', 'hindi');
- * // Returns: नमस्ते
+ * // Dynamic language discovery
+ * const languages = await getSupportedLanguages();
+ * console.log(`${languages.length} languages supported`);
  * 
- * // Full bidirectional translation
- * const toReceiver = await translate('hello', 'english', 'hindi');
- * const backToSender = translateTargetToSource(replyText, 'hindi', 'english');
+ * // Universal semantic translation
+ * const result = await semanticTranslate('hello', 'english', 'hindi');
+ * // Returns: { text: 'हैलो', isTranslated: true, ... }
  * ```
  */
 
 // ============================================================
-// PRIMARY API - EMBEDDED TRANSLATOR (100% in-browser)
+// PRIMARY API - UNIVERSAL SEMANTIC TRANSLATION
+// ============================================================
+
+export {
+  // Core semantic translation
+  semanticTranslate,
+  semanticTranslateBatch,
+  semanticTranslateBidirectional,
+  
+  // Language discovery (dynamic, no hard-coding)
+  getSupportedLanguages,
+  getLanguageCount,
+  isLanguageSupported,
+  isPairSupported,
+  
+  // Types
+  type SemanticTranslationResult,
+  type BidirectionalResult,
+  type LanguageInfo,
+} from './semantic-translate';
+
+// Engine access
+export {
+  loadEngine,
+  getEngine,
+  clearEngineCache,
+  getEngineCacheStats,
+  type Language,
+  type Translator,
+  type TranslationEngine,
+} from './engine';
+
+// ============================================================
+// LEGACY API - EMBEDDED TRANSLATOR (Backward Compatibility)
 // ============================================================
 
 export {
@@ -68,9 +93,11 @@ export {
   getLanguageInfo,
   isEnglish,
   isRTL,
-  getSupportedLanguages,
-  isLanguageSupported,
-  isPairSupported,
+  
+  // Legacy language functions (now delegating to engine)
+  getSupportedLanguages as getLegacySupportedLanguages,
+  isLanguageSupported as isLegacyLanguageSupported,
+  isPairSupported as isLegacyPairSupported,
   getTotalLanguageCount,
   getSupportedPairs,
   
@@ -112,7 +139,7 @@ export type {
   EmbeddedTranslationResult,
   LanguageDetectionResult as AutoDetectedLanguage,
   ChatProcessResult,
-  LanguageInfo,
+  LanguageInfo as LegacyLanguageInfo,
   BidirectionalTranslationResult,
 } from './embedded-translator';
 
@@ -168,7 +195,20 @@ export {
   LATIN_SCRIPT_LANGUAGES,
 } from './language-codes';
 
-// Legacy hooks (still available but recommend using embedded translator directly)
+// ============================================================
+// SEMANTIC TRANSLATION HOOKS (Recommended)
+// ============================================================
+
+export { 
+  useSemanticTranslation, 
+  useTranslate, 
+  useChatTranslation 
+} from '@/hooks/useSemanticTranslation';
+
+// ============================================================
+// LEGACY HOOKS (Backward compatibility)
+// ============================================================
+
 export { useTranslator } from './useTranslator';
 export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
 
