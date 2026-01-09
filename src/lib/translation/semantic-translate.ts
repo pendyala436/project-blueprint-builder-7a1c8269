@@ -2,25 +2,23 @@
  * Universal Semantic Translation API
  * ===================================
  * 
- * Meaning-only pivot logic that:
- * - Works for 10, 50, 386, or 1000+ languages automatically
- * - Uses English as the semantic bridge
- * - No hard-coded language lists
- * - Deterministic and scalable
+ * Meaning-based translation that:
+ * - Works for ALL languages dynamically (386+)
+ * - Uses English as semantic pivot
+ * - NO hard-coded language lists
+ * - NO external APIs
+ * - NO NLLB-200
+ * - Browser-only
  * 
  * Translation Policy:
- * - If source or target is English → direct translation
- * - If both are non-English → English semantic pivot
- * - If both use Latin script and direct path exists → allow direct
- * - Otherwise → always use English as semantic bridge
+ * - If source = target → passthrough
+ * - If source or target is English → direct path
+ * - If both non-English → English semantic pivot
  */
 
 import { loadEngine, type TranslationEngine, type Language } from './engine';
 
-// ============================================================
-// CONSTANTS
-// ============================================================
-
+// Constants
 const ENGLISH_CODE = 'en';
 const ENGLISH_NAME = 'english';
 
@@ -53,13 +51,13 @@ export interface LanguageInfo {
 // ============================================================
 
 /**
- * Universal semantic translation function
+ * Universal semantic translation
  * 
  * Rules:
  * - Preserves meaning, intent, and context
  * - NOT word-by-word translation
  * - Uses English as semantic pivot for non-English pairs
- * - Automatically scales to any number of languages
+ * - Scales to ANY number of languages automatically
  */
 export async function semanticTranslate(
   text: string,
@@ -68,91 +66,67 @@ export async function semanticTranslate(
 ): Promise<SemanticTranslationResult> {
   const trimmedText = text.trim();
   
-  // Empty text handling
+  // Empty text
   if (!trimmedText) {
-    return {
-      text: '',
-      originalText: '',
-      isTranslated: false,
-      sourceLanguage: source,
-      targetLanguage: target,
-      confidence: 0,
-    };
+    return createResult('', '', false, source, target, 0);
   }
 
   const engine = await loadEngine();
-  const langs = engine.getLanguages();
+  const languages = engine.getLanguages();
 
-  const srcLang = findLanguage(langs, source);
-  const tgtLang = findLanguage(langs, target);
+  const srcLang = findLanguage(languages, source);
+  const tgtLang = findLanguage(languages, target);
 
   // Language not supported
-  if (!srcLang || !tgtLang) {
-    return {
-      text: trimmedText,
-      originalText: trimmedText,
-      isTranslated: false,
-      sourceLanguage: source,
-      targetLanguage: target,
-      confidence: 0,
-      error: !srcLang ? `Source language not supported: ${source}` : `Target language not supported: ${target}`,
-    };
+  if (!srcLang) {
+    return createResult(trimmedText, trimmedText, false, source, target, 0, 
+      `Source language not found: ${source}`);
+  }
+  
+  if (!tgtLang) {
+    return createResult(trimmedText, trimmedText, false, source, target, 0,
+      `Target language not found: ${target}`);
   }
 
   // Same language - no translation needed
   if (srcLang.code === tgtLang.code) {
-    return {
-      text: trimmedText,
-      originalText: trimmedText,
-      isTranslated: false,
-      sourceLanguage: srcLang.name,
-      targetLanguage: tgtLang.name,
-      confidence: 1.0,
-    };
+    return createResult(trimmedText, trimmedText, false, srcLang.name, tgtLang.name, 1.0);
   }
 
-  const sourceIsEnglish = isEnglishLanguage(srcLang);
-  const targetIsEnglish = isEnglishLanguage(tgtLang);
+  const sourceIsEnglish = isEnglish(srcLang);
+  const targetIsEnglish = isEnglish(tgtLang);
 
   let result: string;
   let englishPivot: string | undefined;
 
   try {
-    if (sourceIsEnglish) {
-      // English → Any: direct translation
-      const translator = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
-      if (!translator) {
-        throw new Error('No translator from English available');
-      }
-      result = await translator.translateMeaning(trimmedText);
-    } else if (targetIsEnglish) {
-      // Any → English: direct translation
-      const translator = engine.getTranslator(srcLang.code, ENGLISH_CODE);
-      if (!translator) {
-        throw new Error('No translator to English available');
-      }
+    const translator = engine.getTranslator(srcLang.code, tgtLang.code);
+    
+    if (!translator) {
+      return createResult(trimmedText, trimmedText, false, srcLang.name, tgtLang.name, 0,
+        'No translator available for this pair');
+    }
+
+    if (sourceIsEnglish || targetIsEnglish) {
+      // Direct path when English is involved
       result = await translator.translateMeaning(trimmedText);
     } else if (srcLang.script === 'Latin' && tgtLang.script === 'Latin') {
-      // Latin → Latin: direct translation (no pivot needed)
-      const translator = engine.getTranslator(srcLang.code, tgtLang.code);
-      if (!translator) {
-        throw new Error('No translator available for Latin pair');
-      }
+      // Latin → Latin: direct
       result = await translator.translateMeaning(trimmedText);
     } else {
-      // Non-English with Native scripts: ALWAYS use English as semantic pivot
+      // Non-English pair: Use English as semantic pivot
       const toEnglish = engine.getTranslator(srcLang.code, ENGLISH_CODE);
       const fromEnglish = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
       
       if (!toEnglish || !fromEnglish) {
-        throw new Error('English pivot not available');
+        result = await translator.translateMeaning(trimmedText);
+      } else {
+        // Step 1: Source → English (extract meaning)
+        englishPivot = await toEnglish.translateMeaning(trimmedText);
+        
+        // Step 2: English → Target (render meaning)
+        result = await fromEnglish.translateMeaning(englishPivot);
       }
-      
-      // Step 1: Source → English (extract meaning)
-      englishPivot = await toEnglish.translateMeaning(trimmedText);
-      
-      // Step 2: English → Target (render meaning)
-      result = await fromEnglish.translateMeaning(englishPivot);
     }
 
     return {
@@ -165,16 +139,9 @@ export async function semanticTranslate(
       confidence: 0.85,
     };
   } catch (error) {
-    console.error('[SemanticTranslate] Translation failed:', error);
-    return {
-      text: trimmedText,
-      originalText: trimmedText,
-      isTranslated: false,
-      sourceLanguage: srcLang.name,
-      targetLanguage: tgtLang.name,
-      confidence: 0,
-      error: error instanceof Error ? error.message : 'Translation failed',
-    };
+    console.error('[SemanticTranslate] Error:', error);
+    return createResult(trimmedText, trimmedText, false, srcLang.name, tgtLang.name, 0,
+      error instanceof Error ? error.message : 'Translation failed');
   }
 }
 
@@ -182,17 +149,12 @@ export async function semanticTranslate(
 // BATCH TRANSLATION
 // ============================================================
 
-/**
- * Translate multiple texts in parallel
- */
 export async function semanticTranslateBatch(
   texts: string[],
   source: string,
   target: string
 ): Promise<SemanticTranslationResult[]> {
-  return Promise.all(
-    texts.map(text => semanticTranslate(text, source, target))
-  );
+  return Promise.all(texts.map(text => semanticTranslate(text, source, target)));
 }
 
 // ============================================================
@@ -204,10 +166,6 @@ export interface BidirectionalResult {
   reverse: SemanticTranslationResult;
 }
 
-/**
- * Translate text bidirectionally (A→B and B→A)
- * Useful for chat applications
- */
 export async function semanticTranslateBidirectional(
   text: string,
   languageA: string,
@@ -222,11 +180,12 @@ export async function semanticTranslateBidirectional(
 }
 
 // ============================================================
-// LANGUAGE UTILITIES
+// LANGUAGE UTILITIES - DYNAMIC DISCOVERY
 // ============================================================
 
 /**
- * Get all supported languages dynamically
+ * Get ALL supported languages dynamically
+ * No hard-coded count - returns whatever the engine discovers
  */
 export async function getSupportedLanguages(): Promise<LanguageInfo[]> {
   const engine = await loadEngine();
@@ -241,15 +200,15 @@ export async function getSupportedLanguages(): Promise<LanguageInfo[]> {
 }
 
 /**
- * Get total language count
+ * Get total language count (dynamic)
  */
 export async function getLanguageCount(): Promise<number> {
   const engine = await loadEngine();
-  return engine.getLanguages().length;
+  return engine.getLanguageCount();
 }
 
 /**
- * Check if a language is supported
+ * Check if language is supported
  */
 export async function isLanguageSupported(language: string): Promise<boolean> {
   const engine = await loadEngine();
@@ -257,7 +216,7 @@ export async function isLanguageSupported(language: string): Promise<boolean> {
 }
 
 /**
- * Check if a translation pair is supported
+ * Check if translation pair is supported
  */
 export async function isPairSupported(source: string, target: string): Promise<boolean> {
   const engine = await loadEngine();
@@ -269,32 +228,47 @@ export async function isPairSupported(source: string, target: string): Promise<b
 // ============================================================
 
 function findLanguage(languages: Language[], query: string): Language | null {
+  if (!query) return null;
   const normalized = query.toLowerCase().trim();
   
-  // Try exact match by code
+  // Try code match
   const byCode = languages.find(l => l.code.toLowerCase() === normalized);
   if (byCode) return byCode;
   
-  // Try exact match by name
+  // Try name match
   const byName = languages.find(l => l.name.toLowerCase() === normalized);
   if (byName) return byName;
   
-  // Try partial match by name
+  // Try partial match
   const byPartial = languages.find(l => 
-    l.name.toLowerCase().includes(normalized) ||
-    normalized.includes(l.name.toLowerCase())
+    l.name.includes(normalized) || normalized.includes(l.name)
   );
-  if (byPartial) return byPartial;
   
-  return null;
+  return byPartial || null;
 }
 
-function isEnglishLanguage(lang: Language): boolean {
+function isEnglish(lang: Language): boolean {
   return lang.code === ENGLISH_CODE || lang.name === ENGLISH_NAME;
 }
 
-// ============================================================
-// EXPORTS
-// ============================================================
+function createResult(
+  text: string,
+  originalText: string,
+  isTranslated: boolean,
+  sourceLanguage: string,
+  targetLanguage: string,
+  confidence: number,
+  error?: string
+): SemanticTranslationResult {
+  return {
+    text,
+    originalText,
+    isTranslated,
+    sourceLanguage,
+    targetLanguage,
+    confidence,
+    error,
+  };
+}
 
 export default semanticTranslate;
