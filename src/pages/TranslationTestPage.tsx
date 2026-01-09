@@ -44,11 +44,87 @@ export default function TranslationTestPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [testSummary, setTestSummary] = useState("");
   const [languageCount, setLanguageCount] = useState(0);
+  const [quickResults, setQuickResults] = useState<Array<{category: string; pairs: LanguageResult[]}>>([]);
 
   useEffect(() => {
     const languages = getSupportedLanguages();
     setLanguageCount(languages.length);
+    
+    // Run quick test on mount
+    runQuickTest();
   }, []);
+
+  const runQuickTest = async () => {
+    const testPhrase = "how are you";
+    const categories = [
+      {
+        name: "Latin → Latin (Direct)",
+        pairs: [
+          { source: "english", target: "spanish" },
+          { source: "spanish", target: "french" },
+          { source: "french", target: "german" },
+          { source: "german", target: "portuguese" },
+        ]
+      },
+      {
+        name: "Latin → Native (Transliteration)",
+        pairs: [
+          { source: "english", target: "hindi" },
+          { source: "english", target: "telugu" },
+          { source: "english", target: "arabic" },
+          { source: "spanish", target: "tamil" },
+        ]
+      },
+      {
+        name: "Native → Latin (Reverse Transliteration)",
+        pairs: [
+          { source: "hindi", target: "english" },
+          { source: "telugu", target: "english" },
+          { source: "arabic", target: "spanish" },
+          { source: "tamil", target: "french" },
+        ]
+      },
+      {
+        name: "Native → Native (English Pivot)",
+        pairs: [
+          { source: "hindi", target: "telugu" },
+          { source: "telugu", target: "tamil" },
+          { source: "arabic", target: "hindi" },
+          { source: "bengali", target: "kannada" },
+        ]
+      },
+    ];
+
+    const results: Array<{category: string; pairs: LanguageResult[]}> = [];
+
+    for (const category of categories) {
+      const categoryResults: LanguageResult[] = [];
+      
+      for (const pair of category.pairs) {
+        try {
+          const result = await translate(testPhrase, pair.source, pair.target);
+          categoryResults.push({
+            language: `${pair.source} → ${pair.target}`,
+            translation: result.text,
+            success: true,
+            isTransliterated: result.isTransliterated,
+            englishPivot: result.englishPivot,
+          });
+        } catch (err) {
+          categoryResults.push({
+            language: `${pair.source} → ${pair.target}`,
+            translation: testPhrase,
+            success: false,
+            isTransliterated: false,
+          });
+        }
+      }
+      
+      results.push({ category: category.name, pairs: categoryResults });
+    }
+
+    setQuickResults(results);
+  };
 
   const runTranslationTest = async () => {
     setIsLoading(true);
@@ -175,6 +251,48 @@ export default function TranslationTestPage() {
             </p>
           </div>
         </div>
+
+        {/* Quick Test Results - "how are you" */}
+        {quickResults.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Quick Test: "how are you"</h2>
+            {quickResults.map((category, idx) => (
+              <Card key={idx}>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-base">{category.category}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid gap-2">
+                    {category.pairs.map((result, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className="flex items-center justify-between p-2 rounded bg-accent/30 border"
+                      >
+                        <div className="flex-1">
+                          <span className="text-xs text-muted-foreground">{result.language}</span>
+                          <p className="font-medium">{result.translation}</p>
+                          {result.englishPivot && (
+                            <span className="text-xs text-blue-500">Pivot: {result.englishPivot}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {result.isTransliterated && (
+                            <Badge variant="secondary" className="text-xs">Script</Badge>
+                          )}
+                          {result.success ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Test Input */}
         <Card>
