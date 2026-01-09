@@ -14,7 +14,7 @@ import type {
   BatchTranslationResult,
   BatchTranslationItem 
 } from './types';
-import { getLanguageCode as getNLLBCode, isIndianLanguage } from './language-mappings';
+import { getLanguageCode, isIndianLanguage } from './language-mappings';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -57,8 +57,8 @@ export class Translator {
     // Detect source language if not provided
     const detected = detectLanguage(text);
     const effectiveSourceLang = sourceLanguage || detected.language;
-    const sourceCode = getNLLBCode(effectiveSourceLang) || detected.nllbCode;
-    const targetCode = getNLLBCode(targetLanguage);
+    const sourceCode = getLanguageCode(effectiveSourceLang) || detected.nllbCode;
+    const targetCode = getLanguageCode(targetLanguage);
 
     if (!targetCode) {
       return this.createResult(text, text, effectiveSourceLang, targetLanguage, sourceCode, targetCode || '', false, 'translate');
