@@ -1,36 +1,79 @@
 /**
- * Translation Module Exports
- * ==========================
+ * Universal Translation System - 1000+ Languages
+ * ===============================================
  * 
- * UNIVERSAL SEMANTIC TRANSLATION SYSTEM
- * - Language-agnostic engine
- * - Dynamically discovers available languages
- * - Scales to ANY number of languages (10, 50, 386, 1000+)
- * - Uses English as semantic pivot
- * - NO hard-coded language lists in translation logic
- * - 100% EMBEDDED, NO EXTERNAL APIs
+ * Complete browser-based translation supporting ALL languages
+ * from men_languages.ts and women_languages.ts (842+ languages each).
  * 
- * Architecture:
- * - engine.ts: Universal engine contract
- * - semantic-translate.ts: Meaning-only pivot logic
- * - embedded-translator.ts: Legacy compatibility layer
+ * Key Features:
+ * 1. Same-language bypass (source = target → return input as-is)
+ * 2. Different-language translation via English pivot
+ * 3. Dynamic language discovery (no hardcoding)
+ * 4. Native script conversion (Latin ↔ Native)
+ * 5. Real-time typing preview
+ * 6. Offline, browser-based, meaning-based translation
  * 
  * @example
  * ```tsx
- * import { semanticTranslate, getSupportedLanguages } from '@/lib/translation';
+ * import { 
+ *   translateText, 
+ *   getLanguages, 
+ *   isReady,
+ *   isSameLanguage 
+ * } from '@/lib/translation';
  * 
- * // Dynamic language discovery
- * const languages = await getSupportedLanguages();
- * console.log(`${languages.length} languages supported`);
+ * // Same language returns input as-is
+ * const result1 = await translateText('Hello', 'english', 'english');
+ * // result1.text === 'Hello', result1.isSameLanguage === true
  * 
- * // Universal semantic translation
- * const result = await semanticTranslate('hello', 'english', 'hindi');
- * // Returns: { text: 'हैलो', isTranslated: true, ... }
+ * // Different languages use semantic translation
+ * const result2 = await translateText('Hello friend', 'english', 'hindi');
+ * // result2.text === 'नमस्ते दोस्त', result2.isTranslated === true
  * ```
  */
 
 // ============================================================
-// PRIMARY API - UNIVERSAL SEMANTIC TRANSLATION
+// CORE 1000+ LANGUAGE TRANSLATION API (Primary - from translate.ts)
+// ============================================================
+
+export {
+  // Main translation function
+  translateText,
+  
+  // Language discovery
+  getLanguages,
+  getLanguageCount,
+  getLanguageInfo,
+  getTranslator,
+  loadEngine,
+  
+  // Status
+  isReady,
+  clearCache,
+  getCacheStats,
+  
+  // Language utilities
+  normalizeLanguage,
+  isLanguageSupported,
+  isLatinScriptLanguage,
+  isLatinText,
+  isSameLanguage,
+  isEnglish,
+  needsScriptConversion,
+  autoDetectLanguage,
+  
+  // Constants - All 1000+ languages
+  ALL_LANGUAGES,
+  
+  // Types
+  type Language,
+  type TranslationResult,
+  type Translator,
+  type TranslationEngine,
+} from './translate';
+
+// ============================================================
+// SEMANTIC TRANSLATION API (Alternative high-level API)
 // ============================================================
 
 export {
@@ -39,10 +82,8 @@ export {
   semanticTranslateBatch,
   semanticTranslateBidirectional,
   
-  // Language discovery (dynamic, no hard-coding)
+  // Language discovery
   getSupportedLanguages,
-  getLanguageCount,
-  isLanguageSupported,
   isPairSupported,
   
   // Types
@@ -51,19 +92,18 @@ export {
   type LanguageInfo,
 } from './semantic-translate';
 
-// Engine access
+// Engine access (aliased to avoid conflicts)
 export {
-  loadEngine,
   getEngine,
   clearEngineCache,
   getEngineCacheStats,
-  type Language,
-  type Translator,
-  type TranslationEngine,
+  type Language as EngineLanguage,
+  type Translator as EngineTranslator,
+  type TranslationEngine as Engine,
 } from './engine';
 
 // ============================================================
-// LEGACY API - EMBEDDED TRANSLATOR (Backward Compatibility)
+// EMBEDDED TRANSLATOR (Legacy/Backward Compatibility)
 // ============================================================
 
 export {
@@ -79,53 +119,48 @@ export {
   translateBidirectional,
   translateReply,
   translateBidirectionalInBackground,
-  translateTargetToSource, // Target → English → Source
+  translateTargetToSource,
   
-  // Language detection
-  autoDetectLanguage,
+  // Status
+  getLoadingStatus,
   
-  // Language utilities
-  normalizeLanguage,
-  isLatinScriptLanguage,
-  isLatinText,
-  isSameLanguage,
-  needsScriptConversion,
-  getLanguageInfo,
-  isEnglish,
+  // Language utilities (aliased)
   isRTL,
   getProxyLanguage,
   getEffectiveTargetLanguage,
   
-  // Legacy language functions (now delegating to engine)
+  // Legacy language functions
   getSupportedLanguages as getLegacySupportedLanguages,
   isLanguageSupported as isLegacyLanguageSupported,
   isPairSupported as isLegacyPairSupported,
   getTotalLanguageCount,
   getSupportedPairs,
   
-  // Status (always ready - no model loading)
-  isReady,
-  getLoadingStatus,
-  
   // Cache management
   clearTranslationCache,
-  getCacheStats,
   
   // Constants
   LANGUAGES,
 } from './embedded-translator';
 
-// Compatibility aliases (for backward compat with old API)
+// Compatibility aliases - re-export from translate.ts
 export {
   autoDetectLanguage as autoDetectLanguageSync,
   autoDetectLanguage as detectLanguage,
-  convertToNativeScript as convertToNativeScriptAsync,
   needsScriptConversion as asyncNeedsScriptConversion,
   isLatinText as asyncIsLatinText,
+} from './translate';
+
+// Re-export from embedded-translator for chat processing
+export {
+  convertToNativeScript as convertToNativeScriptAsync,
   processMessageForChat as processChatMessage,
 } from './embedded-translator';
 
-// Stub functions for removed worker-based features
+// Import for stub functions
+import { getNativeScriptPreview } from './embedded-translator';
+import { isLatinText as checkLatinText } from './translate';
+
 export const initWorker = () => Promise.resolve();
 export const terminateWorker = () => {};
 export const normalizeUnicode = (text: string) => text.normalize('NFC');
@@ -133,10 +168,9 @@ export const createDebouncedPreview = () => ({
   update: (text: string, lang: string) => Promise.resolve(getNativeScriptPreview(text, lang)),
   cancel: () => {},
 });
-export const isLatinScript = (text: string) => isLatinText(text);
+export const isLatinScript = (text: string) => checkLatinText(text);
 
-import { getNativeScriptPreview, isLatinText } from './embedded-translator';
-
+// Embedded translator types
 export type {
   EmbeddedTranslationResult,
   LanguageDetectionResult as AutoDetectedLanguage,
@@ -161,7 +195,7 @@ export {
 } from './phonetic-symspell';
 
 // ============================================================
-// DYNAMIC TRANSLITERATOR - Script conversion for 386+ languages
+// DYNAMIC TRANSLITERATOR - Script conversion for 1000+ languages
 // ============================================================
 
 export {
@@ -172,11 +206,11 @@ export {
 } from './dynamic-transliterator';
 
 // ============================================================
-// LEGACY EXPORTS (for backward compatibility)
+// LEGACY TYPE EXPORTS
 // ============================================================
 
 export type {
-  TranslationResult,
+  TranslationResult as LegacyTranslationResult,
   TranslationOptions,
   TranslatorConfig,
   LanguageDetectionResult,
@@ -189,8 +223,6 @@ export type {
 export {
   getNLLBCode,
   isIndianLanguage,
-  // getSupportedLanguages, // Now exported from embedded-translator with 386+ languages
-  // isLanguageSupported,   // Now exported from embedded-translator with 386+ languages
   LANGUAGE_TO_NLLB,
   SCRIPT_PATTERNS,
   INDIAN_LANGUAGES,
