@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import MiniChatWindow from "./MiniChatWindow";
+import DraggableMiniChatWindow from "./DraggableMiniChatWindow";
 
 interface ActiveChat {
   id: string;
@@ -11,6 +11,7 @@ interface ActiveChat {
   partnerLanguage: string;
   isPartnerOnline: boolean;
   ratePerMinute: number;
+  earningRatePerMinute: number;
 }
 
 interface ParallelChatsContainerProps {
@@ -73,6 +74,7 @@ const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage
       const chats: ActiveChat[] = sessions.map(session => {
         const partnerId = session[partnerColumn as keyof typeof session] as string;
         const profile = profileMap.get(partnerId);
+        const rate = session.rate_per_minute || 5;
         
         return {
           id: session.id,
@@ -82,7 +84,8 @@ const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage
           partnerPhoto: profile?.photo_url || null,
           partnerLanguage: profile?.primary_language || "Unknown",
           isPartnerOnline: statusMap.get(partnerId) || false,
-          ratePerMinute: session.rate_per_minute || 5
+          ratePerMinute: rate,
+          earningRatePerMinute: rate * 0.6 // Women earn 60% of rate
         };
       });
 
@@ -138,23 +141,27 @@ const ParallelChatsContainer = ({ currentUserId, userGender, currentUserLanguage
   }
 
   return (
-    <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
-      {activeChats.slice(0, 3).map((chat) => (
-        <MiniChatWindow
-          key={chat.chatId}
-          chatId={chat.chatId}
-          sessionId={chat.id}
-          partnerId={chat.partnerId}
-          partnerName={chat.partnerName}
-          partnerPhoto={chat.partnerPhoto}
-          partnerLanguage={chat.partnerLanguage}
-          isPartnerOnline={chat.isPartnerOnline}
-          currentUserId={currentUserId}
-          currentUserLanguage={currentUserLanguage}
-          userGender={userGender}
-          ratePerMinute={chat.ratePerMinute}
-          onClose={() => handleCloseChat(chat.chatId)}
-        />
+    <div className="fixed inset-0 pointer-events-none z-50">
+      {activeChats.slice(0, 3).map((chat, index) => (
+        <div key={chat.chatId} className="pointer-events-auto">
+          <DraggableMiniChatWindow
+            chatId={chat.chatId}
+            sessionId={chat.id}
+            partnerId={chat.partnerId}
+            partnerName={chat.partnerName}
+            partnerPhoto={chat.partnerPhoto}
+            partnerLanguage={chat.partnerLanguage}
+            isPartnerOnline={chat.isPartnerOnline}
+            currentUserId={currentUserId}
+            currentUserLanguage={currentUserLanguage}
+            userGender={userGender}
+            ratePerMinute={chat.ratePerMinute}
+            earningRatePerMinute={chat.earningRatePerMinute}
+            onClose={() => handleCloseChat(chat.chatId)}
+            initialPosition={{ x: window.innerWidth - 340 - (index * 20), y: window.innerHeight - 420 - (index * 20) }}
+            zIndex={50 + index}
+          />
+        </div>
       ))}
     </div>
   );
