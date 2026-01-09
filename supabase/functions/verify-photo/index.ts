@@ -115,11 +115,10 @@ async function classifyWithHuggingFace(
     bytes[i] = binaryString.charCodeAt(i);
   }
 
-  // Use direct fetch to Hugging Face Inference Router
+  // Use direct fetch to Hugging Face Inference API
   const modelsToTry = [
     'prithivMLmods/Gender-Classifier-Mini',
     'AjaySharma/genderDetection',
-    'abhilash88/age-gender-prediction',
     'rizvandwiki/gender-classification-2',
     'dima806/man_woman_face_image_detection'
   ];
@@ -131,7 +130,7 @@ async function classifyWithHuggingFace(
     try {
       console.log(`Trying model: ${modelName}`);
       
-      const response = await fetch(`https://router.huggingface.co/hf-inference/models/${modelName}`, {
+      const response = await fetch(`https://api-inference.huggingface.co/models/${modelName}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${hfToken}`,
