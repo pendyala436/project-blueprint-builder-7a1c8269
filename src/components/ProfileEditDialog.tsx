@@ -33,7 +33,8 @@ import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
+import { menLanguages, MenLanguage } from "@/data/men_languages";
+import { womenLanguages, WomenLanguage } from "@/data/women_languages";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -351,8 +352,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       // Get language from the profile data itself (stored in primary_language/preferred_language)
       // Each profile type has its own language stored independently
       if (data && data.primary_language) {
-        // Find the language in our list to get the code
-        const foundLang = ALL_NLLB200_LANGUAGES.find(l => l.name === data.primary_language);
+        // Use gender-specific language list
+        const languageList = data.gender === 'female' ? womenLanguages : menLanguages;
+        const foundLang = languageList.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = {
             language_name: foundLang.name,
@@ -696,7 +698,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 My Language (for Chat Matching)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 200+ languages.
+                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 1000+ languages.
               </p>
               
               <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
@@ -728,10 +730,12 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                     <CommandList className="max-h-60">
                       <CommandEmpty>No language found.</CommandEmpty>
                       
-                      {/* Indian Languages */}
-                      <CommandGroup heading="🇮🇳 Indian Languages">
-                        {INDIAN_NLLB200_LANGUAGES
-                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
+                      {/* All Languages - Gender specific list */}
+                      <CommandGroup heading="🌐 All Languages">
+                        {(profile.gender === 'female' ? womenLanguages : menLanguages)
+                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
+                                      l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
+                          .slice(0, 50)
                           .map((lang) => (
                             <CommandItem
                               key={lang.code}
@@ -748,33 +752,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                             >
                               <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1">{lang.name}</span>
-                              <span className="text-xs text-muted-foreground">{lang.script}</span>
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-
-                      {/* International Languages */}
-                      <CommandGroup heading="🌍 International Languages">
-                        {NON_INDIAN_NLLB200_LANGUAGES
-                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
-                          .slice(0, 30)
-                          .map((lang) => (
-                            <CommandItem
-                              key={lang.code}
-                              value={lang.name}
-                              onSelect={() => {
-                                setUserLanguage({
-                                  language_name: lang.name,
-                                  language_code: lang.code
-                                });
-                                setLanguageOpen(false);
-                                setLanguageSearch("");
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
-                              <span className="flex-1">{lang.name}</span>
-                              <span className="text-xs text-muted-foreground">{lang.script}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{lang.nativeName}</span>
+                              {lang.script && <span className="text-xs text-muted-foreground ml-1">({lang.script})</span>}
                             </CommandItem>
                           ))}
                       </CommandGroup>
