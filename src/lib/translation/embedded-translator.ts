@@ -390,28 +390,51 @@ export async function translate(
   let wasTranslated = false;
   let wasTransliterated = false;
 
-  // ENGLISH PIVOT TRANSLATION LOGIC
+  // TRANSLATION LOGIC
   const sourceIsEnglish = isEnglish(actualSource);
   const targetIsEnglish = isEnglish(normTarget);
+  const sourceIsLatin = isLatinScriptLanguage(actualSource) || sourceIsEnglish;
+  const targetIsLatin = isLatinScriptLanguage(normTarget) || targetIsEnglish;
 
-  console.log(`[EmbeddedTranslator] Translation: ${actualSource} → ${normTarget} | English pivot: ${!sourceIsEnglish && !targetIsEnglish ? 'YES' : 'NO'}`);
+  // Determine translation path
+  const isLatinToLatin = sourceIsLatin && targetIsLatin;
+
+  console.log(`[EmbeddedTranslator] Translation: ${actualSource} → ${normTarget} | Latin-to-Latin: ${isLatinToLatin} | English pivot: ${!isLatinToLatin && !sourceIsEnglish && !targetIsEnglish}`);
 
   if (sourceIsEnglish && targetIsEnglish) {
     // English to English - no translation needed
     translatedText = correctedText;
     console.log('[EmbeddedTranslator] Same language (English) - no translation');
+  } else if (isLatinToLatin) {
+    // LATIN TO LATIN: Direct pass-through (no pivot needed)
+    // Spanish ↔ French ↔ German ↔ Portuguese ↔ Italian etc.
+    // These share the same script, so no conversion required
+    translatedText = correctedText;
+    wasTranslated = false; // No actual translation, just pass-through
+    console.log(`[EmbeddedTranslator] Direct Latin-to-Latin: ${actualSource} → ${normTarget} (no pivot)`);
   } else if (sourceIsEnglish) {
-    // English → Target (direct, no pivot needed)
+    // English → Non-Latin Target (direct transliteration)
     translatedText = translateFromEnglish(correctedText, normTarget);
     wasTranslated = translatedText !== correctedText;
     console.log(`[EmbeddedTranslator] Direct: English → ${normTarget}`);
   } else if (targetIsEnglish) {
-    // Source → English (direct, no pivot needed)
+    // Non-Latin Source → English (reverse transliteration)
     translatedText = translateToEnglish(correctedText, actualSource);
     wasTranslated = translatedText !== correctedText;
     console.log(`[EmbeddedTranslator] Direct: ${actualSource} → English`);
+  } else if (sourceIsLatin && !targetIsLatin) {
+    // Latin Source → Non-Latin Target (direct transliteration)
+    translatedText = translateFromEnglish(correctedText, normTarget);
+    wasTranslated = translatedText !== correctedText;
+    console.log(`[EmbeddedTranslator] Direct: ${actualSource} (Latin) → ${normTarget} (Native)`);
+  } else if (!sourceIsLatin && targetIsLatin) {
+    // Non-Latin Source → Latin Target (reverse transliteration)
+    translatedText = translateToEnglish(correctedText, actualSource);
+    wasTranslated = translatedText !== correctedText;
+    console.log(`[EmbeddedTranslator] Direct: ${actualSource} (Native) → ${normTarget} (Latin)`);
   } else {
-    // Source → English → Target (FULL ENGLISH PIVOT)
+    // NON-LATIN TO NON-LATIN: Use English as pivot
+    // Hindi → English → Arabic, Telugu → English → Tamil, etc.
     // Step 1: Source language (native script) → English (Latin phonetics)
     englishPivot = translateToEnglish(correctedText, actualSource);
     console.log(`[EmbeddedTranslator] Pivot Step 1: ${actualSource} → English: "${englishPivot.substring(0, 30)}..."`);
