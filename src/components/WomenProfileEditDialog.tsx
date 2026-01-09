@@ -30,7 +30,7 @@ import { Loader2, Lock, User, Calendar, MapPin, Briefcase, Book, Heart, Camera, 
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
-import { ALL_LANGUAGES, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES } from "@/data/profileLanguages";
+import { WOMEN_ALL_LANGUAGES, WOMEN_INDIAN_LANGUAGES, WOMEN_NON_INDIAN_LANGUAGES } from "@/data/women-languages";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -154,7 +154,7 @@ const WomenProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: WomenP
       if (error) throw error;
 
       if (data?.primary_language) {
-        const foundLang = ALL_LANGUAGES.find(l => l.name === data.primary_language);
+        const foundLang = WOMEN_ALL_LANGUAGES.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = { language_name: foundLang.name, language_code: foundLang.code };
           setUserLanguage(langData);
@@ -331,8 +331,8 @@ const WomenProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: WomenP
                   />
                   <CommandList className="max-h-60">
                     <CommandEmpty>No language found.</CommandEmpty>
-                    <CommandGroup heading={`🇮🇳 Indian Languages (${INDIAN_LANGUAGES.length})`}>
-                      {INDIAN_LANGUAGES
+                    <CommandGroup heading={`🇮🇳 Indian Languages (${WOMEN_INDIAN_LANGUAGES.length})`}>
+                      {WOMEN_INDIAN_LANGUAGES
                         .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
                           (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())))
                         .map((lang) => (
@@ -353,8 +353,8 @@ const WomenProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: WomenP
                           </CommandItem>
                         ))}
                     </CommandGroup>
-                    <CommandGroup heading={`🌍 International Languages (${NON_INDIAN_LANGUAGES.length})`}>
-                      {NON_INDIAN_LANGUAGES
+                    <CommandGroup heading={`🌍 International Languages (${WOMEN_NON_INDIAN_LANGUAGES.length})`}>
+                      {WOMEN_NON_INDIAN_LANGUAGES
                         .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
                           (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())))
                         .map((lang) => (
