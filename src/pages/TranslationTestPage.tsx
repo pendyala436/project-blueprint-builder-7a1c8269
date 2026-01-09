@@ -96,10 +96,23 @@ export default function TranslationTestPage() {
         { source: "telugu", target: "english" },
         { source: "hindi", target: "english" },
         { source: "tamil", target: "english" },
-        // Latin to Latin (no conversion needed)
+        // Latin to Latin (ENGLISH PIVOT for phonetic normalization)
         { source: "english", target: "spanish" },
+        { source: "english", target: "french" },
+        { source: "english", target: "german" },
+        { source: "english", target: "portuguese" },
+        { source: "english", target: "italian" },
+        { source: "spanish", target: "french" },
         { source: "french", target: "german" },
         { source: "spanish", target: "portuguese" },
+        { source: "german", target: "italian" },
+        { source: "portuguese", target: "spanish" },
+        { source: "italian", target: "french" },
+        { source: "french", target: "spanish" },
+        // Latin to non-Latin
+        { source: "spanish", target: "hindi" },
+        { source: "french", target: "arabic" },
+        { source: "german", target: "russian" },
       ];
       
       const additionalResults: LanguageResult[] = [];
