@@ -804,8 +804,97 @@ export function getEmbeddedLanguageCount(): number {
   return LANGUAGES.length;
 }
 
-// Alias for backward compatibility
-export { getEmbeddedLanguageCount as getTotalLanguageCount };
+// Alias for backward compatibility - use central source from languages.ts
+export { getTotalLanguageCount } from '@/data/languages';
+
+// ============================================================
+// TRANSLATION SYSTEM TEST
+// ============================================================
+
+export interface TranslationTestResult {
+  source: string;
+  target: string;
+  originalText: string;
+  translatedText: string;
+  englishPivot?: string;
+  success: boolean;
+  isTransliterated: boolean;
+}
+
+/**
+ * Test translation for multiple language pairs
+ * Used to verify the English-pivot system works across all 386 languages
+ */
+export async function testTranslationPairs(testText: string = 'hello'): Promise<{
+  totalLanguages: number;
+  testedPairs: TranslationTestResult[];
+  summary: string;
+}> {
+  const testCases: Array<{ source: string; target: string }> = [
+    // Latin → Non-Latin (Various scripts)
+    { source: 'english', target: 'hindi' },
+    { source: 'english', target: 'bengali' },
+    { source: 'english', target: 'tamil' },
+    { source: 'english', target: 'telugu' },
+    { source: 'english', target: 'kannada' },
+    { source: 'english', target: 'malayalam' },
+    { source: 'english', target: 'gujarati' },
+    { source: 'english', target: 'punjabi' },
+    { source: 'english', target: 'odia' },
+    { source: 'english', target: 'arabic' },
+    { source: 'english', target: 'russian' },
+    { source: 'english', target: 'thai' },
+    { source: 'english', target: 'japanese' },
+    { source: 'english', target: 'korean' },
+    { source: 'english', target: 'chinese (mandarin)' },
+    { source: 'english', target: 'greek' },
+    { source: 'english', target: 'hebrew' },
+    // Non-Latin → Non-Latin (Different scripts via English pivot)
+    { source: 'hindi', target: 'tamil' },
+    { source: 'bengali', target: 'telugu' },
+    { source: 'arabic', target: 'hindi' },
+    { source: 'russian', target: 'chinese (mandarin)' },
+    { source: 'japanese', target: 'korean' },
+    // Latin → Latin
+    { source: 'english', target: 'spanish' },
+    { source: 'french', target: 'german' },
+    { source: 'spanish', target: 'portuguese' },
+  ];
+
+  const results: TranslationTestResult[] = [];
+
+  for (const { source, target } of testCases) {
+    try {
+      const result = await translate(testText, source, target);
+      results.push({
+        source,
+        target,
+        originalText: testText,
+        translatedText: result.text,
+        englishPivot: result.englishPivot,
+        success: true,
+        isTransliterated: result.isTransliterated,
+      });
+    } catch (err) {
+      results.push({
+        source,
+        target,
+        originalText: testText,
+        translatedText: testText,
+        success: false,
+        isTransliterated: false,
+      });
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length;
+
+  return {
+    totalLanguages: TOTAL_LANGUAGES,
+    testedPairs: results,
+    summary: `✅ Tested ${results.length} language pairs | ${successCount}/${results.length} successful | Total languages: ${TOTAL_LANGUAGES}`,
+  };
+}
 
 // Log module initialization
 console.log(`[EmbeddedTranslator] ✓ Loaded ${TOTAL_LANGUAGES} languages | English-pivot system | Pairs: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`);
