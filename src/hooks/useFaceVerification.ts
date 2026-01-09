@@ -30,7 +30,8 @@ let modelsLoaded = false;
 let modelsLoading = false;
 let modelLoadPromise: Promise<void> | null = null;
 
-const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+// Use jsDelivr CDN which has the correct model files
+const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
 
 export const useFaceVerification = (): UseFaceVerificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
