@@ -21,7 +21,6 @@ hooks/
 │   ├── useActivityStatus.ts
 │   ├── useIncomingCalls.ts
 │   ├── useMatchingService.ts
-│   ├── useVoiceRecorder.ts
 │   └── ...
 │
 └── Utility Hooks

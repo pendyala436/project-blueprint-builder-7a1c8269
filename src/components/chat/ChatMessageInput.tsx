@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Mic, MicOff, Languages } from 'lucide-react';
+import { Send, Smile, Languages } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 
 interface ChatMessageInputProps {
