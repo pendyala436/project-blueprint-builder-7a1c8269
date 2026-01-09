@@ -93,6 +93,8 @@ export {
   getLanguageInfo,
   isEnglish,
   isRTL,
+  getProxyLanguage,
+  getEffectiveTargetLanguage,
   
   // Legacy language functions (now delegating to engine)
   getSupportedLanguages as getLegacySupportedLanguages,
