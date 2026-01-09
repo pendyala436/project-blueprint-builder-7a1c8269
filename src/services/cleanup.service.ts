@@ -98,10 +98,11 @@ export const verifyPhoto = async (
     
     return {
       verified: data.verified ?? false,
-      detectedGender: data.detected_gender,
+      // Support both camelCase (current edge function) and snake_case (older versions)
+      detectedGender: data.detectedGender ?? data.detected_gender,
       confidence: data.confidence,
       reason: data.reason,
-      genderMatches: data.gender_matches,
+      genderMatches: data.genderMatches ?? data.gender_matches,
     };
   } catch (error) {
     console.error('Photo verification error:', error);
