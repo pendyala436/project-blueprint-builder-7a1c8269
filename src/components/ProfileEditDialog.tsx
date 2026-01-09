@@ -698,7 +698,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 My Language (for Chat Matching)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 1000+ languages.
+                Select your primary language from {profile.gender === 'female' ? womenLanguages.length : menLanguages.length}+ languages. Auto-translation is available.
               </p>
               
               <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
@@ -720,26 +720,33 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
+                <PopoverContent className="w-[400px] p-0 bg-popover z-50" align="start">
                   <Command className="bg-popover">
                     <CommandInput 
-                      placeholder="Search language..." 
+                      placeholder="Search from 842 languages..." 
                       value={languageSearch}
                       onValueChange={setLanguageSearch}
                     />
-                    <CommandList className="max-h-60">
-                      <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandList className="max-h-80">
+                      <CommandEmpty>No language found. Try searching by name.</CommandEmpty>
                       
-                      {/* All Languages - Gender specific list */}
-                      <CommandGroup heading="🌐 All Languages">
+                      {/* Show filtered results - increased limit */}
+                      <CommandGroup heading={`🌐 Languages (${(profile.gender === 'female' ? womenLanguages : menLanguages).filter(l => 
+                        !languageSearch || 
+                        l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
+                        l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())
+                      ).length} available)`}>
                         {(profile.gender === 'female' ? womenLanguages : menLanguages)
-                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
-                                      l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
-                          .slice(0, 50)
+                          .filter(l => 
+                            !languageSearch || 
+                            l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
+                            l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())
+                          )
+                          .slice(0, 100)
                           .map((lang) => (
                             <CommandItem
                               key={lang.code}
-                              value={lang.name}
+                              value={`${lang.name} ${lang.nativeName}`}
                               onSelect={() => {
                                 setUserLanguage({
                                   language_name: lang.name,
@@ -750,13 +757,18 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               }}
                               className="cursor-pointer"
                             >
-                              <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
-                              <span className="flex-1">{lang.name}</span>
-                              <span className="text-xs text-muted-foreground ml-2">{lang.nativeName}</span>
-                              {lang.script && <span className="text-xs text-muted-foreground ml-1">({lang.script})</span>}
+                              <Check className={cn("mr-2 h-4 w-4 shrink-0", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
+                              <span className="flex-1 truncate">{lang.name}</span>
+                              <span className="text-xs text-muted-foreground ml-2 truncate">{lang.nativeName}</span>
                             </CommandItem>
                           ))}
                       </CommandGroup>
+                      
+                      {!languageSearch && (
+                        <div className="p-2 text-xs text-center text-muted-foreground border-t">
+                          Type to search all 842 languages
+                        </div>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>
