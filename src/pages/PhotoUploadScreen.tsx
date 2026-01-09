@@ -184,26 +184,25 @@ const PhotoUploadScreen = () => {
       
       setVerificationResult(result);
       
-      // If expected gender was provided and there's a mismatch, fail verification
-      if (expectedGender && result.genderMatches === false) {
-        setVerificationState("failed");
-        toast({
-          title: "Gender mismatch",
-          description: `This profile requires a ${expectedGender} selfie. Detected: ${result.detectedGender}`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (result.verified) {
+      // If gender was detected and differs from expected, update the stored gender
+      if (result.verified && result.detectedGender !== 'unknown') {
+        if (expectedGender !== result.detectedGender) {
+          // Update stored gender to match detected gender
+          localStorage.setItem("userGender", result.detectedGender);
+          toast({
+            title: "Gender updated",
+            description: `Your profile gender has been set to ${result.detectedGender} based on AI detection`,
+          });
+        }
+        
         setVerificationState("verified");
         toast({
           title: "Selfie verified! ✨",
           description: result.confidence 
-            ? `Gender verified as ${expectedGender || result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`
+            ? `Gender detected as ${result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`
             : "Your photo has been verified",
         });
-      } else {
+      } else if (!result.verified) {
         setVerificationState("failed");
         toast({
           title: "Verification issue",
