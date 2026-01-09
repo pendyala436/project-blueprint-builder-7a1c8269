@@ -117,6 +117,7 @@ async function classifyWithHuggingFace(
 
   // Use direct fetch to Hugging Face Inference Router
   const modelsToTry = [
+    'prithivMLmods/Gender-Classifier-Mini',
     'AjaySharma/genderDetection',
     'abhilash88/age-gender-prediction',
     'rizvandwiki/gender-classification-2',
