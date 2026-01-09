@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Languages, Search, Check, ChevronDown, Globe, Save, X } from "lucide-react";
+import { Languages, Search, Check, Globe, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { menLanguages, MenLanguage } from "@/data/men_languages";
 import { womenLanguages, WomenLanguage } from "@/data/women_languages";
