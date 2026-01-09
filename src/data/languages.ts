@@ -151,6 +151,7 @@ export const languages: Language[] = [
   { code: "nst", name: "Tangsa", nativeName: "Tangsa", script: "Latin" },
   { code: "nnp", name: "Wancho", nativeName: "Wancho", script: "Latin" },
   { code: "njb", name: "Nocte", nativeName: "Nocte", script: "Latin" },
+  { code: "nag", name: "Nagamese", nativeName: "Nagamese", script: "Latin" },
   { code: "cmn", name: "Monpa", nativeName: "མོན་པ", script: "Tibetan" },
 
   // ================================================================
