@@ -4,7 +4,7 @@
  */
 
 import type { LanguageDetectionResult } from './types';
-import { SCRIPT_PATTERNS } from './language-codes';
+import { SCRIPT_PATTERNS } from './language-mappings';
 
 /**
  * Check if text is primarily Latin script

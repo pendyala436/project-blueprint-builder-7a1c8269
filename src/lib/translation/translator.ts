@@ -14,7 +14,7 @@ import type {
   BatchTranslationResult,
   BatchTranslationItem 
 } from './types';
-import { getNLLBCode, isIndianLanguage } from './language-codes';
+import { getLanguageCode as getNLLBCode, isIndianLanguage } from './language-mappings';
 import { detectLanguage, isLatinScript, isSameLanguage } from './language-detector';
 import { supabase } from '@/integrations/supabase/client';
 
