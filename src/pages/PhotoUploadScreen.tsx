@@ -176,33 +176,35 @@ const PhotoUploadScreen = () => {
     setIsVerifying(true);
 
     try {
-      // Get the expected gender from registration data
-      const expectedGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
+      // Get the expected gender from registration data (defensive: ignore invalid values)
+      const storedGender = localStorage.getItem("userGender");
+      const expectedGender = storedGender === "male" || storedGender === "female" ? storedGender : null;
+      if (storedGender && !expectedGender) localStorage.removeItem("userGender");
       
       // Use edge function for photo verification
       const result = await verifyPhoto(selfiePreview, expectedGender || undefined);
       
       setVerificationResult(result);
-      
-      // If gender was detected and differs from expected, update the stored gender
-      if (result.verified && result.detectedGender !== 'unknown') {
-        if (expectedGender !== result.detectedGender) {
-          // Update stored gender to match detected gender
-          localStorage.setItem("userGender", result.detectedGender);
+
+      if (result.verified) {
+        // If a concrete gender was detected and differs from expected, update the stored gender
+        const detected = result.detectedGender;
+        if ((detected === "male" || detected === "female") && expectedGender !== detected) {
+          localStorage.setItem("userGender", detected);
           toast({
             title: "Gender updated",
-            description: `Your profile gender has been set to ${result.detectedGender} based on AI detection`,
+            description: `Your profile gender has been set to ${detected} based on AI detection`,
           });
         }
-        
+
         setVerificationState("verified");
         toast({
           title: "Selfie verified! ✨",
-          description: result.confidence 
-            ? `Gender detected as ${result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`
-            : "Your photo has been verified",
+          description: result.confidence && (detected === "male" || detected === "female")
+            ? `Gender detected as ${detected} (${Math.round(result.confidence * 100)}% confidence)`
+            : (result.reason || "Your photo has been verified"),
         });
-      } else if (!result.verified) {
+      } else {
         setVerificationState("failed");
         toast({
           title: "Verification issue",
