@@ -76,7 +76,7 @@ interface OnlineMan {
   hasRecharged: boolean;
   lastSeen: string;
   isSameLanguage: boolean;
-  isNllbLanguage: boolean;
+  isTranslationSupported: boolean;
   activeChatCount?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
 }
 
@@ -390,7 +390,7 @@ const WomenDashboardScreen = () => {
       const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
-      // Set all supported NLLB languages for women
+      // Set all supported languages for women (386+ languages from languages.ts)
       setSupportedLanguages(ALL_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context
@@ -465,7 +465,7 @@ const WomenDashboardScreen = () => {
           hasRecharged,
           lastSeen: man.last_seen || new Date().toISOString(),
           isSameLanguage,
-          isNllbLanguage: true, // All languages supported with translation
+          isTranslationSupported: true, // All languages supported with translation
           activeChatCount: man.active_chat_count || 0
         };
       });
@@ -725,7 +725,7 @@ const WomenDashboardScreen = () => {
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
               </div>
-              {user.isNllbLanguage && !user.isSameLanguage && (
+              {user.isTranslationSupported && !user.isSameLanguage && (
                 <Badge variant="outline" className="text-[10px]">
                   <Globe className="h-2.5 w-2.5 mr-1" />
                   {t('autoTranslateMessages', 'Auto-translate')}
