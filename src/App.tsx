@@ -90,6 +90,7 @@ const PasswordResetSuccessScreen = lazy(() => import(/* webpackChunkName: "auth"
 const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminTransactionHistory"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
+const TranslationTestPanel = lazy(() => import(/* webpackChunkName: "dev" */ "./components/TranslationTestPanel"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
 
 // Ultra-optimized React Query - maximum caching
@@ -217,6 +218,7 @@ const App = () => (
             <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
+            <Route path="/translation-test" element={<LazyRoute component={TranslationTestPanel} />} />
             <Route path="*" element={<LazyRoute component={NotFound} />} />
           </Routes>
         </AutoLogoutWrapper>
