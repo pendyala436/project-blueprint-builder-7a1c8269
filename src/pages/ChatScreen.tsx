@@ -88,10 +88,6 @@ import ChatBillingDisplay from "@/components/ChatBillingDisplay";
 import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
-// Voice-to-text component
-// Voice message components
-// Voice message components
-import VoiceMessageRecorder from "@/components/VoiceMessageRecorder";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
 
@@ -1920,14 +1916,6 @@ const ChatScreen = () => {
                 disabled={isSending}
               />
             )}
-            
-            {/* Voice message recorder (up to 5 minutes) */}
-            <VoiceMessageRecorder
-              chatId={chatId.current}
-              currentUserId={currentUserId}
-              partnerId={chatPartner?.userId || ''}
-              disabled={isSending || !chatPartner}
-            />
             
             {/* Text input field */}
             <Input
