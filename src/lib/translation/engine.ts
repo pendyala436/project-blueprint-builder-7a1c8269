@@ -789,6 +789,694 @@ class SemanticTranslationEngine implements TranslationEngine {
         base.set('ヲ', 'wo'); base.set('ン', 'n');
         break;
 
+      // ============= MONGOLIAN SCRIPT =============
+      case 'Mongolian':
+        base.set('ᠠ', 'a'); base.set('ᠡ', 'e'); base.set('ᠢ', 'i'); base.set('ᠣ', 'o');
+        base.set('ᠤ', 'u'); base.set('ᠥ', 'oe'); base.set('ᠦ', 'ue'); base.set('ᠧ', 'ee');
+        base.set('ᠨ', 'n'); base.set('ᠩ', 'ng'); base.set('ᠪ', 'b'); base.set('ᠫ', 'p');
+        base.set('ᠬ', 'h'); base.set('ᠭ', 'g'); base.set('ᠮ', 'm'); base.set('ᠯ', 'l');
+        base.set('ᠰ', 's'); base.set('ᠱ', 'sh'); base.set('ᠲ', 't'); base.set('ᠳ', 'd');
+        base.set('ᠴ', 'ch'); base.set('ᠵ', 'j'); base.set('ᠶ', 'y'); base.set('ᠷ', 'r');
+        base.set('ᠸ', 'w'); base.set('ᠹ', 'f'); base.set('ᠺ', 'k'); base.set('ᠻ', 'kh');
+        base.set('ᠼ', 'ts'); base.set('ᠽ', 'z'); base.set('ᠾ', 'h'); base.set('ᠿ', 'zr');
+        break;
+
+      // ============= JAVANESE SCRIPT =============
+      case 'Javanese':
+        base.set('ꦲ', 'ha'); base.set('ꦤ', 'na'); base.set('ꦕ', 'ca'); base.set('ꦫ', 'ra');
+        base.set('ꦏ', 'ka'); base.set('ꦢ', 'da'); base.set('ꦠ', 'ta'); base.set('ꦱ', 'sa');
+        base.set('ꦮ', 'wa'); base.set('ꦭ', 'la'); base.set('ꦥ', 'pa'); base.set('ꦝ', 'dha');
+        base.set('ꦗ', 'ja'); base.set('ꦪ', 'ya'); base.set('ꦚ', 'nya'); base.set('ꦩ', 'ma');
+        base.set('ꦒ', 'ga'); base.set('ꦧ', 'ba'); base.set('ꦛ', 'tha'); base.set('ꦔ', 'nga');
+        base.set('ꦃ', 'h'); base.set('ꦀ', 'ng'); base.set('ꦁ', 'ng'); base.set('ꦂ', 'r');
+        base.set('ꦶ', 'i'); base.set('ꦷ', 'ii'); base.set('ꦸ', 'u'); base.set('ꦹ', 'uu');
+        base.set('ꦺ', 'e'); base.set('ꦻ', 'ai'); base.set('ꦼ', 'eu'); base.set('ꦽ', 're');
+        base.set('ꦾ', 'ya'); base.set('ꦿ', 'ra'); base.set('ꦴ', 'aa'); base.set('꧀', '');
+        break;
+
+      // ============= BALINESE SCRIPT =============
+      case 'Balinese':
+        base.set('ᬅ', 'a'); base.set('ᬆ', 'aa'); base.set('ᬇ', 'i'); base.set('ᬈ', 'ii');
+        base.set('ᬉ', 'u'); base.set('ᬊ', 'uu'); base.set('ᬋ', 'r'); base.set('ᬌ', 'rr');
+        base.set('ᬍ', 'l'); base.set('ᬎ', 'll'); base.set('ᬏ', 'e'); base.set('ᬐ', 'ai');
+        base.set('ᬑ', 'o'); base.set('ᬒ', 'au'); base.set('ᬓ', 'ka'); base.set('ᬔ', 'kha');
+        base.set('ᬕ', 'ga'); base.set('ᬖ', 'gha'); base.set('ᬗ', 'nga'); base.set('ᬘ', 'ca');
+        base.set('ᬙ', 'cha'); base.set('ᬚ', 'ja'); base.set('ᬛ', 'jha'); base.set('ᬜ', 'nya');
+        base.set('ᬝ', 'tta'); base.set('ᬞ', 'ttha'); base.set('ᬟ', 'dda'); base.set('ᬠ', 'ddha');
+        base.set('ᬡ', 'nna'); base.set('ᬢ', 'ta'); base.set('ᬣ', 'tha'); base.set('ᬤ', 'da');
+        base.set('ᬥ', 'dha'); base.set('ᬦ', 'na'); base.set('ᬧ', 'pa'); base.set('ᬨ', 'pha');
+        base.set('ᬩ', 'ba'); base.set('ᬪ', 'bha'); base.set('ᬫ', 'ma'); base.set('ᬬ', 'ya');
+        base.set('ᬭ', 'ra'); base.set('ᬮ', 'la'); base.set('ᬯ', 'wa'); base.set('ᬰ', 'sha');
+        base.set('ᬱ', 'ssa'); base.set('ᬲ', 'sa'); base.set('ᬳ', 'ha');
+        break;
+
+      // ============= SUNDANESE SCRIPT =============
+      case 'Sundanese':
+        base.set('ᮃ', 'a'); base.set('ᮄ', 'i'); base.set('ᮅ', 'u'); base.set('ᮆ', 'eu');
+        base.set('ᮇ', 'o'); base.set('ᮈ', 'e'); base.set('ᮊ', 'ka'); base.set('ᮋ', 'qa');
+        base.set('ᮌ', 'ga'); base.set('ᮍ', 'nga'); base.set('ᮎ', 'ca'); base.set('ᮏ', 'ja');
+        base.set('ᮐ', 'za'); base.set('ᮑ', 'nya'); base.set('ᮒ', 'ta'); base.set('ᮓ', 'da');
+        base.set('ᮔ', 'na'); base.set('ᮕ', 'pa'); base.set('ᮖ', 'fa'); base.set('ᮗ', 'va');
+        base.set('ᮘ', 'ba'); base.set('ᮙ', 'ma'); base.set('ᮚ', 'ya'); base.set('ᮛ', 'ra');
+        base.set('ᮜ', 'la'); base.set('ᮝ', 'wa'); base.set('ᮞ', 'sa'); base.set('ᮟ', 'xa');
+        base.set('ᮠ', 'ha');
+        break;
+
+      // ============= BUGINESE SCRIPT =============
+      case 'Buginese':
+        base.set('ᨀ', 'ka'); base.set('ᨁ', 'ga'); base.set('ᨂ', 'nga'); base.set('ᨃ', 'ngka');
+        base.set('ᨄ', 'pa'); base.set('ᨅ', 'ba'); base.set('ᨆ', 'ma'); base.set('ᨇ', 'mpa');
+        base.set('ᨈ', 'ta'); base.set('ᨉ', 'da'); base.set('ᨊ', 'na'); base.set('ᨋ', 'nra');
+        base.set('ᨌ', 'ca'); base.set('ᨍ', 'ja'); base.set('ᨎ', 'nya'); base.set('ᨏ', 'nyca');
+        base.set('ᨐ', 'ya'); base.set('ᨑ', 'ra'); base.set('ᨒ', 'la'); base.set('ᨓ', 'wa');
+        base.set('ᨔ', 'sa'); base.set('ᨕ', 'a'); base.set('ᨖ', 'ha');
+        break;
+
+      // ============= TAGALOG SCRIPT =============
+      case 'Tagalog':
+        base.set('ᜀ', 'a'); base.set('ᜁ', 'i'); base.set('ᜂ', 'u');
+        base.set('ᜃ', 'ka'); base.set('ᜄ', 'ga'); base.set('ᜅ', 'nga');
+        base.set('ᜆ', 'ta'); base.set('ᜇ', 'da'); base.set('ᜈ', 'na');
+        base.set('ᜉ', 'pa'); base.set('ᜊ', 'ba'); base.set('ᜋ', 'ma');
+        base.set('ᜌ', 'ya'); base.set('ᜍ', 'la'); base.set('ᜎ', 'la');
+        base.set('ᜏ', 'wa'); base.set('ᜐ', 'sa'); base.set('ᜑ', 'ha');
+        base.set('ᜒ', 'i'); base.set('ᜓ', 'u'); base.set('᜔', '');
+        break;
+
+      // ============= HANUNOO SCRIPT =============
+      case 'Hanunoo':
+        base.set('ᜠ', 'a'); base.set('ᜡ', 'i'); base.set('ᜢ', 'u');
+        base.set('ᜣ', 'ka'); base.set('ᜤ', 'ga'); base.set('ᜥ', 'nga');
+        base.set('ᜦ', 'ta'); base.set('ᜧ', 'da'); base.set('ᜨ', 'na');
+        base.set('ᜩ', 'pa'); base.set('ᜪ', 'ba'); base.set('ᜫ', 'ma');
+        base.set('ᜬ', 'ya'); base.set('ᜭ', 'ra'); base.set('ᜮ', 'la');
+        base.set('ᜯ', 'wa'); base.set('ᜰ', 'sa'); base.set('ᜱ', 'ha');
+        break;
+
+      // ============= BUHID SCRIPT =============
+      case 'Buhid':
+        base.set('ᝀ', 'a'); base.set('ᝁ', 'i'); base.set('ᝂ', 'u');
+        base.set('ᝃ', 'ka'); base.set('ᝄ', 'ga'); base.set('ᝅ', 'nga');
+        base.set('ᝆ', 'ta'); base.set('ᝇ', 'da'); base.set('ᝈ', 'na');
+        base.set('ᝉ', 'pa'); base.set('ᝊ', 'ba'); base.set('ᝋ', 'ma');
+        base.set('ᝌ', 'ya'); base.set('ᝍ', 'ra'); base.set('ᝎ', 'la');
+        base.set('ᝏ', 'wa'); base.set('ᝐ', 'sa'); base.set('ᝑ', 'ha');
+        break;
+
+      // ============= TAGBANWA SCRIPT =============
+      case 'Tagbanwa':
+        base.set('ᝠ', 'a'); base.set('ᝡ', 'i'); base.set('ᝢ', 'u');
+        base.set('ᝣ', 'ka'); base.set('ᝤ', 'ga'); base.set('ᝥ', 'nga');
+        base.set('ᝦ', 'ta'); base.set('ᝧ', 'da'); base.set('ᝨ', 'na');
+        base.set('ᝩ', 'pa'); base.set('ᝪ', 'ba'); base.set('ᝫ', 'ma');
+        base.set('ᝬ', 'ya'); base.set('ᝮ', 'la'); base.set('ᝯ', 'wa');
+        base.set('ᝰ', 'sa');
+        break;
+
+      // ============= TAI LE SCRIPT =============
+      case 'Tai_Le':
+        base.set('ᥐ', 'ka'); base.set('ᥑ', 'xa'); base.set('ᥒ', 'nga'); base.set('ᥓ', 'tsa');
+        base.set('ᥔ', 'sa'); base.set('ᥕ', 'ya'); base.set('ᥖ', 'ta'); base.set('ᥗ', 'tha');
+        base.set('ᥘ', 'la'); base.set('ᥙ', 'pa'); base.set('ᥚ', 'pha'); base.set('ᥛ', 'ma');
+        base.set('ᥜ', 'fa'); base.set('ᥝ', 'va'); base.set('ᥞ', 'ha'); base.set('ᥟ', 'qa');
+        base.set('ᥠ', 'kha'); base.set('ᥡ', 'tsha'); base.set('ᥢ', 'na'); base.set('ᥣ', 'a');
+        base.set('ᥤ', 'i'); base.set('ᥥ', 'ee'); base.set('ᥦ', 'eh'); base.set('ᥧ', 'u');
+        base.set('ᥨ', 'oo'); base.set('ᥩ', 'o'); base.set('ᥪ', 'ue'); base.set('ᥫ', 'e');
+        base.set('ᥬ', 'aue'); base.set('ᥭ', 'ai');
+        break;
+
+      // ============= NEW TAI LUE SCRIPT =============
+      case 'New_Tai_Lue':
+        base.set('ᦀ', 'a'); base.set('ᦁ', 'xa'); base.set('ᦂ', 'k'); base.set('ᦃ', 'kh');
+        base.set('ᦄ', 'x'); base.set('ᦅ', 'ng'); base.set('ᦆ', 'ts'); base.set('ᦇ', 'tsh');
+        base.set('ᦈ', 's'); base.set('ᦉ', 'y'); base.set('ᦊ', 't'); base.set('ᦋ', 'th');
+        base.set('ᦌ', 'n'); base.set('ᦍ', 'p'); base.set('ᦎ', 'ph'); base.set('ᦏ', 'm');
+        base.set('ᦐ', 'f'); base.set('ᦑ', 'v'); base.set('ᦒ', 'l'); base.set('ᦓ', 'h');
+        base.set('ᦔ', 'd'); base.set('ᦕ', 'b'); base.set('ᦖ', 'kw'); base.set('ᦗ', 'xw');
+        base.set('ᦘ', 'sw'); base.set('ᦙ', 'hw');
+        break;
+
+      // ============= TAI THAM (LANNA) SCRIPT =============
+      case 'Tai_Tham':
+      case 'Lanna':
+        base.set('ᨠ', 'ka'); base.set('ᨡ', 'kha'); base.set('ᨢ', 'kha'); base.set('ᨣ', 'kha');
+        base.set('ᨤ', 'kha'); base.set('ᨥ', 'nga'); base.set('ᨦ', 'nga'); base.set('ᨧ', 'ca');
+        base.set('ᨨ', 'cha'); base.set('ᨩ', 'cha'); base.set('ᨪ', 'cha'); base.set('ᨫ', 'cha');
+        base.set('ᨬ', 'nya'); base.set('ᨭ', 'nya'); base.set('ᨮ', 'da'); base.set('ᨯ', 'da');
+        base.set('ᨰ', 'tta'); base.set('ᨱ', 'ttha'); base.set('ᨲ', 'ta'); base.set('ᨳ', 'tha');
+        base.set('ᨴ', 'tha'); base.set('ᨵ', 'tha'); base.set('ᨶ', 'na'); base.set('ᨷ', 'ba');
+        base.set('ᨸ', 'pa'); base.set('ᨹ', 'pha'); base.set('ᨺ', 'pha'); base.set('ᨻ', 'pha');
+        base.set('ᨼ', 'pha'); base.set('ᨽ', 'ma'); base.set('ᨾ', 'ma'); base.set('ᨿ', 'ya');
+        base.set('ᩀ', 'ra'); base.set('ᩁ', 'ra'); base.set('ᩂ', 'la'); base.set('ᩃ', 'la');
+        base.set('ᩄ', 'la'); base.set('ᩅ', 'wa'); base.set('ᩆ', 'sha'); base.set('ᩇ', 'ssa');
+        base.set('ᩈ', 'sa'); base.set('ᩉ', 'ha'); base.set('ᩊ', 'la'); base.set('ᩋ', 'a');
+        break;
+
+      // ============= KAYAH LI SCRIPT =============
+      case 'Kayah_Li':
+        base.set('꤀', '0'); base.set('꤁', '1'); base.set('꤂', '2'); base.set('꤃', '3');
+        base.set('ꤊ', 'ka'); base.set('ꤋ', 'kha'); base.set('ꤌ', 'ga'); base.set('ꤍ', 'nga');
+        base.set('ꤎ', 'sa'); base.set('ꤏ', 'sha'); base.set('ꤐ', 'za'); base.set('ꤑ', 'nya');
+        base.set('ꤒ', 'ta'); base.set('ꤓ', 'hta'); base.set('ꤔ', 'na'); base.set('ꤕ', 'pa');
+        base.set('ꤖ', 'pha'); base.set('ꤗ', 'ma'); base.set('ꤘ', 'da'); base.set('ꤙ', 'ba');
+        base.set('ꤚ', 'ra'); base.set('ꤛ', 'ya'); base.set('ꤜ', 'la'); base.set('ꤝ', 'wa');
+        base.set('ꤞ', 'tha'); base.set('ꤟ', 'ha'); base.set('ꤠ', 'va'); base.set('ꤡ', 'ca');
+        break;
+
+      // ============= REJANG SCRIPT =============
+      case 'Rejang':
+        base.set('ꤰ', 'ka'); base.set('ꤱ', 'ga'); base.set('ꤲ', 'nga'); base.set('ꤳ', 'ta');
+        base.set('ꤴ', 'da'); base.set('ꤵ', 'na'); base.set('ꤶ', 'pa'); base.set('ꤷ', 'ba');
+        base.set('ꤸ', 'ma'); base.set('ꤹ', 'ca'); base.set('ꤺ', 'ja'); base.set('ꤻ', 'nya');
+        base.set('ꤼ', 'sa'); base.set('ꤽ', 'ra'); base.set('ꤾ', 'la'); base.set('ꤿ', 'ya');
+        base.set('ꥀ', 'wa'); base.set('ꥁ', 'ha'); base.set('ꥂ', 'mba'); base.set('ꥃ', 'nda');
+        base.set('ꥄ', 'ngga'); base.set('ꥅ', 'a');
+        break;
+
+      // ============= MEETEI MAYEK (MANIPURI) SCRIPT =============
+      case 'Meetei_Mayek':
+      case 'Manipuri':
+        base.set('ꯀ', 'ka'); base.set('ꯁ', 'sa'); base.set('ꯂ', 'la'); base.set('ꯃ', 'ma');
+        base.set('ꯄ', 'pa'); base.set('ꯅ', 'na'); base.set('ꯆ', 'cha'); base.set('ꯇ', 'ta');
+        base.set('ꯈ', 'kha'); base.set('ꯉ', 'nga'); base.set('ꯊ', 'tha'); base.set('ꯋ', 'wa');
+        base.set('ꯌ', 'ya'); base.set('ꯍ', 'ha'); base.set('ꯎ', 'u'); base.set('ꯏ', 'i');
+        base.set('ꯐ', 'pha'); base.set('ꯑ', 'a'); base.set('ꯒ', 'ga'); base.set('ꯓ', 'jha');
+        base.set('ꯔ', 'ra'); base.set('ꯕ', 'ba'); base.set('ꯖ', 'ja'); base.set('ꯗ', 'da');
+        base.set('ꯘ', 'gha'); base.set('ꯙ', 'dha'); base.set('ꯚ', 'bha'); base.set('ꯛ', 'k');
+        base.set('ꯜ', 'l'); base.set('ꯝ', 'm'); base.set('ꯞ', 'p'); base.set('ꯟ', 'n');
+        base.set('ꯠ', 't'); base.set('ꯡ', 'ng'); base.set('ꯢ', 'i');
+        break;
+
+      // ============= SAURASHTRA SCRIPT =============
+      case 'Saurashtra':
+        base.set('ꢂ', 'a'); base.set('ꢃ', 'aa'); base.set('ꢄ', 'i'); base.set('ꢅ', 'ii');
+        base.set('ꢆ', 'u'); base.set('ꢇ', 'uu'); base.set('ꢈ', 'r'); base.set('ꢉ', 'rr');
+        base.set('ꢊ', 'e'); base.set('ꢋ', 'ai'); base.set('ꢌ', 'o'); base.set('ꢍ', 'au');
+        base.set('ꢎ', 'ka'); base.set('ꢏ', 'kha'); base.set('ꢐ', 'ga'); base.set('ꢑ', 'gha');
+        base.set('ꢒ', 'nga'); base.set('ꢓ', 'cha'); base.set('ꢔ', 'chha'); base.set('ꢕ', 'ja');
+        base.set('ꢖ', 'jha'); base.set('ꢗ', 'nya'); base.set('ꢘ', 'tta'); base.set('ꢙ', 'ttha');
+        base.set('ꢚ', 'dda'); base.set('ꢛ', 'ddha'); base.set('ꢜ', 'nna'); base.set('ꢝ', 'ta');
+        base.set('ꢞ', 'tha'); base.set('ꢟ', 'da'); base.set('ꢠ', 'dha'); base.set('ꢡ', 'na');
+        base.set('ꢢ', 'pa'); base.set('ꢣ', 'pha'); base.set('ꢤ', 'ba'); base.set('ꢥ', 'bha');
+        base.set('ꢦ', 'ma'); base.set('ꢧ', 'ya'); base.set('ꢨ', 'ra'); base.set('ꢩ', 'la');
+        base.set('ꢪ', 'va'); base.set('ꢫ', 'sha'); base.set('ꢬ', 'ssa'); base.set('ꢭ', 'sa');
+        base.set('ꢮ', 'ha'); base.set('ꢯ', 'lla');
+        break;
+
+      // ============= SYLHETI NAGRI SCRIPT =============
+      case 'Syloti_Nagri':
+      case 'Sylheti':
+        base.set('ꠀ', 'a'); base.set('ꠁ', 'i'); base.set('ꠂ', 'u'); base.set('ꠃ', 'e');
+        base.set('ꠄ', 'o'); base.set('ꠅ', 'o'); base.set('ꠇ', 'ko'); base.set('ꠈ', 'kho');
+        base.set('ꠉ', 'go'); base.set('ꠊ', 'gho'); base.set('ꠋ', 'ngo'); base.set('ꠌ', 'co');
+        base.set('ꠍ', 'cho'); base.set('ꠎ', 'jo'); base.set('ꠏ', 'jho'); base.set('ꠐ', 'tto');
+        base.set('ꠑ', 'ttho'); base.set('ꠒ', 'ddo'); base.set('ꠓ', 'ddho'); base.set('ꠔ', 'to');
+        base.set('ꠕ', 'tho'); base.set('ꠖ', 'do'); base.set('ꠗ', 'dho'); base.set('ꠘ', 'no');
+        base.set('ꠙ', 'po'); base.set('ꠚ', 'pho'); base.set('ꠛ', 'bo'); base.set('ꠜ', 'bho');
+        base.set('ꠝ', 'mo'); base.set('ꠞ', 'ro'); base.set('ꠟ', 'lo'); base.set('ꠠ', 'rro');
+        base.set('ꠡ', 'so'); base.set('ꠢ', 'ho');
+        break;
+
+      // ============= PHAGS-PA SCRIPT =============
+      case 'Phags_Pa':
+        base.set('ꡀ', 'ka'); base.set('ꡁ', 'kha'); base.set('ꡂ', 'ga'); base.set('ꡃ', 'nga');
+        base.set('ꡄ', 'ca'); base.set('ꡅ', 'cha'); base.set('ꡆ', 'ja'); base.set('ꡇ', 'nya');
+        base.set('ꡈ', 'ta'); base.set('ꡉ', 'tha'); base.set('ꡊ', 'da'); base.set('ꡋ', 'na');
+        base.set('ꡌ', 'pa'); base.set('ꡍ', 'pha'); base.set('ꡎ', 'ba'); base.set('ꡏ', 'ma');
+        base.set('ꡐ', 'tsa'); base.set('ꡑ', 'tsha'); base.set('ꡒ', 'dza'); base.set('ꡓ', 'wa');
+        base.set('ꡔ', 'zha'); base.set('ꡕ', 'za'); base.set('ꡖ', 'a'); base.set('ꡗ', 'ya');
+        base.set('ꡘ', 'ra'); base.set('ꡙ', 'la'); base.set('ꡚ', 'sha'); base.set('ꡛ', 'sa');
+        base.set('ꡜ', 'ha'); base.set('ꡝ', 'a'); base.set('ꡞ', 'i'); base.set('ꡟ', 'u');
+        base.set('ꡠ', 'e'); base.set('ꡡ', 'o'); base.set('ꡢ', 'xa'); base.set('ꡣ', 'xha');
+        base.set('ꡤ', 'fa'); base.set('ꡥ', 'ga'); base.set('ꡦ', 'ee'); base.set('ꡧ', 'sub_wa');
+        break;
+
+      // ============= SORA SOMPENG SCRIPT =============
+      case 'Sora_Sompeng':
+        base.set('𑃐', 'sa'); base.set('𑃑', 'ta'); base.set('𑃒', 'ba'); base.set('𑃓', 'ca');
+        base.set('𑃔', 'da'); base.set('𑃕', 'ga'); base.set('𑃖', 'ha'); base.set('𑃗', 'ja');
+        base.set('𑃘', 'ka'); base.set('𑃙', 'la'); base.set('𑃚', 'ma'); base.set('𑃛', 'na');
+        base.set('𑃜', 'nga'); base.set('𑃝', 'pa'); base.set('𑃞', 'ra'); base.set('𑃟', 'dra');
+        base.set('𑃠', 'tra'); base.set('𑃡', 'ya'); base.set('𑃢', 'e'); base.set('𑃣', 'o');
+        base.set('𑃤', 'a'); base.set('𑃥', 'i'); base.set('𑃦', 'u'); base.set('𑃧', 'ae');
+        break;
+
+      // ============= WARANG CITI (HO) SCRIPT =============
+      case 'Warang_Citi':
+        base.set('𑢠', 'ngaa'); base.set('𑢡', 'a'); base.set('𑢢', 'wi'); base.set('𑢣', 'yu');
+        base.set('𑢤', 'ya'); base.set('𑢥', 'yo'); base.set('𑢦', 'e'); base.set('𑢧', 'o');
+        base.set('𑢨', 'ang'); base.set('𑢩', 'i'); base.set('𑢪', 'u'); base.set('𑢫', 'aa');
+        base.set('𑢬', 'enu'); base.set('𑢭', 'oo'); base.set('𑢮', 'au'); base.set('𑢯', 'c');
+        base.set('𑢰', 'k'); base.set('𑢱', 'eny'); base.set('𑢲', 'yuj'); base.set('𑢳', 'sii');
+        base.set('𑢴', 'ott'); base.set('𑢵', 'ep'); base.set('𑢶', 'edd'); base.set('𑢷', 'enn');
+        base.set('𑢸', 'odd'); base.set('𑢹', 'ab'); base.set('𑢺', 'ett'); base.set('𑢻', 'kho');
+        base.set('𑢼', 'gc'); base.set('𑢽', 'tt'); base.set('𑢾', 'ga'); base.set('𑢿', 'su');
+        break;
+
+      // ============= PAHAWH HMONG SCRIPT =============
+      case 'Pahawh_Hmong':
+        base.set('𖬀', 'va'); base.set('𖬁', 'nra'); base.set('𖬂', 'ha'); base.set('𖬃', 'ca');
+        base.set('𖬄', 'la'); base.set('𖬅', 'sa'); base.set('𖬆', 'za'); base.set('𖬇', 'xa');
+        base.set('𖬈', 'ma'); base.set('𖬉', 'nya'); base.set('𖬊', 'ka'); base.set('𖬋', 'pa');
+        base.set('𖬌', 'da'); base.set('𖬍', 'ta'); base.set('𖬎', 'na'); base.set('𖬏', 'dha');
+        base.set('𖬐', 'tha'); base.set('𖬑', 'tsha'); base.set('𖬒', 'fa'); base.set('𖬓', 'ga');
+        base.set('𖬔', 'kha'); base.set('𖬕', 'ya'); base.set('𖬖', 'ra'); base.set('𖬗', 'a');
+        break;
+
+      // ============= MIAO (POLLARD) SCRIPT =============
+      case 'Miao':
+      case 'Pollard':
+        base.set('𖼀', 'p'); base.set('𖼁', 'b'); base.set('𖼂', 'mp'); base.set('𖼃', 'm');
+        base.set('𖼄', 'f'); base.set('𖼅', 'v'); base.set('𖼆', 't'); base.set('𖼇', 'd');
+        base.set('𖼈', 'nt'); base.set('𖼉', 'n'); base.set('𖼊', 'l'); base.set('𖼋', 'g');
+        base.set('𖼌', 'k'); base.set('𖼍', 'nk'); base.set('𖼎', 'ng'); base.set('𖼏', 'h');
+        base.set('𖼐', 'c'); base.set('𖼑', 'z'); base.set('𖼒', 'nc'); base.set('𖼓', 'ny');
+        base.set('𖼔', 'q'); base.set('𖼕', 's'); base.set('𖼖', 'r'); base.set('𖼗', 'y');
+        base.set('𖼘', 'w'); base.set('𖼙', 'a'); base.set('𖼚', 'e'); base.set('𖼛', 'i');
+        base.set('𖼜', 'o'); base.set('𖼝', 'u'); base.set('𖼞', 'ue'); base.set('𖼟', 'ae');
+        break;
+
+      // ============= BAMUM SCRIPT =============
+      case 'Bamum':
+        base.set('ꚠ', 'u'); base.set('ꚡ', 'ka'); base.set('ꚢ', 'ku'); base.set('ꚣ', 'ee');
+        base.set('ꚤ', 'fee'); base.set('ꚥ', 'pen'); base.set('ꚦ', 'puu'); base.set('ꚧ', 'rii');
+        base.set('ꚨ', 'yi'); base.set('ꚩ', 'mi'); base.set('ꚪ', 'ni'); base.set('ꚫ', 'ngaa');
+        base.set('ꚬ', 'raa'); base.set('ꚭ', 'si'); base.set('ꚮ', 'ti'); base.set('ꚯ', 'o');
+        base.set('ꚰ', 'e'); base.set('ꚱ', 'a'); base.set('ꚲ', 'ha'); base.set('ꚳ', 'li');
+        base.set('ꚴ', 'fe'); base.set('ꚵ', 'i'); base.set('ꚶ', 'la'); base.set('ꚷ', 'pa');
+        base.set('ꚸ', 'ri'); base.set('ꚹ', 'qi'); base.set('ꚺ', 'pu'); base.set('ꚻ', 'ke');
+        base.set('ꚼ', 'na'); base.set('ꚽ', 'ta'); base.set('ꚾ', 'xu');
+        break;
+
+      // ============= VAI SCRIPT =============
+      case 'Vai':
+        base.set('ꔀ', 'e'); base.set('ꔁ', 'en'); base.set('ꔂ', 'ni'); base.set('ꔃ', 'do');
+        base.set('ꔄ', 'ka'); base.set('ꔅ', 'long'); base.set('ꔆ', 'loo'); base.set('ꔇ', 'be');
+        base.set('ꔈ', 'mbe'); base.set('ꔉ', 'se'); base.set('ꔊ', 'le'); base.set('ꔋ', 'mle');
+        base.set('ꔌ', 'we'); base.set('ꔍ', 'ye'); base.set('ꔎ', 'ke'); base.set('ꔏ', 'gbe');
+        base.set('ꔐ', 'ge'); base.set('ꔑ', 'nge'); base.set('ꔒ', 'me'); base.set('ꔓ', 'ne');
+        base.set('ꔔ', 'nye'); base.set('ꔕ', 'fe'); base.set('ꔖ', 'te'); base.set('ꔗ', 'he');
+        base.set('ꔘ', 'i'); base.set('ꔙ', 'nni'); base.set('ꔚ', 'si'); base.set('ꔛ', 'li');
+        base.set('ꔜ', 'wi'); base.set('ꔝ', 'yi'); base.set('ꔞ', 'ki'); base.set('ꔟ', 'gi');
+        break;
+
+      // ============= NKO SCRIPT =============
+      case 'NKo':
+        base.set('ߊ', 'a'); base.set('ߋ', 'ee'); base.set('ߌ', 'i'); base.set('ߍ', 'e');
+        base.set('ߎ', 'u'); base.set('ߏ', 'oo'); base.set('ߐ', 'o'); base.set('ߑ', 'dagbasinna');
+        base.set('ߒ', 'n'); base.set('ߓ', 'ba'); base.set('ߔ', 'pa'); base.set('ߕ', 'ta');
+        base.set('ߖ', 'ja'); base.set('ߗ', 'cha'); base.set('ߘ', 'da'); base.set('ߙ', 'ra');
+        base.set('ߚ', 'rra'); base.set('ߛ', 'sa'); base.set('ߜ', 'gba'); base.set('ߝ', 'fa');
+        base.set('ߞ', 'ka'); base.set('ߟ', 'la'); base.set('ߠ', 'na'); base.set('ߡ', 'ma');
+        base.set('ߢ', 'nya'); base.set('ߣ', 'na'); base.set('ߤ', 'ha'); base.set('ߥ', 'wa');
+        base.set('ߦ', 'ya'); base.set('ߧ', 'nyin'); base.set('ߨ', 'jona'); base.set('ߩ', 'ju');
+        break;
+
+      // ============= ADLAM SCRIPT (FULANI) =============
+      case 'Adlam':
+        base.set('𞤀', 'a'); base.set('𞤁', 'dha'); base.set('𞤂', 'la'); base.set('𞤃', 'mim');
+        base.set('𞤄', 'ba'); base.set('𞤅', 'sin'); base.set('𞤆', 'pe'); base.set('𞤇', 'bhe');
+        base.set('𞤈', 'ra'); base.set('𞤉', 'e'); base.set('𞤊', 'fa'); base.set('𞤋', 'i');
+        base.set('𞤌', 'o'); base.set('𞤍', 'dhe'); base.set('𞤎', 'yhe'); base.set('𞤏', 'waw');
+        base.set('𞤐', 'nun'); base.set('𞤑', 'kaf'); base.set('𞤒', 'ya'); base.set('𞤓', 'u');
+        base.set('𞤔', 'ji'); base.set('𞤕', 'chi'); base.set('𞤖', 'ha'); base.set('𞤗', 'kha');
+        base.set('𞤘', 'ga'); base.set('𞤙', 'nya'); base.set('𞤚', 'tu'); base.set('𞤛', 'nju');
+        base.set('𞤜', 'va'); base.set('𞤝', 'kha'); base.set('𞤞', 'gbe'); base.set('𞤟', 'zal');
+        base.set('𞤠', 'kpo'); base.set('𞤡', 'sha');
+        break;
+
+      // ============= TIFINAGH (BERBER) SCRIPT =============
+      case 'Tifinagh':
+        base.set('ⴰ', 'a'); base.set('ⴱ', 'b'); base.set('ⴲ', 'b'); base.set('ⴳ', 'g');
+        base.set('ⴴ', 'g'); base.set('ⴵ', 'dj'); base.set('ⴶ', 'dj'); base.set('ⴷ', 'd');
+        base.set('ⴸ', 'd'); base.set('ⴹ', 'd'); base.set('ⴺ', 'd'); base.set('ⴻ', 'e');
+        base.set('ⴼ', 'f'); base.set('ⴽ', 'k'); base.set('ⴾ', 'k'); base.set('ⴿ', 'k');
+        base.set('ⵀ', 'h'); base.set('ⵁ', 'h'); base.set('ⵂ', 'h'); base.set('ⵃ', 'h');
+        base.set('ⵄ', 'aa'); base.set('ⵅ', 'kh'); base.set('ⵆ', 'kh'); base.set('ⵇ', 'q');
+        base.set('ⵈ', 'q'); base.set('ⵉ', 'i'); base.set('ⵊ', 'j'); base.set('ⵋ', 'j');
+        base.set('ⵌ', 'j'); base.set('ⵍ', 'l'); base.set('ⵎ', 'm'); base.set('ⵏ', 'n');
+        base.set('ⵐ', 'gn'); base.set('ⵑ', 'ng'); base.set('ⵒ', 'p'); base.set('ⵓ', 'u');
+        base.set('ⵔ', 'r'); base.set('ⵕ', 'r'); base.set('ⵖ', 'gh'); base.set('ⵗ', 'gh');
+        base.set('ⵘ', 'j'); base.set('ⵙ', 's'); base.set('ⵚ', 's'); base.set('ⵛ', 'sh');
+        base.set('ⵜ', 't'); base.set('ⵝ', 't'); base.set('ⵞ', 'ch'); base.set('ⵟ', 't');
+        base.set('ⵠ', 'v'); base.set('ⵡ', 'w'); base.set('ⵢ', 'y'); base.set('ⵣ', 'z');
+        base.set('ⵤ', 'z'); base.set('ⵥ', 'z');
+        break;
+
+      // ============= OSAGE SCRIPT =============
+      case 'Osage':
+        base.set('𐒰', 'a'); base.set('𐒱', 'ai'); base.set('𐒲', 'an'); base.set('𐒳', 'akin');
+        base.set('𐒴', 'e'); base.set('𐒵', 'in'); base.set('𐒶', 'i'); base.set('𐒷', 'o');
+        base.set('𐒸', 'oin'); base.set('𐒹', 'u'); base.set('𐒺', 'b'); base.set('𐒻', 'c');
+        base.set('𐒼', 'ec'); base.set('𐒽', 'd'); base.set('𐒾', 'g'); base.set('𐒿', 'h');
+        base.set('𐓀', 'k'); base.set('𐓁', 'ek'); base.set('𐓂', 'k'); base.set('𐓃', 'l');
+        base.set('𐓄', 'm'); base.set('𐓅', 'n'); base.set('𐓆', 'p'); base.set('𐓇', 's');
+        base.set('𐓈', 'sh'); base.set('𐓉', 't'); base.set('𐓊', 'ts'); base.set('𐓋', 'w');
+        base.set('𐓌', 'x'); base.set('𐓍', 'ts'); base.set('𐓎', 'z'); base.set('𐓏', 'zh');
+        break;
+
+      // ============= CHEROKEE SCRIPT =============
+      case 'Cherokee':
+        base.set('Ꭰ', 'a'); base.set('Ꭱ', 'e'); base.set('Ꭲ', 'i'); base.set('Ꭳ', 'o');
+        base.set('Ꭴ', 'u'); base.set('Ꭵ', 'v'); base.set('Ꭶ', 'ga'); base.set('Ꭷ', 'ka');
+        base.set('Ꭸ', 'ge'); base.set('Ꭹ', 'gi'); base.set('Ꭺ', 'go'); base.set('Ꭻ', 'gu');
+        base.set('Ꭼ', 'gv'); base.set('Ꭽ', 'ha'); base.set('Ꭾ', 'he'); base.set('Ꭿ', 'hi');
+        base.set('Ꮀ', 'ho'); base.set('Ꮁ', 'hu'); base.set('Ꮂ', 'hv'); base.set('Ꮃ', 'la');
+        base.set('Ꮄ', 'le'); base.set('Ꮅ', 'li'); base.set('Ꮆ', 'lo'); base.set('Ꮇ', 'lu');
+        base.set('Ꮈ', 'lv'); base.set('Ꮉ', 'ma'); base.set('Ꮊ', 'me'); base.set('Ꮋ', 'mi');
+        base.set('Ꮌ', 'mo'); base.set('Ꮍ', 'mu'); base.set('Ꮎ', 'na'); base.set('Ꮏ', 'hna');
+        base.set('Ꮐ', 'nah'); base.set('Ꮑ', 'ne'); base.set('Ꮒ', 'ni'); base.set('Ꮓ', 'no');
+        base.set('Ꮔ', 'nu'); base.set('Ꮕ', 'nv'); base.set('Ꮖ', 'qua'); base.set('Ꮗ', 'que');
+        base.set('Ꮘ', 'qui'); base.set('Ꮙ', 'quo'); base.set('Ꮚ', 'quu'); base.set('Ꮛ', 'quv');
+        base.set('Ꮜ', 'sa'); base.set('Ꮝ', 's'); base.set('Ꮞ', 'se'); base.set('Ꮟ', 'si');
+        base.set('Ꮠ', 'so'); base.set('Ꮡ', 'su'); base.set('Ꮢ', 'sv'); base.set('Ꮣ', 'da');
+        base.set('Ꮤ', 'ta'); base.set('Ꮥ', 'de'); base.set('Ꮦ', 'te'); base.set('Ꮧ', 'di');
+        base.set('Ꮨ', 'ti'); base.set('Ꮩ', 'do'); base.set('Ꮪ', 'du'); base.set('Ꮫ', 'dv');
+        base.set('Ꮬ', 'dla'); base.set('Ꮭ', 'tla'); base.set('Ꮮ', 'tle'); base.set('Ꮯ', 'tli');
+        base.set('Ꮰ', 'tlo'); base.set('Ꮱ', 'tlu'); base.set('Ꮲ', 'tlv'); base.set('Ꮳ', 'tsa');
+        base.set('Ꮴ', 'tse'); base.set('Ꮵ', 'tsi'); base.set('Ꮶ', 'tso'); base.set('Ꮷ', 'tsu');
+        base.set('Ꮸ', 'tsv'); base.set('Ꮹ', 'wa'); base.set('Ꮺ', 'we'); base.set('Ꮻ', 'wi');
+        base.set('Ꮼ', 'wo'); base.set('Ꮽ', 'wu'); base.set('Ꮾ', 'wv'); base.set('Ꮿ', 'ya');
+        base.set('Ᏸ', 'ye'); base.set('Ᏹ', 'yi'); base.set('Ᏺ', 'yo'); base.set('Ᏻ', 'yu');
+        base.set('Ᏼ', 'yv');
+        break;
+
+      // ============= CANADIAN ABORIGINAL SYLLABICS =============
+      case 'Canadian_Aboriginal':
+      case 'UCAS':
+        base.set('ᐁ', 'e'); base.set('ᐂ', 'aai'); base.set('ᐃ', 'i'); base.set('ᐄ', 'ii');
+        base.set('ᐅ', 'o'); base.set('ᐆ', 'oo'); base.set('ᐊ', 'a'); base.set('ᐋ', 'aa');
+        base.set('ᐯ', 'pe'); base.set('ᐱ', 'pi'); base.set('ᐳ', 'po'); base.set('ᐸ', 'pa');
+        base.set('ᑌ', 'te'); base.set('ᑎ', 'ti'); base.set('ᑐ', 'to'); base.set('ᑕ', 'ta');
+        base.set('ᑫ', 'ke'); base.set('ᑭ', 'ki'); base.set('ᑯ', 'ko'); base.set('ᑲ', 'ka');
+        base.set('ᒉ', 'ce'); base.set('ᒋ', 'ci'); base.set('ᒍ', 'co'); base.set('ᒐ', 'ca');
+        base.set('ᒣ', 'me'); base.set('ᒥ', 'mi'); base.set('ᒧ', 'mo'); base.set('ᒪ', 'ma');
+        base.set('ᓀ', 'ne'); base.set('ᓂ', 'ni'); base.set('ᓄ', 'no'); base.set('ᓇ', 'na');
+        base.set('ᓭ', 'se'); base.set('ᓯ', 'si'); base.set('ᓱ', 'so'); base.set('ᓴ', 'sa');
+        base.set('ᔐ', 'she'); base.set('ᔑ', 'shi'); base.set('ᔓ', 'sho'); base.set('ᔕ', 'sha');
+        base.set('ᔦ', 'ye'); base.set('ᔨ', 'yi'); base.set('ᔪ', 'yo'); base.set('ᔭ', 'ya');
+        base.set('ᕃ', 're'); base.set('ᕆ', 'ri'); base.set('ᕈ', 'ro'); base.set('ᕋ', 'ra');
+        base.set('ᕓ', 've'); base.set('ᕕ', 'vi'); base.set('ᕗ', 'vo'); base.set('ᕙ', 'va');
+        base.set('ᕞ', 'the'); base.set('ᕠ', 'thi'); base.set('ᕢ', 'tho'); base.set('ᕤ', 'tha');
+        base.set('ᕴ', 'we'); base.set('ᕶ', 'wi'); base.set('ᕸ', 'wo'); base.set('ᕺ', 'wa');
+        base.set('ᐟ', 't'); base.set('ᐠ', 'k'); base.set('ᐢ', 's'); base.set('ᐣ', 'n');
+        base.set('ᐤ', 'w'); base.set('ᐦ', 'h'); base.set('ᐨ', 'c'); base.set('ᐩ', 'y');
+        base.set('ᑉ', 'p'); base.set('ᒼ', 'm'); base.set('ᓪ', 'l'); base.set('ᕐ', 'r');
+        break;
+
+      // ============= OGHAM SCRIPT (OLD IRISH) =============
+      case 'Ogham':
+        base.set('ᚁ', 'b'); base.set('ᚂ', 'l'); base.set('ᚃ', 'f'); base.set('ᚄ', 's');
+        base.set('ᚅ', 'n'); base.set('ᚆ', 'h'); base.set('ᚇ', 'd'); base.set('ᚈ', 't');
+        base.set('ᚉ', 'c'); base.set('ᚊ', 'q'); base.set('ᚋ', 'm'); base.set('ᚌ', 'g');
+        base.set('ᚍ', 'ng'); base.set('ᚎ', 'z'); base.set('ᚏ', 'r'); base.set('ᚐ', 'a');
+        base.set('ᚑ', 'o'); base.set('ᚒ', 'u'); base.set('ᚓ', 'e'); base.set('ᚔ', 'i');
+        base.set('ᚕ', 'ea'); base.set('ᚖ', 'oi'); base.set('ᚗ', 'ui'); base.set('ᚘ', 'ia');
+        base.set('ᚙ', 'ae'); base.set('ᚚ', 'p');
+        break;
+
+      // ============= RUNIC SCRIPT (OLD NORSE) =============
+      case 'Runic':
+        base.set('ᚠ', 'f'); base.set('ᚡ', 'v'); base.set('ᚢ', 'u'); base.set('ᚣ', 'yr');
+        base.set('ᚤ', 'y'); base.set('ᚥ', 'w'); base.set('ᚦ', 'th'); base.set('ᚧ', 'eth');
+        base.set('ᚨ', 'a'); base.set('ᚩ', 'os'); base.set('ᚪ', 'ac'); base.set('ᚫ', 'aesc');
+        base.set('ᚬ', 'o'); base.set('ᚭ', 'oe'); base.set('ᚮ', 'o'); base.set('ᚯ', 'oe');
+        base.set('ᚰ', 'on'); base.set('ᚱ', 'r'); base.set('ᚲ', 'k'); base.set('ᚳ', 'cen');
+        base.set('ᚴ', 'kaun'); base.set('ᚵ', 'g'); base.set('ᚶ', 'eng'); base.set('ᚷ', 'gyfu');
+        base.set('ᚸ', 'gar'); base.set('ᚹ', 'w'); base.set('ᚺ', 'h'); base.set('ᚻ', 'haegl');
+        base.set('ᚼ', 'h'); base.set('ᚽ', 'h'); base.set('ᚾ', 'n'); base.set('ᚿ', 'n');
+        base.set('ᛀ', 'n'); base.set('ᛁ', 'i'); base.set('ᛂ', 'e'); base.set('ᛃ', 'j');
+        base.set('ᛄ', 'ger'); base.set('ᛅ', 'ae'); base.set('ᛆ', 'a'); base.set('ᛇ', 'eo');
+        base.set('ᛈ', 'p'); base.set('ᛉ', 'z'); base.set('ᛊ', 's'); base.set('ᛋ', 's');
+        base.set('ᛌ', 's'); base.set('ᛍ', 'c'); base.set('ᛎ', 'z'); base.set('ᛏ', 't');
+        base.set('ᛐ', 't'); base.set('ᛑ', 'd'); base.set('ᛒ', 'b'); base.set('ᛓ', 'b');
+        base.set('ᛔ', 'p'); base.set('ᛕ', 'p'); base.set('ᛖ', 'e'); base.set('ᛗ', 'm');
+        base.set('ᛘ', 'm'); base.set('ᛙ', 'm'); base.set('ᛚ', 'l'); base.set('ᛛ', 'l');
+        base.set('ᛜ', 'ng'); base.set('ᛝ', 'ing'); base.set('ᛞ', 'd'); base.set('ᛟ', 'o');
+        break;
+
+      // ============= COPTIC SCRIPT =============
+      case 'Coptic':
+        base.set('ⲁ', 'a'); base.set('ⲃ', 'b'); base.set('ⲅ', 'g'); base.set('ⲇ', 'd');
+        base.set('ⲉ', 'e'); base.set('ⲋ', 's'); base.set('ⲍ', 'z'); base.set('ⲏ', 'ee');
+        base.set('ⲑ', 'th'); base.set('ⲓ', 'i'); base.set('ⲕ', 'k'); base.set('ⲗ', 'l');
+        base.set('ⲙ', 'm'); base.set('ⲛ', 'n'); base.set('ⲝ', 'ks'); base.set('ⲟ', 'o');
+        base.set('ⲡ', 'p'); base.set('ⲣ', 'r'); base.set('ⲥ', 's'); base.set('ⲧ', 't');
+        base.set('ⲩ', 'u'); base.set('ⲫ', 'ph'); base.set('ⲭ', 'kh'); base.set('ⲯ', 'ps');
+        base.set('ⲱ', 'o'); base.set('ϣ', 'sh'); base.set('ϥ', 'f'); base.set('ϧ', 'kh');
+        base.set('ϩ', 'h'); base.set('ϫ', 'j'); base.set('ϭ', 'ch'); base.set('ϯ', 'ti');
+        break;
+
+      // ============= SAMARITAN SCRIPT =============
+      case 'Samaritan':
+        base.set('ࠀ', 'a'); base.set('ࠁ', 'b'); base.set('ࠂ', 'g'); base.set('ࠃ', 'd');
+        base.set('ࠄ', 'e'); base.set('ࠅ', 'v'); base.set('ࠆ', 'z'); base.set('ࠇ', 'h');
+        base.set('ࠈ', 'kh'); base.set('ࠉ', 'y'); base.set('ࠊ', 'k'); base.set('ࠋ', 'l');
+        base.set('ࠌ', 'm'); base.set('ࠍ', 'n'); base.set('ࠎ', 's'); base.set('ࠏ', 'aa');
+        base.set('ࠐ', 'f'); base.set('ࠑ', 'ts'); base.set('ࠒ', 'q'); base.set('ࠓ', 'r');
+        base.set('ࠔ', 'sh'); base.set('ࠕ', 't');
+        break;
+
+      // ============= MANDAIC SCRIPT =============
+      case 'Mandaic':
+        base.set('ࡀ', 'a'); base.set('ࡁ', 'b'); base.set('ࡂ', 'g'); base.set('ࡃ', 'd');
+        base.set('ࡄ', 'h'); base.set('ࡅ', 'w'); base.set('ࡆ', 'z'); base.set('ࡇ', 'kh');
+        base.set('ࡈ', 't'); base.set('ࡉ', 'y'); base.set('ࡊ', 'k'); base.set('ࡋ', 'l');
+        base.set('ࡌ', 'm'); base.set('ࡍ', 'n'); base.set('ࡎ', 's'); base.set('ࡏ', 'aa');
+        base.set('ࡐ', 'p'); base.set('ࡑ', 'ts'); base.set('ࡒ', 'q'); base.set('ࡓ', 'r');
+        base.set('ࡔ', 'sh'); base.set('ࡕ', 't'); base.set('ࡖ', 'd'); base.set('ࡗ', 'ksh');
+        break;
+
+      // ============= SYRIAC SCRIPT =============
+      case 'Syriac':
+        base.set('ܐ', 'a'); base.set('ܒ', 'b'); base.set('ܓ', 'g'); base.set('ܕ', 'd');
+        base.set('ܗ', 'h'); base.set('ܘ', 'w'); base.set('ܙ', 'z'); base.set('ܚ', 'kh');
+        base.set('ܛ', 't'); base.set('ܝ', 'y'); base.set('ܟ', 'k'); base.set('ܠ', 'l');
+        base.set('ܡ', 'm'); base.set('ܢ', 'n'); base.set('ܣ', 's'); base.set('ܥ', 'aa');
+        base.set('ܦ', 'p'); base.set('ܨ', 'ts'); base.set('ܩ', 'q'); base.set('ܪ', 'r');
+        base.set('ܫ', 'sh'); base.set('ܬ', 't');
+        break;
+
+      // ============= AVESTAN SCRIPT =============
+      case 'Avestan':
+        base.set('𐬀', 'a'); base.set('𐬁', 'aa'); base.set('𐬂', 'ao'); base.set('𐬃', 'aao');
+        base.set('𐬄', 'an'); base.set('𐬅', 'aan'); base.set('𐬆', 'ae'); base.set('𐬇', 'aee');
+        base.set('𐬈', 'e'); base.set('𐬉', 'ee'); base.set('𐬊', 'o'); base.set('𐬋', 'oo');
+        base.set('𐬌', 'i'); base.set('𐬍', 'ii'); base.set('𐬎', 'u'); base.set('𐬏', 'uu');
+        base.set('𐬐', 'k'); base.set('𐬑', 'x'); base.set('𐬒', 'xv'); base.set('𐬓', 'xv');
+        base.set('𐬔', 'g'); base.set('𐬕', 'gh'); base.set('𐬖', 'gh'); base.set('𐬗', 'c');
+        base.set('𐬘', 'j'); base.set('𐬙', 't'); base.set('𐬚', 'th'); base.set('𐬛', 'd');
+        base.set('𐬜', 'dh'); base.set('𐬝', 't'); base.set('𐬞', 'p'); base.set('𐬟', 'f');
+        base.set('𐬠', 'b'); base.set('𐬡', 'bh'); base.set('𐬢', 'ng'); base.set('𐬣', 'ngv');
+        base.set('𐬤', 'n'); base.set('𐬥', 'ny'); base.set('𐬦', 'n'); base.set('𐬧', 'm');
+        base.set('𐬨', 'm'); base.set('𐬩', 'y'); base.set('𐬪', 'v'); base.set('𐬫', 'r');
+        base.set('𐬬', 'l'); base.set('𐬭', 's'); base.set('𐬮', 'z'); base.set('𐬯', 'sh');
+        base.set('𐬰', 'zh'); base.set('𐬱', 'shy'); base.set('𐬲', 'shy'); base.set('𐬳', 'h');
+        break;
+
+      // ============= PAHLAVI SCRIPT =============
+      case 'Inscriptional_Pahlavi':
+      case 'Pahlavi':
+        base.set('𐭠', 'a'); base.set('𐭡', 'b'); base.set('𐭢', 'g'); base.set('𐭣', 'd');
+        base.set('𐭤', 'h'); base.set('𐭥', 'wv'); base.set('𐭦', 'z'); base.set('𐭧', 'kh');
+        base.set('𐭨', 't'); base.set('𐭩', 'y'); base.set('𐭪', 'k'); base.set('𐭫', 'l');
+        base.set('𐭬', 'm'); base.set('𐭭', 'n'); base.set('𐭮', 's'); base.set('𐭯', 'aa');
+        base.set('𐭰', 'p'); base.set('𐭱', 'ts'); base.set('𐭲', 'r');
+        break;
+
+      // ============= OLD PERSIAN SCRIPT =============
+      case 'Old_Persian':
+        base.set('𐎠', 'a'); base.set('𐎡', 'i'); base.set('𐎢', 'u'); base.set('𐎣', 'k');
+        base.set('𐎤', 'ku'); base.set('𐎥', 'g'); base.set('𐎦', 'gu'); base.set('𐎧', 'x');
+        base.set('𐎨', 'c'); base.set('𐎩', 'j'); base.set('𐎪', 'ji'); base.set('𐎫', 't');
+        base.set('𐎬', 'tu'); base.set('𐎭', 'd'); base.set('𐎮', 'di'); base.set('𐎯', 'du');
+        base.set('𐎰', 'th'); base.set('𐎱', 'p'); base.set('𐎲', 'b'); base.set('𐎳', 'f');
+        base.set('𐎴', 'n'); base.set('𐎵', 'nu'); base.set('𐎶', 'm'); base.set('𐎷', 'mi');
+        base.set('𐎸', 'mu'); base.set('𐎹', 'y'); base.set('𐎺', 'v'); base.set('𐎻', 'vi');
+        base.set('𐎼', 'r'); base.set('𐎽', 'ru'); base.set('𐎾', 'l'); base.set('𐎿', 's');
+        base.set('𐏀', 'z'); base.set('𐏁', 'sh'); base.set('𐏂', 'ssh'); base.set('𐏃', 'h');
+        break;
+
+      // ============= MENDE KIKAKUI SCRIPT =============
+      case 'Mende_Kikakui':
+        base.set('𞠀', 'ki'); base.set('𞠁', 'ka'); base.set('𞠂', 'ku'); base.set('𞠃', 'kee');
+        base.set('𞠄', 'ke'); base.set('𞠅', 'koo'); base.set('𞠆', 'ko'); base.set('𞠇', 'kua');
+        base.set('𞠈', 'si'); base.set('𞠉', 'sa'); base.set('𞠊', 'su'); base.set('𞠋', 'see');
+        base.set('𞠌', 'se'); base.set('𞠍', 'soo'); base.set('𞠎', 'so'); base.set('𞠏', 'sia');
+        base.set('𞠐', 'li'); base.set('𞠑', 'la'); base.set('𞠒', 'lu'); base.set('𞠓', 'lee');
+        base.set('𞠔', 'le'); base.set('𞠕', 'loo'); base.set('𞠖', 'lo'); base.set('𞠗', 'lia');
+        break;
+
+      // ============= BASSA VAH SCRIPT =============
+      case 'Bassa_Vah':
+        base.set('𖫐', 'e'); base.set('𖫑', 'en'); base.set('𖫒', 'ba'); base.set('𖫓', 'ku');
+        base.set('𖫔', 'de'); base.set('𖫕', 'te'); base.set('𖫖', 'ye'); base.set('𖫗', 'wa');
+        base.set('𖫘', 'ke'); base.set('𖫙', 'ge'); base.set('𖫚', 'pe'); base.set('𖫛', 'fe');
+        base.set('𖫜', 'me'); base.set('𖫝', 'gbe'); base.set('𖫞', 'se'); base.set('𖫟', 'zhe');
+        base.set('𖫠', 'je'); base.set('𖫡', 'we'); base.set('𖫢', 'he'); base.set('𖫣', 'mbe');
+        base.set('𖫤', 'kpe'); base.set('𖫥', 'ne'); base.set('𖫦', 'ndi'); base.set('𖫧', 'ze');
+        break;
+
+      // ============= DUPLOYAN SHORTHAND =============
+      case 'Duployan':
+        base.set('𛰀', 'h'); base.set('𛰁', 'x'); base.set('𛰂', 'p'); base.set('𛰃', 't');
+        base.set('𛰄', 'f'); base.set('𛰅', 'k'); base.set('𛰆', 'l'); base.set('𛰇', 'b');
+        base.set('𛰈', 'd'); base.set('𛰉', 'v'); base.set('𛰊', 'g'); base.set('𛰋', 'r');
+        base.set('𛰌', 'p'); base.set('𛰍', 't'); base.set('𛰎', 'f'); base.set('𛰏', 'k');
+        base.set('𛰐', 'l'); base.set('𛰑', 'm'); base.set('𛰒', 'n'); base.set('𛰓', 'j');
+        base.set('𛰔', 's'); base.set('𛰕', 'm'); base.set('𛰖', 'n'); base.set('𛰗', 'j');
+        base.set('𛰘', 's');
+        break;
+
+      // ============= WANCHO SCRIPT =============
+      case 'Wancho':
+        base.set('𞋀', 'a'); base.set('𞋁', 'au'); base.set('𞋂', 'ka'); base.set('𞋃', 'nga');
+        base.set('𞋄', 'wa'); base.set('𞋅', 'la'); base.set('𞋆', 'ya'); base.set('𞋇', 'pa');
+        base.set('𞋈', 'pha'); base.set('𞋉', 'na'); base.set('𞋊', 'ha'); base.set('𞋋', 'e');
+        base.set('𞋌', 'sha'); base.set('𞋍', 'o'); base.set('𞋎', 'i'); base.set('𞋏', 'u');
+        base.set('𞋐', 'an'); base.set('𞋑', 'ang'); base.set('𞋒', 'en'); base.set('𞋓', 'in');
+        base.set('𞋔', 'un'); base.set('𞋕', 'on');
+        break;
+
+      // ============= MAKASAR SCRIPT =============
+      case 'Makasar':
+        base.set('𑻠', 'ka'); base.set('𑻡', 'ga'); base.set('𑻢', 'nga'); base.set('𑻣', 'pa');
+        base.set('𑻤', 'ba'); base.set('𑻥', 'ma'); base.set('𑻦', 'ta'); base.set('𑻧', 'da');
+        base.set('𑻨', 'na'); base.set('𑻩', 'ca'); base.set('𑻪', 'ja'); base.set('𑻫', 'nya');
+        base.set('𑻬', 'ya'); base.set('𑻭', 'ra'); base.set('𑻮', 'la'); base.set('𑻯', 'wa');
+        base.set('𑻰', 'sa'); base.set('𑻱', 'a'); base.set('𑻲', 'ha');
+        break;
+
+      // ============= MASARAM GONDI SCRIPT =============
+      case 'Masaram_Gondi':
+        base.set('𑴀', 'a'); base.set('𑴁', 'aa'); base.set('𑴂', 'i'); base.set('𑴃', 'ii');
+        base.set('𑴄', 'u'); base.set('𑴅', 'uu'); base.set('𑴆', 'r'); base.set('𑴈', 'e');
+        base.set('𑴉', 'ai'); base.set('𑴊', 'o'); base.set('𑴋', 'au'); base.set('𑴌', 'ka');
+        base.set('𑴍', 'kha'); base.set('𑴎', 'ga'); base.set('𑴏', 'gha'); base.set('𑴐', 'nga');
+        base.set('𑴑', 'ca'); base.set('𑴒', 'cha'); base.set('𑴓', 'ja'); base.set('𑴔', 'jha');
+        base.set('𑴕', 'nya'); base.set('𑴖', 'tta'); base.set('𑴗', 'ttha'); base.set('𑴘', 'dda');
+        base.set('𑴙', 'ddha'); base.set('𑴚', 'nna'); base.set('𑴛', 'ta'); base.set('𑴜', 'tha');
+        base.set('𑴝', 'da'); base.set('𑴞', 'dha'); base.set('𑴟', 'na'); base.set('𑴠', 'pa');
+        base.set('𑴡', 'pha'); base.set('𑴢', 'ba'); base.set('𑴣', 'bha'); base.set('𑴤', 'ma');
+        base.set('𑴥', 'ya'); base.set('𑴦', 'ra'); base.set('𑴧', 'la'); base.set('𑴨', 'va');
+        base.set('𑴩', 'sha'); base.set('𑴪', 'ssa'); base.set('𑴫', 'sa'); base.set('𑴬', 'ha');
+        break;
+
+      // ============= GUNJALA GONDI SCRIPT =============
+      case 'Gunjala_Gondi':
+        base.set('𑵠', 'a'); base.set('𑵡', 'aa'); base.set('𑵢', 'i'); base.set('𑵣', 'ii');
+        base.set('𑵤', 'u'); base.set('𑵥', 'uu'); base.set('𑵦', 'ee'); base.set('𑵧', 'ai');
+        base.set('𑵨', 'oo'); base.set('𑵩', 'au'); base.set('𑵪', 'ka'); base.set('𑵫', 'kha');
+        base.set('𑵬', 'ga'); base.set('𑵭', 'gha'); base.set('𑵮', 'nga'); base.set('𑵯', 'ca');
+        base.set('𑵰', 'cha'); base.set('𑵱', 'ja'); base.set('𑵲', 'jha'); base.set('𑵳', 'nya');
+        base.set('𑵴', 'tta'); base.set('𑵵', 'ttha'); base.set('𑵶', 'dda'); base.set('𑵷', 'ddha');
+        base.set('𑵸', 'nna'); base.set('𑵹', 'ta'); base.set('𑵺', 'tha'); base.set('𑵻', 'da');
+        base.set('𑵼', 'dha'); base.set('𑵽', 'na'); base.set('𑵾', 'pa'); base.set('𑵿', 'pha');
+        break;
+
+      // ============= NEWA (NEWARI) SCRIPT =============
+      case 'Newa':
+        base.set('𑐀', 'a'); base.set('𑐁', 'aa'); base.set('𑐂', 'i'); base.set('𑐃', 'ii');
+        base.set('𑐄', 'u'); base.set('𑐅', 'uu'); base.set('𑐆', 'ri'); base.set('𑐇', 'rii');
+        base.set('𑐈', 'li'); base.set('𑐉', 'lii'); base.set('𑐊', 'e'); base.set('𑐋', 'ai');
+        base.set('𑐌', 'o'); base.set('𑐍', 'au'); base.set('𑐎', 'ka'); base.set('𑐏', 'kha');
+        base.set('𑐐', 'ga'); base.set('𑐑', 'gha'); base.set('𑐒', 'nga'); base.set('𑐓', 'ngha');
+        base.set('𑐔', 'ca'); base.set('𑐕', 'cha'); base.set('𑐖', 'ja'); base.set('𑐗', 'jha');
+        base.set('𑐘', 'nya'); base.set('𑐙', 'nyha'); base.set('𑐚', 'tta'); base.set('𑐛', 'ttha');
+        base.set('𑐜', 'dda'); base.set('𑐝', 'ddha'); base.set('𑐞', 'nna'); base.set('𑐟', 'ta');
+        base.set('𑐠', 'tha'); base.set('𑐡', 'da'); base.set('𑐢', 'dha'); base.set('𑐣', 'na');
+        base.set('𑐤', 'nha'); base.set('𑐥', 'pa'); base.set('𑐦', 'pha'); base.set('𑐧', 'ba');
+        base.set('𑐨', 'bha'); base.set('𑐩', 'ma'); base.set('𑐪', 'mha'); base.set('𑐫', 'ya');
+        base.set('𑐬', 'ra'); base.set('𑐭', 'rha'); base.set('𑐮', 'la'); base.set('𑐯', 'lha');
+        base.set('𑐰', 'wa'); base.set('𑐱', 'sha'); base.set('𑐲', 'ssa'); base.set('𑐳', 'sa');
+        base.set('𑐴', 'ha');
+        break;
+
+      // ============= BHAIKSUKI SCRIPT =============
+      case 'Bhaiksuki':
+        base.set('𑰀', 'a'); base.set('𑰁', 'aa'); base.set('𑰂', 'i'); base.set('𑰃', 'ii');
+        base.set('𑰄', 'u'); base.set('𑰅', 'uu'); base.set('𑰆', 'r'); base.set('𑰇', 'rr');
+        base.set('𑰈', 'l'); base.set('𑰉', 'll'); base.set('𑰊', 'e'); base.set('𑰋', 'ai');
+        base.set('𑰌', 'o'); base.set('𑰍', 'au'); base.set('𑰎', 'ka'); base.set('𑰏', 'kha');
+        base.set('𑰐', 'ga'); base.set('𑰑', 'gha'); base.set('𑰒', 'nga'); base.set('𑰓', 'ca');
+        base.set('𑰔', 'cha'); base.set('𑰕', 'ja'); base.set('𑰖', 'jha'); base.set('𑰗', 'nya');
+        base.set('𑰘', 'tta'); base.set('𑰙', 'ttha'); base.set('𑰚', 'dda'); base.set('𑰛', 'ddha');
+        base.set('𑰜', 'nna'); base.set('𑰝', 'ta'); base.set('𑰞', 'tha'); base.set('𑰟', 'da');
+        base.set('𑰠', 'dha'); base.set('𑰡', 'na'); base.set('𑰢', 'pa'); base.set('𑰣', 'pha');
+        base.set('𑰤', 'ba'); base.set('𑰥', 'bha'); base.set('𑰦', 'ma'); base.set('𑰧', 'ya');
+        base.set('𑰨', 'ra'); base.set('𑰩', 'la'); base.set('𑰪', 'va'); base.set('𑰫', 'sha');
+        base.set('𑰬', 'ssa'); base.set('𑰭', 'sa'); base.set('𑰮', 'ha');
+        break;
+
+      // ============= MARCHEN SCRIPT =============
+      case 'Marchen':
+        base.set('𑱰', 'ka'); base.set('𑱱', 'kha'); base.set('𑱲', 'ga'); base.set('𑱳', 'nga');
+        base.set('𑱴', 'ca'); base.set('𑱵', 'cha'); base.set('𑱶', 'ja'); base.set('𑱷', 'nya');
+        base.set('𑱸', 'ta'); base.set('𑱹', 'tha'); base.set('𑱺', 'da'); base.set('𑱻', 'na');
+        base.set('𑱼', 'pa'); base.set('𑱽', 'pha'); base.set('𑱾', 'ba'); base.set('𑱿', 'ma');
+        base.set('𑲀', 'tsa'); base.set('𑲁', 'tsha'); base.set('𑲂', 'dza'); base.set('𑲃', 'wa');
+        base.set('𑲄', 'zha'); base.set('𑲅', 'za'); base.set('𑲆', 'a'); base.set('𑲇', 'ya');
+        base.set('𑲈', 'ra'); base.set('𑲉', 'la'); base.set('𑲊', 'sha'); base.set('𑲋', 'sa');
+        base.set('𑲌', 'ha');
+        break;
+
+      // ============= ZANABAZAR SQUARE SCRIPT =============
+      case 'Zanabazar_Square':
+        base.set('𑨀', 'a'); base.set('𑨁', 'i'); base.set('𑨂', 'u'); base.set('𑨃', 'e');
+        base.set('𑨄', 'o'); base.set('𑨅', 'oe'); base.set('𑨆', 'ue'); base.set('𑨇', 'ee');
+        base.set('𑨈', 'ai'); base.set('𑨉', 'au'); base.set('𑨊', 'reversed'); base.set('𑨋', 'ka');
+        base.set('𑨌', 'kha'); base.set('𑨍', 'ga'); base.set('𑨎', 'gha'); base.set('𑨏', 'nga');
+        base.set('𑨐', 'ca'); base.set('𑨑', 'cha'); base.set('𑨒', 'ja'); base.set('𑨓', 'nya');
+        base.set('𑨔', 'tta'); base.set('𑨕', 'ttha'); base.set('𑨖', 'dda'); base.set('𑨗', 'ddha');
+        base.set('𑨘', 'nna'); base.set('𑨙', 'ta'); base.set('𑨚', 'tha'); base.set('𑨛', 'da');
+        base.set('𑨜', 'dha'); base.set('𑨝', 'na'); base.set('𑨞', 'pa'); base.set('𑨟', 'pha');
+        base.set('𑨠', 'ba'); base.set('𑨡', 'bha'); base.set('𑨢', 'ma'); base.set('𑨣', 'tsa');
+        base.set('𑨤', 'tsha'); base.set('𑨥', 'dza'); base.set('𑨦', 'dza'); base.set('𑨧', 'zha');
+        base.set('𑨨', 'za'); base.set('𑨩', 'a'); base.set('𑨪', 'ya'); base.set('𑨫', 'ra');
+        base.set('𑨬', 'la'); base.set('𑨭', 'va'); base.set('𑨮', 'sha'); base.set('𑨯', 'ssa');
+        base.set('𑨰', 'sa'); base.set('𑨱', 'ha'); base.set('𑨲', 'kssa');
+        break;
+
+      // ============= SOYOMBO SCRIPT =============
+      case 'Soyombo':
+        base.set('𑩐', 'a'); base.set('𑩑', 'i'); base.set('𑩒', 'u'); base.set('𑩓', 'e');
+        base.set('𑩔', 'o'); base.set('𑩕', 'oe'); base.set('𑩖', 'ue'); base.set('𑩗', 'ee');
+        base.set('𑩘', 'ai'); base.set('𑩙', 'au'); base.set('𑩚', 'ka'); base.set('𑩛', 'kha');
+        base.set('𑩜', 'ga'); base.set('𑩝', 'gha'); base.set('𑩞', 'nga'); base.set('𑩟', 'ca');
+        base.set('𑩠', 'cha'); base.set('𑩡', 'ja'); base.set('𑩢', 'jha'); base.set('𑩣', 'nya');
+        base.set('𑩤', 'tta'); base.set('𑩥', 'ttha'); base.set('𑩦', 'dda'); base.set('𑩧', 'ddha');
+        base.set('𑩨', 'nna'); base.set('𑩩', 'ta'); base.set('𑩪', 'tha'); base.set('𑩫', 'da');
+        base.set('𑩬', 'dha'); base.set('𑩭', 'na'); base.set('𑩮', 'pa'); base.set('𑩯', 'pha');
+        base.set('𑩰', 'ba'); base.set('𑩱', 'bha'); base.set('𑩲', 'ma'); base.set('𑩳', 'tsa');
+        base.set('𑩴', 'tsha'); base.set('𑩵', 'dza'); base.set('𑩶', 'zha'); base.set('𑩷', 'za');
+        base.set('𑩸', 'a'); base.set('𑩹', 'ya'); base.set('𑩺', 'ra'); base.set('𑩻', 'la');
+        base.set('𑩼', 'va'); base.set('𑩽', 'sha'); base.set('𑩾', 'ssa'); base.set('𑩿', 'sa');
+        base.set('𑪀', 'ha'); base.set('𑪁', 'kssa');
+        break;
+
+      // ============= HATRAN SCRIPT =============
+      case 'Hatran':
+        base.set('𐣠', 'a'); base.set('𐣡', 'b'); base.set('𐣢', 'g'); base.set('𐣣', 'd');
+        base.set('𐣤', 'h'); base.set('𐣥', 'w'); base.set('𐣦', 'z'); base.set('𐣧', 'ch');
+        base.set('𐣨', 't'); base.set('𐣩', 'y'); base.set('𐣪', 'k'); base.set('𐣫', 'l');
+        base.set('𐣬', 'm'); base.set('𐣭', 'n'); base.set('𐣮', 's'); base.set('𐣯', 'aa');
+        base.set('𐣰', 'p'); base.set('𐣱', 'ts'); base.set('𐣲', 'q'); base.set('𐣳', 'r');
+        base.set('𐣴', 'sh'); base.set('𐣵', 't');
+        break;
+
+      // ============= ELBASAN SCRIPT =============
+      case 'Elbasan':
+        base.set('𐔀', 'a'); base.set('𐔁', 'be'); base.set('𐔂', 'ce'); base.set('𐔃', 'che');
+        base.set('𐔄', 'de'); base.set('𐔅', 'ndhe'); base.set('𐔆', 'e'); base.set('𐔇', 'ei');
+        base.set('𐔈', 'fe'); base.set('𐔉', 'ge'); base.set('𐔊', 'gje'); base.set('𐔋', 'he');
+        base.set('𐔌', 'i'); base.set('𐔍', 'je'); base.set('𐔎', 'ke'); base.set('𐔏', 'le');
+        base.set('𐔐', 'lle'); base.set('𐔑', 'me'); base.set('𐔒', 'ne'); base.set('𐔓', 'nge');
+        base.set('𐔔', 'o'); base.set('𐔕', 'pe'); base.set('𐔖', 'qe'); base.set('𐔗', 're');
+        base.set('𐔘', 'rre'); base.set('𐔙', 'se'); base.set('𐔚', 'she'); base.set('𐔛', 'te');
+        base.set('𐔜', 'the'); base.set('𐔝', 'u'); base.set('𐔞', 've'); base.set('𐔟', 'xe');
+        base.set('𐔠', 'y'); base.set('𐔡', 'ze'); base.set('𐔢', 'zhe'); base.set('𐔣', 'ghamma');
+        break;
+
       default:
         // For Latin and unknown scripts, no mapping needed
         break;
