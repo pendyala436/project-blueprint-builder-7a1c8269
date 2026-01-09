@@ -556,11 +556,11 @@ const LANGUAGE_SCRIPT_MAP: Record<string, string> = {
   'maori': '', 'samoan': '', 'tongan': '', 'fijian': '', 'tahitian': '',
   'tok pisin': '', 'bislama': '', 'crimean tatar': '', 'karakalpak': '',
   'hmong': '', 'zhuang': '', 'naxi': '', 'bai': '', 'esperanto': '', 'latin': '',
-  'romani': '', 'ladino': '', 'mizo': '', 'khasi': '', 'garo': '', 'karbi': '',
+  'romani': '', 'ladino': '', 'mizo': '', 'khasi': '', 'garo': '', 'karbi': '', 'nagamese': '',
   'kokborok': '', 'rabha': '', 'mishing': '', 'nyishi': '', 'apatani': '', 'adi': '',
   'ao': '', 'lotha': '', 'sumi': '', 'angami': '', 'tangkhul': '', 'paite': '',
   'thadou': '', 'rongmei': '', 'tangsa': '', 'wancho': '', 'nocte': '', 'nicobarese': '',
-  'cham': '',
+  'cham': '', 'coorgi': 'kannada',
 };
 
 // ============================================================
