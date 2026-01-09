@@ -117,10 +117,9 @@ async function classifyWithHuggingFace(
 
   // Use direct fetch to Hugging Face Inference API
   const modelsToTry = [
-    'prithivMLmods/Gender-Classifier-Mini',
-    'AjaySharma/genderDetection',
+    'dima806/man_woman_face_image_detection',
     'rizvandwiki/gender-classification-2',
-    'dima806/man_woman_face_image_detection'
+    'AjaySharma/genderDetection'
   ];
 
   let results: any[] = [];
