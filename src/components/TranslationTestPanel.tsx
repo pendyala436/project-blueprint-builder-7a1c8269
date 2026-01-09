@@ -1,124 +1,174 @@
 /**
  * Translation Test Panel
  * ======================
- * Tests all 6 translation path combinations:
- * 1. English → Latin (en → es)
- * 2. English → Native (en → hi)
- * 3. Latin → Latin (es → fr)
- * 4. Latin → Native (es → hi)
- * 5. Native → Latin (hi → es)
- * 6. Native → Native (hi → ar)
+ * Tests all 6 translation path combinations using "Where is your home?":
+ * 1. Native → Native (Hindi → Tamil)
+ * 2. Latin → Native (English → Hindi)
+ * 3. Native → Latin (Hindi → English)
+ * 4. Latin → Latin (English → Spanish)
+ * 5. English → Latin (English → French)
+ * 6. English → Native (English → Bengali)
  */
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, ArrowRight } from 'lucide-react';
-import { semanticTranslate, getSupportedLanguages, type LanguageInfo } from '@/lib/translation/semantic-translate';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, Check, X, ArrowRight, Globe, Languages } from 'lucide-react';
+import { 
+  translateText, 
+  getLanguageCount, 
+  isReady,
+  isLatinScriptLanguage,
+  getLanguageInfo,
+  type TranslationResult
+} from '@/lib/translation/translate';
+
+const TEST_TEXT = "Where is your home?";
 
 interface TestCase {
   id: string;
   name: string;
   description: string;
-  sourceCode: string;
-  targetCode: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  sourceText: string;
   sourceScript: 'Latin' | 'Native';
   targetScript: 'Latin' | 'Native';
-  inputText: string;
   expectedBehavior: string;
 }
 
-interface TestResult {
+interface TestResultData {
   id: string;
   output: string;
   pivot?: string;
   confidence: number;
   success: boolean;
+  isSameLanguage: boolean;
+  isTranslated: boolean;
   error?: string;
   duration: number;
 }
 
 const TEST_CASES: TestCase[] = [
+  // 1. Native → Native (Hindi → Tamil)
   {
-    id: 'en-latin',
-    name: 'English → Latin',
-    description: 'Direct translation from English to Spanish',
-    sourceCode: 'en',
-    targetCode: 'es',
-    sourceScript: 'Latin',
-    targetScript: 'Latin',
-    inputText: 'Hello, how are you today?',
-    expectedBehavior: 'Direct translation, no pivot needed',
+    id: 'native-to-native',
+    name: 'Native → Native',
+    description: 'Hindi to Tamil (Devanagari → Tamil script)',
+    sourceLanguage: 'hindi',
+    targetLanguage: 'tamil',
+    sourceText: 'आपका घर कहाँ है?', // "Where is your home?" in Hindi
+    sourceScript: 'Native',
+    targetScript: 'Native',
+    expectedBehavior: 'Uses English pivot: Hindi → English → Tamil',
   },
+  // 2. Latin → Native (English → Hindi)
   {
-    id: 'en-native',
-    name: 'English → Native',
-    description: 'Direct translation from English to Hindi (Devanagari)',
-    sourceCode: 'en',
-    targetCode: 'hi',
+    id: 'latin-to-native',
+    name: 'Latin → Native',
+    description: 'English to Hindi (Latin → Devanagari)',
+    sourceLanguage: 'english',
+    targetLanguage: 'hindi',
+    sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Native',
-    inputText: 'Welcome to the application',
     expectedBehavior: 'Direct translation with script conversion to Devanagari',
   },
+  // 3. Native → Latin (Hindi → English)
   {
-    id: 'latin-latin',
-    name: 'Latin → Latin',
-    description: 'Spanish to French translation',
-    sourceCode: 'es',
-    targetCode: 'fr',
-    sourceScript: 'Latin',
-    targetScript: 'Latin',
-    inputText: 'Buenos dias amigo',
-    expectedBehavior: 'Try direct first, fallback to English pivot',
-  },
-  {
-    id: 'latin-native',
-    name: 'Latin → Native',
-    description: 'Spanish to Arabic translation',
-    sourceCode: 'es',
-    targetCode: 'ar',
-    sourceScript: 'Latin',
-    targetScript: 'Native',
-    inputText: 'Gracias por tu ayuda',
-    expectedBehavior: 'English pivot: Spanish → English → Arabic',
-  },
-  {
-    id: 'native-latin',
+    id: 'native-to-latin',
     name: 'Native → Latin',
-    description: 'Hindi to Portuguese translation',
-    sourceCode: 'hi',
-    targetCode: 'pt',
+    description: 'Hindi to English (Devanagari → Latin)',
+    sourceLanguage: 'hindi',
+    targetLanguage: 'english',
+    sourceText: 'आपका घर कहाँ है?',
     sourceScript: 'Native',
     targetScript: 'Latin',
-    inputText: 'नमस्ते दोस्त',
-    expectedBehavior: 'English pivot: Hindi → English → Portuguese',
+    expectedBehavior: 'Reverse transliteration to Latin/English',
+  },
+  // 4. Latin → Latin (English → Spanish)
+  {
+    id: 'latin-to-latin',
+    name: 'Latin → Latin',
+    description: 'English to Spanish (both Latin script)',
+    sourceLanguage: 'english',
+    targetLanguage: 'spanish',
+    sourceText: TEST_TEXT,
+    sourceScript: 'Latin',
+    targetScript: 'Latin',
+    expectedBehavior: 'Direct translation, stays in Latin script',
+  },
+  // 5. English → Latin (English → French)
+  {
+    id: 'english-to-latin',
+    name: 'English → Latin',
+    description: 'English to French (Latin script target)',
+    sourceLanguage: 'english',
+    targetLanguage: 'french',
+    sourceText: TEST_TEXT,
+    sourceScript: 'Latin',
+    targetScript: 'Latin',
+    expectedBehavior: 'Direct translation to French',
+  },
+  // 6. English → Native (English → Bengali)
+  {
+    id: 'english-to-native',
+    name: 'English → Native',
+    description: 'English to Bengali (Latin → Bengali script)',
+    sourceLanguage: 'english',
+    targetLanguage: 'bengali',
+    sourceText: TEST_TEXT,
+    sourceScript: 'Latin',
+    targetScript: 'Native',
+    expectedBehavior: 'Translation with script conversion to Bengali',
+  },
+  // Additional test cases
+  {
+    id: 'english-to-arabic',
+    name: 'English → Arabic',
+    description: 'English to Arabic (RTL script)',
+    sourceLanguage: 'english',
+    targetLanguage: 'arabic',
+    sourceText: TEST_TEXT,
+    sourceScript: 'Latin',
+    targetScript: 'Native',
+    expectedBehavior: 'Translation with script conversion to Arabic (RTL)',
   },
   {
-    id: 'native-native',
-    name: 'Native → Native',
-    description: 'Hindi to Arabic translation',
-    sourceCode: 'hi',
-    targetCode: 'ar',
+    id: 'english-to-telugu',
+    name: 'English → Telugu',
+    description: 'English to Telugu (Latin → Telugu script)',
+    sourceLanguage: 'english',
+    targetLanguage: 'telugu',
+    sourceText: TEST_TEXT,
+    sourceScript: 'Latin',
+    targetScript: 'Native',
+    expectedBehavior: 'Translation with script conversion to Telugu',
+  },
+  {
+    id: 'same-language-test',
+    name: 'Same Language',
+    description: 'Hindi to Hindi (should return as-is)',
+    sourceLanguage: 'hindi',
+    targetLanguage: 'hindi',
+    sourceText: 'आपका घर कहाँ है?',
     sourceScript: 'Native',
     targetScript: 'Native',
-    inputText: 'आपका दिन शुभ हो',
-    expectedBehavior: 'English pivot: Hindi → English → Arabic',
+    expectedBehavior: 'Returns input unchanged (same language bypass)',
   },
 ];
 
 export default function TranslationTestPanel() {
-  const [results, setResults] = useState<Record<string, TestResult>>({});
+  const [results, setResults] = useState<Record<string, TestResultData>>({});
   const [running, setRunning] = useState<string | null>(null);
   const [languageCount, setLanguageCount] = useState(0);
-  const [languages, setLanguages] = useState<LanguageInfo[]>([]);
+  const [systemReady, setSystemReady] = useState(false);
 
   useEffect(() => {
-    getSupportedLanguages().then(langs => {
-      setLanguages(langs);
-      setLanguageCount(langs.length);
-    });
+    setSystemReady(isReady());
+    setLanguageCount(getLanguageCount());
   }, []);
 
   const runTest = async (testCase: TestCase) => {
@@ -126,10 +176,10 @@ export default function TranslationTestPanel() {
     const startTime = performance.now();
 
     try {
-      const result = await semanticTranslate(
-        testCase.inputText,
-        testCase.sourceCode,
-        testCase.targetCode
+      const result: TranslationResult = await translateText(
+        testCase.sourceText,
+        testCase.sourceLanguage,
+        testCase.targetLanguage
       );
 
       const duration = performance.now() - startTime;
@@ -141,8 +191,9 @@ export default function TranslationTestPanel() {
           output: result.text,
           pivot: result.englishPivot,
           confidence: result.confidence,
-          success: result.isTranslated || result.text !== testCase.inputText,
-          error: result.error,
+          success: true,
+          isSameLanguage: result.isSameLanguage,
+          isTranslated: result.isTranslated,
           duration,
         },
       }));
@@ -154,6 +205,8 @@ export default function TranslationTestPanel() {
           output: '',
           confidence: 0,
           success: false,
+          isSameLanguage: false,
+          isTranslated: false,
           error: error instanceof Error ? error.message : 'Unknown error',
           duration: performance.now() - startTime,
         },
@@ -166,37 +219,67 @@ export default function TranslationTestPanel() {
   const runAllTests = async () => {
     for (const testCase of TEST_CASES) {
       await runTest(testCase);
+      // Small delay between tests
+      await new Promise(r => setTimeout(r, 100));
     }
   };
 
-  const getLanguageName = (code: string) => {
-    const lang = languages.find(l => l.code === code);
-    return lang?.name || code;
+  const getScriptBadge = (lang: string) => {
+    const info = getLanguageInfo(lang);
+    const isLatin = isLatinScriptLanguage(lang);
+    return (
+      <Badge variant={isLatin ? "secondary" : "default"} className="text-xs">
+        {info?.script || (isLatin ? 'Latin' : 'Native')}
+      </Badge>
+    );
   };
+
+  const successCount = Object.values(results).filter(r => r.success).length;
+  const totalRun = Object.keys(results).length;
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Semantic Translation Test Panel</span>
-            <Badge variant="secondary">{languageCount} languages</Badge>
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Languages className="h-5 w-5 text-primary" />
+                Translation Test Panel
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Testing "{TEST_TEXT}" across 6 language/script combinations
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                {languageCount} languages
+              </Badge>
+              <Badge variant={systemReady ? "default" : "destructive"}>
+                {systemReady ? 'Ready' : 'Not Ready'}
+              </Badge>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground mb-4">
-            Testing all 6 translation path combinations with English semantic pivot.
-          </p>
-          <Button onClick={runAllTests} disabled={running !== null}>
-            {running ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Running...
-              </>
-            ) : (
-              'Run All Tests'
+          <div className="flex items-center gap-4">
+            <Button onClick={runAllTests} disabled={running !== null || !systemReady}>
+              {running ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                'Run All Tests'
+              )}
+            </Button>
+            {totalRun > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {successCount}/{totalRun} passed
+              </span>
             )}
-          </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -206,15 +289,22 @@ export default function TranslationTestPanel() {
           const isRunning = running === testCase.id;
 
           return (
-            <Card key={testCase.id} className={result?.success ? 'border-green-500/50' : result?.error ? 'border-red-500/50' : ''}>
+            <Card 
+              key={testCase.id} 
+              className={`transition-colors ${
+                result?.success ? 'border-green-500/50 bg-green-500/5' : 
+                result?.error ? 'border-red-500/50 bg-red-500/5' : 
+                isRunning ? 'border-primary bg-primary/5' : ''
+              }`}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Badge variant={testCase.sourceScript === 'Latin' ? 'default' : 'secondary'}>
+                    <Badge variant={testCase.sourceScript === 'Latin' ? 'secondary' : 'default'}>
                       {testCase.sourceScript}
                     </Badge>
                     <ArrowRight className="w-4 h-4" />
-                    <Badge variant={testCase.targetScript === 'Latin' ? 'default' : 'secondary'}>
+                    <Badge variant={testCase.targetScript === 'Latin' ? 'secondary' : 'default'}>
                       {testCase.targetScript}
                     </Badge>
                     <span className="ml-2">{testCase.name}</span>
@@ -232,22 +322,27 @@ export default function TranslationTestPanel() {
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">{testCase.description}</p>
                 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">From:</span>{' '}
-                    <span className="capitalize">{getLanguageName(testCase.sourceCode)}</span>
-                    <span className="text-muted-foreground"> ({testCase.sourceCode})</span>
+                <div className="flex items-center gap-4 text-sm flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">From:</span>
+                    <span className="font-mono bg-muted px-2 py-0.5 rounded capitalize">
+                      {testCase.sourceLanguage}
+                    </span>
+                    {getScriptBadge(testCase.sourceLanguage)}
                   </div>
-                  <div>
-                    <span className="font-medium">To:</span>{' '}
-                    <span className="capitalize">{getLanguageName(testCase.targetCode)}</span>
-                    <span className="text-muted-foreground"> ({testCase.targetCode})</span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">To:</span>
+                    <span className="font-mono bg-muted px-2 py-0.5 rounded capitalize">
+                      {testCase.targetLanguage}
+                    </span>
+                    {getScriptBadge(testCase.targetLanguage)}
                   </div>
                 </div>
 
                 <div className="bg-muted/50 p-3 rounded-md">
-                  <div className="text-sm font-medium mb-1">Input:</div>
-                  <div className="text-foreground">{testCase.inputText}</div>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Input:</div>
+                  <div className="text-foreground font-medium">{testCase.sourceText}</div>
                 </div>
 
                 <div className="text-xs text-muted-foreground italic">
@@ -255,7 +350,9 @@ export default function TranslationTestPanel() {
                 </div>
 
                 {result && (
-                  <div className={`p-3 rounded-md ${result.success ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                  <div className={`p-3 rounded-md border ${
+                    result.success ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
+                  }`}>
                     <div className="flex items-center gap-2 mb-2">
                       {result.success ? (
                         <Check className="w-4 h-4 text-green-500" />
@@ -268,17 +365,25 @@ export default function TranslationTestPanel() {
                       <span className="text-xs text-muted-foreground">
                         ({result.duration.toFixed(1)}ms)
                       </span>
+                      {result.isSameLanguage && (
+                        <Badge variant="outline" className="text-xs">Same Language</Badge>
+                      )}
+                      {result.isTranslated && (
+                        <Badge variant="outline" className="text-xs">Translated</Badge>
+                      )}
                     </div>
 
-                    <div className="text-sm">
-                      <div className="font-medium">Output:</div>
-                      <div className="text-foreground mt-1">{result.output || '(empty)'}</div>
+                    <div className="bg-primary/10 p-2 rounded">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Output:</div>
+                      <div className="text-foreground font-medium text-lg">
+                        {result.output || '(empty)'}
+                      </div>
                     </div>
 
                     {result.pivot && (
-                      <div className="text-sm mt-2">
-                        <div className="font-medium text-blue-500">English Pivot:</div>
-                        <div className="text-muted-foreground">{result.pivot}</div>
+                      <div className="mt-2 p-2 bg-blue-500/10 rounded">
+                        <div className="text-xs font-medium text-blue-600">English Pivot:</div>
+                        <div className="text-sm">{result.pivot}</div>
                       </div>
                     )}
 
@@ -299,26 +404,58 @@ export default function TranslationTestPanel() {
         })}
       </div>
 
+      <Separator />
+
       {/* Language Stats */}
       <Card>
         <CardHeader>
-          <CardTitle>Script Distribution</CardTitle>
+          <CardTitle>System Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-2xl font-bold">
-                {languages.filter(l => l.script === 'Latin').length}
-              </div>
-              <div className="text-sm text-muted-foreground">Latin Script</div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold text-primary">{languageCount}</div>
+              <div className="text-sm text-muted-foreground">Total Languages</div>
             </div>
-            <div>
-              <div className="text-2xl font-bold">
-                {languages.filter(l => l.script === 'Native').length}
-              </div>
-              <div className="text-sm text-muted-foreground">Native Scripts</div>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold text-green-500">{successCount}</div>
+              <div className="text-sm text-muted-foreground">Tests Passed</div>
+            </div>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="text-3xl font-bold">{TEST_CASES.length}</div>
+              <div className="text-sm text-muted-foreground">Test Cases</div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Scenarios Explained</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-start gap-2">
+              <Badge variant="default" className="mt-0.5">Native → Native</Badge>
+              <span>Hindi to Tamil - Uses English pivot (Hindi → English → Tamil)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Badge variant="secondary" className="mt-0.5">Latin → Native</Badge>
+              <span>English to Hindi - Transliterates to Devanagari script</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Badge variant="default" className="mt-0.5">Native → Latin</Badge>
+              <span>Hindi to English - Reverse transliterates to Latin</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Badge variant="secondary" className="mt-0.5">Latin → Latin</Badge>
+              <span>English to Spanish - Stays in Latin script</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Badge variant="outline" className="mt-0.5">Same Language</Badge>
+              <span>Returns input unchanged (no translation needed)</span>
+            </li>
+          </ul>
         </CardContent>
       </Card>
     </div>
