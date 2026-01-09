@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +13,33 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Languages, Search, Check, ChevronDown, Globe, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  ALL_NLLB200_LANGUAGES, 
-  INDIAN_NLLB200_LANGUAGES, 
-  NON_INDIAN_NLLB200_LANGUAGES,
-  NLLB200Language,
-  getTotalLanguageCount
-} from "@/data/nllb200Languages";
+import { menLanguages, MenLanguage } from "@/data/men_languages";
+import { womenLanguages, WomenLanguage } from "@/data/women_languages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// Unified language type for the selector
+interface ProfileLanguage {
+  code: string;
+  name: string;
+  nativeName: string;
+  script?: string;
+  rtl?: boolean;
+  isIndian?: boolean;
+}
+
+// Indian language codes for categorization
+const INDIAN_LANGUAGE_CODES = new Set([
+  "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "or", "pa", "as", "mai", "sat", "ks",
+  "kok", "doi", "mni", "brx", "sa", "bho", "hne", "raj", "mwr", "mtr", "bgc", "mag",
+  "anp", "bjj", "awa", "bns", "bfy", "gbm", "kfy", "him", "kan", "tcy", "kfa", "bhb",
+  "gon", "lmn", "sck", "kru", "unr", "hoc", "khr", "hlb", "khn", "dcc", "wbr", "bhd",
+  "mup", "hoj", "dgo", "sjo", "mby", "saz", "bra", "kfk", "lah", "psu", "pgg", "xnr",
+  "srx", "jml", "dty", "thl", "bap", "lus", "kha", "grt", "mjw", "trp", "rah", "mrg",
+  "njz", "apt", "adi", "lep", "sip", "lif", "njo", "njh", "nsm", "njm", "nmf", "pck",
+  "tcz", "nbu", "nst", "nnp", "njb", "nag", "tcx", "bfq", "iru", "kfh", "vav", "abl",
+  "wbq", "gok", "kxv", "kff", "kdu", "yed", "sou", "ur", "sd", "ne"
+]);
 
 interface LanguageSelectorProps {
   selectedLanguage: string;
@@ -31,6 +49,7 @@ interface LanguageSelectorProps {
   label?: string;
   description?: string;
   className?: string;
+  gender?: 'male' | 'female' | null;
 }
 
 export const LanguageSelector = ({
@@ -41,17 +60,43 @@ export const LanguageSelector = ({
   label = "Your Language",
   description,
   className,
+  gender,
 }: LanguageSelectorProps) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<NLLB200Language | null>(null);
+  const [tempSelectedLanguage, setTempSelectedLanguage] = useState<ProfileLanguage | null>(null);
+  const [userGender, setUserGender] = useState<'male' | 'female' | null>(gender || null);
 
-  // All languages - Indian + World
-  const languages = useMemo(() => {
-    return [...INDIAN_NLLB200_LANGUAGES, ...NON_INDIAN_NLLB200_LANGUAGES];
-  }, []);
+  // Fetch user gender if not provided
+  useEffect(() => {
+    if (!gender) {
+      const fetchUserGender = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("gender")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (profile?.gender) {
+            setUserGender(profile.gender.toLowerCase() as 'male' | 'female');
+          }
+        }
+      };
+      fetchUserGender();
+    }
+  }, [gender]);
+
+  // Get languages based on gender - 1000+ languages for each gender
+  const languages: ProfileLanguage[] = useMemo(() => {
+    const sourceLanguages = userGender === 'female' ? womenLanguages : menLanguages;
+    return sourceLanguages.map(lang => ({
+      ...lang,
+      isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
+    }));
+  }, [userGender]);
 
   // Filter languages based on search
   const filteredLanguages = useMemo(() => {
@@ -60,7 +105,8 @@ export const LanguageSelector = ({
     return languages.filter(
       lang => 
         lang.name.toLowerCase().includes(query) ||
-        lang.script.toLowerCase().includes(query)
+        lang.nativeName.toLowerCase().includes(query) ||
+        (lang.script && lang.script.toLowerCase().includes(query))
     );
   }, [languages, searchQuery]);
 
@@ -83,7 +129,7 @@ export const LanguageSelector = ({
     setTempSelectedLanguage(currentLang || null);
   };
 
-  const handleSelectLanguage = (lang: NLLB200Language) => {
+  const handleSelectLanguage = (lang: ProfileLanguage) => {
     setTempSelectedLanguage(lang);
   };
 
@@ -162,7 +208,7 @@ export const LanguageSelector = ({
     setSearchQuery("");
   };
 
-  const LanguageItem = ({ lang }: { lang: NLLB200Language }) => {
+  const LanguageItem = ({ lang }: { lang: ProfileLanguage }) => {
     const isSelected = tempSelectedLanguage?.code === lang.code;
     const isCurrent = selectedLanguage === lang.name;
     
@@ -182,11 +228,13 @@ export const LanguageSelector = ({
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground"
           )}>
-            {lang.name.charAt(0)}
+            {lang.nativeName.charAt(0)}
           </div>
           <div>
             <p className="font-semibold text-foreground">{lang.name}</p>
-            <p className="text-xs text-muted-foreground">{lang.script}</p>
+            <p className="text-xs text-muted-foreground">
+              {lang.nativeName} • {lang.script || 'Latin'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -215,16 +263,16 @@ export const LanguageSelector = ({
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/50">
           <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
-            {selectedLanguage?.charAt(0) || "?"}
+            {languages.find(l => l.name === selectedLanguage)?.nativeName?.charAt(0) || selectedLanguage?.charAt(0) || "?"}
           </div>
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
             <p className="text-xs text-muted-foreground">
-              {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.script || "Choose your language"}
+              {languages.find(l => l.name === selectedLanguage)?.nativeName || "Choose your language"}
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
-            {ALL_NLLB200_LANGUAGES.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
+            {languages.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
           </Badge>
         </div>
         
@@ -273,7 +321,7 @@ export const LanguageSelector = ({
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {getTotalLanguageCount()} languages ({INDIAN_NLLB200_LANGUAGES.length} Indian + {NON_INDIAN_NLLB200_LANGUAGES.length} World)
+              Choose from {languages.length} languages ({indianLanguages.length} Indian + {worldLanguages.length} World)
             </p>
           </DialogHeader>
           
