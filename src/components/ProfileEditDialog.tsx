@@ -33,7 +33,7 @@ import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
-import { ALL_NLLB200_LANGUAGES, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES } from "@/data/profileLanguages";
+import { ALL_LANGUAGES, INDIAN_LANGUAGES, NON_INDIAN_LANGUAGES } from "@/data/profileLanguages";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -352,7 +352,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       // Each profile type has its own language stored independently
       if (data && data.primary_language) {
         // Find the language in our list to get the code
-        const foundLang = ALL_NLLB200_LANGUAGES.find(l => l.name === data.primary_language);
+        const foundLang = ALL_LANGUAGES.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = {
             language_name: foundLang.name,
@@ -729,8 +729,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       <CommandEmpty>No language found.</CommandEmpty>
                       
                       {/* Indian Languages */}
-                      <CommandGroup heading={`🇮🇳 Indian Languages (${INDIAN_NLLB200_LANGUAGES.length})`}>
-                        {INDIAN_NLLB200_LANGUAGES
+                      <CommandGroup heading={`🇮🇳 Indian Languages (${INDIAN_LANGUAGES.length})`}>
+                        {INDIAN_LANGUAGES
                           .filter(l => 
                             l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
                             (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
@@ -762,8 +762,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       </CommandGroup>
 
                       {/* International Languages */}
-                      <CommandGroup heading={`🌍 International Languages (${NON_INDIAN_NLLB200_LANGUAGES.length})`}>
-                        {NON_INDIAN_NLLB200_LANGUAGES
+                      <CommandGroup heading={`🌍 International Languages (${NON_INDIAN_LANGUAGES.length})`}>
+                        {NON_INDIAN_LANGUAGES
                           .filter(l => 
                             l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
                             (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
