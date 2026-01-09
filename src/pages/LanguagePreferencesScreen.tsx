@@ -26,11 +26,10 @@ const LanguagePreferencesScreen = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const filteredLanguages = useMemo(() => {
-    if (!searchQuery.trim()) return languages.slice(0, 50); // Show more languages by default
+    if (!searchQuery.trim()) return languages.slice(0, 20);
     return languages.filter(
       (lang) =>
         lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lang.code.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
@@ -143,7 +142,7 @@ const LanguagePreferencesScreen = () => {
             </div>
             <h1 className="text-2xl font-display font-bold text-foreground">Language Preferences</h1>
             <p className="text-muted-foreground">
-              Select languages from 386+ available (via English pivot translation)
+              Select languages you'd like for translation support
             </p>
           </div>
 
@@ -204,11 +203,7 @@ const LanguagePreferencesScreen = () => {
                         <Globe2 className="w-5 h-5 text-muted-foreground" />
                         <div className="text-left">
                           <div className="font-medium text-foreground">{lang.name}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            {lang.nativeName !== lang.name && <span>{lang.nativeName}</span>}
-                            <span className="uppercase">{lang.code}</span>
-                            {lang.script && <span>• {lang.script}</span>}
-                          </div>
+                          <div className="text-xs text-muted-foreground uppercase">{lang.code}</div>
                         </div>
                       </div>
                       {isSelected(lang.code) && (

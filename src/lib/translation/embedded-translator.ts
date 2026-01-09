@@ -20,14 +20,12 @@
  * - Reply translation: Receiver can reply in their language
  */
 
-import { dynamicTransliterate, reverseTransliterate, isSameLanguage as dynamicIsSameLanguage, isLatinScriptLanguage as dynamicIsLatinScript } from './dynamic-transliterator';
+import { dynamicTransliterate, reverseTransliterate } from './dynamic-transliterator';
 import { spellCorrectForChat } from './phonetic-symspell';
-import { languages as allLanguages, type Language, getTotalLanguageCount } from '@/data/languages';
+import { languages as allLanguages, type Language } from '@/data/languages';
 
 // ============================================================
-// 386+ LANGUAGE DATABASE (Single Source of Truth: @/data/languages.ts)
-// English Pivot Translation: Source → English → Target
-// Supports: 386 × 385 = 148,610 translation pairs
+// 386+ LANGUAGE DATABASE (All from languages.ts)
 // ============================================================
 
 export interface LanguageInfo {
@@ -42,14 +40,8 @@ export interface LanguageInfo {
 
 // Convert Language from data/languages.ts to LanguageInfo format
 function convertToLanguageInfo(lang: Language): LanguageInfo {
-  // Normalize name for consistent lookup
-  const normalizedName = lang.name
-    .toLowerCase()
-    .replace(/[()]/g, '')
-    .trim();
-  
   return {
-    name: normalizedName,
+    name: lang.name.toLowerCase().replace(/[()]/g, '').trim(),
     code: lang.code,
     nllbCode: `${lang.code}_${lang.script?.substring(0, 4) || 'Latn'}`,
     native: lang.nativeName,
@@ -58,11 +50,8 @@ function convertToLanguageInfo(lang: Language): LanguageInfo {
   };
 }
 
-// All 386+ languages from the main languages database (single source of truth)
+// All 386+ languages from the main languages database
 export const LANGUAGES: LanguageInfo[] = allLanguages.map(convertToLanguageInfo);
-
-// Log language count on module load
-const TOTAL_LANGUAGES = getTotalLanguageCount();
 
 // ============================================================
 // LANGUAGE LOOKUP MAPS
@@ -800,101 +789,8 @@ export function isPairSupported(source: string, target: string): boolean {
 /**
  * Get total language count
  */
-export function getEmbeddedLanguageCount(): number {
+export function getTotalLanguageCount(): number {
   return LANGUAGES.length;
 }
 
-// Alias for backward compatibility - use central source from languages.ts
-export { getTotalLanguageCount } from '@/data/languages';
-
-// ============================================================
-// TRANSLATION SYSTEM TEST
-// ============================================================
-
-export interface TranslationTestResult {
-  source: string;
-  target: string;
-  originalText: string;
-  translatedText: string;
-  englishPivot?: string;
-  success: boolean;
-  isTransliterated: boolean;
-}
-
-/**
- * Test translation for multiple language pairs
- * Used to verify the English-pivot system works across all 386 languages
- */
-export async function testTranslationPairs(testText: string = 'hello'): Promise<{
-  totalLanguages: number;
-  testedPairs: TranslationTestResult[];
-  summary: string;
-}> {
-  const testCases: Array<{ source: string; target: string }> = [
-    // Latin → Non-Latin (Various scripts)
-    { source: 'english', target: 'hindi' },
-    { source: 'english', target: 'bengali' },
-    { source: 'english', target: 'tamil' },
-    { source: 'english', target: 'telugu' },
-    { source: 'english', target: 'kannada' },
-    { source: 'english', target: 'malayalam' },
-    { source: 'english', target: 'gujarati' },
-    { source: 'english', target: 'punjabi' },
-    { source: 'english', target: 'odia' },
-    { source: 'english', target: 'arabic' },
-    { source: 'english', target: 'russian' },
-    { source: 'english', target: 'thai' },
-    { source: 'english', target: 'japanese' },
-    { source: 'english', target: 'korean' },
-    { source: 'english', target: 'chinese (mandarin)' },
-    { source: 'english', target: 'greek' },
-    { source: 'english', target: 'hebrew' },
-    // Non-Latin → Non-Latin (Different scripts via English pivot)
-    { source: 'hindi', target: 'tamil' },
-    { source: 'bengali', target: 'telugu' },
-    { source: 'arabic', target: 'hindi' },
-    { source: 'russian', target: 'chinese (mandarin)' },
-    { source: 'japanese', target: 'korean' },
-    // Latin → Latin
-    { source: 'english', target: 'spanish' },
-    { source: 'french', target: 'german' },
-    { source: 'spanish', target: 'portuguese' },
-  ];
-
-  const results: TranslationTestResult[] = [];
-
-  for (const { source, target } of testCases) {
-    try {
-      const result = await translate(testText, source, target);
-      results.push({
-        source,
-        target,
-        originalText: testText,
-        translatedText: result.text,
-        englishPivot: result.englishPivot,
-        success: true,
-        isTransliterated: result.isTransliterated,
-      });
-    } catch (err) {
-      results.push({
-        source,
-        target,
-        originalText: testText,
-        translatedText: testText,
-        success: false,
-        isTransliterated: false,
-      });
-    }
-  }
-
-  const successCount = results.filter(r => r.success).length;
-
-  return {
-    totalLanguages: TOTAL_LANGUAGES,
-    testedPairs: results,
-    summary: `✅ Tested ${results.length} language pairs | ${successCount}/${results.length} successful | Total languages: ${TOTAL_LANGUAGES}`,
-  };
-}
-
-// Log module initialization
-console.log(`[EmbeddedTranslator] ✓ Loaded ${TOTAL_LANGUAGES} languages | English-pivot system | Pairs: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`);
+console.log(`[EmbeddedTranslator] Module loaded - ${LANGUAGES.length} languages, English pivot system, 100% embedded`);

@@ -82,9 +82,6 @@ export {
   clearTranslationCache,
   getCacheStats,
   
-  // Testing utility
-  testTranslationPairs,
-  
   // Constants
   LANGUAGES,
 } from './embedded-translator';

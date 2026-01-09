@@ -696,7 +696,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 My Language (for Chat Matching)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 386+ languages.
+                Select your primary language. You will be matched with users speaking the same language. Auto-translation is available for 200+ languages.
               </p>
               
               <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
@@ -721,7 +721,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 <PopoverContent className="w-full p-0 bg-popover z-50" align="start">
                   <Command className="bg-popover">
                     <CommandInput 
-                      placeholder="Search 386+ languages..." 
+                      placeholder="Search language..." 
                       value={languageSearch}
                       onValueChange={setLanguageSearch}
                     />
@@ -729,12 +729,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       <CommandEmpty>No language found.</CommandEmpty>
                       
                       {/* Indian Languages */}
-                      <CommandGroup heading={`🇮🇳 Indian Languages (${INDIAN_NLLB200_LANGUAGES.length})`}>
+                      <CommandGroup heading="🇮🇳 Indian Languages">
                         {INDIAN_NLLB200_LANGUAGES
-                          .filter(l => 
-                            l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
-                            (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
-                          )
+                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
                           .map((lang) => (
                             <CommandItem
                               key={lang.code}
@@ -750,24 +747,17 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               className="cursor-pointer"
                             >
                               <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
-                              <div className="flex-1 flex items-center gap-2">
-                                <span>{lang.name}</span>
-                                {lang.nativeName && lang.nativeName !== lang.name && (
-                                  <span className="text-xs text-muted-foreground">({lang.nativeName})</span>
-                                )}
-                              </div>
+                              <span className="flex-1">{lang.name}</span>
                               <span className="text-xs text-muted-foreground">{lang.script}</span>
                             </CommandItem>
                           ))}
                       </CommandGroup>
 
                       {/* International Languages */}
-                      <CommandGroup heading={`🌍 International Languages (${NON_INDIAN_NLLB200_LANGUAGES.length})`}>
+                      <CommandGroup heading="🌍 International Languages">
                         {NON_INDIAN_NLLB200_LANGUAGES
-                          .filter(l => 
-                            l.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
-                            (l.nativeName && l.nativeName.toLowerCase().includes(languageSearch.toLowerCase()))
-                          )
+                          .filter(l => l.name.toLowerCase().includes(languageSearch.toLowerCase()))
+                          .slice(0, 30)
                           .map((lang) => (
                             <CommandItem
                               key={lang.code}
@@ -783,12 +773,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                               className="cursor-pointer"
                             >
                               <Check className={cn("mr-2 h-4 w-4", userLanguage?.language_code === lang.code ? "opacity-100" : "opacity-0")} />
-                              <div className="flex-1 flex items-center gap-2">
-                                <span>{lang.name}</span>
-                                {lang.nativeName && lang.nativeName !== lang.name && (
-                                  <span className="text-xs text-muted-foreground">({lang.nativeName})</span>
-                                )}
-                              </div>
+                              <span className="flex-1">{lang.name}</span>
                               <span className="text-xs text-muted-foreground">{lang.script}</span>
                             </CommandItem>
                           ))}
