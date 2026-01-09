@@ -178,12 +178,23 @@ class SemanticTranslationEngine implements TranslationEngine {
       // Source → English: Extract semantic meaning
       result = await this.translateToEnglish(text, source);
     } else {
-      // Non-English pair: Full semantic pivot
-      // Step 1: Source → English (extract meaning)
+      // Non-English pair: Full semantic pivot through English
+      // This handles cases like Telugu → German, Hindi → French, etc.
+      
+      // Step 1: Source → English (extract meaning / transliterate non-Latin to readable form)
       const englishMeaning = await this.translateToEnglish(text, source);
       
-      // Step 2: English → Target (render meaning)
+      // Step 2: For cross-language translation between unrelated languages,
+      // we need to indicate the semantic content is in English form.
+      // The English pivot serves as the common semantic representation.
+      
+      // Step 3: English → Target (for Latin targets like German, French, Spanish,
+      // return the English semantic representation since we can't do actual
+      // language-to-language translation without ML models)
       result = await this.translateFromEnglish(englishMeaning, target);
+      
+      // Log for debugging cross-language translations
+      console.log(`[SemanticEngine] ${source.name} → ${target.name}: "${text.substring(0, 30)}..." → "${result.substring(0, 30)}..." (via English: "${englishMeaning.substring(0, 30)}...")`);
     }
 
     // Cache result
