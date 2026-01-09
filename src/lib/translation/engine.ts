@@ -245,11 +245,22 @@ class SemanticTranslationEngine implements TranslationEngine {
   private renderToNativeScript(text: string, target: Language): string {
     const semanticBase = this.getSemanticBase(target);
     
+    // Create inverted map (semantic -> native) and sort by length (longest first)
+    const invertedMap: Array<[string, string]> = [];
+    for (const [native, semantic] of semanticBase) {
+      invertedMap.push([semantic, native]);
+    }
+    
+    // Sort by semantic length (longest first) to avoid partial replacements
+    invertedMap.sort((a, b) => b[0].length - a[0].length);
+    
     let result = text.toLowerCase();
     
-    // Apply forward semantic mapping
-    for (const [native, semantic] of semanticBase) {
-      result = result.replace(new RegExp(semantic, 'gi'), native);
+    // Apply forward semantic mapping (semantic -> native)
+    for (const [semantic, native] of invertedMap) {
+      // Use word boundary or exact match to avoid partial replacements
+      const escapedSemantic = semantic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escapedSemantic, 'gi'), native);
     }
     
     return result;
@@ -297,17 +308,26 @@ class SemanticTranslationEngine implements TranslationEngine {
         break;
 
       case 'Telugu':
+        // Vowels
         base.set('అ', 'a'); base.set('ఆ', 'aa'); base.set('ఇ', 'i'); base.set('ఈ', 'ee');
         base.set('ఉ', 'u'); base.set('ఊ', 'oo'); base.set('ఎ', 'e'); base.set('ఏ', 'ae');
         base.set('ఐ', 'ai'); base.set('ఒ', 'o'); base.set('ఓ', 'o'); base.set('ఔ', 'au');
-        base.set('క', 'k'); base.set('ఖ', 'kh'); base.set('గ', 'g'); base.set('ఘ', 'gh');
-        base.set('చ', 'ch'); base.set('ఛ', 'chh'); base.set('జ', 'j'); base.set('ఝ', 'jh');
-        base.set('ట', 't'); base.set('ఠ', 'th'); base.set('డ', 'd'); base.set('ఢ', 'dh');
-        base.set('ణ', 'n'); base.set('త', 't'); base.set('థ', 'th'); base.set('ద', 'd');
-        base.set('ధ', 'dh'); base.set('న', 'n'); base.set('ప', 'p'); base.set('ఫ', 'ph');
-        base.set('బ', 'b'); base.set('భ', 'bh'); base.set('మ', 'm'); base.set('య', 'y');
-        base.set('ర', 'r'); base.set('ల', 'l'); base.set('వ', 'v'); base.set('శ', 'sh');
-        base.set('ష', 'sh'); base.set('స', 's'); base.set('హ', 'h');
+        // Consonants
+        base.set('క', 'ka'); base.set('ఖ', 'kha'); base.set('గ', 'ga'); base.set('ఘ', 'gha');
+        base.set('చ', 'cha'); base.set('ఛ', 'chha'); base.set('జ', 'ja'); base.set('ఝ', 'jha');
+        base.set('ట', 'ta'); base.set('ఠ', 'tha'); base.set('డ', 'da'); base.set('ఢ', 'dha');
+        base.set('ణ', 'na'); base.set('త', 'ta'); base.set('థ', 'tha'); base.set('ద', 'da');
+        base.set('ధ', 'dha'); base.set('న', 'na'); base.set('ప', 'pa'); base.set('ఫ', 'pha');
+        base.set('బ', 'ba'); base.set('భ', 'bha'); base.set('మ', 'ma'); base.set('య', 'ya');
+        base.set('ర', 'ra'); base.set('ల', 'la'); base.set('వ', 'va'); base.set('శ', 'sha');
+        base.set('ష', 'sha'); base.set('స', 'sa'); base.set('హ', 'ha');
+        base.set('ళ', 'la'); base.set('క్ష', 'ksha'); base.set('ఱ', 'rra');
+        // Vowel signs (matras)
+        base.set('ా', 'aa'); base.set('ి', 'i'); base.set('ీ', 'ee'); base.set('ు', 'u');
+        base.set('ూ', 'oo'); base.set('ె', 'e'); base.set('ే', 'ae'); base.set('ై', 'ai');
+        base.set('ొ', 'o'); base.set('ో', 'o'); base.set('ౌ', 'au'); base.set('్', '');
+        // Numerals and others
+        base.set('ం', 'n'); base.set('ః', 'h'); base.set('ఁ', 'n');
         break;
 
       case 'Tamil':
@@ -323,17 +343,27 @@ class SemanticTranslationEngine implements TranslationEngine {
         break;
 
       case 'Kannada':
+        // Vowels
         base.set('ಅ', 'a'); base.set('ಆ', 'aa'); base.set('ಇ', 'i'); base.set('ಈ', 'ee');
         base.set('ಉ', 'u'); base.set('ಊ', 'oo'); base.set('ಎ', 'e'); base.set('ಏ', 'ae');
         base.set('ಐ', 'ai'); base.set('ಒ', 'o'); base.set('ಓ', 'o'); base.set('ಔ', 'au');
-        base.set('ಕ', 'k'); base.set('ಖ', 'kh'); base.set('ಗ', 'g'); base.set('ಘ', 'gh');
-        base.set('ಚ', 'ch'); base.set('ಛ', 'chh'); base.set('ಜ', 'j'); base.set('ಝ', 'jh');
-        base.set('ಟ', 't'); base.set('ಠ', 'th'); base.set('ಡ', 'd'); base.set('ಢ', 'dh');
-        base.set('ಣ', 'n'); base.set('ತ', 't'); base.set('ಥ', 'th'); base.set('ದ', 'd');
-        base.set('ಧ', 'dh'); base.set('ನ', 'n'); base.set('ಪ', 'p'); base.set('ಫ', 'ph');
-        base.set('ಬ', 'b'); base.set('ಭ', 'bh'); base.set('ಮ', 'm'); base.set('ಯ', 'y');
-        base.set('ರ', 'r'); base.set('ಲ', 'l'); base.set('ವ', 'v'); base.set('ಶ', 'sh');
-        base.set('ಷ', 'sh'); base.set('ಸ', 's'); base.set('ಹ', 'h');
+        // Consonants with inherent 'a'
+        base.set('ಕ', 'ka'); base.set('ಖ', 'kha'); base.set('ಗ', 'ga'); base.set('ಘ', 'gha');
+        base.set('ಙ', 'nga'); base.set('ಚ', 'cha'); base.set('ಛ', 'chha'); base.set('ಜ', 'ja'); 
+        base.set('ಝ', 'jha'); base.set('ಞ', 'nya');
+        base.set('ಟ', 'ta'); base.set('ಠ', 'tha'); base.set('ಡ', 'da'); base.set('ಢ', 'dha');
+        base.set('ಣ', 'na'); base.set('ತ', 'ta'); base.set('ಥ', 'tha'); base.set('ದ', 'da');
+        base.set('ಧ', 'dha'); base.set('ನ', 'na'); base.set('ಪ', 'pa'); base.set('ಫ', 'pha');
+        base.set('ಬ', 'ba'); base.set('ಭ', 'bha'); base.set('ಮ', 'ma'); base.set('ಯ', 'ya');
+        base.set('ರ', 'ra'); base.set('ಲ', 'la'); base.set('ವ', 'va'); base.set('ಶ', 'sha');
+        base.set('ಷ', 'sha'); base.set('ಸ', 'sa'); base.set('ಹ', 'ha');
+        base.set('ಳ', 'la'); base.set('ಕ್ಷ', 'ksha'); base.set('ಜ್ಞ', 'gnya');
+        // Vowel signs (matras)
+        base.set('ಾ', 'aa'); base.set('ಿ', 'i'); base.set('ೀ', 'ee'); base.set('ು', 'u');
+        base.set('ೂ', 'oo'); base.set('ೆ', 'e'); base.set('ೇ', 'ae'); base.set('ೈ', 'ai');
+        base.set('ೊ', 'o'); base.set('ೋ', 'o'); base.set('ೌ', 'au'); base.set('್', '');
+        // Others
+        base.set('ಂ', 'n'); base.set('ಃ', 'h'); base.set('ಁ', 'n');
         break;
 
       case 'Malayalam':
