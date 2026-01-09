@@ -50,7 +50,7 @@ import {
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - Gboard native input + Edge Function translation');
+console.log('[DraggableMiniChatWindow] Module loaded - 386 language support via semantic translation + Edge Function');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
