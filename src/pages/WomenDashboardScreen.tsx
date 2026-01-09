@@ -31,7 +31,7 @@ import {
   Users2
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
-import ProfileEditDialog from "@/components/ProfileEditDialog";
+import WomenProfileEditDialog from "@/components/WomenProfileEditDialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
@@ -1221,7 +1221,7 @@ const WomenDashboardScreen = () => {
       </main>
 
       {/* Profile Edit Dialog */}
-      <ProfileEditDialog
+      <WomenProfileEditDialog
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
