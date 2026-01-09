@@ -145,20 +145,29 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           return;
         }
 
-        // Check for gender mismatch if expected gender was provided
-        if (expectedGender && verifyData.genderMatches === false) {
-          toast({
-            title: "Gender mismatch",
-            description: `This profile requires a ${expectedGender} selfie. Detected: ${verifyData.detectedGender}`,
-            variant: "destructive",
-          });
-          setVerificationStatus('failed');
-          setUploadingType(null);
-          return;
+        // Get detected gender - if it differs from expected, update it (same as registration)
+        const detected = verifyData.detectedGender;
+        let gender = expectedGender || 'unknown';
+        
+        if (detected === 'male' || detected === 'female') {
+          if (expectedGender && detected !== expectedGender) {
+            // Gender mismatch - update to detected gender (same behavior as registration)
+            gender = detected;
+            toast({
+              title: "Gender updated",
+              description: `Your profile gender has been set to ${detected} based on AI detection`,
+            });
+            
+            // Update gender in profiles table
+            await supabase
+              .from("profiles")
+              .update({ gender: detected })
+              .eq("user_id", userId);
+          } else {
+            gender = detected;
+          }
         }
-
-        // Use expected gender if provided and detection was uncertain
-        const gender = expectedGender || (verifyData.detectedGender?.toLowerCase() as 'male' | 'female') || 'unknown';
+        
         setDetectedGender(gender);
         setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
 
@@ -441,22 +450,33 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         return;
       }
 
-      // Check for gender mismatch if expected gender was provided
-      if (expectedGender && verifyData.genderMatches === false) {
-        toast({
-          title: "Gender mismatch",
-          description: `This profile requires a ${expectedGender} selfie. Detected: ${verifyData.detectedGender}`,
-          variant: "destructive",
-        });
-        setVerificationStatus('failed');
-        setUploadingType(null);
-        return;
+      // Get detected gender - if it differs from expected, update it (same as registration)
+      const detected = verifyData.detectedGender;
+      let finalGender = expectedGender || 'unknown';
+      
+      if (detected === 'male' || detected === 'female') {
+        if (expectedGender && detected !== expectedGender) {
+          // Gender mismatch - update to detected gender (same behavior as registration)
+          finalGender = detected;
+          toast({
+            title: "Gender updated",
+            description: `Your profile gender has been set to ${detected} based on AI detection`,
+          });
+          
+          // Update gender in profiles table
+          await supabase
+            .from("profiles")
+            .update({ gender: detected })
+            .eq("user_id", userId);
+        } else {
+          finalGender = detected;
+        }
       }
 
-      // Verification passed - now upload the photo
-      const gender = expectedGender || (verifyData.detectedGender?.toLowerCase() as 'male' | 'female') || 'unknown';
-      setDetectedGender(gender);
+      // Verification passed
+      setDetectedGender(finalGender);
       setVerificationStatus('verified');
+      onGenderVerified?.(finalGender);
 
       // Generate unique filename
       const fileExt = pendingSelfieFile.name.split(".").pop();
@@ -509,11 +529,11 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         .update({ photo_url: publicUrl, verification_status: true })
         .eq("user_id", userId);
 
-      onGenderVerified?.(gender);
+      onGenderVerified?.(finalGender);
 
       toast({
         title: "Selfie verified!",
-        description: `Gender verified as ${gender}`,
+        description: `Gender verified as ${finalGender}`,
       });
 
       // Clear preview and reload photos
