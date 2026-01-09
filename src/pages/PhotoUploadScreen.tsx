@@ -6,7 +6,7 @@ import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScreenTitle from "@/components/ScreenTitle";
 import { toast } from "@/hooks/use-toast";
-import { useGenderClassification } from "@/hooks/useGenderClassification";
+import { verifyPhoto } from "@/services/cleanup.service";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
@@ -21,9 +21,7 @@ const PhotoUploadScreen = () => {
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  // In-browser gender classification hook (Hugging Face)
-  const { isVerifying, isLoadingModel, modelLoadProgress, classifyGender } = useGenderClassification();
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Selfie state (first photo with AI verification)
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
@@ -175,13 +173,14 @@ const PhotoUploadScreen = () => {
     if (!selfiePreview) return;
 
     setVerificationState("verifying");
+    setIsVerifying(true);
 
     try {
       // Get the expected gender from registration data
       const expectedGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
       
-      // Use in-browser AI gender classification with Hugging Face
-      const result = await classifyGender(selfiePreview, expectedGender || undefined);
+      // Use edge function for photo verification
+      const result = await verifyPhoto(selfiePreview, expectedGender || undefined);
       
       setVerificationResult(result);
       
@@ -200,7 +199,9 @@ const PhotoUploadScreen = () => {
         setVerificationState("verified");
         toast({
           title: "Selfie verified! ✨",
-          description: `Gender verified as ${expectedGender || result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`,
+          description: result.confidence 
+            ? `Gender verified as ${expectedGender || result.detectedGender} (${Math.round(result.confidence * 100)}% confidence)`
+            : "Your photo has been verified",
         });
       } else {
         setVerificationState("failed");
@@ -219,6 +220,8 @@ const PhotoUploadScreen = () => {
         title: "Photo accepted",
         description: "Your photo has been saved",
       });
+    } finally {
+      setIsVerifying(false);
     }
   };
 

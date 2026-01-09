@@ -15,3 +15,4 @@ export * from './profile.service';
 export * from './wallet.service';
 export * from './chat.service';
 export * from './admin.service';
+export * from './cleanup.service';
