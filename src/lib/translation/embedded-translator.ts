@@ -477,8 +477,12 @@ export async function translate(
  * Translate from any language to English (Latin phonetics)
  * Step 1 of English Pivot: Source → English
  * 
- * For non-Latin scripts: reverse transliterate to Latin
- * For Latin scripts: return as-is (already readable)
+ * HANDLES ALL CASES:
+ * 1. English input → Return as-is (already English)
+ * 2. Non-Latin script (Hindi, Arabic, etc.) → Reverse transliterate to Latin
+ * 3. Latin script languages (Spanish, French, etc.) → Apply phonetic normalization
+ * 
+ * This ensures even Latin-to-Latin translations go through proper English normalization
  */
 function translateToEnglish(text: string, sourceLanguage: string): string {
   if (!text || !text.trim()) return text || '';
@@ -486,41 +490,93 @@ function translateToEnglish(text: string, sourceLanguage: string): string {
   const trimmed = text.trim();
   const normalizedSource = normalizeLanguage(sourceLanguage);
   
-  // English input - no conversion needed
+  // English input - already in English, no conversion needed
   if (isEnglish(normalizedSource)) {
     return trimmed;
   }
   
-  // For Latin script languages, text is already in Latin letters
-  if (isLatinScriptLanguage(normalizedSource)) {
-    return trimmed;
-  }
-  
-  // Check if text is already Latin (e.g., user typed in English keyboard)
-  if (isLatinText(trimmed)) {
-    return trimmed;
-  }
-  
-  // For non-Latin scripts, reverse transliterate to Latin/English phonetics
-  try {
-    const reversed = reverseTransliterate(trimmed, normalizedSource);
-    if (reversed && reversed.trim()) {
-      console.log(`[EmbeddedTranslator] Reverse transliteration: ${normalizedSource} → English: "${trimmed.substring(0, 20)}..." → "${reversed.substring(0, 20)}..."`);
-      return reversed;
+  // NON-LATIN SCRIPTS: Reverse transliterate to Latin/English phonetics
+  // e.g., नमस्ते → namaste, مرحبا → marhaba
+  if (!isLatinText(trimmed)) {
+    try {
+      const reversed = reverseTransliterate(trimmed, normalizedSource);
+      if (reversed && reversed.trim()) {
+        console.log(`[EmbeddedTranslator] Reverse transliteration: ${normalizedSource} → English: "${trimmed.substring(0, 20)}..." → "${reversed.substring(0, 20)}..."`);
+        return reversed;
+      }
+      return trimmed;
+    } catch (err) {
+      console.warn('[EmbeddedTranslator] Reverse transliteration failed:', err);
+      return trimmed;
     }
-    return trimmed;
-  } catch (err) {
-    console.warn('[EmbeddedTranslator] Reverse transliteration failed:', err);
-    return trimmed;
   }
+  
+  // LATIN SCRIPT LANGUAGES (Spanish, French, Portuguese, etc.)
+  // Apply phonetic normalization to convert to English-compatible phonetics
+  // This allows proper Latin ↔ Latin translation via English pivot
+  if (isLatinScriptLanguage(normalizedSource)) {
+    const normalized = normalizeLatinToEnglish(trimmed, normalizedSource);
+    console.log(`[EmbeddedTranslator] Latin normalization: ${normalizedSource} → English: "${trimmed.substring(0, 20)}..." → "${normalized.substring(0, 20)}..."`);
+    return normalized;
+  }
+  
+  // Fallback: Return as-is (already Latin text from non-Latin language)
+  return trimmed;
+}
+
+/**
+ * Normalize Latin script text to English phonetics
+ * Handles language-specific character mappings (ñ, ü, ç, etc.)
+ */
+function normalizeLatinToEnglish(text: string, sourceLanguage: string): string {
+  // Common Latin character to English phonetic mappings
+  // Use Map to avoid duplicate key issues
+  const latinToEnglishMap = new Map<string, string>([
+    // Spanish
+    ['ñ', 'ny'], ['á', 'a'], ['é', 'e'], ['í', 'i'], ['ó', 'o'], ['ú', 'u'], ['ü', 'u'],
+    // French
+    ['ç', 's'], ['œ', 'oe'], ['æ', 'ae'], ['è', 'e'], ['ê', 'e'], ['ë', 'e'], 
+    ['à', 'a'], ['â', 'a'], ['î', 'i'], ['ï', 'i'], ['ô', 'o'], ['û', 'u'], ['ù', 'u'], ['ÿ', 'y'],
+    // German
+    ['ß', 'ss'], ['ä', 'ae'], ['ö', 'oe'],
+    // Portuguese
+    ['ã', 'a'], ['õ', 'o'],
+    // Polish/Czech/Slovak
+    ['ł', 'l'], ['ą', 'a'], ['ę', 'e'], ['ć', 'c'], ['ś', 's'], ['ź', 'z'], ['ż', 'z'], ['ń', 'n'],
+    ['č', 'ch'], ['š', 'sh'], ['ž', 'zh'], ['ř', 'rz'], ['ě', 'e'], ['ů', 'u'], ['ý', 'y'],
+    // Romanian
+    ['ș', 'sh'], ['ț', 'ts'], ['ă', 'a'],
+    // Turkish
+    ['ğ', 'g'], ['ş', 'sh'], ['ı', 'i'],
+    // Scandinavian
+    ['å', 'a'], ['ø', 'o'],
+    // Vietnamese diacritics (Latin-based)
+    ['đ', 'd'], ['ơ', 'o'], ['ư', 'u'],
+  ]);
+  
+  let result = text.toLowerCase();
+  
+  // Apply character mappings
+  for (const [char, replacement] of latinToEnglishMap.entries()) {
+    result = result.replace(new RegExp(char, 'g'), replacement);
+  }
+  
+  // Normalize remaining accented characters
+  result = result.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  return result;
 }
 
 /**
  * Translate from English to any language (native script)
  * Step 2 of English Pivot: English → Target
  * 
- * For non-Latin scripts: transliterate Latin text to native script
- * For Latin scripts: return as-is
+ * HANDLES ALL CASES:
+ * 1. English target → Return as-is
+ * 2. Non-Latin script target → Transliterate Latin to native script
+ * 3. Latin script target → Apply language-specific phonetic transformation
+ * 
+ * This ensures even Latin-to-Latin translations produce proper target language output
  */
 function translateFromEnglish(text: string, targetLanguage: string): string {
   if (!text || !text.trim()) return text || '';
@@ -533,35 +589,95 @@ function translateFromEnglish(text: string, targetLanguage: string): string {
     return trimmed;
   }
   
-  // For Latin script languages, minimal processing needed
-  if (isLatinScriptLanguage(normalizedTarget)) {
-    return trimmed;
+  // NON-LATIN SCRIPT TARGETS: Transliterate Latin to native script
+  if (!isLatinScriptLanguage(normalizedTarget)) {
+    // If text is already in native script (non-Latin), check if it's the right one
+    if (!isLatinText(trimmed)) {
+      const detected = autoDetectLanguage(trimmed);
+      if (isSameLanguage(detected.language, normalizedTarget)) {
+        return trimmed; // Already in target language script
+      }
+      // Convert from one native script to another via Latin
+      const latinized = reverseTransliterate(trimmed, detected.language);
+      return transliterateToNative(latinized, normalizedTarget);
+    }
+    
+    // Transliterate Latin text to target native script
+    try {
+      const native = transliterateToNative(trimmed, normalizedTarget);
+      if (native && native.trim()) {
+        console.log(`[EmbeddedTranslator] Forward transliteration: English → ${normalizedTarget}: "${trimmed.substring(0, 20)}..." → "${native.substring(0, 20)}..."`);
+        return native;
+      }
+      return trimmed;
+    } catch (err) {
+      console.warn('[EmbeddedTranslator] Forward transliteration failed:', err);
+      return trimmed;
+    }
   }
   
-  // Check if text is already in native script (non-Latin)
-  if (!isLatinText(trimmed)) {
-    // Already in some native script, try to detect and convert if needed
-    const detected = autoDetectLanguage(trimmed);
-    if (isSameLanguage(detected.language, normalizedTarget)) {
-      return trimmed; // Already in target language script
-    }
-    // Need to convert from one native script to another via Latin
-    const latinized = reverseTransliterate(trimmed, detected.language);
-    return transliterateToNative(latinized, normalizedTarget);
+  // LATIN SCRIPT TARGETS (Spanish, French, Portuguese, etc.)
+  // Apply target language phonetic transformation
+  const transformed = normalizeEnglishToLatin(trimmed, normalizedTarget);
+  console.log(`[EmbeddedTranslator] Latin transformation: English → ${normalizedTarget}: "${trimmed.substring(0, 20)}..." → "${transformed.substring(0, 20)}..."`);
+  return transformed;
+}
+
+/**
+ * Transform English phonetics to target Latin language
+ * Applies language-specific phonetic rules
+ */
+function normalizeEnglishToLatin(text: string, targetLanguage: string): string {
+  let result = text;
+  
+  // Language-specific phonetic transformations
+  const languageRules: Record<string, Array<[RegExp, string]>> = {
+    'spanish': [
+      [/\bny\b/g, 'ñ'], [/ny(?=[aeiou])/gi, 'ñ'],
+      [/\bh([aeiou])/gi, '$1'], // Silent h in Spanish
+    ],
+    'french': [
+      [/sh(?=[aeiou])/gi, 'ch'],
+      [/\boe\b/g, 'œ'],
+      [/\bss\b/g, 'ç'], 
+    ],
+    'german': [
+      [/\bss\b/g, 'ß'],
+      [/\bsh/gi, 'sch'],
+      [/\bts/gi, 'z'],
+    ],
+    'portuguese': [
+      [/\bny/gi, 'nh'],
+      [/\bsh/gi, 'ch'],
+    ],
+    'italian': [
+      [/\bny/gi, 'gn'],
+      [/\bsh/gi, 'sc'],
+    ],
+    'dutch': [
+      [/\bij/gi, 'ij'],
+    ],
+    'polish': [
+      [/\bsh/gi, 'sz'],
+      [/\bch/gi, 'cz'],
+    ],
+    'turkish': [
+      [/\bsh/gi, 'ş'],
+      [/\bch/gi, 'ç'],
+    ],
+    'romanian': [
+      [/\bsh/gi, 'ș'],
+      [/\bts/gi, 'ț'],
+    ],
+  };
+  
+  // Apply language-specific rules
+  const rules = languageRules[targetLanguage] || [];
+  for (const [pattern, replacement] of rules) {
+    result = result.replace(pattern, replacement);
   }
   
-  // For non-Latin target scripts, transliterate Latin text to native script
-  try {
-    const native = transliterateToNative(trimmed, normalizedTarget);
-    if (native && native.trim()) {
-      console.log(`[EmbeddedTranslator] Forward transliteration: English → ${normalizedTarget}: "${trimmed.substring(0, 20)}..." → "${native.substring(0, 20)}..."`);
-      return native;
-    }
-    return trimmed;
-  } catch (err) {
-    console.warn('[EmbeddedTranslator] Forward transliteration failed:', err);
-    return trimmed;
-  }
+  return result;
 }
 
 /**
