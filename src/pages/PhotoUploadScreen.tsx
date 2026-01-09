@@ -6,7 +6,7 @@ import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScreenTitle from "@/components/ScreenTitle";
 import { toast } from "@/hooks/use-toast";
-import { verifyPhoto } from "@/services/cleanup.service";
+import { useFaceVerification } from "@/hooks/useFaceVerification";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
@@ -22,6 +22,9 @@ const PhotoUploadScreen = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  
+  // Face verification hook for client-side gender detection
+  const { verifyFace, isLoadingModel, modelLoadProgress } = useFaceVerification();
   
   // Selfie state (first photo with AI verification)
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
@@ -181,12 +184,12 @@ const PhotoUploadScreen = () => {
       const expectedGender = storedGender === "male" || storedGender === "female" ? storedGender : null;
       if (storedGender && !expectedGender) localStorage.removeItem("userGender");
       
-      // Use edge function for photo verification
-      const result = await verifyPhoto(selfiePreview, expectedGender || undefined);
+      // Use client-side face-api.js for photo verification
+      const result = await verifyFace(selfiePreview, expectedGender || undefined);
       
       setVerificationResult(result);
 
-      if (result.verified) {
+      if (result.verified && result.hasFace) {
         // If a concrete gender was detected and differs from expected, update the stored gender
         const detected = result.detectedGender;
         if ((detected === "male" || detected === "female") && expectedGender !== detected) {
