@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import ProfileEditDialog from "@/components/ProfileEditDialog";
+import MenProfileEditDialog from "@/components/MenProfileEditDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -1624,7 +1624,7 @@ const DashboardScreen = () => {
       </Dialog>
 
       {/* Profile Edit Dialog */}
-      <ProfileEditDialog
+      <MenProfileEditDialog
         open={profileEditOpen}
         onOpenChange={setProfileEditOpen}
         onProfileUpdated={() => loadDashboardData()}
