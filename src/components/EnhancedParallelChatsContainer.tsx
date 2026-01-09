@@ -321,12 +321,25 @@ const EnhancedParallelChatsContainer = ({
   // Limit displayed chats to max setting
   const displayedChats = activeChats.slice(0, maxParallelChats);
 
-  // Filter incoming chats - exclude those for existing partners
-  const pendingIncomingChats = incomingChats.filter(
-    ic => !acceptedSessionsRef.current.has(ic.sessionId) &&
-          !activeChats.some(ac => ac.id === ic.sessionId) &&
-          !existingPartnersRef.current.has(ic.partnerId) // Don't show popup if already chatting
-  );
+  // Filter incoming chats - show popup for all pending chats from useIncomingChats
+  // Only filter out those that are already shown as active windows
+  const pendingIncomingChats = useMemo(() => {
+    const filtered = incomingChats.filter(ic => {
+      // Don't show if already accepted (will be in active chats)
+      if (acceptedSessionsRef.current.has(ic.sessionId)) return false;
+      // Don't show if already displaying as active chat window
+      if (activeChats.some(ac => ac.id === ic.sessionId)) return false;
+      return true;
+    });
+    
+    console.log(`[EnhancedParallelChats] 📨 Incoming chats from hook: ${incomingChats.length}`);
+    console.log(`[EnhancedParallelChats] ✅ Pending popups after filter: ${filtered.length}`);
+    filtered.forEach(ic => {
+      console.log(`[EnhancedParallelChats] 📩 Popup for: ${ic.partnerName} (session: ${ic.sessionId.slice(0,8)}...)`);
+    });
+    
+    return filtered;
+  }, [incomingChats, activeChats]);
 
   // Debug logging
   console.log(`[EnhancedParallelChats] User: ${userGender}, Active: ${activeChats.length}, Incoming: ${incomingChats.length}, Pending Popups: ${pendingIncomingChats.length}`);
@@ -366,8 +379,8 @@ const EnhancedParallelChatsContainer = ({
       </div>
 
       {/* Incoming chat popups - ONLY for women (accept/reject) */}
-      {userGender === "female" && (
-        <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
+      {userGender === "female" && pendingIncomingChats.length > 0 && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] flex flex-col gap-3">
           {pendingIncomingChats.map((incoming) => (
             <IncomingChatPopup
               key={incoming.sessionId}
