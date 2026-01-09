@@ -548,9 +548,89 @@ function getLanguageInfo(language: string): LanguageInfo | undefined {
   return languageByName.get(normalized) || languageByCode.get(normalized);
 }
 
+// Map of language codes not supported by Google/MyMemory to their closest supported equivalent
+const UNSUPPORTED_TO_SUPPORTED_FALLBACK: Record<string, string> = {
+  // Indian regional/tribal languages without direct Google support
+  'tcy': 'kn',    // Tulu → Kannada
+  'kfa': 'kn',    // Kodava → Kannada
+  'bfq': 'kn',    // Badaga → Kannada
+  'tcx': 'ta',    // Toda → Tamil
+  'iru': 'ta',    // Irula → Tamil
+  'kfh': 'ml',    // Kuruma → Malayalam
+  'bho': 'hi',    // Bhojpuri → Hindi
+  'hne': 'hi',    // Chhattisgarhi → Hindi
+  'raj': 'hi',    // Rajasthani → Hindi
+  'mwr': 'hi',    // Marwari → Hindi
+  'mtr': 'hi',    // Mewari → Hindi
+  'bgc': 'hi',    // Haryanvi → Hindi
+  'mag': 'hi',    // Magahi → Hindi
+  'anp': 'hi',    // Angika → Hindi
+  'bjj': 'hi',    // Bajjika/Kanauji → Hindi
+  'awa': 'hi',    // Awadhi → Hindi
+  'bns': 'hi',    // Bundeli/Banjara → Hindi
+  'bfy': 'hi',    // Bagheli → Hindi
+  'gbm': 'hi',    // Garhwali → Hindi
+  'kfy': 'hi',    // Kumaoni → Hindi
+  'him': 'hi',    // Pahari → Hindi
+  'bhb': 'hi',    // Bhili → Hindi
+  'bhi': 'hi',    // Bhilodi → Hindi
+  'gon': 'hi',    // Gondi → Hindi
+  'lmn': 'hi',    // Lambadi → Hindi
+  'sck': 'hi',    // Nagpuri/Sadri → Hindi
+  'kru': 'hi',    // Kurukh/Oraon → Hindi
+  'unr': 'hi',    // Mundari → Hindi
+  'hoc': 'hi',    // Ho → Hindi
+  'khr': 'hi',    // Kharia → Hindi
+  'vav': 'mr',    // Warli/Varli → Marathi
+  'kok': 'mr',    // Konkani → Marathi (closest major)
+  'wbq': 'te',    // Waddar → Telugu
+  'kff': 'te',    // Koya → Telugu
+  'kdu': 'te',    // Kadaru → Telugu
+  'yed': 'te',    // Yerukala → Telugu
+  'brx': 'hi',    // Bodo → Hindi
+  'sat': 'hi',    // Santali → Hindi
+  'lus': 'en',    // Mizo → English (no close major)
+  'kha': 'en',    // Khasi → English
+  'grt': 'bn',    // Garo → Bengali
+  'mjw': 'as',    // Karbi → Assamese
+  'trp': 'bn',    // Kokborok → Bengali
+  'rah': 'as',    // Rabha → Assamese
+  'mrg': 'as',    // Mishing → Assamese
+  'njz': 'as',    // Nyishi → Assamese
+  'apt': 'as',    // Apatani → Assamese
+  'adi': 'as',    // Adi → Assamese
+  'lep': 'ne',    // Lepcha → Nepali
+  'sip': 'ne',    // Bhutia/Sikkimese → Nepali
+  'lif': 'ne',    // Limbu → Nepali
+  'njo': 'as',    // Ao → Assamese
+  'njh': 'as',    // Lotha → Assamese
+  'nsm': 'as',    // Sema/Sumi → Assamese
+  'njm': 'as',    // Angami → Assamese
+  'nmf': 'bn',    // Tangkhul → Bengali
+  'pck': 'bn',    // Paite → Bengali
+  'tcz': 'bn',    // Thadou → Bengali
+  'nbu': 'bn',    // Rongmei → Bengali
+  'nst': 'as',    // Tangsa → Assamese
+  'nnp': 'as',    // Wancho → Assamese
+  'njb': 'as',    // Nocte → Assamese
+  'mni': 'bn',    // Manipuri/Meitei → Bengali
+  'meit': 'bn',   // Meitei → Bengali
+  'doi': 'hi',    // Dogri → Hindi
+  'mai': 'hi',    // Maithili → Hindi (has direct support in some cases)
+};
+
 function getLibreCode(language: string): string {
   const info = getLanguageInfo(language);
-  return info?.code || 'en';
+  const originalCode = info?.code || 'en';
+  
+  // Check if this code needs to be mapped to a supported one
+  const mappedCode = UNSUPPORTED_TO_SUPPORTED_FALLBACK[originalCode];
+  if (mappedCode) {
+    console.log(`[dl-translate] Mapping unsupported code ${originalCode} -> ${mappedCode}`);
+    return mappedCode;
+  }
+  
+  return originalCode;
 }
 
 function getNllbCode(language: string): string {
