@@ -118,32 +118,23 @@ export async function semanticTranslate(
   let englishPivot: string | undefined;
 
   try {
-    if (sourceIsEnglish || targetIsEnglish) {
-      // Direct translation (one is English)
-      const translator = engine.getTranslator(srcLang.code, tgtLang.code);
+    if (sourceIsEnglish) {
+      // English → Any: direct translation
+      const translator = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
       if (!translator) {
-        throw new Error('No direct translator available');
+        throw new Error('No translator from English available');
       }
       result = await translator.translateMeaning(trimmedText);
-    } else if (srcLang.script === 'Latin' && tgtLang.script === 'Latin') {
-      // Latin → Latin: try direct first
-      const directTranslator = engine.getTranslator(srcLang.code, tgtLang.code);
-      if (directTranslator) {
-        result = await directTranslator.translateMeaning(trimmedText);
-      } else {
-        // Fall back to English pivot
-        const toEnglish = engine.getTranslator(srcLang.code, ENGLISH_CODE);
-        const fromEnglish = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
-        
-        if (!toEnglish || !fromEnglish) {
-          throw new Error('English pivot not available');
-        }
-        
-        englishPivot = await toEnglish.translateMeaning(trimmedText);
-        result = await fromEnglish.translateMeaning(englishPivot);
+    } else if (targetIsEnglish) {
+      // Any → English: direct translation
+      const translator = engine.getTranslator(srcLang.code, ENGLISH_CODE);
+      if (!translator) {
+        throw new Error('No translator to English available');
       }
+      result = await translator.translateMeaning(trimmedText);
     } else {
-      // Universal English pivot for all other cases
+      // Non-English → Non-English: ALWAYS use English as semantic pivot
+      // This applies to ALL language pairs including Latin → Latin
       const toEnglish = engine.getTranslator(srcLang.code, ENGLISH_CODE);
       const fromEnglish = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
       
@@ -151,7 +142,10 @@ export async function semanticTranslate(
         throw new Error('English pivot not available');
       }
       
+      // Step 1: Source → English (extract meaning)
       englishPivot = await toEnglish.translateMeaning(trimmedText);
+      
+      // Step 2: English → Target (render meaning)
       result = await fromEnglish.translateMeaning(englishPivot);
     }
 
