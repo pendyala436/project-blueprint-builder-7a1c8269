@@ -82,8 +82,11 @@ export {
   clearTranslationCache,
   getCacheStats,
   
-  // Testing utility
+  // Testing utilities
   testTranslationPairs,
+  testEnglishPivot,
+  getEmbeddedLanguageCount,
+  getTotalTranslationPairs,
   
   // Constants
   LANGUAGES,

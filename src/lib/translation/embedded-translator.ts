@@ -318,8 +318,18 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
 
 /**
  * Core translation function using English pivot
- * Flow: Source → English → Target
- * If source OR target is English, direct translation (no pivot)
+ * ============================================
+ * ENGLISH PIVOT SYSTEM for 386 × 385 = 148,610 language pairs
+ * 
+ * Flow options:
+ * 1. Source(English) → Target: Direct (translateFromEnglish)
+ * 2. Source → Target(English): Direct (translateToEnglish)
+ * 3. Source → English → Target: Full pivot (both functions)
+ * 
+ * @param text - Text to translate
+ * @param sourceLanguage - Source language (any of 386 languages)
+ * @param targetLanguage - Target language (any of 386 languages)
+ * @returns Translation result with English pivot info
  */
 export async function translate(
   text: string,
@@ -328,6 +338,7 @@ export async function translate(
 ): Promise<EmbeddedTranslationResult> {
   const trimmed = text.trim();
 
+  // Empty input check
   if (!trimmed) {
     return {
       text: '',
@@ -365,10 +376,14 @@ export async function translate(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // Apply spell correction
+  // Apply spell correction for source language
   const correctedText = spellCorrectForChat(trimmed, normSource);
+  
+  // Auto-detect language from script if text is non-Latin
   const detected = autoDetectLanguage(correctedText);
-  const actualSource = detected.isLatin ? normSource : detected.language;
+  const actualSource = !detected.isLatin && detected.language !== 'english' 
+    ? detected.language 
+    : normSource;
 
   let translatedText = correctedText;
   let englishPivot: string | undefined;
@@ -379,25 +394,36 @@ export async function translate(
   const sourceIsEnglish = isEnglish(actualSource);
   const targetIsEnglish = isEnglish(normTarget);
 
+  console.log(`[EmbeddedTranslator] Translation: ${actualSource} → ${normTarget} | English pivot: ${!sourceIsEnglish && !targetIsEnglish ? 'YES' : 'NO'}`);
+
   if (sourceIsEnglish && targetIsEnglish) {
     // English to English - no translation needed
     translatedText = correctedText;
+    console.log('[EmbeddedTranslator] Same language (English) - no translation');
   } else if (sourceIsEnglish) {
     // English → Target (direct, no pivot needed)
     translatedText = translateFromEnglish(correctedText, normTarget);
-    wasTranslated = true;
+    wasTranslated = translatedText !== correctedText;
+    console.log(`[EmbeddedTranslator] Direct: English → ${normTarget}`);
   } else if (targetIsEnglish) {
     // Source → English (direct, no pivot needed)
     translatedText = translateToEnglish(correctedText, actualSource);
-    wasTranslated = true;
+    wasTranslated = translatedText !== correctedText;
+    console.log(`[EmbeddedTranslator] Direct: ${actualSource} → English`);
   } else {
-    // Source → English → Target (full pivot)
+    // Source → English → Target (FULL ENGLISH PIVOT)
+    // Step 1: Source language (native script) → English (Latin phonetics)
     englishPivot = translateToEnglish(correctedText, actualSource);
+    console.log(`[EmbeddedTranslator] Pivot Step 1: ${actualSource} → English: "${englishPivot.substring(0, 30)}..."`);
+    
+    // Step 2: English (Latin phonetics) → Target language (native script)
     translatedText = translateFromEnglish(englishPivot, normTarget);
+    console.log(`[EmbeddedTranslator] Pivot Step 2: English → ${normTarget}: "${translatedText.substring(0, 30)}..."`);
+    
     wasTranslated = true;
   }
 
-  // Convert to target native script if needed
+  // Ensure target script conversion if needed
   if (needsScriptConversion(normTarget) && isLatinText(translatedText)) {
     const nativeResult = transliterateToNative(translatedText, normTarget);
     if (nativeResult !== translatedText) {
@@ -422,6 +448,9 @@ export async function translate(
   };
 
   setInCache(cacheKey, result);
+  
+  console.log(`[EmbeddedTranslator] Result: "${trimmed.substring(0, 20)}..." → "${translatedText.substring(0, 20)}..." (translated: ${wasTranslated}, pivot: ${!!englishPivot})`);
+  
   return result;
 }
 
@@ -434,43 +463,105 @@ export async function translate(
 
 
 /**
- * Translate from any language to English
- * For non-Latin scripts: reverse transliterate to Latin/English
+ * ENGLISH PIVOT TRANSLATION SYSTEM
+ * ================================
+ * All 386 languages translate through English as middleware:
+ * - Source (any) → English (Latin phonetics)
+ * - English → Target (native script of target language)
+ * 
+ * This creates 386 × 385 = 148,610 possible translation pairs
+ * without needing direct translation between each pair.
+ */
+
+/**
+ * Translate from any language to English (Latin phonetics)
+ * Step 1 of English Pivot: Source → English
+ * 
+ * For non-Latin scripts: reverse transliterate to Latin
  * For Latin scripts: return as-is (already readable)
  */
 function translateToEnglish(text: string, sourceLanguage: string): string {
-  if (!text.trim()) return text;
+  if (!text || !text.trim()) return text || '';
   
-  // For Latin script languages, text is already readable as English phonetics
-  if (isLatinScriptLanguage(sourceLanguage)) {
-    return text;
+  const trimmed = text.trim();
+  const normalizedSource = normalizeLanguage(sourceLanguage);
+  
+  // English input - no conversion needed
+  if (isEnglish(normalizedSource)) {
+    return trimmed;
   }
   
-  // For non-Latin scripts, reverse transliterate to Latin/English
+  // For Latin script languages, text is already in Latin letters
+  if (isLatinScriptLanguage(normalizedSource)) {
+    return trimmed;
+  }
+  
+  // Check if text is already Latin (e.g., user typed in English keyboard)
+  if (isLatinText(trimmed)) {
+    return trimmed;
+  }
+  
+  // For non-Latin scripts, reverse transliterate to Latin/English phonetics
   try {
-    const reversed = reverseTransliterate(text, sourceLanguage);
-    return reversed || text;
+    const reversed = reverseTransliterate(trimmed, normalizedSource);
+    if (reversed && reversed.trim()) {
+      console.log(`[EmbeddedTranslator] Reverse transliteration: ${normalizedSource} → English: "${trimmed.substring(0, 20)}..." → "${reversed.substring(0, 20)}..."`);
+      return reversed;
+    }
+    return trimmed;
   } catch (err) {
     console.warn('[EmbeddedTranslator] Reverse transliteration failed:', err);
-    return text;
+    return trimmed;
   }
 }
 
 /**
- * Translate from English to any language
- * For non-Latin scripts: transliterate to native script
+ * Translate from English to any language (native script)
+ * Step 2 of English Pivot: English → Target
+ * 
+ * For non-Latin scripts: transliterate Latin text to native script
  * For Latin scripts: return as-is
  */
 function translateFromEnglish(text: string, targetLanguage: string): string {
-  if (!text.trim()) return text;
+  if (!text || !text.trim()) return text || '';
   
-  // For Latin script languages, minimal processing needed
-  if (isLatinScriptLanguage(targetLanguage)) {
-    return text;
+  const trimmed = text.trim();
+  const normalizedTarget = normalizeLanguage(targetLanguage);
+  
+  // English output - no conversion needed
+  if (isEnglish(normalizedTarget)) {
+    return trimmed;
   }
   
-  // For non-Latin scripts, transliterate to native script
-  return transliterateToNative(text, targetLanguage);
+  // For Latin script languages, minimal processing needed
+  if (isLatinScriptLanguage(normalizedTarget)) {
+    return trimmed;
+  }
+  
+  // Check if text is already in native script (non-Latin)
+  if (!isLatinText(trimmed)) {
+    // Already in some native script, try to detect and convert if needed
+    const detected = autoDetectLanguage(trimmed);
+    if (isSameLanguage(detected.language, normalizedTarget)) {
+      return trimmed; // Already in target language script
+    }
+    // Need to convert from one native script to another via Latin
+    const latinized = reverseTransliterate(trimmed, detected.language);
+    return transliterateToNative(latinized, normalizedTarget);
+  }
+  
+  // For non-Latin target scripts, transliterate Latin text to native script
+  try {
+    const native = transliterateToNative(trimmed, normalizedTarget);
+    if (native && native.trim()) {
+      console.log(`[EmbeddedTranslator] Forward transliteration: English → ${normalizedTarget}: "${trimmed.substring(0, 20)}..." → "${native.substring(0, 20)}..."`);
+      return native;
+    }
+    return trimmed;
+  } catch (err) {
+    console.warn('[EmbeddedTranslator] Forward transliteration failed:', err);
+    return trimmed;
+  }
 }
 
 /**
@@ -798,13 +889,20 @@ export function isPairSupported(source: string, target: string): boolean {
 }
 
 /**
- * Get total language count
+ * Get total language count (from central source)
  */
 export function getEmbeddedLanguageCount(): number {
   return LANGUAGES.length;
 }
 
-// Alias for backward compatibility - use central source from languages.ts
+/**
+ * Get total number of translation pairs possible
+ */
+export function getTotalTranslationPairs(): number {
+  return LANGUAGES.length * (LANGUAGES.length - 1);
+}
+
+// Re-export for backward compatibility
 export { getTotalLanguageCount } from '@/data/languages';
 
 // ============================================================
@@ -892,9 +990,65 @@ export async function testTranslationPairs(testText: string = 'hello'): Promise<
   return {
     totalLanguages: TOTAL_LANGUAGES,
     testedPairs: results,
-    summary: `✅ Tested ${results.length} language pairs | ${successCount}/${results.length} successful | Total languages: ${TOTAL_LANGUAGES}`,
+    summary: `✅ Tested ${results.length} language pairs | ${successCount}/${results.length} successful | Total languages: ${TOTAL_LANGUAGES} | Pairs possible: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`,
   };
 }
 
-// Log module initialization
-console.log(`[EmbeddedTranslator] ✓ Loaded ${TOTAL_LANGUAGES} languages | English-pivot system | Pairs: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`);
+/**
+ * Test the English pivot system with a specific source and target
+ */
+export async function testEnglishPivot(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{
+  originalText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  englishPivot: string | undefined;
+  translatedText: string;
+  success: boolean;
+  steps: string[];
+}> {
+  const steps: string[] = [];
+  
+  try {
+    steps.push(`1. Input: "${text}" in ${sourceLanguage}`);
+    
+    const result = await translate(text, sourceLanguage, targetLanguage);
+    
+    if (result.englishPivot) {
+      steps.push(`2. English Pivot: "${result.englishPivot}"`);
+    } else {
+      steps.push(`2. No pivot needed (direct translation)`);
+    }
+    
+    steps.push(`3. Output: "${result.text}" in ${targetLanguage}`);
+    steps.push(`4. Translated: ${result.isTranslated}, Transliterated: ${result.isTransliterated}`);
+    
+    return {
+      originalText: text,
+      sourceLanguage,
+      targetLanguage,
+      englishPivot: result.englishPivot,
+      translatedText: result.text,
+      success: true,
+      steps,
+    };
+  } catch (err) {
+    steps.push(`ERROR: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    return {
+      originalText: text,
+      sourceLanguage,
+      targetLanguage,
+      englishPivot: undefined,
+      translatedText: text,
+      success: false,
+      steps,
+    };
+  }
+}
+
+// Log module initialization with detailed info
+console.log(`[EmbeddedTranslator] ✓ Initialized | Languages: ${TOTAL_LANGUAGES} | English Pivot System | Possible pairs: ${TOTAL_LANGUAGES * (TOTAL_LANGUAGES - 1)}`);
+console.log(`[EmbeddedTranslator] ✓ Translation flow: Source → English (Latin) → Target (Native Script)`);
