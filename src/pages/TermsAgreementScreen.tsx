@@ -638,9 +638,9 @@ const TermsAgreementScreen = () => {
 
       if (profileError) throw profileError;
 
-      // NOTE: All user data is now stored in the single 'profiles' table
-      // Gender-specific tables (male_profiles/female_profiles) are no longer used
-      // This simplifies the data model and ensures consistency
+      // NOTE: Profile data is synced to gender-specific tables (male_profiles/female_profiles)
+      // via database trigger. Languages support all 386+ languages from languages.ts
+      // The trigger automatically syncs primary_language and preferred_language fields
 
       // Save selfie as primary photo in user_photos
       if (photoUrl) {
