@@ -34,7 +34,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGenderVerified }: ProfilePhotosSectionProps) => {
   const { toast } = useToast();
-  const { verifyFace, isVerifying: isFaceVerifying } = useFaceVerification();
+  const { verifyFace, isVerifying: isFaceVerifying, isLoadingModel, modelLoadProgress } = useFaceVerification();
   const [photos, setPhotos] = useState<UserPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadingType, setUploadingType] = useState<'selfie' | 'additional' | null>(null);
@@ -51,7 +51,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
   const streamRef = useRef<MediaStream | null>(null);
   
   // Combined verifying state
-  const isVerifying = isFaceVerifying;
+  const isVerifying = isFaceVerifying || uploadingType === 'selfie';
 
   // Load existing photos and check verification status
   useEffect(() => {
@@ -818,9 +818,14 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
                   size="sm"
                   className="gap-2"
                   onClick={verifySelfie}
-                  disabled={uploadingType !== null || isVerifying}
+                  disabled={uploadingType !== null || isVerifying || isLoadingModel}
                 >
-                  {uploadingType === 'selfie' || isVerifying ? (
+                  {isLoadingModel ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading AI ({modelLoadProgress}%)
+                    </>
+                  ) : uploadingType === 'selfie' || isVerifying ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Verifying
