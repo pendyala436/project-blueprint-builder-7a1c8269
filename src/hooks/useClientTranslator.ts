@@ -1,22 +1,19 @@
 /**
- * Client-side NLLB-200 Translator using @huggingface/transformers
+ * Client-side Translator using embedded translation
  * 
- * Runs translation entirely in the browser using WebGPU/WASM
- * Supports 200+ languages with auto-detection and transliteration
+ * Uses the embedded translator from @/lib/translation
+ * Supports 386+ languages with transliteration
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { pipeline, env } from '@huggingface/transformers';
-import { detectLanguage, isLatinScript, isSameLanguage } from '@/lib/translation/language-detector';
-import { getNLLBCode, LANGUAGE_TO_NLLB } from '@/lib/translation/language-codes';
-import { ALL_NLLB200_LANGUAGES } from '@/data/nllb200Languages';
-
-// Configure transformers.js to allow local model caching
-env.allowLocalModels = true;
-env.useBrowserCache = true;
-
-// Translation pipeline type (using any to handle dynamic API)
-type TranslatorPipeline = (text: string | string[], options?: Record<string, unknown>) => Promise<Array<{ translation_text: string }>>;
+import { useState, useCallback, useEffect } from 'react';
+import { 
+  translate as embeddedTranslate,
+  autoDetectLanguage,
+  isSameLanguage,
+  isLanguageSupported,
+  dynamicTransliterate,
+  isLatinScriptLanguage
+} from '@/lib/translation';
 
 // Translation result type
 export interface ClientTranslationResult {
@@ -30,86 +27,28 @@ export interface ClientTranslationResult {
   detectedLanguage?: string;
 }
 
-// DEPRECATED: Old hardcoded word mappings removed
-// Now uses dynamic phonetic transliteration from @/lib/translation/dynamic-transliterator
-// This supports ALL 300+ languages without hardcoded words
-//
-// Import the dynamic transliterator for fallback
-import { dynamicTransliterate, isLatinScriptLanguage } from '@/lib/translation/dynamic-transliterator';
-
-// Dynamic phonetic transliteration - NO hardcoded words
-// Uses dynamic-transliterator for ALL 300+ languages
-function transliterateToNative(text: string, targetLanguage: string): string {
-  if (!text || !text.trim()) return text;
-  
-  // Use dynamic transliterator - works for ALL 300+ languages
-  return dynamicTransliterate(text, targetLanguage);
-}
-
-// Get the NLLB language code for translation
-function getLanguageCode(language: string): string | null {
-  const normalized = language.toLowerCase().trim();
-  const code = LANGUAGE_TO_NLLB[normalized];
-  if (code) return code;
-  
-  // Try finding in ALL_NLLB200_LANGUAGES
-  const found = ALL_NLLB200_LANGUAGES.find(
-    l => l.name.toLowerCase() === normalized
-  );
-  return found?.code || null;
-}
-
 // Cache for translations
 const translationCache = new Map<string, ClientTranslationResult>();
 
-export function useClientTranslator() {
-  const [isModelLoading, setIsModelLoading] = useState(false);
-  const [modelLoadProgress, setModelLoadProgress] = useState(0);
-  const [isModelReady, setIsModelReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const translatorRef = useRef<TranslatorPipeline | null>(null);
-  const loadingRef = useRef(false);
+// Check if text is primarily Latin script
+function isLatinScript(text: string): boolean {
+  const latinChars = text.match(/[a-zA-Z]/g);
+  const totalChars = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
+  return latinChars !== null && totalChars.length > 0 && (latinChars.length / totalChars.length) > 0.7;
+}
 
-  // Load the translation model
+export function useClientTranslator() {
+  const [isModelLoading] = useState(false);
+  const [modelLoadProgress] = useState(100);
+  const [isModelReady] = useState(true);
+  const [error] = useState<string | null>(null);
+
+  // Load model - no-op since we use embedded translator
   const loadModel = useCallback(async () => {
-    if (loadingRef.current || translatorRef.current) return;
-    
-    loadingRef.current = true;
-    setIsModelLoading(true);
-    setError(null);
-    
-    try {
-      console.log('[ClientTranslator] Loading NLLB-200 model...');
-      
-      // Use the distilled 600M model for faster loading
-      const translator = await pipeline(
-        'translation',
-        'Xenova/nllb-200-distilled-600M',
-        {
-          progress_callback: (progress: { progress?: number; status?: string }) => {
-            if (progress.progress !== undefined) {
-              setModelLoadProgress(Math.round(progress.progress));
-            }
-            console.log('[ClientTranslator] Loading:', progress);
-          },
-        }
-      );
-      
-      // Store the translator with proper typing
-      translatorRef.current = translator as unknown as TranslatorPipeline;
-      setIsModelReady(true);
-      console.log('[ClientTranslator] Model loaded successfully');
-    } catch (err) {
-      console.error('[ClientTranslator] Failed to load model:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load translation model');
-    } finally {
-      setIsModelLoading(false);
-      loadingRef.current = false;
-    }
+    // Embedded translator is always ready
   }, []);
 
-  // Translate text using the local model
+  // Translate text using embedded translator
   const translate = useCallback(async (
     text: string,
     sourceLanguage: string,
@@ -121,12 +60,8 @@ export function useClientTranslator() {
     const cached = translationCache.get(cacheKey);
     if (cached) return cached;
     
-    // Get NLLB codes
-    const sourceCode = getLanguageCode(sourceLanguage);
-    const targetCode = getLanguageCode(targetLanguage);
-    
     // Detect language if needed
-    const detected = detectLanguage(text);
+    const detected = autoDetectLanguage(text);
     const effectiveSourceLang = sourceLanguage || detected.language;
     
     // Check if same language
@@ -137,76 +72,65 @@ export function useClientTranslator() {
         sourceLanguage: effectiveSourceLang,
         targetLanguage,
         isTranslated: false,
-        model: 'nllb-200-distilled-600M',
+        model: 'embedded-translator',
         usedPivot: false,
         detectedLanguage: detected.language,
       };
       return result;
     }
     
-    // If model is ready, use it
-    if (translatorRef.current && sourceCode && targetCode) {
-      try {
-        // Call the translator with src_lang and tgt_lang options
-        const output = await translatorRef.current(text, {
-          src_lang: sourceCode,
-          tgt_lang: targetCode,
-        });
-        
-        const translatedText = Array.isArray(output) && output[0]
-          ? output[0].translation_text || text
-          : text;
-        
+    try {
+      // Use embedded translator
+      const translationResult = await embeddedTranslate(text, effectiveSourceLang, targetLanguage);
+      
+      const result: ClientTranslationResult = {
+        translatedText: translationResult.text,
+        originalText: text,
+        sourceLanguage: effectiveSourceLang,
+        targetLanguage,
+        isTranslated: translationResult.isTranslated,
+        model: 'embedded-translator',
+        usedPivot: !!translationResult.englishPivot,
+        detectedLanguage: detected.language,
+      };
+      
+      translationCache.set(cacheKey, result);
+      return result;
+    } catch (err) {
+      console.error('[ClientTranslator] Translation error:', err);
+      
+      // Fallback: Basic transliteration for romanized input
+      if (isLatinScript(text) && !isLatinScriptLanguage(targetLanguage)) {
+        const transliterated = dynamicTransliterate(text, targetLanguage);
         const result: ClientTranslationResult = {
-          translatedText,
+          translatedText: transliterated,
           originalText: text,
           sourceLanguage: effectiveSourceLang,
           targetLanguage,
-          isTranslated: translatedText !== text,
-          model: 'nllb-200-distilled-600M',
+          isTranslated: transliterated !== text,
+          model: 'transliteration-fallback',
           usedPivot: false,
           detectedLanguage: detected.language,
         };
         
-        translationCache.set(cacheKey, result);
+        if (transliterated !== text) {
+          translationCache.set(cacheKey, result);
+        }
         return result;
-      } catch (err) {
-        console.error('[ClientTranslator] Translation error:', err);
-        // Fall through to basic transliteration
       }
-    }
-    
-    // Fallback: Basic transliteration for romanized input
-    if (isLatinScript(text)) {
-      const transliterated = transliterateToNative(text, targetLanguage);
-      const result: ClientTranslationResult = {
-        translatedText: transliterated,
+      
+      // No translation available
+      return {
+        translatedText: text,
         originalText: text,
         sourceLanguage: effectiveSourceLang,
         targetLanguage,
-        isTranslated: transliterated !== text,
-        model: 'transliteration-fallback',
+        isTranslated: false,
+        model: 'none',
         usedPivot: false,
         detectedLanguage: detected.language,
       };
-      
-      if (transliterated !== text) {
-        translationCache.set(cacheKey, result);
-      }
-      return result;
     }
-    
-    // No translation available
-    return {
-      translatedText: text,
-      originalText: text,
-      sourceLanguage: effectiveSourceLang,
-      targetLanguage,
-      isTranslated: false,
-      model: 'none',
-      usedPivot: false,
-      detectedLanguage: detected.language,
-    };
   }, []);
 
   // Convert romanized text to native script
@@ -221,32 +145,11 @@ export function useClientTranslator() {
       return { converted: text, isConverted: false };
     }
     
-    // Try transliteration first
-    const transliterated = transliterateToNative(text, targetLanguage);
-    if (transliterated !== text.toLowerCase()) {
-      return { converted: transliterated, isConverted: true };
-    }
-    
-    // If model is ready, try translation from English to target
-    if (translatorRef.current) {
-      try {
-        const targetCode = getLanguageCode(targetLanguage);
-        if (targetCode && !targetCode.endsWith('_Latn')) {
-          const output = await translatorRef.current(text, {
-            src_lang: 'eng_Latn',
-            tgt_lang: targetCode,
-          });
-          
-          const converted = Array.isArray(output) && output[0]
-            ? output[0].translation_text || text
-            : text;
-          
-          if (converted !== text) {
-            return { converted, isConverted: true };
-          }
-        }
-      } catch (err) {
-        console.error('[ClientTranslator] Script conversion error:', err);
+    // Use dynamic transliteration
+    if (!isLatinScriptLanguage(targetLanguage)) {
+      const transliterated = dynamicTransliterate(text, targetLanguage);
+      if (transliterated !== text) {
+        return { converted: transliterated, isConverted: true };
       }
     }
     
@@ -258,11 +161,10 @@ export function useClientTranslator() {
     translationCache.clear();
   }, []);
 
-  // Auto-load model on mount (optional - can be triggered manually)
+  // Auto-ready on mount
   useEffect(() => {
-    // Uncomment to auto-load on mount:
-    // loadModel();
-  }, [loadModel]);
+    // No loading needed - embedded translator is always ready
+  }, []);
 
   return {
     // State
@@ -278,7 +180,7 @@ export function useClientTranslator() {
     clearCache,
     
     // Utils
-    detectLanguage,
+    detectLanguage: autoDetectLanguage,
     isLatinScript,
     isSameLanguage,
   };
