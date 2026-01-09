@@ -81,6 +81,7 @@ export const countries = [
   { code: "PF", name: "French Polynesia", flag: "🇵🇫" },
   { code: "TF", name: "French Southern Territories", flag: "🇹🇫" },
   { code: "GA", name: "Gabon", flag: "🇬🇦" },
+  { code: "XZ", name: "Tibet", flag: "🏔️" },
   { code: "GM", name: "Gambia", flag: "🇬🇲" },
   { code: "GE", name: "Georgia", flag: "🇬🇪" },
   { code: "DE", name: "Germany", flag: "🇩🇪" },
