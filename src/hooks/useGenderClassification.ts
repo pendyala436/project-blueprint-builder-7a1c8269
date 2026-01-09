@@ -1,11 +1,12 @@
 /**
  * useGenderClassification Hook
  * 
- * Stub implementation - auto-accepts photos.
- * Gender classification requires external API integration.
+ * Uses face-api.js for client-side gender classification.
+ * This hook wraps useFaceVerification for backward compatibility.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useFaceVerification } from './useFaceVerification';
 
 export interface GenderClassificationResult {
   verified: boolean;
@@ -24,30 +25,23 @@ export interface UseGenderClassificationReturn {
 }
 
 export const useGenderClassification = (): UseGenderClassificationReturn => {
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isLoadingModel] = useState(false);
-  const [modelLoadProgress] = useState(100);
+  const { isVerifying, isLoadingModel, modelLoadProgress, verifyFace } = useFaceVerification();
 
   const classifyGender = useCallback(async (
-    _imageBase64: string,
+    imageBase64: string,
     expectedGender?: 'male' | 'female'
   ): Promise<GenderClassificationResult> => {
-    setIsVerifying(true);
-
-    try {
-      // Auto-accept - classification requires external API
-      return {
-        verified: true,
-        hasFace: true,
-        detectedGender: expectedGender || 'unknown',
-        confidence: 1.0,
-        reason: 'Photo accepted (classification unavailable)',
-        genderMatches: true
-      };
-    } finally {
-      setIsVerifying(false);
-    }
-  }, []);
+    const result = await verifyFace(imageBase64, expectedGender);
+    
+    return {
+      verified: result.verified,
+      hasFace: result.hasFace,
+      detectedGender: result.detectedGender,
+      confidence: result.confidence,
+      reason: result.reason,
+      genderMatches: result.genderMatches ?? true
+    };
+  }, [verifyFace]);
 
   return {
     isVerifying,
