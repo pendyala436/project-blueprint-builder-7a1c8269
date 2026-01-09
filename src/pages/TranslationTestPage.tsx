@@ -15,6 +15,7 @@ import {
   translate, 
   getSupportedLanguages, 
   testTranslationPairs,
+  testEnglishPivot,
 } from "@/lib/translation";
 
 interface TranslationTestResult {
@@ -32,6 +33,7 @@ interface LanguageResult {
   translation: string;
   success: boolean;
   isTransliterated: boolean;
+  englishPivot?: string;
 }
 
 export default function TranslationTestPage() {
@@ -67,32 +69,58 @@ export default function TranslationTestPage() {
       
       setResults(formattedResults);
       
-      // Now test more language pairs - sample of languages
-      const sampleLanguages = [
-        "hindi", "bengali", "telugu", "tamil", "marathi", "gujarati", 
-        "kannada", "malayalam", "punjabi", "odia", "urdu", "assamese",
-        "spanish", "french", "german", "italian", "portuguese", "dutch",
-        "russian", "ukrainian", "polish", "czech", "romanian", "hungarian",
-        "arabic", "persian", "turkish", "hebrew", "greek",
-        "chinese (mandarin)", "japanese", "korean", "thai", "vietnamese",
-        "indonesian", "malay", "tagalog", "burmese", "khmer",
-        "swahili", "amharic", "yoruba", "hausa", "zulu"
+      // Now test more language pairs - especially non-Latin to non-Latin via English pivot
+      const testPairs: Array<{ source: string; target: string }> = [
+        // English to non-Latin (direct, no pivot)
+        { source: "english", target: "hindi" },
+        { source: "english", target: "telugu" },
+        { source: "english", target: "tamil" },
+        { source: "english", target: "kannada" },
+        { source: "english", target: "tulu" },
+        { source: "english", target: "arabic" },
+        { source: "english", target: "russian" },
+        { source: "english", target: "japanese" },
+        { source: "english", target: "korean" },
+        { source: "english", target: "chinese (mandarin)" },
+        // Non-Latin to non-Latin (ENGLISH PIVOT)
+        { source: "telugu", target: "tulu" },
+        { source: "telugu", target: "kannada" },
+        { source: "hindi", target: "telugu" },
+        { source: "hindi", target: "tamil" },
+        { source: "tamil", target: "kannada" },
+        { source: "bengali", target: "telugu" },
+        { source: "arabic", target: "hindi" },
+        { source: "russian", target: "telugu" },
+        { source: "japanese", target: "korean" },
+        // Non-Latin to English (reverse pivot)
+        { source: "telugu", target: "english" },
+        { source: "hindi", target: "english" },
+        { source: "tamil", target: "english" },
+        // Latin to Latin (no conversion needed)
+        { source: "english", target: "spanish" },
+        { source: "french", target: "german" },
+        { source: "spanish", target: "portuguese" },
       ];
       
       const additionalResults: LanguageResult[] = [];
       
-      for (const targetLang of sampleLanguages) {
+      for (const pair of testPairs) {
         try {
-          const result = await translate(testText, "english", targetLang);
+          // Use the testEnglishPivot function for detailed logging
+          const pivotResult = await testEnglishPivot(testText, pair.source, pair.target);
+          
           additionalResults.push({
-            language: `english → ${targetLang}`,
-            translation: result.text,
-            success: true,
-            isTransliterated: result.isTransliterated,
+            language: `${pair.source} → ${pair.target}`,
+            translation: pivotResult.translatedText,
+            success: pivotResult.success,
+            isTransliterated: pivotResult.englishPivot ? true : false,
+            englishPivot: pivotResult.englishPivot,
           });
+          
+          console.log(`[TranslationTest] ${pair.source} → ${pair.target}:`, pivotResult.steps);
         } catch (err) {
           additionalResults.push({
-            language: `english → ${targetLang}`,
+            language: `${pair.source} → ${pair.target}`,
             translation: testText,
             success: false,
             isTransliterated: false,

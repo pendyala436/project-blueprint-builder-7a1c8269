@@ -16,6 +16,7 @@ export interface TranslationResult {
   isTranslated: boolean;           // Whether translation occurred
   detectedLanguage?: string;       // Auto-detected source language
   detectedScript?: string;         // Detected script type
+  englishPivot?: string;           // Intermediate English translation (for debugging)
   mode: 'translate' | 'convert' | 'passthrough';  // What operation was performed
 }
 

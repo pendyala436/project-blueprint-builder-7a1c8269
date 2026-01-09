@@ -1,19 +1,22 @@
 /**
  * DL-Translate Translator
- * Inspired by: https://github.com/xhluca/dl-translate
+ * ========================
  * 
- * Auto-detects languages and translates via Edge Function
- * Handles bidirectional chat translation with native script support
+ * 100% EMBEDDED, NO EXTERNAL APIs
+ * Uses dynamic transliteration with English as middleware
+ * 
+ * ENGLISH PIVOT SYSTEM:
+ * - Source → English (reverse transliterate) → Target (forward transliterate)
+ * - Supports 386 × 385 = 148,610 translation pairs
  * 
  * Features:
  * 1. Auto-detect source language from text script
  * 2. Convert Latin typing to user's native script
- * 3. Translate messages between chat partners
+ * 3. Translate messages between chat partners via English pivot
  * 4. Skip translation when same language
- * 5. Support for 200+ languages
+ * 5. Support for 386+ languages
  */
 
-import { supabase } from '@/integrations/supabase/client';
 import type { 
   TranslationResult, 
   ChatTranslationOptions, 
@@ -33,6 +36,22 @@ import {
   getCode,
   getNativeName
 } from './languages';
+
+// Import embedded translator functions
+import {
+  translate as embeddedTranslate,
+  transliterateToNative,
+  autoDetectLanguage,
+  isLatinText,
+  isSameLanguage as embeddedIsSameLanguage,
+  isLatinScriptLanguage as embeddedIsLatinScript,
+  normalizeLanguage as embeddedNormalizeLanguage,
+} from '@/lib/translation/embedded-translator';
+
+import {
+  dynamicTransliterate,
+  reverseTransliterate,
+} from '@/lib/translation/dynamic-transliterator';
 
 // Default configuration
 const DEFAULT_CONFIG: TranslatorConfig = {
@@ -84,7 +103,8 @@ function setInCache(key: string, result: TranslationResult): void {
 }
 
 /**
- * Main translate function
+ * Main translate function - 100% EMBEDDED, NO EXTERNAL APIs
+ * Uses English pivot: Source → English → Target
  * Auto-detects source language and translates to target
  */
 export async function translate(
@@ -114,6 +134,20 @@ export async function translate(
 
   // Same language - no translation needed
   if (isSameLanguage(effectiveSource, effectiveTarget)) {
+    // But if typing in Latin and target is non-Latin, convert to native script
+    if (isLatinScript(trimmed) && needsScriptConversion(effectiveTarget)) {
+      const nativeText = dynamicTransliterate(trimmed, effectiveTarget);
+      return {
+        text: nativeText,
+        originalText: trimmed,
+        source: effectiveSource,
+        target: effectiveTarget,
+        isTranslated: nativeText !== trimmed,
+        detectedLanguage: detected.language,
+        detectedScript: detected.script,
+        mode: 'convert'
+      };
+    }
     return {
       text: trimmed,
       originalText: trimmed,
@@ -136,45 +170,34 @@ export async function translate(
     }
   }
 
+  // Use embedded translator with English pivot (NO external APIs)
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: effectiveSource,
-        targetLanguage: effectiveTarget,
-        mode: 'translate'
-      },
-    });
-
-    if (error) {
-      console.error('[dl-translate] Edge function error:', error);
-      return {
-        text: trimmed,
-        originalText: trimmed,
-        source: effectiveSource,
-        target: effectiveTarget,
-        isTranslated: false,
-        detectedLanguage: detected.language,
-        mode: 'passthrough'
-      };
-    }
-
+    const embeddedResult = await embeddedTranslate(trimmed, effectiveSource, effectiveTarget);
+    
     const result: TranslationResult = {
-      text: data?.translatedText || trimmed,
+      text: embeddedResult.text,
       originalText: trimmed,
-      source: data?.sourceLanguage || effectiveSource,
-      target: data?.targetLanguage || effectiveTarget,
+      source: embeddedResult.sourceLanguage,
+      target: embeddedResult.targetLanguage,
       sourceCode: getCode(effectiveSource),
       targetCode: getCode(effectiveTarget),
-      isTranslated: data?.isTranslated || false,
-      detectedLanguage: data?.detectedLanguage || detected.language,
+      isTranslated: embeddedResult.isTranslated || embeddedResult.isTransliterated,
+      detectedLanguage: embeddedResult.detectedLanguage || detected.language,
       detectedScript: detected.script,
-      mode: 'translate'
+      englishPivot: embeddedResult.englishPivot,
+      mode: embeddedResult.isTranslated ? 'translate' : 'convert'
     };
 
     // Cache successful translations
     if (result.isTranslated && config.cacheEnabled) {
       setInCache(cacheKey, result);
+    }
+
+    if (config.debugMode) {
+      console.log(`[dl-translate] Translated: ${effectiveSource} → ${effectiveTarget}`);
+      if (embeddedResult.englishPivot) {
+        console.log(`[dl-translate] English pivot: "${embeddedResult.englishPivot}"`);
+      }
     }
 
     return result;
@@ -254,10 +277,8 @@ export async function convertToNativeScript(
     }
   }
 
-  // INSTANT FALLBACK: Use dynamic transliteration FIRST for immediate preview
-  // This ensures 300+ language support without any edge function dependency
+  // Use dynamic transliteration (100% embedded, NO external APIs)
   try {
-    const { dynamicTransliterate } = await import('@/lib/translation/dynamic-transliterator');
     const dynamicResult = dynamicTransliterate(trimmed, targetLanguage);
     
     if (dynamicResult && dynamicResult !== trimmed) {
@@ -283,41 +304,7 @@ export async function convertToNativeScript(
     console.warn('[dl-translate] Dynamic transliteration error:', err);
   }
 
-  // Try Edge Function as secondary (for potentially better quality)
-  try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: 'english',
-        targetLanguage,
-        mode: 'convert'
-      },
-    });
-
-    if (!error && data?.translatedText && data?.isTranslated) {
-      const result: TranslationResult = {
-        text: data.translatedText,
-        originalText: trimmed,
-        source: 'english',
-        target: targetLanguage,
-        sourceCode: 'en',
-        targetCode: getCode(targetLanguage),
-        isTranslated: true,
-        mode: 'convert'
-      };
-
-      // Cache successful conversions
-      if (config.cacheEnabled) {
-        setInCache(cacheKey, result);
-      }
-
-      return result;
-    }
-  } catch (error) {
-    console.warn('[dl-translate] Edge function conversion error:', error);
-  }
-
-  // Final fallback - return original
+  // Fallback - return original
   return {
     text: trimmed,
     originalText: trimmed,
