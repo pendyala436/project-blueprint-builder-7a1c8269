@@ -169,7 +169,7 @@ export {
   SCRIPT_PATTERNS,
   INDIAN_LANGUAGES,
   LATIN_SCRIPT_LANGUAGES,
-} from './language-codes';
+} from './language-mappings';
 
 // Legacy hooks (still available but recommend using embedded translator directly)
 export { useTranslator } from './useTranslator';
