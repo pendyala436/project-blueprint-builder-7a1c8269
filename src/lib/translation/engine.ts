@@ -515,6 +515,269 @@ class SemanticTranslationEngine implements TranslationEngine {
         base.set('ר', 'r'); base.set('ש', 'sh'); base.set('ת', 't');
         break;
 
+      // ============= ETHIOPIC SCRIPTS (Amharic, Tigrinya) =============
+      case 'Ethiopic':
+        base.set('ሀ', 'ha'); base.set('ሁ', 'hu'); base.set('ሂ', 'hi'); base.set('ሃ', 'ha');
+        base.set('ሄ', 'he'); base.set('ህ', 'h'); base.set('ሆ', 'ho');
+        base.set('ለ', 'le'); base.set('ሉ', 'lu'); base.set('ሊ', 'li'); base.set('ላ', 'la');
+        base.set('ሌ', 'le'); base.set('ል', 'l'); base.set('ሎ', 'lo');
+        base.set('መ', 'me'); base.set('ሙ', 'mu'); base.set('ሚ', 'mi'); base.set('ማ', 'ma');
+        base.set('ሜ', 'me'); base.set('ም', 'm'); base.set('ሞ', 'mo');
+        base.set('ሰ', 'se'); base.set('ሱ', 'su'); base.set('ሲ', 'si'); base.set('ሳ', 'sa');
+        base.set('ሴ', 'se'); base.set('ስ', 's'); base.set('ሶ', 'so');
+        base.set('ረ', 're'); base.set('ሩ', 'ru'); base.set('ሪ', 'ri'); base.set('ራ', 'ra');
+        base.set('ሬ', 're'); base.set('ር', 'r'); base.set('ሮ', 'ro');
+        base.set('በ', 'be'); base.set('ቡ', 'bu'); base.set('ቢ', 'bi'); base.set('ባ', 'ba');
+        base.set('ቤ', 'be'); base.set('ብ', 'b'); base.set('ቦ', 'bo');
+        base.set('ነ', 'ne'); base.set('ኑ', 'nu'); base.set('ኒ', 'ni'); base.set('ና', 'na');
+        base.set('ኔ', 'ne'); base.set('ን', 'n'); base.set('ኖ', 'no');
+        base.set('አ', 'a'); base.set('ኡ', 'u'); base.set('ኢ', 'i'); base.set('ኣ', 'a');
+        base.set('ኤ', 'e'); base.set('እ', 'i'); base.set('ኦ', 'o');
+        base.set('ከ', 'ke'); base.set('ኩ', 'ku'); base.set('ኪ', 'ki'); base.set('ካ', 'ka');
+        base.set('ኬ', 'ke'); base.set('ክ', 'k'); base.set('ኮ', 'ko');
+        base.set('ወ', 'we'); base.set('ዉ', 'wu'); base.set('ዊ', 'wi'); base.set('ዋ', 'wa');
+        base.set('ዌ', 'we'); base.set('ው', 'w'); base.set('ዎ', 'wo');
+        base.set('ዘ', 'ze'); base.set('ዙ', 'zu'); base.set('ዚ', 'zi'); base.set('ዛ', 'za');
+        base.set('ዜ', 'ze'); base.set('ዝ', 'z'); base.set('ዞ', 'zo');
+        base.set('የ', 'ye'); base.set('ዩ', 'yu'); base.set('ዪ', 'yi'); base.set('ያ', 'ya');
+        base.set('ዬ', 'ye'); base.set('ይ', 'y'); base.set('ዮ', 'yo');
+        base.set('ደ', 'de'); base.set('ዱ', 'du'); base.set('ዲ', 'di'); base.set('ዳ', 'da');
+        base.set('ዴ', 'de'); base.set('ድ', 'd'); base.set('ዶ', 'do');
+        base.set('ገ', 'ge'); base.set('ጉ', 'gu'); base.set('ጊ', 'gi'); base.set('ጋ', 'ga');
+        base.set('ጌ', 'ge'); base.set('ግ', 'g'); base.set('ጎ', 'go');
+        base.set('ተ', 'te'); base.set('ቱ', 'tu'); base.set('ቲ', 'ti'); base.set('ታ', 'ta');
+        base.set('ቴ', 'te'); base.set('ት', 't'); base.set('ቶ', 'to');
+        base.set('ጠ', 'te'); base.set('ጡ', 'tu'); base.set('ጢ', 'ti'); base.set('ጣ', 'ta');
+        base.set('ጤ', 'te'); base.set('ጥ', 't'); base.set('ጦ', 'to');
+        base.set('ፈ', 'fe'); base.set('ፉ', 'fu'); base.set('ፊ', 'fi'); base.set('ፋ', 'fa');
+        base.set('ፌ', 'fe'); base.set('ፍ', 'f'); base.set('ፎ', 'fo');
+        break;
+
+      // ============= MYANMAR/BURMESE SCRIPT =============
+      case 'Myanmar':
+        base.set('က', 'ka'); base.set('ခ', 'kha'); base.set('ဂ', 'ga'); base.set('ဃ', 'gha');
+        base.set('င', 'nga'); base.set('စ', 'sa'); base.set('ဆ', 'hsa'); base.set('ဇ', 'za');
+        base.set('ဈ', 'zha'); base.set('ည', 'nya'); base.set('ဋ', 'ta'); base.set('ဌ', 'tha');
+        base.set('ဍ', 'da'); base.set('ဎ', 'dha'); base.set('ဏ', 'na'); base.set('တ', 'ta');
+        base.set('ထ', 'hta'); base.set('ဒ', 'da'); base.set('ဓ', 'dha'); base.set('န', 'na');
+        base.set('ပ', 'pa'); base.set('ဖ', 'pha'); base.set('ဗ', 'ba'); base.set('ဘ', 'bha');
+        base.set('မ', 'ma'); base.set('ယ', 'ya'); base.set('ရ', 'ra'); base.set('လ', 'la');
+        base.set('ဝ', 'wa'); base.set('သ', 'tha'); base.set('ဟ', 'ha'); base.set('ဠ', 'la');
+        base.set('အ', 'a'); base.set('ဣ', 'i'); base.set('ဤ', 'ii'); base.set('ဥ', 'u');
+        base.set('ဦ', 'uu'); base.set('ဧ', 'e'); base.set('ဩ', 'o'); base.set('ဪ', 'au');
+        base.set('ာ', 'aa'); base.set('ိ', 'i'); base.set('ီ', 'ii'); base.set('ု', 'u');
+        base.set('ူ', 'uu'); base.set('ေ', 'e'); base.set('ဲ', 'ai'); base.set('ော', 'aw');
+        base.set('ံ', 'n'); base.set('့', ''); base.set('း', '');
+        break;
+
+      // ============= KHMER (CAMBODIAN) SCRIPT =============
+      case 'Khmer':
+        base.set('ក', 'ka'); base.set('ខ', 'kha'); base.set('គ', 'ko'); base.set('ឃ', 'kho');
+        base.set('ង', 'ngo'); base.set('ច', 'cha'); base.set('ឆ', 'chha'); base.set('ជ', 'cho');
+        base.set('ឈ', 'chho'); base.set('ញ', 'nyo'); base.set('ដ', 'da'); base.set('ឋ', 'tha');
+        base.set('ឌ', 'do'); base.set('ឍ', 'tho'); base.set('ណ', 'na'); base.set('ត', 'ta');
+        base.set('ថ', 'tha'); base.set('ទ', 'to'); base.set('ធ', 'tho'); base.set('ន', 'no');
+        base.set('ប', 'ba'); base.set('ផ', 'pha'); base.set('ព', 'po'); base.set('ភ', 'pho');
+        base.set('ម', 'mo'); base.set('យ', 'yo'); base.set('រ', 'ro'); base.set('ល', 'lo');
+        base.set('វ', 'vo'); base.set('ស', 'sa'); base.set('ហ', 'ha'); base.set('ឡ', 'la');
+        base.set('អ', 'a');
+        base.set('ា', 'aa'); base.set('ិ', 'i'); base.set('ី', 'ii'); base.set('ឹ', 'eu');
+        base.set('ឺ', 'euu'); base.set('ុ', 'u'); base.set('ូ', 'uu'); base.set('ួ', 'uo');
+        base.set('ើ', 'ae'); base.set('ឿ', 'eua'); base.set('ៀ', 'ia'); base.set('េ', 'e');
+        base.set('ែ', 'ae'); base.set('ៃ', 'ai'); base.set('ោ', 'ao'); base.set('ៅ', 'au');
+        break;
+
+      // ============= LAO SCRIPT =============
+      case 'Lao':
+        base.set('ກ', 'k'); base.set('ຂ', 'kh'); base.set('ຄ', 'kh'); base.set('ງ', 'ng');
+        base.set('ຈ', 'ch'); base.set('ສ', 's'); base.set('ຊ', 's'); base.set('ຍ', 'ny');
+        base.set('ດ', 'd'); base.set('ຕ', 't'); base.set('ຖ', 'th'); base.set('ທ', 'th');
+        base.set('ນ', 'n'); base.set('ບ', 'b'); base.set('ປ', 'p'); base.set('ຜ', 'ph');
+        base.set('ຝ', 'f'); base.set('ພ', 'ph'); base.set('ຟ', 'f'); base.set('ມ', 'm');
+        base.set('ຢ', 'y'); base.set('ຣ', 'r'); base.set('ລ', 'l'); base.set('ວ', 'w');
+        base.set('ຫ', 'h'); base.set('ອ', 'o'); base.set('ຮ', 'h');
+        base.set('ະ', 'a'); base.set('ັ', 'a'); base.set('າ', 'aa'); base.set('ິ', 'i');
+        base.set('ີ', 'ii'); base.set('ຶ', 'ue'); base.set('ື', 'uee'); base.set('ຸ', 'u');
+        base.set('ູ', 'uu'); base.set('ເ', 'e'); base.set('ແ', 'ae'); base.set('ໂ', 'o');
+        base.set('ໄ', 'ai'); base.set('ໃ', 'ai'); base.set('ົ', 'o'); base.set('ຼ', 'l');
+        break;
+
+      // ============= SINHALA SCRIPT =============
+      case 'Sinhala':
+        base.set('අ', 'a'); base.set('ආ', 'aa'); base.set('ඇ', 'ae'); base.set('ඈ', 'aee');
+        base.set('ඉ', 'i'); base.set('ඊ', 'ii'); base.set('උ', 'u'); base.set('ඌ', 'uu');
+        base.set('එ', 'e'); base.set('ඒ', 'ee'); base.set('ඔ', 'o'); base.set('ඕ', 'oo');
+        base.set('ක', 'ka'); base.set('ඛ', 'kha'); base.set('ග', 'ga'); base.set('ඝ', 'gha');
+        base.set('ඞ', 'nga'); base.set('ච', 'cha'); base.set('ඡ', 'chha'); base.set('ජ', 'ja');
+        base.set('ඣ', 'jha'); base.set('ඤ', 'nya'); base.set('ට', 'ta'); base.set('ඨ', 'tha');
+        base.set('ඩ', 'da'); base.set('ඪ', 'dha'); base.set('ණ', 'na'); base.set('ත', 'ta');
+        base.set('ථ', 'tha'); base.set('ද', 'da'); base.set('ධ', 'dha'); base.set('න', 'na');
+        base.set('ප', 'pa'); base.set('ඵ', 'pha'); base.set('බ', 'ba'); base.set('භ', 'bha');
+        base.set('ම', 'ma'); base.set('ය', 'ya'); base.set('ර', 'ra'); base.set('ල', 'la');
+        base.set('ව', 'wa'); base.set('ශ', 'sha'); base.set('ෂ', 'sha'); base.set('ස', 'sa');
+        base.set('හ', 'ha'); base.set('ළ', 'la'); base.set('ෆ', 'fa');
+        base.set('ා', 'aa'); base.set('ැ', 'ae'); base.set('ෑ', 'aee'); base.set('ි', 'i');
+        base.set('ී', 'ii'); base.set('ු', 'u'); base.set('ූ', 'uu'); base.set('ෙ', 'e');
+        base.set('ේ', 'ee'); base.set('ො', 'o'); base.set('ෝ', 'oo'); base.set('ෞ', 'au');
+        base.set('ං', 'n'); base.set('ඃ', 'h'); base.set('්', '');
+        break;
+
+      // ============= GEORGIAN SCRIPT =============
+      case 'Georgian':
+        base.set('ა', 'a'); base.set('ბ', 'b'); base.set('გ', 'g'); base.set('დ', 'd');
+        base.set('ე', 'e'); base.set('ვ', 'v'); base.set('ზ', 'z'); base.set('თ', 't');
+        base.set('ი', 'i'); base.set('კ', 'k'); base.set('ლ', 'l'); base.set('მ', 'm');
+        base.set('ნ', 'n'); base.set('ო', 'o'); base.set('პ', 'p'); base.set('ჟ', 'zh');
+        base.set('რ', 'r'); base.set('ს', 's'); base.set('ტ', 't'); base.set('უ', 'u');
+        base.set('ფ', 'f'); base.set('ქ', 'k'); base.set('ღ', 'gh'); base.set('ყ', 'q');
+        base.set('შ', 'sh'); base.set('ჩ', 'ch'); base.set('ც', 'ts'); base.set('ძ', 'dz');
+        base.set('წ', 'ts'); base.set('ჭ', 'ch'); base.set('ხ', 'kh'); base.set('ჯ', 'j');
+        base.set('ჰ', 'h');
+        break;
+
+      // ============= ARMENIAN SCRIPT =============
+      case 'Armenian':
+        base.set('ա', 'a'); base.set('բ', 'b'); base.set('գ', 'g'); base.set('դ', 'd');
+        base.set('ե', 'e'); base.set('զ', 'z'); base.set('է', 'e'); base.set('ը', 'e');
+        base.set('թ', 't'); base.set('ժ', 'zh'); base.set('ի', 'i'); base.set('լ', 'l');
+        base.set('խ', 'kh'); base.set('ծ', 'ts'); base.set('կ', 'k'); base.set('հ', 'h');
+        base.set('ձ', 'dz'); base.set('ղ', 'gh'); base.set('ճ', 'ch'); base.set('մ', 'm');
+        base.set('յ', 'y'); base.set('ն', 'n'); base.set('շ', 'sh'); base.set('ո', 'o');
+        base.set('չ', 'ch'); base.set('պ', 'p'); base.set(' delays', 'j'); base.set(' delays', 'r');
+        base.set(' delays', 's'); base.set(' delays', 'v'); base.set(' delays', 't'); base.set(' delays', 'r');
+        base.set(' delays', 'ts'); base.set(' delays', 'v'); base.set('ू', 'p'); base.set('ջ', 'j');
+        base.set(' delays', 'k'); base.set('ո', 'o'); base.set('delays', 'f');
+        break;
+
+      // ============= TIBETAN SCRIPT =============
+      case 'Tibetan':
+        base.set('ཀ', 'ka'); base.set('ཁ', 'kha'); base.set('ག', 'ga'); base.set('ང', 'nga');
+        base.set('ཅ', 'cha'); base.set('ཆ', 'chha'); base.set('ཇ', 'ja'); base.set('ཉ', 'nya');
+        base.set('ཏ', 'ta'); base.set('ཐ', 'tha'); base.set('ད', 'da'); base.set('ན', 'na');
+        base.set('པ', 'pa'); base.set('ཕ', 'pha'); base.set('བ', 'ba'); base.set('མ', 'ma');
+        base.set('ཙ', 'tsa'); base.set('ཚ', 'tsha'); base.set('ཛ', 'dza'); base.set('ཝ', 'wa');
+        base.set('ཞ', 'zha'); base.set('ཟ', 'za'); base.set('འ', 'a'); base.set('ཡ', 'ya');
+        base.set('ར', 'ra'); base.set('ལ', 'la'); base.set('ཤ', 'sha'); base.set('ས', 'sa');
+        base.set('ཧ', 'ha'); base.set('ཨ', 'a');
+        base.set('ི', 'i'); base.set('ུ', 'u'); base.set('ེ', 'e'); base.set('ོ', 'o');
+        break;
+
+      // ============= THAANA (DHIVEHI/MALDIVIAN) SCRIPT =============
+      case 'Thaana':
+        base.set('ހ', 'h'); base.set('ށ', 'sh'); base.set('ނ', 'n'); base.set('ރ', 'r');
+        base.set('ބ', 'b'); base.set('ޅ', 'lh'); base.set('ކ', 'k'); base.set('އ', 'a');
+        base.set('ވ', 'v'); base.set('މ', 'm'); base.set('ފ', 'f'); base.set('ދ', 'dh');
+        base.set('ތ', 'th'); base.set('ލ', 'l'); base.set('ގ', 'g'); base.set('ޏ', 'gn');
+        base.set('ސ', 's'); base.set('ޑ', 'd'); base.set('ޒ', 'z'); base.set('ޓ', 't');
+        base.set('ޔ', 'y'); base.set('ޕ', 'p'); base.set('ޖ', 'j'); base.set('ޗ', 'ch');
+        base.set('ަ', 'a'); base.set('ާ', 'aa'); base.set('ި', 'i'); base.set('ީ', 'ee');
+        base.set('ު', 'u'); base.set('ޫ', 'oo'); base.set('ެ', 'e'); base.set('ޭ', 'ey');
+        base.set('ޮ', 'o'); base.set('ޯ', 'oa');
+        break;
+
+      // ============= OL CHIKI (SANTALI) SCRIPT =============
+      case 'Ol_Chiki':
+        base.set('ᱚ', 'a'); base.set('ᱛ', 't'); base.set('ᱜ', 'g'); base.set('ᱝ', 'ng');
+        base.set('ᱞ', 'l'); base.set('ᱟ', 'aa'); base.set('ᱠ', 'k'); base.set('ᱡ', 'j');
+        base.set('ᱢ', 'm'); base.set('ᱣ', 'w'); base.set('ᱤ', 'i'); base.set('ᱥ', 's');
+        base.set('ᱦ', 'h'); base.set('ᱧ', 'ny'); base.set('ᱨ', 'r'); base.set('ᱩ', 'u');
+        base.set('ᱪ', 'ch'); base.set('ᱫ', 'd'); base.set('ᱬ', 'n'); base.set('ᱭ', 'y');
+        base.set('ᱮ', 'e'); base.set('ᱯ', 'p'); base.set('ᱰ', 'd'); base.set('ᱱ', 'n');
+        base.set('ᱲ', 'r'); base.set('ᱳ', 'o'); base.set('ᱴ', 't'); base.set('ᱵ', 'b');
+        break;
+
+      // ============= LEPCHA SCRIPT =============
+      case 'Lepcha':
+        base.set('ᰀ', 'ka'); base.set('ᰁ', 'kla'); base.set('ᰂ', 'kha'); base.set('ᰃ', 'ga');
+        base.set('ᰄ', 'gla'); base.set('ᰅ', 'nga'); base.set('ᰆ', 'cha'); base.set('ᰇ', 'chha');
+        base.set('ᰈ', 'ja'); base.set('ᰉ', 'nya'); base.set('ᰊ', 'ta'); base.set('ᰋ', 'tha');
+        base.set('ᰌ', 'da'); base.set('ᰍ', 'na'); base.set('ᰎ', 'pa'); base.set('ᰏ', 'pla');
+        base.set('ᰐ', 'pha'); base.set('ᰑ', 'fa'); base.set('ᰒ', 'fla'); base.set('ᰓ', 'ba');
+        base.set('ᰔ', 'bla'); base.set('ᰕ', 'ma'); base.set('ᰖ', 'mla'); base.set('ᰗ', 'tsa');
+        base.set('ᰘ', 'tsha'); base.set('ᰙ', 'dza'); base.set('ᰚ', 'ya'); base.set('ᰛ', 'ra');
+        base.set('ᰜ', 'la'); base.set('ᰝ', 'ha'); base.set('ᰞ', 'hla'); base.set('ᰟ', 'va');
+        base.set('ᰠ', 'sa'); base.set('ᰡ', 'sha'); base.set('ᰢ', 'wa'); base.set('ᰣ', 'a');
+        break;
+
+      // ============= LIMBU SCRIPT =============
+      case 'Limbu':
+        base.set('ᤀ', 'a'); base.set('ᤁ', 'ka'); base.set('ᤂ', 'kha'); base.set('ᤃ', 'ga');
+        base.set('ᤄ', 'gha'); base.set('ᤅ', 'nga'); base.set('ᤆ', 'cha'); base.set('ᤇ', 'chha');
+        base.set('ᤈ', 'ja'); base.set('ᤉ', 'jha'); base.set('ᤊ', 'nya'); base.set('ᤋ', 'ta');
+        base.set('ᤌ', 'tha'); base.set('ᤍ', 'da'); base.set('ᤎ', 'dha'); base.set('ᤏ', 'na');
+        base.set('ᤐ', 'pa'); base.set('ᤑ', 'pha'); base.set('ᤒ', 'ba'); base.set('ᤓ', 'bha');
+        base.set('ᤔ', 'ma'); base.set('ᤕ', 'ya'); base.set('ᤖ', 'ra'); base.set('ᤗ', 'la');
+        base.set('ᤘ', 'wa'); base.set('ᤙ', 'sha'); base.set('ᤚ', 'ssa'); base.set('ᤛ', 'sa');
+        base.set('ᤜ', 'ha'); base.set('ᤝ', 'gyan');
+        break;
+
+      // ============= CHAKMA SCRIPT =============
+      case 'Chakma':
+        base.set('𑄀', 'a'); base.set('𑄁', 'aa'); base.set('𑄂', 'i'); base.set('𑄃', 'u');
+        base.set('𑄄', 'e'); base.set('𑄅', 'ka'); base.set('𑄆', 'kha'); base.set('𑄇', 'ga');
+        base.set('𑄈', 'gha'); base.set('𑄉', 'nga'); base.set('𑄊', 'cha'); base.set('𑄋', 'chha');
+        base.set('𑄌', 'ja'); base.set('𑄍', 'jha'); base.set('𑄎', 'nya'); base.set('𑄏', 'tta');
+        base.set('𑄐', 'ttha'); base.set('𑄑', 'dda'); base.set('𑄒', 'ddha'); base.set('𑄓', 'nna');
+        base.set('𑄔', 'ta'); base.set('𑄕', 'tha'); base.set('𑄖', 'da'); base.set('𑄗', 'dha');
+        base.set('𑄘', 'na'); base.set('𑄙', 'pa'); base.set('𑄚', 'pha'); base.set('𑄛', 'ba');
+        base.set('𑄜', 'bha'); base.set('𑄝', 'ma'); base.set('𑄞', 'ya'); base.set('𑄟', 'ra');
+        base.set('𑄠', 'la'); base.set('𑄡', 'wa'); base.set('𑄢', 'sa'); base.set('𑄣', 'ha');
+        break;
+
+      // ============= YI SCRIPT =============
+      case 'Yi':
+        base.set('ꀀ', 'it'); base.set('ꀁ', 'ix'); base.set('ꀂ', 'i'); base.set('ꀃ', 'ip');
+        base.set('ꀄ', 'iet'); base.set('ꀅ', 'iex'); base.set('ꀆ', 'ie'); base.set('ꀇ', 'iep');
+        base.set('ꀈ', 'at'); base.set('ꀉ', 'ax'); base.set('ꀊ', 'a'); base.set('ꀋ', 'ap');
+        base.set('ꀌ', 'uot'); base.set('ꀍ', 'uox'); base.set('ꀎ', 'uo'); base.set('ꀏ', 'uop');
+        base.set('ꀐ', 'ot'); base.set('ꀑ', 'ox'); base.set('ꀒ', 'o'); base.set('ꀓ', 'op');
+        base.set('ꀔ', 'ex'); base.set('ꀕ', 'e'); base.set('ꀖ', 'wu'); base.set('ꀗ', 'wux');
+        base.set('ꆈ', 'nuo'); base.set('ꌠ', 'su'); base.set('ꉙ', 'hxo');
+        break;
+
+      // ============= LISU SCRIPT =============
+      case 'Lisu':
+        base.set('ꓐ', 'ba'); base.set('ꓑ', 'pa'); base.set('ꓒ', 'pha'); base.set('ꓓ', 'da');
+        base.set('ꓔ', 'ta'); base.set('ꓕ', 'tha'); base.set('ꓖ', 'ga'); base.set('ꓗ', 'ka');
+        base.set('ꓘ', 'kha'); base.set('ꓙ', 'ja'); base.set('ꓚ', 'ca'); base.set('ꓛ', 'cha');
+        base.set('ꓜ', 'dza'); base.set('ꓝ', 'tsa'); base.set('ꓞ', 'ma'); base.set('ꓟ', 'na');
+        base.set('ꓠ', 'la'); base.set('ꓡ', 'sa'); base.set('ꓢ', 'za'); base.set('ꓣ', 'nga');
+        base.set('ꓤ', 'ha'); base.set('ꓥ', 'xa'); base.set('ꓦ', 'hha'); base.set('ꓧ', 'fa');
+        base.set('ꓨ', 'wa'); base.set('ꓩ', 'sha'); base.set('ꓪ', 'ya'); base.set('ꓫ', 'gha');
+        base.set('ꓬ', 'a'); base.set('ꓭ', 'ae'); base.set('ꓮ', 'e'); base.set('ꓯ', 'eu');
+        base.set('ꓰ', 'i'); base.set('ꓱ', 'o'); base.set('ꓲ', 'u'); base.set('ꓳ', 'ue');
+        break;
+
+      // ============= CHAM SCRIPT =============
+      case 'Cham':
+        base.set('ꨀ', 'a'); base.set('ꨁ', 'i'); base.set('ꨂ', 'u'); base.set('ꨃ', 'e');
+        base.set('ꨄ', 'ai'); base.set('ꨅ', 'o'); base.set('ꨆ', 'ka'); base.set('ꨇ', 'kha');
+        base.set('ꨈ', 'ga'); base.set('ꨉ', 'gha'); base.set('ꨊ', 'ngua'); base.set('ꨋ', 'nga');
+        base.set('ꨌ', 'cha'); base.set('ꨍ', 'chha'); base.set('ꨎ', 'ja'); base.set('ꨏ', 'jha');
+        base.set('ꨐ', 'nhja'); base.set('ꨑ', 'nja'); base.set('ꨒ', 'nha'); base.set('ꨓ', 'ta');
+        base.set('ꨔ', 'tha'); base.set('ꨕ', 'da'); base.set('ꨖ', 'dha'); base.set('ꨗ', 'na');
+        base.set('ꨘ', 'nda'); base.set('ꨙ', 'pa'); base.set('ꨚ', 'pha'); base.set('ꨛ', 'ba');
+        base.set('ꨜ', 'bha'); base.set('ꨝ', 'ma'); base.set('ꨞ', 'mba'); base.set('ꨟ', 'ya');
+        base.set('ꨠ', 'ra'); base.set('ꨡ', 'la'); base.set('ꨢ', 'wa'); base.set('ꨣ', 'sha');
+        base.set('ꨤ', 'sa'); base.set('ꨥ', 'ha');
+        break;
+
+      // ============= JAPANESE KATAKANA =============
+      case 'Katakana':
+        base.set('ア', 'a'); base.set('イ', 'i'); base.set('ウ', 'u'); base.set('エ', 'e');
+        base.set('オ', 'o'); base.set('カ', 'ka'); base.set('キ', 'ki'); base.set('ク', 'ku');
+        base.set('ケ', 'ke'); base.set('コ', 'ko'); base.set('サ', 'sa'); base.set('シ', 'shi');
+        base.set('ス', 'su'); base.set('セ', 'se'); base.set('ソ', 'so'); base.set('タ', 'ta');
+        base.set('チ', 'chi'); base.set('ツ', 'tsu'); base.set('テ', 'te'); base.set('ト', 'to');
+        base.set('ナ', 'na'); base.set('ニ', 'ni'); base.set('ヌ', 'nu'); base.set('ネ', 'ne');
+        base.set('ノ', 'no'); base.set('ハ', 'ha'); base.set('ヒ', 'hi'); base.set('フ', 'fu');
+        base.set('ヘ', 'he'); base.set('ホ', 'ho'); base.set('マ', 'ma'); base.set('ミ', 'mi');
+        base.set('ム', 'mu'); base.set('メ', 'me'); base.set('モ', 'mo'); base.set('ヤ', 'ya');
+        base.set('ユ', 'yu'); base.set('ヨ', 'yo'); base.set('ラ', 'ra'); base.set('リ', 'ri');
+        base.set('ル', 'ru'); base.set('レ', 're'); base.set('ロ', 'ro'); base.set('ワ', 'wa');
+        base.set('ヲ', 'wo'); base.set('ン', 'n');
+        break;
+
       default:
         // For Latin and unknown scripts, no mapping needed
         break;
