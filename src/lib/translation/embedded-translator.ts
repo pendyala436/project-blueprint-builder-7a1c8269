@@ -94,6 +94,42 @@ const languageAliases: Record<string, string> = {
 };
 
 // ============================================================
+// PROXY LANGUAGE MAPPINGS
+// Languages that don't have direct translation support use a related language
+// ============================================================
+
+const PROXY_LANGUAGES: Record<string, { proxy: string; note: string }> = {
+  'tulu': { proxy: 'kannada', note: 'Tulu uses Kannada script - showing Kannada translation' },
+  'kodava': { proxy: 'kannada', note: 'Kodava uses Kannada script - showing Kannada translation' },
+  'konkani': { proxy: 'marathi', note: 'Konkani closely related to Marathi' },
+  'marwari': { proxy: 'hindi', note: 'Marwari uses Devanagari - showing Hindi translation' },
+  'rajasthani': { proxy: 'hindi', note: 'Rajasthani uses Devanagari - showing Hindi translation' },
+  'haryanvi': { proxy: 'hindi', note: 'Haryanvi dialect - showing Hindi translation' },
+  'kumaoni': { proxy: 'hindi', note: 'Kumaoni uses Devanagari - showing Hindi translation' },
+  'garhwali': { proxy: 'hindi', note: 'Garhwali uses Devanagari - showing Hindi translation' },
+  'bhojpuri': { proxy: 'hindi', note: 'Bhojpuri uses Devanagari - showing Hindi translation' },
+  'magahi': { proxy: 'hindi', note: 'Magahi uses Devanagari - showing Hindi translation' },
+  'awadhi': { proxy: 'hindi', note: 'Awadhi uses Devanagari - showing Hindi translation' },
+  'chhattisgarhi': { proxy: 'hindi', note: 'Chhattisgarhi uses Devanagari - showing Hindi translation' },
+};
+
+/**
+ * Get proxy language for unsupported languages
+ */
+export function getProxyLanguage(lang: string): { proxy: string; note: string } | undefined {
+  const normalized = normalizeLanguage(lang);
+  return PROXY_LANGUAGES[normalized];
+}
+
+/**
+ * Get effective target language (uses proxy if available)
+ */
+export function getEffectiveTargetLanguage(lang: string): string {
+  const proxy = getProxyLanguage(lang);
+  return proxy ? proxy.proxy : lang;
+}
+
+// ============================================================
 // SCRIPT DETECTION (Extended for all scripts)
 // ============================================================
 
@@ -185,6 +221,7 @@ export interface EmbeddedTranslationResult {
   englishPivot?: string; // Intermediate English translation
   detectedLanguage?: string;
   confidence: number;
+  proxyNote?: string; // Note when proxy language is used (e.g., Tulu → Kannada)
 }
 
 export interface LanguageDetectionResult {
@@ -332,10 +369,14 @@ export async function translate(
   const normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
 
+  // Check for proxy language (e.g., Tulu → Kannada)
+  const targetProxy = getProxyLanguage(normTarget);
+  const effectiveTarget = targetProxy ? targetProxy.proxy : normTarget;
+
   // Same language - just convert script if needed
-  if (isSameLanguage(normSource, normTarget)) {
-    const nativeText = needsScriptConversion(normTarget) && isLatinText(trimmed)
-      ? transliterateToNative(trimmed, normTarget)
+  if (isSameLanguage(normSource, normTarget) || isSameLanguage(normSource, effectiveTarget)) {
+    const nativeText = needsScriptConversion(effectiveTarget) && isLatinText(trimmed)
+      ? transliterateToNative(trimmed, effectiveTarget)
       : trimmed;
 
     return {
@@ -346,6 +387,7 @@ export async function translate(
       sourceLanguage: normSource,
       targetLanguage: normTarget,
       confidence: 1.0,
+      proxyNote: targetProxy?.note,
     };
   }
 
@@ -364,39 +406,39 @@ export async function translate(
   let wasTranslated = false;
   let wasTransliterated = false;
 
-  // ENGLISH PIVOT TRANSLATION LOGIC
+  // ENGLISH PIVOT TRANSLATION LOGIC - Use effective target (proxy if needed)
   const sourceIsEnglish = isEnglish(actualSource);
-  const targetIsEnglish = isEnglish(normTarget);
+  const targetIsEnglish = isEnglish(effectiveTarget);
 
   if (sourceIsEnglish && targetIsEnglish) {
     // English to English - no translation needed
     translatedText = correctedText;
   } else if (sourceIsEnglish) {
-    // English → Target (direct, no pivot needed)
-    translatedText = translateFromEnglish(correctedText, normTarget);
+    // English → Target (direct, no pivot needed) - use effectiveTarget for proxy languages
+    translatedText = translateFromEnglish(correctedText, effectiveTarget);
     wasTranslated = true;
   } else if (targetIsEnglish) {
     // Source → English (direct, no pivot needed)
     translatedText = translateToEnglish(correctedText, actualSource);
     wasTranslated = true;
   } else {
-    // Source → English → Target (full pivot)
+    // Source → English → Target (full pivot) - use effectiveTarget for proxy languages
     englishPivot = translateToEnglish(correctedText, actualSource);
-    translatedText = translateFromEnglish(englishPivot, normTarget);
+    translatedText = translateFromEnglish(englishPivot, effectiveTarget);
     wasTranslated = true;
   }
 
-  // Convert to target native script if needed
-  if (needsScriptConversion(normTarget) && isLatinText(translatedText)) {
-    const nativeResult = transliterateToNative(translatedText, normTarget);
+  // Convert to target native script if needed - use effectiveTarget for script conversion
+  if (needsScriptConversion(effectiveTarget) && isLatinText(translatedText)) {
+    const nativeResult = transliterateToNative(translatedText, effectiveTarget);
     if (nativeResult !== translatedText) {
       translatedText = nativeResult;
       wasTransliterated = true;
     }
   }
 
-  // Apply target language spell correction
-  translatedText = spellCorrectForChat(translatedText, normTarget);
+  // Apply target language spell correction - use effectiveTarget
+  translatedText = spellCorrectForChat(translatedText, effectiveTarget);
 
   const result: EmbeddedTranslationResult = {
     text: translatedText,
@@ -404,10 +446,11 @@ export async function translate(
     isTranslated: wasTranslated,
     isTransliterated: wasTransliterated,
     sourceLanguage: actualSource,
-    targetLanguage: normTarget,
+    targetLanguage: normTarget, // Keep original target for display
     englishPivot,
     detectedLanguage: detected.language,
     confidence: wasTranslated ? 0.85 : 0.5,
+    proxyNote: targetProxy?.note, // Add proxy note if used
   };
 
   setInCache(cacheKey, result);
