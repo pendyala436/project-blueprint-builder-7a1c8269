@@ -132,9 +132,15 @@ export async function semanticTranslate(
         throw new Error('No translator to English available');
       }
       result = await translator.translateMeaning(trimmedText);
+    } else if (srcLang.script === 'Latin' && tgtLang.script === 'Latin') {
+      // Latin → Latin: direct translation (no pivot needed)
+      const translator = engine.getTranslator(srcLang.code, tgtLang.code);
+      if (!translator) {
+        throw new Error('No translator available for Latin pair');
+      }
+      result = await translator.translateMeaning(trimmedText);
     } else {
-      // Non-English → Non-English: ALWAYS use English as semantic pivot
-      // This applies to ALL language pairs including Latin → Latin
+      // Non-English with Native scripts: ALWAYS use English as semantic pivot
       const toEnglish = engine.getTranslator(srcLang.code, ENGLISH_CODE);
       const fromEnglish = engine.getTranslator(ENGLISH_CODE, tgtLang.code);
       
