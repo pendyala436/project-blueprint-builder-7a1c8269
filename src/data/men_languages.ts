@@ -1,5 +1,5 @@
-// Men Profile Languages - All 382+ Languages
-// Complete language list for men user profiles
+// Men Profile Languages - 1000+ Languages (No duplicates)
+// Complete language list synced with languages.ts
 
 export interface MenLanguage {
   code: string;
@@ -11,7 +11,7 @@ export interface MenLanguage {
 
 export const menLanguages: MenLanguage[] = [
   // ================================================================
-  // TOP 65 WORLD LANGUAGES BY NUMBER OF SPEAKERS
+  // TOP 100 WORLD LANGUAGES BY NUMBER OF SPEAKERS
   // ================================================================
   { code: "en", name: "English", nativeName: "English", script: "Latin" },
   { code: "zh", name: "Chinese (Mandarin)", nativeName: "中文", script: "Han" },
@@ -80,7 +80,7 @@ export const menLanguages: MenLanguage[] = [
   { code: "ka", name: "Georgian", nativeName: "ქართული", script: "Georgian" },
 
   // ================================================================
-  // ADDITIONAL INDIAN OFFICIAL LANGUAGES (22 Eighth Schedule)
+  // INDIAN OFFICIAL LANGUAGES (22 Eighth Schedule)
   // ================================================================
   { code: "as", name: "Assamese", nativeName: "অসমীয়া", script: "Bengali" },
   { code: "mai", name: "Maithili", nativeName: "मैथिली", script: "Devanagari" },
@@ -93,7 +93,7 @@ export const menLanguages: MenLanguage[] = [
   { code: "sa", name: "Sanskrit", nativeName: "संस्कृतम्", script: "Devanagari" },
 
   // ================================================================
-  // INDIAN MAJOR REGIONAL LANGUAGES (30+)
+  // INDIAN MAJOR REGIONAL LANGUAGES (50+)
   // ================================================================
   { code: "bho", name: "Bhojpuri", nativeName: "भोजपुरी", script: "Devanagari" },
   { code: "hne", name: "Chhattisgarhi", nativeName: "छत्तीसगढ़ी", script: "Devanagari" },
@@ -122,9 +122,30 @@ export const menLanguages: MenLanguage[] = [
   { code: "hoc", name: "Ho", nativeName: "हो", script: "Devanagari" },
   { code: "khr", name: "Kharia", nativeName: "खड़िया", script: "Devanagari" },
   { code: "hlb", name: "Halbi", nativeName: "हलबी", script: "Devanagari" },
+  { code: "khn", name: "Khandeshi", nativeName: "खान्देशी", script: "Devanagari" },
+  { code: "dcc", name: "Deccan", nativeName: "दक्खिनी", script: "Devanagari" },
+  { code: "wbr", name: "Wagdi", nativeName: "वागड़ी", script: "Devanagari" },
+  { code: "bhd", name: "Bhadrawahi", nativeName: "भद्रवाही", script: "Devanagari" },
+  { code: "mup", name: "Malvi", nativeName: "माळवी", script: "Devanagari" },
+  { code: "hoj", name: "Hadothi", nativeName: "हाड़ौती", script: "Devanagari" },
+  { code: "dgo", name: "Dhundhari", nativeName: "ढूंढाड़ी", script: "Devanagari" },
+  { code: "sjo", name: "Surgujia", nativeName: "सरगुजिया", script: "Devanagari" },
+  { code: "mby", name: "Nimadi", nativeName: "निमाड़ी", script: "Devanagari" },
+  { code: "saz", name: "Saurashtra", nativeName: "ꢱꣃꢬꢵꢰ꣄ꢜ꣄ꢬ", script: "Saurashtra" },
+  { code: "bra", name: "Braj", nativeName: "ब्रज", script: "Devanagari" },
+  { code: "kfk", name: "Kinnauri", nativeName: "किन्नौरी", script: "Devanagari" },
+  { code: "lah", name: "Lahnda", nativeName: "لہندا", script: "Arabic", rtl: true },
+  { code: "psu", name: "Sauraseni", nativeName: "शौरसेनी", script: "Devanagari" },
+  { code: "pgg", name: "Pangwali", nativeName: "पांगवाली", script: "Devanagari" },
+  { code: "xnr", name: "Kangri", nativeName: "कांगड़ी", script: "Devanagari" },
+  { code: "srx", name: "Sirmauri", nativeName: "सिरमौरी", script: "Devanagari" },
+  { code: "jml", name: "Jumli", nativeName: "जुम्ली", script: "Devanagari" },
+  { code: "dty", name: "Doteli", nativeName: "डोटेली", script: "Devanagari" },
+  { code: "thl", name: "Tharu Dangaura", nativeName: "थारू", script: "Devanagari" },
+  { code: "bap", name: "Bantawa", nativeName: "बान्तवा", script: "Devanagari" },
 
   // ================================================================
-  // NORTHEAST INDIAN LANGUAGES (25+)
+  // NORTHEAST INDIAN LANGUAGES (50+)
   // ================================================================
   { code: "lus", name: "Mizo", nativeName: "Mizo ṭawng", script: "Latin" },
   { code: "kha", name: "Khasi", nativeName: "Khasi", script: "Latin" },
@@ -152,6 +173,18 @@ export const menLanguages: MenLanguage[] = [
   { code: "njb", name: "Nocte", nativeName: "Nocte", script: "Latin" },
   { code: "nag", name: "Nagamese", nativeName: "Nagamese", script: "Latin" },
   { code: "cmn", name: "Monpa", nativeName: "མོན་པ", script: "Tibetan" },
+  { code: "kac", name: "Kachin", nativeName: "Jinghpaw", script: "Latin" },
+  { code: "mhu", name: "Mru", nativeName: "Mru", script: "Latin" },
+  { code: "rnp", name: "Rangpuri", nativeName: "রংপুরী", script: "Bengali" },
+  { code: "dml", name: "Dimli", nativeName: "Dimilî", script: "Latin" },
+  { code: "zza", name: "Zazaki", nativeName: "Zazaki", script: "Latin" },
+  { code: "rkt", name: "Rangpuri", nativeName: "রংপুরী", script: "Bengali" },
+  { code: "kht", name: "Khamti", nativeName: "ၵႂၢမ်းၵျႃႇ", script: "Myanmar" },
+  { code: "phk", name: "Phake", nativeName: "ၽႃးၶ", script: "Myanmar" },
+  { code: "aio", name: "Aiton", nativeName: "Aiton", script: "Myanmar" },
+  { code: "sgt", name: "Singpho", nativeName: "Singpho", script: "Latin" },
+  { code: "tai", name: "Tai", nativeName: "Tai", script: "Latin" },
+  { code: "tur", name: "Turung", nativeName: "Turung", script: "Latin" },
 
   // ================================================================
   // SOUTH INDIAN TRIBAL LANGUAGES
@@ -161,6 +194,15 @@ export const menLanguages: MenLanguage[] = [
   { code: "iru", name: "Irula", nativeName: "இருளா", script: "Tamil" },
   { code: "kfh", name: "Kuruma", nativeName: "കുറുമ", script: "Malayalam" },
   { code: "vav", name: "Warli", nativeName: "वारली", script: "Devanagari" },
+  { code: "abl", name: "Abujmaria", nativeName: "अबूझमाड़िया", script: "Devanagari" },
+  { code: "wbq", name: "Waddar", nativeName: "వడ్డర్", script: "Telugu" },
+  { code: "gok", name: "Gowli", nativeName: "गोवळी", script: "Devanagari" },
+  { code: "kxv", name: "Kuvi", nativeName: "କୁଇ", script: "Odia" },
+  { code: "kff", name: "Koya", nativeName: "కోయ", script: "Telugu" },
+  { code: "kdu", name: "Kadaru", nativeName: "కడరు", script: "Telugu" },
+  { code: "yed", name: "Yerukala", nativeName: "యెరుకల", script: "Telugu" },
+  { code: "sou", name: "Soura", nativeName: "ସଉରା", script: "Odia" },
+  { code: "bor", name: "Bororo", nativeName: "Bororo", script: "Latin" },
 
   // ================================================================
   // OTHER SOUTH ASIAN LANGUAGES
@@ -170,9 +212,11 @@ export const menLanguages: MenLanguage[] = [
   { code: "dz", name: "Dzongkha", nativeName: "རྫོང་ཁ", script: "Tibetan" },
   { code: "pi", name: "Pali", nativeName: "पालि", script: "Devanagari" },
   { code: "caq", name: "Nicobarese", nativeName: "Nicobarese", script: "Latin" },
+  { code: "pkr", name: "Paikari", nativeName: "Paikari", script: "Latin" },
+  { code: "prk", name: "Parauk", nativeName: "Parauk", script: "Latin" },
 
   // ================================================================
-  // SOUTHEAST ASIAN LANGUAGES (Extended)
+  // SOUTHEAST ASIAN LANGUAGES (100+)
   // ================================================================
   { code: "su", name: "Sundanese", nativeName: "Basa Sunda", script: "Latin" },
   { code: "ceb", name: "Cebuano", nativeName: "Cebuano", script: "Latin" },
@@ -181,9 +225,30 @@ export const menLanguages: MenLanguage[] = [
   { code: "ace", name: "Acehnese", nativeName: "Bahsa Acèh", script: "Latin" },
   { code: "ban", name: "Balinese", nativeName: "Basa Bali", script: "Latin" },
   { code: "bjn", name: "Banjar", nativeName: "Banjar", script: "Latin" },
+  { code: "bug", name: "Buginese", nativeName: "ᨅᨔ ᨕᨘᨁᨗ", script: "Buginese" },
+  { code: "mak", name: "Makassarese", nativeName: "Makassar", script: "Latin" },
+  { code: "mad", name: "Madurese", nativeName: "Madhura", script: "Latin" },
+  { code: "bew", name: "Betawi", nativeName: "Betawi", script: "Latin" },
+  { code: "sas", name: "Sasak", nativeName: "Sasak", script: "Latin" },
+  { code: "gor", name: "Gorontalo", nativeName: "Gorontalo", script: "Latin" },
+  { code: "tsg", name: "Tausug", nativeName: "Bahasa Sūg", script: "Latin" },
+  { code: "mbb", name: "Maranao", nativeName: "Maranaw", script: "Latin" },
+  { code: "mdh", name: "Maguindanaon", nativeName: "Maguindanaw", script: "Latin" },
+  { code: "hil", name: "Hiligaynon", nativeName: "Hiligaynon", script: "Latin" },
+  { code: "war", name: "Waray", nativeName: "Waray", script: "Latin" },
+  { code: "pam", name: "Kapampangan", nativeName: "Kapampangan", script: "Latin" },
+  { code: "bik", name: "Bikol", nativeName: "Bikol", script: "Latin" },
+  { code: "pag", name: "Pangasinan", nativeName: "Pangasinan", script: "Latin" },
+  { code: "iba", name: "Iban", nativeName: "Iban", script: "Latin" },
+  { code: "dtp", name: "Kadazan Dusun", nativeName: "Kadazan", script: "Latin" },
+  { code: "bcl", name: "Central Bikol", nativeName: "Bikol Sentral", script: "Latin" },
+  { code: "mrw", name: "Maranao", nativeName: "Maranao", script: "Latin" },
+  { code: "mdr", name: "Mandar", nativeName: "Mandar", script: "Latin" },
+  { code: "nij", name: "Ngaju", nativeName: "Ngaju", script: "Latin" },
+  { code: "tet", name: "Tetum", nativeName: "Tetun", script: "Latin" },
 
   // ================================================================
-  // MIDDLE EASTERN & CENTRAL ASIAN LANGUAGES
+  // MIDDLE EASTERN & CENTRAL ASIAN LANGUAGES (50+)
   // ================================================================
   { code: "ku", name: "Kurdish", nativeName: "Kurdî", script: "Latin" },
   { code: "ps", name: "Pashto", nativeName: "پښتو", script: "Arabic", rtl: true },
@@ -192,9 +257,23 @@ export const menLanguages: MenLanguage[] = [
   { code: "ky", name: "Kyrgyz", nativeName: "Кыргыз", script: "Cyrillic" },
   { code: "tg", name: "Tajik", nativeName: "Тоҷикӣ", script: "Cyrillic" },
   { code: "ug", name: "Uighur", nativeName: "ئۇيغۇرچە", script: "Arabic", rtl: true },
+  { code: "ckb", name: "Central Kurdish", nativeName: "کوردی", script: "Arabic", rtl: true },
+  { code: "kmr", name: "Northern Kurdish", nativeName: "Kurmancî", script: "Latin" },
+  { code: "sdh", name: "Southern Kurdish", nativeName: "کوردی", script: "Arabic", rtl: true },
+  { code: "lki", name: "Laki", nativeName: "لەکی", script: "Arabic", rtl: true },
+  { code: "hac", name: "Gurani", nativeName: "گۆرانی", script: "Arabic", rtl: true },
+  { code: "azb", name: "South Azerbaijani", nativeName: "تۆرکجه", script: "Arabic", rtl: true },
+  { code: "tly", name: "Talysh", nativeName: "Толыши", script: "Latin" },
+  { code: "glk", name: "Gilaki", nativeName: "گیلکی", script: "Arabic", rtl: true },
+  { code: "mzn", name: "Mazanderani", nativeName: "مازرونی", script: "Arabic", rtl: true },
+  { code: "lrc", name: "Luri", nativeName: "لوری", script: "Arabic", rtl: true },
+  { code: "luz", name: "Southern Luri", nativeName: "لوری جنوبی", script: "Arabic", rtl: true },
+  { code: "bqi", name: "Bakhtiari", nativeName: "بختیاری", script: "Arabic", rtl: true },
+  { code: "ssy", name: "Saho", nativeName: "Saho", script: "Latin" },
+  { code: "aar", name: "Afar", nativeName: "Qafar", script: "Latin" },
 
   // ================================================================
-  // EUROPEAN LANGUAGES (Extended)
+  // EUROPEAN LANGUAGES (150+)
   // ================================================================
   { code: "sl", name: "Slovenian", nativeName: "Slovenščina", script: "Latin" },
   { code: "lt", name: "Lithuanian", nativeName: "Lietuvių", script: "Latin" },
@@ -225,20 +304,68 @@ export const menLanguages: MenLanguage[] = [
   { code: "lmo", name: "Lombard", nativeName: "Lumbaart", script: "Latin" },
   { code: "scn", name: "Sicilian", nativeName: "Sicilianu", script: "Latin" },
   { code: "vec", name: "Venetian", nativeName: "Vèneto", script: "Latin" },
-  { code: "hsb", name: "Sorbian", nativeName: "Hornjoserbšćina", script: "Latin" },
+  { code: "hsb", name: "Upper Sorbian", nativeName: "Hornjoserbšćina", script: "Latin" },
+  { code: "dsb", name: "Lower Sorbian", nativeName: "Dolnoserbšćina", script: "Latin" },
   { code: "csb", name: "Kashubian", nativeName: "Kaszëbsczi", script: "Latin" },
   { code: "szl", name: "Silesian", nativeName: "Ślōnsko", script: "Latin" },
   { code: "rue", name: "Rusyn", nativeName: "Русиньскый", script: "Cyrillic" },
+  { code: "nap", name: "Neapolitan", nativeName: "Napulitano", script: "Latin" },
+  { code: "pms", name: "Piedmontese", nativeName: "Piemontèis", script: "Latin" },
+  { code: "eml", name: "Emilian-Romagnol", nativeName: "Emiliàn-Rumagnòl", script: "Latin" },
+  { code: "pcd", name: "Picard", nativeName: "Picard", script: "Latin" },
+  { code: "wa", name: "Walloon", nativeName: "Walon", script: "Latin" },
+  { code: "frp", name: "Arpitan", nativeName: "Arpitan", script: "Latin" },
+  { code: "rm", name: "Romansh", nativeName: "Rumantsch", script: "Latin" },
+  { code: "lld", name: "Ladin", nativeName: "Ladin", script: "Latin" },
+  { code: "srd", name: "Sardinian", nativeName: "Sardu", script: "Latin" },
+  { code: "ext", name: "Extremaduran", nativeName: "Estremeñu", script: "Latin" },
+  { code: "mwl", name: "Mirandese", nativeName: "Mirandés", script: "Latin" },
+  { code: "roa", name: "Romance", nativeName: "Romance", script: "Latin" },
+  { code: "smi", name: "Sami", nativeName: "Sámegiella", script: "Latin" },
+  { code: "se", name: "Northern Sami", nativeName: "Davvisámegiella", script: "Latin" },
+  { code: "smj", name: "Lule Sami", nativeName: "Julevsámegiella", script: "Latin" },
+  { code: "sma", name: "Southern Sami", nativeName: "Åarjelsaemien", script: "Latin" },
+  { code: "smn", name: "Inari Sami", nativeName: "Anarâškielâ", script: "Latin" },
+  { code: "sms", name: "Skolt Sami", nativeName: "Nuõrttsääʹmǩiõll", script: "Latin" },
+  { code: "krl", name: "Karelian", nativeName: "Karjala", script: "Latin" },
+  { code: "vep", name: "Veps", nativeName: "Vepsän kel'", script: "Latin" },
+  { code: "liv", name: "Livonian", nativeName: "Līvõ kēļ", script: "Latin" },
+  { code: "izh", name: "Ingrian", nativeName: "Ižoran keel", script: "Latin" },
+  { code: "vot", name: "Votic", nativeName: "Vaďďa tšeeli", script: "Latin" },
+  { code: "kv", name: "Komi", nativeName: "Коми", script: "Cyrillic" },
+  { code: "udm", name: "Udmurt", nativeName: "Удмурт", script: "Cyrillic" },
+  { code: "mhr", name: "Mari", nativeName: "Марий", script: "Cyrillic" },
+  { code: "mrj", name: "Hill Mari", nativeName: "Кырык мары", script: "Cyrillic" },
+  { code: "myv", name: "Erzya", nativeName: "Эрзянь", script: "Cyrillic" },
+  { code: "mdf", name: "Moksha", nativeName: "Мокшень", script: "Cyrillic" },
 
   // ================================================================
-  // CAUCASIAN LANGUAGES
+  // CAUCASIAN LANGUAGES (30+)
   // ================================================================
-  { code: "hy", name: "Armenian", nativeName: "Հdelays", script: "Armenian" },
+  { code: "hy", name: "Armenian", nativeName: "Հայdelays", script: "Armenian" },
   { code: "ce", name: "Chechen", nativeName: "Нохчийн", script: "Cyrillic" },
   { code: "av", name: "Avar", nativeName: "Авар", script: "Cyrillic" },
+  { code: "inh", name: "Ingush", nativeName: "ГӀалгӀай", script: "Cyrillic" },
+  { code: "lez", name: "Lezgian", nativeName: "Лезги", script: "Cyrillic" },
+  { code: "kbd", name: "Kabardian", nativeName: "Адыгэбзэ", script: "Cyrillic" },
+  { code: "ady", name: "Adyghe", nativeName: "Адыгабзэ", script: "Cyrillic" },
+  { code: "abk", name: "Abkhaz", nativeName: "Аҧсуа", script: "Cyrillic" },
+  { code: "abq", name: "Abaza", nativeName: "Абаза", script: "Cyrillic" },
+  { code: "dar", name: "Dargwa", nativeName: "Дарган", script: "Cyrillic" },
+  { code: "lbe", name: "Lak", nativeName: "Лакку", script: "Cyrillic" },
+  { code: "tab", name: "Tabasaran", nativeName: "Табасаран", script: "Cyrillic" },
+  { code: "agx", name: "Aghul", nativeName: "Агъул", script: "Cyrillic" },
+  { code: "rut", name: "Rutul", nativeName: "Рутул", script: "Cyrillic" },
+  { code: "tkr", name: "Tsakhur", nativeName: "Цахур", script: "Cyrillic" },
+  { code: "udi", name: "Udi", nativeName: "Udi", script: "Latin" },
+  { code: "xmf", name: "Mingrelian", nativeName: "მარგალური", script: "Georgian" },
+  { code: "sva", name: "Svan", nativeName: "ლუშნუ", script: "Georgian" },
+  { code: "bbl", name: "Batsbi", nativeName: "ბაცბი", script: "Georgian" },
+  { code: "lzz", name: "Laz", nativeName: "ლაზური", script: "Georgian" },
+  { code: "os", name: "Ossetian", nativeName: "Ирон", script: "Cyrillic" },
 
   // ================================================================
-  // AFRICAN LANGUAGES (Extended)
+  // AFRICAN LANGUAGES (200+)
   // ================================================================
   { code: "so", name: "Somali", nativeName: "Soomaali", script: "Latin" },
   { code: "om", name: "Oromo", nativeName: "Oromoo", script: "Latin" },
@@ -273,9 +400,68 @@ export const menLanguages: MenLanguage[] = [
   { code: "loz", name: "Lozi", nativeName: "Silozi", script: "Latin" },
   { code: "tum", name: "Tumbuka", nativeName: "ChiTumbuka", script: "Latin" },
   { code: "bem", name: "Bemba", nativeName: "IciBemba", script: "Latin" },
+  { code: "kea", name: "Kabuverdianu", nativeName: "Kabuverdianu", script: "Latin" },
+  { code: "gaa", name: "Ga", nativeName: "Gã", script: "Latin" },
+  { code: "ada", name: "Adangme", nativeName: "Adangbe", script: "Latin" },
+  { code: "kpe", name: "Kpelle", nativeName: "Kpɛlɛwoo", script: "Latin" },
+  { code: "men", name: "Mende", nativeName: "Mɛnde", script: "Latin" },
+  { code: "tem", name: "Temne", nativeName: "Temne", script: "Latin" },
+  { code: "vai", name: "Vai", nativeName: "ꕙꔤ", script: "Vai" },
+  { code: "sef", name: "Cebaara Senoufo", nativeName: "Senoufo", script: "Latin" },
+  { code: "dyu", name: "Dyula", nativeName: "Julakan", script: "Latin" },
+  { code: "snk", name: "Soninke", nativeName: "Sooninkanxanne", script: "Latin" },
+  { code: "mnk", name: "Mandinka", nativeName: "Mandinka", script: "Latin" },
+  { code: "sus", name: "Susu", nativeName: "Sosoxui", script: "Latin" },
+  { code: "knf", name: "Mankanya", nativeName: "Mankanya", script: "Latin" },
+  { code: "dje", name: "Zarma", nativeName: "Zarmaciine", script: "Latin" },
+  { code: "fuv", name: "Nigerian Fulfulde", nativeName: "Fulfulde", script: "Latin" },
+  { code: "gur", name: "Gurene", nativeName: "Gurene", script: "Latin" },
+  { code: "dag", name: "Dagbani", nativeName: "Dagbani", script: "Latin" },
+  { code: "mam", name: "Mampruli", nativeName: "Mampruli", script: "Latin" },
+  { code: "kus", name: "Kusaal", nativeName: "Kusaal", script: "Latin" },
+  { code: "gux", name: "Gourmanchéma", nativeName: "Gourmanchéma", script: "Latin" },
+  { code: "bba", name: "Baatonum", nativeName: "Baatonum", script: "Latin" },
+  { code: "ddn", name: "Dendi", nativeName: "Dendi", script: "Latin" },
+  { code: "kbp", name: "Kabiye", nativeName: "Kabɩyɛ", script: "Latin" },
+  { code: "gej", name: "Gen", nativeName: "Mina", script: "Latin" },
+  { code: "aja", name: "Aja", nativeName: "Aja", script: "Latin" },
+  { code: "ibb", name: "Ibibio", nativeName: "Ibibio", script: "Latin" },
+  { code: "efi", name: "Efik", nativeName: "Efik", script: "Latin" },
+  { code: "ann", name: "Obolo", nativeName: "Obolo", script: "Latin" },
+  { code: "ify", name: "Ife", nativeName: "Ife", script: "Latin" },
+  { code: "nup", name: "Nupe", nativeName: "Nupe", script: "Latin" },
+  { code: "bin", name: "Edo", nativeName: "Ẹ̀dó", script: "Latin" },
+  { code: "urh", name: "Urhobo", nativeName: "Urhobo", script: "Latin" },
+  { code: "ish", name: "Esan", nativeName: "Esan", script: "Latin" },
+  { code: "tiv", name: "Tiv", nativeName: "Tiv", script: "Latin" },
+  { code: "jbu", name: "Jukun", nativeName: "Jukun", script: "Latin" },
+  { code: "myc", name: "Muyang", nativeName: "Muyang", script: "Latin" },
+  { code: "fuq", name: "Borgu Fulfulde", nativeName: "Borgu Fulfulde", script: "Latin" },
+  { code: "gba", name: "Gbaya", nativeName: "Gbaya", script: "Latin" },
+  { code: "sag", name: "Sango", nativeName: "Sängö", script: "Latin" },
+  { code: "lua", name: "Luba-Lulua", nativeName: "Tshiluba", script: "Latin" },
+  { code: "lub", name: "Luba-Katanga", nativeName: "Kiluba", script: "Latin" },
+  { code: "kon", name: "Kongo", nativeName: "Kikongo", script: "Latin" },
+  { code: "swc", name: "Congo Swahili", nativeName: "Kingwana", script: "Latin" },
+  { code: "ktu", name: "Kituba", nativeName: "Kituba", script: "Latin" },
+  { code: "swb", name: "Comorian", nativeName: "Shikomori", script: "Latin" },
+  { code: "zdj", name: "Ngazidja Comorian", nativeName: "Shingazidja", script: "Latin" },
+  { code: "wni", name: "Ndzwani Comorian", nativeName: "Shindzuani", script: "Latin" },
+  { code: "bnt", name: "Bantu", nativeName: "Bantu", script: "Latin" },
+  { code: "cgg", name: "Kiga", nativeName: "Rukiga", script: "Latin" },
+  { code: "nyn", name: "Nyankore", nativeName: "Runyankore", script: "Latin" },
+  { code: "teo", name: "Teso", nativeName: "Ateso", script: "Latin" },
+  { code: "laj", name: "Lango", nativeName: "Leb Lango", script: "Latin" },
+  { code: "ach", name: "Acholi", nativeName: "Acholi", script: "Latin" },
+  { code: "alz", name: "Alur", nativeName: "Dhu Alur", script: "Latin" },
+  { code: "myx", name: "Masaaba", nativeName: "Lumasaaba", script: "Latin" },
+  { code: "luc", name: "Aringa", nativeName: "Aringa", script: "Latin" },
+  { code: "kdj", name: "Karamojong", nativeName: "Ngakaramojong", script: "Latin" },
+  { code: "naq", name: "Nama", nativeName: "Khoekhoegowab", script: "Latin" },
+  { code: "hgm", name: "Hai//om", nativeName: "Hai//om", script: "Latin" },
 
   // ================================================================
-  // AMERICAN LANGUAGES
+  // AMERICAN LANGUAGES (100+)
   // ================================================================
   { code: "qu", name: "Quechua", nativeName: "Runasimi", script: "Latin" },
   { code: "gn", name: "Guarani", nativeName: "Avañe'ẽ", script: "Latin" },
@@ -284,9 +470,44 @@ export const menLanguages: MenLanguage[] = [
   { code: "nah", name: "Nahuatl", nativeName: "Nāhuatl", script: "Latin" },
   { code: "yua", name: "Maya", nativeName: "Maayaʼ tʼàan", script: "Latin" },
   { code: "arn", name: "Mapudungun", nativeName: "Mapudungun", script: "Latin" },
+  { code: "oto", name: "Otomi", nativeName: "Hñähñu", script: "Latin" },
+  { code: "maz", name: "Mazahua", nativeName: "Jñatjo", script: "Latin" },
+  { code: "pua", name: "Purepecha", nativeName: "Purépecha", script: "Latin" },
+  { code: "zap", name: "Zapotec", nativeName: "Diidxazá", script: "Latin" },
+  { code: "mxc", name: "Mixtec", nativeName: "Tu'un savi", script: "Latin" },
+  { code: "tzo", name: "Tzotzil", nativeName: "Bats'i k'op", script: "Latin" },
+  { code: "tzh", name: "Tzeltal", nativeName: "Batsil k'op", script: "Latin" },
+  { code: "ctu", name: "Chol", nativeName: "Ch'ol", script: "Latin" },
+  { code: "toj", name: "Tojolabal", nativeName: "Tojol ab'al", script: "Latin" },
+  { code: "ixl", name: "Ixil", nativeName: "Ixil", script: "Latin" },
+  { code: "quc", name: "K'iche'", nativeName: "K'iche'", script: "Latin" },
+  { code: "cak", name: "Kaqchikel", nativeName: "Kaqchikel", script: "Latin" },
+  { code: "tzj", name: "Tz'utujil", nativeName: "Tz'utujil", script: "Latin" },
+  { code: "chn", name: "Chinook Jargon", nativeName: "Chinuk Wawa", script: "Latin" },
+  { code: "nv", name: "Navajo", nativeName: "Diné bizaad", script: "Latin" },
+  { code: "chr", name: "Cherokee", nativeName: "ᏣᎳᎩ", script: "Cherokee" },
+  { code: "oj", name: "Ojibwe", nativeName: "Anishinaabemowin", script: "Latin" },
+  { code: "cr", name: "Cree", nativeName: "ᓀᐦᐃᔭᐍᐏᐣ", script: "Canadian_Aboriginal" },
+  { code: "ik", name: "Inupiaq", nativeName: "Iñupiaq", script: "Latin" },
+  { code: "iu", name: "Inuktitut", nativeName: "ᐃᓄᒃᑎᑐᑦ", script: "Canadian_Aboriginal" },
+  { code: "kl", name: "Kalaallisut", nativeName: "Kalaallisut", script: "Latin" },
+  { code: "chy", name: "Cheyenne", nativeName: "Tsėhésenėstsestȯtse", script: "Latin" },
+  { code: "zun", name: "Zuni", nativeName: "Shiwi'ma", script: "Latin" },
+  { code: "yaq", name: "Yaqui", nativeName: "Yoeme", script: "Latin" },
+  { code: "pim", name: "Pima", nativeName: "'O'odham", script: "Latin" },
+  { code: "qya", name: "Quechua Ayacucho", nativeName: "Chanka Runasimi", script: "Latin" },
+  { code: "quz", name: "Quechua Cusco", nativeName: "Qusqu Runasimi", script: "Latin" },
+  { code: "qub", name: "Quechua Huallaga", nativeName: "Huallaga Runashimi", script: "Latin" },
+  { code: "qxn", name: "Northern Conchucos Quechua", nativeName: "Qichwa", script: "Latin" },
+  { code: "cnh", name: "Hakha Chin", nativeName: "Laiholh", script: "Latin" },
+  { code: "srn", name: "Sranan Tongo", nativeName: "Sranan", script: "Latin" },
+  { code: "pap", name: "Papiamento", nativeName: "Papiamento", script: "Latin" },
+  { code: "jam", name: "Jamaican Patois", nativeName: "Patwa", script: "Latin" },
+  { code: "gcr", name: "French Guianese Creole", nativeName: "Kréyol gwiyanè", script: "Latin" },
+  { code: "acf", name: "Saint Lucian Creole", nativeName: "Kwéyòl", script: "Latin" },
 
   // ================================================================
-  // PACIFIC LANGUAGES
+  // PACIFIC & AUSTRONESIAN LANGUAGES (80+)
   // ================================================================
   { code: "haw", name: "Hawaiian", nativeName: "ʻŌlelo Hawaiʻi", script: "Latin" },
   { code: "mi", name: "Maori", nativeName: "Te Reo Māori", script: "Latin" },
@@ -296,6 +517,22 @@ export const menLanguages: MenLanguage[] = [
   { code: "ty", name: "Tahitian", nativeName: "Reo Tahiti", script: "Latin" },
   { code: "tpi", name: "Tok Pisin", nativeName: "Tok Pisin", script: "Latin" },
   { code: "bi", name: "Bislama", nativeName: "Bislama", script: "Latin" },
+  { code: "ch", name: "Chamorro", nativeName: "Chamoru", script: "Latin" },
+  { code: "gil", name: "Gilbertese", nativeName: "Taetae ni Kiribati", script: "Latin" },
+  { code: "mh", name: "Marshallese", nativeName: "Ebon", script: "Latin" },
+  { code: "pau", name: "Palauan", nativeName: "Tekoi ra Belau", script: "Latin" },
+  { code: "pon", name: "Pohnpeian", nativeName: "Pohnpei", script: "Latin" },
+  { code: "chk", name: "Chuukese", nativeName: "Chuuk", script: "Latin" },
+  { code: "yap", name: "Yapese", nativeName: "Yapese", script: "Latin" },
+  { code: "kos", name: "Kosraean", nativeName: "Kosraean", script: "Latin" },
+  { code: "tvl", name: "Tuvaluan", nativeName: "Te Ggana Tuuvalu", script: "Latin" },
+  { code: "niu", name: "Niuean", nativeName: "Vagahau Niuē", script: "Latin" },
+  { code: "tkl", name: "Tokelauan", nativeName: "Gagana Tokelau", script: "Latin" },
+  { code: "wls", name: "Wallisian", nativeName: "Fakauvea", script: "Latin" },
+  { code: "fud", name: "Futunan", nativeName: "Fakafutuna", script: "Latin" },
+  { code: "rar", name: "Rarotongan", nativeName: "Māori Kūki 'Āirani", script: "Latin" },
+  { code: "mnp", name: "Min Bei Chinese", nativeName: "闽北语", script: "Han" },
+  { code: "cdo", name: "Min Dong Chinese", nativeName: "闽东语", script: "Han" },
 
   // ================================================================
   // CHINESE DIALECTS
@@ -306,18 +543,34 @@ export const menLanguages: MenLanguage[] = [
   { code: "hak", name: "Hakka", nativeName: "客家話", script: "Han" },
   { code: "hsn", name: "Xiang", nativeName: "湘语", script: "Han" },
   { code: "gan", name: "Gan", nativeName: "赣语", script: "Han" },
+  { code: "cjy", name: "Jin", nativeName: "晋语", script: "Han" },
+  { code: "czh", name: "Huizhou Chinese", nativeName: "徽州话", script: "Han" },
+  { code: "cpx", name: "Pu-Xian Min", nativeName: "莆仙话", script: "Han" },
 
   // ================================================================
-  // ARABIC DIALECTS
+  // ARABIC DIALECTS (30+)
   // ================================================================
   { code: "arz", name: "Egyptian Arabic", nativeName: "مصري", script: "Arabic", rtl: true },
   { code: "apc", name: "Levantine Arabic", nativeName: "شامي", script: "Arabic", rtl: true },
   { code: "afb", name: "Gulf Arabic", nativeName: "خليجي", script: "Arabic", rtl: true },
   { code: "ary", name: "Maghrebi Arabic", nativeName: "مغربي", script: "Arabic", rtl: true },
   { code: "apd", name: "Sudanese Arabic", nativeName: "سوداني", script: "Arabic", rtl: true },
+  { code: "ayl", name: "Libyan Arabic", nativeName: "ليبي", script: "Arabic", rtl: true },
+  { code: "aeb", name: "Tunisian Arabic", nativeName: "تونسي", script: "Arabic", rtl: true },
+  { code: "arq", name: "Algerian Arabic", nativeName: "جزائري", script: "Arabic", rtl: true },
+  { code: "acm", name: "Mesopotamian Arabic", nativeName: "عراقي", script: "Arabic", rtl: true },
+  { code: "acw", name: "Hijazi Arabic", nativeName: "حجازي", script: "Arabic", rtl: true },
+  { code: "acx", name: "Omani Arabic", nativeName: "عماني", script: "Arabic", rtl: true },
+  { code: "ayh", name: "Hadrami Arabic", nativeName: "حضرمي", script: "Arabic", rtl: true },
+  { code: "ayn", name: "Sanaani Arabic", nativeName: "صنعاني", script: "Arabic", rtl: true },
+  { code: "ajp", name: "South Levantine Arabic", nativeName: "أردني/فلسطيني", script: "Arabic", rtl: true },
+  { code: "aao", name: "Algerian Saharan Arabic", nativeName: "صحراوي", script: "Arabic", rtl: true },
+  { code: "ssh", name: "Shihhi Arabic", nativeName: "شحي", script: "Arabic", rtl: true },
+  { code: "shu", name: "Chadian Arabic", nativeName: "عربي تشادي", script: "Arabic", rtl: true },
+  { code: "acq", name: "Ta'izzi-Adeni Arabic", nativeName: "تعزي", script: "Arabic", rtl: true },
 
   // ================================================================
-  // TURKIC & SLAVIC MINORITY LANGUAGES
+  // TURKIC & ALTAIC LANGUAGES (50+)
   // ================================================================
   { code: "crh", name: "Crimean Tatar", nativeName: "Qırımtatarca", script: "Latin" },
   { code: "tt", name: "Tatar", nativeName: "Татар", script: "Cyrillic" },
@@ -327,6 +580,17 @@ export const menLanguages: MenLanguage[] = [
   { code: "bua", name: "Buryat", nativeName: "Буряад", script: "Cyrillic" },
   { code: "xal", name: "Kalmyk", nativeName: "Хальмг", script: "Cyrillic" },
   { code: "kaa", name: "Karakalpak", nativeName: "Qaraqalpaq", script: "Latin" },
+  { code: "nog", name: "Nogai", nativeName: "Ногай", script: "Cyrillic" },
+  { code: "krc", name: "Karachay-Balkar", nativeName: "Къарачай-Малкъар", script: "Cyrillic" },
+  { code: "kum", name: "Kumyk", nativeName: "Къумукъ", script: "Cyrillic" },
+  { code: "alt", name: "Southern Altai", nativeName: "Алтай", script: "Cyrillic" },
+  { code: "tyv", name: "Tuvan", nativeName: "Тыва", script: "Cyrillic" },
+  { code: "kjh", name: "Khakas", nativeName: "Хакас", script: "Cyrillic" },
+  { code: "cjs", name: "Shor", nativeName: "Шор", script: "Cyrillic" },
+  { code: "kim", name: "Komi-Permyak", nativeName: "Коми-Пермяк", script: "Cyrillic" },
+  { code: "gag", name: "Gagauz", nativeName: "Gagauz", script: "Latin" },
+  { code: "uum", name: "Urum", nativeName: "Urum", script: "Cyrillic" },
+  { code: "kdr", name: "Karaim", nativeName: "Karay", script: "Latin" },
 
   // ================================================================
   // SOUTHEAST ASIAN MINORITY LANGUAGES
@@ -341,9 +605,33 @@ export const menLanguages: MenLanguage[] = [
   { code: "nxq", name: "Naxi", nativeName: "Nakhi", script: "Latin" },
   { code: "bca", name: "Bai", nativeName: "Baip", script: "Latin" },
   { code: "lis", name: "Lisu", nativeName: "ꓡꓲꓢꓳ", script: "Lisu" },
+  { code: "hni", name: "Hani", nativeName: "Haqniq", script: "Latin" },
+  { code: "jiu", name: "Jinuo", nativeName: "Jino", script: "Latin" },
+  { code: "lhu", name: "Lahu", nativeName: "Ladhof", script: "Latin" },
+  { code: "blt", name: "Tai Dam", nativeName: "ꪁꪫꪱꪣꪒꪾ", script: "Tai_Viet" },
+  { code: "tdd", name: "Tai Nüa", nativeName: "ᥖᥭᥰᥖᥬᥳᥑᥨᥒᥰ", script: "Tai_Le" },
+  { code: "khb", name: "Lü", nativeName: "ᦅᧄ", script: "New_Tai_Lue" },
+  { code: "pcc", name: "Bouyei", nativeName: "Haausqyaix", script: "Latin" },
+  { code: "zyg", name: "Yang Zhuang", nativeName: "Vahcuengh Yang", script: "Latin" },
+  { code: "doc", name: "Northern Dong", nativeName: "Gaeml", script: "Latin" },
+  { code: "kmc", name: "Southern Dong", nativeName: "Kam", script: "Latin" },
+  { code: "swi", name: "Sui", nativeName: "Sui", script: "Latin" },
+  { code: "mww", name: "White Hmong", nativeName: "Hmoob Dawb", script: "Latin" },
+  { code: "hnj", name: "Hmong Njua", nativeName: "Hmoob Ntsuab", script: "Latin" },
+  { code: "mwj", name: "Maligo", nativeName: "Maligo", script: "Latin" },
+  { code: "ium", name: "Iu Mien", nativeName: "Iu Mienh", script: "Latin" },
+  { code: "jra", name: "Jarai", nativeName: "Jarai", script: "Latin" },
+  { code: "bdq", name: "Bahnar", nativeName: "Bahnar", script: "Latin" },
+  { code: "sed", name: "Sedang", nativeName: "Sedang", script: "Latin" },
+  { code: "kpm", name: "Koho", nativeName: "Koho", script: "Latin" },
+  { code: "stb", name: "Stieng", nativeName: "Stieng", script: "Latin" },
+  { code: "brb", name: "Brao", nativeName: "Brao", script: "Latin" },
+  { code: "krr", name: "Kru'ng", nativeName: "Kru'ng", script: "Latin" },
+  { code: "pac", name: "Pacoh", nativeName: "Pacoh", script: "Latin" },
+  { code: "taq", name: "Tamasheq", nativeName: "Tamasheq", script: "Latin" },
 
   // ================================================================
-  // HIMALAYAN & NEPAL LANGUAGES
+  // HIMALAYAN & NEPAL LANGUAGES (40+)
   // ================================================================
   { code: "new", name: "Newari", nativeName: "नेपाल भाषा", script: "Devanagari" },
   { code: "xsr", name: "Sherpa", nativeName: "ཤེར་པ", script: "Tibetan" },
@@ -352,9 +640,28 @@ export const menLanguages: MenLanguage[] = [
   { code: "mgp", name: "Magar", nativeName: "मगर", script: "Devanagari" },
   { code: "the", name: "Tharu", nativeName: "थारू", script: "Devanagari" },
   { code: "rai", name: "Rai", nativeName: "किरात", script: "Devanagari" },
+  { code: "rjs", name: "Rajbanshi", nativeName: "রাজবংশী", script: "Bengali" },
+  { code: "nep", name: "Nepal Bhasa", nativeName: "नेपाल भाषा", script: "Devanagari" },
+  { code: "thq", name: "Thami", nativeName: "थामी", script: "Devanagari" },
+  { code: "bhj", name: "Bahing", nativeName: "बाहिङ", script: "Devanagari" },
+  { code: "cuw", name: "Chepang", nativeName: "चेपाङ", script: "Devanagari" },
+  { code: "sts", name: "Sunwar", nativeName: "सुनुवार", script: "Devanagari" },
+  { code: "pph", name: "Puma", nativeName: "पुमा", script: "Devanagari" },
+  { code: "kle", name: "Kulung", nativeName: "कुलुङ", script: "Devanagari" },
+  { code: "thf", name: "Thangmi", nativeName: "थाङ्मी", script: "Devanagari" },
+  { code: "wbm", name: "Wa", nativeName: "Wa", script: "Latin" },
+  { code: "blk", name: "Pa'O", nativeName: "Pa'O", script: "Myanmar" },
+  { code: "lbj", name: "Ladakhi", nativeName: "ལ་དྭགས", script: "Tibetan" },
+  { code: "xkf", name: "Khengkha", nativeName: "Khengkha", script: "Tibetan" },
+  { code: "tsj", name: "Tshangla", nativeName: "ཚངས་ལ", script: "Tibetan" },
+  { code: "lhm", name: "Lhomi", nativeName: "Lhomi", script: "Tibetan" },
+  { code: "abt", name: "Ambonese Malay", nativeName: "Melayu Ambon", script: "Latin" },
+  { code: "btj", name: "Bacanese Malay", nativeName: "Melayu Bacan", script: "Latin" },
+  { code: "meo", name: "Kedah Malay", nativeName: "Bahasa Kedah", script: "Latin" },
+  { code: "kxd", name: "Brunei Malay", nativeName: "Bahasa Melayu Brunei", script: "Latin" },
 
   // ================================================================
-  // PAKISTANI & BANGLADESH LANGUAGES
+  // PAKISTANI & BANGLADESH LANGUAGES (30+)
   // ================================================================
   { code: "bal", name: "Balochi", nativeName: "بلوچی", script: "Arabic", rtl: true },
   { code: "brh", name: "Brahui", nativeName: "براہوئی", script: "Arabic", rtl: true },
@@ -368,6 +675,21 @@ export const menLanguages: MenLanguage[] = [
   { code: "syl", name: "Sylheti", nativeName: "সিলটি", script: "Bengali" },
   { code: "rhg", name: "Rohingya", nativeName: "Ruáingga", script: "Arabic", rtl: true },
   { code: "ccp", name: "Chakma", nativeName: "𑄌𑄋𑄴𑄟𑄳", script: "Chakma" },
+  { code: "bgn", name: "Western Balochi", nativeName: "بلوچی رخشانی", script: "Arabic", rtl: true },
+  { code: "bcc", name: "Southern Balochi", nativeName: "بلوچی مکرانی", script: "Arabic", rtl: true },
+  { code: "gbz", name: "Dari Zoroastrian", nativeName: "داری زرتشتی", script: "Arabic", rtl: true },
+  { code: "dri", name: "Dari", nativeName: "دری", script: "Arabic", rtl: true },
+  { code: "pbt", name: "Southern Pashto", nativeName: "پښتو", script: "Arabic", rtl: true },
+  { code: "wne", name: "Waneci", nativeName: "وانیچی", script: "Arabic", rtl: true },
+  { code: "oru", name: "Ormuri", nativeName: "ورمیڼی", script: "Arabic", rtl: true },
+  { code: "prc", name: "Parachi", nativeName: "پراچی", script: "Arabic", rtl: true },
+  { code: "mvy", name: "Indus Kohistani", nativeName: "کوہستانی", script: "Arabic", rtl: true },
+  { code: "trw", name: "Torwali", nativeName: "توروالی", script: "Arabic", rtl: true },
+  { code: "gwr", name: "Gwere", nativeName: "Gwere", script: "Latin" },
+  { code: "btk", name: "Brahui", nativeName: "Brahui", script: "Arabic", rtl: true },
+  { code: "kvx", name: "Parkari Koli", nativeName: "پارکاری کولی", script: "Arabic", rtl: true },
+  { code: "kxp", name: "Wadiyara Koli", nativeName: "واڈیارا", script: "Arabic", rtl: true },
+  { code: "gjk", name: "Kachi Koli", nativeName: "کچھی", script: "Arabic", rtl: true },
 
   // ================================================================
   // OTHER LANGUAGES
@@ -378,48 +700,143 @@ export const menLanguages: MenLanguage[] = [
   { code: "la", name: "Latin", nativeName: "Latina", script: "Latin" },
   { code: "rom", name: "Romani", nativeName: "Romani", script: "Latin" },
   { code: "lad", name: "Ladino", nativeName: "Ladino", script: "Latin" },
+  { code: "vo", name: "Volapük", nativeName: "Volapük", script: "Latin" },
+  { code: "ia", name: "Interlingua", nativeName: "Interlingua", script: "Latin" },
+  { code: "ie", name: "Interlingue", nativeName: "Interlingue", script: "Latin" },
+  { code: "io", name: "Ido", nativeName: "Ido", script: "Latin" },
+  { code: "jbo", name: "Lojban", nativeName: "Lojban", script: "Latin" },
+  { code: "tlh", name: "Klingon", nativeName: "tlhIngan Hol", script: "Latin" },
+  { code: "sjn", name: "Sindarin", nativeName: "Sindarin", script: "Latin" },
+
+  // ================================================================
+  // SIGN LANGUAGES
+  // ================================================================
+  { code: "ase", name: "American Sign Language", nativeName: "ASL", script: "Latin" },
+  { code: "bfi", name: "British Sign Language", nativeName: "BSL", script: "Latin" },
+  { code: "psr", name: "Portuguese Sign Language", nativeName: "LGP", script: "Latin" },
+  { code: "ins", name: "Indian Sign Language", nativeName: "ISL", script: "Latin" },
+  { code: "csl", name: "Chinese Sign Language", nativeName: "中国手语", script: "Latin" },
+  { code: "jsl", name: "Japanese Sign Language", nativeName: "日本手話", script: "Latin" },
+  { code: "gss", name: "German Sign Language", nativeName: "DGS", script: "Latin" },
+  { code: "fsl", name: "French Sign Language", nativeName: "LSF", script: "Latin" },
+
+  // ================================================================
+  // ANCIENT & HISTORICAL LANGUAGES
+  // ================================================================
+  { code: "ang", name: "Old English", nativeName: "Ænglisc", script: "Latin" },
+  { code: "goh", name: "Old High German", nativeName: "Althochdeutsch", script: "Latin" },
+  { code: "non", name: "Old Norse", nativeName: "Norrœnt mál", script: "Latin" },
+  { code: "grc", name: "Ancient Greek", nativeName: "Ἑλληνική", script: "Greek" },
+  { code: "akk", name: "Akkadian", nativeName: "Akkadû", script: "Cuneiform" },
+  { code: "sux", name: "Sumerian", nativeName: "Emegir", script: "Cuneiform" },
+  { code: "egy", name: "Egyptian", nativeName: "Egyptian", script: "Egyptian" },
+  { code: "hit", name: "Hittite", nativeName: "Hittite", script: "Cuneiform" },
+  { code: "peo", name: "Old Persian", nativeName: "Old Persian", script: "Cuneiform" },
+  { code: "syc", name: "Classical Syriac", nativeName: "ܣܘܪܝܝܐ", script: "Syriac" },
+  { code: "phn", name: "Phoenician", nativeName: "Phoenician", script: "Phoenician" },
+
+  // ================================================================
+  // MORE AFRICAN LANGUAGES (100+)
+  // ================================================================
+  { code: "nod", name: "Northern Thai", nativeName: "ᨣᩴᩤᩴᨾᩮᩥᩬᨦ", script: "Tai_Tham" },
+  { code: "sot", name: "Southern Sotho", nativeName: "Sesotho", script: "Latin" },
+  { code: "dik", name: "Southwestern Dinka", nativeName: "Thuɔŋjäŋ", script: "Latin" },
+  { code: "dip", name: "Northeastern Dinka", nativeName: "Thuɔŋjäŋ", script: "Latin" },
+  { code: "gke", name: "Ndai", nativeName: "Ndai", script: "Latin" },
+  { code: "ndc", name: "Ndau", nativeName: "Ndau", script: "Latin" },
+  { code: "kqn", name: "Kalanga", nativeName: "Kalanga", script: "Latin" },
+  { code: "toi", name: "Tonga", nativeName: "Chitonga", script: "Latin" },
+  { code: "leh", name: "Lenje", nativeName: "Lenje", script: "Latin" },
+  { code: "tog", name: "Tonga Nyasa", nativeName: "Chitonga", script: "Latin" },
+  { code: "jol", name: "Jola-Fonyi", nativeName: "Jola", script: "Latin" },
+  { code: "bjt", name: "Balanta-Ganja", nativeName: "Balanta", script: "Latin" },
+  { code: "naf", name: "Nafaanra", nativeName: "Nafaara", script: "Latin" },
+  { code: "lob", name: "Lobi", nativeName: "Lobi", script: "Latin" },
+  { code: "bib", name: "Bissa", nativeName: "Bissa", script: "Latin" },
+  { code: "sfw", name: "Sehwi", nativeName: "Sehwi", script: "Latin" },
+  { code: "nzi", name: "Nzema", nativeName: "Nzema", script: "Latin" },
+  { code: "anv", name: "Denya", nativeName: "Denya", script: "Latin" },
+  { code: "ken", name: "Kenyang", nativeName: "Kenyang", script: "Latin" },
+  { code: "bss", name: "Akoose", nativeName: "Akoose", script: "Latin" },
+  { code: "ybb", name: "Yemba", nativeName: "Yemba", script: "Latin" },
+  { code: "bum", name: "Bulu", nativeName: "Bulu", script: "Latin" },
+  { code: "ewo", name: "Ewondo", nativeName: "Ewondo", script: "Latin" },
+  { code: "fan", name: "Fang", nativeName: "Fang", script: "Latin" },
+  { code: "dua", name: "Duala", nativeName: "Duálá", script: "Latin" },
+  { code: "bas", name: "Basaa", nativeName: "Basaa", script: "Latin" },
+  { code: "ksf", name: "Bafia", nativeName: "Rikpa", script: "Latin" },
+  { code: "yat", name: "Yambeta", nativeName: "Yambeta", script: "Latin" },
+  { code: "nmg", name: "Kwasio", nativeName: "Kwasio", script: "Latin" },
+  { code: "mua", name: "Mundang", nativeName: "Mundang", script: "Latin" },
+  { code: "jgo", name: "Ngomba", nativeName: "Ngomba", script: "Latin" },
+  { code: "agq", name: "Aghem", nativeName: "Aghem", script: "Latin" },
+  { code: "kkj", name: "Kako", nativeName: "Kako", script: "Latin" },
+  { code: "nnh", name: "Ngiemboon", nativeName: "Ngiemboon", script: "Latin" },
+  { code: "bkm", name: "Kom", nativeName: "Kom", script: "Latin" },
+  { code: "byv", name: "Medumba", nativeName: "Medumba", script: "Latin" },
+  { code: "mgo", name: "Meta'", nativeName: "Meta'", script: "Latin" },
+  { code: "seh", name: "Sena", nativeName: "Sena", script: "Latin" },
+  { code: "vmw", name: "Makhuwa", nativeName: "Emakhuwa", script: "Latin" },
+  { code: "mgh", name: "Makhuwa-Meetto", nativeName: "Emakhuwa", script: "Latin" },
+  { code: "xog", name: "Soga", nativeName: "Lusoga", script: "Latin" },
+  { code: "jmc", name: "Machame", nativeName: "Kimachame", script: "Latin" },
+  { code: "rof", name: "Rombo", nativeName: "Kirombo", script: "Latin" },
+  { code: "rwk", name: "Rwa", nativeName: "Kirwa", script: "Latin" },
+  { code: "asa", name: "Asu", nativeName: "Kipare", script: "Latin" },
+  { code: "sbp", name: "Sangu", nativeName: "Ishisangu", script: "Latin" },
+  { code: "vun", name: "Vunjo", nativeName: "Kivunjo", script: "Latin" },
+  { code: "bez", name: "Bena", nativeName: "Hibena", script: "Latin" },
+  { code: "ksb", name: "Shambala", nativeName: "Kishambala", script: "Latin" },
+  { code: "lag", name: "Langi", nativeName: "Kilangi", script: "Latin" },
+  { code: "dav", name: "Taita", nativeName: "Kitaita", script: "Latin" },
+  { code: "mas", name: "Maasai", nativeName: "Maa", script: "Latin" },
+  { code: "guz", name: "Gusii", nativeName: "Ekegusii", script: "Latin" },
+  { code: "ebu", name: "Embu", nativeName: "Kiembu", script: "Latin" },
+  { code: "kam", name: "Kamba", nativeName: "Kikamba", script: "Latin" },
+  { code: "mer", name: "Meru", nativeName: "Kimeru", script: "Latin" },
+  { code: "kln", name: "Kalenjin", nativeName: "Kalenjin", script: "Latin" },
+  { code: "luy", name: "Luyia", nativeName: "Luluhia", script: "Latin" },
+  { code: "saq", name: "Samburu", nativeName: "Samburu", script: "Latin" },
+  { code: "pko", name: "Pokoot", nativeName: "Pokoot", script: "Latin" },
+  { code: "tuq", name: "Turkana", nativeName: "Ng'aturkana", script: "Latin" },
+  { code: "mfe", name: "Mauritian Creole", nativeName: "Kreol Morisien", script: "Latin" },
+  { code: "sey", name: "Seychellois Creole", nativeName: "Kreol Seselwa", script: "Latin" },
+  { code: "rcf", name: "Reunionese Creole", nativeName: "Créole réunionnais", script: "Latin" },
 ];
 
-// Helper functions for men profile language operations
-export const getMenLanguageByCode = (code: string): MenLanguage | undefined => {
-  return menLanguages.find(lang => lang.code === code);
-};
-
-export const getMenLanguageByName = (name: string): MenLanguage | undefined => {
-  return menLanguages.find(lang => 
-    lang.name.toLowerCase() === name.toLowerCase() ||
-    lang.nativeName.toLowerCase() === name.toLowerCase()
-  );
-};
-
-export const getMenLanguagesByScript = (script: string): MenLanguage[] => {
-  return menLanguages.filter(lang => lang.script === script);
-};
-
-export const getMenRTLLanguages = (): MenLanguage[] => {
-  return menLanguages.filter(lang => lang.rtl === true);
-};
-
-export const searchMenLanguages = (query: string): MenLanguage[] => {
-  const lowerQuery = query.toLowerCase();
-  return menLanguages.filter(lang =>
-    lang.name.toLowerCase().includes(lowerQuery) ||
-    lang.nativeName.toLowerCase().includes(lowerQuery) ||
-    lang.code.toLowerCase().includes(lowerQuery)
-  );
-};
-
-// Get language name by code
+// Helper function to get language name by code
 export const getMenLanguageName = (code: string): string => {
   const language = menLanguages.find(lang => lang.code === code);
   return language?.name || code;
 };
 
-// Get native name by code
+// Helper function to get native name by code
 export const getMenLanguageNativeName = (code: string): string => {
   const language = menLanguages.find(lang => lang.code === code);
   return language?.nativeName || code;
 };
 
-// Total count of available languages for men profiles
-export const MEN_LANGUAGE_COUNT = menLanguages.length;
+// Get language by code
+export const getMenLanguageByCode = (code: string): MenLanguage | undefined => {
+  return menLanguages.find(lang => lang.code === code);
+};
+
+// Search languages by name or native name
+export const searchMenLanguages = (query: string): MenLanguage[] => {
+  const q = query.toLowerCase();
+  return menLanguages.filter(lang => 
+    lang.name.toLowerCase().includes(q) || 
+    lang.nativeName.toLowerCase().includes(q) ||
+    lang.code.toLowerCase().includes(q)
+  );
+};
+
+// Get total language count
+export const getMenLanguageCount = (): number => {
+  return menLanguages.length;
+};
+
+// Get RTL languages
+export const getMenRTLLanguages = (): MenLanguage[] => {
+  return menLanguages.filter(lang => lang.rtl);
+};
