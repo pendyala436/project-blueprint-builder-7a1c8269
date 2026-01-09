@@ -42,15 +42,15 @@ import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 import { useRealtimeTranslation } from "@/lib/translation";
-// GBOARD-FIRST: Users type in native script, no Latin conversion needed
+// SEMANTIC TRANSLATION: Use translateText from translate.ts for tested functionality
 import {
   isSameLanguage,
   isLatinScriptLanguage,
   normalizeUnicode,
+  translateText,
 } from "@/lib/translation";
-import { translateAsync } from "@/lib/translation/async-translator";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 386 language support via semantic translation + Edge Function');
+console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via semantic translation (translateText)');
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -620,8 +620,8 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // GBOARD-FIRST: Auto-translate partner's messages using profile languages
-  // Users type in native script via Gboard - no Latin detection needed
+  // SEMANTIC TRANSLATION: Auto-translate partner's messages using translateText
+  // Uses the tested translation logic: direct for English/Latin, pivot for Native→Native
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     isTranslated?: boolean;
@@ -634,29 +634,29 @@ const DraggableMiniChatWindow = ({
       }
 
       // Partner's message - translate to current user's language
-      // Source = partner's mother tongue (from profile)
-      // Target = current user's mother tongue (from profile)
       const sourceLanguage = partnerLanguage;
       const targetLanguage = currentUserLanguage;
       
-      console.log('[DraggableMiniChatWindow] translateMessage:', {
+      console.log('[DraggableMiniChatWindow] translateMessage (semantic):', {
         text: text.substring(0, 30),
         sourceLanguage,
         targetLanguage
       });
       
-      // Same language - no translation needed
+      // Same language - no translation needed (handled by translateText)
       if (isSameLanguage(sourceLanguage, targetLanguage)) {
         console.log('[DraggableMiniChatWindow] Same language, no translation needed');
         return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
       
-      // Different languages - translate via Edge Function
-      console.log(`[DraggableMiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
-      const result = await translateAsync(text, sourceLanguage, targetLanguage);
+      // SEMANTIC TRANSLATION using translateText from translate.ts
+      // Direct translation for: English↔Any, Latin↔Latin
+      // English pivot for: Native↔Native
+      console.log(`[DraggableMiniChatWindow] Semantic translation: ${sourceLanguage} -> ${targetLanguage}`);
+      const result = await translateText(text, sourceLanguage, targetLanguage);
       
       if (result.isTranslated && result.text) {
-        console.log('[DraggableMiniChatWindow] Translation result:', result.text.substring(0, 50));
+        console.log('[DraggableMiniChatWindow] Semantic translation result:', result.text.substring(0, 50));
         return {
           translatedMessage: normalizeUnicode(result.text),
           isTranslated: true,
@@ -671,7 +671,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
-  // GBOARD-FIRST: Load messages with immediate display + background translation
+  // SEMANTIC TRANSLATION: Load messages with immediate display + background translation
   const loadMessages = async () => {
     console.log('[DraggableMiniChatWindow] loadMessages called');
     
@@ -695,7 +695,7 @@ const DraggableMiniChatWindow = ({
       }));
       setMessages(immediateMessages);
 
-      // STEP 2: BACKGROUND - Translate partner's messages
+      // STEP 2: BACKGROUND - Translate partner's messages using translateText
       const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
       
       partnerMessages.forEach((m) => {
@@ -707,8 +707,8 @@ const DraggableMiniChatWindow = ({
           return;
         }
         
-        // Different languages - translate via Edge Function
-        translateAsync(m.message, partnerLanguage, currentUserLanguage)
+        // SEMANTIC TRANSLATION using translateText
+        translateText(m.message, partnerLanguage, currentUserLanguage)
           .then((result) => {
             setMessages(prev => prev.map(msg => 
               msg.id === m.id 
@@ -730,7 +730,7 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  // GBOARD-FIRST: Subscribe to new messages with immediate display + background translation
+  // SEMANTIC TRANSLATION: Subscribe to new messages with immediate display + background translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -767,9 +767,9 @@ const DraggableMiniChatWindow = ({
               setUnreadCount(prev => prev + 1);
             }
             
-            // STEP 2: BACKGROUND - Translate partner message
+            // STEP 2: BACKGROUND - Translate partner message using translateText
             if (needsTranslation) {
-              translateAsync(newMsg.message, partnerLanguage, currentUserLanguage)
+              translateText(newMsg.message, partnerLanguage, currentUserLanguage)
                 .then((result) => {
                   setMessages(prev => prev.map(msg => 
                     msg.id === newMsg.id 
@@ -854,9 +854,8 @@ const DraggableMiniChatWindow = ({
   // Track the current preview for this typing session - reset after each send
   const currentPreviewRef = useRef<string>('');
 
-  // NON-BLOCKING: Send message with optimistic UI update
-  // Bi-directional: Sender sees native script, receiver sees translated native script
-  // GBOARD-FIRST: Send message directly - user types in native script
+  // SEMANTIC TRANSLATION: Send message with optimistic UI update
+  // Message stored as-is, receiver sees semantically translated version via translateText
   const sendMessage = async () => {
     const messageText = newMessage.trim();
     if (!messageText || isSending) return;
