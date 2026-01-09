@@ -111,29 +111,48 @@ async function classifyWithHuggingFace(
     ? imageBase64.split(',')[1] 
     : imageBase64;
 
-  // Convert base64 to ArrayBuffer for Hugging Face
+  // Convert base64 to Blob for Hugging Face
   const binaryString = atob(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  const arrayBuffer = bytes.buffer as ArrayBuffer;
+  const blob = new Blob([bytes], { type: 'image/jpeg' });
 
-  // Use AjaySharma/genderDetection model for gender classification
-  const results = await hf.imageClassification({
-    model: 'AjaySharma/genderDetection',
-    data: arrayBuffer,
-  });
+  // Try multiple models for gender classification (fallback chain)
+  const modelsToTry = [
+    'rizvandwiki/gender-classification-2',
+    'rizvandwiki/gender-classification',
+    'dima806/man_woman_face_image_detection'
+  ];
 
-  console.log('HF genderDetection results:', results);
+  let results: any[] = [];
+  let lastError: Error | null = null;
+
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`Trying model: ${modelName}`);
+      results = await hf.imageClassification({
+        model: modelName,
+        data: blob,
+      });
+      console.log(`${modelName} results:`, results);
+      if (results && results.length > 0) break;
+    } catch (err) {
+      console.error(`Model ${modelName} failed:`, err);
+      lastError = err as Error;
+      continue;
+    }
+  }
 
   if (!results || results.length === 0) {
+    console.error('All models failed, last error:', lastError);
     return {
       verified: false,
       hasFace: false,
       detectedGender: 'unknown',
       confidence: 0,
-      reason: 'Could not classify the image',
+      reason: 'Could not classify the image. Please try a clearer photo.',
       genderMatches: false
     };
   }
@@ -143,7 +162,7 @@ async function classifyWithHuggingFace(
   const label = topResult.label.toLowerCase();
   const confidence = topResult.score;
 
-  // Map label to gender - AjaySharma/genderDetection returns 'male' or 'female'
+  // Map label to gender
   let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
   if (label === 'male' || label.includes('man') || label.includes('boy')) {
     detectedGender = 'male';
