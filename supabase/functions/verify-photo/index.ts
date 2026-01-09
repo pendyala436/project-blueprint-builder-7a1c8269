@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -104,24 +103,23 @@ async function classifyWithHuggingFace(
   expectedGender: string | undefined,
   hfToken: string
 ): Promise<VerificationResult> {
-  const hf = new HfInference(hfToken);
-
   // Extract just the base64 data if it includes the data URL prefix
   const base64Data = imageBase64.includes(',') 
     ? imageBase64.split(',')[1] 
     : imageBase64;
 
-  // Convert base64 to Blob for Hugging Face
+  // Convert base64 to binary
   const binaryString = atob(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  const blob = new Blob([bytes], { type: 'image/jpeg' });
 
-  // Use abhilash88/age-gender-prediction model for gender classification
+  // Use direct fetch to Hugging Face Inference API
   const modelsToTry = [
-    'abhilash88/age-gender-prediction'
+    'abhilash88/age-gender-prediction',
+    'rizvandwiki/gender-classification-2',
+    'dima806/man_woman_face_image_detection'
   ];
 
   let results: any[] = [];
@@ -130,12 +128,34 @@ async function classifyWithHuggingFace(
   for (const modelName of modelsToTry) {
     try {
       console.log(`Trying model: ${modelName}`);
-      results = await hf.imageClassification({
-        model: modelName,
-        data: blob,
+      
+      const response = await fetch(`https://api-inference.huggingface.co/models/${modelName}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${hfToken}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: bytes,
       });
-      console.log(`${modelName} results:`, results);
-      if (results && results.length > 0) break;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Model ${modelName} HTTP error:`, response.status, errorText);
+        lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+        continue;
+      }
+
+      const data = await response.json();
+      console.log(`${modelName} results:`, data);
+      
+      if (Array.isArray(data) && data.length > 0) {
+        results = data;
+        break;
+      } else if (data.error) {
+        console.error(`Model ${modelName} returned error:`, data.error);
+        lastError = new Error(data.error);
+        continue;
+      }
     } catch (err) {
       console.error(`Model ${modelName} failed:`, err);
       lastError = err as Error;
