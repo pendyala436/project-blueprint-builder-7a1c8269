@@ -469,6 +469,8 @@ class SemanticTranslationEngine implements TranslationEngine {
 
       case 'Japanese':
       case 'Hiragana':
+      case 'Katakana':
+        // ============= HIRAGANA =============
         base.set('あ', 'a'); base.set('い', 'i'); base.set('う', 'u'); base.set('え', 'e');
         base.set('お', 'o'); base.set('か', 'ka'); base.set('き', 'ki'); base.set('く', 'ku');
         base.set('け', 'ke'); base.set('こ', 'ko'); base.set('さ', 'sa'); base.set('し', 'shi');
@@ -481,6 +483,134 @@ class SemanticTranslationEngine implements TranslationEngine {
         base.set('ゆ', 'yu'); base.set('よ', 'yo'); base.set('ら', 'ra'); base.set('り', 'ri');
         base.set('る', 'ru'); base.set('れ', 're'); base.set('ろ', 'ro'); base.set('わ', 'wa');
         base.set('を', 'wo'); base.set('ん', 'n');
+        // Hiragana voiced (dakuten) and semi-voiced (handakuten)
+        base.set('が', 'ga'); base.set('ぎ', 'gi'); base.set('ぐ', 'gu'); base.set('げ', 'ge');
+        base.set('ご', 'go'); base.set('ざ', 'za'); base.set('じ', 'ji'); base.set('ず', 'zu');
+        base.set('ぜ', 'ze'); base.set('ぞ', 'zo'); base.set('だ', 'da'); base.set('ぢ', 'ji');
+        base.set('づ', 'zu'); base.set('で', 'de'); base.set('ど', 'do'); base.set('ば', 'ba');
+        base.set('び', 'bi'); base.set('ぶ', 'bu'); base.set('べ', 'be'); base.set('ぼ', 'bo');
+        base.set('ぱ', 'pa'); base.set('ぴ', 'pi'); base.set('ぷ', 'pu'); base.set('ぺ', 'pe');
+        base.set('ぽ', 'po');
+        // Hiragana small characters
+        base.set('ぁ', 'a'); base.set('ぃ', 'i'); base.set('ぅ', 'u'); base.set('ぇ', 'e');
+        base.set('ぉ', 'o'); base.set('ゃ', 'ya'); base.set('ゅ', 'yu'); base.set('ょ', 'yo');
+        base.set('っ', ''); base.set('ゎ', 'wa');
+        // Hiragana digraphs
+        base.set('きゃ', 'kya'); base.set('きゅ', 'kyu'); base.set('きょ', 'kyo');
+        base.set('しゃ', 'sha'); base.set('しゅ', 'shu'); base.set('しょ', 'sho');
+        base.set('ちゃ', 'cha'); base.set('ちゅ', 'chu'); base.set('ちょ', 'cho');
+        base.set('にゃ', 'nya'); base.set('にゅ', 'nyu'); base.set('にょ', 'nyo');
+        base.set('ひゃ', 'hya'); base.set('ひゅ', 'hyu'); base.set('ひょ', 'hyo');
+        base.set('みゃ', 'mya'); base.set('みゅ', 'myu'); base.set('みょ', 'myo');
+        base.set('りゃ', 'rya'); base.set('りゅ', 'ryu'); base.set('りょ', 'ryo');
+        base.set('ぎゃ', 'gya'); base.set('ぎゅ', 'gyu'); base.set('ぎょ', 'gyo');
+        base.set('じゃ', 'ja'); base.set('じゅ', 'ju'); base.set('じょ', 'jo');
+        base.set('びゃ', 'bya'); base.set('びゅ', 'byu'); base.set('びょ', 'byo');
+        base.set('ぴゃ', 'pya'); base.set('ぴゅ', 'pyu'); base.set('ぴょ', 'pyo');
+        
+        // ============= KATAKANA =============
+        base.set('ア', 'a'); base.set('イ', 'i'); base.set('ウ', 'u'); base.set('エ', 'e');
+        base.set('オ', 'o'); base.set('カ', 'ka'); base.set('キ', 'ki'); base.set('ク', 'ku');
+        base.set('ケ', 'ke'); base.set('コ', 'ko'); base.set('サ', 'sa'); base.set('シ', 'shi');
+        base.set('ス', 'su'); base.set('セ', 'se'); base.set('ソ', 'so'); base.set('タ', 'ta');
+        base.set('チ', 'chi'); base.set('ツ', 'tsu'); base.set('テ', 'te'); base.set('ト', 'to');
+        base.set('ナ', 'na'); base.set('ニ', 'ni'); base.set('ヌ', 'nu'); base.set('ネ', 'ne');
+        base.set('ノ', 'no'); base.set('ハ', 'ha'); base.set('ヒ', 'hi'); base.set('フ', 'fu');
+        base.set('ヘ', 'he'); base.set('ホ', 'ho'); base.set('マ', 'ma'); base.set('ミ', 'mi');
+        base.set('ム', 'mu'); base.set('メ', 'me'); base.set('モ', 'mo'); base.set('ヤ', 'ya');
+        base.set('ユ', 'yu'); base.set('ヨ', 'yo'); base.set('ラ', 'ra'); base.set('リ', 'ri');
+        base.set('ル', 'ru'); base.set('レ', 're'); base.set('ロ', 'ro'); base.set('ワ', 'wa');
+        base.set('ヲ', 'wo'); base.set('ン', 'n');
+        // Katakana voiced (dakuten) and semi-voiced (handakuten)
+        base.set('ガ', 'ga'); base.set('ギ', 'gi'); base.set('グ', 'gu'); base.set('ゲ', 'ge');
+        base.set('ゴ', 'go'); base.set('ザ', 'za'); base.set('ジ', 'ji'); base.set('ズ', 'zu');
+        base.set('ゼ', 'ze'); base.set('ゾ', 'zo'); base.set('ダ', 'da'); base.set('ヂ', 'ji');
+        base.set('ヅ', 'zu'); base.set('デ', 'de'); base.set('ド', 'do'); base.set('バ', 'ba');
+        base.set('ビ', 'bi'); base.set('ブ', 'bu'); base.set('ベ', 'be'); base.set('ボ', 'bo');
+        base.set('パ', 'pa'); base.set('ピ', 'pi'); base.set('プ', 'pu'); base.set('ペ', 'pe');
+        base.set('ポ', 'po');
+        // Katakana small characters
+        base.set('ァ', 'a'); base.set('ィ', 'i'); base.set('ゥ', 'u'); base.set('ェ', 'e');
+        base.set('ォ', 'o'); base.set('ャ', 'ya'); base.set('ュ', 'yu'); base.set('ョ', 'yo');
+        base.set('ッ', ''); base.set('ヮ', 'wa');
+        // Katakana extended for foreign sounds
+        base.set('ヴ', 'vu'); base.set('ヴァ', 'va'); base.set('ヴィ', 'vi'); base.set('ヴェ', 've'); base.set('ヴォ', 'vo');
+        base.set('ファ', 'fa'); base.set('フィ', 'fi'); base.set('フェ', 'fe'); base.set('フォ', 'fo');
+        base.set('ティ', 'ti'); base.set('ディ', 'di'); base.set('トゥ', 'tu'); base.set('ドゥ', 'du');
+        base.set('ウィ', 'wi'); base.set('ウェ', 'we'); base.set('ウォ', 'wo');
+        base.set('シェ', 'she'); base.set('ジェ', 'je'); base.set('チェ', 'che');
+        // Katakana digraphs
+        base.set('キャ', 'kya'); base.set('キュ', 'kyu'); base.set('キョ', 'kyo');
+        base.set('シャ', 'sha'); base.set('シュ', 'shu'); base.set('ショ', 'sho');
+        base.set('チャ', 'cha'); base.set('チュ', 'chu'); base.set('チョ', 'cho');
+        base.set('ニャ', 'nya'); base.set('ニュ', 'nyu'); base.set('ニョ', 'nyo');
+        base.set('ヒャ', 'hya'); base.set('ヒュ', 'hyu'); base.set('ヒョ', 'hyo');
+        base.set('ミャ', 'mya'); base.set('ミュ', 'myu'); base.set('ミョ', 'myo');
+        base.set('リャ', 'rya'); base.set('リュ', 'ryu'); base.set('リョ', 'ryo');
+        base.set('ギャ', 'gya'); base.set('ギュ', 'gyu'); base.set('ギョ', 'gyo');
+        base.set('ジャ', 'ja'); base.set('ジュ', 'ju'); base.set('ジョ', 'jo');
+        base.set('ビャ', 'bya'); base.set('ビュ', 'byu'); base.set('ビョ', 'byo');
+        base.set('ピャ', 'pya'); base.set('ピュ', 'pyu'); base.set('ピョ', 'pyo');
+        // Long vowel mark
+        base.set('ー', '');
+        
+        // ============= COMMON KANJI (Basic) =============
+        base.set('私', 'watashi'); base.set('僕', 'boku'); base.set('俺', 'ore');
+        base.set('彼', 'kare'); base.set('彼女', 'kanojo'); base.set('人', 'hito');
+        base.set('日', 'hi'); base.set('月', 'tsuki'); base.set('年', 'nen');
+        base.set('時', 'toki'); base.set('分', 'fun'); base.set('秒', 'byou');
+        base.set('今', 'ima'); base.set('昨', 'saku'); base.set('明', 'mei');
+        base.set('大', 'oo'); base.set('小', 'ko'); base.set('中', 'naka');
+        base.set('上', 'ue'); base.set('下', 'shita'); base.set('左', 'hidari');
+        base.set('右', 'migi'); base.set('前', 'mae'); base.set('後', 'ato');
+        base.set('新', 'shin'); base.set('古', 'furu'); base.set('高', 'taka');
+        base.set('安', 'yasu'); base.set('多', 'oo'); base.set('少', 'suko');
+        base.set('長', 'naga'); base.set('短', 'miji'); base.set('早', 'haya');
+        base.set('遅', 'oso'); base.set('強', 'tsuyo'); base.set('弱', 'yowa');
+        base.set('男', 'otoko'); base.set('女', 'onna'); base.set('子', 'ko');
+        base.set('父', 'chichi'); base.set('母', 'haha'); base.set('兄', 'ani');
+        base.set('姉', 'ane'); base.set('弟', 'otouto'); base.set('妹', 'imouto');
+        base.set('友', 'tomo'); base.set('家', 'ie'); base.set('学', 'gaku');
+        base.set('校', 'kou'); base.set('会', 'kai'); base.set('社', 'sha');
+        base.set('国', 'kuni'); base.set('地', 'chi'); base.set('水', 'mizu');
+        base.set('火', 'hi'); base.set('風', 'kaze'); base.set('空', 'sora');
+        base.set('山', 'yama'); base.set('川', 'kawa'); base.set('海', 'umi');
+        base.set('木', 'ki'); base.set('花', 'hana'); base.set('草', 'kusa');
+        base.set('食', 'tabe'); base.set('飲', 'no'); base.set('見', 'mi');
+        base.set('聞', 'ki'); base.set('話', 'hanashi'); base.set('読', 'yo');
+        base.set('書', 'ka'); base.set('行', 'i'); base.set('来', 'ki');
+        base.set('帰', 'kaeri'); base.set('買', 'ka'); base.set('売', 'u');
+        base.set('待', 'ma'); base.set('持', 'mo'); base.set('使', 'tsuka');
+        base.set('作', 'tsuku'); base.set('知', 'shi'); base.set('思', 'omo');
+        base.set('言', 'i'); base.set('出', 'de'); base.set('入', 'hai');
+        base.set('開', 'a'); base.set('閉', 'shi'); base.set('始', 'haji');
+        base.set('終', 'o'); base.set('生', 'sei'); base.set('死', 'shi');
+        base.set('愛', 'ai'); base.set('恋', 'koi'); base.set('好', 'su');
+        base.set('嫌', 'kira'); base.set('楽', 'tano'); base.set('悲', 'kana');
+        base.set('怒', 'oko'); base.set('笑', 'wara'); base.set('泣', 'na');
+        base.set('眠', 'nemu'); base.set('起', 'o'); base.set('寝', 'ne');
+        base.set('走', 'hashi'); base.set('歩', 'aru'); base.set('止', 'to');
+        base.set('立', 'ta'); base.set('座', 'suwa'); base.set('乗', 'no');
+        base.set('降', 'o'); base.set('着', 'tsu'); base.set('脱', 'nu');
+        base.set('洗', 'ara'); base.set('切', 'ki'); base.set('結', 'musu');
+        base.set('電', 'den'); base.set('車', 'kuruma'); base.set('駅', 'eki');
+        base.set('道', 'michi'); base.set('店', 'mise'); base.set('病', 'byou');
+        base.set('院', 'in'); base.set('薬', 'kusuri'); base.set('金', 'kane');
+        base.set('銀', 'gin'); base.set('円', 'en'); base.set('本', 'hon');
+        base.set('紙', 'kami'); base.set('手', 'te'); base.set('足', 'ashi');
+        base.set('目', 'me'); base.set('耳', 'mimi'); base.set('口', 'kuchi');
+        base.set('鼻', 'hana'); base.set('顔', 'kao'); base.set('頭', 'atama');
+        base.set('心', 'kokoro'); base.set('体', 'karada'); base.set('声', 'koe');
+        base.set('名', 'na'); base.set('字', 'ji'); base.set('語', 'go');
+        base.set('文', 'bun'); base.set('数', 'kazu'); base.set('色', 'iro');
+        base.set('赤', 'aka'); base.set('青', 'ao'); base.set('白', 'shiro');
+        base.set('黒', 'kuro'); base.set('黄', 'ki'); base.set('緑', 'midori');
+        // Japanese common phrases
+        base.set('こんにちは', 'konnichiwa'); base.set('ありがとう', 'arigatou');
+        base.set('すみません', 'sumimasen'); base.set('ごめんなさい', 'gomennasai');
+        base.set('おはよう', 'ohayou'); base.set('こんばんは', 'konbanwa');
+        base.set('さようなら', 'sayounara'); base.set('はい', 'hai');
+        base.set('いいえ', 'iie'); base.set('です', 'desu'); base.set('ます', 'masu');
         break;
 
       case 'Hangul':
