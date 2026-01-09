@@ -119,13 +119,13 @@ async function classifyWithHuggingFace(
   }
   const arrayBuffer = bytes.buffer as ArrayBuffer;
 
-  // Use image classification model
+  // Use AjaySharma/genderDetection model for gender classification
   const results = await hf.imageClassification({
-    model: 'rizvandwiki/gender-classification',
+    model: 'AjaySharma/genderDetection',
     data: arrayBuffer,
   });
 
-  console.log('HF classification results:', results);
+  console.log('HF genderDetection results:', results);
 
   if (!results || results.length === 0) {
     return {
@@ -143,17 +143,15 @@ async function classifyWithHuggingFace(
   const label = topResult.label.toLowerCase();
   const confidence = topResult.score;
 
-  // Map label to gender
+  // Map label to gender - AjaySharma/genderDetection returns 'male' or 'female'
   let detectedGender: 'male' | 'female' | 'unknown' = 'unknown';
-  if (label.includes('male') && !label.includes('female')) {
+  if (label === 'male' || label.includes('man') || label.includes('boy')) {
     detectedGender = 'male';
-  } else if (label.includes('female') || label.includes('woman')) {
+  } else if (label === 'female' || label.includes('woman') || label.includes('girl')) {
     detectedGender = 'female';
-  } else if (label.includes('man')) {
-    detectedGender = 'male';
   }
 
-  // Check gender match
+  // Check gender match - if no expected gender, auto-detect is accepted
   const genderMatches = !expectedGender || expectedGender === detectedGender;
   const verified = confidence >= 0.5 && detectedGender !== 'unknown';
 
@@ -161,7 +159,7 @@ async function classifyWithHuggingFace(
   if (!verified) {
     reason = 'Could not verify gender. Please try a clearer photo.';
   } else if (!genderMatches) {
-    reason = `Gender mismatch: Expected ${expectedGender}, detected ${detectedGender}`;
+    reason = `Gender detected as ${detectedGender}. Your profile will be updated accordingly.`;
   } else {
     reason = `Gender verified as ${detectedGender} (${Math.round(confidence * 100)}% confidence)`;
   }
