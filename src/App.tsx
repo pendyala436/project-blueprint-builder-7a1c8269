@@ -91,6 +91,7 @@ const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" *
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
+const TranslationTestPage = lazy(() => import(/* webpackChunkName: "test" */ "./pages/TranslationTestPage"));
 
 // Ultra-optimized React Query - maximum caching
 const queryClient = new QueryClient({
@@ -217,6 +218,7 @@ const App = () => (
             <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
+            <Route path="/translation-test" element={<LazyRoute component={TranslationTestPage} />} />
             <Route path="*" element={<LazyRoute component={NotFound} />} />
           </Routes>
         </AutoLogoutWrapper>
