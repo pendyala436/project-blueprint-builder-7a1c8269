@@ -119,11 +119,9 @@ async function classifyWithHuggingFace(
   }
   const blob = new Blob([bytes], { type: 'image/jpeg' });
 
-  // Try multiple models for gender classification (fallback chain)
+  // Use abhilash88/age-gender-prediction model for gender classification
   const modelsToTry = [
-    'rizvandwiki/gender-classification-2',
-    'rizvandwiki/gender-classification',
-    'dima806/man_woman_face_image_detection'
+    'abhilash88/age-gender-prediction'
   ];
 
   let results: any[] = [];
