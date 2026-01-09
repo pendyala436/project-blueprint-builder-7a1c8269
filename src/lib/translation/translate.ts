@@ -1,35 +1,29 @@
 /**
- * Universal Translation System - 1000+ Languages
- * ===============================================
+ * Universal Semantic Translation System - 1000+ Languages
+ * =========================================================
  * 
- * Browser-based, offline-ready translation supporting ALL languages
- * from men_languages.ts and women_languages.ts (842+ languages each).
+ * SEMANTIC TRANSLATION ONLY - No phonetic transliteration
+ * Uses meaning-based translation for all language pairs.
  * 
  * Key Features:
  * 1. Same-language bypass (no translation needed)
- * 2. Dynamic language discovery from data files
- * 3. English pivot for cross-language translation
- * 4. Native script conversion (Latin ↔ Native)
- * 5. Real-time typing preview
- * 6. Meaning-based translation (not word-by-word)
+ * 2. Direct translation for English ↔ Any language (no pivot)
+ * 3. Direct translation for Latin ↔ Latin languages (no pivot)
+ * 4. English pivot ONLY for Native ↔ Native (when no direct path exists)
+ * 5. All translations are meaning-based (semantic)
  * 
- * Usage:
- * ```tsx
- * import { translateText, getLanguages, isReady } from '@/lib/translation/translate';
- * 
- * // Same language returns input as-is
- * const result1 = await translateText('Hello', 'english', 'english');
- * // result1 === 'Hello'
- * 
- * // Different languages use semantic translation
- * const result2 = await translateText('Hello friend', 'english', 'hindi');
- * // result2 === 'नमस्ते दोस्त'
- * ```
+ * Translation Paths:
+ * - English → Any: Direct semantic translation
+ * - Any → English: Direct semantic translation
+ * - Latin → Latin: Direct semantic translation (Spanish → French)
+ * - Native → Native: English pivot (Hindi → Tamil = Hindi → English → Tamil)
+ * - Latin → Native: Direct semantic translation
+ * - Native → Latin: Direct semantic translation
  */
 
 import { menLanguages, type MenLanguage } from '@/data/men_languages';
 import { womenLanguages, type WomenLanguage } from '@/data/women_languages';
-import { dynamicTransliterate, reverseTransliterate } from './dynamic-transliterator';
+import { supabase } from '@/integrations/supabase/client';
 
 // ============================================================
 // TYPES
@@ -52,6 +46,7 @@ export interface TranslationResult {
   isSameLanguage: boolean;
   englishPivot?: string;
   confidence: number;
+  error?: string;
 }
 
 export interface Translator {
@@ -70,7 +65,6 @@ export interface TranslationEngine {
 // UNIFIED LANGUAGE DATABASE (1000+ Languages)
 // ============================================================
 
-// Combine men and women languages, removing duplicates
 const allLanguagesMap = new Map<string, Language>();
 
 // Add men languages
@@ -84,7 +78,7 @@ menLanguages.forEach((lang: MenLanguage) => {
   });
 });
 
-// Add women languages (will merge/add new ones)
+// Add women languages (merge/add new ones)
 womenLanguages.forEach((lang: WomenLanguage) => {
   if (!allLanguagesMap.has(lang.code.toLowerCase())) {
     allLanguagesMap.set(lang.code.toLowerCase(), {
@@ -97,21 +91,20 @@ womenLanguages.forEach((lang: WomenLanguage) => {
   }
 });
 
-// Convert to array
 export const ALL_LANGUAGES: Language[] = Array.from(allLanguagesMap.values());
 
 // Quick lookup maps
 const languageByCode = new Map(ALL_LANGUAGES.map(l => [l.code.toLowerCase(), l]));
 const languageByName = new Map(ALL_LANGUAGES.map(l => [l.name.toLowerCase(), l]));
 
-// Also map native names for lookup
+// Also map native names
 ALL_LANGUAGES.forEach(l => {
   if (l.nativeName) {
     languageByName.set(l.nativeName.toLowerCase(), l);
   }
 });
 
-// Language aliases for normalization
+// Language aliases
 const LANGUAGE_ALIASES: Record<string, string> = {
   'bangla': 'bengali',
   'oriya': 'odia',
@@ -120,15 +113,10 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   'mandarin': 'chinese (mandarin)',
   'hindustani': 'hindi',
   'filipino': 'tagalog',
-  'punjabi': 'punjabi',
   'panjabi': 'punjabi',
-  'sinhala': 'sinhala',
   'sinhalese': 'sinhala',
-  'burmese': 'burmese',
   'myanmar': 'burmese',
-  'korean': 'korean',
   'hangul': 'korean',
-  'japanese': 'japanese',
   'nihongo': 'japanese',
 };
 
@@ -166,24 +154,18 @@ function setInCache(key: string, result: TranslationResult): void {
 // LANGUAGE UTILITIES
 // ============================================================
 
-/**
- * Normalize language name/code to standard form
- */
 export function normalizeLanguage(lang: string): string {
   if (!lang) return 'english';
   const normalized = lang.toLowerCase().trim();
   
-  // Check aliases first
   if (LANGUAGE_ALIASES[normalized]) {
     return LANGUAGE_ALIASES[normalized];
   }
   
-  // Check if it's a known language name
   if (languageByName.has(normalized)) {
     return normalized;
   }
   
-  // Check if it's a code
   const byCode = languageByCode.get(normalized);
   if (byCode) {
     return byCode.name;
@@ -192,142 +174,105 @@ export function normalizeLanguage(lang: string): string {
   return normalized;
 }
 
-/**
- * Get language info by code or name
- */
 export function getLanguageInfo(lang: string): Language | null {
   const normalized = normalizeLanguage(lang);
   return languageByName.get(normalized) || languageByCode.get(lang.toLowerCase()) || null;
 }
 
-/**
- * Get all supported languages
- */
+export function getLanguageCode(lang: string): string {
+  const info = getLanguageInfo(lang);
+  return info?.code || lang.substring(0, 2).toLowerCase();
+}
+
 export function getLanguages(): Language[] {
   return [...ALL_LANGUAGES];
 }
 
-/**
- * Get total language count
- */
 export function getLanguageCount(): number {
   return ALL_LANGUAGES.length;
 }
 
-/**
- * Check if language is supported
- */
 export function isLanguageSupported(lang: string): boolean {
   const normalized = normalizeLanguage(lang);
   return languageByName.has(normalized) || languageByCode.has(lang.toLowerCase());
 }
 
-/**
- * Check if language uses Latin script
- */
 export function isLatinScriptLanguage(lang: string): boolean {
   const normalized = normalizeLanguage(lang);
   return LATIN_SCRIPT_LANGUAGES.has(normalized);
 }
 
-/**
- * Check if text is primarily Latin script
- */
-export function isLatinText(text: string): boolean {
-  const cleaned = text.replace(/[\s\d\p{P}\p{S}]/gu, '');
-  if (!cleaned) return true;
-  const latinMatch = cleaned.match(/[\u0000-\u007F\u0080-\u00FF\u0100-\u024F]/g) || [];
-  return latinMatch.length / cleaned.length > 0.7;
-}
-
-/**
- * Check if two languages are the same
- */
 export function isSameLanguage(lang1: string, lang2: string): boolean {
   return normalizeLanguage(lang1) === normalizeLanguage(lang2);
 }
 
-/**
- * Check if language is English
- */
 export function isEnglish(lang: string): boolean {
   const normalized = normalizeLanguage(lang);
   return normalized === 'english' || lang.toLowerCase() === 'en';
 }
 
-/**
- * Check if language needs script conversion (non-Latin)
- */
-export function needsScriptConversion(lang: string): boolean {
-  return !isLatinScriptLanguage(lang);
-}
-
-/**
- * Check if engine is ready
- */
 export function isReady(): boolean {
   return ALL_LANGUAGES.length > 0;
 }
 
 // ============================================================
-// SCRIPT DETECTION
+// SEMANTIC TRANSLATION VIA EDGE FUNCTION
 // ============================================================
 
-const SCRIPT_PATTERNS: Array<{ regex: RegExp; language: string; script: string }> = [
-  { regex: /[\u0900-\u097F]/, language: 'hindi', script: 'Devanagari' },
-  { regex: /[\u0980-\u09FF]/, language: 'bengali', script: 'Bengali' },
-  { regex: /[\u0A00-\u0A7F]/, language: 'punjabi', script: 'Gurmukhi' },
-  { regex: /[\u0A80-\u0AFF]/, language: 'gujarati', script: 'Gujarati' },
-  { regex: /[\u0B00-\u0B7F]/, language: 'odia', script: 'Odia' },
-  { regex: /[\u0B80-\u0BFF]/, language: 'tamil', script: 'Tamil' },
-  { regex: /[\u0C00-\u0C7F]/, language: 'telugu', script: 'Telugu' },
-  { regex: /[\u0C80-\u0CFF]/, language: 'kannada', script: 'Kannada' },
-  { regex: /[\u0D00-\u0D7F]/, language: 'malayalam', script: 'Malayalam' },
-  { regex: /[\u0D80-\u0DFF]/, language: 'sinhala', script: 'Sinhala' },
-  { regex: /[\u4E00-\u9FFF\u3400-\u4DBF]/, language: 'chinese (mandarin)', script: 'Han' },
-  { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese', script: 'Japanese' },
-  { regex: /[\uAC00-\uD7AF\u1100-\u11FF]/, language: 'korean', script: 'Hangul' },
-  { regex: /[\u0E00-\u0E7F]/, language: 'thai', script: 'Thai' },
-  { regex: /[\u0E80-\u0EFF]/, language: 'lao', script: 'Lao' },
-  { regex: /[\u1000-\u109F]/, language: 'burmese', script: 'Myanmar' },
-  { regex: /[\u1780-\u17FF]/, language: 'khmer', script: 'Khmer' },
-  { regex: /[\u0600-\u06FF]/, language: 'arabic', script: 'Arabic' },
-  { regex: /[\u0590-\u05FF]/, language: 'hebrew', script: 'Hebrew' },
-  { regex: /[\u0400-\u04FF]/, language: 'russian', script: 'Cyrillic' },
-  { regex: /[\u0370-\u03FF]/, language: 'greek', script: 'Greek' },
-  { regex: /[\u0530-\u058F]/, language: 'armenian', script: 'Armenian' },
-  { regex: /[\u10A0-\u10FF]/, language: 'georgian', script: 'Georgian' },
-  { regex: /[\u1200-\u137F]/, language: 'amharic', script: 'Ethiopic' },
-  { regex: /[\u0F00-\u0FFF]/, language: 'tibetan', script: 'Tibetan' },
-];
-
 /**
- * Auto-detect language from text
+ * Call the translate-message edge function for semantic translation
  */
-export function autoDetectLanguage(text: string): { language: string; script: string; isLatin: boolean; confidence: number } {
-  const cleaned = text.trim();
-  if (!cleaned) {
-    return { language: 'english', script: 'Latin', isLatin: true, confidence: 0 };
-  }
+async function callTranslationAPI(
+  text: string,
+  sourceCode: string,
+  targetCode: string
+): Promise<{ translatedText: string; success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        source: sourceCode,
+        target: targetCode,
+      },
+    });
 
-  for (const { regex, language, script } of SCRIPT_PATTERNS) {
-    if (regex.test(cleaned)) {
-      return { language, script, isLatin: false, confidence: 0.95 };
+    if (error) {
+      console.error('[Translate API] Error:', error);
+      return { translatedText: text, success: false, error: error.message };
     }
-  }
 
-  return { language: 'english', script: 'Latin', isLatin: true, confidence: 0.7 };
+    if (data?.translatedText) {
+      return { translatedText: data.translatedText, success: true };
+    }
+
+    if (data?.translation) {
+      return { translatedText: data.translation, success: true };
+    }
+
+    if (data?.text) {
+      return { translatedText: data.text, success: true };
+    }
+
+    return { translatedText: text, success: false, error: 'No translation returned' };
+  } catch (err: any) {
+    console.error('[Translate API] Exception:', err);
+    return { translatedText: text, success: false, error: err.message };
+  }
 }
 
 // ============================================================
-// CORE TRANSLATION FUNCTION
+// CORE TRANSLATION FUNCTION - SEMANTIC ONLY
 // ============================================================
 
 /**
- * Main translation function
+ * Main translation function - SEMANTIC TRANSLATION ONLY
  * 
- * If source === target → returns input as-is (no translation)
- * If source !== target → uses semantic translation via English pivot
+ * Translation Logic:
+ * 1. Same language → return as-is
+ * 2. English involved (source or target) → Direct translation (no pivot)
+ * 3. Latin → Latin → Direct translation (no pivot)
+ * 4. Native → Native → English pivot (Hindi → English → Tamil)
+ * 5. Latin ↔ Native → Direct translation
  */
 export async function translateText(
   text: string,
@@ -351,21 +296,13 @@ export async function translateText(
 
   const normSource = normalizeLanguage(source);
   const normTarget = normalizeLanguage(target);
+  const sourceCode = getLanguageCode(normSource);
+  const targetCode = getLanguageCode(normTarget);
 
-  // SAME LANGUAGE: Return input as-is
+  // SAME LANGUAGE: Return input as-is (no translation needed)
   if (isSameLanguage(normSource, normTarget)) {
-    // Only convert script if needed (Latin → Native)
-    let resultText = trimmed;
-    if (needsScriptConversion(normTarget) && isLatinText(trimmed)) {
-      try {
-        resultText = dynamicTransliterate(trimmed, normTarget) || trimmed;
-      } catch {
-        // Keep original if transliteration fails
-      }
-    }
-
     return {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
@@ -380,45 +317,77 @@ export async function translateText(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // DIFFERENT LANGUAGES: Use English pivot translation
+  // Determine translation path
   const sourceIsEnglish = isEnglish(normSource);
   const targetIsEnglish = isEnglish(normTarget);
+  const sourceIsLatin = isLatinScriptLanguage(normSource);
+  const targetIsLatin = isLatinScriptLanguage(normTarget);
 
   let translatedText = trimmed;
   let englishPivot: string | undefined;
   let wasTranslated = false;
+  let translationError: string | undefined;
 
   try {
+    // CASE 1: English to English (shouldn't happen, but handle it)
     if (sourceIsEnglish && targetIsEnglish) {
-      // English to English - no translation
       translatedText = trimmed;
-    } else if (sourceIsEnglish) {
-      // English → Target
-      translatedText = translateFromEnglish(trimmed, normTarget);
-      wasTranslated = true;
-    } else if (targetIsEnglish) {
-      // Source → English
-      translatedText = translateToEnglish(trimmed, normSource);
-      wasTranslated = true;
-    } else {
-      // Source → English → Target (full pivot)
-      englishPivot = translateToEnglish(trimmed, normSource);
-      translatedText = translateFromEnglish(englishPivot, normTarget);
-      wasTranslated = true;
     }
-
-    // Convert to native script if needed
-    if (needsScriptConversion(normTarget) && isLatinText(translatedText)) {
-      try {
-        const nativeText = dynamicTransliterate(translatedText, normTarget);
-        if (nativeText) translatedText = nativeText;
-      } catch {
-        // Keep Latin if conversion fails
+    // CASE 2: English → Any (Direct translation, no pivot)
+    else if (sourceIsEnglish) {
+      console.log(`[Translate] Direct: English → ${normTarget}`);
+      const result = await callTranslationAPI(trimmed, 'en', targetCode);
+      translatedText = result.translatedText;
+      wasTranslated = result.success;
+      translationError = result.error;
+    }
+    // CASE 3: Any → English (Direct translation, no pivot)
+    else if (targetIsEnglish) {
+      console.log(`[Translate] Direct: ${normSource} → English`);
+      const result = await callTranslationAPI(trimmed, sourceCode, 'en');
+      translatedText = result.translatedText;
+      wasTranslated = result.success;
+      translationError = result.error;
+    }
+    // CASE 4: Latin → Latin (Direct translation, no pivot)
+    else if (sourceIsLatin && targetIsLatin) {
+      console.log(`[Translate] Direct Latin→Latin: ${normSource} → ${normTarget}`);
+      const result = await callTranslationAPI(trimmed, sourceCode, targetCode);
+      translatedText = result.translatedText;
+      wasTranslated = result.success;
+      translationError = result.error;
+    }
+    // CASE 5: Native ↔ Native (English pivot required)
+    else if (!sourceIsLatin && !targetIsLatin) {
+      console.log(`[Translate] Pivot: ${normSource} → English → ${normTarget}`);
+      
+      // Step 1: Source → English
+      const toEnglish = await callTranslationAPI(trimmed, sourceCode, 'en');
+      englishPivot = toEnglish.translatedText;
+      
+      // Step 2: English → Target
+      if (toEnglish.success && englishPivot !== trimmed) {
+        const toTarget = await callTranslationAPI(englishPivot, 'en', targetCode);
+        translatedText = toTarget.translatedText;
+        wasTranslated = toTarget.success;
+        translationError = toTarget.error;
+      } else {
+        translatedText = trimmed;
+        translationError = toEnglish.error || 'Failed to translate to English';
       }
     }
-  } catch (err) {
+    // CASE 6: Latin → Native OR Native → Latin (Direct translation)
+    else {
+      console.log(`[Translate] Direct: ${normSource} → ${normTarget}`);
+      const result = await callTranslationAPI(trimmed, sourceCode, targetCode);
+      translatedText = result.translatedText;
+      wasTranslated = result.success;
+      translationError = result.error;
+    }
+  } catch (err: any) {
     console.error('[Translate] Translation error:', err);
     translatedText = trimmed;
+    translationError = err.message;
   }
 
   const result: TranslationResult = {
@@ -429,58 +398,22 @@ export async function translateText(
     isTranslated: wasTranslated,
     isSameLanguage: false,
     englishPivot,
-    confidence: wasTranslated ? 0.85 : 0.5,
+    confidence: wasTranslated ? 0.9 : 0.3,
+    error: translationError,
   };
 
-  setInCache(cacheKey, result);
+  // Only cache successful translations
+  if (wasTranslated) {
+    setInCache(cacheKey, result);
+  }
+
   return result;
-}
-
-// ============================================================
-// SEMANTIC TRANSLATION HELPERS
-// ============================================================
-
-/**
- * Translate from source language TO English
- */
-function translateToEnglish(text: string, source: string): string {
-  // For Latin script languages, text is already readable
-  if (isLatinScriptLanguage(source)) {
-    return text;
-  }
-
-  // For non-Latin scripts, reverse transliterate to Latin/English representation
-  try {
-    return reverseTransliterate(text, source) || text;
-  } catch {
-    return text;
-  }
-}
-
-/**
- * Translate FROM English to target language
- */
-function translateFromEnglish(text: string, target: string): string {
-  // For Latin script targets, return as-is
-  if (isLatinScriptLanguage(target)) {
-    return text;
-  }
-
-  // For non-Latin targets, transliterate to native script
-  try {
-    return dynamicTransliterate(text, target) || text;
-  } catch {
-    return text;
-  }
 }
 
 // ============================================================
 // GET TRANSLATOR INTERFACE
 // ============================================================
 
-/**
- * Get a translator for a language pair
- */
 export function getTranslator(from: string, to: string): Translator | null {
   const sourceLanguage = getLanguageInfo(from);
   const targetLanguage = getLanguageInfo(to);
@@ -498,7 +431,7 @@ export function getTranslator(from: string, to: string): Translator | null {
 }
 
 // ============================================================
-// LOAD ENGINE (For compatibility)
+// TRANSLATION ENGINE
 // ============================================================
 
 const engine: TranslationEngine = {
@@ -509,29 +442,63 @@ const engine: TranslationEngine = {
   getLanguageCount,
 };
 
-/**
- * Load the translation engine
- */
 export async function loadEngine(): Promise<TranslationEngine> {
   return engine;
 }
 
-/**
- * Clear translation cache
- */
 export function clearCache(): void {
   translationCache.clear();
 }
 
-/**
- * Get cache statistics
- */
 export function getCacheStats(): { size: number; hitRate: number } {
   return {
     size: translationCache.size,
-    hitRate: 0, // Would need to track hits/misses
+    hitRate: 0,
   };
 }
 
-// Export default engine
+// Check if text is primarily Latin script
+export function isLatinText(text: string): boolean {
+  const cleaned = text.replace(/[\s\d\p{P}\p{S}]/gu, '');
+  if (!cleaned) return true;
+  const latinMatch = cleaned.match(/[\u0000-\u007F\u0080-\u00FF\u0100-\u024F]/g) || [];
+  return latinMatch.length / cleaned.length > 0.7;
+}
+
+// Check if language needs script conversion (non-Latin)
+export function needsScriptConversion(lang: string): boolean {
+  return !isLatinScriptLanguage(lang);
+}
+
+// Auto-detect language from text script
+export function autoDetectLanguage(text: string): { language: string; script: string; isLatin: boolean; confidence: number } {
+  const SCRIPT_PATTERNS: Array<{ regex: RegExp; language: string; script: string }> = [
+    { regex: /[\u0900-\u097F]/, language: 'hindi', script: 'Devanagari' },
+    { regex: /[\u0980-\u09FF]/, language: 'bengali', script: 'Bengali' },
+    { regex: /[\u0A00-\u0A7F]/, language: 'punjabi', script: 'Gurmukhi' },
+    { regex: /[\u0A80-\u0AFF]/, language: 'gujarati', script: 'Gujarati' },
+    { regex: /[\u0B00-\u0B7F]/, language: 'odia', script: 'Odia' },
+    { regex: /[\u0B80-\u0BFF]/, language: 'tamil', script: 'Tamil' },
+    { regex: /[\u0C00-\u0C7F]/, language: 'telugu', script: 'Telugu' },
+    { regex: /[\u0C80-\u0CFF]/, language: 'kannada', script: 'Kannada' },
+    { regex: /[\u0D00-\u0D7F]/, language: 'malayalam', script: 'Malayalam' },
+    { regex: /[\u4E00-\u9FFF]/, language: 'chinese (mandarin)', script: 'Han' },
+    { regex: /[\u3040-\u309F\u30A0-\u30FF]/, language: 'japanese', script: 'Japanese' },
+    { regex: /[\uAC00-\uD7AF]/, language: 'korean', script: 'Hangul' },
+    { regex: /[\u0E00-\u0E7F]/, language: 'thai', script: 'Thai' },
+    { regex: /[\u0600-\u06FF]/, language: 'arabic', script: 'Arabic' },
+    { regex: /[\u0590-\u05FF]/, language: 'hebrew', script: 'Hebrew' },
+    { regex: /[\u0400-\u04FF]/, language: 'russian', script: 'Cyrillic' },
+    { regex: /[\u0370-\u03FF]/, language: 'greek', script: 'Greek' },
+  ];
+
+  for (const { regex, language, script } of SCRIPT_PATTERNS) {
+    if (regex.test(text)) {
+      return { language, script, isLatin: false, confidence: 0.95 };
+    }
+  }
+
+  return { language: 'english', script: 'Latin', isLatin: true, confidence: 0.7 };
+}
+
 export default engine;

@@ -52,111 +52,113 @@ interface TestResultData {
 }
 
 const TEST_CASES: TestCase[] = [
-  // 1. Native → Native (Hindi → Tamil)
+  // 1. Native → Native (Hindi → Tamil) - Requires English pivot
   {
     id: 'native-to-native',
     name: 'Native → Native',
-    description: 'Hindi to Tamil (Devanagari → Tamil script)',
+    description: 'Hindi to Tamil (via English pivot)',
     sourceLanguage: 'hindi',
     targetLanguage: 'tamil',
     sourceText: 'आपका घर कहाँ है?', // "Where is your home?" in Hindi
     sourceScript: 'Native',
     targetScript: 'Native',
-    expectedBehavior: 'Uses English pivot: Hindi → English → Tamil',
+    expectedBehavior: 'Semantic: Hindi → English → Tamil (English pivot)',
   },
-  // 2. Latin → Native (English → Hindi)
+  // 2. Latin → Native (English → Hindi) - Direct, no pivot
   {
     id: 'latin-to-native',
-    name: 'Latin → Native',
-    description: 'English to Hindi (Latin → Devanagari)',
+    name: 'English → Native',
+    description: 'English to Hindi (direct semantic translation)',
     sourceLanguage: 'english',
     targetLanguage: 'hindi',
     sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Native',
-    expectedBehavior: 'Direct translation with script conversion to Devanagari',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
-  // 3. Native → Latin (Hindi → English)
+  // 3. Native → Latin (Hindi → English) - Direct, no pivot
   {
     id: 'native-to-latin',
-    name: 'Native → Latin',
-    description: 'Hindi to English (Devanagari → Latin)',
+    name: 'Native → English',
+    description: 'Hindi to English (direct semantic translation)',
     sourceLanguage: 'hindi',
     targetLanguage: 'english',
     sourceText: 'आपका घर कहाँ है?',
     sourceScript: 'Native',
     targetScript: 'Latin',
-    expectedBehavior: 'Reverse transliteration to Latin/English',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
-  // 4. Latin → Latin (English → Spanish)
+  // 4. Latin → Latin (English → Spanish) - Direct, no pivot
   {
     id: 'latin-to-latin',
     name: 'Latin → Latin',
-    description: 'English to Spanish (both Latin script)',
+    description: 'English to Spanish (direct semantic translation)',
     sourceLanguage: 'english',
     targetLanguage: 'spanish',
     sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Latin',
-    expectedBehavior: 'Direct translation, stays in Latin script',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
-  // 5. English → Latin (English → French)
+  // 5. English → French (Latin → Latin) - Direct, no pivot  
   {
-    id: 'english-to-latin',
-    name: 'English → Latin',
-    description: 'English to French (Latin script target)',
+    id: 'english-to-french',
+    name: 'English → French',
+    description: 'English to French (direct semantic translation)',
     sourceLanguage: 'english',
     targetLanguage: 'french',
     sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Latin',
-    expectedBehavior: 'Direct translation to French',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
-  // 6. English → Native (English → Bengali)
+  // 6. English → Bengali - Direct, no pivot
   {
-    id: 'english-to-native',
-    name: 'English → Native',
-    description: 'English to Bengali (Latin → Bengali script)',
+    id: 'english-to-bengali',
+    name: 'English → Bengali',
+    description: 'English to Bengali (direct semantic translation)',
     sourceLanguage: 'english',
     targetLanguage: 'bengali',
     sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Native',
-    expectedBehavior: 'Translation with script conversion to Bengali',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
-  // Additional test cases
+  // 7. English → Arabic - Direct, no pivot
   {
     id: 'english-to-arabic',
     name: 'English → Arabic',
-    description: 'English to Arabic (RTL script)',
+    description: 'English to Arabic RTL (direct semantic translation)',
     sourceLanguage: 'english',
     targetLanguage: 'arabic',
     sourceText: TEST_TEXT,
     sourceScript: 'Latin',
     targetScript: 'Native',
-    expectedBehavior: 'Translation with script conversion to Arabic (RTL)',
+    expectedBehavior: 'Direct semantic translation (no pivot needed)',
   },
+  // 8. Spanish → French (Latin → Latin) - Direct, no pivot
   {
-    id: 'english-to-telugu',
-    name: 'English → Telugu',
-    description: 'English to Telugu (Latin → Telugu script)',
-    sourceLanguage: 'english',
-    targetLanguage: 'telugu',
-    sourceText: TEST_TEXT,
+    id: 'spanish-to-french',
+    name: 'Spanish → French',
+    description: 'Spanish to French (direct Latin-to-Latin)',
+    sourceLanguage: 'spanish',
+    targetLanguage: 'french',
+    sourceText: '¿Dónde está tu casa?', // Where is your home in Spanish
     sourceScript: 'Latin',
-    targetScript: 'Native',
-    expectedBehavior: 'Translation with script conversion to Telugu',
+    targetScript: 'Latin',
+    expectedBehavior: 'Direct semantic translation (no English pivot)',
   },
+  // 9. Same Language Test
   {
     id: 'same-language-test',
     name: 'Same Language',
-    description: 'Hindi to Hindi (should return as-is)',
+    description: 'Hindi to Hindi (returns input unchanged)',
     sourceLanguage: 'hindi',
     targetLanguage: 'hindi',
     sourceText: 'आपका घर कहाँ है?',
     sourceScript: 'Native',
     targetScript: 'Native',
-    expectedBehavior: 'Returns input unchanged (same language bypass)',
+    expectedBehavior: 'Returns input as-is (no translation)',
   },
 ];
 
