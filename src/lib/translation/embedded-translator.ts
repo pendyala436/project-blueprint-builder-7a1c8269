@@ -324,8 +324,9 @@ export function getNativeScriptPreview(text: string, targetLanguage: string): st
  * Translation Flow:
  * =================
  * 1. Latin → Latin: Direct pass-through (Spanish ↔ French ↔ German)
- * 2. English as source/target: Direct transliteration (English → Hindi, Arabic → English)
- * 3. Non-Latin → Non-Latin: Full English pivot (Hindi → English → Arabic)
+ * 2. English as source/target: Direct transliteration
+ * 3. Latin ↔ Native: English as bidirectional pivot (French → English → Hindi)
+ * 4. Native ↔ Native: English as bidirectional pivot (Hindi → English → Arabic)
  * 
  * NO APIs, NO NLLB-200, NO hardcoded dictionaries
  * Uses dynamic phonetic transliteration + English as middleware
@@ -406,7 +407,7 @@ export async function translate(
   // Determine translation path
   const isLatinToLatin = sourceIsLatin && targetIsLatin;
 
-  console.log(`[EmbeddedTranslator] Translation: ${actualSource} → ${normTarget} | Latin-to-Latin: ${isLatinToLatin} | NonLatin-to-NonLatin: ${sourceIsNonLatin && targetIsNonLatin}`);
+  console.log(`[EmbeddedTranslator] Translation: ${actualSource} → ${normTarget} | LatinToLatin: ${isLatinToLatin} | EnglishInvolved: ${sourceIsEnglish || targetIsEnglish}`);
 
   if (sourceIsEnglish && targetIsEnglish) {
     // ═══════════════════════════════════════════════════════════
@@ -418,62 +419,93 @@ export async function translate(
   } else if (isLatinToLatin && !sourceIsEnglish && !targetIsEnglish) {
     // ═══════════════════════════════════════════════════════════
     // CASE 2: Latin → Latin (Spanish ↔ French ↔ German etc.)
-    // Direct pass-through - no pivot needed for same script
+    // DIRECT PASS-THROUGH - no pivot needed for same script
     // ═══════════════════════════════════════════════════════════
     translatedText = correctedText;
     wasTranslated = false;
-    console.log(`[EmbeddedTranslator] Direct Latin-to-Latin: ${actualSource} → ${normTarget} (no pivot)`);
+    console.log(`[EmbeddedTranslator] DIRECT Latin-to-Latin: ${actualSource} → ${normTarget}`);
     
   } else if (sourceIsEnglish && targetIsNonLatin) {
     // ═══════════════════════════════════════════════════════════
     // CASE 3: English → Non-Latin (English → Hindi, English → Arabic)
-    // Direct transliteration from English to native script
+    // DIRECT transliteration - English to native script
     // ═══════════════════════════════════════════════════════════
     translatedText = translateFromEnglish(correctedText, normTarget);
     wasTranslated = translatedText !== correctedText;
-    console.log(`[EmbeddedTranslator] Direct: English → ${normTarget} (native script)`);
+    console.log(`[EmbeddedTranslator] DIRECT: English → ${normTarget}`);
     
   } else if (sourceIsNonLatin && targetIsEnglish) {
     // ═══════════════════════════════════════════════════════════
     // CASE 4: Non-Latin → English (Hindi → English, Arabic → English)
-    // Reverse transliteration from native to Latin
+    // DIRECT reverse transliteration - native to English
     // ═══════════════════════════════════════════════════════════
     translatedText = translateToEnglish(correctedText, actualSource);
     wasTranslated = translatedText !== correctedText;
-    console.log(`[EmbeddedTranslator] Direct: ${actualSource} → English (Latin)`);
+    console.log(`[EmbeddedTranslator] DIRECT: ${actualSource} → English`);
+    
+  } else if (sourceIsEnglish && targetIsLatin) {
+    // ═══════════════════════════════════════════════════════════
+    // CASE 5: English → Latin (English → French, English → Spanish)
+    // DIRECT pass-through (both are Latin script)
+    // ═══════════════════════════════════════════════════════════
+    translatedText = correctedText;
+    wasTranslated = false;
+    console.log(`[EmbeddedTranslator] DIRECT: English → ${normTarget} (Latin)`);
+    
+  } else if (sourceIsLatin && targetIsEnglish) {
+    // ═══════════════════════════════════════════════════════════
+    // CASE 6: Latin → English (French → English, Spanish → English)
+    // DIRECT pass-through (both are Latin script)
+    // ═══════════════════════════════════════════════════════════
+    translatedText = correctedText;
+    wasTranslated = false;
+    console.log(`[EmbeddedTranslator] DIRECT: ${actualSource} (Latin) → English`);
     
   } else if (sourceIsLatin && targetIsNonLatin) {
     // ═══════════════════════════════════════════════════════════
-    // CASE 5: Latin → Non-Latin (French → Hindi, Spanish → Arabic)
-    // Direct transliteration - Latin text to native script
+    // CASE 7: Latin → Non-Latin (French → Hindi, Spanish → Arabic)
+    // ENGLISH PIVOT: Latin → English → Native
     // ═══════════════════════════════════════════════════════════
-    translatedText = translateFromEnglish(correctedText, normTarget);
-    wasTranslated = translatedText !== correctedText;
-    console.log(`[EmbeddedTranslator] Direct: ${actualSource} (Latin) → ${normTarget} (Native)`);
-    
-  } else if (sourceIsNonLatin && targetIsLatin) {
-    // ═══════════════════════════════════════════════════════════
-    // CASE 6: Non-Latin → Latin (Hindi → French, Arabic → Spanish)
-    // Reverse transliteration - native script to Latin
-    // ═══════════════════════════════════════════════════════════
-    translatedText = translateToEnglish(correctedText, actualSource);
-    wasTranslated = translatedText !== correctedText;
-    console.log(`[EmbeddedTranslator] Direct: ${actualSource} (Native) → ${normTarget} (Latin)`);
-    
-  } else if (sourceIsNonLatin && targetIsNonLatin) {
-    // ═══════════════════════════════════════════════════════════
-    // CASE 7: Non-Latin → Non-Latin (ENGLISH PIVOT REQUIRED)
-    // Hindi → English → Arabic, Telugu → English → Tamil, etc.
-    // ═══════════════════════════════════════════════════════════
-    // Step 1: Source language (native script) → English (Latin phonetics)
+    // Step 1: Normalize Latin to English phonetics
     englishPivot = translateToEnglish(correctedText, actualSource);
     console.log(`[EmbeddedTranslator] Pivot Step 1: ${actualSource} → English: "${englishPivot.substring(0, 30)}..."`);
     
-    // Step 2: English (Latin phonetics) → Target language (native script)
+    // Step 2: English to target native script
     translatedText = translateFromEnglish(englishPivot, normTarget);
     console.log(`[EmbeddedTranslator] Pivot Step 2: English → ${normTarget}: "${translatedText.substring(0, 30)}..."`);
     
     wasTranslated = true;
+    
+  } else if (sourceIsNonLatin && targetIsLatin) {
+    // ═══════════════════════════════════════════════════════════
+    // CASE 8: Non-Latin → Latin (Hindi → French, Arabic → Spanish)
+    // ENGLISH PIVOT: Native → English → Latin
+    // ═══════════════════════════════════════════════════════════
+    // Step 1: Reverse transliterate native to English
+    englishPivot = translateToEnglish(correctedText, actualSource);
+    console.log(`[EmbeddedTranslator] Pivot Step 1: ${actualSource} → English: "${englishPivot.substring(0, 30)}..."`);
+    
+    // Step 2: Transform English to target Latin language
+    translatedText = translateFromEnglish(englishPivot, normTarget);
+    console.log(`[EmbeddedTranslator] Pivot Step 2: English → ${normTarget}: "${translatedText.substring(0, 30)}..."`);
+    
+    wasTranslated = true;
+    
+  } else if (sourceIsNonLatin && targetIsNonLatin) {
+    // ═══════════════════════════════════════════════════════════
+    // CASE 9: Non-Latin → Non-Latin (Hindi → Arabic, Telugu → Tamil)
+    // ENGLISH PIVOT: Native → English → Native
+    // ═══════════════════════════════════════════════════════════
+    // Step 1: Reverse transliterate to English
+    englishPivot = translateToEnglish(correctedText, actualSource);
+    console.log(`[EmbeddedTranslator] Pivot Step 1: ${actualSource} → English: "${englishPivot.substring(0, 30)}..."`);
+    
+    // Step 2: Transliterate English to target native script
+    translatedText = translateFromEnglish(englishPivot, normTarget);
+    console.log(`[EmbeddedTranslator] Pivot Step 2: English → ${normTarget}: "${translatedText.substring(0, 30)}..."`);
+    
+    wasTranslated = true;
+    
   } else {
     // Fallback: pass-through
     translatedText = correctedText;
