@@ -19,7 +19,7 @@ interface UseIncomingChatsResult {
   clearChat: (sessionId: string) => void;
 }
 
-// Create audio context for sounds
+// Create audio context for sounds - LOUDER and more attention-grabbing
 let buzzAudioContext: AudioContext | null = null;
 let buzzIntervalId: NodeJS.Timeout | null = null;
 
@@ -29,22 +29,48 @@ const playBuzzSound = () => {
       buzzAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
-    const oscillator = buzzAudioContext.createOscillator();
-    const gainNode = buzzAudioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(buzzAudioContext.destination);
-
-    oscillator.frequency.value = 440; // A4 note
-    oscillator.type = "sine";
+    // Create a more noticeable multi-tone notification
+    const now = buzzAudioContext.currentTime;
     
-    gainNode.gain.setValueAtTime(0.3, buzzAudioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, buzzAudioContext.currentTime + 0.3);
+    // First tone - higher
+    const oscillator1 = buzzAudioContext.createOscillator();
+    const gainNode1 = buzzAudioContext.createGain();
+    oscillator1.connect(gainNode1);
+    gainNode1.connect(buzzAudioContext.destination);
+    oscillator1.frequency.value = 523.25; // C5
+    oscillator1.type = "sine";
+    gainNode1.gain.setValueAtTime(0.4, now);
+    gainNode1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    oscillator1.start(now);
+    oscillator1.stop(now + 0.15);
 
-    oscillator.start(buzzAudioContext.currentTime);
-    oscillator.stop(buzzAudioContext.currentTime + 0.3);
+    // Second tone - even higher
+    const oscillator2 = buzzAudioContext.createOscillator();
+    const gainNode2 = buzzAudioContext.createGain();
+    oscillator2.connect(gainNode2);
+    gainNode2.connect(buzzAudioContext.destination);
+    oscillator2.frequency.value = 659.25; // E5
+    oscillator2.type = "sine";
+    gainNode2.gain.setValueAtTime(0.4, now + 0.15);
+    gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    oscillator2.start(now + 0.15);
+    oscillator2.stop(now + 0.3);
+
+    // Third tone - highest
+    const oscillator3 = buzzAudioContext.createOscillator();
+    const gainNode3 = buzzAudioContext.createGain();
+    oscillator3.connect(gainNode3);
+    gainNode3.connect(buzzAudioContext.destination);
+    oscillator3.frequency.value = 783.99; // G5
+    oscillator3.type = "sine";
+    gainNode3.gain.setValueAtTime(0.4, now + 0.3);
+    gainNode3.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    oscillator3.start(now + 0.3);
+    oscillator3.stop(now + 0.5);
+
+    console.log("[useIncomingChats] 🔔 Played notification sound");
   } catch (error) {
-    console.error("Error playing buzz sound:", error);
+    console.error("[useIncomingChats] Error playing buzz sound:", error);
   }
 };
 
@@ -128,7 +154,8 @@ export const useIncomingChats = (
 
     let isCheckingRef = false;
     let lastCheckTime = 0;
-    const MIN_CHECK_INTERVAL = 500; // Throttle to max 2 checks per second
+    const MIN_CHECK_INTERVAL = 300; // Reduced throttle for faster detection
+    let pollIntervalId: NodeJS.Timeout | null = null;
 
     const checkForNewChats = async () => {
       // Prevent concurrent checks and throttle
@@ -138,7 +165,7 @@ export const useIncomingChats = (
       lastCheckTime = now;
 
       try {
-        console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
+        console.log(`[useIncomingChats] 🔍 Checking for new chats for ${userGender} user: ${currentUserId}`);
         
         const column = userGender === "male" ? "man_user_id" : "woman_user_id";
         const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
@@ -152,13 +179,25 @@ export const useIncomingChats = (
           .order("created_at", { ascending: false })
           .limit(10);
 
-        if (sessionsError || !sessions || sessions.length === 0) {
+        console.log(`[useIncomingChats] Found ${sessions?.length || 0} active sessions`);
+
+        if (sessionsError) {
+          console.error("[useIncomingChats] Error fetching sessions:", sessionsError);
+          isCheckingRef = false;
+          return;
+        }
+
+        if (!sessions || sessions.length === 0) {
+          // Clear any stale incoming chats
+          setIncomingChats([]);
           isCheckingRef = false;
           return;
         }
 
         // Filter out already accepted sessions first
         const pendingSessions = sessions.filter(s => !acceptedChatsRef.current.has(s.id));
+        console.log(`[useIncomingChats] Pending sessions (not accepted): ${pendingSessions.length}`);
+        
         if (pendingSessions.length === 0) {
           isCheckingRef = false;
           return;
@@ -173,10 +212,14 @@ export const useIncomingChats = (
           .eq("sender_id", currentUserId);
 
         const chatsWithMessages = new Set(userMessages?.map(m => m.chat_id) || []);
+        console.log(`[useIncomingChats] Chats where user has sent messages: ${chatsWithMessages.size}`);
 
         // Filter sessions where user hasn't sent any message
         const incomingSessions = pendingSessions.filter(s => !chatsWithMessages.has(s.chat_id));
+        console.log(`[useIncomingChats] 📨 Incoming sessions (no user messages): ${incomingSessions.length}`);
+        
         if (incomingSessions.length === 0) {
+          setIncomingChats([]);
           isCheckingRef = false;
           return;
         }
@@ -208,13 +251,17 @@ export const useIncomingChats = (
           };
 
           newIncomingChats.push(newChat);
+          console.log(`[useIncomingChats] 🆕 New incoming chat from: ${newChat.partnerName}`);
         }
 
         if (newIncomingChats.length > 0) {
           setIncomingChats(prev => {
             const existingIds = new Set(prev.map(c => c.sessionId));
             const uniqueNew = newIncomingChats.filter(c => !existingIds.has(c.sessionId));
-            return [...prev, ...uniqueNew];
+            if (uniqueNew.length > 0) {
+              console.log(`[useIncomingChats] ✅ Adding ${uniqueNew.length} new incoming chats to state`);
+            }
+            return [...prev.filter(c => newIncomingChats.some(nc => nc.sessionId === c.sessionId)), ...uniqueNew];
           });
         }
       } catch (error) {
@@ -226,6 +273,11 @@ export const useIncomingChats = (
 
     // Check immediately
     checkForNewChats();
+
+    // FALLBACK: Poll every 3 seconds to catch any missed realtime events
+    pollIntervalId = setInterval(() => {
+      checkForNewChats();
+    }, 3000);
 
     // User-scoped channel for efficient message routing at scale
     const channelName = `incoming-${currentUserId}-${Date.now()}`;
@@ -261,6 +313,9 @@ export const useIncomingChats = (
       .subscribe();
 
     return () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+      }
       supabase.removeChannel(channel);
     };
   }, [currentUserId, userGender]);
