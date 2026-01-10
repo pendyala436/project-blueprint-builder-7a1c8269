@@ -158,18 +158,31 @@ export function normalizeLanguage(lang: string): string {
   if (!lang) return 'english';
   const normalized = lang.toLowerCase().trim();
   
+  // Check aliases first
   if (LANGUAGE_ALIASES[normalized]) {
     return LANGUAGE_ALIASES[normalized];
   }
   
+  // Check if it's already a known language name
   if (languageByName.has(normalized)) {
     return normalized;
   }
   
+  // Check if it's a language code - convert to name
   const byCode = languageByCode.get(normalized);
   if (byCode) {
     return byCode.name;
   }
+  
+  // Check if it's a partial match (for codes like 'ja' -> 'japanese')
+  for (const [code, langInfo] of languageByCode) {
+    if (code === normalized || langInfo.code.toLowerCase() === normalized) {
+      return langInfo.name;
+    }
+  }
+  
+  // Log warning for unmapped languages to help debug
+  console.warn(`[normalizeLanguage] Unknown language: "${lang}" - using as-is`);
   
   return normalized;
 }
