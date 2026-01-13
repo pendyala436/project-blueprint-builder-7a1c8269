@@ -880,34 +880,61 @@ const MiniChatWindow = ({
               </div>
             )}
             <div className="flex items-center gap-1">
-              {/* Input: Shows Latin for non-Latin languages, shows native for Latin languages */}
+              {/* Input: Shows native script directly for phonetic typing */}
               <Input
-                placeholder={needsTransliteration ? `Type "bagunnava" in English letters` : `Type in ${currentUserLanguage}...`}
-                value={rawInput}
+                placeholder={needsTransliteration ? `Type "bagunnava" → బాగున్నావా` : `Type in ${currentUserLanguage}...`}
+                value={newMessage}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  setRawInput(value);
+                  const newValue = e.target.value;
                   
-                  if (needsTransliteration && value.trim()) {
-                    // Transliterate Latin → Native script
-                    try {
-                      const native = dynamicTransliterate(value, currentUserLanguage);
-                      console.log('[MiniChat] Transliterate:', value, '→', native);
-                      setNewMessage(native || value);
-                    } catch (e) {
-                      console.error('[MiniChat] Transliteration error:', e);
-                      setNewMessage(value);
+                  if (needsTransliteration) {
+                    // Handle deletion
+                    if (newValue.length < newMessage.length) {
+                      const deleteCount = newMessage.length - newValue.length;
+                      const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                      setRawInput(newRaw);
+                      if (newRaw.trim()) {
+                        try {
+                          const native = dynamicTransliterate(newRaw, currentUserLanguage);
+                          setNewMessage(native || newRaw);
+                        } catch {
+                          setNewMessage(newRaw);
+                        }
+                      } else {
+                        setNewMessage('');
+                      }
+                    } else {
+                      // Handle addition - extract what was added
+                      const addedText = newValue.slice(newMessage.length);
+                      const isLatinInput = /^[a-zA-Z\s\d.,!?'"()\-:;@#$%^&*+=]*$/.test(addedText);
+                      
+                      if (isLatinInput && addedText) {
+                        const newRaw = rawInput + addedText;
+                        setRawInput(newRaw);
+                        try {
+                          const native = dynamicTransliterate(newRaw, currentUserLanguage);
+                          console.log('[MiniChat] Transliterate:', newRaw, '→', native);
+                          setNewMessage(native || newRaw);
+                        } catch {
+                          setNewMessage(newRaw);
+                        }
+                      } else {
+                        // Native script typed directly
+                        setRawInput(newValue);
+                        setNewMessage(newValue);
+                      }
                     }
                   } else {
-                    setNewMessage(value);
+                    setRawInput(newValue);
+                    setNewMessage(newValue);
                   }
                   
                   handleTyping();
                 }}
                 onKeyDown={handleKeyPress}
-                lang="en"
-                dir="ltr"
-                className="h-7 text-[11px]"
+                lang={currentUserLanguage}
+                dir="auto"
+                className="h-7 text-[11px] unicode-text"
               />
               <Button
                 size="icon"

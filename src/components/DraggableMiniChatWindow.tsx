@@ -1451,37 +1451,59 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder={needsTransliteration ? `Type "bagunnava" in English letters` : userUsesLatinScript ? "Type your message..." : "Type in your language..."}
-                  value={needsTransliteration ? rawInput : newMessage}
+                  placeholder={needsTransliteration ? `Type "bagunnava" → బాగున్నావా` : userUsesLatinScript ? "Type your message..." : "Type in your language..."}
+                  value={newMessage}
                   onChange={(e) => {
-                    const value = e.target.value;
+                    const newValue = e.target.value;
                     
                     if (needsTransliteration) {
-                      setRawInput(value);
-                      
-                      if (value.trim()) {
-                        // Transliterate Latin → Native script instantly
-                        try {
-                          const native = dynamicTransliterate(value, currentUserLanguage);
-                          console.log('[DraggableMiniChatWindow] Transliterate:', value, '→', native);
-                          setNewMessage(native || value);
-                        } catch (e) {
-                          console.error('[DraggableMiniChatWindow] Transliteration error:', e);
-                          setNewMessage(value);
+                      // Handle deletion
+                      if (newValue.length < newMessage.length) {
+                        const deleteCount = newMessage.length - newValue.length;
+                        const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                        setRawInput(newRaw);
+                        if (newRaw.trim()) {
+                          try {
+                            const native = dynamicTransliterate(newRaw, currentUserLanguage);
+                            setNewMessage(native || newRaw);
+                          } catch {
+                            setNewMessage(newRaw);
+                          }
+                        } else {
+                          setNewMessage('');
                         }
                       } else {
-                        setNewMessage("");
+                        // Handle addition - extract what was added
+                        const addedText = newValue.slice(newMessage.length);
+                        const isLatinInput = /^[a-zA-Z\s\d.,!?'"()\-:;@#$%^&*+=]*$/.test(addedText);
+                        
+                        if (isLatinInput && addedText) {
+                          const newRaw = rawInput + addedText;
+                          setRawInput(newRaw);
+                          try {
+                            const native = dynamicTransliterate(newRaw, currentUserLanguage);
+                            console.log('[DraggableMiniChatWindow] Transliterate:', newRaw, '→', native);
+                            setNewMessage(native || newRaw);
+                          } catch {
+                            setNewMessage(newRaw);
+                          }
+                        } else {
+                          // Native script typed directly
+                          setRawInput(newValue);
+                          setNewMessage(newValue);
+                        }
                       }
                     } else {
-                      setNewMessage(value);
+                      setRawInput(newValue);
+                      setNewMessage(newValue);
                     }
                     
-                    handleTyping(value);
+                    handleTyping(newValue);
                   }}
                   onKeyDown={handleKeyPress}
-                  lang="en"
-                  dir="ltr"
-                  className="h-8 text-xs w-full"
+                  lang={currentUserLanguage}
+                  dir="auto"
+                  className="h-8 text-xs w-full unicode-text"
                   disabled={isSending || isUploading}
                 />
               </div>
