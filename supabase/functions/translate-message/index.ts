@@ -1077,12 +1077,22 @@ serve(async (req) => {
         const translated = await translateText(transliterated.text, effectiveSource, effectiveTarget);
         const cleanedTranslation = cleanTextOutput(translated.translatedText);
 
+        // Step 3: Get English translation if target is not English
+        let englishText = "";
+        if (!isSameLanguage(effectiveTarget, "english")) {
+          const englishTranslation = await translateText(transliterated.text, effectiveSource, "english");
+          englishText = cleanTextOutput(englishTranslation.translatedText);
+        } else {
+          englishText = cleanedTranslation; // Target is already English
+        }
+
         return new Response(
           JSON.stringify({
             translatedText: cleanedTranslation,
             translatedMessage: cleanedTranslation,
             originalText: inputText,
             nativeScriptText: transliterated.text,
+            englishText: englishText,
             isTranslated: translated.success,
             wasTransliterated: true,
             pivotUsed: translated.pivotUsed,
@@ -1109,11 +1119,19 @@ serve(async (req) => {
         const converted = await transliterateToNative(inputText, effectiveTarget);
         const cleanedText = cleanTextOutput(converted.success ? converted.text : inputText);
         
+        // Get English translation for non-English languages
+        let englishText = "";
+        if (!isSameLanguage(effectiveTarget, "english")) {
+          const englishTranslation = await translateText(cleanedText, effectiveTarget, "english");
+          englishText = cleanTextOutput(englishTranslation.translatedText);
+        }
+        
         return new Response(
           JSON.stringify({
             translatedText: cleanedText,
             translatedMessage: cleanedText,
             originalText: inputText,
+            englishText: englishText,
             isTranslated: false,
             wasTransliterated: converted.success,
             detectedLanguage: detected.language,
@@ -1164,6 +1182,17 @@ serve(async (req) => {
     const wasActuallyTranslated = result.success && 
                                    cleanedResult.toLowerCase().trim() !== inputText.toLowerCase().trim();
     
+    // Get English translation if neither source nor target is English
+    let englishText = "";
+    if (!isSameLanguage(translateFrom, "english") && !isSameLanguage(effectiveTarget, "english")) {
+      const englishTranslation = await translateText(inputText, translateFrom, "english");
+      englishText = cleanTextOutput(englishTranslation.translatedText);
+    } else if (isSameLanguage(translateFrom, "english")) {
+      englishText = inputText; // Source is English
+    } else if (isSameLanguage(effectiveTarget, "english")) {
+      englishText = cleanedResult; // Target is English
+    }
+    
     console.log(`[dl-translate] Translation result: "${cleanedResult.substring(0, 100)}..."`);
     console.log(`[dl-translate] Was translated: ${wasActuallyTranslated}, pivot: ${result.pivotUsed}`);
 
@@ -1172,6 +1201,7 @@ serve(async (req) => {
         translatedText: cleanedResult,
         translatedMessage: cleanedResult,
         originalText: inputText,
+        englishText: englishText,
         isTranslated: wasActuallyTranslated,
         pivotUsed: result.pivotUsed,
         detectedLanguage: detected.language,

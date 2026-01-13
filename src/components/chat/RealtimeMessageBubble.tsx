@@ -18,6 +18,7 @@ interface RealtimeMessageBubbleProps {
   originalText: string;         // Raw input (Latin)
   senderView: string;           // What sender sees (native script)
   receiverView: string;         // What receiver sees (translated)
+  englishView?: string;         // English translation for universal understanding
   // Metadata
   senderId: string;
   senderName: string;
@@ -33,6 +34,7 @@ interface RealtimeMessageBubbleProps {
   wasTransliterated?: boolean;
   // Options
   showTranslationToggle?: boolean;
+  showEnglishTranslation?: boolean;  // Show English alongside native
   className?: string;
 }
 
@@ -41,6 +43,7 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
   originalText,
   senderView,
   receiverView,
+  englishView,
   senderId,
   senderName,
   senderAvatar,
@@ -53,6 +56,7 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
   wasTranslated,
   wasTransliterated,
   showTranslationToggle = true,
+  showEnglishTranslation = true,
   className,
 }) => {
   const [showOriginal, setShowOriginal] = useState(false);
@@ -149,6 +153,22 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
         >
           {displayContent}
         </p>
+
+        {/* English translation (if available and different from display) */}
+        {showEnglishTranslation && englishView && englishView !== displayContent && (
+          <p
+            className={cn(
+              "text-xs mt-1 pt-1 border-t whitespace-pre-wrap break-words leading-relaxed italic",
+              isSentByMe 
+                ? "text-primary-foreground/70 border-primary-foreground/20" 
+                : "text-muted-foreground border-border/50"
+            )}
+            dir="ltr"
+            lang="en"
+          >
+            🇬🇧 {englishView}
+          </p>
+        )}
 
         {/* Translation toggle & metadata */}
         <div className={cn(
