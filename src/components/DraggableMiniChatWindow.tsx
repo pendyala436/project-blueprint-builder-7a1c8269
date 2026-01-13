@@ -41,7 +41,7 @@ import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { useRealtimeTranslation } from "@/lib/translation";
+import { useRealtimeChatTranslation } from "@/lib/translation";
 // SEMANTIC TRANSLATION: Use translateText from translate.ts for tested functionality
 import {
   isSameLanguage,
@@ -200,16 +200,21 @@ const DraggableMiniChatWindow = ({
 
   // Real-time typing indicator with bi-directional translation - FULLY ASYNC
   const {
-    sendTypingIndicator,
-    clearPreview,
-    senderNativePreview,
-    partnerTyping
-  } = useRealtimeTranslation({
-    currentUserId,
-    currentUserLanguage,
-    channelId: chatId,
-    enabled: true
-  });
+    getLivePreview,
+    processMessage,
+  } = useRealtimeChatTranslation(currentUserLanguage, partnerLanguage);
+  
+  const [senderNativePreview, setSenderNativePreview] = useState('');
+  const [partnerTyping, setPartnerTyping] = useState<any>(null);
+  
+  const sendTypingIndicator = useCallback((text: string) => {
+    const preview = getLivePreview(text, currentUserLanguage);
+    setSenderNativePreview(preview.preview);
+  }, [getLivePreview, currentUserLanguage]);
+  
+  const clearPreview = useCallback(() => {
+    setSenderNativePreview('');
+  }, []);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -940,7 +945,7 @@ const DraggableMiniChatWindow = ({
     setLastActivityTime(Date.now());
     // Send typing indicator with native script preview
     if (text.trim()) {
-      sendTypingIndicator(text.trim(), partnerLanguage);
+      sendTypingIndicator(text.trim());
     }
   }, [sendTypingIndicator, partnerLanguage]);
 

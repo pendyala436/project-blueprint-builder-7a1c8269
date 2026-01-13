@@ -2,16 +2,15 @@
  * Universal Translation System - 1000+ Languages
  * ===============================================
  * 
- * Complete browser-based translation supporting ALL languages
- * from men_languages.ts and women_languages.ts (842+ languages each).
+ * SINGLE SOURCE OF TRUTH: translate.ts
+ * All translations use translateText() from translate.ts
  * 
  * Key Features:
  * 1. Same-language bypass (source = target → return input as-is)
  * 2. Different-language translation via English pivot
  * 3. Dynamic language discovery (no hardcoding)
- * 4. Native script conversion (Latin ↔ Native)
+ * 4. Native script conversion via dynamic-transliterator
  * 5. Real-time typing preview
- * 6. Offline, browser-based, meaning-based translation
  * 
  * @example
  * ```tsx
@@ -37,13 +36,14 @@
 // ============================================================
 
 export {
-  // Main translation function
+  // Main translation function - THE SINGLE SOURCE OF TRUTH
   translateText,
   
   // Language discovery
   getLanguages,
   getLanguageCount,
   getLanguageInfo,
+  getLanguageCode,
   getTranslator,
   loadEngine,
   
@@ -73,118 +73,6 @@ export {
 } from './translate';
 
 // ============================================================
-// SEMANTIC TRANSLATION API (Alternative high-level API)
-// ============================================================
-
-export {
-  // Core semantic translation
-  semanticTranslate,
-  semanticTranslateBatch,
-  semanticTranslateBidirectional,
-  
-  // Language discovery
-  getSupportedLanguages,
-  isPairSupported,
-  
-  // Types
-  type SemanticTranslationResult,
-  type BidirectionalResult,
-  type LanguageInfo,
-} from './semantic-translate';
-
-// Engine access (aliased to avoid conflicts)
-export {
-  getEngine,
-  clearEngineCache,
-  getEngineCacheStats,
-  type Language as EngineLanguage,
-  type Translator as EngineTranslator,
-  type TranslationEngine as Engine,
-} from './engine';
-
-// ============================================================
-// EMBEDDED TRANSLATOR (Legacy/Backward Compatibility)
-// ============================================================
-
-export {
-  // Core translation functions
-  translate,
-  translateInBackground,
-  convertToNativeScript,
-  transliterateToNative,
-  getNativeScriptPreview,
-  processMessageForChat,
-  
-  // Bidirectional translation (Source ↔ Target via English)
-  translateBidirectional,
-  translateReply,
-  translateBidirectionalInBackground,
-  translateTargetToSource,
-  
-  // Status
-  getLoadingStatus,
-  
-  // Language utilities (aliased)
-  isRTL,
-  getProxyLanguage,
-  getEffectiveTargetLanguage,
-  
-  // Legacy language functions
-  getSupportedLanguages as getLegacySupportedLanguages,
-  isLanguageSupported as isLegacyLanguageSupported,
-  isPairSupported as isLegacyPairSupported,
-  getTotalLanguageCount,
-  getSupportedPairs,
-  
-  // Cache management
-  clearTranslationCache,
-  
-  // Constants
-  LANGUAGES,
-} from './embedded-translator';
-
-// Compatibility aliases - re-export from translate.ts
-export {
-  autoDetectLanguage as autoDetectLanguageSync,
-  autoDetectLanguage as detectLanguage,
-  needsScriptConversion as asyncNeedsScriptConversion,
-  isLatinText as asyncIsLatinText,
-} from './translate';
-
-// Re-export from embedded-translator for chat processing
-export {
-  convertToNativeScript as convertToNativeScriptAsync,
-  processMessageForChat as processChatMessage,
-} from './embedded-translator';
-
-// Import for stub functions
-import { getNativeScriptPreview } from './embedded-translator';
-import { isLatinText as checkLatinText } from './translate';
-
-export const initWorker = () => Promise.resolve();
-export const terminateWorker = () => {};
-export const normalizeUnicode = (text: string) => text.normalize('NFC');
-export const createDebouncedPreview = () => ({
-  update: (text: string, lang: string) => Promise.resolve(getNativeScriptPreview(text, lang)),
-  cancel: () => {},
-});
-export const isLatinScript = (text: string) => checkLatinText(text);
-
-// Embedded translator types
-export type {
-  EmbeddedTranslationResult,
-  LanguageDetectionResult as AutoDetectedLanguage,
-  ChatProcessResult,
-  LanguageInfo as LegacyLanguageInfo,
-  BidirectionalTranslationResult,
-} from './embedded-translator';
-
-// ============================================================
-// GBOARD TYPING - Pure dynamic transliteration (no phonetic spell correction)
-// ============================================================
-// Note: Phonetic spell correction removed - using pure Gboard typing via dynamic-transliterator
-
-// ============================================================
 // DYNAMIC TRANSLITERATOR - Script conversion for 1000+ languages
 // ============================================================
 
@@ -196,50 +84,190 @@ export {
 } from './dynamic-transliterator';
 
 // ============================================================
-// LEGACY TYPE EXPORTS
+// CONVENIENCE ALIASES
 // ============================================================
 
-export type {
-  TranslationResult as LegacyTranslationResult,
-  TranslationOptions,
-  TranslatorConfig,
-  LanguageDetectionResult,
-  BatchTranslationItem,
-  BatchTranslationResult,
-  NLLBLanguageCode,
-  ScriptPattern,
-} from './types';
+import { translateText, isLatinText as checkLatinText, autoDetectLanguage, normalizeLanguage } from './translate';
+import { dynamicTransliterate } from './dynamic-transliterator';
 
-export {
-  getNLLBCode,
-  isIndianLanguage,
-  LANGUAGE_TO_NLLB,
-  SCRIPT_PATTERNS,
-  INDIAN_LANGUAGES,
-  LATIN_SCRIPT_LANGUAGES,
-} from './language-codes';
+// Legacy function aliases pointing to translate.ts
+export const translate = translateText;
+export const semanticTranslate = translateText;
+export const semanticTranslateBatch = async (items: Array<{ text: string; source: string; target: string }>) => {
+  return Promise.all(items.map(item => translateText(item.text, item.source, item.target)));
+};
+
+// Transliteration helpers using dynamic-transliterator
+export const transliterateToNative = (text: string, targetLanguage: string): string => {
+  return dynamicTransliterate(text, targetLanguage) || text;
+};
+
+export const convertToNativeScript = (text: string, targetLanguage: string): string => {
+  return dynamicTransliterate(text, targetLanguage) || text;
+};
+
+export const getNativeScriptPreview = (text: string, targetLanguage: string): string => {
+  return dynamicTransliterate(text, targetLanguage) || text;
+};
+
+// Process message for chat (uses translateText internally)
+export interface ChatProcessResult {
+  senderView: string;
+  receiverView: string;
+  originalText: string;
+  wasTransliterated: boolean;
+  wasTranslated: boolean;
+}
+
+export async function processMessageForChat(
+  text: string,
+  senderLanguage: string,
+  receiverLanguage: string
+): Promise<ChatProcessResult> {
+  const trimmed = text.trim();
+  
+  if (!trimmed) {
+    return {
+      senderView: '',
+      receiverView: '',
+      originalText: '',
+      wasTransliterated: false,
+      wasTranslated: false,
+    };
+  }
+
+  const { isSameLanguage, isLatinScriptLanguage, isLatinText, needsScriptConversion } = await import('./translate');
+  
+  let senderView = trimmed;
+  let wasTransliterated = false;
+
+  // Convert Latin input to sender's native script if needed
+  if (needsScriptConversion(senderLanguage) && isLatinText(trimmed)) {
+    senderView = transliterateToNative(trimmed, senderLanguage);
+    wasTransliterated = senderView !== trimmed;
+  }
+
+  // Same language - receiver sees same as sender
+  if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    return {
+      senderView,
+      receiverView: senderView,
+      originalText: trimmed,
+      wasTransliterated,
+      wasTranslated: false,
+    };
+  }
+
+  // Translate using translateText
+  let receiverView = senderView;
+  let wasTranslated = false;
+
+  try {
+    const result = await translateText(senderView, senderLanguage, receiverLanguage);
+    if (result.isTranslated && result.text !== senderView) {
+      receiverView = result.text;
+      wasTranslated = true;
+    }
+  } catch (err) {
+    console.error('[processMessageForChat] Translation error:', err);
+  }
+
+  return {
+    senderView,
+    receiverView,
+    originalText: trimmed,
+    wasTransliterated,
+    wasTranslated,
+  };
+}
+
+// Bidirectional translation helper
+export interface BidirectionalResult {
+  forward: string;
+  backward: string;
+  pivot?: string;
+}
+
+export async function translateBidirectional(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<BidirectionalResult> {
+  const forward = await translateText(text, sourceLanguage, targetLanguage);
+  const backward = await translateText(forward.text, targetLanguage, sourceLanguage);
+  
+  return {
+    forward: forward.text,
+    backward: backward.text,
+    pivot: forward.englishPivot,
+  };
+}
+
+export const semanticTranslateBidirectional = translateBidirectional;
+export const translateReply = async (text: string, from: string, to: string) => {
+  const result = await translateText(text, from, to);
+  return result.text;
+};
+
+// Status helpers
+export const getLoadingStatus = () => ({ ready: true, progress: 100 });
+export const isRTL = (lang: string) => {
+  const rtlLangs = ['arabic', 'hebrew', 'persian', 'urdu', 'pashto', 'sindhi'];
+  return rtlLangs.includes(normalizeLanguage(lang));
+};
+
+// Utility exports
+export const initWorker = () => Promise.resolve();
+export const terminateWorker = () => {};
+export const normalizeUnicode = (text: string) => text.normalize('NFC');
+export const isLatinScript = (text: string) => checkLatinText(text);
+export const detectLanguage = autoDetectLanguage;
+
+// Legacy compatibility - all point to translate.ts functions
+export const getSupportedLanguages = () => import('./translate').then(m => m.getLanguages());
+export const isPairSupported = () => true; // All pairs supported via English pivot
+export const getTotalLanguageCount = () => import('./translate').then(m => m.getLanguageCount());
+export const getSupportedPairs = () => [];
+export const clearTranslationCache = () => import('./translate').then(m => m.clearCache());
+export const getProxyLanguage = (lang: string) => normalizeLanguage(lang);
+export const getEffectiveTargetLanguage = (lang: string) => normalizeLanguage(lang);
+export const translateInBackground = translateText;
+export const translateBidirectionalInBackground = translateBidirectional;
+export const translateTargetToSource = async (text: string, target: string, source: string) => {
+  const result = await translateText(text, target, source);
+  return result.text;
+};
+
+// Types for backward compatibility
+export type EmbeddedTranslationResult = {
+  text: string;
+  originalText: string;
+  isTranslated: boolean;
+  isTransliterated?: boolean;
+  source?: string;
+  target?: string;
+};
+
+export type LanguageDetectionResult = ReturnType<typeof autoDetectLanguage>;
+export type AutoDetectedLanguage = LanguageDetectionResult;
+export type LanguageInfo = {
+  name: string;
+  code: string;
+  nativeName: string;
+  script: string;
+  rtl?: boolean;
+};
+export type BidirectionalTranslationResult = BidirectionalResult;
+export type SemanticTranslationResult = Awaited<ReturnType<typeof translateText>>;
+
+// Constants placeholder
+export const LANGUAGES = {} as Record<string, LanguageInfo>;
 
 // ============================================================
-// SEMANTIC TRANSLATION HOOKS (Recommended)
+// HOOKS (Recommended)
 // ============================================================
 
-export { 
-  useSemanticTranslation, 
-  useTranslate, 
-  useChatTranslation 
-} from '@/hooks/useSemanticTranslation';
-
-// ============================================================
-// LEGACY HOOKS (Backward compatibility)
-// ============================================================
-
-export { useTranslator } from './useTranslator';
-export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
-
-// Legacy realtime hook
+export { useSemanticTranslation, useTranslate, useChatTranslation } from '@/hooks/useSemanticTranslation';
 export { useRealtimeChatTranslation } from '@/hooks/useRealtimeChatTranslation';
-export type {
-  ChatMessageResult,
-  LivePreviewResult,
-  AutoDetectedLanguage as RealtimeAutoDetectedLanguage,
-} from '@/hooks/useRealtimeChatTranslation';
+export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
+export type { ChatMessageResult, LivePreviewResult } from '@/hooks/useRealtimeChatTranslation';

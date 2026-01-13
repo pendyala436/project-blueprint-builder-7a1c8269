@@ -1,29 +1,26 @@
 /**
- * Translation Service Hook
- * =========================
- * Fully embedded, browser-based translation
- * 100% in-browser, NO external APIs, NO Docker
+ * Translation Service Hook (Unified)
+ * ===================================
  * 
- * Supports 386+ languages with instant response
- * Bidirectional: Source ↔ English ↔ Target
- * Non-blocking - all operations are synchronous or fast async
+ * SINGLE SOURCE: Uses translateText from @/lib/translation/translate
+ * All translations go through the unified translate.ts system
+ * 
+ * Supports 1000+ languages with semantic translation
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  // Embedded translator (preferred)
-  translate,
-  transliterateToNative,
-  processMessageForChat,
-  autoDetectLanguage,
-  isReady as isEmbeddedReady,
-  getLoadingStatus,
-  getNativeScriptPreview,
+  translateText,
   isLatinText,
   isLatinScriptLanguage,
   isSameLanguage,
-  normalizeUnicode,
-  clearTranslationCache as clearCache,
+  autoDetectLanguage,
+  normalizeLanguage,
+  needsScriptConversion,
+  clearCache,
+  processMessageForChat,
+  transliterateToNative,
+  getNativeScriptPreview,
 } from '@/lib/translation';
 
 // Re-export types
@@ -61,21 +58,12 @@ export interface ConversionResult {
 export function useTranslationService() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
-  const [modelLoadProgress, setModelLoadProgress] = useState(100); // Always loaded
+  const [modelLoadProgress, setModelLoadProgress] = useState(100);
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(true); // Embedded is always ready
+  const [isReady, setIsReady] = useState(true);
   
-  // Live preview helper (debounced, non-blocking)
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Always ready - no model loading needed
-  useEffect(() => {
-    const status = getLoadingStatus();
-    setIsReady(status.ready);
-    setModelLoadProgress(status.progress);
-  }, []);
-
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (previewTimeoutRef.current) {
@@ -84,13 +72,13 @@ export function useTranslationService() {
     };
   }, []);
 
-  // Translate text (embedded, non-blocking)
-  const translateText = useCallback(async (
+  // Translate text using unified translateText
+  const translateTextFn = useCallback(async (
     text: string,
     sourceLanguage: string,
     targetLanguage: string
   ): Promise<TranslationResult> => {
-    const originalText = normalizeUnicode(text.trim());
+    const originalText = text.trim().normalize('NFC');
     
     if (!originalText) {
       return {
@@ -103,7 +91,6 @@ export function useTranslationService() {
       };
     }
 
-    // Same language - no translation needed
     if (isSameLanguage(sourceLanguage, targetLanguage)) {
       return {
         text: originalText,
@@ -119,14 +106,14 @@ export function useTranslationService() {
     setError(null);
 
     try {
-      const result = await translate(originalText, sourceLanguage, targetLanguage);
+      const result = await translateText(originalText, sourceLanguage, targetLanguage);
       return {
         text: result.text,
         originalText,
         sourceLanguage,
         targetLanguage,
         isTranslated: result.isTranslated,
-        wasTransliterated: result.isTransliterated || false,
+        wasTransliterated: false,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Translation failed';
@@ -146,25 +133,15 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Convert Latin text to native script (embedded, sync)
+  // Convert Latin text to native script
   const convertToNativeScript = useCallback((
     text: string,
     targetLanguage: string
   ): ConversionResult => {
-    const trimmed = normalizeUnicode(text.trim());
+    const trimmed = text.trim().normalize('NFC');
     
-    if (!trimmed) {
-      return { converted: text, isConverted: false };
-    }
-
-    // Check if text is already non-Latin
-    if (!isLatinText(trimmed)) {
-      return { converted: trimmed, isConverted: false };
-    }
-
-    // Check if target language uses Latin script
-    if (isLatinScriptLanguage(targetLanguage)) {
-      return { converted: trimmed, isConverted: false };
+    if (!trimmed || !isLatinText(trimmed) || isLatinScriptLanguage(targetLanguage)) {
+      return { converted: trimmed || text, isConverted: false };
     }
 
     try {
@@ -183,23 +160,12 @@ export function useTranslationService() {
     text: string,
     senderLanguage: string
   ): { senderView: string; wasTransliterated: boolean } => {
-    const trimmed = normalizeUnicode(text.trim());
+    const trimmed = text.trim().normalize('NFC');
     
-    if (!trimmed) {
-      return { senderView: text, wasTransliterated: false };
+    if (!trimmed || isLatinScriptLanguage(senderLanguage) || !isLatinText(trimmed)) {
+      return { senderView: trimmed || text, wasTransliterated: false };
     }
 
-    // If sender's language uses Latin script, no conversion
-    if (isLatinScriptLanguage(senderLanguage)) {
-      return { senderView: trimmed, wasTransliterated: false };
-    }
-
-    // If text is already in native script, no conversion
-    if (!isLatinText(trimmed)) {
-      return { senderView: trimmed, wasTransliterated: false };
-    }
-
-    // Convert Latin to sender's native script
     const result = transliterateToNative(trimmed, senderLanguage);
     return {
       senderView: result,
@@ -213,15 +179,13 @@ export function useTranslationService() {
     senderLanguage: string,
     receiverLanguage: string
   ): Promise<{ receiverView: string; wasTranslated: boolean }> => {
-    const trimmed = normalizeUnicode(text.trim());
+    const trimmed = text.trim().normalize('NFC');
     
     if (!trimmed) {
       return { receiverView: text, wasTranslated: false };
     }
 
-    // Same language - no translation needed
     if (isSameLanguage(senderLanguage, receiverLanguage)) {
-      // But if receiver's language is non-Latin and text is Latin, convert
       if (!isLatinScriptLanguage(receiverLanguage) && isLatinText(trimmed)) {
         const result = transliterateToNative(trimmed, receiverLanguage);
         return { receiverView: result, wasTranslated: false };
@@ -229,15 +193,14 @@ export function useTranslationService() {
       return { receiverView: trimmed, wasTranslated: false };
     }
 
-    // Translate to receiver's language
-    const result = await translate(trimmed, senderLanguage, receiverLanguage);
+    const result = await translateText(trimmed, senderLanguage, receiverLanguage);
     return {
       receiverView: result.text,
       wasTranslated: result.isTranslated,
     };
   }, []);
 
-  // Full chat message processing (embedded)
+  // Full chat message processing
   const processMessageForChatFn = useCallback(async (
     text: string,
     senderLanguage: string,
@@ -246,11 +209,11 @@ export function useTranslationService() {
     return await processMessageForChat(text, senderLanguage, receiverLanguage);
   }, []);
 
-  // Detect language from text (sync)
+  // Detect language from text
   const detectLanguage = useCallback((
     text: string
   ): { language: string; isLatin: boolean } => {
-    const trimmed = normalizeUnicode(text.trim());
+    const trimmed = text.trim().normalize('NFC');
     if (!trimmed) return { language: 'english', isLatin: true };
 
     try {
@@ -261,7 +224,7 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Update live preview (debounced, non-blocking)
+  // Update live preview (debounced)
   const updateLivePreview = useCallback((
     text: string,
     targetLanguage: string
@@ -286,11 +249,6 @@ export function useTranslationService() {
     }
   }, []);
 
-  // Check if language uses non-Latin script (sync)
-  const checkNonLatinScript = useCallback((language: string): boolean => {
-    return !isLatinScriptLanguage(language);
-  }, []);
-
   // Clear translation cache
   const clearTranslationCache = useCallback((): void => {
     clearCache();
@@ -298,27 +256,20 @@ export function useTranslationService() {
   }, []);
 
   return {
-    // Core translation functions
-    translate: translateText,
+    translate: translateTextFn,
     convertToNativeScript,
     processOutgoing,
     processIncoming,
     processMessageForChat: processMessageForChatFn,
     detectLanguage,
-    
-    // Live preview
     updateLivePreview,
     cancelLivePreview,
-    
-    // Utility functions (sync)
-    checkNonLatinScript,
+    checkNonLatinScript: (language: string) => !isLatinScriptLanguage(language),
     isSameLanguage,
     isLatinText,
     isLatinScriptLanguage,
-    normalizeUnicode,
+    normalizeUnicode: (text: string) => text.normalize('NFC'),
     clearTranslationCache,
-    
-    // State
     isTranslating,
     isModelLoading,
     modelLoadProgress,
