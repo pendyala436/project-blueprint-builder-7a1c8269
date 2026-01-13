@@ -3,17 +3,21 @@
  * Target: Sub-second initial render
  */
 
-import { lazy, Suspense, memo, startTransition } from "react";
+import { lazy, Suspense, memo, startTransition, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
+import { preloadBaseFonts } from "@/lib/fonts";
 
 // Critical components - no lazy for stability
 import AuthScreen from "./pages/AuthScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { I18nProvider } from "@/components/I18nProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Preload base fonts immediately (non-blocking)
+preloadBaseFonts();
 
 // Defer non-critical imports
 const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));

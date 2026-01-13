@@ -88,34 +88,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Preload critical Noto fonts -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" />
+    <!-- 
+      Font Loading Strategy: On-Demand
+      
+      Only the base Latin font is preloaded. All other scripts (900+ languages)
+      are loaded dynamically when text in that script is detected.
+      This dramatically improves initial page load performance.
+      
+      See: src/lib/fonts/font-loader.ts for the dynamic loading system.
+    -->
     
-    <!-- Load Noto fonts for all 300+ languages/scripts -->
-    <!-- Group 1: Latin, Cyrillic, Greek, Armenian, Georgian -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&family=Noto+Serif:wght@400;700&display=swap" />
-    <!-- Group 2: Indic scripts (Devanagari, Bengali, Tamil, Telugu, Kannada, Malayalam, Gujarati, Gurmukhi, Oriya, Sinhala) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" />
-    <!-- Group 3: Arabic, Hebrew, Persian, Urdu + RTL scripts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Hebrew:wght@400;500;600;700&family=Noto+Sans+Syriac:wght@400&family=Noto+Sans+Thaana:wght@400;500&display=swap" />
-    <!-- Group 4: Southeast Asian (Thai, Lao, Khmer, Myanmar, Vietnamese) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;500;600;700&family=Noto+Sans+Khmer:wght@400;500;600;700&family=Noto+Sans+Myanmar:wght@400;500;600;700&family=Noto+Serif+Thai:wght@400;700&display=swap" />
-    <!-- Group 5: CJK (Chinese Simplified, Traditional, Japanese, Korean) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+HK:wght@400;500;700&display=swap" />
-    <!-- Group 6: Central Asian + Caucasian (Armenian, Georgian, Mongolian, Tibetan) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Armenian:wght@400;500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&family=Noto+Sans+Mongolian&family=Noto+Sans+Tibetan:wght@400;700&display=swap" />
-    <!-- Group 7: African scripts (Ethiopic, Tifinagh, Vai, N'Ko, Bamum, Adlam) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&family=Noto+Sans+Tifinagh&family=Noto+Sans+Vai&family=Noto+Sans+NKo:wght@400;500&family=Noto+Sans+Bamum&family=Noto+Sans+Adlam:wght@400;500;600;700&display=swap" />
-    <!-- Group 8: Javanese, Balinese, Sundanese, Buginese, Tagalog, Baybayin -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Javanese:wght@400;700&family=Noto+Sans+Balinese:wght@400;700&family=Noto+Sans+Sundanese:wght@400;700&family=Noto+Sans+Buginese&family=Noto+Sans+Tagalog&family=Noto+Sans+Hanunoo&family=Noto+Sans+Buhid&family=Noto+Sans+Tagbanwa&display=swap" />
-    <!-- Group 9: Canadian Aboriginal, Cherokee, Coptic, Runic, Gothic -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Canadian+Aboriginal:wght@400;500;600;700&family=Noto+Sans+Cherokee:wght@400;500;600;700&family=Noto+Sans+Coptic&family=Noto+Sans+Runic&family=Noto+Sans+Gothic&display=swap" />
-    <!-- Group 10: Additional South Asian (Limbu, Lepcha, Ol Chiki, Meetei Mayek, Chakma, Syloti Nagri) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Limbu&family=Noto+Sans+Lepcha&family=Noto+Sans+Ol+Chiki:wght@400;500;600;700&family=Noto+Sans+Meetei+Mayek:wght@400;500;600;700&family=Noto+Sans+Chakma&family=Noto+Sans+Syloti+Nagri&display=swap" />
-    <!-- Group 11: Brahmic derivatives (Cham, Tai Tham, Tai Viet, Kayah Li, Pahawh Hmong, Miao) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Cham:wght@400;700&family=Noto+Sans+Tai+Tham:wght@400;500&family=Noto+Sans+Tai+Viet&family=Noto+Sans+Kayah+Li:wght@400;500;700&family=Noto+Sans+Pahawh+Hmong&family=Noto+Sans+Miao&display=swap" />
-    <!-- Group 12: Historic/minority scripts (Samaritan, Mandaic, Avestan, Old Persian, Phoenician, Ogham) -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Samaritan&family=Noto+Sans+Mandaic&family=Noto+Sans+Avestan&family=Noto+Sans+Old+Persian&family=Noto+Sans+Phoenician&family=Noto+Sans+Ogham&display=swap" />
+    <!-- Preload only base Latin fonts for fast initial render -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" /></noscript>
 
     <style>
       /* Safe area padding for notched devices */
