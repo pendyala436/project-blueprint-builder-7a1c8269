@@ -918,8 +918,11 @@ const MiniChatWindow = ({
                   handleTyping();
                 }}
                 onKeyDown={handleKeyPress}
-                lang={currentUserLanguage}
+                lang={needsTransliteration ? "en" : currentUserLanguage}
                 dir="auto"
+                spellCheck={true}
+                autoComplete="off"
+                autoCorrect="on"
                 className="h-7 text-[11px] unicode-text"
               />
               <Button

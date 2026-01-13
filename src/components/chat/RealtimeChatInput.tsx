@@ -243,8 +243,11 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled || isSending}
-            lang={senderLanguage}
+            lang={needsTransliteration ? "en" : senderLanguage}
             dir="auto"
+            spellCheck={true}
+            autoComplete="off"
+            autoCorrect="on"
             className={cn(
               'min-h-[44px] max-h-[120px] resize-none unicode-text',
               'py-3 px-4',
