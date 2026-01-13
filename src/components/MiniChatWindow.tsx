@@ -36,7 +36,7 @@ import {
   initWorker,
   normalizeUnicode,
 } from "@/lib/translation";
-import { translateAsync } from "@/lib/translation/async-translator";
+import { translateText as universalTranslate, isLatinText, isLatinScriptLanguage as isLatinLang } from "@/lib/translation/translate";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 
@@ -357,9 +357,9 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
       
-      // Different languages - translate via Edge Function
-      console.log(`[MiniChatWindow] Translating: ${sourceLanguage} -> ${targetLanguage}`);
-      const result = await translateAsync(text, sourceLanguage, targetLanguage);
+      // Different languages - translate via Universal Translator
+      console.log(`[MiniChatWindow] Translating via Universal Translator: ${sourceLanguage} -> ${targetLanguage}`);
+      const result = await universalTranslate(text, sourceLanguage, targetLanguage);
       
       if (result.isTranslated && result.text) {
         console.log('[MiniChatWindow] Translation result:', result.text.substring(0, 50));
