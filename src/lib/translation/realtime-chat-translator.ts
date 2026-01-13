@@ -11,18 +11,20 @@
  * - Bi-directional chat translation
  */
 
+// Use Universal Translation for actual message translation
 import {
-  translate as embeddedTranslate,
-  autoDetectLanguage,
-  isLanguageSupported,
-  getLanguageInfo as getEmbeddedLanguageInfo,
-  getSupportedLanguages,
+  translateText as universalTranslate,
   isSameLanguage as checkSameLanguage,
+  isLatinText as checkLatinText,
   normalizeLanguage as normalizeLanguageName,
   isReady
-} from './embedded-translator';
+} from './translate';
 
+// Use Gboard (dynamic transliteration) for typing preview only
 import { dynamicTransliterate, isLatinScriptLanguage } from './dynamic-transliterator';
+
+// For language info lookup
+import { getLanguageInfo as getEmbeddedLanguageInfo, getSupportedLanguages, autoDetectLanguage, isLanguageSupported } from './embedded-translator';
 
 // ============================================================
 // TYPES
@@ -206,16 +208,17 @@ export async function translate(
   }
 
   try {
-    const result = await embeddedTranslate(originalText, srcLang, tgtLang);
+    // Use Universal Translation (Edge Function) for actual translation
+    const result = await universalTranslate(originalText, srcLang, tgtLang);
     
     return {
       text: result.text,
       originalText,
-      sourceLanguage: result.sourceLanguage,
-      targetLanguage: result.targetLanguage,
+      sourceLanguage: result.sourceLanguage || srcLang,
+      targetLanguage: result.targetLanguage || tgtLang,
       isTranslated: result.isTranslated,
-      wasTransliterated: result.isTransliterated,
-      detectedLanguage: result.detectedLanguage
+      wasTransliterated: false,
+      detectedLanguage: undefined
     };
   } catch (err) {
     console.error('[RealtimeTranslator] Translation error:', err);
@@ -278,8 +281,8 @@ export async function processMessageForChat(
       senderView = transliterateToNative(text, senderLang);
     }
 
-    // Receiver view - translate to their language
-    const result = await embeddedTranslate(text, senderLang, receiverLang);
+    // Receiver view - translate using Universal Translation (Edge Function)
+    const result = await universalTranslate(text, senderLang, receiverLang);
 
     return {
       senderView,
