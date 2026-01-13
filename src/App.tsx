@@ -92,6 +92,7 @@ const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotF
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 const TranslationTestPanel = lazy(() => import(/* webpackChunkName: "dev" */ "./components/TranslationTestPanel"));
 const UniversalChatPage = lazy(() => import(/* webpackChunkName: "chat" */ "./pages/UniversalChatPage"));
+const TranslationTestPage = lazy(() => import(/* webpackChunkName: "dev" */ "./pages/TranslationTestPage"));
 
 // Ultra-optimized React Query - maximum caching
 const queryClient = new QueryClient({
@@ -219,6 +220,7 @@ const App = () => (
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             <Route path="/universal-chat" element={<LazyRoute component={UniversalChatPage} />} />
             <Route path="/translation-test" element={<LazyRoute component={TranslationTestPanel} />} />
+            <Route path="/test-translation" element={<LazyRoute component={TranslationTestPage} />} />
             <Route path="*" element={<LazyRoute component={NotFound} />} />
           </Routes>
         </AutoLogoutWrapper>
