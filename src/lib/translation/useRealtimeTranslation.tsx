@@ -16,12 +16,10 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  isSameLanguage as checkSameLanguage, 
-  isLatinText,
-  isLatinScriptLanguage 
-} from './embedded-translator';
-import { transliterateToNative, translate } from './embedded-translator';
+// Use Gboard (dynamic transliteration) for typing preview
+import { dynamicTransliterate, isLatinScriptLanguage } from './dynamic-transliterator';
+// Use Universal Translation for actual message translation
+import { translateText as universalTranslate, isSameLanguage as checkSameLanguage, isLatinText } from './translate';
 
 export interface TypingIndicator {
   userId: string;
@@ -101,22 +99,22 @@ export function useRealtimeTranslation({
           try {
             let receiverNativeText = text;
             
-            // If same language, just convert to receiver's native script
+            // If same language, just convert to receiver's native script using Gboard
             if (checkSameLanguage(senderLanguage, currentUserLanguage)) {
-              // Both same language - show in native script
+              // Both same language - show in native script using dynamicTransliterate (Gboard)
               if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-                receiverNativeText = transliterateToNative(text, currentUserLanguage);
+                receiverNativeText = dynamicTransliterate(text, currentUserLanguage);
               } else {
                 receiverNativeText = senderNativeText || text;
               }
             } else {
-              // Different languages - translate to receiver's language in native script
-              const translated = await translate(text, senderLanguage, currentUserLanguage);
+              // Different languages - translate using Universal Translation (Edge Function)
+              const translated = await universalTranslate(text, senderLanguage, currentUserLanguage);
               receiverNativeText = translated.text;
               
-              // If receiver's language needs native script conversion
+              // If receiver's language needs native script conversion, use Gboard
               if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(receiverNativeText)) {
-                receiverNativeText = transliterateToNative(receiverNativeText, currentUserLanguage);
+                receiverNativeText = dynamicTransliterate(receiverNativeText, currentUserLanguage);
               }
             }
 
@@ -182,8 +180,9 @@ export function useRealtimeTranslation({
     previewDebounceRef.current = setTimeout(() => {
       const generatePreview = () => {
         let senderNative = text;
+        // Use Gboard (dynamicTransliterate) for typing preview
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-          senderNative = transliterateToNative(text, currentUserLanguage);
+          senderNative = dynamicTransliterate(text, currentUserLanguage);
         }
         setSenderNativePreview(senderNative);
         setIsTranslating(false);
@@ -209,10 +208,10 @@ export function useRealtimeTranslation({
       broadcastDebounceRef.current = setTimeout(() => {
         if (!channelRef.current) return;
         
-        // Generate native text for broadcast
+        // Generate native text for broadcast using Gboard
         let senderNative = text;
         if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-          senderNative = transliterateToNative(text, currentUserLanguage);
+          senderNative = dynamicTransliterate(text, currentUserLanguage);
         }
         
         channelRef.current.send({
