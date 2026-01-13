@@ -66,6 +66,20 @@ const SAMPLE_INPUTS = {
   french: ['bonjour', 'comment allez-vous', 'merci', 'comment vous appelez-vous'],
 };
 
+// Auto-test combinations for "how are you"
+const HOW_ARE_YOU_TESTS = [
+  { sender: 'english', receiver: 'hindi', input: 'how are you', expectedTranslit: 'how are you' },
+  { sender: 'hindi', receiver: 'english', input: 'kaise ho', expectedTranslit: 'कैसे हो' },
+  { sender: 'hindi', receiver: 'telugu', input: 'kaise ho', expectedTranslit: 'कैसे हो' },
+  { sender: 'telugu', receiver: 'hindi', input: 'ela unnavu', expectedTranslit: 'ఎలా ఉన్నావు' },
+  { sender: 'tamil', receiver: 'hindi', input: 'eppadi irukka', expectedTranslit: 'எப்படி இருக்க' },
+  { sender: 'english', receiver: 'tamil', input: 'how are you', expectedTranslit: 'how are you' },
+  { sender: 'bengali', receiver: 'english', input: 'kemon acho', expectedTranslit: 'কেমন আছো' },
+  { sender: 'kannada', receiver: 'telugu', input: 'hegiddira', expectedTranslit: 'ಹೆಗಿದ್ದೀರ' },
+  { sender: 'spanish', receiver: 'hindi', input: 'como estas', expectedTranslit: 'como estas' },
+  { sender: 'french', receiver: 'english', input: 'comment allez-vous', expectedTranslit: 'comment allez-vous' },
+];
+
 export default function TranslationTestPage() {
   const [senderLanguage, setSenderLanguage] = useState('english');
   const [receiverLanguage, setReceiverLanguage] = useState('hindi');
@@ -74,6 +88,16 @@ export default function TranslationTestPage() {
   const [transliteratedForTranslator, setTransliteratedForTranslator] = useState('');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [autoTestRunning, setAutoTestRunning] = useState(false);
+  const [autoTestResults, setAutoTestResults] = useState<Array<{
+    sender: string;
+    receiver: string;
+    input: string;
+    transliterated: string;
+    translated: string;
+    success: boolean;
+    time: number;
+  }>>([]);
 
   const { getLivePreview, processMessage, isReady } = useRealtimeChatTranslation(
     senderLanguage,
@@ -245,7 +269,65 @@ export default function TranslationTestPage() {
     }
   }, [senderLanguage, handleInputChange, testChatFlow]);
 
-  const clearResults = () => setTestResults([]);
+  // Run auto "how are you" test across all language combinations
+  const runHowAreYouTests = useCallback(async () => {
+    setAutoTestRunning(true);
+    setAutoTestResults([]);
+    
+    console.log('🚀 Starting "How Are You" tests across language combinations...');
+    
+    for (const test of HOW_ARE_YOU_TESTS) {
+      const startTime = performance.now();
+      
+      // Get transliteration (sender sees)
+      const transliterated = dynamicTransliterate(test.input, test.sender);
+      
+      // Get translation (receiver sees)
+      let translated = '';
+      let success = false;
+      
+      try {
+        const result = await translateText(transliterated, test.sender, test.receiver);
+        translated = result.text;
+        success = result.isTranslated || translated.length > 0;
+      } catch (err) {
+        translated = `Error: ${err instanceof Error ? err.message : 'Unknown'}`;
+        success = false;
+      }
+      
+      const time = performance.now() - startTime;
+      
+      const testResult = {
+        sender: test.sender,
+        receiver: test.receiver,
+        input: test.input,
+        transliterated,
+        translated,
+        success,
+        time,
+      };
+      
+      setAutoTestResults(prev => [...prev, testResult]);
+      
+      console.log(`[HowAreYou] ${test.sender} → ${test.receiver}:`, {
+        input: test.input,
+        transliterated,
+        translated,
+        time: `${time.toFixed(0)}ms`,
+      });
+      
+      // Small delay between tests
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    setAutoTestRunning(false);
+    console.log('✅ "How Are You" tests completed!');
+  }, []);
+
+  const clearResults = () => {
+    setTestResults([]);
+    setAutoTestResults([]);
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -351,6 +433,83 @@ export default function TranslationTestPage() {
                 Clear Results
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* "How Are You" Auto Test Panel */}
+        <Card className="border-2 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              🧪 "How Are You" - Multi-Language Test
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Automatically tests "how are you" across 10 language combinations to verify typing + transliteration + translation.
+            </p>
+            
+            <Button 
+              onClick={runHowAreYouTests} 
+              disabled={autoTestRunning}
+              className="w-full"
+              size="lg"
+            >
+              {autoTestRunning ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Running Tests... ({autoTestResults.length}/10)
+                </>
+              ) : (
+                <>
+                  <Languages className="h-4 w-4 mr-2" />
+                  🚀 Run "How Are You" Tests
+                </>
+              )}
+            </Button>
+
+            {autoTestResults.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Sender</th>
+                      <th className="text-left p-2">Receiver</th>
+                      <th className="text-left p-2">Input (Latin)</th>
+                      <th className="text-left p-2">Transliterated (Sender Sees)</th>
+                      <th className="text-left p-2">Translated (Receiver Sees)</th>
+                      <th className="text-left p-2">Time</th>
+                      <th className="text-left p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {autoTestResults.map((result, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="p-2 capitalize">{result.sender}</td>
+                        <td className="p-2 capitalize">{result.receiver}</td>
+                        <td className="p-2 font-mono">{result.input}</td>
+                        <td className="p-2 text-lg">{result.transliterated}</td>
+                        <td className="p-2 text-lg">{result.translated}</td>
+                        <td className="p-2 text-muted-foreground">{result.time.toFixed(0)}ms</td>
+                        <td className="p-2">
+                          {result.success ? (
+                            <Badge variant="default" className="bg-green-500">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              OK
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Failed
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
