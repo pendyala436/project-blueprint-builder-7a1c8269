@@ -84,20 +84,36 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
   /**
    * Handle input change - INSTANT transliteration on every keystroke
+   * Key insight: We store raw Latin input separately and always display the transliterated version
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     
-    // Check if user typed in Latin or native script directly
-    const isLatin = isLatinText(value);
+    // Detect if user is typing Latin characters (phonetic input)
+    // We compare the new value against what we expect
+    const lastChar = value.slice(-1);
+    const isTypingLatin = lastChar ? /[a-zA-Z\s\d.,!?'"()\-:;]/.test(lastChar) : true;
     
-    if (isLatin && needsTransliteration) {
-      // User typing in Latin → store raw + show transliterated
-      setRawInput(value);
-      const native = transliterateNow(value);
-      setNativeText(native);
+    if (needsTransliteration) {
+      if (isTypingLatin || isLatinText(value)) {
+        // User typing phonetically in Latin → store raw, show transliterated
+        setRawInput(value);
+        
+        // INSTANT transliteration
+        if (value.trim()) {
+          const native = transliterateNow(value);
+          console.log('[RealtimeChatInput] Transliterate:', value, '→', native, 'lang:', senderLanguage);
+          setNativeText(native);
+        } else {
+          setNativeText('');
+        }
+      } else {
+        // User typing in native script directly (e.g., using native keyboard)
+        setRawInput(value);
+        setNativeText(value);
+      }
     } else {
-      // User typing in native script directly OR Latin-script language
+      // Latin-script language - no transliteration needed
       setRawInput(value);
       setNativeText(value);
     }
@@ -114,7 +130,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         onTyping(false);
       }, 2000);
     }
-  }, [transliterateNow, needsTransliteration, onTyping]);
+  }, [transliterateNow, needsTransliteration, senderLanguage, onTyping]);
 
   /**
    * Handle send - sends native script text, translates for receiver
@@ -211,10 +227,60 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       {/* Input area */}
       <div className="p-3 flex items-end gap-2">
         <div className="flex-1 relative">
+          {/* Hidden input for raw Latin text */}
+          <input 
+            type="hidden" 
+            value={rawInput} 
+            aria-hidden="true"
+          />
+          
           <Textarea
             ref={textareaRef}
-            value={displayText}
-            onChange={handleChange}
+            value={nativeText || ''}
+            onChange={(e) => {
+              // When native text shown, map back to raw input logic
+              const newValue = e.target.value;
+              
+              // If user is deleting or the value changed significantly, reset
+              if (newValue.length < (nativeText?.length || 0)) {
+                // User is deleting - need to delete from rawInput too
+                const deleteCount = (nativeText?.length || 0) - newValue.length;
+                const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                setRawInput(newRaw);
+                if (newRaw.trim() && needsTransliteration) {
+                  setNativeText(transliterateNow(newRaw));
+                } else {
+                  setNativeText(newRaw);
+                }
+              } else {
+                // User is adding - figure out what was added
+                const addedNative = newValue.slice(nativeText?.length || 0);
+                
+                // Check if added text is Latin (phonetic typing)
+                if (isLatinText(addedNative)) {
+                  const newRaw = rawInput + addedNative;
+                  setRawInput(newRaw);
+                  if (needsTransliteration) {
+                    const native = transliterateNow(newRaw);
+                    console.log('[Input] Latin typed:', addedNative, '| Raw:', newRaw, '→ Native:', native);
+                    setNativeText(native);
+                  } else {
+                    setNativeText(newRaw);
+                  }
+                } else {
+                  // Native text typed directly
+                  setRawInput(newValue);
+                  setNativeText(newValue);
+                }
+              }
+              
+              // Typing indicator
+              if (onTyping) {
+                onTyping(newValue.length > 0);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
+              }
+            }}
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}

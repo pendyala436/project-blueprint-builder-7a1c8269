@@ -37,6 +37,7 @@ import {
   normalizeUnicode,
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
+import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -86,7 +87,8 @@ const MiniChatWindow = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [rawInput, setRawInput] = useState(""); // What user types (Latin)
+  const [newMessage, setNewMessage] = useState(""); // Display text (native script)
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true); // Start minimized by default
   const [areButtonsExpanded, setAreButtonsExpanded] = useState(false); // Buttons minimized by default
@@ -109,6 +111,8 @@ const MiniChatWindow = ({
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
   // User's language uses Latin script natively (English, Spanish, French, etc.)
   const userUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
+  // Check if phonetic transliteration is needed (for non-Latin script languages like Telugu)
+  const needsTransliteration = !userUsesLatinScript;
 
   // Background task queue for non-blocking operations
   const backgroundTasksRef = useRef<Set<Promise<void>>>(new Set());
@@ -535,6 +539,7 @@ const MiniChatWindow = ({
 
     // IMMEDIATE: Clear input and update UI (non-blocking)
     setNewMessage("");
+    setRawInput("");
     clearPreview(); // Clear typing preview
     setLastActivityTime(Date.now());
 
@@ -853,25 +858,55 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* Input area - Mother tongue via Gboard, all processing in background */}
+          {/* Input area - Phonetic transliteration for non-Latin languages */}
           <div className="p-1.5 border-t space-y-1">
+            {/* Transliteration hint for non-Latin languages */}
+            {needsTransliteration && (
+              <div className="px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
+                <span>✨</span>
+                <span>Type in English → shows in {currentUserLanguage}</span>
+              </div>
+            )}
+            {/* Native script preview for non-Latin languages */}
+            {needsTransliteration && newMessage && newMessage !== rawInput && (
+              <div className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
+                {newMessage}
+              </div>
+            )}
             {/* Same language indicator */}
-            {!needsTranslation && newMessage.trim() && (
+            {!needsTranslation && newMessage.trim() && !needsTransliteration && (
               <div className="px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                 Same language - direct chat
               </div>
             )}
             <div className="flex items-center gap-1">
+              {/* Input: Shows Latin for non-Latin languages, shows native for Latin languages */}
               <Input
-                placeholder={`Type in ${currentUserLanguage}...`}
-                value={newMessage}
+                placeholder={needsTransliteration ? `Type "bagunnava" in English letters` : `Type in ${currentUserLanguage}...`}
+                value={rawInput}
                 onChange={(e) => {
-                  setNewMessage(e.target.value);
+                  const value = e.target.value;
+                  setRawInput(value);
+                  
+                  if (needsTransliteration && value.trim()) {
+                    // Transliterate Latin → Native script
+                    try {
+                      const native = dynamicTransliterate(value, currentUserLanguage);
+                      console.log('[MiniChat] Transliterate:', value, '→', native);
+                      setNewMessage(native || value);
+                    } catch (e) {
+                      console.error('[MiniChat] Transliteration error:', e);
+                      setNewMessage(value);
+                    }
+                  } else {
+                    setNewMessage(value);
+                  }
+                  
                   handleTyping();
                 }}
                 onKeyDown={handleKeyPress}
-                lang={currentUserLanguage}
-                dir="auto"
+                lang="en"
+                dir="ltr"
                 className="h-7 text-[11px]"
               />
               <Button
