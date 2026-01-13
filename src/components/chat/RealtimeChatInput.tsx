@@ -1,15 +1,17 @@
 /**
  * Real-Time Chat Input with INSTANT Transliteration
  * ==================================================
- * Zero-lag typing experience for all 900+ languages
+ * Zero-lag typing experience for all 1000+ languages
  * 
  * Features:
- * - INSTANT transliteration on every keystroke (sync, < 2ms)
+ * - INSTANT offline transliteration on every keystroke (sync, < 2ms)
  * - Type "bagunnava" → see "బాగున్నావా" immediately in input
  * - Latin → Native script conversion based on sender's mother tongue
- * - Works identically for sender AND receiver
- * - All 900+ languages from profile language list
+ * - Universal Translation for sender → receiver (different languages)
  * - Toggle between English and Native typing modes
+ * 
+ * TYPING: Pure offline dynamic transliteration (Gboard-style)
+ * TRANSLATION: Uses translateText from translate.ts via Edge Function
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
@@ -19,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Send, Loader2, Languages, Globe } from 'lucide-react';
 import { dynamicTransliterate, isLatinScriptLanguage as checkLatinScript } from '@/lib/translation/dynamic-transliterator';
+import { translateText, isSameLanguage } from '@/lib/translation/translate';
 
 interface RealtimeChatInputProps {
   onSendMessage: (message: string, senderView: string, receiverView: string) => void;
@@ -155,7 +158,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   }, [transliterateNow, needsTransliteration, typingMode, onTyping]);
 
   /**
-   * Handle send - sends native script text, translates for receiver
+   * Handle send - sends native script text, translates for receiver using Universal Translation
    */
   const handleSend = useCallback(async () => {
     // Use native text (transliterated) if available, or raw input in English mode
@@ -169,27 +172,28 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
     // Clear input immediately for responsive feel
     const savedMessage = messageToSend;
-    const savedRaw = rawInput;
     setRawInput('');
     setNativeText('');
     onTyping?.(false);
 
     try {
-      // For receiver, transliterate to their language
       let receiverView = savedMessage;
       
-      if (!checkLatinScript(receiverLanguage)) {
-        // Receiver needs native script - transliterate from Latin if we have it
-        if (savedRaw && isLatinText(savedRaw)) {
-          try {
-            receiverView = dynamicTransliterate(savedRaw, receiverLanguage) || savedMessage;
-          } catch (e) {
-            console.error('[RealtimeChatInput] Receiver transliteration error:', e);
+      // If sender and receiver have different languages, use Universal Translation
+      if (!isSameLanguage(senderLanguage, receiverLanguage)) {
+        try {
+          console.log('[RealtimeChatInput] Translating:', senderLanguage, '→', receiverLanguage);
+          const result = await translateText(savedMessage, senderLanguage, receiverLanguage);
+          if (result.isTranslated) {
+            receiverView = result.text;
           }
+        } catch (e) {
+          console.error('[RealtimeChatInput] Translation error:', e);
+          // Fallback to original message if translation fails
         }
       }
 
-      // Send: original message, sender's view (native), receiver's view
+      // Send: original message, sender's view (native), receiver's view (translated)
       onSendMessage(savedMessage, savedMessage, receiverView);
       textareaRef.current?.focus();
     } catch (err) {
@@ -199,7 +203,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     } finally {
       setIsSending(false);
     }
-  }, [nativeText, rawInput, disabled, isComposing, isSending, typingMode, receiverLanguage, onSendMessage, onTyping]);
+  }, [nativeText, rawInput, disabled, isComposing, isSending, typingMode, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
 
   /**
    * Handle key press
