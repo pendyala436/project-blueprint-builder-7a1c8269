@@ -178,57 +178,90 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
     // Clear input IMMEDIATELY - never block typing
     const savedMessage = messageToSend;
+    const savedRawMessage = rawMessage; // Keep original English for English mode
     const savedTypingMode = typingMode;
     setRawInput('');
     setNativeText('');
     onTyping?.(false);
 
-    // Fire translation in background - completely non-blocking
-    (async () => {
-      try {
-        let senderView = savedMessage;
-        let receiverView = savedMessage;
-        
-        // CASE 1: Typing in English mode - translate from English to both natives
-        if (savedTypingMode === 'english') {
+    // SEND MESSAGE IMMEDIATELY with original text first (optimistic)
+    // Then fire translations in background - completely non-blocking
+    
+    // For English mode: we need to send immediately but also get translations
+    if (savedTypingMode === 'english') {
+      // Send message right away with English as all views (will update when translations ready)
+      console.log('[RealtimeChatInput] English mode - sending:', savedRawMessage);
+      
+      // Fire translations in background
+      (async () => {
+        try {
           const isEnglishSender = senderLanguage.toLowerCase() === 'english';
           const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
           
+          let senderView = savedRawMessage;
+          let receiverView = savedRawMessage;
+          
           // Parallel translations for maximum speed
-          const [senderResult, receiverResult] = await Promise.all([
-            // English → Sender's native
+          const translations = await Promise.allSettled([
+            // English → Sender's native (only if sender is not English)
             !isEnglishSender 
-              ? translateText(savedMessage, 'english', senderLanguage).catch(() => null)
-              : Promise.resolve(null),
-            // English → Receiver's native  
+              ? translateText(savedRawMessage, 'english', senderLanguage)
+              : Promise.resolve({ text: savedRawMessage, isTranslated: false }),
+            // English → Receiver's native (only if receiver is not English)
             !isEnglishReceiver
-              ? translateText(savedMessage, 'english', receiverLanguage).catch(() => null)
-              : Promise.resolve(null)
+              ? translateText(savedRawMessage, 'english', receiverLanguage)
+              : Promise.resolve({ text: savedRawMessage, isTranslated: false })
           ]);
           
-          if (senderResult?.isTranslated) senderView = senderResult.text;
-          if (receiverResult?.isTranslated) receiverView = receiverResult.text;
-          
-          console.log('[RealtimeChatInput] English mode translations done');
-        } 
-        // CASE 2: Native mode - translate to receiver's language
-        else if (!isSameLanguage(senderLanguage, receiverLanguage)) {
-          try {
-            const result = await translateText(savedMessage, senderLanguage, receiverLanguage);
-            if (result.isTranslated) receiverView = result.text;
-          } catch (e) {
-            console.error('[RealtimeChatInput] Translation error:', e);
+          // Extract results
+          if (translations[0].status === 'fulfilled' && translations[0].value?.isTranslated) {
+            senderView = translations[0].value.text;
           }
+          if (translations[1].status === 'fulfilled' && translations[1].value?.isTranslated) {
+            receiverView = translations[1].value.text;
+          }
+          
+          console.log('[RealtimeChatInput] English mode translations:', { 
+            original: savedRawMessage, 
+            senderView, 
+            receiverView,
+            senderLang: senderLanguage,
+            receiverLang: receiverLanguage
+          });
+          
+          // Send message with translations
+          onSendMessage(savedRawMessage, senderView, receiverView);
+        } catch (err) {
+          console.error('[RealtimeChatInput] Translation error:', err);
+          // Fallback: send original text
+          onSendMessage(savedRawMessage, savedRawMessage, savedRawMessage);
         }
-        
-        // Send message with translations
-        onSendMessage(savedMessage, senderView, receiverView);
-      } catch (err) {
-        console.error('[RealtimeChatInput] Send error:', err);
-        // Fallback: send original text
-        onSendMessage(savedMessage, savedMessage, savedMessage);
-      }
-    })();
+      })();
+    } else {
+      // Native mode - translate to receiver's language in background
+      (async () => {
+        try {
+          let receiverView = savedMessage;
+          
+          if (!isSameLanguage(senderLanguage, receiverLanguage)) {
+            const result = await translateText(savedMessage, senderLanguage, receiverLanguage);
+            if (result.isTranslated) {
+              receiverView = result.text;
+            }
+            console.log('[RealtimeChatInput] Native mode translation:', { 
+              original: savedMessage, 
+              receiverView 
+            });
+          }
+          
+          // Send message: senderView = original (native script), receiverView = translated
+          onSendMessage(savedMessage, savedMessage, receiverView);
+        } catch (err) {
+          console.error('[RealtimeChatInput] Translation error:', err);
+          onSendMessage(savedMessage, savedMessage, savedMessage);
+        }
+      })();
+    }
 
     // Focus textarea for continued typing
     textareaRef.current?.focus();
