@@ -821,7 +821,36 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
 }
 
 /**
+ * Try to find a pattern match in a map with case variations
+ */
+function findPatternMatch(map: Record<string, string>, pattern: string): string | null {
+  // 1. Exact match
+  if (map[pattern]) return map[pattern];
+  
+  // 2. All lowercase
+  const lower = pattern.toLowerCase();
+  if (map[lower]) return map[lower];
+  
+  // 3. All uppercase
+  const upper = pattern.toUpperCase();
+  if (map[upper]) return map[upper];
+  
+  // 4. First letter uppercase (TitleCase)
+  const title = pattern.charAt(0).toUpperCase() + pattern.slice(1).toLowerCase();
+  if (map[title]) return map[title];
+  
+  // 5. First letter lowercase (camelCase for multi-char)
+  if (pattern.length > 1) {
+    const camel = pattern.charAt(0).toLowerCase() + pattern.slice(1);
+    if (map[camel]) return map[camel];
+  }
+  
+  return null;
+}
+
+/**
  * Transliterate a single word using Gboard input codes
+ * Supports any case combination for input
  */
 function transliterateWord(word: string, script: ScriptBlock): string {
   if (!word) return '';
@@ -838,11 +867,8 @@ function transliterateWord(word: string, script: ScriptBlock): string {
     for (let len = Math.min(4, word.length - i); len >= 1; len--) {
       const pattern = word.substring(i, i + len);
       
-      // Check exact case first (Gboard is case-sensitive for some inputs)
-      let consonant = script.consonantMap[pattern];
-      if (!consonant) {
-        consonant = script.consonantMap[pattern.toLowerCase()];
-      }
+      // Find consonant with case-insensitive matching
+      const consonant = findPatternMatch(script.consonantMap, pattern);
       
       if (consonant) {
         if (pendingConsonant) {
@@ -856,24 +882,26 @@ function transliterateWord(word: string, script: ScriptBlock): string {
         break;
       }
 
-      // Check vowels
-      let vowel = script.vowelMap[pattern];
-      let vowelKey = pattern;
-      if (!vowel) {
-        vowel = script.vowelMap[pattern.toLowerCase()];
-        vowelKey = pattern.toLowerCase();
-      }
+      // Check vowels with case-insensitive matching
+      const vowel = findPatternMatch(script.vowelMap, pattern);
+      const vowelKeyLower = pattern.toLowerCase();
       
       if (vowel) {
         if (lastWasConsonant && pendingConsonant) {
-          const modifier = script.modifiers[pattern] || script.modifiers[vowelKey];
-          if (modifier && vowelKey !== 'a' && vowelKey !== 'A') {
+          // Try to find modifier with any case
+          const modifier = findPatternMatch(script.modifiers, pattern);
+          
+          if (modifier && vowelKeyLower !== 'a') {
             result += pendingConsonant + modifier;
-          } else if (vowelKey === 'a' || vowelKey === 'A') {
-            // Inherent 'a' vowel in Indic scripts
-            if (vowelKey === 'A' && script.modifiers['A']) {
+          } else if (vowelKeyLower === 'a') {
+            // Check if user typed 'A', 'AA', or 'aa' for long vowel
+            const isLongA = /^(A|AA|Aa|aA|aa)$/i.test(pattern) && pattern !== 'a';
+            if (isLongA && script.modifiers['A']) {
               result += pendingConsonant + script.modifiers['A'];
+            } else if (isLongA && script.modifiers['aa']) {
+              result += pendingConsonant + script.modifiers['aa'];
             } else {
+              // Inherent 'a' vowel in Indic scripts - no matra needed
               result += pendingConsonant;
             }
           } else {
