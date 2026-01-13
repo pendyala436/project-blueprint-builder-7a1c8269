@@ -909,8 +909,8 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Import Edge Function-based translation
-      const { translateAsync, isSameLanguage } = await import('@/lib/translation/async-translator');
+      // Use ONLY Universal Translator for all translations
+      const { translateText, isSameLanguage } = await import('@/lib/translation/translate');
       
       const source = sourceLanguage || currentUserLanguage;
       
@@ -919,8 +919,8 @@ const ChatScreen = () => {
         return { translatedMessage: message, isTranslated: false, detectedLanguage: source, translationPair: "" };
       }
       
-      // Use Edge Function translation (server-side NLLB)
-      const result = await translateAsync(message, source, targetLanguage);
+      // Use Universal Translator (Edge Function-based semantic translation)
+      const result = await translateText(message, source, targetLanguage);
       
       return { 
         translatedMessage: result.text, 
@@ -963,8 +963,9 @@ const ChatScreen = () => {
    */
   const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
     try {
-      // Import browser-side transliteration
-      const { convertToNativeScriptAsync, isLatinScriptLanguage, isLatinText } = await import('@/lib/translation/async-translator');
+      // Use Universal Translator utilities
+      const { isLatinScriptLanguage, isLatinText } = await import('@/lib/translation/translate');
+      const { dynamicTransliterate } = await import('@/lib/translation/dynamic-transliterator');
       
       // Skip if target is Latin script or input is already native script
       if (isLatinScriptLanguage(targetLanguage) || !isLatinText(message)) {
@@ -983,9 +984,9 @@ const ChatScreen = () => {
       }
       
       // Sender's language is non-Latin (Hindi, Telugu, etc.) but typed in Latin
-      // This is romanized input that needs transliteration
-      const result = await convertToNativeScriptAsync(message, targetLanguage);
-      return result.text || message;
+      // This is romanized input that needs transliteration using dynamic transliterator
+      const result = dynamicTransliterate(message, targetLanguage);
+      return result || message;
     } catch (error) {
       console.error("Conversion failed:", error);
       return message;
