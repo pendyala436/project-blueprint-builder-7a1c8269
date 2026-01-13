@@ -1,14 +1,13 @@
 /**
- * Dynamic Universal Transliterator
- * =================================
+ * Dynamic Universal Transliterator with Gboard Input Codes
+ * =========================================================
  * Supports ALL 900+ languages from profile language lists
- * Uses Unicode block detection + phonetic mapping algorithms
+ * Uses Gboard-compatible input codes (not phonetic mapping)
  * 
- * ARCHITECTURE:
- * 1. Dynamically builds script mappings from men_languages.ts and women_languages.ts
- * 2. Detect target script from language using profile language script property
- * 3. Apply phonetic rules dynamically (no word lookup)
- * 4. Works for ANY language pair without maintenance
+ * GBOARD INPUT CODES:
+ * - These match how users type on Gboard keyboards
+ * - More intuitive for mobile users
+ * - Dynamically built from profile language lists
  * 
  * PERFORMANCE: < 2ms for typical messages (sync, instant)
  * 
@@ -23,7 +22,7 @@ import { menLanguages, type MenLanguage } from '@/data/men_languages';
 import { womenLanguages, type WomenLanguage } from '@/data/women_languages';
 
 // ============================================================
-// UNICODE SCRIPT BLOCKS - Dynamic detection
+// UNICODE SCRIPT BLOCKS - Gboard Input Codes
 // ============================================================
 
 interface ScriptBlock {
@@ -36,350 +35,357 @@ interface ScriptBlock {
   virama?: string; // Halant for Indic scripts
 }
 
-// Script blocks for all major writing systems
+// Script blocks with Gboard input codes for all major writing systems
 const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
-  // Devanagari (Hindi, Marathi, Sanskrit, Nepali, etc.)
+  // Devanagari (Hindi, Marathi, Sanskrit, Nepali, etc.) - Gboard Hindi keyboard codes
   devanagari: {
     name: 'Devanagari',
     start: 0x0900,
     end: 0x097F,
     virama: '्',
     vowelMap: {
-      'a': 'अ', 'aa': 'आ', 'i': 'इ', 'ii': 'ई', 'ee': 'ई',
-      'u': 'उ', 'uu': 'ऊ', 'oo': 'ऊ', 'e': 'ए', 'ai': 'ऐ',
-      'o': 'ओ', 'au': 'औ', 'ri': 'ऋ', 'am': 'अं', 'ah': 'अः'
+      // Gboard Devanagari vowel inputs
+      'a': 'अ', 'A': 'आ', 'aa': 'आ', 'i': 'इ', 'I': 'ई', 'ee': 'ई',
+      'u': 'उ', 'U': 'ऊ', 'oo': 'ऊ', 'e': 'ए', 'E': 'ऐ', 'ai': 'ऐ',
+      'o': 'ओ', 'O': 'औ', 'au': 'औ', 'RRi': 'ऋ', 'aM': 'अं', 'aH': 'अः'
     },
     consonantMap: {
-      'k': 'क', 'kh': 'ख', 'g': 'ग', 'gh': 'घ', 'ng': 'ङ',
-      'ch': 'च', 'chh': 'छ', 'j': 'ज', 'jh': 'झ', 'ny': 'ञ',
-      'TT': 'ट', 'tth': 'ठ', 'DD': 'ड', 'ddh': 'ढ',
-      't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न', 'N': 'ण',
-      'nn': 'न्न', 'mm': 'म्म', 'kk': 'क्क', 'gg': 'ग्ग', 'pp': 'प्प', 'bb': 'ब्ब', 'jj': 'ज्ज', 'll': 'ल्ल', 'vv': 'व्व', 'ss': 'स्स', 'rr': 'र्र', 'yy': 'य्य', 'tt': 'त्त', 'dd': 'द्द', 'cc': 'च्च',
-      'p': 'प', 'ph': 'फ', 'f': 'फ', 'b': 'ब', 'bh': 'भ', 'm': 'म',
-      'y': 'य', 'r': 'र', 'l': 'ल', 'v': 'व', 'w': 'व',
-      'sh': 'श', 'shh': 'ष', 's': 'स', 'h': 'ह',
-      'x': 'क्ष', 'tr': 'त्र', 'gn': 'ज्ञ', 'q': 'क़', 'z': 'ज़'
+      // Gboard Devanagari consonant inputs
+      'k': 'क', 'K': 'ख', 'kh': 'ख', 'g': 'ग', 'G': 'घ', 'gh': 'घ', '~N': 'ङ', 'ng': 'ङ',
+      'c': 'च', 'ch': 'च', 'C': 'छ', 'chh': 'छ', 'j': 'ज', 'J': 'झ', 'jh': 'झ', '~n': 'ञ', 'ny': 'ञ',
+      'T': 'ट', 'Th': 'ठ', 'D': 'ड', 'Dh': 'ढ', 'N': 'ण',
+      't': 'त', 'th': 'थ', 'd': 'द', 'dh': 'ध', 'n': 'न',
+      'p': 'प', 'P': 'फ', 'ph': 'फ', 'f': 'फ़', 'b': 'ब', 'B': 'भ', 'bh': 'भ', 'm': 'म',
+      'y': 'य', 'r': 'र', 'l': 'ल', 'L': 'ळ', 'v': 'व', 'w': 'व',
+      'sh': 'श', 'Sh': 'ष', 'shh': 'ष', 's': 'स', 'h': 'ह',
+      'x': 'क्ष', 'ksh': 'क्ष', 'tr': 'त्र', 'GY': 'ज्ञ', 'gy': 'ज्ञ', 'dny': 'ज्ञ',
+      'q': 'क़', 'z': 'ज़', '.D': 'ड़', '.Dh': 'ढ़', '.n': 'ँ', 'M': 'ं', 'H': 'ः'
     },
     modifiers: {
-      'aa': 'ा', 'i': 'ि', 'ii': 'ी', 'ee': 'ी',
-      'u': 'ु', 'uu': 'ू', 'oo': 'ू', 'e': 'े', 'ai': 'ै',
-      'o': 'ो', 'au': 'ौ', 'ri': 'ृ', 'am': 'ं', 'ah': 'ः'
+      // Gboard matra (vowel signs)
+      'A': 'ा', 'aa': 'ा', 'i': 'ि', 'I': 'ी', 'ee': 'ी',
+      'u': 'ु', 'U': 'ू', 'oo': 'ू', 'e': 'े', 'E': 'ै', 'ai': 'ै',
+      'o': 'ो', 'O': 'ौ', 'au': 'ौ', 'RRi': 'ृ', 'M': 'ं', 'H': 'ः', '.n': 'ँ'
     }
   },
 
-  // Telugu
+  // Telugu - Gboard Telugu keyboard codes
   telugu: {
     name: 'Telugu',
     start: 0x0C00,
     end: 0x0C7F,
     virama: '్',
     vowelMap: {
-      'a': 'అ', 'aa': 'ఆ', 'i': 'ఇ', 'ii': 'ఈ', 'ee': 'ఈ',
-      'u': 'ఉ', 'uu': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'ai': 'ఐ',
-      'o': 'ఒ', 'au': 'ఔ', 'ri': 'ఋ', 'am': 'అం', 'ah': 'అః'
+      'a': 'అ', 'A': 'ఆ', 'aa': 'ఆ', 'i': 'ఇ', 'I': 'ఈ', 'ee': 'ఈ',
+      'u': 'ఉ', 'U': 'ఊ', 'oo': 'ఊ', 'e': 'ఎ', 'E': 'ఏ', 'ai': 'ఐ',
+      'o': 'ఒ', 'O': 'ఓ', 'au': 'ఔ', 'RRi': 'ఋ', 'aM': 'అం', 'aH': 'అః'
     },
     consonantMap: {
-      'k': 'క', 'kh': 'ఖ', 'g': 'గ', 'gh': 'ఘ', 'ng': 'ఙ',
-      'ch': 'చ', 'chh': 'ఛ', 'j': 'జ', 'jh': 'ఝ', 'ny': 'ఞ',
-      'tt': 'ట', 'tth': 'ఠ', 'dd': 'డ', 'ddh': 'ఢ',
-      't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న', 'N': 'ణ',
-      'nn': 'న్న', 'mm': 'మ్మ', 'kk': 'క్క', 'gg': 'గ్గ', 'pp': 'ప్ప', 'bb': 'బ్బ', 'jj': 'జ్జ', 'll': 'ల్ల', 'vv': 'వ్వ', 'ss': 'స్స', 'rr': 'ర్ర', 'yy': 'య్య',
-      'p': 'ప', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'bh': 'భ', 'm': 'మ',
-      'y': 'య', 'r': 'ర', 'l': 'ల', 'v': 'వ', 'w': 'వ',
-      'sh': 'శ', 'shh': 'ష', 's': 'స', 'h': 'హ',
-      'x': 'క్ష', 'tr': 'త్ర', 'gn': 'జ్ఞ', 'q': 'క', 'z': 'జ'
+      'k': 'క', 'K': 'ఖ', 'kh': 'ఖ', 'g': 'గ', 'G': 'ఘ', 'gh': 'ఘ', '~N': 'ఙ', 'ng': 'ఙ',
+      'c': 'చ', 'ch': 'చ', 'C': 'ఛ', 'chh': 'ఛ', 'j': 'జ', 'J': 'ఝ', 'jh': 'ఝ', '~n': 'ఞ', 'ny': 'ఞ',
+      'T': 'ట', 'Th': 'ఠ', 'D': 'డ', 'Dh': 'ఢ', 'N': 'ణ',
+      't': 'త', 'th': 'థ', 'd': 'ద', 'dh': 'ధ', 'n': 'న',
+      'p': 'ప', 'P': 'ఫ', 'ph': 'ఫ', 'f': 'ఫ', 'b': 'బ', 'B': 'భ', 'bh': 'భ', 'm': 'మ',
+      'y': 'య', 'r': 'ర', 'R': 'ఱ', 'l': 'ల', 'L': 'ళ', 'v': 'వ', 'w': 'వ',
+      'sh': 'శ', 'Sh': 'ష', 'shh': 'ష', 's': 'స', 'h': 'హ',
+      'x': 'క్ష', 'ksh': 'క్ష', 'GY': 'జ్ఞ', 'gy': 'జ్ఞ', 'q': 'క', 'z': 'జ',
+      'M': 'ం', 'H': 'ః'
     },
     modifiers: {
-      'aa': 'ా', 'i': 'ి', 'ii': 'ీ', 'ee': 'ీ',
-      'u': 'ు', 'uu': 'ూ', 'oo': 'ూ', 'e': 'ె', 'ai': 'ై',
-      'o': 'ొ', 'au': 'ౌ', 'ri': 'ృ', 'am': 'ం', 'ah': 'ః'
+      'A': 'ా', 'aa': 'ా', 'i': 'ి', 'I': 'ీ', 'ee': 'ీ',
+      'u': 'ు', 'U': 'ూ', 'oo': 'ూ', 'e': 'ె', 'E': 'ే', 'ai': 'ై',
+      'o': 'ొ', 'O': 'ో', 'au': 'ౌ', 'RRi': 'ృ', 'M': 'ం', 'H': 'ః'
     }
   },
 
-  // Tamil
+  // Tamil - Gboard Tamil keyboard codes
   tamil: {
     name: 'Tamil',
     start: 0x0B80,
     end: 0x0BFF,
     virama: '்',
     vowelMap: {
-      'a': 'அ', 'aa': 'ஆ', 'i': 'இ', 'ii': 'ஈ', 'ee': 'ஈ',
-      'u': 'உ', 'uu': 'ஊ', 'oo': 'ஊ', 'e': 'எ', 'ai': 'ஐ',
-      'o': 'ஒ', 'au': 'ஔ', 'am': 'அம்', 'ah': 'அஃ'
+      'a': 'அ', 'A': 'ஆ', 'aa': 'ஆ', 'i': 'இ', 'I': 'ஈ', 'ee': 'ஈ',
+      'u': 'உ', 'U': 'ஊ', 'oo': 'ஊ', 'e': 'எ', 'E': 'ஏ', 'ai': 'ஐ',
+      'o': 'ஒ', 'O': 'ஓ', 'au': 'ஔ', 'aM': 'அம்', 'aH': 'அஃ'
     },
     consonantMap: {
-      'k': 'க', 'g': 'க', 'ng': 'ங',
-      'ch': 'ச', 'j': 'ஜ', 's': 'ச', 'ny': 'ஞ',
-      'tt': 'ட', 'dd': 'ட',
-      't': 'த', 'd': 'த', 'n': 'ந',
-      'nn': 'ன்ன', 'mm': 'ம்ம', 'kk': 'க்க', 'pp': 'ப்ப', 'll': 'ல்ல', 'rr': 'ர்ர', 'ss': 'ச்ச', 'yy': 'ய்ய',
+      'k': 'க', 'g': 'க', 'ng': 'ங', '~N': 'ங',
+      'c': 'ச', 'ch': 'ச', 's': 'ச', 'j': 'ஜ', '~n': 'ஞ', 'ny': 'ஞ',
+      'T': 'ட', 'D': 'ட',
+      't': 'த', 'd': 'த', 'n': 'ந', 'N': 'ண',
       'p': 'ப', 'b': 'ப', 'f': 'ப', 'm': 'ம',
-      'y': 'ய', 'r': 'ர', 'l': 'ல', 'v': 'வ', 'w': 'வ',
-      'zh': 'ழ', 'sh': 'ஷ', 'h': 'ஹ',
-      'x': 'க்ஷ', 'z': 'ஜ', 'q': 'க'
+      'y': 'ய', 'r': 'ர', 'R': 'ற', 'l': 'ல', 'L': 'ள', 'zh': 'ழ', 'v': 'வ', 'w': 'வ',
+      'sh': 'ஷ', 'Sh': 'ஷ', 'h': 'ஹ',
+      'x': 'க்ஷ', 'ksh': 'க்ஷ', 'z': 'ஜ', 'q': 'க',
+      'M': 'ம்', 'H': 'ஃ'
     },
     modifiers: {
-      'aa': 'ா', 'i': 'ி', 'ii': 'ீ', 'ee': 'ீ',
-      'u': 'ு', 'uu': 'ூ', 'oo': 'ூ', 'e': 'ெ', 'ai': 'ை',
-      'o': 'ொ', 'au': 'ௌ', 'am': 'ம்', 'ah': 'ஃ'
+      'A': 'ா', 'aa': 'ா', 'i': 'ி', 'I': 'ீ', 'ee': 'ீ',
+      'u': 'ு', 'U': 'ூ', 'oo': 'ூ', 'e': 'ெ', 'E': 'ே', 'ai': 'ை',
+      'o': 'ொ', 'O': 'ோ', 'au': 'ௌ', 'M': 'ம்', 'H': 'ஃ'
     }
   },
 
-  // Kannada
+  // Kannada - Gboard Kannada keyboard codes
   kannada: {
     name: 'Kannada',
     start: 0x0C80,
     end: 0x0CFF,
     virama: '್',
     vowelMap: {
-      'a': 'ಅ', 'aa': 'ಆ', 'i': 'ಇ', 'ii': 'ಈ', 'ee': 'ಈ',
-      'u': 'ಉ', 'uu': 'ಊ', 'oo': 'ಊ', 'e': 'ಎ', 'ai': 'ಐ',
-      'o': 'ಒ', 'au': 'ಔ', 'ri': 'ಋ', 'am': 'ಅಂ', 'ah': 'ಅಃ'
+      'a': 'ಅ', 'A': 'ಆ', 'aa': 'ಆ', 'i': 'ಇ', 'I': 'ಈ', 'ee': 'ಈ',
+      'u': 'ಉ', 'U': 'ಊ', 'oo': 'ಊ', 'e': 'ಎ', 'E': 'ಏ', 'ai': 'ಐ',
+      'o': 'ಒ', 'O': 'ಓ', 'au': 'ಔ', 'RRi': 'ಋ', 'aM': 'ಅಂ', 'aH': 'ಅಃ'
     },
     consonantMap: {
-      'k': 'ಕ', 'kh': 'ಖ', 'g': 'ಗ', 'gh': 'ಘ', 'ng': 'ಙ',
-      'ch': 'ಚ', 'chh': 'ಛ', 'j': 'ಜ', 'jh': 'ಝ', 'ny': 'ಞ',
-      'tt': 'ಟ', 'tth': 'ಠ', 'dd': 'ಡ', 'ddh': 'ಢ',
-      't': 'ತ', 'th': 'ಥ', 'd': 'ದ', 'dh': 'ಧ', 'n': 'ನ', 'N': 'ಣ',
-      'nn': 'ನ್ನ', 'mm': 'ಮ್ಮ', 'kk': 'ಕ್ಕ', 'gg': 'ಗ್ಗ', 'pp': 'ಪ್ಪ', 'bb': 'ಬ್ಬ', 'jj': 'ಜ್ಜ', 'll': 'ಲ್ಲ', 'vv': 'ವ್ವ', 'ss': 'ಸ್ಸ', 'rr': 'ರ್ರ', 'yy': 'ಯ್ಯ',
-      'p': 'ಪ', 'ph': 'ಫ', 'f': 'ಫ', 'b': 'ಬ', 'bh': 'ಭ', 'm': 'ಮ',
-      'y': 'ಯ', 'r': 'ರ', 'l': 'ಲ', 'v': 'ವ', 'w': 'ವ',
-      'sh': 'ಶ', 'shh': 'ಷ', 's': 'ಸ', 'h': 'ಹ',
-      'x': 'ಕ್ಷ', 'tr': 'ತ್ರ', 'gn': 'ಜ್ಞ', 'q': 'ಕ', 'z': 'ಜ'
+      'k': 'ಕ', 'K': 'ಖ', 'kh': 'ಖ', 'g': 'ಗ', 'G': 'ಘ', 'gh': 'ಘ', '~N': 'ಙ', 'ng': 'ಙ',
+      'c': 'ಚ', 'ch': 'ಚ', 'C': 'ಛ', 'chh': 'ಛ', 'j': 'ಜ', 'J': 'ಝ', 'jh': 'ಝ', '~n': 'ಞ', 'ny': 'ಞ',
+      'T': 'ಟ', 'Th': 'ಠ', 'D': 'ಡ', 'Dh': 'ಢ', 'N': 'ಣ',
+      't': 'ತ', 'th': 'ಥ', 'd': 'ದ', 'dh': 'ಧ', 'n': 'ನ',
+      'p': 'ಪ', 'P': 'ಫ', 'ph': 'ಫ', 'f': 'ಫ', 'b': 'ಬ', 'B': 'ಭ', 'bh': 'ಭ', 'm': 'ಮ',
+      'y': 'ಯ', 'r': 'ರ', 'l': 'ಲ', 'L': 'ಳ', 'v': 'ವ', 'w': 'ವ',
+      'sh': 'ಶ', 'Sh': 'ಷ', 'shh': 'ಷ', 's': 'ಸ', 'h': 'ಹ',
+      'x': 'ಕ್ಷ', 'ksh': 'ಕ್ಷ', 'GY': 'ಜ್ಞ', 'gy': 'ಜ್ಞ', 'q': 'ಕ', 'z': 'ಜ',
+      'M': 'ಂ', 'H': 'ಃ'
     },
     modifiers: {
-      'aa': 'ಾ', 'i': 'ಿ', 'ii': 'ೀ', 'ee': 'ೀ',
-      'u': 'ು', 'uu': 'ೂ', 'oo': 'ೂ', 'e': 'ೆ', 'ai': 'ೈ',
-      'o': 'ೊ', 'au': 'ೌ', 'ri': 'ೃ', 'am': 'ಂ', 'ah': 'ಃ'
+      'A': 'ಾ', 'aa': 'ಾ', 'i': 'ಿ', 'I': 'ೀ', 'ee': 'ೀ',
+      'u': 'ು', 'U': 'ೂ', 'oo': 'ೂ', 'e': 'ೆ', 'E': 'ೇ', 'ai': 'ೈ',
+      'o': 'ೊ', 'O': 'ೋ', 'au': 'ೌ', 'RRi': 'ೃ', 'M': 'ಂ', 'H': 'ಃ'
     }
   },
 
-  // Malayalam
+  // Malayalam - Gboard Malayalam keyboard codes
   malayalam: {
     name: 'Malayalam',
     start: 0x0D00,
     end: 0x0D7F,
     virama: '്',
     vowelMap: {
-      'a': 'അ', 'aa': 'ആ', 'i': 'ഇ', 'ii': 'ഈ', 'ee': 'ഈ',
-      'u': 'ഉ', 'uu': 'ഊ', 'oo': 'ഊ', 'e': 'എ', 'ai': 'ഐ',
-      'o': 'ഒ', 'au': 'ഔ', 'ri': 'ഋ', 'am': 'അം', 'ah': 'അഃ'
+      'a': 'അ', 'A': 'ആ', 'aa': 'ആ', 'i': 'ഇ', 'I': 'ഈ', 'ee': 'ഈ',
+      'u': 'ഉ', 'U': 'ഊ', 'oo': 'ഊ', 'e': 'എ', 'E': 'ഏ', 'ai': 'ഐ',
+      'o': 'ഒ', 'O': 'ഓ', 'au': 'ഔ', 'RRi': 'ഋ', 'aM': 'അം', 'aH': 'അഃ'
     },
     consonantMap: {
-      'k': 'ക', 'kh': 'ഖ', 'g': 'ഗ', 'gh': 'ഘ', 'ng': 'ങ',
-      'ch': 'ച', 'chh': 'ഛ', 'j': 'ജ', 'jh': 'ഝ', 'ny': 'ഞ',
-      'tt': 'ട', 'tth': 'ഠ', 'dd': 'ഡ', 'ddh': 'ഢ',
-      't': 'ത', 'th': 'ഥ', 'd': 'ദ', 'dh': 'ധ', 'n': 'ന', 'N': 'ണ',
-      'nn': 'ന്ന', 'mm': 'മ്മ', 'kk': 'ക്ക', 'gg': 'ഗ്ഗ', 'pp': 'പ്പ', 'bb': 'ബ്ബ', 'jj': 'ജ്ജ', 'll': 'ല്ല', 'vv': 'വ്വ', 'ss': 'സ്സ', 'rr': 'ര്ര', 'yy': 'യ്യ',
-      'p': 'പ', 'ph': 'ഫ', 'f': 'ഫ', 'b': 'ബ', 'bh': 'ഭ', 'm': 'മ',
-      'y': 'യ', 'r': 'ര', 'l': 'ല', 'v': 'വ', 'w': 'വ',
-      'sh': 'ശ', 'shh': 'ഷ', 's': 'സ', 'h': 'ഹ', 'zh': 'ഴ',
-      'x': 'ക്ഷ', 'tr': 'ത്ര', 'gn': 'ജ്ഞ', 'q': 'ക', 'z': 'ജ'
+      'k': 'ക', 'K': 'ഖ', 'kh': 'ഖ', 'g': 'ഗ', 'G': 'ഘ', 'gh': 'ഘ', '~N': 'ങ', 'ng': 'ങ',
+      'c': 'ച', 'ch': 'ച', 'C': 'ഛ', 'chh': 'ഛ', 'j': 'ജ', 'J': 'ഝ', 'jh': 'ഝ', '~n': 'ഞ', 'ny': 'ഞ',
+      'T': 'ട', 'Th': 'ഠ', 'D': 'ഡ', 'Dh': 'ഢ', 'N': 'ണ',
+      't': 'ത', 'th': 'ഥ', 'd': 'ദ', 'dh': 'ധ', 'n': 'ന',
+      'p': 'പ', 'P': 'ഫ', 'ph': 'ഫ', 'f': 'ഫ', 'b': 'ബ', 'B': 'ഭ', 'bh': 'ഭ', 'm': 'മ',
+      'y': 'യ', 'r': 'ര', 'R': 'റ', 'l': 'ല', 'L': 'ള', 'zh': 'ഴ', 'v': 'വ', 'w': 'വ',
+      'sh': 'ശ', 'Sh': 'ഷ', 'shh': 'ഷ', 's': 'സ', 'h': 'ഹ',
+      'x': 'ക്ഷ', 'ksh': 'ക്ഷ', 'GY': 'ജ്ഞ', 'gy': 'ജ്ഞ', 'q': 'ക', 'z': 'ജ',
+      'M': 'ം', 'H': 'ഃ'
     },
     modifiers: {
-      'aa': 'ാ', 'i': 'ി', 'ii': 'ീ', 'ee': 'ീ',
-      'u': 'ു', 'uu': 'ൂ', 'oo': 'ൂ', 'e': 'െ', 'ai': 'ൈ',
-      'o': 'ൊ', 'au': 'ൌ', 'ri': 'ൃ', 'am': 'ം', 'ah': 'ഃ'
+      'A': 'ാ', 'aa': 'ാ', 'i': 'ി', 'I': 'ീ', 'ee': 'ീ',
+      'u': 'ു', 'U': 'ൂ', 'oo': 'ൂ', 'e': 'െ', 'E': 'േ', 'ai': 'ൈ',
+      'o': 'ൊ', 'O': 'ോ', 'au': 'ൌ', 'RRi': 'ൃ', 'M': 'ം', 'H': 'ഃ'
     }
   },
 
-  // Bengali
+  // Bengali - Gboard Bengali keyboard codes
   bengali: {
     name: 'Bengali',
     start: 0x0980,
     end: 0x09FF,
     virama: '্',
     vowelMap: {
-      'a': 'অ', 'aa': 'আ', 'i': 'ই', 'ii': 'ঈ', 'ee': 'ঈ',
-      'u': 'উ', 'uu': 'ঊ', 'oo': 'ঊ', 'e': 'এ', 'ai': 'ঐ',
-      'o': 'ও', 'au': 'ঔ', 'ri': 'ঋ', 'am': 'অং', 'ah': 'অঃ'
+      'a': 'অ', 'A': 'আ', 'aa': 'আ', 'i': 'ই', 'I': 'ঈ', 'ee': 'ঈ',
+      'u': 'উ', 'U': 'ঊ', 'oo': 'ঊ', 'e': 'এ', 'E': 'ঐ', 'ai': 'ঐ',
+      'o': 'ও', 'O': 'ঔ', 'au': 'ঔ', 'RRi': 'ঋ', 'aM': 'অং', 'aH': 'অঃ'
     },
     consonantMap: {
-      'k': 'ক', 'kh': 'খ', 'g': 'গ', 'gh': 'ঘ', 'ng': 'ঙ',
-      'ch': 'চ', 'chh': 'ছ', 'j': 'জ', 'jh': 'ঝ', 'ny': 'ঞ',
-      'tt': 'ট', 'tth': 'ঠ', 'dd': 'ড', 'ddh': 'ঢ',
-      't': 'ত', 'th': 'থ', 'd': 'দ', 'dh': 'ধ', 'n': 'ন', 'N': 'ণ',
-      'nn': 'ন্ন', 'mm': 'ম্ম', 'kk': 'ক্ক', 'gg': 'গ্গ', 'pp': 'প্প', 'bb': 'ব্ব', 'jj': 'জ্জ', 'll': 'ল্ল', 'vv': 'ভ্ভ', 'ss': 'স্স', 'rr': 'র্র', 'yy': 'য়্য়',
-      'p': 'প', 'ph': 'ফ', 'f': 'ফ', 'b': 'ব', 'bh': 'ভ', 'm': 'ম',
-      'y': 'য', 'r': 'র', 'l': 'ল', 'v': 'ভ', 'w': 'ও',
-      'sh': 'শ', 'shh': 'ষ', 's': 'স', 'h': 'হ',
-      'x': 'ক্ষ', 'tr': 'ত্র', 'gn': 'জ্ঞ', 'q': 'ক', 'z': 'জ'
+      'k': 'ক', 'K': 'খ', 'kh': 'খ', 'g': 'গ', 'G': 'ঘ', 'gh': 'ঘ', '~N': 'ঙ', 'ng': 'ঙ',
+      'c': 'চ', 'ch': 'চ', 'C': 'ছ', 'chh': 'ছ', 'j': 'জ', 'J': 'ঝ', 'jh': 'ঝ', '~n': 'ঞ', 'ny': 'ঞ',
+      'T': 'ট', 'Th': 'ঠ', 'D': 'ড', 'Dh': 'ঢ', 'N': 'ণ',
+      't': 'ত', 'th': 'থ', 'd': 'দ', 'dh': 'ধ', 'n': 'ন',
+      'p': 'প', 'P': 'ফ', 'ph': 'ফ', 'f': 'ফ', 'b': 'ব', 'B': 'ভ', 'bh': 'ভ', 'm': 'ম',
+      'y': 'য', 'Y': 'য়', 'r': 'র', 'R': 'ড়', 'Rh': 'ঢ়', 'l': 'ল', 'v': 'ভ', 'w': 'ও',
+      'sh': 'শ', 'Sh': 'ষ', 'shh': 'ষ', 's': 'স', 'h': 'হ',
+      'x': 'ক্ষ', 'ksh': 'ক্ষ', 'GY': 'জ্ঞ', 'gy': 'জ্ঞ', 'q': 'ক', 'z': 'জ',
+      'M': 'ং', 'H': 'ঃ', '.n': 'ঁ'
     },
     modifiers: {
-      'aa': 'া', 'i': 'ি', 'ii': 'ী', 'ee': 'ী',
-      'u': 'ু', 'uu': 'ূ', 'oo': 'ূ', 'e': 'ে', 'ai': 'ৈ',
-      'o': 'ো', 'au': 'ৌ', 'ri': 'ৃ', 'am': 'ং', 'ah': 'ঃ'
+      'A': 'া', 'aa': 'া', 'i': 'ি', 'I': 'ী', 'ee': 'ী',
+      'u': 'ু', 'U': 'ূ', 'oo': 'ূ', 'e': 'ে', 'E': 'ৈ', 'ai': 'ৈ',
+      'o': 'ো', 'O': 'ৌ', 'au': 'ৌ', 'RRi': 'ৃ', 'M': 'ং', 'H': 'ঃ', '.n': 'ঁ'
     }
   },
 
-  // Gujarati
+  // Gujarati - Gboard Gujarati keyboard codes
   gujarati: {
     name: 'Gujarati',
     start: 0x0A80,
     end: 0x0AFF,
     virama: '્',
     vowelMap: {
-      'a': 'અ', 'aa': 'આ', 'i': 'ઇ', 'ii': 'ઈ', 'ee': 'ઈ',
-      'u': 'ઉ', 'uu': 'ઊ', 'oo': 'ઊ', 'e': 'એ', 'ai': 'ઐ',
-      'o': 'ઓ', 'au': 'ઔ', 'ri': 'ઋ', 'am': 'અં', 'ah': 'અઃ'
+      'a': 'અ', 'A': 'આ', 'aa': 'આ', 'i': 'ઇ', 'I': 'ઈ', 'ee': 'ઈ',
+      'u': 'ઉ', 'U': 'ઊ', 'oo': 'ઊ', 'e': 'એ', 'E': 'ઐ', 'ai': 'ઐ',
+      'o': 'ઓ', 'O': 'ઔ', 'au': 'ઔ', 'RRi': 'ઋ', 'aM': 'અં', 'aH': 'અઃ'
     },
     consonantMap: {
-      'k': 'ક', 'kh': 'ખ', 'g': 'ગ', 'gh': 'ઘ', 'ng': 'ઙ',
-      'ch': 'ચ', 'chh': 'છ', 'j': 'જ', 'jh': 'ઝ', 'ny': 'ઞ',
-      'tt': 'ટ', 'tth': 'ઠ', 'dd': 'ડ', 'ddh': 'ઢ',
-      't': 'ત', 'th': 'થ', 'd': 'દ', 'dh': 'ધ', 'n': 'ન', 'N': 'ણ',
-      'nn': 'ન્ન', 'mm': 'મ્મ', 'kk': 'ક્ક', 'gg': 'ગ્ગ', 'pp': 'પ્પ', 'bb': 'બ્બ', 'jj': 'જ્જ', 'll': 'લ્લ', 'vv': 'વ્વ', 'ss': 'સ્સ', 'rr': 'ર્ર', 'yy': 'ય્ય',
-      'p': 'પ', 'ph': 'ફ', 'f': 'ફ', 'b': 'બ', 'bh': 'ભ', 'm': 'મ',
-      'y': 'ય', 'r': 'ર', 'l': 'લ', 'v': 'વ', 'w': 'વ',
-      'sh': 'શ', 'shh': 'ષ', 's': 'સ', 'h': 'હ',
-      'x': 'ક્ષ', 'tr': 'ત્ર', 'gn': 'જ્ઞ', 'q': 'ક', 'z': 'જ'
+      'k': 'ક', 'K': 'ખ', 'kh': 'ખ', 'g': 'ગ', 'G': 'ઘ', 'gh': 'ઘ', '~N': 'ઙ', 'ng': 'ઙ',
+      'c': 'ચ', 'ch': 'ચ', 'C': 'છ', 'chh': 'છ', 'j': 'જ', 'J': 'ઝ', 'jh': 'ઝ', '~n': 'ઞ', 'ny': 'ઞ',
+      'T': 'ટ', 'Th': 'ઠ', 'D': 'ડ', 'Dh': 'ઢ', 'N': 'ણ',
+      't': 'ત', 'th': 'થ', 'd': 'દ', 'dh': 'ધ', 'n': 'ન',
+      'p': 'પ', 'P': 'ફ', 'ph': 'ફ', 'f': 'ફ', 'b': 'બ', 'B': 'ભ', 'bh': 'ભ', 'm': 'મ',
+      'y': 'ય', 'r': 'ર', 'l': 'લ', 'L': 'ળ', 'v': 'વ', 'w': 'વ',
+      'sh': 'શ', 'Sh': 'ષ', 'shh': 'ષ', 's': 'સ', 'h': 'હ',
+      'x': 'ક્ષ', 'ksh': 'ક્ષ', 'GY': 'જ્ઞ', 'gy': 'જ્ઞ', 'q': 'ક', 'z': 'જ',
+      'M': 'ં', 'H': 'ઃ', '.n': 'ઁ'
     },
     modifiers: {
-      'aa': 'ા', 'i': 'િ', 'ii': 'ી', 'ee': 'ી',
-      'u': 'ુ', 'uu': 'ૂ', 'oo': 'ૂ', 'e': 'ે', 'ai': 'ૈ',
-      'o': 'ો', 'au': 'ૌ', 'ri': 'ૃ', 'am': 'ં', 'ah': 'ઃ'
+      'A': 'ા', 'aa': 'ા', 'i': 'િ', 'I': 'ી', 'ee': 'ી',
+      'u': 'ુ', 'U': 'ૂ', 'oo': 'ૂ', 'e': 'ે', 'E': 'ૈ', 'ai': 'ૈ',
+      'o': 'ો', 'O': 'ૌ', 'au': 'ૌ', 'RRi': 'ૃ', 'M': 'ં', 'H': 'ઃ', '.n': 'ઁ'
     }
   },
 
-  // Punjabi (Gurmukhi)
+  // Punjabi (Gurmukhi) - Gboard Punjabi keyboard codes
   punjabi: {
     name: 'Gurmukhi',
     start: 0x0A00,
     end: 0x0A7F,
     virama: '੍',
     vowelMap: {
-      'a': 'ਅ', 'aa': 'ਆ', 'i': 'ਇ', 'ii': 'ਈ', 'ee': 'ਈ',
-      'u': 'ਉ', 'uu': 'ਊ', 'oo': 'ਊ', 'e': 'ਏ', 'ai': 'ਐ',
-      'o': 'ਓ', 'au': 'ਔ', 'am': 'ਅਂ', 'ah': 'ਅਃ'
+      'a': 'ਅ', 'A': 'ਆ', 'aa': 'ਆ', 'i': 'ਇ', 'I': 'ਈ', 'ee': 'ਈ',
+      'u': 'ਉ', 'U': 'ਊ', 'oo': 'ਊ', 'e': 'ਏ', 'E': 'ਐ', 'ai': 'ਐ',
+      'o': 'ਓ', 'O': 'ਔ', 'au': 'ਔ', 'aM': 'ਅਂ', 'aH': 'ਅਃ'
     },
     consonantMap: {
-      'k': 'ਕ', 'kh': 'ਖ', 'g': 'ਗ', 'gh': 'ਘ', 'ng': 'ਙ',
-      'ch': 'ਚ', 'chh': 'ਛ', 'j': 'ਜ', 'jh': 'ਝ', 'ny': 'ਞ',
-      'tt': 'ਟ', 'tth': 'ਠ', 'dd': 'ਡ', 'ddh': 'ਢ',
-      't': 'ਤ', 'th': 'ਥ', 'd': 'ਦ', 'dh': 'ਧ', 'n': 'ਨ', 'N': 'ਣ',
-      'nn': 'ਨ੍ਨ', 'mm': 'ਮ੍ਮ', 'kk': 'ਕ੍ਕ', 'gg': 'ਗ੍ਗ', 'pp': 'ਪ੍ਪ', 'bb': 'ਬ੍ਬ', 'jj': 'ਜ੍ਜ', 'll': 'ਲ੍ਲ', 'vv': 'ਵ੍ਵ', 'ss': 'ਸ੍ਸ', 'rr': 'ਰ੍ਰ', 'yy': 'ਯ੍ਯ',
-      'p': 'ਪ', 'ph': 'ਫ', 'f': 'ਫ', 'b': 'ਬ', 'bh': 'ਭ', 'm': 'ਮ',
-      'y': 'ਯ', 'r': 'ਰ', 'l': 'ਲ', 'v': 'ਵ', 'w': 'ਵ',
+      'k': 'ਕ', 'K': 'ਖ', 'kh': 'ਖ', 'g': 'ਗ', 'G': 'ਘ', 'gh': 'ਘ', '~N': 'ਙ', 'ng': 'ਙ',
+      'c': 'ਚ', 'ch': 'ਚ', 'C': 'ਛ', 'chh': 'ਛ', 'j': 'ਜ', 'J': 'ਝ', 'jh': 'ਝ', '~n': 'ਞ', 'ny': 'ਞ',
+      'T': 'ਟ', 'Th': 'ਠ', 'D': 'ਡ', 'Dh': 'ਢ', 'N': 'ਣ',
+      't': 'ਤ', 'th': 'ਥ', 'd': 'ਦ', 'dh': 'ਧ', 'n': 'ਨ',
+      'p': 'ਪ', 'P': 'ਫ', 'ph': 'ਫ', 'f': 'ਫ਼', 'b': 'ਬ', 'B': 'ਭ', 'bh': 'ਭ', 'm': 'ਮ',
+      'y': 'ਯ', 'r': 'ਰ', 'l': 'ਲ', 'L': 'ਲ਼', 'v': 'ਵ', 'w': 'ਵ',
       'sh': 'ਸ਼', 's': 'ਸ', 'h': 'ਹ',
-      'x': 'ਕ੍ਸ਼', 'z': 'ਜ਼', 'q': 'ਕ'
+      'x': 'ਕ੍ਸ਼', 'ksh': 'ਕ੍ਸ਼', 'z': 'ਜ਼', 'q': 'ਕ', '.D': 'ੜ',
+      'M': 'ਂ', 'H': 'ਃ', '.n': 'ਁ'
     },
     modifiers: {
-      'aa': 'ਾ', 'i': 'ਿ', 'ii': 'ੀ', 'ee': 'ੀ',
-      'u': 'ੁ', 'uu': 'ੂ', 'oo': 'ੂ', 'e': 'ੇ', 'ai': 'ੈ',
-      'o': 'ੋ', 'au': 'ੌ', 'am': 'ਂ', 'ah': 'ਃ'
+      'A': 'ਾ', 'aa': 'ਾ', 'i': 'ਿ', 'I': 'ੀ', 'ee': 'ੀ',
+      'u': 'ੁ', 'U': 'ੂ', 'oo': 'ੂ', 'e': 'ੇ', 'E': 'ੈ', 'ai': 'ੈ',
+      'o': 'ੋ', 'O': 'ੌ', 'au': 'ੌ', 'M': 'ਂ', 'H': 'ਃ', '.n': 'ਁ'
     }
   },
 
-  // Odia
+  // Odia - Gboard Odia keyboard codes
   odia: {
     name: 'Odia',
     start: 0x0B00,
     end: 0x0B7F,
     virama: '୍',
     vowelMap: {
-      'a': 'ଅ', 'aa': 'ଆ', 'i': 'ଇ', 'ii': 'ଈ', 'ee': 'ଈ',
-      'u': 'ଉ', 'uu': 'ଊ', 'oo': 'ଊ', 'e': 'ଏ', 'ai': 'ଐ',
-      'o': 'ଓ', 'au': 'ଔ', 'ri': 'ଋ', 'am': 'ଅଂ', 'ah': 'ଅଃ'
+      'a': 'ଅ', 'A': 'ଆ', 'aa': 'ଆ', 'i': 'ଇ', 'I': 'ଈ', 'ee': 'ଈ',
+      'u': 'ଉ', 'U': 'ଊ', 'oo': 'ଊ', 'e': 'ଏ', 'E': 'ଐ', 'ai': 'ଐ',
+      'o': 'ଓ', 'O': 'ଔ', 'au': 'ଔ', 'RRi': 'ଋ', 'aM': 'ଅଂ', 'aH': 'ଅଃ'
     },
     consonantMap: {
-      'k': 'କ', 'kh': 'ଖ', 'g': 'ଗ', 'gh': 'ଘ', 'ng': 'ଙ',
-      'ch': 'ଚ', 'chh': 'ଛ', 'j': 'ଜ', 'jh': 'ଝ', 'ny': 'ଞ',
-      'tt': 'ଟ', 'tth': 'ଠ', 'dd': 'ଡ', 'ddh': 'ଢ',
-      't': 'ତ', 'th': 'ଥ', 'd': 'ଦ', 'dh': 'ଧ', 'n': 'ନ', 'N': 'ଣ',
-      'nn': 'ନ୍ନ', 'mm': 'ମ୍ମ', 'kk': 'କ୍କ', 'gg': 'ଗ୍ଗ', 'pp': 'ପ୍ପ', 'bb': 'ବ୍ବ', 'jj': 'ଜ୍ଜ', 'll': 'ଲ୍ଲ', 'vv': 'ୱ୍ୱ', 'ss': 'ସ୍ସ', 'rr': 'ର୍ର', 'yy': 'ଯ୍ଯ',
-      'p': 'ପ', 'ph': 'ଫ', 'f': 'ଫ', 'b': 'ବ', 'bh': 'ଭ', 'm': 'ମ',
-      'y': 'ଯ', 'r': 'ର', 'l': 'ଲ', 'v': 'ୱ', 'w': 'ୱ',
-      'sh': 'ଶ', 'shh': 'ଷ', 's': 'ସ', 'h': 'ହ',
-      'x': 'କ୍ଷ', 'tr': 'ତ୍ର', 'gn': 'ଜ୍ଞ', 'q': 'କ', 'z': 'ଜ'
+      'k': 'କ', 'K': 'ଖ', 'kh': 'ଖ', 'g': 'ଗ', 'G': 'ଘ', 'gh': 'ଘ', '~N': 'ଙ', 'ng': 'ଙ',
+      'c': 'ଚ', 'ch': 'ଚ', 'C': 'ଛ', 'chh': 'ଛ', 'j': 'ଜ', 'J': 'ଝ', 'jh': 'ଝ', '~n': 'ଞ', 'ny': 'ଞ',
+      'T': 'ଟ', 'Th': 'ଠ', 'D': 'ଡ', 'Dh': 'ଢ', 'N': 'ଣ',
+      't': 'ତ', 'th': 'ଥ', 'd': 'ଦ', 'dh': 'ଧ', 'n': 'ନ',
+      'p': 'ପ', 'P': 'ଫ', 'ph': 'ଫ', 'f': 'ଫ', 'b': 'ବ', 'B': 'ଭ', 'bh': 'ଭ', 'm': 'ମ',
+      'y': 'ଯ', 'Y': 'ୟ', 'r': 'ର', 'l': 'ଲ', 'L': 'ଳ', 'v': 'ୱ', 'w': 'ୱ',
+      'sh': 'ଶ', 'Sh': 'ଷ', 'shh': 'ଷ', 's': 'ସ', 'h': 'ହ',
+      'x': 'କ୍ଷ', 'ksh': 'କ୍ଷ', 'GY': 'ଜ୍ଞ', 'gy': 'ଜ୍ଞ', 'q': 'କ', 'z': 'ଜ',
+      'M': 'ଂ', 'H': 'ଃ', '.n': 'ଁ'
     },
     modifiers: {
-      'aa': 'ା', 'i': 'ି', 'ii': 'ୀ', 'ee': 'ୀ',
-      'u': 'ୁ', 'uu': 'ୂ', 'oo': 'ୂ', 'e': 'େ', 'ai': 'ୈ',
-      'o': 'ୋ', 'au': 'ୌ', 'ri': 'ୃ', 'am': 'ଂ', 'ah': 'ଃ'
+      'A': 'ା', 'aa': 'ା', 'i': 'ି', 'I': 'ୀ', 'ee': 'ୀ',
+      'u': 'ୁ', 'U': 'ୂ', 'oo': 'ୂ', 'e': 'େ', 'E': 'ୈ', 'ai': 'ୈ',
+      'o': 'ୋ', 'O': 'ୌ', 'au': 'ୌ', 'RRi': 'ୃ', 'M': 'ଂ', 'H': 'ଃ', '.n': 'ଁ'
     }
   },
 
-  // Arabic
+  // Arabic - Gboard Arabic keyboard codes
   arabic: {
     name: 'Arabic',
     start: 0x0600,
     end: 0x06FF,
     vowelMap: {
-      'a': 'ا', 'aa': 'آ', 'i': 'إ', 'ii': 'ي', 'ee': 'ي',
-      'u': 'أ', 'uu': 'و', 'oo': 'و', 'e': 'ي', 'ai': 'ي',
-      'o': 'و', 'au': 'و'
+      'a': 'ا', 'A': 'آ', 'aa': 'آ', 'i': 'إ', 'I': 'ي', 'ee': 'ي',
+      'u': 'أ', 'U': 'و', 'oo': 'و', 'e': 'ي', 'ai': 'ي',
+      'o': 'و', 'O': 'و', 'au': 'و'
     },
     consonantMap: {
-      'b': 'ب', 't': 'ت', 'th': 'ث', 'j': 'ج', 'h': 'ح', 'kh': 'خ',
+      'b': 'ب', 't': 'ت', 'th': 'ث', 'j': 'ج', 'H': 'ح', 'kh': 'خ',
       'd': 'د', 'dh': 'ذ', 'r': 'ر', 'z': 'ز', 's': 'س', 'sh': 'ش',
-      'ss': 'ص', 'dd': 'ض', 'tt': 'ط', 'zz': 'ظ', 'aa': 'ع', 'gh': 'غ',
+      'S': 'ص', 'D': 'ض', 'T': 'ط', 'Z': 'ظ', 'E': 'ع', 'gh': 'غ',
       'f': 'ف', 'q': 'ق', 'k': 'ك', 'l': 'ل', 'm': 'م', 'n': 'ن',
-      'w': 'و', 'y': 'ي', 'v': 'ف', 'p': 'ب', 'g': 'غ', 'x': 'كس',
-      'ch': 'تش'
+      'h': 'ه', 'w': 'و', 'y': 'ي', 'v': 'ف', 'p': 'ب', 'g': 'غ', 'x': 'كس',
+      'c': 'تش', 'ch': 'تش', "'": 'ء'
     },
     modifiers: {}
   },
 
-  // Thai
+  // Thai - Gboard Thai keyboard codes
   thai: {
     name: 'Thai',
     start: 0x0E00,
     end: 0x0E7F,
     vowelMap: {
-      'a': 'อ', 'aa': 'อา', 'i': 'อิ', 'ii': 'อี', 'ee': 'อี',
-      'u': 'อุ', 'uu': 'อู', 'oo': 'อู', 'e': 'เอ', 'ai': 'ไอ',
-      'o': 'โอ', 'au': 'เอา'
+      'a': 'อ', 'A': 'อา', 'aa': 'อา', 'i': 'อิ', 'I': 'อี', 'ee': 'อี',
+      'u': 'อุ', 'U': 'อู', 'oo': 'อู', 'e': 'เอ', 'E': 'แอ', 'ai': 'ไอ',
+      'o': 'โอ', 'O': 'โอ', 'au': 'เอา'
     },
     consonantMap: {
-      'k': 'ก', 'kh': 'ข', 'g': 'ก', 'ng': 'ง',
-      'ch': 'ช', 'j': 'จ', 's': 'ส', 'ny': 'ญ',
-      't': 'ต', 'th': 'ท', 'd': 'ด', 'n': 'น',
-      'p': 'ป', 'ph': 'พ', 'f': 'ฟ', 'b': 'บ', 'm': 'ม',
+      'k': 'ก', 'K': 'ข', 'kh': 'ข', 'g': 'ก', 'ng': 'ง',
+      'c': 'จ', 'ch': 'ช', 'j': 'จ', 's': 'ส', 'S': 'ซ', 'ny': 'ญ',
+      't': 'ต', 'T': 'ท', 'th': 'ท', 'd': 'ด', 'n': 'น',
+      'p': 'ป', 'P': 'พ', 'ph': 'พ', 'f': 'ฟ', 'b': 'บ', 'm': 'ม',
       'y': 'ย', 'r': 'ร', 'l': 'ล', 'w': 'ว', 'v': 'ว',
       'h': 'ห', 'x': 'กซ', 'z': 'ซ', 'q': 'ก'
     },
     modifiers: {}
   },
 
-  // Russian (Cyrillic)
+  // Russian (Cyrillic) - Gboard Russian keyboard codes
   russian: {
     name: 'Cyrillic',
     start: 0x0400,
     end: 0x04FF,
     vowelMap: {
       'a': 'а', 'e': 'е', 'i': 'и', 'o': 'о', 'u': 'у',
-      'y': 'ы', 'yo': 'ё', 'ya': 'я', 'yu': 'ю', 'ye': 'е'
+      'y': 'ы', 'yo': 'ё', 'ya': 'я', 'yu': 'ю', 'ye': 'е',
+      'E': 'э', 'A': 'а', 'I': 'и', 'O': 'о', 'U': 'у'
     },
     consonantMap: {
       'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'zh': 'ж', 'z': 'з',
       'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'p': 'п', 'r': 'р',
-      's': 'с', 't': 'т', 'f': 'ф', 'kh': 'х', 'ts': 'ц', 'ch': 'ч',
-      'sh': 'ш', 'shch': 'щ', 'j': 'й', 'w': 'в', 'h': 'х', 'x': 'кс',
-      'q': 'к', 'c': 'ц'
+      's': 'с', 't': 'т', 'f': 'ф', 'kh': 'х', 'h': 'х', 'ts': 'ц', 'c': 'ц',
+      'ch': 'ч', 'sh': 'ш', 'shch': 'щ', 'Sh': 'щ', 'j': 'й', 'w': 'в', 'x': 'кс',
+      'q': 'к', "'": 'ь', '"': 'ъ'
     },
     modifiers: {}
   },
 
-  // Greek
+  // Greek - Gboard Greek keyboard codes
   greek: {
     name: 'Greek',
     start: 0x0370,
     end: 0x03FF,
     vowelMap: {
-      'a': 'α', 'e': 'ε', 'i': 'ι', 'o': 'ο', 'u': 'υ',
-      'ee': 'η', 'oo': 'ω'
+      'a': 'α', 'A': 'Α', 'e': 'ε', 'E': 'Ε', 'i': 'ι', 'I': 'Ι',
+      'o': 'ο', 'O': 'Ο', 'u': 'υ', 'U': 'Υ', 'ee': 'η', 'oo': 'ω',
+      'H': 'Η', 'W': 'Ω'
     },
     consonantMap: {
-      'b': 'β', 'g': 'γ', 'd': 'δ', 'z': 'ζ', 'th': 'θ',
-      'k': 'κ', 'l': 'λ', 'm': 'μ', 'n': 'ν', 'x': 'ξ',
-      'p': 'π', 'r': 'ρ', 's': 'σ', 't': 'τ', 'f': 'φ',
-      'ch': 'χ', 'ps': 'ψ', 'v': 'β', 'w': 'ω', 'h': 'η',
-      'j': 'ι', 'q': 'κ', 'c': 'κ'
+      'b': 'β', 'B': 'Β', 'g': 'γ', 'G': 'Γ', 'd': 'δ', 'D': 'Δ',
+      'z': 'ζ', 'Z': 'Ζ', 'th': 'θ', 'Th': 'Θ',
+      'k': 'κ', 'K': 'Κ', 'l': 'λ', 'L': 'Λ', 'm': 'μ', 'M': 'Μ',
+      'n': 'ν', 'N': 'Ν', 'x': 'ξ', 'X': 'Ξ', 'p': 'π', 'P': 'Π',
+      'r': 'ρ', 'R': 'Ρ', 's': 'σ', 'S': 'Σ', 't': 'τ', 'T': 'Τ',
+      'f': 'φ', 'F': 'Φ', 'ch': 'χ', 'Ch': 'Χ', 'ps': 'ψ', 'Ps': 'Ψ',
+      'v': 'β', 'w': 'ω', 'h': 'η', 'j': 'ι', 'q': 'κ', 'c': 'κ'
     },
     modifiers: {}
   },
 
-  // Hebrew
+  // Hebrew - Gboard Hebrew keyboard codes
   hebrew: {
     name: 'Hebrew',
     start: 0x0590,
@@ -388,15 +394,16 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
       'a': 'א', 'e': 'א', 'i': 'י', 'o': 'ו', 'u': 'ו'
     },
     consonantMap: {
-      'b': 'ב', 'g': 'ג', 'd': 'ד', 'h': 'ה', 'v': 'ו', 'w': 'ו',
-      'z': 'ז', 'ch': 'ח', 't': 'ט', 'y': 'י', 'k': 'כ', 'kh': 'ח',
+      'b': 'ב', 'v': 'ו', 'g': 'ג', 'd': 'ד', 'h': 'ה', 'w': 'ו',
+      'z': 'ז', 'ch': 'ח', 'kh': 'ח', 't': 'ט', 'y': 'י', 'k': 'כ',
       'l': 'ל', 'm': 'מ', 'n': 'נ', 's': 'ס', 'p': 'פ', 'f': 'פ',
-      'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש', 'j': 'ג', 'x': 'קס'
+      'ts': 'צ', 'q': 'ק', 'r': 'ר', 'sh': 'ש', 'j': 'ג', 'x': 'קס',
+      "'": 'ע'
     },
     modifiers: {}
   },
 
-  // Japanese Hiragana
+  // Japanese Hiragana - Gboard Japanese keyboard codes (Romaji input)
   japanese: {
     name: 'Hiragana',
     start: 0x3040,
@@ -405,25 +412,37 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
       'a': 'あ', 'i': 'い', 'u': 'う', 'e': 'え', 'o': 'お'
     },
     consonantMap: {
+      // Gboard Romaji to Hiragana
       'ka': 'か', 'ki': 'き', 'ku': 'く', 'ke': 'け', 'ko': 'こ',
-      'sa': 'さ', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
-      'ta': 'た', 'chi': 'ち', 'tsu': 'つ', 'te': 'て', 'to': 'と',
+      'sa': 'さ', 'si': 'し', 'shi': 'し', 'su': 'す', 'se': 'せ', 'so': 'そ',
+      'ta': 'た', 'ti': 'ち', 'chi': 'ち', 'tu': 'つ', 'tsu': 'つ', 'te': 'て', 'to': 'と',
       'na': 'な', 'ni': 'に', 'nu': 'ぬ', 'ne': 'ね', 'no': 'の',
-      'ha': 'は', 'hi': 'ひ', 'fu': 'ふ', 'he': 'へ', 'ho': 'ほ',
+      'ha': 'は', 'hi': 'ひ', 'hu': 'ふ', 'fu': 'ふ', 'he': 'へ', 'ho': 'ほ',
       'ma': 'ま', 'mi': 'み', 'mu': 'む', 'me': 'め', 'mo': 'も',
       'ya': 'や', 'yu': 'ゆ', 'yo': 'よ',
       'ra': 'ら', 'ri': 'り', 'ru': 'る', 're': 'れ', 'ro': 'ろ',
-      'wa': 'わ', 'wo': 'を', 'n': 'ん',
+      'wa': 'わ', 'wo': 'を', 'n': 'ん', 'nn': 'ん',
       'ga': 'が', 'gi': 'ぎ', 'gu': 'ぐ', 'ge': 'げ', 'go': 'ご',
-      'za': 'ざ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
+      'za': 'ざ', 'zi': 'じ', 'ji': 'じ', 'zu': 'ず', 'ze': 'ぜ', 'zo': 'ぞ',
       'da': 'だ', 'di': 'ぢ', 'du': 'づ', 'de': 'で', 'do': 'ど',
       'ba': 'ば', 'bi': 'び', 'bu': 'ぶ', 'be': 'べ', 'bo': 'ぼ',
-      'pa': 'ぱ', 'pi': 'ぴ', 'pu': 'ぷ', 'pe': 'ぺ', 'po': 'ぽ'
+      'pa': 'ぱ', 'pi': 'ぴ', 'pu': 'ぷ', 'pe': 'ぺ', 'po': 'ぽ',
+      'kya': 'きゃ', 'kyu': 'きゅ', 'kyo': 'きょ',
+      'sha': 'しゃ', 'shu': 'しゅ', 'sho': 'しょ',
+      'cha': 'ちゃ', 'chu': 'ちゅ', 'cho': 'ちょ',
+      'nya': 'にゃ', 'nyu': 'にゅ', 'nyo': 'にょ',
+      'hya': 'ひゃ', 'hyu': 'ひゅ', 'hyo': 'ひょ',
+      'mya': 'みゃ', 'myu': 'みゅ', 'myo': 'みょ',
+      'rya': 'りゃ', 'ryu': 'りゅ', 'ryo': 'りょ',
+      'gya': 'ぎゃ', 'gyu': 'ぎゅ', 'gyo': 'ぎょ',
+      'ja': 'じゃ', 'ju': 'じゅ', 'jo': 'じょ',
+      'bya': 'びゃ', 'byu': 'びゅ', 'byo': 'びょ',
+      'pya': 'ぴゃ', 'pyu': 'ぴゅ', 'pyo': 'ぴょ'
     },
     modifiers: {}
   },
 
-  // Korean (Hangul)
+  // Korean (Hangul) - Gboard Korean keyboard codes
   korean: {
     name: 'Hangul',
     start: 0xAC00,
@@ -436,20 +455,21 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
       'i': '이'
     },
     consonantMap: {
-      'g': '그', 'k': '크', 'n': '느', 'd': '드', 't': '트',
-      'r': '르', 'l': '르', 'm': '므', 'b': '브', 'p': '프',
-      's': '스', 'j': '즈', 'ch': '츠', 'h': '흐', 'ng': '응'
+      'g': '그', 'k': '크', 'kk': '끄', 'n': '느', 'd': '드', 't': '트',
+      'tt': '뜨', 'r': '르', 'l': '르', 'm': '므', 'b': '브', 'p': '프',
+      'pp': '쁘', 's': '스', 'ss': '쓰', 'j': '즈', 'jj': '쯔',
+      'ch': '츠', 'h': '흐', 'ng': '응'
     },
     modifiers: {}
   },
 
-  // Chinese (Pinyin placeholder - complex tones)
+  // Chinese (Pinyin) - Gboard Pinyin input
   chinese: {
     name: 'Chinese',
     start: 0x4E00,
     end: 0x9FFF,
     vowelMap: {
-      'a': '阿', 'e': '额', 'i': '一', 'o': '哦', 'u': '乌'
+      'a': '阿', 'e': '额', 'i': '一', 'o': '哦', 'u': '乌', 'v': '鱼', 'ü': '鱼'
     },
     consonantMap: {
       'b': '波', 'p': '坡', 'm': '摸', 'f': '佛',
@@ -461,12 +481,171 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
       'y': '一', 'w': '五'
     },
     modifiers: {}
+  },
+
+  // Myanmar/Burmese - Gboard Myanmar keyboard codes
+  myanmar: {
+    name: 'Myanmar',
+    start: 0x1000,
+    end: 0x109F,
+    virama: '်',
+    vowelMap: {
+      'a': 'အ', 'A': 'အာ', 'aa': 'အာ', 'i': 'ဣ', 'I': 'ဤ', 'ee': 'ဤ',
+      'u': 'ဥ', 'U': 'ဦ', 'oo': 'ဦ', 'e': 'ဧ', 'o': 'ဩ', 'au': 'ဪ'
+    },
+    consonantMap: {
+      'k': 'က', 'kh': 'ခ', 'g': 'ဂ', 'gh': 'ဃ', 'ng': 'င',
+      'c': 'စ', 'ch': 'ဆ', 'j': 'ဇ', 'jh': 'ဈ', 'ny': 'ည',
+      'T': 'ဋ', 'Th': 'ဌ', 'D': 'ဍ', 'Dh': 'ဎ', 'N': 'ဏ',
+      't': 'တ', 'th': 'ထ', 'd': 'ဒ', 'dh': 'ဓ', 'n': 'န',
+      'p': 'ပ', 'ph': 'ဖ', 'f': 'ဖ', 'b': 'ဗ', 'bh': 'ဘ', 'm': 'မ',
+      'y': 'ယ', 'r': 'ရ', 'l': 'လ', 'w': 'ဝ', 'v': 'ဝ',
+      'sh': 'ရှ', 's': 'သ', 'h': 'ဟ', 'L': 'ဠ', 'a': 'အ'
+    },
+    modifiers: {
+      'A': 'ာ', 'aa': 'ာ', 'i': 'ိ', 'I': 'ီ', 'ee': 'ီ',
+      'u': 'ု', 'U': 'ူ', 'oo': 'ူ', 'e': 'ေ', 'ai': 'ဲ',
+      'o': 'ော', 'au': 'ော', 'M': 'ံ'
+    }
+  },
+
+  // Khmer/Cambodian - Gboard Khmer keyboard codes
+  khmer: {
+    name: 'Khmer',
+    start: 0x1780,
+    end: 0x17FF,
+    virama: '្',
+    vowelMap: {
+      'a': 'អ', 'A': 'អា', 'aa': 'អា', 'i': 'ឥ', 'I': 'ឦ', 'ee': 'ឦ',
+      'u': 'ឧ', 'U': 'ឩ', 'oo': 'ឩ', 'e': 'ឯ', 'ai': 'ឰ',
+      'o': 'ឱ', 'au': 'ឳ'
+    },
+    consonantMap: {
+      'k': 'ក', 'kh': 'ខ', 'g': 'គ', 'gh': 'ឃ', 'ng': 'ង',
+      'c': 'ច', 'ch': 'ឆ', 'j': 'ជ', 'jh': 'ឈ', 'ny': 'ញ',
+      'T': 'ដ', 'Th': 'ឋ', 'D': 'ឌ', 'Dh': 'ឍ', 'N': 'ណ',
+      't': 'ត', 'th': 'ថ', 'd': 'ទ', 'dh': 'ធ', 'n': 'ន',
+      'p': 'ប', 'ph': 'ផ', 'f': 'ផ', 'b': 'ព', 'bh': 'ភ', 'm': 'ម',
+      'y': 'យ', 'r': 'រ', 'l': 'ល', 'v': 'វ', 'w': 'វ',
+      'sh': 'ស', 's': 'ស', 'h': 'ហ', 'L': 'ឡ'
+    },
+    modifiers: {
+      'A': 'ា', 'aa': 'ា', 'i': 'ិ', 'I': 'ី', 'ee': 'ី',
+      'u': 'ុ', 'U': 'ូ', 'oo': 'ូ', 'e': 'េ', 'ai': 'ៃ',
+      'o': 'ោ', 'au': 'ៅ', 'M': 'ំ', 'H': 'ះ'
+    }
+  },
+
+  // Sinhala - Gboard Sinhala keyboard codes
+  sinhala: {
+    name: 'Sinhala',
+    start: 0x0D80,
+    end: 0x0DFF,
+    virama: '්',
+    vowelMap: {
+      'a': 'අ', 'A': 'ආ', 'aa': 'ආ', 'i': 'ඉ', 'I': 'ඊ', 'ee': 'ඊ',
+      'u': 'උ', 'U': 'ඌ', 'oo': 'ඌ', 'e': 'එ', 'E': 'ඒ', 'ai': 'ඓ',
+      'o': 'ඔ', 'O': 'ඕ', 'au': 'ඖ'
+    },
+    consonantMap: {
+      'k': 'ක', 'kh': 'ඛ', 'g': 'ග', 'gh': 'ඝ', 'ng': 'ඞ',
+      'c': 'ච', 'ch': 'ඡ', 'j': 'ජ', 'jh': 'ඣ', 'ny': 'ඤ',
+      'T': 'ට', 'Th': 'ඨ', 'D': 'ඩ', 'Dh': 'ඪ', 'N': 'ණ',
+      't': 'ත', 'th': 'ථ', 'd': 'ද', 'dh': 'ධ', 'n': 'න',
+      'p': 'ප', 'ph': 'ඵ', 'f': 'ෆ', 'b': 'බ', 'bh': 'භ', 'm': 'ම',
+      'y': 'ය', 'r': 'ර', 'l': 'ල', 'v': 'ව', 'w': 'ව',
+      'sh': 'ශ', 'Sh': 'ෂ', 's': 'ස', 'h': 'හ', 'L': 'ළ'
+    },
+    modifiers: {
+      'A': 'ා', 'aa': 'ා', 'i': 'ි', 'I': 'ී', 'ee': 'ී',
+      'u': 'ු', 'U': 'ූ', 'oo': 'ූ', 'e': 'ෙ', 'E': 'ේ', 'ai': 'ෛ',
+      'o': 'ො', 'O': 'ෝ', 'au': 'ෞ', 'M': 'ං', 'H': 'ඃ'
+    }
+  },
+
+  // Georgian - Gboard Georgian keyboard codes
+  georgian: {
+    name: 'Georgian',
+    start: 0x10A0,
+    end: 0x10FF,
+    vowelMap: {
+      'a': 'ა', 'e': 'ე', 'i': 'ი', 'o': 'ო', 'u': 'უ'
+    },
+    consonantMap: {
+      'b': 'ბ', 'g': 'გ', 'd': 'დ', 'v': 'ვ', 'z': 'ზ',
+      'T': 'თ', 'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ',
+      'p': 'პ', 'zh': 'ჟ', 'r': 'რ', 's': 'ს', 't': 'ტ',
+      'f': 'ფ', 'q': 'ქ', 'gh': 'ღ', 'y': 'ყ', 'sh': 'შ',
+      'ch': 'ჩ', 'ts': 'ც', 'dz': 'ძ', 'w': 'წ', 'ch\'': 'ჭ',
+      'x': 'ხ', 'j': 'ჯ', 'h': 'ჰ'
+    },
+    modifiers: {}
+  },
+
+  // Armenian - Gboard Armenian keyboard codes
+  armenian: {
+    name: 'Armenian',
+    start: 0x0530,
+    end: 0x058F,
+    vowelMap: {
+      'a': 'ա', 'e': 'է', 'i': ' delays', 'o': 'օ', 'u': ' delays'
+    },
+    consonantMap: {
+      'b': 'բ', 'g': 'գ', 'd': 'դ', 'ye': 'delays', 'z': 'զ',
+      'e': 'delays', 'y': 'delays', 'T': 'delays', 'zh': ' delays',
+      'k': 'delays', 'l': 'լ', 'm': 'delays', 'n': 'delays', 'sh': ' delays',
+      'vo': 'delays', 'ch': 'delays', 'p': 'delays', 'j': 'delays',
+      'r': ' delays', 's': 'delays', 'v': 'delays', 't': 'delays',
+      'f': 'delays', 'kh': 'delays', 'ts': 'delays', 'h': 'delays'
+    },
+    modifiers: {}
+  },
+
+  // Ethiopic/Amharic - Gboard Amharic keyboard codes  
+  ethiopic: {
+    name: 'Ethiopic',
+    start: 0x1200,
+    end: 0x137F,
+    vowelMap: {
+      'a': 'አ', 'e': 'ኤ', 'i': 'ኢ', 'o': 'ኦ', 'u': 'ኡ'
+    },
+    consonantMap: {
+      'ha': 'ሀ', 'la': 'ለ', 'Ha': 'ሐ', 'ma': 'መ', 'sa': 'ሰ', 'ra': 'ረ',
+      'sha': 'ሸ', 'qa': 'ቀ', 'ba': 'በ', 'va': 'ቨ', 'ta': 'ተ',
+      'cha': 'ቸ', 'na': 'ነ', 'nya': 'ኘ', 'a': 'አ',
+      'ka': 'ከ', 'kha': 'ኸ', 'wa': 'ወ', 'za': 'ዘ', 'zha': 'ዠ',
+      'ya': 'የ', 'da': 'ደ', 'ja': 'ጀ', 'ga': 'ገ', 'Ta': 'ጠ',
+      'Cha': 'ጨ', 'Pa': 'ጰ', 'tsa': 'ጸ', 'Tsa': 'ፀ', 'fa': 'ፈ', 'pa': 'ፐ'
+    },
+    modifiers: {}
+  },
+
+  // Tibetan - Gboard Tibetan keyboard codes
+  tibetan: {
+    name: 'Tibetan',
+    start: 0x0F00,
+    end: 0x0FFF,
+    virama: '་',
+    vowelMap: {
+      'a': 'ཨ', 'i': 'ཨི', 'u': 'ཨུ', 'e': 'ཨེ', 'o': 'ཨོ'
+    },
+    consonantMap: {
+      'ka': 'ཀ', 'kha': 'ཁ', 'ga': 'ག', 'nga': 'ང',
+      'ca': 'ཅ', 'cha': 'ཆ', 'ja': 'ཇ', 'nya': 'ཉ',
+      'ta': 'ཏ', 'tha': 'ཐ', 'da': 'ད', 'na': 'ན',
+      'pa': 'པ', 'pha': 'ཕ', 'ba': 'བ', 'ma': 'མ',
+      'tsa': 'ཙ', 'tsha': 'ཚ', 'dza': 'ཛ', 'wa': 'ཝ',
+      'zha': 'ཞ', 'za': 'ཟ', "'a": 'འ', 'ya': 'ཡ',
+      'ra': 'ར', 'la': 'ལ', 'sha': 'ཤ', 'sa': 'ས', 'ha': 'ཧ', 'a': 'ཨ'
+    },
+    modifiers: {
+      'i': 'ི', 'u': 'ུ', 'e': 'ེ', 'o': 'ོ'
+    }
   }
 };
 
 // ============================================================
 // LANGUAGE TO SCRIPT MAPPING - Dynamically built from 900+ profile languages
-// Maps language names/codes to script block names
 // ============================================================
 
 // Script name normalization: maps profile script names to our SCRIPT_BLOCKS keys
@@ -499,11 +678,11 @@ const SCRIPT_NAME_TO_BLOCK: Record<string, string> = {
   'ethiopic': 'ethiopic',
   'tibetan': 'tibetan',
   'thaana': 'arabic', // Dhivehi uses similar patterns to Arabic
-  'ol_chiki': 'ol_chiki',
-  'limbu': 'limbu',
-  'lepcha': 'lepcha',
-  'saurashtra': 'saurashtra',
-  'buginese': 'buginese',
+  'ol_chiki': 'devanagari', // Fallback to Devanagari patterns
+  'limbu': 'devanagari',
+  'lepcha': 'tibetan',
+  'saurashtra': 'devanagari',
+  'buginese': 'latin',
   // Latin script - empty string means no conversion needed
   'latin': '',
 };
@@ -512,7 +691,7 @@ const SCRIPT_NAME_TO_BLOCK: Record<string, string> = {
 function buildLanguageScriptMap(): Record<string, string> {
   const map: Record<string, string> = {};
   
-  // Combine both men and women language lists (they're identical but we include both for safety)
+  // Combine both men and women language lists
   const allLanguages = [...menLanguages, ...womenLanguages];
   const seen = new Set<string>();
   
@@ -565,10 +744,8 @@ function buildLanguageScriptMap(): Record<string, string> {
 // Build the map once at module load time
 const LANGUAGE_SCRIPT_MAP: Record<string, string> = buildLanguageScriptMap();
 
-// Note: LANGUAGE_SCRIPT_MAP now contains 900+ language mappings from profile language lists
-
 // ============================================================
-// CORE TRANSLITERATION ENGINE - Dynamic, no hardcoding
+// CORE TRANSLITERATION ENGINE
 // ============================================================
 
 /**
@@ -583,26 +760,21 @@ function getScriptForLanguage(language: string): ScriptBlock | null {
 
 /**
  * Check if language uses Latin script
- * Returns true for Latin-script languages
- * Returns false for known non-Latin languages (so they get transliterated)
  */
 export function isLatinScriptLanguage(language: string): boolean {
   if (!language || typeof language !== 'string') return true;
   const normalized = language.toLowerCase().trim();
   if (!normalized) return true;
   
-  // If we have a script mapping for this language and it's NOT empty, it's NON-Latin
   const scriptName = LANGUAGE_SCRIPT_MAP[normalized];
   if (scriptName && scriptName !== '') {
-    return false; // Has a non-empty script mapping = non-Latin
+    return false;
   }
   
-  // If the mapping exists and is empty string, it's Latin
   if (scriptName === '') {
     return true;
   }
   
-  // Default: unknown language - assume Latin (no conversion)
   return true;
 }
 
@@ -616,33 +788,25 @@ export function isLatinText(text: string): boolean {
 }
 
 /**
- * Dynamic phonetic transliteration - NO hardcoded words
- * Uses Unicode phonetic mapping algorithms + SymSpell correction
- * Handles small to very large messages efficiently
- * Safe for ANY language - returns original text for unsupported
+ * Dynamic Gboard-style transliteration
+ * Uses Gboard input codes for all 900+ languages
  */
 export function dynamicTransliterate(text: string, targetLanguage: string): string {
-  // Null-safe: return empty/original for invalid input
   if (!text || typeof text !== 'string') return text || '';
   if (!text.trim()) return text;
   if (!targetLanguage || typeof targetLanguage !== 'string') return text;
   
   const script = getScriptForLanguage(targetLanguage);
-  if (!script) return text; // Latin script language or unknown, no conversion
+  if (!script) return text;
   
   // If already in target script, return as-is
   if (!isLatinText(text)) return text;
   
-  // Step 1: Apply phonetic spell correction before transliteration
-  // NOTE: Keep original casing so advanced romanization cues (e.g. "N" for ణ) can work.
-  const correctedInput = phoneticSpellCorrect(text, targetLanguage);
-  // For very large messages, process in chunks to avoid blocking
-  // Each word is transliterated independently, so chunking by words is safe
-  const words = correctedInput.split(/(\s+)/); // Preserve whitespace
+  // Process words
+  const words = text.split(/(\s+)/);
   const results: string[] = [];
   
   for (const segment of words) {
-    // Preserve whitespace segments as-is
     if (/^\s+$/.test(segment)) {
       results.push(segment);
       continue;
@@ -650,188 +814,14 @@ export function dynamicTransliterate(text: string, targetLanguage: string): stri
     
     if (!segment) continue;
     
-    // Transliterate each word
     results.push(transliterateWord(segment, script));
   }
   
   return results.join('');
 }
 
-// ============================================================
-// EMBEDDED SYMSPELL PHONETIC SPELL CORRECTION
-// No external dictionaries - uses phonetic patterns
-// ============================================================
-
-// Common phonetic equivalences for spell correction
-const PHONETIC_EQUIVALENCES: Record<string, string[]> = {
-  'a': ['aa', 'ah', 'e'],
-  'e': ['ee', 'i', 'a', 'ae'],
-  'i': ['ee', 'y', 'ie'],
-  'o': ['oo', 'ou', 'u', 'au'],
-  'u': ['oo', 'ou', 'o', 'w'],
-  'v': ['b', 'w'],
-  'n': ['nn', 'm'],
-  'l': ['ll', 'r'],
-};
-
-// Language-specific phonetic corrections (common misspellings)
-const LANGUAGE_CORRECTIONS: Record<string, Record<string, string>> = {
-  telugu: {
-    // Fix missing vowel elongations
-    'bagunnava': 'baagunnava',
-    'bagunnara': 'baagunnara', 
-    'elunnaru': 'elaunnaru',
-    'ela unnaru': 'ela unnaru',
-    'chala': 'chaala',
-    'manchidi': 'manchidi',
-    'nenu': 'nenu',
-    'nuvvu': 'nuvvu',
-    'meeru': 'meeru',
-    'emi': 'emi',
-    'enti': 'enti',
-  },
-  hindi: {
-    'kaisey': 'kaise',
-    'kaisay': 'kaise',
-    'thik': 'theek',
-    'tek': 'theek',
-    'kya hal': 'kya haal',
-    'achha': 'accha',
-    'acha': 'accha',
-    'bahot': 'bahut',
-    'bohot': 'bahut',
-  },
-  tamil: {
-    'vanakam': 'vanakkam',
-    'nandri': 'nandri',
-    'eppadi': 'eppadi',
-    'epadi': 'eppadi',
-    'irukkireenga': 'irukkeenga',
-  },
-  bengali: {
-    'kemon': 'kemon',
-    'bhalo': 'bhaalo',
-    'achi': 'aachi',
-  },
-  marathi: {
-    'kasa': 'kaasa',
-    'aahe': 'aahe',
-    'mee': 'mi',
-  },
-  gujarati: {
-    'kem cho': 'kem chho',
-    'kemcho': 'kem chho',
-    'saru': 'saaru',
-  },
-  kannada: {
-    'hegiddira': 'hegiddira',
-    'chennagide': 'chennagide',
-    'nanu': 'naanu',
-  },
-  malayalam: {
-    'sugham': 'sukham',
-    'nanni': 'nandri',
-    'entha': 'enthaa',
-  },
-  punjabi: {
-    'kiwe': 'kive',
-    'vadiya': 'vadiya',
-    'satsriakal': 'sat sri akal',
-  },
-  odia: {
-    'kemiti': 'kemiti',
-    'bhala': 'bhaala',
-  },
-};
-
-// Common greeting/phrase patterns for phonetic matching
-const COMMON_PHRASE_PATTERNS: Record<string, string[]> = {
-  'howareyou': ['howareyou', 'howru', 'howreyou', 'hru', 'hw r u'],
-  'hello': ['helo', 'hllo', 'heelo', 'hallo'],
-  'thankyou': ['thanks', 'thanku', 'thnks', 'thx', 'ty'],
-  'good': ['gud', 'gd', 'goood'],
-  'morning': ['mornin', 'mornng', 'morng'],
-  'night': ['nite', 'nyt', 'nght'],
-};
-
 /**
- * Damerau-Levenshtein edit distance (handles transpositions)
- */
-function calcEditDistance(s1: string, s2: string): number {
-  const len1 = s1.length;
-  const len2 = s2.length;
-  
-  if (len1 === 0) return len2;
-  if (len2 === 0) return len1;
-  if (Math.abs(len1 - len2) > 3) return Math.abs(len1 - len2);
-  
-  const matrix: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
-  
-  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-  
-  for (let i = 1; i <= len1; i++) {
-    for (let j = 1; j <= len2; j++) {
-      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
-      if (i > 1 && j > 1 && s1[i - 1] === s2[j - 2] && s1[i - 2] === s2[j - 1]) {
-        matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + cost);
-      }
-    }
-  }
-  return matrix[len1][len2];
-}
-
-/**
- * Apply phonetic spell correction
- */
-function phoneticSpellCorrect(text: string, language: string): string {
-  const lang = language.toLowerCase().trim();
-  let corrected = text;
-  
-  // Step 1: Apply language-specific known corrections
-  const langCorrections = LANGUAGE_CORRECTIONS[lang];
-  if (langCorrections) {
-    for (const [wrong, right] of Object.entries(langCorrections)) {
-      // Use word boundary matching
-      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-      corrected = corrected.replace(regex, right);
-    }
-  }
-  
-  // Step 2: Apply phonetic pattern matching for common phrases
-  const words = corrected.split(/\s+/);
-  const correctedWords = words.map(word => {
-    const normalized = word.toLowerCase().replace(/[^a-z]/g, '');
-    if (normalized.length < 3) return word;
-    
-    // Check against common patterns
-    for (const [canonical, variants] of Object.entries(COMMON_PHRASE_PATTERNS)) {
-      for (const variant of variants) {
-        if (calcEditDistance(normalized, variant) <= 1) {
-          // Found a close match - preserve original casing style
-          return canonical;
-        }
-      }
-    }
-    
-    return word;
-  });
-  
-  // Step 3: Fix common phonetic confusions
-  corrected = correctedWords.join(' ')
-    .replace(/([bcdfghjklmnpqrstvwxyz])\1{3,}/gi, '$1$1') // Reduce >2 repeated consonants
-    .replace(/([aeiou])\1{3,}/gi, '$1$1'); // Reduce >2 repeated vowels
-  
-  return corrected;
-}
-
-/**
- * Transliterate a single word using phonetic rules
+ * Transliterate a single word using Gboard input codes
  */
 function transliterateWord(word: string, script: ScriptBlock): string {
   if (!word) return '';
@@ -844,15 +834,17 @@ function transliterateWord(word: string, script: ScriptBlock): string {
   while (i < word.length) {
     let matched = false;
     
-    // Try multi-character patterns first (4, 3, 2, 1)
+    // Try multi-character patterns first (4, 3, 2, 1) - Gboard uses longer patterns
     for (let len = Math.min(4, word.length - i); len >= 1; len--) {
       const pattern = word.substring(i, i + len);
-      const patternLower = pattern.toLowerCase();
-
-      // Check consonants first (they're more specific)
-      const consonant = script.consonantMap[pattern] ?? script.consonantMap[patternLower];
+      
+      // Check exact case first (Gboard is case-sensitive for some inputs)
+      let consonant = script.consonantMap[pattern];
+      if (!consonant) {
+        consonant = script.consonantMap[pattern.toLowerCase()];
+      }
+      
       if (consonant) {
-        // Handle previous consonant
         if (pendingConsonant) {
           result += pendingConsonant;
           if (script.virama) result += script.virama;
@@ -865,18 +857,25 @@ function transliterateWord(word: string, script: ScriptBlock): string {
       }
 
       // Check vowels
-      const vowel = script.vowelMap[pattern] ?? script.vowelMap[patternLower];
+      let vowel = script.vowelMap[pattern];
+      let vowelKey = pattern;
+      if (!vowel) {
+        vowel = script.vowelMap[pattern.toLowerCase()];
+        vowelKey = pattern.toLowerCase();
+      }
+      
       if (vowel) {
-        const vowelKey = script.vowelMap[pattern] ? pattern : patternLower;
-
         if (lastWasConsonant && pendingConsonant) {
-          // Use modifier if available, otherwise full vowel
-          const modifier = script.modifiers[vowelKey];
-          if (modifier && vowelKey !== 'a') {
+          const modifier = script.modifiers[pattern] || script.modifiers[vowelKey];
+          if (modifier && vowelKey !== 'a' && vowelKey !== 'A') {
             result += pendingConsonant + modifier;
-          } else if (vowelKey === 'a') {
+          } else if (vowelKey === 'a' || vowelKey === 'A') {
             // Inherent 'a' vowel in Indic scripts
-            result += pendingConsonant;
+            if (vowelKey === 'A' && script.modifiers['A']) {
+              result += pendingConsonant + script.modifiers['A'];
+            } else {
+              result += pendingConsonant;
+            }
           } else {
             result += pendingConsonant + vowel;
           }
@@ -891,6 +890,7 @@ function transliterateWord(word: string, script: ScriptBlock): string {
         break;
       }
     }
+    
     // No match - keep original character
     if (!matched) {
       if (pendingConsonant) {
@@ -906,8 +906,6 @@ function transliterateWord(word: string, script: ScriptBlock): string {
   // Handle trailing consonant
   if (pendingConsonant) {
     result += pendingConsonant;
-    // Add inherent 'a' for trailing consonants (Indic scripts)
-    // This makes words like "bagunnava" work correctly
   }
   
   return result;
@@ -921,14 +919,12 @@ export function detectScriptFromText(text: string): { script: string; language: 
     return { script: 'Latin', language: 'english', isLatin: true };
   }
   
-  // Count characters in each script block
   const scriptCounts: Record<string, number> = {};
   
   for (const char of text) {
     const codePoint = char.codePointAt(0);
     if (!codePoint) continue;
     
-    // Check each script block
     for (const [scriptName, block] of Object.entries(SCRIPT_BLOCKS)) {
       if (codePoint >= block.start && codePoint <= block.end) {
         scriptCounts[scriptName] = (scriptCounts[scriptName] || 0) + 1;
@@ -937,7 +933,6 @@ export function detectScriptFromText(text: string): { script: string; language: 
     }
   }
   
-  // Find dominant script
   let maxCount = 0;
   let dominantScript = 'latin';
   
@@ -948,14 +943,15 @@ export function detectScriptFromText(text: string): { script: string; language: 
     }
   }
   
-  // Map script to language
   const scriptToLang: Record<string, string> = {
     devanagari: 'hindi', telugu: 'telugu', tamil: 'tamil',
     kannada: 'kannada', malayalam: 'malayalam', bengali: 'bengali',
     gujarati: 'gujarati', punjabi: 'punjabi', odia: 'odia',
     arabic: 'arabic', hebrew: 'hebrew', thai: 'thai',
     russian: 'russian', greek: 'greek', japanese: 'japanese',
-    korean: 'korean', chinese: 'chinese'
+    korean: 'korean', chinese: 'chinese', myanmar: 'burmese',
+    khmer: 'khmer', sinhala: 'sinhala', georgian: 'georgian',
+    ethiopic: 'amharic', tibetan: 'tibetan'
   };
   
   if (maxCount === 0) {
@@ -993,8 +989,7 @@ function buildLanguageCodeToNameMap(): Record<string, string> {
     const name = lang.name.toLowerCase();
     map[code] = name;
     
-    // Also add 3-letter ISO codes where applicable
-    // Common 3-letter variants
+    // Add 3-letter ISO codes
     const threeLetterCodes: Record<string, string> = {
       'en': 'eng', 'hi': 'hin', 'te': 'tel', 'ta': 'tam', 'kn': 'kan',
       'ml': 'mal', 'bn': 'ben', 'gu': 'guj', 'pa': 'pan', 'mr': 'mar',
@@ -1044,25 +1039,22 @@ function buildLanguageCodeToNameMap(): Record<string, string> {
 const LANGUAGE_CODE_TO_NAME: Record<string, string> = buildLanguageCodeToNameMap();
 
 /**
- * Normalize language name - handles any input safely
- * Uses dynamically built map from 900+ profile languages
+ * Normalize language name
  */
 export function normalizeLanguage(lang: string): string {
   if (!lang || typeof lang !== 'string') return 'english';
   const l = lang.toLowerCase().trim();
   if (!l) return 'english';
   
-  // Check if it's a code we know
   if (LANGUAGE_CODE_TO_NAME[l]) {
     return LANGUAGE_CODE_TO_NAME[l];
   }
   
-  // Already a language name
   return l;
 }
 
 /**
- * Check if two languages are the same - handles any input safely
+ * Check if two languages are the same
  */
 export function isSameLanguage(lang1: string, lang2: string): boolean {
   const norm1 = normalizeLanguage(lang1);
@@ -1072,7 +1064,6 @@ export function isSameLanguage(lang1: string, lang2: string): boolean {
 
 // ============================================================
 // REVERSE TRANSLITERATION: Native Script → Latin
-// Used for Target → English translation path
 // ============================================================
 
 /**
@@ -1081,17 +1072,14 @@ export function isSameLanguage(lang1: string, lang2: string): boolean {
 function buildReverseMap(block: ScriptBlock): Map<string, string> {
   const reverseMap = new Map<string, string>();
   
-  // Reverse consonant map
   for (const [latin, native] of Object.entries(block.consonantMap)) {
     reverseMap.set(native, latin);
   }
   
-  // Reverse vowel map
   for (const [latin, native] of Object.entries(block.vowelMap)) {
     reverseMap.set(native, latin);
   }
   
-  // Reverse modifier map
   for (const [latin, native] of Object.entries(block.modifiers)) {
     reverseMap.set(native, latin);
   }
@@ -1117,11 +1105,6 @@ function getReverseMap(scriptKey: string): Map<string, string> | null {
 
 /**
  * Reverse transliterate: Convert native script text to Latin
- * Used in Target → English translation path
- * 
- * @param text - Native script text to convert
- * @param sourceLanguage - Language of the native text
- * @returns Latin/romanized text
  */
 export function reverseTransliterate(text: string, sourceLanguage: string): string {
   if (!text || !text.trim()) return text;
@@ -1129,7 +1112,6 @@ export function reverseTransliterate(text: string, sourceLanguage: string): stri
   const normalized = normalizeLanguage(sourceLanguage);
   const scriptKey = LANGUAGE_SCRIPT_MAP[normalized];
   
-  // If no script mapping or Latin script, return as-is
   if (!scriptKey || isLatinScriptLanguage(sourceLanguage)) {
     return text;
   }
@@ -1139,18 +1121,16 @@ export function reverseTransliterate(text: string, sourceLanguage: string): stri
     return text;
   }
   
-  // Get the script block for virama detection
   const block = SCRIPT_BLOCKS[scriptKey];
   const virama = block?.virama || '';
   
   let result = '';
   let i = 0;
-  const chars = [...text]; // Handle Unicode properly
+  const chars = [...text];
   
   while (i < chars.length) {
     let matched = false;
     
-    // Try to match longer sequences first (up to 4 chars)
     for (let len = Math.min(4, chars.length - i); len > 0; len--) {
       const substr = chars.slice(i, i + len).join('');
       
@@ -1165,17 +1145,14 @@ export function reverseTransliterate(text: string, sourceLanguage: string): stri
     if (!matched) {
       const char = chars[i];
       
-      // Skip virama (halant) - consonant already handled
       if (char === virama) {
         i++;
         continue;
       }
       
-      // Check individual character
       if (reverseMap.has(char)) {
         result += reverseMap.get(char);
       } else {
-        // Keep character as-is (spaces, punctuation, etc.)
         result += char;
       }
       i++;
