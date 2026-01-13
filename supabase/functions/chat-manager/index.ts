@@ -1036,20 +1036,22 @@ serve(async (req) => {
           );
         }
 
-        // Get session
+        // Get session (include both active and billing_paused statuses)
         const { data: session } = await supabase
           .from("active_chat_sessions")
           .select("*")
           .eq("chat_id", chat_id)
-          .eq("status", "active")
+          .in("status", ["active", "billing_paused"])
           .maybeSingle();
 
         if (!session) {
           return new Response(
-            JSON.stringify({ success: false, message: "Session not found or inactive" }),
+            JSON.stringify({ success: false, message: "Session not found or ended" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        
+        const isBillingPaused = session.status === "billing_paused";
 
         const MESSAGE_INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes in milliseconds
         const now = new Date();
@@ -1102,7 +1104,7 @@ serve(async (req) => {
           );
         }
 
-        // Check 3-minute inactivity from either party - AUTO DISCONNECT
+        // Check 3-minute inactivity from either party - PAUSE BILLING (don't disconnect)
         const manLastMessageTime = new Date(manMessages[0].created_at).getTime();
         const womanLastMessageTime = new Date(womanMessages[0].created_at).getTime();
         const nowTime = now.getTime();
@@ -1110,16 +1112,25 @@ serve(async (req) => {
         const manInactiveMs = nowTime - manLastMessageTime;
         const womanInactiveMs = nowTime - womanLastMessageTime;
 
-        // If either party hasn't replied for 3 minutes, end the chat
+        // If either party hasn't replied for 3 minutes, PAUSE BILLING (chat stays connected)
         if (manInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
-          console.log(`[HEARTBEAT] Man ${session.man_user_id} inactive for ${Math.floor(manInactiveMs / 1000)}s - auto-disconnecting chat ${chat_id}`);
-          await endChatSession(supabase, chat_id, "man_inactive_3min", session);
+          console.log(`[HEARTBEAT] Man ${session.man_user_id} inactive for ${Math.floor(manInactiveMs / 1000)}s - PAUSING billing (chat stays connected)`);
+          
+          // Update session to mark billing as paused
+          await supabase
+            .from("active_chat_sessions")
+            .update({ 
+              last_activity_at: now.toISOString(),
+              status: "billing_paused"
+            })
+            .eq("chat_id", chat_id);
+          
           return new Response(
             JSON.stringify({ 
-              success: false, 
-              message: "Chat ended: Man did not reply for 3 minutes",
-              end_chat: true,
-              end_reason: "man_inactive_3min",
+              success: true, 
+              billing_paused: true,
+              billing_started: false,
+              message: "Billing paused: Man inactive for 3+ minutes. Chat still connected - reply to resume billing.",
               inactive_party: "man",
               inactive_seconds: Math.floor(manInactiveMs / 1000)
             }),
@@ -1128,19 +1139,40 @@ serve(async (req) => {
         }
 
         if (womanInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
-          console.log(`[HEARTBEAT] Woman ${session.woman_user_id} inactive for ${Math.floor(womanInactiveMs / 1000)}s - auto-disconnecting chat ${chat_id}`);
-          await endChatSession(supabase, chat_id, "woman_inactive_3min", session);
+          console.log(`[HEARTBEAT] Woman ${session.woman_user_id} inactive for ${Math.floor(womanInactiveMs / 1000)}s - PAUSING billing (chat stays connected)`);
+          
+          // Update session to mark billing as paused
+          await supabase
+            .from("active_chat_sessions")
+            .update({ 
+              last_activity_at: now.toISOString(),
+              status: "billing_paused"
+            })
+            .eq("chat_id", chat_id);
+          
           return new Response(
             JSON.stringify({ 
-              success: false, 
-              message: "Chat ended: Woman did not reply for 3 minutes",
-              end_chat: true,
-              end_reason: "woman_inactive_3min",
+              success: true, 
+              billing_paused: true,
+              billing_started: false,
+              message: "Billing paused: Woman inactive for 3+ minutes. Chat still connected - reply to resume billing.",
               inactive_party: "woman",
               inactive_seconds: Math.floor(womanInactiveMs / 1000)
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
+        }
+
+        // Both parties are active (within 3 minutes) - resume billing if it was paused
+        if (isBillingPaused) {
+          console.log(`[HEARTBEAT] Both parties active - resuming billing for chat ${chat_id}`);
+          await supabase
+            .from("active_chat_sessions")
+            .update({ 
+              status: "active",
+              last_activity_at: now.toISOString()
+            })
+            .eq("chat_id", chat_id);
         }
 
         // Get current pricing for women's earning rate
