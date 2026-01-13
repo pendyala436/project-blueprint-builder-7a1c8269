@@ -38,6 +38,10 @@ interface UniversalTranslatorProps {
   defaultTarget?: string;
   showLanguageCount?: boolean;
   compact?: boolean;
+  /** External input from typing preview (transliteration result) */
+  externalInput?: string;
+  /** Callback when input changes */
+  onInputChange?: (input: string) => void;
 }
 
 export default function UniversalTranslator({
@@ -45,6 +49,8 @@ export default function UniversalTranslator({
   defaultTarget = 'hi',
   showLanguageCount = true,
   compact = false,
+  externalInput,
+  onInputChange,
 }: UniversalTranslatorProps) {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [source, setSource] = useState(defaultSource);
@@ -62,6 +68,19 @@ export default function UniversalTranslator({
       setLanguages(getLanguages());
     }
   }, []);
+
+  // Sync external input (from typing transliteration)
+  useEffect(() => {
+    if (externalInput !== undefined && externalInput !== input) {
+      setInput(externalInput);
+    }
+  }, [externalInput]);
+
+  // Notify parent of input changes
+  const handleInputChange = useCallback((value: string) => {
+    setInput(value);
+    onInputChange?.(value);
+  }, [onInputChange]);
 
   // Translate handler
   const handleTranslate = useCallback(async () => {
@@ -146,7 +165,7 @@ export default function UniversalTranslator({
         <Textarea
           placeholder="Enter text to translate..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => handleInputChange(e.target.value)}
           rows={3}
         />
 
@@ -274,7 +293,7 @@ export default function UniversalTranslator({
           <Textarea
             placeholder="Enter text here..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             rows={4}
             className="resize-none"
           />

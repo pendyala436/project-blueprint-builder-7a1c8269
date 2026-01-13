@@ -15,10 +15,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Languages, Keyboard, MessageSquare, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { ArrowRight, Languages, Keyboard, MessageSquare, CheckCircle, Clock, AlertCircle, Globe } from 'lucide-react';
 import { useRealtimeChatTranslation } from '@/hooks/useRealtimeChatTranslation';
 import { dynamicTransliterate, isLatinScriptLanguage } from '@/lib/translation/dynamic-transliterator';
 import { translateText } from '@/lib/translation/translate';
+import UniversalTranslator from '@/components/UniversalTranslator';
 
 interface TestResult {
   id: string;
@@ -70,6 +71,7 @@ export default function TranslationTestPage() {
   const [receiverLanguage, setReceiverLanguage] = useState('hindi');
   const [inputText, setInputText] = useState('');
   const [livePreview, setLivePreview] = useState('');
+  const [transliteratedForTranslator, setTransliteratedForTranslator] = useState('');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -89,12 +91,20 @@ export default function TranslationTestPage() {
     
     setLivePreview(preview.preview);
     
+    // Send transliterated result to Universal Translator
+    // If sender's language is non-Latin, use the transliterated version
+    const transliteratedText = !isLatinScriptLanguage(senderLanguage) && preview.preview !== value
+      ? preview.preview
+      : value;
+    setTransliteratedForTranslator(transliteratedText);
+    
     console.log('[TranslationTest] Live preview:', {
       input: value,
       output: preview.preview,
       language: senderLanguage,
       isLatin: preview.isLatin,
       processingTime: `${processingTime.toFixed(2)}ms`,
+      sentToTranslator: transliteratedText,
     });
   }, [senderLanguage, getLivePreview]);
 
@@ -341,6 +351,32 @@ export default function TranslationTestPage() {
                 Clear Results
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Universal Translator - Connected to typing input */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Universal Translator (Receives Typing Input)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-muted/30 rounded-lg mb-4">
+              <div className="text-sm text-muted-foreground mb-2">
+                Input from typing (transliterated if non-Latin):
+              </div>
+              <div className="text-lg font-medium">
+                {transliteratedForTranslator || '(Type above to see input here)'}
+              </div>
+            </div>
+            <UniversalTranslator
+              defaultSource={senderLanguage === 'english' ? 'en' : senderLanguage.substring(0, 2)}
+              defaultTarget={receiverLanguage === 'english' ? 'en' : receiverLanguage.substring(0, 2)}
+              externalInput={transliteratedForTranslator}
+              compact={false}
+            />
           </CardContent>
         </Card>
 
