@@ -1,21 +1,26 @@
 /**
  * Dynamic Universal Transliterator
  * =================================
- * NO hardcoded words - works for ALL 300+ languages dynamically
+ * Supports ALL 900+ languages from profile language lists
  * Uses Unicode block detection + phonetic mapping algorithms
  * 
  * ARCHITECTURE:
- * 1. Detect target script from language
- * 2. Apply phonetic rules dynamically (no word lookup)
- * 3. Works for ANY language pair without maintenance
+ * 1. Dynamically builds script mappings from men_languages.ts and women_languages.ts
+ * 2. Detect target script from language using profile language script property
+ * 3. Apply phonetic rules dynamically (no word lookup)
+ * 4. Works for ANY language pair without maintenance
  * 
  * PERFORMANCE: < 2ms for typical messages (sync, instant)
  * 
  * ANY LANGUAGE SUPPORT:
+ * - Supports 900+ languages from profile lists
  * - Unknown languages default to Latin (passthrough)
  * - All operations are null-safe
  * - No errors thrown for unsupported languages
  */
+
+import { menLanguages, type MenLanguage } from '@/data/men_languages';
+import { womenLanguages, type WomenLanguage } from '@/data/women_languages';
 
 // ============================================================
 // UNICODE SCRIPT BLOCKS - Dynamic detection
@@ -460,108 +465,107 @@ const SCRIPT_BLOCKS: Record<string, ScriptBlock> = {
 };
 
 // ============================================================
-// LANGUAGE TO SCRIPT MAPPING - Extended for 386+ languages
-// Maps language names to script block names
+// LANGUAGE TO SCRIPT MAPPING - Dynamically built from 900+ profile languages
+// Maps language names/codes to script block names
 // ============================================================
 
-const LANGUAGE_SCRIPT_MAP: Record<string, string> = {
-  // Indic languages - Devanagari script
-  'hindi': 'devanagari', 'marathi': 'devanagari', 'sanskrit': 'devanagari',
-  'nepali': 'devanagari', 'konkani': 'devanagari', 'bodo': 'devanagari',
-  'dogri': 'devanagari', 'maithili': 'devanagari', 'bhojpuri': 'devanagari',
-  'chhattisgarhi': 'devanagari', 'rajasthani': 'devanagari', 'marwari': 'devanagari',
-  'mewari': 'devanagari', 'haryanvi': 'devanagari', 'magahi': 'devanagari',
-  'angika': 'devanagari', 'bajjika': 'devanagari', 'awadhi': 'devanagari',
-  'bundeli': 'devanagari', 'bagheli': 'devanagari', 'garhwali': 'devanagari',
-  'kumaoni': 'devanagari', 'pahari': 'devanagari', 'kanauji': 'devanagari',
-  'bhili': 'devanagari', 'gondi': 'devanagari', 'lambadi': 'devanagari',
-  'nagpuri': 'devanagari', 'kurukh': 'devanagari', 'mundari': 'devanagari',
-  'ho': 'devanagari', 'kharia': 'devanagari', 'halbi': 'devanagari',
-  'newari': 'devanagari', 'tamang': 'devanagari', 'gurung': 'devanagari',
-  'magar': 'devanagari', 'tharu': 'devanagari', 'rai': 'devanagari',
-  'pali': 'devanagari', 'warli': 'devanagari',
-  
-  // Indic languages - other scripts
-  'telugu': 'telugu', 'tamil': 'tamil', 'kannada': 'kannada', 'tulu': 'kannada',
-  'malayalam': 'malayalam', 'bengali': 'bengali', 'assamese': 'bengali',
-  'gujarati': 'gujarati', 'punjabi': 'punjabi', 'odia': 'odia', 'oriya': 'odia',
-  'manipuri': 'bengali', 'meitei': 'bengali', 'chittagonian': 'bengali',
-  'sylheti': 'bengali', 'kodava': 'kannada', 'badaga': 'kannada',
-  'toda': 'tamil', 'irula': 'tamil', 'kuruma': 'malayalam',
-  
-  // Middle Eastern & Arabic script
-  'arabic': 'arabic', 'urdu': 'arabic', 'persian': 'arabic', 'farsi': 'arabic',
-  'pashto': 'arabic', 'dari': 'arabic', 'uighur': 'arabic', 'sindhi': 'arabic',
-  'kashmiri': 'arabic', 'balochi': 'arabic', 'brahui': 'arabic', 'saraiki': 'arabic',
-  'hindko': 'arabic', 'shina': 'arabic', 'burushaski': 'arabic', 'khowar': 'arabic',
-  'kalasha': 'arabic', 'rohingya': 'arabic', 'egyptian arabic': 'arabic',
-  'levantine arabic': 'arabic', 'gulf arabic': 'arabic', 'maghrebi arabic': 'arabic',
-  'sudanese arabic': 'arabic',
-  
-  // Hebrew script
-  'hebrew': 'hebrew', 'yiddish': 'hebrew',
-  
-  // East Asian scripts
-  'thai': 'thai', 'lao': 'thai',
-  'japanese': 'japanese', 'korean': 'korean', 
-  'chinese (mandarin)': 'chinese', 'chinese': 'chinese', 'mandarin': 'chinese',
-  'cantonese': 'chinese', 'wu chinese': 'chinese', 'min nan': 'chinese',
-  'hakka': 'chinese', 'xiang': 'chinese', 'gan': 'chinese',
-  
-  // Cyrillic script
-  'russian': 'russian', 'ukrainian': 'russian', 'bulgarian': 'russian',
-  'serbian': 'russian', 'macedonian': 'russian', 'belarusian': 'russian',
-  'kazakh': 'russian', 'kyrgyz': 'russian', 'tajik': 'russian',
-  'tatar': 'russian', 'bashkir': 'russian', 'chuvash': 'russian',
-  'sakha': 'russian', 'buryat': 'russian', 'kalmyk': 'russian',
-  'mongolian': 'russian', 'chechen': 'russian', 'avar': 'russian',
-  'rusyn': 'russian',
-  
-  // Greek script
+// Script name normalization: maps profile script names to our SCRIPT_BLOCKS keys
+const SCRIPT_NAME_TO_BLOCK: Record<string, string> = {
+  'devanagari': 'devanagari',
+  'telugu': 'telugu',
+  'tamil': 'tamil',
+  'kannada': 'kannada',
+  'malayalam': 'malayalam',
+  'bengali': 'bengali',
+  'gujarati': 'gujarati',
+  'gurmukhi': 'punjabi',
+  'odia': 'odia',
+  'arabic': 'arabic',
+  'hebrew': 'hebrew',
+  'thai': 'thai',
+  'cyrillic': 'russian',
   'greek': 'greek',
-  
-  // Other scripts (no transliteration available - will passthrough)
-  'burmese': 'myanmar', 'shan': 'myanmar', 'karen': 'myanmar', 'mon': 'myanmar',
-  'khmer': 'khmer', 'sinhala': 'sinhala', 'sinhalese': 'sinhala',
-  'amharic': 'ethiopic', 'tigrinya': 'ethiopic',
-  'georgian': 'georgian', 'armenian': 'armenian',
-  'tibetan': 'tibetan', 'dzongkha': 'tibetan', 'sherpa': 'tibetan', 'bhutia': 'tibetan',
-  'santali': 'ol_chiki', 'limbu': 'limbu', 'lepcha': 'lepcha',
-  'yi': 'yi', 'lisu': 'lisu', 'dhivehi': 'thaana',
-  'chakma': 'chakma',
-  
-  // Latin script languages - empty string means no conversion needed
-  'english': '', 'spanish': '', 'french': '', 'german': '', 'italian': '',
-  'portuguese': '', 'dutch': '', 'polish': '', 'czech': '', 'romanian': '',
-  'hungarian': '', 'turkish': '', 'vietnamese': '', 'indonesian': '',
-  'malay': '', 'tagalog': '', 'filipino': '', 'swahili': '', 'javanese': '',
-  'sundanese': '', 'cebuano': '', 'ilocano': '', 'minangkabau': '', 'acehnese': '',
-  'balinese': '', 'banjar': '', 'kurdish': '', 'turkmen': '', 'uzbek': '',
-  'azerbaijani': '', 'albanian': '', 'bosnian': '', 'croatian': '', 'slovenian': '',
-  'slovak': '', 'lithuanian': '', 'latvian': '', 'estonian': '', 'finnish': '',
-  'swedish': '', 'norwegian': '', 'danish': '', 'icelandic': '', 'irish': '',
-  'welsh': '', 'scottish gaelic': '', 'basque': '', 'catalan': '', 'galician': '',
-  'maltese': '', 'luxembourgish': '', 'occitan': '', 'breton': '', 'frisian': '',
-  'faroese': '', 'aragonese': '', 'asturian': '', 'corsican': '', 'sardinian': '',
-  'friulian': '', 'ligurian': '', 'lombard': '', 'sicilian': '', 'venetian': '',
-  'sorbian': '', 'kashubian': '', 'silesian': '', 'afrikaans': '', 'zulu': '',
-  'xhosa': '', 'yoruba': '', 'igbo': '', 'hausa': '', 'somali': '', 'oromo': '',
-  'shona': '', 'setswana': '', 'sesotho': '', 'kinyarwanda': '', 'kirundi': '',
-  'luganda': '', 'chichewa': '', 'malagasy': '', 'wolof': '', 'fulani': '',
-  'bambara': '', 'lingala': '', 'twi': '', 'ewe': '', 'akan': '', 'fon': '',
-  'moore': '', 'kikuyu': '', 'luo': '', 'kanuri': '', 'ndebele': '', 'siswati': '',
-  'venda': '', 'tsonga': '', 'sepedi': '', 'dinka': '', 'nuer': '', 'lozi': '',
-  'tumbuka': '', 'bemba': '', 'quechua': '', 'guarani': '', 'aymara': '',
-  'haitian creole': '', 'nahuatl': '', 'maya': '', 'mapudungun': '', 'hawaiian': '',
-  'maori': '', 'samoan': '', 'tongan': '', 'fijian': '', 'tahitian': '',
-  'tok pisin': '', 'bislama': '', 'crimean tatar': '', 'karakalpak': '',
-  'hmong': '', 'zhuang': '', 'naxi': '', 'bai': '', 'esperanto': '', 'latin': '',
-  'romani': '', 'ladino': '', 'mizo': '', 'khasi': '', 'garo': '', 'karbi': '', 'nagamese': '',
-  'kokborok': '', 'rabha': '', 'mishing': '', 'nyishi': '', 'apatani': '', 'adi': '',
-  'ao': '', 'lotha': '', 'sumi': '', 'angami': '', 'tangkhul': '', 'paite': '',
-  'thadou': '', 'rongmei': '', 'tangsa': '', 'wancho': '', 'nocte': '', 'nicobarese': '',
-  'cham': '', 'coorgi': 'kannada',
+  'japanese': 'japanese',
+  'hiragana': 'japanese',
+  'katakana': 'japanese',
+  'hangul': 'korean',
+  'han': 'chinese',
+  'myanmar': 'myanmar',
+  'khmer': 'khmer',
+  'lao': 'thai', // Lao uses similar phonetic patterns to Thai
+  'sinhala': 'sinhala',
+  'georgian': 'georgian',
+  'armenian': 'armenian',
+  'ethiopic': 'ethiopic',
+  'tibetan': 'tibetan',
+  'thaana': 'arabic', // Dhivehi uses similar patterns to Arabic
+  'ol_chiki': 'ol_chiki',
+  'limbu': 'limbu',
+  'lepcha': 'lepcha',
+  'saurashtra': 'saurashtra',
+  'buginese': 'buginese',
+  // Latin script - empty string means no conversion needed
+  'latin': '',
 };
+
+// Dynamically build language-to-script map from profile languages
+function buildLanguageScriptMap(): Record<string, string> {
+  const map: Record<string, string> = {};
+  
+  // Combine both men and women language lists (they're identical but we include both for safety)
+  const allLanguages = [...menLanguages, ...womenLanguages];
+  const seen = new Set<string>();
+  
+  for (const lang of allLanguages) {
+    // Skip duplicates
+    const key = lang.code.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    
+    const scriptName = lang.script?.toLowerCase() || 'latin';
+    const blockName = SCRIPT_NAME_TO_BLOCK[scriptName] ?? '';
+    
+    // Map by language code
+    map[lang.code.toLowerCase()] = blockName;
+    
+    // Map by language name (normalized)
+    const normalizedName = lang.name.toLowerCase().trim();
+    if (!map[normalizedName]) {
+      map[normalizedName] = blockName;
+    }
+    
+    // Also add native name mapping if it's ASCII
+    if (lang.nativeName && /^[a-zA-Z\s]+$/.test(lang.nativeName)) {
+      const nativeNormalized = lang.nativeName.toLowerCase().trim();
+      if (!map[nativeNormalized]) {
+        map[nativeNormalized] = blockName;
+      }
+    }
+  }
+  
+  // Add common aliases
+  const aliases: Record<string, string> = {
+    'bangla': map['bn'] || map['bengali'] || 'bengali',
+    'panjabi': map['pa'] || map['punjabi'] || 'punjabi',
+    'oriya': map['or'] || map['odia'] || 'odia',
+    'farsi': map['fa'] || map['persian'] || 'arabic',
+    'mandarin': map['zh'] || map['chinese (mandarin)'] || 'chinese',
+    'sinhalese': map['si'] || map['sinhala'] || 'sinhala',
+  };
+  
+  for (const [alias, value] of Object.entries(aliases)) {
+    if (!map[alias]) {
+      map[alias] = value;
+    }
+  }
+  
+  return map;
+}
+
+// Build the map once at module load time
+const LANGUAGE_SCRIPT_MAP: Record<string, string> = buildLanguageScriptMap();
+
+// Note: LANGUAGE_SCRIPT_MAP now contains 900+ language mappings from profile language lists
 
 // ============================================================
 // CORE TRANSLITERATION ENGINE - Dynamic, no hardcoding
@@ -974,118 +978,87 @@ export function needsScriptConversion(language: string): boolean {
 }
 
 /**
+ * Build language code to name mapping from profile languages
+ */
+function buildLanguageCodeToNameMap(): Record<string, string> {
+  const map: Record<string, string> = {};
+  const allLanguages = [...menLanguages, ...womenLanguages];
+  const seen = new Set<string>();
+  
+  for (const lang of allLanguages) {
+    const code = lang.code.toLowerCase();
+    if (seen.has(code)) continue;
+    seen.add(code);
+    
+    const name = lang.name.toLowerCase();
+    map[code] = name;
+    
+    // Also add 3-letter ISO codes where applicable
+    // Common 3-letter variants
+    const threeLetterCodes: Record<string, string> = {
+      'en': 'eng', 'hi': 'hin', 'te': 'tel', 'ta': 'tam', 'kn': 'kan',
+      'ml': 'mal', 'bn': 'ben', 'gu': 'guj', 'pa': 'pan', 'mr': 'mar',
+      'or': 'ori', 'as': 'asm', 'ar': 'ara', 'ur': 'urd', 'ru': 'rus',
+      'zh': 'zho', 'ja': 'jpn', 'ko': 'kor', 'th': 'tha', 'he': 'heb',
+      'el': 'ell', 'es': 'spa', 'fr': 'fra', 'de': 'deu', 'pt': 'por',
+      'it': 'ita', 'nl': 'nld', 'pl': 'pol', 'ro': 'ron', 'sv': 'swe',
+      'cs': 'ces', 'hu': 'hun', 'tr': 'tur', 'vi': 'vie', 'id': 'ind',
+      'ms': 'msa', 'tl': 'tgl', 'sw': 'swa', 'uk': 'ukr', 'fa': 'fas',
+      'ne': 'nep', 'si': 'sin', 'my': 'mya', 'km': 'khm', 'lo': 'lao',
+      'ka': 'kat', 'hy': 'hye', 'am': 'amh', 'ti': 'tir', 'sd': 'snd',
+      'ks': 'kas', 'bo': 'bod', 'dz': 'dzo', 'ps': 'pus', 'ku': 'kur',
+      'az': 'aze', 'uz': 'uzb', 'kk': 'kaz', 'ky': 'kir', 'tg': 'tgk',
+      'tk': 'tuk', 'mn': 'mon', 'bg': 'bul', 'sr': 'srp', 'hr': 'hrv',
+      'sl': 'slv', 'sk': 'slk', 'lt': 'lit', 'lv': 'lav', 'et': 'est',
+      'fi': 'fin', 'da': 'dan', 'no': 'nor', 'is': 'isl', 'ga': 'gle',
+      'cy': 'cym', 'eu': 'eus', 'ca': 'cat', 'gl': 'glg', 'mt': 'mlt',
+      'sq': 'sqi', 'bs': 'bos', 'mk': 'mkd', 'be': 'bel', 'yo': 'yor',
+      'ig': 'ibo', 'ha': 'hau', 'zu': 'zul', 'xh': 'xho', 'so': 'som',
+      'rw': 'kin', 'mg': 'mlg', 'jv': 'jav', 'su': 'sun', 'mi': 'mri',
+      'sm': 'smo', 'eo': 'epo', 'la': 'lat', 'yi': 'yid', 'ug': 'uig',
+      'af': 'afr',
+    };
+    
+    if (threeLetterCodes[code]) {
+      map[threeLetterCodes[code]] = name;
+    }
+  }
+  
+  // Add common aliases
+  map['bangla'] = 'bengali';
+  map['panjabi'] = 'punjabi';
+  map['oriya'] = 'odia';
+  map['farsi'] = 'persian';
+  map['mandarin'] = 'chinese (mandarin)';
+  map['chinese'] = 'chinese (mandarin)';
+  map['sinhalese'] = 'sinhala';
+  map['myanmar'] = 'burmese';
+  map['filipino'] = 'tagalog';
+  map['azeri'] = 'azerbaijani';
+  map['asamiya'] = 'assamese';
+  
+  return map;
+}
+
+// Build the code-to-name map once
+const LANGUAGE_CODE_TO_NAME: Record<string, string> = buildLanguageCodeToNameMap();
+
+/**
  * Normalize language name - handles any input safely
+ * Uses dynamically built map from 900+ profile languages
  */
 export function normalizeLanguage(lang: string): string {
   if (!lang || typeof lang !== 'string') return 'english';
   const l = lang.toLowerCase().trim();
   if (!l) return 'english';
   
-  // Comprehensive language code to name mapping
-  const aliases: Record<string, string> = {
-    // Common codes
-    'en': 'english', 'eng': 'english', 'hi': 'hindi', 'hin': 'hindi',
-    'te': 'telugu', 'tel': 'telugu', 'ta': 'tamil', 'tam': 'tamil',
-    'kn': 'kannada', 'kan': 'kannada', 'ml': 'malayalam', 'mal': 'malayalam',
-    'bn': 'bengali', 'ben': 'bengali', 'bangla': 'bengali',
-    'gu': 'gujarati', 'guj': 'gujarati',
-    'pa': 'punjabi', 'pan': 'punjabi', 'panjabi': 'punjabi',
-    'or': 'odia', 'ori': 'odia', 'oriya': 'odia',
-    'mr': 'marathi', 'mar': 'marathi',
-    'as': 'assamese', 'asm': 'assamese', 'asamiya': 'assamese',
-    'ar': 'arabic', 'ara': 'arabic',
-    'ur': 'urdu', 'urd': 'urdu',
-    'ru': 'russian', 'rus': 'russian',
-    'zh': 'chinese (mandarin)', 'zho': 'chinese (mandarin)', 'chinese': 'chinese (mandarin)', 'mandarin': 'chinese (mandarin)',
-    'ja': 'japanese', 'jpn': 'japanese',
-    'ko': 'korean', 'kor': 'korean',
-    'th': 'thai', 'tha': 'thai',
-    'he': 'hebrew', 'heb': 'hebrew',
-    'el': 'greek', 'ell': 'greek',
-    'es': 'spanish', 'spa': 'spanish',
-    'fr': 'french', 'fra': 'french',
-    'de': 'german', 'deu': 'german',
-    'pt': 'portuguese', 'por': 'portuguese',
-    'it': 'italian', 'ita': 'italian',
-    'nl': 'dutch', 'nld': 'dutch',
-    'pl': 'polish', 'pol': 'polish',
-    'ro': 'romanian', 'ron': 'romanian',
-    'sv': 'swedish', 'swe': 'swedish',
-    'cs': 'czech', 'ces': 'czech',
-    'hu': 'hungarian', 'hun': 'hungarian',
-    'tr': 'turkish', 'tur': 'turkish',
-    'vi': 'vietnamese', 'vie': 'vietnamese',
-    'id': 'indonesian', 'ind': 'indonesian',
-    'ms': 'malay', 'msa': 'malay',
-    'tl': 'tagalog', 'tgl': 'tagalog', 'filipino': 'tagalog',
-    'sw': 'swahili', 'swa': 'swahili',
-    'uk': 'ukrainian', 'ukr': 'ukrainian',
-    'fa': 'persian', 'fas': 'persian', 'farsi': 'persian',
-    'ne': 'nepali', 'nep': 'nepali',
-    'si': 'sinhala', 'sin': 'sinhala', 'sinhalese': 'sinhala',
-    'my': 'burmese', 'mya': 'burmese', 'myanmar': 'burmese',
-    'km': 'khmer', 'khm': 'khmer',
-    'lo': 'lao', 'lao': 'lao',
-    'ka': 'georgian', 'kat': 'georgian',
-    'hy': 'armenian', 'hye': 'armenian',
-    'am': 'amharic', 'amh': 'amharic',
-    'ti': 'tigrinya', 'tir': 'tigrinya',
-    'sd': 'sindhi', 'snd': 'sindhi',
-    'ks': 'kashmiri', 'kas': 'kashmiri',
-    'bo': 'tibetan', 'bod': 'tibetan',
-    'dz': 'dzongkha', 'dzo': 'dzongkha',
-    'ps': 'pashto', 'pus': 'pashto',
-    'ku': 'kurdish', 'kur': 'kurdish',
-    'az': 'azerbaijani', 'aze': 'azerbaijani', 'azeri': 'azerbaijani',
-    'uz': 'uzbek', 'uzb': 'uzbek',
-    'kk': 'kazakh', 'kaz': 'kazakh',
-    'ky': 'kyrgyz', 'kir': 'kyrgyz',
-    'tg': 'tajik', 'tgk': 'tajik',
-    'tk': 'turkmen', 'tuk': 'turkmen',
-    'mn': 'mongolian', 'mon': 'mongolian',
-    'bg': 'bulgarian', 'bul': 'bulgarian',
-    'sr': 'serbian', 'srp': 'serbian',
-    'hr': 'croatian', 'hrv': 'croatian',
-    'sl': 'slovenian', 'slv': 'slovenian',
-    'sk': 'slovak', 'slk': 'slovak',
-    'lt': 'lithuanian', 'lit': 'lithuanian',
-    'lv': 'latvian', 'lav': 'latvian',
-    'et': 'estonian', 'est': 'estonian',
-    'fi': 'finnish', 'fin': 'finnish',
-    'da': 'danish', 'dan': 'danish',
-    'no': 'norwegian', 'nor': 'norwegian',
-    'is': 'icelandic', 'isl': 'icelandic',
-    'ga': 'irish', 'gle': 'irish',
-    'cy': 'welsh', 'cym': 'welsh',
-    'eu': 'basque', 'eus': 'basque',
-    'ca': 'catalan', 'cat': 'catalan',
-    'gl': 'galician', 'glg': 'galician',
-    'mt': 'maltese', 'mlt': 'maltese',
-    'sq': 'albanian', 'sqi': 'albanian',
-    'bs': 'bosnian', 'bos': 'bosnian',
-    'mk': 'macedonian', 'mkd': 'macedonian',
-    'be': 'belarusian', 'bel': 'belarusian',
-    'yo': 'yoruba', 'yor': 'yoruba',
-    'ig': 'igbo', 'ibo': 'igbo',
-    'ha': 'hausa', 'hau': 'hausa',
-    'zu': 'zulu', 'zul': 'zulu',
-    'xh': 'xhosa', 'xho': 'xhosa',
-    'so': 'somali', 'som': 'somali',
-    'rw': 'kinyarwanda', 'kin': 'kinyarwanda',
-    'mg': 'malagasy', 'mlg': 'malagasy',
-    'jv': 'javanese', 'jav': 'javanese',
-    'su': 'sundanese', 'sun': 'sundanese',
-    'mi': 'maori', 'mri': 'maori',
-    'sm': 'samoan', 'smo': 'samoan',
-    'haw': 'hawaiian',
-    'eo': 'esperanto', 'epo': 'esperanto',
-    'la': 'latin', 'lat': 'latin',
-    'yi': 'yiddish', 'yid': 'yiddish',
-    'ug': 'uighur', 'uig': 'uighur',
-    'af': 'afrikaans', 'afr': 'afrikaans',
-  };
+  // Check if it's a code we know
+  if (LANGUAGE_CODE_TO_NAME[l]) {
+    return LANGUAGE_CODE_TO_NAME[l];
+  }
   
-  return aliases[l] || l;
+  // Already a language name
+  return l;
 }
 
 /**
