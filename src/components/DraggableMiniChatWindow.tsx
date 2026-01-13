@@ -543,13 +543,18 @@ const DraggableMiniChatWindow = ({
         async (payload: any) => {
           const newProfile = payload.new;
           
-          // Check if partner went offline (last_active_at is more than 2 minutes ago)
+          // Check if partner went offline (last_active_at is more than 5 minutes ago)
+          // Use 5 minutes instead of 2 to avoid false disconnects during active chats
           if (newProfile.last_active_at) {
             const lastActive = new Date(newProfile.last_active_at).getTime();
-            const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
-            const isNowOffline = lastActive < twoMinutesAgo;
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+            const isNowOffline = lastActive < fiveMinutesAgo;
             
-            if (partnerOnlineStatus && isNowOffline) {
+            // Only disconnect if partner was online AND went offline AND no recent messages
+            // Skip if there was activity in the chat within the last minute (they're still chatting)
+            const recentChatActivity = Date.now() - lastActivityTime < 60 * 1000;
+            
+            if (partnerOnlineStatus && isNowOffline && !recentChatActivity) {
               console.log("Partner went offline (profiles), disconnecting...");
               toast({
                 title: "Partner Disconnected",
