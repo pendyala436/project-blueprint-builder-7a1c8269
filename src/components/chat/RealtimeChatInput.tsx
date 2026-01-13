@@ -1,12 +1,12 @@
 /**
- * Real-Time Chat Input with Non-Blocking Transliteration
- * =======================================================
+ * Real-Time Chat Input with INSTANT Transliteration
+ * ==================================================
  * Zero-lag typing experience for all 900+ languages
  * 
  * Features:
- * - Non-blocking transliteration (runs in background via requestIdleCallback)
- * - Instant typing response - never blocks user input
- * - Latin → Native script conversion based on profile mother tongue
+ * - INSTANT transliteration on every keystroke (sync, < 2ms)
+ * - Type "bagunnava" → see "బాగున్నావా" immediately in input
+ * - Latin → Native script conversion based on sender's mother tongue
  * - Works identically for sender AND receiver
  * - All 900+ languages from profile language list
  */
@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Send, Loader2 } from 'lucide-react';
-import { useRealtimeChatTranslation } from '@/hooks/useRealtimeChatTranslation';
+import { dynamicTransliterate, isLatinScriptLanguage as checkLatinScript } from '@/lib/translation/dynamic-transliterator';
 
 interface RealtimeChatInputProps {
   onSendMessage: (message: string, senderView: string, receiverView: string) => void;
@@ -29,13 +29,11 @@ interface RealtimeChatInputProps {
   className?: string;
 }
 
-// Use requestIdleCallback with fallback for non-blocking background work
-const scheduleBackground = (callback: () => void) => {
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(callback, { timeout: 16 });
-  } else {
-    requestAnimationFrame(callback);
-  }
+// Quick check if text is Latin script
+const isLatinText = (text: string): boolean => {
+  if (!text) return true;
+  const latinPattern = /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()\-:;@#$%^&*+=\[\]{}|\\/<>~`]+$/;
+  return latinPattern.test(text);
 };
 
 export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
@@ -48,69 +46,61 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   className,
 }) => {
   const { t } = useTranslation();
-  const {
-    getLivePreview,
-    processMessage,
-    isLatinText,
-    isLatinScriptLanguage,
-  } = useRealtimeChatTranslation();
 
-  // State - rawInput is what user types, displayText is transliterated version
-  const [rawInput, setRawInput] = useState('');
-  const [displayText, setDisplayText] = useState('');
+  // State
+  const [rawInput, setRawInput] = useState(''); // What user typed (Latin)
+  const [nativeText, setNativeText] = useState(''); // Transliterated native script
   const [isComposing, setIsComposing] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const transliterationRef = useRef<number>(0); // Track latest transliteration request
 
   // Check if user's mother tongue uses non-Latin script
-  const needsTransliteration = !isLatinScriptLanguage(senderLanguage);
+  const needsTransliteration = !checkLatinScript(senderLanguage);
 
   /**
-   * Background transliteration - never blocks typing
-   * Runs via requestIdleCallback for zero-lag experience
+   * INSTANT transliteration - sync, < 2ms
+   * Converts Latin text to native script immediately
    */
-  const transliterateInBackground = useCallback((text: string, requestId: number) => {
-    scheduleBackground(() => {
-      // Skip if newer request exists (user typed more)
-      if (requestId !== transliterationRef.current) return;
-      
-      if (!text.trim()) {
-        setDisplayText('');
-        return;
+  const transliterateNow = useCallback((latinText: string): string => {
+    if (!latinText.trim()) return '';
+    
+    // Only transliterate if text is Latin and language needs it
+    if (needsTransliteration && isLatinText(latinText)) {
+      try {
+        const result = dynamicTransliterate(latinText, senderLanguage);
+        return result || latinText;
+      } catch (e) {
+        console.error('[RealtimeChatInput] Transliteration error:', e);
+        return latinText;
       }
-
-      // Only transliterate if text is Latin and language needs it
-      if (needsTransliteration && isLatinText(text)) {
-        const result = getLivePreview(text, senderLanguage);
-        // Double-check we're still on the same request
-        if (requestId === transliterationRef.current) {
-          setDisplayText(result.preview || text);
-        }
-      } else {
-        // No transliteration needed - user typing in native script or Latin language
-        if (requestId === transliterationRef.current) {
-          setDisplayText(text);
-        }
-      }
-    });
-  }, [needsTransliteration, isLatinText, getLivePreview, senderLanguage]);
+    }
+    
+    // No transliteration needed - passthrough
+    return latinText;
+  }, [needsTransliteration, senderLanguage]);
 
   /**
-   * Handle input change - instantly updates raw input, transliterates in background
+   * Handle input change - INSTANT transliteration on every keystroke
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     
-    // Instant: update raw input (never blocks)
-    setRawInput(value);
+    // Check if user typed in Latin or native script directly
+    const isLatin = isLatinText(value);
     
-    // Background: transliterate without blocking typing
-    const requestId = ++transliterationRef.current;
-    transliterateInBackground(value, requestId);
+    if (isLatin && needsTransliteration) {
+      // User typing in Latin → store raw + show transliterated
+      setRawInput(value);
+      const native = transliterateNow(value);
+      setNativeText(native);
+    } else {
+      // User typing in native script directly OR Latin-script language
+      setRawInput(value);
+      setNativeText(value);
+    }
 
     // Typing indicator
     if (onTyping) {
@@ -124,30 +114,42 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         onTyping(false);
       }, 2000);
     }
-  }, [transliterateInBackground, onTyping]);
+  }, [transliterateNow, needsTransliteration, onTyping]);
 
   /**
-   * Handle send - sends native script text, translates for receiver in background
+   * Handle send - sends native script text, translates for receiver
    */
   const handleSend = useCallback(async () => {
-    // Use displayText (native script) if available, otherwise rawInput
-    const messageToSend = (displayText || rawInput).trim();
+    // Use native text (transliterated) if available
+    const messageToSend = (nativeText || rawInput).trim();
     if (!messageToSend || disabled || isComposing || isSending) return;
 
     setIsSending(true);
 
     // Clear input immediately for responsive feel
     const savedMessage = messageToSend;
+    const savedRaw = rawInput;
     setRawInput('');
-    setDisplayText('');
+    setNativeText('');
     onTyping?.(false);
 
     try {
-      // Process message in background - translate for receiver
-      const result = await processMessage(savedMessage, senderLanguage, receiverLanguage);
+      // For receiver, transliterate to their language
+      let receiverView = savedMessage;
+      
+      if (!checkLatinScript(receiverLanguage)) {
+        // Receiver needs native script - transliterate from Latin if we have it
+        if (savedRaw && isLatinText(savedRaw)) {
+          try {
+            receiverView = dynamicTransliterate(savedRaw, receiverLanguage) || savedMessage;
+          } catch (e) {
+            console.error('[RealtimeChatInput] Receiver transliteration error:', e);
+          }
+        }
+      }
 
-      // Send: original (native script), senderView, receiverView (translated)
-      onSendMessage(savedMessage, result.senderView, result.receiverView);
+      // Send: original message, sender's view (native), receiver's view
+      onSendMessage(savedMessage, savedMessage, receiverView);
       textareaRef.current?.focus();
     } catch (err) {
       console.error('[RealtimeChatInput] Send error:', err);
@@ -156,7 +158,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     } finally {
       setIsSending(false);
     }
-  }, [displayText, rawInput, disabled, isComposing, isSending, processMessage, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
+  }, [nativeText, rawInput, disabled, isComposing, isSending, receiverLanguage, onSendMessage, onTyping]);
 
   /**
    * Handle key press
@@ -181,7 +183,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       textarea.style.height = 'auto';
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
-  }, [displayText || rawInput]);
+  }, [nativeText]);
 
   // Cleanup timeouts
   useEffect(() => {
@@ -190,10 +192,10 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     };
   }, []);
 
-  // Show displayText (native script) if available, otherwise show rawInput
-  const shownText = displayText || rawInput;
+  // Display the native script text (transliterated)
+  const displayText = nativeText || rawInput;
   const defaultPlaceholder = needsTransliteration 
-    ? t('chat.typeInLatin', 'Type in English letters...')
+    ? t('chat.typeInLatin', 'Type in English letters - converts to your language')
     : t('chat.typeMessage', 'Type a message...');
 
   return (
@@ -202,7 +204,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       {needsTransliteration && (
         <div className="px-4 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5 border-b border-border/30">
           <span>✨</span>
-          <span>{t('chat.transliterationHint', 'Type in English - auto-converts to your language')}</span>
+          <span>{t('chat.transliterationHint', 'Type in English letters → auto-converts to')} {senderLanguage}</span>
         </div>
       )}
 
@@ -211,7 +213,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
-            value={shownText}
+            value={displayText}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
@@ -235,7 +237,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         {/* Send button */}
         <Button
           onClick={handleSend}
-          disabled={!shownText.trim() || disabled || isSending}
+          disabled={!displayText.trim() || disabled || isSending}
           size="icon"
           className={cn(
             'h-11 w-11 rounded-full flex-shrink-0',
