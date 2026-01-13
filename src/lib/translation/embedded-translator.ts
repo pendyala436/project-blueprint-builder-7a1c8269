@@ -21,7 +21,6 @@
  */
 
 import { dynamicTransliterate, reverseTransliterate } from './dynamic-transliterator';
-import { spellCorrectForChat } from './phonetic-symspell';
 import { languages as allLanguages, type Language } from '@/data/languages';
 
 // ============================================================
@@ -396,12 +395,11 @@ export async function translate(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // Apply spell correction
-  const correctedText = spellCorrectForChat(trimmed, normSource);
-  const detected = autoDetectLanguage(correctedText);
+  // Use text directly (Gboard typing handles input correctly)
+  const detected = autoDetectLanguage(trimmed);
   const actualSource = detected.isLatin ? normSource : detected.language;
 
-  let translatedText = correctedText;
+  let translatedText = trimmed;
   let englishPivot: string | undefined;
   let wasTranslated = false;
   let wasTransliterated = false;
@@ -412,18 +410,18 @@ export async function translate(
 
   if (sourceIsEnglish && targetIsEnglish) {
     // English to English - no translation needed
-    translatedText = correctedText;
+    translatedText = trimmed;
   } else if (sourceIsEnglish) {
     // English → Target (direct, no pivot needed) - use effectiveTarget for proxy languages
-    translatedText = translateFromEnglish(correctedText, effectiveTarget);
+    translatedText = translateFromEnglish(trimmed, effectiveTarget);
     wasTranslated = true;
   } else if (targetIsEnglish) {
     // Source → English (direct, no pivot needed)
-    translatedText = translateToEnglish(correctedText, actualSource);
+    translatedText = translateToEnglish(trimmed, actualSource);
     wasTranslated = true;
   } else {
     // Source → English → Target (full pivot) - use effectiveTarget for proxy languages
-    englishPivot = translateToEnglish(correctedText, actualSource);
+    englishPivot = translateToEnglish(trimmed, actualSource);
     translatedText = translateFromEnglish(englishPivot, effectiveTarget);
     wasTranslated = true;
   }
@@ -437,8 +435,7 @@ export async function translate(
     }
   }
 
-  // Apply target language spell correction - use effectiveTarget
-  translatedText = spellCorrectForChat(translatedText, effectiveTarget);
+  // No spell correction - Gboard typing provides clean input
 
   const result: EmbeddedTranslationResult = {
     text: translatedText,
@@ -731,16 +728,14 @@ export async function processMessageForChat(
     };
   }
 
-  // Apply spell correction
-  const corrected = spellCorrectForChat(trimmed, senderLanguage);
-
+  // Use text directly - Gboard typing provides clean input
   // SENDER VIEW: Convert to sender's native script
-  let senderView = corrected;
+  let senderView = trimmed;
   let wasTransliterated = false;
 
-  if (needsScriptConversion(senderLanguage) && isLatinText(corrected)) {
-    const nativeResult = transliterateToNative(corrected, senderLanguage);
-    if (nativeResult !== corrected) {
+  if (needsScriptConversion(senderLanguage) && isLatinText(trimmed)) {
+    const nativeResult = transliterateToNative(trimmed, senderLanguage);
+    if (nativeResult !== trimmed) {
       senderView = nativeResult;
       wasTransliterated = true;
     }

@@ -180,19 +180,9 @@ export type {
 } from './embedded-translator';
 
 // ============================================================
-// PHONETIC SYMSPELL - Spell correction for 300+ languages
+// GBOARD TYPING - Pure dynamic transliteration (no phonetic spell correction)
 // ============================================================
-
-export {
-  correctWord,
-  correctText,
-  getSuggestions,
-  spellCorrectForChat,
-  applyLanguagePhonetics,
-  editDistance,
-  phoneticNormalize,
-  generatePhoneticVariations,
-} from './phonetic-symspell';
+// Note: Phonetic spell correction removed - using pure Gboard typing via dynamic-transliterator
 
 // ============================================================
 // DYNAMIC TRANSLITERATOR - Script conversion for 1000+ languages
