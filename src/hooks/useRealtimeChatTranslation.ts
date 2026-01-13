@@ -1,37 +1,27 @@
 /**
- * Real-Time Chat Translation Hook (900+ Languages)
- * =================================================
+ * Real-Time Chat Translation Hook (Unified)
+ * ==========================================
  * 
- * TYPING: Gboard Input Codes (NOT phonetic)
- * - Uses standard Gboard keyboard codes for all 900+ languages
- * - Example: "namaste" → "नमस्ते" (Hindi Gboard codes)
- * - Example: "bagunnava" → "బాగున్నావా" (Telugu Gboard codes)
+ * SINGLE SOURCE: Uses translateText from @/lib/translation/translate
+ * 
+ * TYPING: Dynamic Transliterator
+ * - Uses dynamic transliteration for all 1000+ languages
  * - Instant, sync, client-side conversion
  * 
- * TRANSLATION: Universal Translator
+ * TRANSLATION: Universal Translator (translateText)
  * - Semantic meaning-based translation between any language pair
- * - Example: "బాగున్నావా" (Telugu) → "कैसे हो" (Hindi)
  * - Async via Edge Function
- * 
- * FLOW (Sender → Receiver):
- * 1. Sender types Latin using Gboard codes → Instant native script preview
- * 2. Sender sends → Native text stored and shown to sender
- * 3. Universal Translator translates to receiver's language
- * 4. Receiver sees message in their native language/script
- * 
- * BIDIRECTIONAL: Same flow works for receiver replying back
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  translateText as universalTranslate,
+  translateText,
   isSameLanguage,
   isLatinText,
   isLatinScriptLanguage,
   needsScriptConversion,
   autoDetectLanguage,
   normalizeLanguage,
-  type TranslationResult,
 } from '@/lib/translation/translate';
 import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
 
@@ -73,7 +63,7 @@ function getCacheKey(text: string, lang: string): string {
 }
 
 // ============================================================
-// QUICK HELPER FUNCTIONS (Sync, instant)
+// QUICK HELPER FUNCTIONS
 // ============================================================
 
 function quickTransliterate(text: string, language: string): string {
@@ -147,27 +137,22 @@ export function useRealtimeChatTranslation(
 
     const isLatin = isQuickLatinText(text);
 
-    // Latin script language - no conversion needed
     if (isLatinScriptLanguage(targetLang)) {
       return { preview: text, isLatin, processingTime: performance.now() - startTime };
     }
 
-    // Already native script
     if (!isLatin) {
       return { preview: text, isLatin: false, processingTime: performance.now() - startTime };
     }
 
-    // Check cache
     const cacheKey = getCacheKey(text, targetLang);
     const cached = previewCache.get(cacheKey);
     if (cached) {
       return { preview: cached, isLatin: true, processingTime: performance.now() - startTime };
     }
 
-    // Transliterate Latin to native script
     const preview = quickTransliterate(text, targetLang);
     
-    // Cache with LRU eviction
     if (previewCache.size >= MAX_CACHE) {
       const firstKey = previewCache.keys().next().value;
       if (firstKey) previewCache.delete(firstKey);
@@ -180,7 +165,7 @@ export function useRealtimeChatTranslation(
   const getInstantPreview = getLivePreview;
 
   // ============================================================
-  // PROCESS MESSAGE (Async, Universal Translator)
+  // PROCESS MESSAGE (Async, uses translateText)
   // ============================================================
 
   const processMessage = useCallback(async (
@@ -207,13 +192,11 @@ export function useRealtimeChatTranslation(
     let senderView = trimmed;
     let wasTransliterated = false;
 
-    // Convert Latin input to sender's native script if needed
     if (needsScriptConversion(srcLang) && isLatinText(trimmed)) {
       senderView = quickTransliterate(trimmed, srcLang);
       wasTransliterated = senderView !== trimmed;
     }
 
-    // If same language, receiver sees same as sender
     if (isSameLanguage(srcLang, tgtLang)) {
       return {
         senderView,
@@ -225,14 +208,13 @@ export function useRealtimeChatTranslation(
       };
     }
 
-    // Translate using Universal Translator
     let receiverView = senderView;
     let wasTranslated = false;
 
     try {
-      console.log(`[Chat Translation] Universal Translator: ${srcLang} → ${tgtLang}`);
+      console.log(`[Chat Translation] translateText: ${srcLang} → ${tgtLang}`);
       
-      const result: TranslationResult = await universalTranslate(senderView, srcLang, tgtLang);
+      const result = await translateText(senderView, srcLang, tgtLang);
       
       if (result.isTranslated && result.text !== senderView) {
         receiverView = result.text;
@@ -240,7 +222,7 @@ export function useRealtimeChatTranslation(
         console.log(`[Chat Translation] Translated: "${senderView}" → "${receiverView}"`);
       }
     } catch (err) {
-      console.error('[useRealtimeChatTranslation] Universal Translator error:', err);
+      console.error('[useRealtimeChatTranslation] Translation error:', err);
       setError(err instanceof Error ? err.message : 'Translation failed');
     }
 
@@ -255,7 +237,7 @@ export function useRealtimeChatTranslation(
   }, [senderLanguage, receiverLanguage]);
 
   // ============================================================
-  // TRANSLATE TEXT (Async, Universal Translator)
+  // TRANSLATE TEXT (Async, uses translateText)
   // ============================================================
 
   const translateTextFn = useCallback(async (
@@ -271,7 +253,7 @@ export function useRealtimeChatTranslation(
     }
 
     try {
-      const result = await universalTranslate(text, from, to);
+      const result = await translateText(text, from, to);
       return result.isTranslated ? result.text : text;
     } catch {
       return text;
@@ -333,7 +315,6 @@ export function useRealtimeChatTranslation(
   }, []);
 
   return {
-    // State
     isReady,
     isModelLoading,
     isLoading: isModelLoading,
@@ -341,19 +322,13 @@ export function useRealtimeChatTranslation(
     loadProgress: modelLoadProgress,
     error,
     sameLanguage,
-
-    // Preview (instant)
     getLivePreview,
     getInstantPreview,
     updatePreviewDebounced,
     cancelPreview,
-
-    // Message processing (async via Universal Translator)
     processMessage,
     translateText: translateTextFn,
     translateIncoming,
-
-    // Utilities
     detectInputLanguage,
     autoDetectLanguage: detectInputLanguage,
     checkIsLatinText,
@@ -374,4 +349,4 @@ export function transliterate(text: string, language: string): string {
   return quickTransliterate(text, language);
 }
 
-export { isLatinScriptLanguage, isSameLanguage };
+export { isLatinScriptLanguage, isSameLanguage } from '@/lib/translation/translate';

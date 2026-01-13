@@ -1,55 +1,30 @@
 /**
- * DL-Translate TypeScript Port
- * ============================
- * Inspired by: https://github.com/xhluca/dl-translate
+ * DL-Translate TypeScript Port (Unified)
+ * =======================================
  * 
- * Complete translation solution for chat applications supporting 200+ languages
- * with auto-detection, native script conversion, and bidirectional translation.
+ * SINGLE SOURCE: All translations use translateText from @/lib/translation/translate
+ * 
+ * Inspired by: https://github.com/xhluca/dl-translate
  * 
  * Key Features:
  * 1. Auto-detect source language from text script
  * 2. Convert Latin typing to user's native script (real-time preview)
  * 3. Bidirectional chat translation (sender → receiver, receiver → sender)
  * 4. Same language optimization (native script works, no translation)
- * 5. Support for 200+ languages worldwide
- * 
- * Chat Translation Workflow:
- * -------------------------
- * 1. User A (Hindi speaker) types in English: "Hello, how are you?"
- * 2. Live preview shows: "हैलो, हाउ आर यू?" (in Hindi script)
- * 3. On send, message stored in Hindi script
- * 4. User B (Telugu speaker) receives: "హలో, మీరు ఎలా ఉన్నారు?" (in Telugu)
- * 5. If both users speak same language, no translation - just native script
+ * 5. Support for 1000+ languages
  * 
  * @example
  * ```tsx
- * import { 
- *   translate, 
- *   translateForChat, 
- *   convertToNativeScript,
- *   useDLTranslate 
- * } from '@/lib/dl-translate';
+ * import { translate, translateForChat, convertToNativeScript } from '@/lib/dl-translate';
  * 
- * // Basic translation
- * const result = await translate('Hello world', undefined, 'hindi');
+ * // Basic translation (uses translateText internally)
+ * const result = await translate('Hello world', 'english', 'hindi');
  * console.log(result.text); // "नमस्ते दुनिया"
  * 
- * // Chat translation (sender → receiver)
+ * // Chat translation
  * const chatResult = await translateForChat('How are you?', {
  *   senderLanguage: 'english',
  *   receiverLanguage: 'hindi',
- * });
- * console.log(chatResult.text); // "आप कैसे हैं?"
- * 
- * // Using React hook
- * const { 
- *   processOutgoing, 
- *   processIncoming, 
- *   livePreview,
- *   updateLivePreview 
- * } = useDLTranslate({
- *   userLanguage: 'hindi',
- *   partnerLanguage: 'telugu'
  * });
  * ```
  */
@@ -68,7 +43,7 @@ export type {
   BatchTranslationResult,
 } from './types';
 
-// Core translation functions
+// Core translation functions (all use translateText internally)
 export {
   translate,
   translateForChat,
@@ -79,30 +54,25 @@ export {
   detect,
   clearCache,
   getCacheStats,
-} from './translator';
-
-// Language utilities
-export {
-  LANGUAGES,
-  LANGUAGE_TO_CODE,
-  CODE_TO_LANGUAGE,
-  LATIN_SCRIPT_LANGUAGES,
-  NON_LATIN_LANGUAGES,
-  getSupportedLanguages,
-  detectScript,
   detectLanguage,
+  detectScript,
+  getNativeName,
+  isSameLanguage,
   isLatinScript,
   isLatinScriptLanguage,
   needsScriptConversion,
-  isSameLanguage,
   normalizeLanguage,
   getCode,
-  getLanguage,
-  getNativeName,
+} from './translator';
+
+// Language utilities from translate.ts
+export {
+  getLanguages as getSupportedLanguages,
   getLanguageInfo,
   isLanguageSupported,
-  searchLanguages,
-} from './languages';
+  normalizeLanguage as getLanguage,
+  ALL_LANGUAGES as LANGUAGES,
+} from '@/lib/translation/translate';
 
 // React hook
 export { useDLTranslate } from './useDLTranslate';

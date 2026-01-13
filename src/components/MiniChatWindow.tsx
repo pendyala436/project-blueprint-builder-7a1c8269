@@ -26,7 +26,7 @@ import {
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { useRealtimeTranslation } from "@/lib/translation";
+import { useRealtimeChatTranslation } from "@/lib/translation";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Translation utilities - Gboard native input, no Latin conversion needed
 import { 
@@ -147,16 +147,21 @@ const MiniChatWindow = ({
 
   // Real-time typing indicator with translation - FULLY ASYNC
   const {
-    sendTypingIndicator,
-    clearPreview,
-    senderNativePreview,
-    partnerTyping
-  } = useRealtimeTranslation({
-    currentUserId,
-    currentUserLanguage,
-    channelId: chatId,
-    enabled: true
-  });
+    getLivePreview,
+    processMessage,
+  } = useRealtimeChatTranslation(currentUserLanguage, partnerLanguage);
+  
+  const [senderNativePreview, setSenderNativePreview] = useState('');
+  const [partnerTyping, setPartnerTyping] = useState<any>(null);
+  
+  const sendTypingIndicator = useCallback((text: string) => {
+    const preview = getLivePreview(text, currentUserLanguage);
+    setSenderNativePreview(preview.preview);
+  }, [getLivePreview, currentUserLanguage]);
+  
+  const clearPreview = useCallback(() => {
+    setSenderNativePreview('');
+  }, []);
 
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
@@ -592,7 +597,7 @@ const MiniChatWindow = ({
     setLastActivityTime(Date.now());
     // Send typing indicator with translation
     if (newMessage.trim()) {
-      sendTypingIndicator(newMessage.trim(), partnerLanguage);
+      sendTypingIndicator(newMessage.trim());
     }
   };
 
