@@ -883,46 +883,32 @@ const MiniChatWindow = ({
               {/* Input: Shows native script directly for phonetic typing */}
               <Input
                 placeholder={needsTransliteration ? `Type "bagunnava" → బాగున్నావా` : `Type in ${currentUserLanguage}...`}
-                value={newMessage}
+                value={needsTransliteration ? rawInput : newMessage}
                 onChange={(e) => {
                   const newValue = e.target.value;
                   
                   if (needsTransliteration) {
-                    // Handle deletion - use rawInput as source of truth
-                    if (newValue.length < newMessage.length) {
-                      // Delete one Latin character at a time from rawInput
-                      const newRaw = rawInput.slice(0, -1);
-                      setRawInput(newRaw);
-                      if (newRaw.trim()) {
+                    // Check if this looks like Latin input (user is typing phonetically)
+                    const isLatinText = /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue);
+                    
+                    if (isLatinText) {
+                      // User is typing in Latin - transliterate the entire input
+                      setRawInput(newValue);
+                      if (newValue.trim()) {
                         try {
-                          const native = dynamicTransliterate(newRaw, currentUserLanguage);
-                          setNewMessage(native || newRaw);
+                          const native = dynamicTransliterate(newValue, currentUserLanguage);
+                          console.log('[MiniChat] Transliterate:', newValue, '→', native);
+                          setNewMessage(native || newValue);
                         } catch {
-                          setNewMessage(newRaw);
+                          setNewMessage(newValue);
                         }
                       } else {
-                        setNewMessage(newRaw);
-                      }
-                    } else {
-                      // Handle addition - extract what was added
-                      const addedText = newValue.slice(newMessage.length);
-                      const isLatinInput = /^[a-zA-Z\s\d.,!?'"()\-:;@#$%^&*+=]*$/.test(addedText);
-                      
-                      if (isLatinInput && addedText) {
-                        const newRaw = rawInput + addedText;
-                        setRawInput(newRaw);
-                        try {
-                          const native = dynamicTransliterate(newRaw, currentUserLanguage);
-                          console.log('[MiniChat] Transliterate:', newRaw, '→', native);
-                          setNewMessage(native || newRaw);
-                        } catch {
-                          setNewMessage(newRaw);
-                        }
-                      } else {
-                        // Native script typed directly
-                        setRawInput(newValue);
                         setNewMessage(newValue);
                       }
+                    } else {
+                      // User typed native script directly (e.g., using native keyboard)
+                      setRawInput(newValue);
+                      setNewMessage(newValue);
                     }
                   } else {
                     setRawInput(newValue);
