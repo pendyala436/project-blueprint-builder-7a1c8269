@@ -80,6 +80,28 @@ const HOW_ARE_YOU_TESTS = [
   { sender: 'french', receiver: 'english', input: 'comment allez-vous', expectedTranslit: 'comment allez-vous' },
 ];
 
+// "My home town is near Delhi" tests across multiple languages
+const HOMETOWN_DELHI_TESTS = [
+  { sender: 'english', receiver: 'hindi', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'telugu', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'tamil', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'kannada', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'malayalam', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'bengali', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'gujarati', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'marathi', input: 'my home town is near delhi' },
+  { sender: 'english', receiver: 'punjabi', input: 'my home town is near delhi' },
+  { sender: 'hindi', receiver: 'telugu', input: 'mera gaon dilli ke paas hai' },
+  { sender: 'hindi', receiver: 'tamil', input: 'mera gaon dilli ke paas hai' },
+  { sender: 'hindi', receiver: 'english', input: 'mera gaon dilli ke paas hai' },
+  { sender: 'telugu', receiver: 'hindi', input: 'naa ooru delhi daggaralo undi' },
+  { sender: 'telugu', receiver: 'english', input: 'naa ooru delhi daggaralo undi' },
+  { sender: 'tamil', receiver: 'hindi', input: 'en ooru delhi arugil ullathu' },
+  { sender: 'kannada', receiver: 'telugu', input: 'nanna ooru delhi hattira ide' },
+  { sender: 'bengali', receiver: 'hindi', input: 'amar bari delhi kachhe' },
+  { sender: 'malayalam', receiver: 'tamil', input: 'ente naadu delhi aduthaanu' },
+];
+
 export default function TranslationTestPage() {
   const [senderLanguage, setSenderLanguage] = useState('english');
   const [receiverLanguage, setReceiverLanguage] = useState('hindi');
@@ -98,6 +120,16 @@ export default function TranslationTestPage() {
     success: boolean;
     time: number;
   }>>([]);
+  const [hometownTestResults, setHometownTestResults] = useState<Array<{
+    sender: string;
+    receiver: string;
+    input: string;
+    transliterated: string;
+    translated: string;
+    success: boolean;
+    time: number;
+  }>>([]);
+  const [hometownTestRunning, setHometownTestRunning] = useState(false);
 
   const { getLivePreview, processMessage, isReady } = useRealtimeChatTranslation(
     senderLanguage,
@@ -324,9 +356,65 @@ export default function TranslationTestPage() {
     console.log('✅ "How Are You" tests completed!');
   }, []);
 
+  // Run "My home town is near Delhi" tests
+  const runHometownDelhiTests = useCallback(async () => {
+    setHometownTestRunning(true);
+    setHometownTestResults([]);
+    
+    console.log('🏠 Starting "My home town is near Delhi" tests across language combinations...');
+    
+    for (const test of HOMETOWN_DELHI_TESTS) {
+      const startTime = performance.now();
+      
+      // Get transliteration (sender sees)
+      const transliterated = dynamicTransliterate(test.input, test.sender);
+      
+      // Get translation (receiver sees)
+      let translated = '';
+      let success = false;
+      
+      try {
+        const result = await translateText(transliterated, test.sender, test.receiver);
+        translated = result.text;
+        success = result.isTranslated || translated.length > 0;
+      } catch (err) {
+        translated = `Error: ${err instanceof Error ? err.message : 'Unknown'}`;
+        success = false;
+      }
+      
+      const time = performance.now() - startTime;
+      
+      const testResult = {
+        sender: test.sender,
+        receiver: test.receiver,
+        input: test.input,
+        transliterated,
+        translated,
+        success,
+        time,
+      };
+      
+      setHometownTestResults(prev => [...prev, testResult]);
+      
+      console.log(`[Hometown] ${test.sender} → ${test.receiver}:`, {
+        input: test.input,
+        transliterated,
+        translated,
+        time: `${time.toFixed(0)}ms`,
+      });
+      
+      // Small delay between tests
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    setHometownTestRunning(false);
+    console.log('✅ "My home town is near Delhi" tests completed!');
+  }, []);
+
   const clearResults = () => {
     setTestResults([]);
     setAutoTestResults([]);
+    setHometownTestResults([]);
   };
 
   return (
@@ -513,7 +601,83 @@ export default function TranslationTestPage() {
           </CardContent>
         </Card>
 
-        {/* Universal Translator - Connected to typing input */}
+        {/* "My home town is near Delhi" Test Panel */}
+        <Card className="border-2 border-green-500/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-green-500" />
+              🏠 "My home town is near Delhi" - Multi-Language Test
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Tests "my home town is near delhi" across 18 language combinations (English, Hindi, Telugu, Tamil, Kannada, Malayalam, Bengali, Gujarati, Marathi, Punjabi).
+            </p>
+            
+            <Button 
+              onClick={runHometownDelhiTests} 
+              disabled={hometownTestRunning}
+              className="w-full bg-green-600 hover:bg-green-700"
+              size="lg"
+            >
+              {hometownTestRunning ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Running Tests... ({hometownTestResults.length}/18)
+                </>
+              ) : (
+                <>
+                  <Languages className="h-4 w-4 mr-2" />
+                  🏠 Run "Hometown Delhi" Tests
+                </>
+              )}
+            </Button>
+
+            {hometownTestResults.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Sender</th>
+                      <th className="text-left p-2">Receiver</th>
+                      <th className="text-left p-2">Input (Gboard Latin)</th>
+                      <th className="text-left p-2">Sender Sees (Native)</th>
+                      <th className="text-left p-2">Receiver Sees (Translated)</th>
+                      <th className="text-left p-2">Time</th>
+                      <th className="text-left p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hometownTestResults.map((result, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="p-2 capitalize font-medium">{result.sender}</td>
+                        <td className="p-2 capitalize font-medium">{result.receiver}</td>
+                        <td className="p-2 font-mono text-xs">{result.input}</td>
+                        <td className="p-2 text-lg unicode-text" dir="auto">{result.transliterated}</td>
+                        <td className="p-2 text-lg unicode-text" dir="auto">{result.translated}</td>
+                        <td className="p-2 text-muted-foreground">{result.time.toFixed(0)}ms</td>
+                        <td className="p-2">
+                          {result.success ? (
+                            <Badge variant="default" className="bg-green-500">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              OK
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Failed
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
