@@ -1492,8 +1492,11 @@ const DraggableMiniChatWindow = ({
                     handleTyping(newValue);
                   }}
                   onKeyDown={handleKeyPress}
-                  lang={currentUserLanguage}
+                  lang={needsTransliteration ? "en" : currentUserLanguage}
                   dir="auto"
+                  spellCheck={true}
+                  autoComplete="off"
+                  autoCorrect="on"
                   className="h-8 text-xs w-full unicode-text"
                   disabled={isSending || isUploading}
                 />
