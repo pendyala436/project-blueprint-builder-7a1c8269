@@ -49,6 +49,7 @@ import {
   normalizeUnicode,
   translateText,
 } from "@/lib/translation";
+import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 
 console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via semantic translation (translateText)');
 
@@ -105,7 +106,8 @@ const DraggableMiniChatWindow = ({
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [rawInput, setRawInput] = useState(""); // What user types (Latin for non-Latin languages)
+  const [newMessage, setNewMessage] = useState(""); // Native script after transliteration
   const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -130,6 +132,8 @@ const DraggableMiniChatWindow = ({
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
   // User's language uses Latin script natively (English, Spanish, etc.)
   const userUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
+  // Check if phonetic transliteration is needed (user types Latin but language needs native script)
+  const needsTransliteration = !userUsesLatinScript && transliterationEnabled;
 
   // Dragging state - use left/top for absolute positioning anywhere on screen
   const [position, setPosition] = useState(() => {
@@ -871,6 +875,7 @@ const DraggableMiniChatWindow = ({
 
     // IMMEDIATE: Clear input and UI
     setNewMessage("");
+    setRawInput(""); // Clear Latin input too
     setLivePreview({ text: '', isLoading: false });
     currentPreviewRef.current = '';
     clearPreview();
@@ -1424,22 +1429,58 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* GBOARD-FIRST: Simple text input - no Latin conversion */}
+              {/* Phonetic transliteration input for non-Latin languages */}
               <div className="flex-1 relative">
+                {/* Transliteration hint for non-Latin languages */}
+                {needsTransliteration && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
+                    <span>✨</span>
+                    <span>Type in English → shows in {currentUserLanguage}</span>
+                  </div>
+                )}
+                {/* Native script preview for non-Latin languages */}
+                {needsTransliteration && newMessage && newMessage !== rawInput && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
+                    {newMessage}
+                  </div>
+                )}
                 {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && (
+                {!needsTranslation && newMessage.trim() && !needsTransliteration && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                     Same language - direct chat
                   </div>
                 )}
                 <Input
-                  placeholder={userUsesLatinScript ? "Type your message..." : "Type in your language..."}
-                  value={newMessage}
+                  placeholder={needsTransliteration ? `Type "bagunnava" in English letters` : userUsesLatinScript ? "Type your message..." : "Type in your language..."}
+                  value={needsTransliteration ? rawInput : newMessage}
                   onChange={(e) => {
-                    setNewMessage(e.target.value);
-                    handleTyping(e.target.value);
+                    const value = e.target.value;
+                    
+                    if (needsTransliteration) {
+                      setRawInput(value);
+                      
+                      if (value.trim()) {
+                        // Transliterate Latin → Native script instantly
+                        try {
+                          const native = dynamicTransliterate(value, currentUserLanguage);
+                          console.log('[DraggableMiniChatWindow] Transliterate:', value, '→', native);
+                          setNewMessage(native || value);
+                        } catch (e) {
+                          console.error('[DraggableMiniChatWindow] Transliteration error:', e);
+                          setNewMessage(value);
+                        }
+                      } else {
+                        setNewMessage("");
+                      }
+                    } else {
+                      setNewMessage(value);
+                    }
+                    
+                    handleTyping(value);
                   }}
                   onKeyDown={handleKeyPress}
+                  lang="en"
+                  dir="ltr"
                   className="h-8 text-xs w-full"
                   disabled={isSending || isUploading}
                 />
