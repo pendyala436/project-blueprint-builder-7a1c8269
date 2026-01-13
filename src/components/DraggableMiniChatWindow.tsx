@@ -63,6 +63,7 @@ interface Message {
   senderId: string;
   message: string;
   translatedMessage?: string;
+  englishMessage?: string; // Always show English below translated message
   isTranslated?: boolean;
   isTranslating?: boolean;
   detectedLanguage?: string;
@@ -714,8 +715,10 @@ const DraggableMiniChatWindow = ({
 
   // SEMANTIC TRANSLATION: Auto-translate partner's messages using translateText
   // Uses the tested translation logic: direct for English/Latin, pivot for Native→Native
+  // Now also translates to English for display below native translation
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
+    englishMessage?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
@@ -725,38 +728,49 @@ const DraggableMiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false };
       }
 
-      // Partner's message - translate to current user's language
+      // Partner's message - translate to current user's language AND English
       const sourceLanguage = partnerLanguage;
       const targetLanguage = currentUserLanguage;
       
-      console.log('[DraggableMiniChatWindow] translateMessage (semantic):', {
+      console.log('[DraggableMiniChatWindow] translateMessage (semantic + English):', {
         text: text.substring(0, 30),
         sourceLanguage,
         targetLanguage
       });
       
-      // Same language - no translation needed (handled by translateText)
+      // Same language - no translation needed for native, but still get English
       if (isSameLanguage(sourceLanguage, targetLanguage)) {
-        console.log('[DraggableMiniChatWindow] Same language, no translation needed');
-        return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
-      }
-      
-      // SEMANTIC TRANSLATION using translateText from translate.ts
-      // Direct translation for: English↔Any, Latin↔Latin
-      // English pivot for: Native↔Native
-      console.log(`[DraggableMiniChatWindow] Semantic translation: ${sourceLanguage} -> ${targetLanguage}`);
-      const result = await translateText(text, sourceLanguage, targetLanguage);
-      
-      if (result.isTranslated && result.text) {
-        console.log('[DraggableMiniChatWindow] Semantic translation result:', result.text.substring(0, 50));
-        return {
-          translatedMessage: normalizeUnicode(result.text),
-          isTranslated: true,
-          detectedLanguage: sourceLanguage
+        // If both speak English, no translations needed
+        if (isSameLanguage(sourceLanguage, 'English')) {
+          return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
+        }
+        // Same non-English language - get English translation
+        const englishResult = await translateText(text, sourceLanguage, 'English');
+        return { 
+          translatedMessage: text, 
+          englishMessage: englishResult.isTranslated ? normalizeUnicode(englishResult.text) : undefined,
+          isTranslated: false, 
+          detectedLanguage: sourceLanguage 
         };
       }
       
-      return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
+      // PARALLEL: Translate to both target language and English
+      console.log(`[DraggableMiniChatWindow] Semantic translation: ${sourceLanguage} -> ${targetLanguage} + English`);
+      
+      const [nativeResult, englishResult] = await Promise.all([
+        translateText(text, sourceLanguage, targetLanguage),
+        // Only translate to English if target is not English
+        isSameLanguage(targetLanguage, 'English') 
+          ? Promise.resolve({ text, isTranslated: false })
+          : translateText(text, sourceLanguage, 'English')
+      ]);
+      
+      return {
+        translatedMessage: nativeResult.isTranslated ? normalizeUnicode(nativeResult.text) : text,
+        englishMessage: englishResult.isTranslated ? normalizeUnicode(englishResult.text) : undefined,
+        isTranslated: nativeResult.isTranslated,
+        detectedLanguage: sourceLanguage
+      };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
@@ -781,32 +795,26 @@ const DraggableMiniChatWindow = ({
         senderId: m.sender_id,
         message: m.message,
         translatedMessage: undefined,
+        englishMessage: undefined,
         isTranslated: false,
-        isTranslating: m.sender_id !== currentUserId && needsTranslation,
+        isTranslating: m.sender_id !== currentUserId,
         createdAt: m.created_at
       }));
       setMessages(immediateMessages);
 
-      // STEP 2: BACKGROUND - Translate partner's messages using translateText
+      // STEP 2: BACKGROUND - Translate partner's messages to native + English
       const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
       
       partnerMessages.forEach((m) => {
-        if (!needsTranslation) {
-          // Same language - no translation needed
-          setMessages(prev => prev.map(msg => 
-            msg.id === m.id ? { ...msg, isTranslating: false } : msg
-          ));
-          return;
-        }
-        
-        // SEMANTIC TRANSLATION using translateText
-        translateText(m.message, partnerLanguage, currentUserLanguage)
+        // Always translate to get both native and English
+        translateMessage(m.message, m.sender_id)
           .then((result) => {
             setMessages(prev => prev.map(msg => 
               msg.id === m.id 
                 ? {
                     ...msg,
-                    translatedMessage: result.isTranslated ? normalizeUnicode(result.text) : undefined,
+                    translatedMessage: result.translatedMessage,
+                    englishMessage: result.englishMessage,
                     isTranslated: result.isTranslated,
                     isTranslating: false
                   }
@@ -846,8 +854,9 @@ const DraggableMiniChatWindow = ({
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage: undefined,
+              englishMessage: undefined,
               isTranslated: false,
-              isTranslating: isPartnerMessage && needsTranslation,
+              isTranslating: isPartnerMessage,
               createdAt: newMsg.created_at
             }];
           });
@@ -859,32 +868,26 @@ const DraggableMiniChatWindow = ({
               setUnreadCount(prev => prev + 1);
             }
             
-            // STEP 2: BACKGROUND - Translate partner message using translateText
-            if (needsTranslation) {
-              translateText(newMsg.message, partnerLanguage, currentUserLanguage)
-                .then((result) => {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === newMsg.id 
-                      ? {
-                          ...msg,
-                          translatedMessage: result.isTranslated ? normalizeUnicode(result.text) : undefined,
-                          isTranslated: result.isTranslated,
-                          isTranslating: false
-                        }
-                      : msg
-                  ));
-                })
-                .catch(() => {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
-                  ));
-                });
-            } else {
-              // Same language - mark as complete
-              setMessages(prev => prev.map(msg => 
-                msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
-              ));
-            }
+            // STEP 2: BACKGROUND - Translate partner message to native + English
+            translateMessage(newMsg.message, newMsg.sender_id)
+              .then((result) => {
+                setMessages(prev => prev.map(msg => 
+                  msg.id === newMsg.id 
+                    ? {
+                        ...msg,
+                        translatedMessage: result.translatedMessage,
+                        englishMessage: result.englishMessage,
+                        isTranslated: result.isTranslated,
+                        isTranslating: false
+                      }
+                    : msg
+                ));
+              })
+              .catch(() => {
+                setMessages(prev => prev.map(msg => 
+                  msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
+                ));
+              });
           }
         }
       )
@@ -1428,8 +1431,15 @@ const DraggableMiniChatWindow = ({
                           <span className="opacity-70 italic">{msg.message}</span>
                         </div>
                       ) : (
-                        // PARTNER MESSAGE: Show translated if available, else original
-                        <p>{msg.translatedMessage || msg.message}</p>
+                        // PARTNER MESSAGE: Show native translation + English below
+                        <div className="space-y-1">
+                          <p>{msg.translatedMessage || msg.message}</p>
+                          {msg.englishMessage && !isSameLanguage(currentUserLanguage, 'English') && (
+                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🌐 {msg.englishMessage}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
