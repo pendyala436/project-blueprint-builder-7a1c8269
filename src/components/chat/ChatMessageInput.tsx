@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Loader2 } from 'lucide-react';
+import { Send, Smile, Loader2, Languages, Globe } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { dynamicTransliterate, isLatinScriptLanguage } from '@/lib/translation/dynamic-transliterator';
 
@@ -27,6 +27,8 @@ const isLatinText = (text: string): boolean => {
   return latinPattern.test(text);
 };
 
+type TypingMode = 'native' | 'english';
+
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   onSendMessage,
   onTyping,
@@ -46,11 +48,15 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [isComposing, setIsComposing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   
+  // Toggle between English and Native typing mode
+  const [typingMode, setTypingMode] = useState<TypingMode>('native');
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Check if user's language needs transliteration (non-Latin script)
   const needsTransliteration = !isLatinScriptLanguage(userLanguage);
+  const isEnglishLanguage = userLanguage.toLowerCase() === 'english';
 
   /**
    * INSTANT offline transliteration - pure TypeScript, < 2ms
@@ -73,11 +79,33 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [needsTransliteration, userLanguage]);
 
   /**
+   * Toggle typing mode between English and Native
+   */
+  const toggleTypingMode = useCallback(() => {
+    setTypingMode(prev => prev === 'native' ? 'english' : 'native');
+  }, []);
+
+  /**
    * Handle input change with instant Gboard-style transliteration
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     
+    // If in English mode, just keep raw text - no transliteration
+    if (typingMode === 'english') {
+      setRawInput(value);
+      setNativeText(value); // In English mode, native = raw
+      
+      // Typing indicator
+      if (onTyping) {
+        onTyping(value.length > 0);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
+      }
+      return;
+    }
+    
+    // Native mode with transliteration
     if (needsTransliteration) {
       // Check if user is using native keyboard (GBoard) - contains non-Latin chars
       const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
@@ -119,18 +147,21 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         onTyping(false);
       }, 2000);
     }
-  }, [transliterateInstant, needsTransliteration, onTyping]);
+  }, [transliterateInstant, needsTransliteration, typingMode, onTyping]);
 
   // Handle send
   const handleSend = useCallback(() => {
-    const messageToSend = (nativeText || rawInput).trim();
+    const messageToSend = typingMode === 'english' 
+      ? rawInput.trim() 
+      : (nativeText || rawInput).trim();
+    
     if (!messageToSend || disabled || isComposing || isSending) return;
 
     setIsSending(true);
     
     try {
       // Send both the native text and original for reference
-      onSendMessage(messageToSend, nativeText || undefined);
+      onSendMessage(messageToSend, typingMode === 'english' ? undefined : nativeText || undefined);
       setRawInput('');
       setNativeText('');
       onTyping?.(false);
@@ -138,7 +169,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     } finally {
       setIsSending(false);
     }
-  }, [nativeText, rawInput, disabled, isComposing, isSending, onSendMessage, onTyping]);
+  }, [nativeText, rawInput, disabled, isComposing, isSending, typingMode, onSendMessage, onTyping]);
 
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -172,15 +203,52 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
   }, [rawInput, nativeText]);
 
-  const displayText = needsTransliteration ? rawInput : nativeText;
-  const defaultPlaceholder = needsTransliteration 
-    ? t('chat.typeInLatin', 'Type in English letters → auto-converts')
-    : t('chat.typeMessage');
+  const displayText = typingMode === 'english' ? rawInput : (needsTransliteration ? rawInput : nativeText);
+  
+  const defaultPlaceholder = typingMode === 'english'
+    ? t('chat.typeInEnglish', 'Type in English...')
+    : needsTransliteration 
+      ? t('chat.typeInLatin', 'Type in English letters → auto-converts')
+      : t('chat.typeMessage');
+
+  // Show toggle only for non-English languages
+  const showModeToggle = !isEnglishLanguage;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Native script preview for non-Latin languages */}
-      {needsTransliteration && nativeText && nativeText !== rawInput && (
+      {/* Typing mode toggle for non-English languages */}
+      {showModeToggle && (
+        <div className="px-4 py-2 border-b border-border/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={typingMode === 'native' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTypingMode('native')}
+              className="h-7 px-3 text-xs gap-1.5"
+            >
+              <Languages className="h-3.5 w-3.5" />
+              {userLanguage}
+            </Button>
+            <Button
+              variant={typingMode === 'english' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTypingMode('english')}
+              className="h-7 px-3 text-xs gap-1.5"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              English
+            </Button>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {typingMode === 'english' 
+              ? t('chat.typingInEnglish', 'Typing in English')
+              : t('chat.typingInNative', `Typing in ${userLanguage}`)}
+          </span>
+        </div>
+      )}
+
+      {/* Native script preview for non-Latin languages (only in native mode) */}
+      {typingMode === 'native' && needsTransliteration && nativeText && nativeText !== rawInput && (
         <div className="px-4 py-2 border-b border-border/50 bg-primary/5">
           <div className="text-xs text-muted-foreground mb-1">
             {userLanguage}:
@@ -204,8 +272,8 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
         </div>
       )}
 
-      {/* Gboard hint for non-Latin languages */}
-      {needsTransliteration && (
+      {/* Gboard hint for non-Latin languages (only in native mode) */}
+      {typingMode === 'native' && needsTransliteration && (
         <div className="px-4 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5">
           <span>✨</span>
           <span>{t('chat.gboardHint', 'Type English letters → auto-converts to')} {userLanguage}</span>
@@ -213,7 +281,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
       )}
 
       {/* Input area */}
-      <div className="p-3 pt-0 flex items-end gap-2">
+      <div className="p-3 pt-2 flex items-end gap-2">
         {/* Message input */}
         <div className="flex-1 relative">
           <Textarea
@@ -225,7 +293,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled || isSending}
-            lang={needsTransliteration ? "en" : userLanguage}
+            lang={typingMode === 'english' ? 'en' : (needsTransliteration ? 'en' : userLanguage)}
             dir="auto"
             spellCheck={true}
             autoComplete="off"
