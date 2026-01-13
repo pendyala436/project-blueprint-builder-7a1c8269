@@ -1,22 +1,28 @@
 /**
  * useMultilingualChat Hook
+ * ========================
  * 
- * Refactored to use the dl-translate inspired translation module
- * Provides multilingual chat functionality with:
- * 1. Latin-to-native script conversion
- * 2. Auto-translation between languages
- * 3. Live preview for sender
+ * Universal Translation for Chat
+ * Uses translateText from src/lib/translation/translate.ts for 1000+ languages
  * 
- * Uses NLLB-200 model via Hugging Face for 200+ language support
+ * Features:
+ * 1. Offline Gboard-style transliteration for typing
+ * 2. Universal Translation for sender ↔ receiver messages
+ * 3. Live preview for native script conversion
+ * 
+ * NO external API for typing - uses pure offline dynamic transliteration
+ * Translation uses translate-message edge function for semantic translation
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { 
-  useTranslator, 
+  translateText,
   isSameLanguage as checkSameLanguage,
-  isLatinScript,
+  isLatinText,
   isLatinScriptLanguage 
-} from '@/lib/translation';
+} from '@/lib/translation/translate';
+import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
+import { useTranslator } from '@/lib/translation/useTranslator';
 
 interface TranslationResult {
   translatedMessage: string;
@@ -49,7 +55,7 @@ interface UseMultilingualChatOptions {
  * - Message stored in sender's language
  * - Receiver sees message translated to their native language
  * 
- * Uses facebook/nllb-200-distilled-600M for 200+ language support
+ * Uses Universal Translation for 1000+ language support
  */
 export const useMultilingualChat = ({
   currentUserLanguage,
@@ -57,10 +63,8 @@ export const useMultilingualChat = ({
   enabled = true
 }: UseMultilingualChatOptions) => {
   
-  // Use the new translation hook
+  // Use the translation hook for live preview and utilities
   const {
-    translate,
-    convertScript,
     livePreview: translatorLivePreview,
     updateLivePreview: translatorUpdatePreview,
     clearLivePreview: translatorClearPreview,
@@ -91,12 +95,13 @@ export const useMultilingualChat = ({
   /**
    * Check if text is primarily in Latin script
    */
-  const isLatinText = useCallback((text: string): boolean => {
-    return isLatinScript(text);
+  const checkIsLatinText = useCallback((text: string): boolean => {
+    return isLatinText(text);
   }, []);
 
   /**
    * Convert Latin text to user's native script (transliteration)
+   * Uses offline dynamic transliteration
    */
   const convertToNativeScript = useCallback(async (
     text: string,
@@ -104,42 +109,46 @@ export const useMultilingualChat = ({
   ): Promise<string> => {
     if (!enabled || !text.trim()) return text;
     if (isLatinScriptLanguage(targetLanguage)) return text;
-    if (!isLatinScript(text)) return text;
+    if (!isLatinText(text)) return text;
     
     try {
-      return await convertScript(text, targetLanguage);
+      // Use offline dynamic transliteration
+      const converted = dynamicTransliterate(text, targetLanguage);
+      return converted || text;
     } catch (err) {
       console.error('[MultilingualChat] Conversion error:', err);
       return text;
     }
-  }, [enabled, convertScript]);
+  }, [enabled]);
 
   /**
-   * Translate a message to a target language
+   * Translate a message from source to target language
+   * Uses Universal Translation (translateText)
    */
   const translateMessage = useCallback(async (
     text: string,
-    targetLanguage: string
+    targetLanguage: string,
+    sourceLanguage?: string
   ): Promise<TranslationResult> => {
     if (!enabled || !text.trim()) {
       return { translatedMessage: text, isTranslated: false };
     }
 
     try {
-      const result = await translate(text, { targetLanguage });
+      const source = sourceLanguage || partnerLanguage || 'english';
+      // Use Universal Translation directly
+      const result = await translateText(text, source, targetLanguage);
       
       return {
-        translatedMessage: result.translatedText,
+        translatedMessage: result.text,
         isTranslated: result.isTranslated,
-        detectedLanguage: result.sourceLanguage,
-        sourceLanguageCode: result.sourceCode,
-        targetLanguageCode: result.targetCode
+        detectedLanguage: result.sourceLanguage
       };
     } catch (err) {
       console.error('[MultilingualChat] Translation error:', err);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [enabled, translate]);
+  }, [enabled, partnerLanguage]);
 
   /**
    * Update live preview as user types
@@ -209,7 +218,8 @@ export const useMultilingualChat = ({
       };
     }
 
-    const result = await translateMessage(messageText, currentUserLanguage);
+    // Translate from sender's language to receiver's language
+    const result = await translateMessage(messageText, currentUserLanguage, senderLang);
     
     console.log('[MultilingualChat] Incoming:', {
       original: messageText,
@@ -244,7 +254,7 @@ export const useMultilingualChat = ({
     // Utility functions
     clearCache,
     isLatinLanguage,
-    isLatinText,
+    isLatinText: checkIsLatinText,
     isSameLanguage
   };
 };

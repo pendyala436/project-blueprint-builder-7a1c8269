@@ -1,11 +1,20 @@
 /**
- * React Hook for Translation
- * Provides easy-to-use translation functionality in React components
+ * React Hook for Universal Translation
+ * =====================================
+ * Uses the Universal Translation System (translate.ts) for 1000+ languages
+ * with semantic translation via Edge Function
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { translator, detectLanguage, isSameLanguage, isLatinScript } from './translator';
-import type { TranslationResult, TranslationOptions } from './types';
+import { 
+  translateText, 
+  isSameLanguage, 
+  isLatinScriptLanguage,
+  isLatinText,
+  normalizeLanguage,
+  getLanguageInfo 
+} from './translate';
+import { dynamicTransliterate } from './dynamic-transliterator';
 
 interface LivePreview {
   originalText: string;
@@ -20,14 +29,26 @@ interface UseTranslatorOptions {
   previewDebounceMs?: number;
 }
 
+interface TranslationResult {
+  translatedText: string;
+  originalText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  sourceCode?: string;
+  targetCode?: string;
+  isTranslated: boolean;
+  model?: string;
+  mode?: string;
+}
+
 interface UseTranslatorReturn {
   // Translation functions
-  translate: (text: string, options: TranslationOptions) => Promise<TranslationResult>;
+  translate: (text: string, options: { sourceLanguage?: string; targetLanguage: string }) => Promise<TranslationResult>;
   convertScript: (text: string, targetLanguage: string) => Promise<string>;
-  translateBatch: (items: { text: string; options: TranslationOptions }[]) => Promise<TranslationResult[]>;
+  translateBatch: (items: { text: string; options: { sourceLanguage?: string; targetLanguage: string } }[]) => Promise<{ results: TranslationResult[] }>;
   
   // Language detection
-  detectLanguage: (text: string) => ReturnType<typeof detectLanguage>;
+  detectLanguage: (text: string) => { language: string; isLatin: boolean };
   isSameLanguage: (lang1: string, lang2: string) => boolean;
   isLatinScript: (text: string) => boolean;
   
@@ -48,6 +69,10 @@ interface UseTranslatorReturn {
   clearCache: () => void;
 }
 
+/**
+ * Universal Translator Hook
+ * Uses translateText from translate.ts for all translations
+ */
 export function useTranslator(options: UseTranslatorOptions = {}): UseTranslatorReturn {
   const {
     userLanguage = 'english',
@@ -71,61 +96,108 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
     };
   }, []);
 
-  // Main translate function
-  const translateText = useCallback(async (
+  // Main translate function - uses Universal Translation
+  const translateFn = useCallback(async (
     text: string, 
-    opts: TranslationOptions
+    opts: { sourceLanguage?: string; targetLanguage: string }
   ): Promise<TranslationResult> => {
     setIsTranslating(true);
     setLastError(null);
     
     try {
-      const result = await translator.translate(text, opts);
-      return result;
+      const source = opts.sourceLanguage || userLanguage;
+      const result = await translateText(text, source, opts.targetLanguage);
+      
+      return {
+        translatedText: result.text,
+        originalText: result.originalText,
+        sourceLanguage: result.sourceLanguage,
+        targetLanguage: result.targetLanguage,
+        isTranslated: result.isTranslated,
+        mode: result.isSameLanguage ? 'same_language' : 'translate'
+      };
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Translation failed';
       setLastError(error);
-      throw err;
+      return {
+        translatedText: text,
+        originalText: text,
+        sourceLanguage: opts.sourceLanguage || userLanguage,
+        targetLanguage: opts.targetLanguage,
+        isTranslated: false
+      };
     } finally {
       setIsTranslating(false);
     }
-  }, []);
+  }, [userLanguage]);
 
-  // Convert script (English typing to native script)
+  // Convert script using dynamic transliteration (offline Gboard-style)
   const convertScriptFn = useCallback(async (
     text: string,
     targetLanguage: string
   ): Promise<string> => {
-    setIsTranslating(true);
+    if (!text.trim()) return text;
+    
+    // If target uses Latin script, no conversion needed
+    if (isLatinScriptLanguage(targetLanguage)) {
+      return text;
+    }
+    
+    // If text is already non-Latin, return as-is
+    if (!isLatinText(text)) {
+      return text;
+    }
+    
     try {
-      return await translator.convertScript(text, targetLanguage);
-    } finally {
-      setIsTranslating(false);
+      // Use offline dynamic transliteration for instant Gboard-style conversion
+      const converted = dynamicTransliterate(text, targetLanguage);
+      return converted || text;
+    } catch (err) {
+      console.error('[useTranslator] Script conversion error:', err);
+      return text;
     }
   }, []);
 
   // Batch translate
   const translateBatch = useCallback(async (
-    items: { text: string; options: TranslationOptions }[]
-  ): Promise<TranslationResult[]> => {
+    items: { text: string; options: { sourceLanguage?: string; targetLanguage: string } }[]
+  ): Promise<{ results: TranslationResult[] }> => {
     setIsTranslating(true);
     try {
-      const result = await translator.translateBatch(items);
-      return result.results;
+      const results = await Promise.all(
+        items.map(item => translateFn(item.text, item.options))
+      );
+      return { results };
     } finally {
       setIsTranslating(false);
     }
-  }, []);
+  }, [translateFn]);
 
-  // Live preview update (debounced)
+  // Detect language
+  const detectLanguageFn = useCallback((text: string): { language: string; isLatin: boolean } => {
+    const isLatin = isLatinText(text);
+    // Basic detection - return user's language or english based on script
+    return {
+      language: isLatin ? 'english' : userLanguage,
+      isLatin
+    };
+  }, [userLanguage]);
+
+  // Live preview update (debounced) - uses offline transliteration
   const updateLivePreview = useCallback((text: string) => {
     if (!enableLivePreview || !text.trim()) {
       setLivePreview(null);
       return;
     }
 
-    // Skip if same language
-    if (isSameLanguage(userLanguage, partnerLanguage)) {
+    // Skip if user language uses Latin script
+    if (isLatinScriptLanguage(userLanguage)) {
+      setLivePreview(null);
+      return;
+    }
+
+    // Skip if text is already non-Latin
+    if (!isLatinText(text)) {
       setLivePreview(null);
       return;
     }
@@ -137,38 +209,29 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
       isLoading: true
     });
 
-    // Debounce API call
+    // Debounce conversion
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        // Check if Latin input needs conversion to native script
-        if (isLatinScript(text) && userLanguage.toLowerCase() !== 'english') {
-          const converted = await translator.convertScript(text, userLanguage);
-          setLivePreview({
-            originalText: text,
-            previewText: converted,
-            isLoading: false
-          });
-        } else {
-          // Show how it will appear to partner
-          const result = await translator.translate(text, {
-            sourceLanguage: userLanguage,
-            targetLanguage: partnerLanguage
-          });
-          setLivePreview({
-            originalText: text,
-            previewText: result.translatedText,
-            isLoading: false
-          });
-        }
+        // Use offline dynamic transliteration for instant preview
+        const converted = dynamicTransliterate(text, userLanguage);
+        setLivePreview({
+          originalText: text,
+          previewText: converted || text,
+          isLoading: false
+        });
       } catch {
-        setLivePreview(null);
+        setLivePreview({
+          originalText: text,
+          previewText: text,
+          isLoading: false
+        });
       }
     }, previewDebounceMs);
-  }, [userLanguage, partnerLanguage, enableLivePreview, previewDebounceMs]);
+  }, [userLanguage, enableLivePreview, previewDebounceMs]);
 
   // Clear live preview
   const clearLivePreview = useCallback(() => {
@@ -178,7 +241,7 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
     }
   }, []);
 
-  // Process outgoing message (for sender)
+  // Process outgoing message (for sender) - uses offline transliteration
   const processOutgoingMessage = useCallback(async (text: string): Promise<{
     original: string;
     converted: string;
@@ -188,24 +251,30 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
       return { original: text, converted: text, isConverted: false };
     }
 
-    // If typing in Latin and user's language is non-Latin, convert to native script
-    if (isLatinScript(text) && userLanguage.toLowerCase() !== 'english') {
-      try {
-        const converted = await translator.convertScript(text, userLanguage);
-        return {
-          original: text,
-          converted,
-          isConverted: converted !== text
-        };
-      } catch {
-        return { original: text, converted: text, isConverted: false };
-      }
+    // If user's language uses Latin script, no conversion needed
+    if (isLatinScriptLanguage(userLanguage)) {
+      return { original: text, converted: text, isConverted: false };
     }
 
-    return { original: text, converted: text, isConverted: false };
+    // If text is already non-Latin, return as-is
+    if (!isLatinText(text)) {
+      return { original: text, converted: text, isConverted: false };
+    }
+
+    try {
+      // Use offline dynamic transliteration
+      const converted = dynamicTransliterate(text, userLanguage);
+      return {
+        original: text,
+        converted: converted || text,
+        isConverted: converted !== text
+      };
+    } catch {
+      return { original: text, converted: text, isConverted: false };
+    }
   }, [userLanguage]);
 
-  // Process incoming message (for receiver)
+  // Process incoming message (for receiver) - uses Universal Translation
   const processIncomingMessage = useCallback(async (
     text: string,
     senderLanguage: string
@@ -224,14 +293,12 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
     }
 
     try {
-      const result = await translator.translate(text, {
-        sourceLanguage: senderLanguage,
-        targetLanguage: userLanguage
-      });
+      // Use Universal Translation (translateText)
+      const result = await translateText(text, senderLanguage, userLanguage);
       
       return {
         original: text,
-        translated: result.translatedText,
+        translated: result.text,
         isTranslated: result.isTranslated
       };
     } catch {
@@ -241,16 +308,19 @@ export function useTranslator(options: UseTranslatorOptions = {}): UseTranslator
 
   // Clear cache
   const clearCache = useCallback(() => {
-    translator.clearCache();
+    // Import and call clearCache from translate.ts
+    import('./translate').then(module => {
+      module.clearCache();
+    });
   }, []);
 
   return {
-    translate: translateText,
+    translate: translateFn,
     convertScript: convertScriptFn,
     translateBatch,
-    detectLanguage,
+    detectLanguage: detectLanguageFn,
     isSameLanguage,
-    isLatinScript,
+    isLatinScript: isLatinText,
     livePreview,
     updateLivePreview,
     clearLivePreview,
