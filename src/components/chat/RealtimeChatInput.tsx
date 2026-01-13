@@ -241,11 +241,10 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
               // When native text shown, map back to raw input logic
               const newValue = e.target.value;
               
-              // If user is deleting or the value changed significantly, reset
+              // If user is deleting, remove one Latin char at a time from rawInput
               if (newValue.length < (nativeText?.length || 0)) {
-                // User is deleting - need to delete from rawInput too
-                const deleteCount = (nativeText?.length || 0) - newValue.length;
-                const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                // Delete one Latin character at a time from rawInput
+                const newRaw = rawInput.slice(0, -1);
                 setRawInput(newRaw);
                 if (newRaw.trim() && needsTransliteration) {
                   setNativeText(transliterateNow(newRaw));

@@ -888,10 +888,10 @@ const MiniChatWindow = ({
                   const newValue = e.target.value;
                   
                   if (needsTransliteration) {
-                    // Handle deletion
+                    // Handle deletion - use rawInput as source of truth
                     if (newValue.length < newMessage.length) {
-                      const deleteCount = newMessage.length - newValue.length;
-                      const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                      // Delete one Latin character at a time from rawInput
+                      const newRaw = rawInput.slice(0, -1);
                       setRawInput(newRaw);
                       if (newRaw.trim()) {
                         try {
@@ -901,7 +901,7 @@ const MiniChatWindow = ({
                           setNewMessage(newRaw);
                         }
                       } else {
-                        setNewMessage('');
+                        setNewMessage(newRaw);
                       }
                     } else {
                       // Handle addition - extract what was added

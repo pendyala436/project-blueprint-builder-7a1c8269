@@ -1459,8 +1459,8 @@ const DraggableMiniChatWindow = ({
                     if (needsTransliteration) {
                       // Handle deletion
                       if (newValue.length < newMessage.length) {
-                        const deleteCount = newMessage.length - newValue.length;
-                        const newRaw = rawInput.slice(0, Math.max(0, rawInput.length - deleteCount));
+                        // Delete one Latin character at a time from rawInput
+                        const newRaw = rawInput.slice(0, -1);
                         setRawInput(newRaw);
                         if (newRaw.trim()) {
                           try {
