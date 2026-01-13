@@ -40,8 +40,9 @@ import { translateText as universalTranslate, isLatinText, isLatinScriptLanguage
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 
-const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
-const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
+const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
+const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
+const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes - close chat and logout
 
 interface Message {
   id: string;
@@ -107,7 +108,14 @@ const MiniChatWindow = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
+  const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
+  
+  // State for billing pause and activity tracking
+  const [isBillingPaused, setIsBillingPaused] = useState(false);
+  const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
+  const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
   // Check if translation is needed
   const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
   // User's language uses Latin script natively (English, Spanish, French, etc.)
@@ -244,6 +252,8 @@ const MiniChatWindow = ({
       if (timerRef.current) clearInterval(timerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+      if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
       unsubscribe?.();
     };
   }, [chatId, currentUserLanguage, partnerLanguage]);
@@ -265,7 +275,40 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Inactivity check with warning - auto disconnect after 3 mins of no activity
+
+  // Track when both users reply to resume billing
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.senderId === currentUserId) {
+        setLastUserMessageTime(Date.now());
+      } else {
+        setLastPartnerMessageTime(Date.now());
+      }
+    }
+  }, [messages, currentUserId]);
+
+  // Resume billing when BOTH users have replied after pause
+  useEffect(() => {
+    if (isBillingPaused && billingStarted) {
+      // Check if both users have replied after the pause started
+      const now = Date.now();
+      const userRepliedAfterPause = lastUserMessageTime > (lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000);
+      const partnerRepliedAfterPause = lastPartnerMessageTime > (lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000);
+      
+      if (userRepliedAfterPause && partnerRepliedAfterPause) {
+        setIsBillingPaused(false);
+        setLastActivityTime(now);
+        startBilling();
+        toast({
+          title: "Billing Resumed",
+          description: "Both users are active again. Charging/earning resumed.",
+        });
+      }
+    }
+  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime]);
+
+  // Inactivity check - pause billing at 3 mins, logout at 15 mins
   useEffect(() => {
     if (!billingStarted) return;
 
@@ -273,56 +316,82 @@ const MiniChatWindow = ({
     const warningInterval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       
-      if (timeSinceActivity >= WARNING_THRESHOLD_MS && timeSinceActivity < INACTIVITY_TIMEOUT_MS) {
-        const remainingSecs = Math.ceil((INACTIVITY_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Ends in ${remainingSecs}s`);
-      } else {
+      // Show billing pause warning between 2-3 mins
+      if (!isBillingPaused && timeSinceActivity >= BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
+        const remainingSecs = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Billing pauses in ${remainingSecs}s`);
+      } 
+      // Show logout warning after billing paused (between 3-15 mins)
+      else if (isBillingPaused && timeSinceActivity < LOGOUT_TIMEOUT_MS) {
+        const remainingMins = Math.ceil((LOGOUT_TIMEOUT_MS - timeSinceActivity) / 60000);
+        setInactiveWarning(`Billing paused. Logout in ${remainingMins}m if no activity`);
+      } else if (!isBillingPaused) {
         setInactiveWarning(null);
       }
     }, 1000);
 
-    if (inactivityRef.current) {
-      clearTimeout(inactivityRef.current);
+    // Billing pause timeout (3 minutes)
+    if (billingPauseTimeoutRef.current) {
+      clearTimeout(billingPauseTimeoutRef.current);
     }
 
-    inactivityRef.current = setTimeout(async () => {
-      // Stop the timer and heartbeat
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-      
+    if (!isBillingPaused) {
+      billingPauseTimeoutRef.current = setTimeout(() => {
+        // Pause billing - stop timer but DON'T close chat
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+        
+        setIsBillingPaused(true);
+        toast({
+          title: "Billing Paused",
+          description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
+        });
+      }, BILLING_PAUSE_TIMEOUT_MS);
+    }
+
+    // Logout timeout (15 minutes)
+    if (logoutTimeoutRef.current) {
+      clearTimeout(logoutTimeoutRef.current);
+    }
+
+    logoutTimeoutRef.current = setTimeout(async () => {
       toast({
-        title: "Chat Disconnected",
-        description: "No activity for 3 minutes. Chat ended automatically.",
+        title: "Session Ended",
+        description: "No activity for 15 minutes. Logging out...",
       });
       
-      // Auto-close the chat session
+      // Close chat and logout
       try {
         await supabase
           .from("active_chat_sessions")
           .update({
             status: "ended",
             ended_at: new Date().toISOString(),
-            end_reason: "inactivity_timeout"
+            end_reason: "inactivity_logout"
           })
           .eq("id", sessionId);
+        
+        // Logout user
+        await supabase.auth.signOut();
       } catch (error) {
-        console.error("Error auto-closing chat:", error);
+        console.error("Error during inactivity logout:", error);
       }
       
       onClose();
-    }, INACTIVITY_TIMEOUT_MS);
+    }, LOGOUT_TIMEOUT_MS);
 
     return () => {
       clearInterval(warningInterval);
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
-  }, [lastActivityTime, billingStarted, sessionId, onClose]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
   // Auto-translate a message to current user's language via Edge Function
   // GBOARD-FIRST: Users type in their mother tongue, so use profile language
