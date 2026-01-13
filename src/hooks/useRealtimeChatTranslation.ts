@@ -1,19 +1,25 @@
 /**
- * Real-Time Chat Translation Hook
- * ================================
- * Uses Universal Translator for all translations
- * Dynamic phonetic transliteration for instant previews (client-side)
+ * Real-Time Chat Translation Hook (900+ Languages)
+ * =================================================
  * 
- * ARCHITECTURE:
- * - Main thread: Instant sync transliteration using dynamic phonetic mapping
- * - Universal Translator: Semantic translation via Edge Function
- * - Caching for performance
+ * TYPING: Gboard Input Codes (NOT phonetic)
+ * - Uses standard Gboard keyboard codes for all 900+ languages
+ * - Example: "namaste" → "नमस्ते" (Hindi Gboard codes)
+ * - Example: "bagunnava" → "బాగున్నావా" (Telugu Gboard codes)
+ * - Instant, sync, client-side conversion
  * 
- * FLOW:
- * 1. Sender types Latin → Instant native preview (sync, dynamic transliterator)
- * 2. Sender sends → Native text shown immediately
- * 3. Background: Translation via Universal Translator
- * 4. Receiver sees translated native text in their language
+ * TRANSLATION: Universal Translator
+ * - Semantic meaning-based translation between any language pair
+ * - Example: "బాగున్నావా" (Telugu) → "कैसे हो" (Hindi)
+ * - Async via Edge Function
+ * 
+ * FLOW (Sender → Receiver):
+ * 1. Sender types Latin using Gboard codes → Instant native script preview
+ * 2. Sender sends → Native text stored and shown to sender
+ * 3. Universal Translator translates to receiver's language
+ * 4. Receiver sees message in their native language/script
+ * 
+ * BIDIRECTIONAL: Same flow works for receiver replying back
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
