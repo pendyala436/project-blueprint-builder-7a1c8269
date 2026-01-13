@@ -1510,11 +1510,16 @@ const DraggableMiniChatWindow = ({
                     const newValue = e.target.value;
                     
                     if (needsTransliteration) {
-                      // Check if this looks like Latin input (user is typing phonetically)
-                      const isLatinText = /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue);
+                      // Detect if input contains ANY non-Latin characters (GBoard native input)
+                      const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(newValue);
                       
-                      if (isLatinText) {
-                        // User is typing in Latin - transliterate the entire input
+                      if (hasNativeChars) {
+                        // PRIORITY: GBoard/native keyboard detected - use directly, no transliteration
+                        console.log('[DraggableMiniChatWindow] Native keyboard detected:', newValue);
+                        setRawInput(newValue); // Store as-is
+                        setNewMessage(newValue); // Use directly
+                      } else if (newValue === '' || /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue)) {
+                        // Pure Latin input - apply transliteration
                         setRawInput(newValue);
                         if (newValue.trim()) {
                           try {
@@ -1527,10 +1532,10 @@ const DraggableMiniChatWindow = ({
                           // Trigger spell check
                           checkSpellingDebounced(newValue);
                         } else {
-                          setNewMessage(newValue);
+                          setNewMessage('');
                         }
                       } else {
-                        // User typed native script directly (e.g., using native keyboard)
+                        // Mixed or unknown - pass through
                         setRawInput(newValue);
                         setNewMessage(newValue);
                       }

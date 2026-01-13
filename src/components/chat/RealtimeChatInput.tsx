@@ -89,17 +89,19 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     
-    // Detect if user is typing Latin characters (phonetic input)
-    // We compare the new value against what we expect
-    const lastChar = value.slice(-1);
-    const isTypingLatin = lastChar ? /[a-zA-Z\s\d.,!?'"()\-:;]/.test(lastChar) : true;
-    
     if (needsTransliteration) {
-      if (isTypingLatin || isLatinText(value)) {
-        // User typing phonetically in Latin → store raw, show transliterated
+      // PRIORITY CHECK: Detect if input contains ANY non-Latin characters (GBoard/native keyboard)
+      const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
+      
+      if (hasNativeChars) {
+        // GBoard/native keyboard detected - use directly, NO transliteration
+        console.log('[RealtimeChatInput] Native keyboard (GBoard) detected:', value);
+        setRawInput(value); // Store as-is
+        setNativeText(value); // Use directly - user is typing in native script
+      } else if (value === '' || isLatinText(value)) {
+        // Pure Latin input - apply transliteration
         setRawInput(value);
         
-        // INSTANT transliteration
         if (value.trim()) {
           const native = transliterateNow(value);
           console.log('[RealtimeChatInput] Transliterate:', value, '→', native, 'lang:', senderLanguage);
@@ -108,7 +110,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           setNativeText('');
         }
       } else {
-        // User typing in native script directly (e.g., using native keyboard)
+        // Mixed or unknown - pass through
         setRawInput(value);
         setNativeText(value);
       }
