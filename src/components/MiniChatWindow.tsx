@@ -38,6 +38,7 @@ import {
 } from "@/lib/translation";
 import { translateAsync } from "@/lib/translation/async-translator";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
+import { useSpellCheck } from "@/hooks/useSpellCheck";
 
 const INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - auto disconnect per feature requirement
 const WARNING_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes - show warning
@@ -113,6 +114,19 @@ const MiniChatWindow = ({
   const userUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
   // Check if phonetic transliteration is needed (for non-Latin script languages like Telugu)
   const needsTransliteration = !userUsesLatinScript;
+
+  // AI-powered spell check for 900+ languages
+  const { 
+    isChecking: isSpellChecking, 
+    lastSuggestion, 
+    checkSpellingDebounced,
+    acceptSuggestion,
+    dismissSuggestion 
+  } = useSpellCheck({ 
+    language: currentUserLanguage, 
+    enabled: needsTransliteration,
+    debounceMs: 800 
+  });
 
   // Background task queue for non-blocking operations
   const backgroundTasksRef = useRef<Set<Promise<void>>>(new Set());
@@ -871,6 +885,40 @@ const MiniChatWindow = ({
             {needsTransliteration && newMessage && newMessage !== rawInput && (
               <div className="px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
                 {newMessage}
+                {isSpellChecking && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
+              </div>
+            )}
+            {/* Spell check suggestion */}
+            {lastSuggestion?.wasChanged && (
+              <div className="px-2 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded text-[10px] flex items-center justify-between gap-2">
+                <span className="text-yellow-700 dark:text-yellow-400">
+                  Did you mean: <strong>{lastSuggestion.corrected}</strong>?
+                </span>
+                <div className="flex gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-5 px-2 text-[9px]"
+                    onClick={() => {
+                      const corrected = acceptSuggestion();
+                      if (corrected) {
+                        setRawInput(corrected);
+                        const native = dynamicTransliterate(corrected, currentUserLanguage);
+                        setNewMessage(native || corrected);
+                      }
+                    }}
+                  >
+                    Yes
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-5 px-2 text-[9px]"
+                    onClick={dismissSuggestion}
+                  >
+                    No
+                  </Button>
+                </div>
               </div>
             )}
             {/* Same language indicator */}
@@ -902,6 +950,8 @@ const MiniChatWindow = ({
                         } catch {
                           setNewMessage(newValue);
                         }
+                        // Trigger spell check
+                        checkSpellingDebounced(newValue);
                       } else {
                         setNewMessage(newValue);
                       }
