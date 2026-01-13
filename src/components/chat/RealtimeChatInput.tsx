@@ -158,48 +158,98 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   }, [transliterateNow, needsTransliteration, typingMode, onTyping]);
 
   /**
-   * Handle send - sends native script text, translates for receiver using Universal Translation
+   * Handle send - Universal Translation for all typing modes
+   * 
+   * TYPING MODES:
+   * 1. Native mode: User types Latin → transliterates to native → sends native
+   * 2. English mode: User types pure English → translate to sender's native + receiver's native
+   * 
+   * TRANSLATION PATHS:
+   * - English typing: English → Sender's native (senderView), English → Receiver's native (receiverView)
+   * - Native typing: Native stored, translate Native → Receiver's native (receiverView)
    */
   const handleSend = useCallback(async () => {
-    // Use native text (transliterated) if available, or raw input in English mode
-    const messageToSend = typingMode === 'english' 
-      ? rawInput.trim() 
-      : (nativeText || rawInput).trim();
+    // Get the raw input text
+    const rawMessage = rawInput.trim();
+    const nativeMessage = (nativeText || rawInput).trim();
+    
+    // In English mode use raw English, in native mode use transliterated text
+    const messageToSend = typingMode === 'english' ? rawMessage : nativeMessage;
       
     if (!messageToSend || disabled || isComposing || isSending) return;
 
     setIsSending(true);
 
     // Clear input immediately for responsive feel
-    const savedMessage = messageToSend;
     setRawInput('');
     setNativeText('');
     onTyping?.(false);
 
     try {
-      let receiverView = savedMessage;
+      let senderView = messageToSend;
+      let receiverView = messageToSend;
       
-      // If sender and receiver have different languages, use Universal Translation
-      if (!isSameLanguage(senderLanguage, receiverLanguage)) {
-        try {
-          console.log('[RealtimeChatInput] Translating:', senderLanguage, '→', receiverLanguage);
-          const result = await translateText(savedMessage, senderLanguage, receiverLanguage);
-          if (result.isTranslated) {
-            receiverView = result.text;
+      // CASE 1: Typing in English mode - translate from English to both sender's and receiver's native
+      if (typingMode === 'english') {
+        const isEnglishSender = senderLanguage.toLowerCase() === 'english';
+        const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
+        
+        // Translate English → Sender's native language (so sender sees in their native)
+        if (!isEnglishSender) {
+          try {
+            console.log('[RealtimeChatInput] English → Sender native:', 'english', '→', senderLanguage);
+            const senderResult = await translateText(messageToSend, 'english', senderLanguage);
+            if (senderResult.isTranslated) {
+              senderView = senderResult.text;
+            }
+          } catch (e) {
+            console.error('[RealtimeChatInput] Sender translation error:', e);
           }
-        } catch (e) {
-          console.error('[RealtimeChatInput] Translation error:', e);
-          // Fallback to original message if translation fails
         }
+        
+        // Translate English → Receiver's native language
+        if (!isEnglishReceiver) {
+          try {
+            console.log('[RealtimeChatInput] English → Receiver native:', 'english', '→', receiverLanguage);
+            const receiverResult = await translateText(messageToSend, 'english', receiverLanguage);
+            if (receiverResult.isTranslated) {
+              receiverView = receiverResult.text;
+            }
+          } catch (e) {
+            console.error('[RealtimeChatInput] Receiver translation error:', e);
+          }
+        }
+        
+        // Store original English as the base message
+        onSendMessage(messageToSend, senderView, receiverView);
+      } 
+      // CASE 2: Typing in Native mode - translate native to receiver's language
+      else {
+        // Sender view is already in native script (transliterated)
+        senderView = messageToSend;
+        
+        // If sender and receiver have different languages, translate for receiver
+        if (!isSameLanguage(senderLanguage, receiverLanguage)) {
+          try {
+            console.log('[RealtimeChatInput] Native → Receiver:', senderLanguage, '→', receiverLanguage);
+            const result = await translateText(messageToSend, senderLanguage, receiverLanguage);
+            if (result.isTranslated) {
+              receiverView = result.text;
+            }
+          } catch (e) {
+            console.error('[RealtimeChatInput] Translation error:', e);
+          }
+        }
+        
+        // Send: original message, sender's view (native), receiver's view (translated)
+        onSendMessage(messageToSend, senderView, receiverView);
       }
-
-      // Send: original message, sender's view (native), receiver's view (translated)
-      onSendMessage(savedMessage, savedMessage, receiverView);
+      
       textareaRef.current?.focus();
     } catch (err) {
       console.error('[RealtimeChatInput] Send error:', err);
       // Fallback: send original text
-      onSendMessage(savedMessage, savedMessage, savedMessage);
+      onSendMessage(messageToSend, messageToSend, messageToSend);
     } finally {
       setIsSending(false);
     }
