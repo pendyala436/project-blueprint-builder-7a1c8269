@@ -1737,8 +1737,8 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 
-                {/* MODE: english-meaning - Hint */}
-                {typingMode === 'english-meaning' && !userUsesLatinScript && (
+                {/* MODE: english-meaning - Hint (works for ALL languages - Latin or non-Latin) */}
+                {typingMode === 'english-meaning' && !isSameLanguage(currentUserLanguage, 'english') && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-blue-500/10 rounded text-[9px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
                     <span>🌐</span>
                     <span>Type English meaning → translates to {currentUserLanguage}</span>
