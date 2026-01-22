@@ -102,28 +102,40 @@ const ApprovalPendingScreen = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          approval_status: "pending",
-          ai_disapproval_reason: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
+      // Show processing message
+      toast({
+        title: "Processing Request",
+        description: "Your reapproval request is being processed. Please wait...",
+      });
+
+      // Call the edge function for immediate approval
+      const { data, error } = await supabase.functions.invoke('ai-women-approval', {
+        body: { action: 'request_reapproval', user_id: user.id }
+      });
 
       if (error) throw error;
 
-      setStatus("pending");
-      setDisapprovalReason(null);
-      
-      toast({
-        title: "Application Submitted",
-        description: "Your application has been resubmitted for review.",
-      });
+      if (data?.success) {
+        setStatus("approved");
+        setDisapprovalReason(null);
+        
+        toast({
+          title: "✅ Approved Successfully!",
+          description: "Your account has been reactivated. You are now a Free User and can start chatting. Perform well to earn a badge!",
+        });
+
+        // Navigate to dashboard after short delay
+        setTimeout(() => {
+          navigate("/women-dashboard");
+        }, 2000);
+      } else {
+        throw new Error(data?.error || "Approval failed");
+      }
     } catch (error: any) {
+      console.error("Reapply error:", error);
       toast({
-        title: "Error",
-        description: "Failed to reapply. Please try again.",
+        title: "Reapproval Failed",
+        description: error?.message || "Failed to process your request. Please try again later.",
         variant: "destructive",
       });
     } finally {
