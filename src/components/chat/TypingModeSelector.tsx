@@ -159,6 +159,11 @@ export const detectNativeScript = (text: string): { isNative: boolean; script: s
 
 /**
  * Hook to manage typing mode with persistence and auto-detection
+ * 
+ * Auto-detection logic:
+ * - If user types native script (Gboard, etc.) → Switch to 'native' mode
+ * - If user types Latin/English after being in native → Switch to 'english-meaning' (default)
+ * - Default mode: 'english-meaning'
  */
 export const useTypingMode = () => {
   const [mode, setModeState] = useState<TypingMode>(() => getSavedTypingMode());
@@ -166,6 +171,7 @@ export const useTypingMode = () => {
   const [isAutoMode, setIsAutoMode] = useState(false);
   const lastManualModeRef = useRef<TypingMode>(mode);
   const modeLockedUntilRef = useRef<number>(0);
+  const lastDetectedScriptRef = useRef<'latin' | 'native'>('latin');
 
   const setMode = useCallback((newMode: TypingMode, isAuto = false) => {
     setModeState(newMode);
@@ -186,6 +192,8 @@ export const useTypingMode = () => {
 
   /**
    * Handle input and auto-detect script to switch mode
+   * - Native script → 'native' mode
+   * - Latin script (when in native mode) → 'english-meaning' mode (default)
    */
   const handleInputForAutoDetect = useCallback((input: string) => {
     if (!autoDetectEnabled) return;
@@ -194,11 +202,26 @@ export const useTypingMode = () => {
 
     const { isNative, script } = detectNativeScript(input);
     
-    if (isNative && mode !== 'native') {
-      console.log('[TypingMode] Auto-detected native script:', script, '→ switching to native mode');
-      setModeState('native');
-      saveTypingMode('native');
-      setIsAutoMode(true);
+    // Detect script change and switch mode accordingly
+    if (isNative) {
+      // Native script detected (Gboard native keyboard, etc.)
+      if (mode !== 'native') {
+        console.log('[TypingMode] Auto-detected native script:', script, '→ switching to native mode');
+        setModeState('native');
+        saveTypingMode('native');
+        setIsAutoMode(true);
+      }
+      lastDetectedScriptRef.current = 'native';
+    } else {
+      // Latin/English detected
+      if (lastDetectedScriptRef.current === 'native' && mode === 'native') {
+        // User switched from native keyboard to Latin - switch to default English mode
+        console.log('[TypingMode] Auto-detected Latin input after native → switching to english-meaning');
+        setModeState('english-meaning');
+        saveTypingMode('english-meaning');
+        setIsAutoMode(true);
+      }
+      lastDetectedScriptRef.current = 'latin';
     }
   }, [autoDetectEnabled, mode]);
 
@@ -213,6 +236,13 @@ export const useTypingMode = () => {
     }
   }, [isAutoMode]);
 
+  /**
+   * Reset detection state (call when input is cleared)
+   */
+  const resetDetection = useCallback(() => {
+    lastDetectedScriptRef.current = 'latin';
+  }, []);
+
   return { 
     mode, 
     setMode, 
@@ -221,6 +251,7 @@ export const useTypingMode = () => {
     isAutoMode,
     handleInputForAutoDetect,
     resetToManualMode,
+    resetDetection,
   };
 };
 
