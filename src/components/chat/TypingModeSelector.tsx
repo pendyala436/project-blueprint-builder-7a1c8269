@@ -269,32 +269,32 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
   const [isOpen, setIsOpen] = useState(false);
   const [autoDetect, setAutoDetect] = useState(() => getAutoDetectEnabled());
 
-  // Define the 3 modes with their behaviors
+  // Define the 3 modes with meaningful names and clear behaviors
   const modes: TypingModeInfo[] = [
     {
       id: 'native',
-      name: t('chat.mode.native', 'Type in Mother Tongue'),
-      description: t('chat.mode.nativeDesc', 'Type using your native language keyboard or Latin letters'),
+      name: t('chat.mode.native', '🏠 Mother Tongue'),
+      description: t('chat.mode.nativeDesc', 'Type directly in your language using Gboard or transliteration'),
       icon: <Languages className="h-4 w-4" />,
-      preview: `Shows in ${userLanguage}`,
+      preview: `Your ${userLanguage} text`,
       afterSend: `You see: ${userLanguage}`,
       receiverSees: `Partner sees: ${receiverLanguage}`,
     },
     {
       id: 'english-core',
-      name: t('chat.mode.englishCore', 'Type & See English'),
-      description: t('chat.mode.englishCoreDesc', 'You type and see English, partner sees their language'),
+      name: t('chat.mode.englishCore', '🌍 English Only'),
+      description: t('chat.mode.englishCoreDesc', 'Type & read in English. Partner reads their language'),
       icon: <Globe className="h-4 w-4" />,
-      preview: 'Shows in English',
+      preview: 'Your English text',
       afterSend: 'You see: English',
       receiverSees: `Partner sees: ${receiverLanguage}`,
     },
     {
       id: 'english-meaning',
-      name: t('chat.mode.englishMeaning', 'Type English → Show Native'),
-      description: t('chat.mode.englishMeaningDesc', 'Type in English, message displays in your native language'),
+      name: t('chat.mode.englishMeaning', '✨ Smart Translate'),
+      description: t('chat.mode.englishMeaningDesc', 'Type English → Auto-converts to native language display'),
       icon: <MessageSquareText className="h-4 w-4" />,
-      preview: `Shows in ${userLanguage}`,
+      preview: `Shows as ${userLanguage}`,
       afterSend: `You see: ${userLanguage}`,
       receiverSees: `Partner sees: ${receiverLanguage}`,
     },
@@ -333,7 +333,7 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="end" 
-          className="w-80 bg-popover border border-border shadow-xl z-[10000]"
+          className="w-80 max-h-[400px] overflow-y-auto bg-popover border border-border shadow-xl z-[10000]"
           sideOffset={5}
         >
           {/* Auto-detect toggle */}
@@ -359,7 +359,7 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
             </>
           )}
           
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
+          <DropdownMenuLabel className="text-xs text-muted-foreground px-3 py-1.5">
             {t('chat.selectTypingMode', 'Select Typing Mode')}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -368,7 +368,7 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
               key={mode.id}
               onClick={() => handleSelectMode(mode.id)}
               className={cn(
-                'flex items-start gap-3 p-3 cursor-pointer',
+                'flex items-start gap-2 px-3 py-2 cursor-pointer min-h-0',
                 currentMode === mode.id && 'bg-primary/10'
               )}
             >
@@ -383,14 +383,9 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
                     <Badge variant="outline" className="h-4 text-[9px] px-1">Auto</Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                   {mode.description}
                 </p>
-                <div className="text-xs text-muted-foreground/70 mt-1.5 space-y-0.5">
-                  <div>Preview: <span className="text-foreground/80">{mode.preview}</span></div>
-                  <div>After Send: <span className="text-foreground/80">{mode.afterSend}</span></div>
-                  <div>Receiver: <span className="text-foreground/80">{mode.receiverSees}</span></div>
-                </div>
               </div>
             </DropdownMenuItem>
           ))}
