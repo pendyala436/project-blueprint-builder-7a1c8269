@@ -130,7 +130,7 @@ const DraggableMiniChatWindow = ({
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const [isTypingModeOpen, setIsTypingModeOpen] = useState(false);
+  
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Typing mode for 9-combination display (persisted in localStorage) with auto-detection
@@ -1283,32 +1283,19 @@ const DraggableMiniChatWindow = ({
         </div>
         <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
           {/* Typing Mode Selector - Let user choose their viewing/typing mode */}
-          <Popover open={isTypingModeOpen} onOpenChange={setIsTypingModeOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5"
-                title="Change typing mode"
-              >
-                <Type className="h-2.5 w-2.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-2" side="bottom" align="end">
-              <TypingModeSelector
-                currentMode={typingMode}
-                onModeChange={(mode) => {
-                  setTypingMode(mode);
-                  setIsTypingModeOpen(false);
-                }}
-                userLanguage={currentUserLanguage}
-                receiverLanguage={partnerLanguage}
-                compact={false}
-                showAutoDetect={true}
-                isAutoMode={isAutoMode}
-              />
-            </PopoverContent>
-          </Popover>
+          {/* Typing Mode Selector - compact dropdown for quick mode switching */}
+          <TypingModeSelector
+            currentMode={typingMode}
+            onModeChange={(mode) => {
+              setTypingMode(mode);
+            }}
+            userLanguage={currentUserLanguage}
+            receiverLanguage={partnerLanguage}
+            compact={true}
+            showAutoDetect={true}
+            isAutoMode={isAutoMode}
+            className="h-5"
+          />
           
           {/* Toggle button to show/hide action buttons */}
           <Button

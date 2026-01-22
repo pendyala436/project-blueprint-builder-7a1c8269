@@ -332,8 +332,9 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          align="start" 
-          className="w-80 bg-popover border border-border shadow-lg z-50"
+          align="end" 
+          className="w-80 bg-popover border border-border shadow-xl z-[10000]"
+          sideOffset={5}
         >
           {/* Auto-detect toggle */}
           {showAutoDetect && (
