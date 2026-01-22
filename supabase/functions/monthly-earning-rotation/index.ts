@@ -126,6 +126,25 @@ serve(async (req) => {
       return data?.reduce((sum, s) => sum + (Number(s.total_minutes) || 0), 0) || 0;
     }
 
+    // Helper function to get last 2 months chat minutes for inactivity check
+    async function getLastTwoMonthsMinutes(userId: string): Promise<number> {
+      const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      
+      const { data, error } = await supabase
+        .from("active_chat_sessions")
+        .select("total_minutes")
+        .eq("woman_user_id", userId)
+        .gte("started_at", twoMonthsAgo.toISOString())
+        .lt("started_at", monthEnd.toISOString());
+
+      if (error) {
+        console.error(`Error getting 2-month minutes for ${userId}:`, error);
+        return 0;
+      }
+
+      return data?.reduce((sum, s) => sum + (Number(s.total_minutes) || 0), 0) || 0;
+    }
+
     // Process each language
     for (const langLimit of languageLimits || []) {
       console.log(`\nProcessing language: ${langLimit.language_name}`);
@@ -149,6 +168,7 @@ serve(async (req) => {
         (paidWomen || []).map(async (w) => ({
           ...w,
           monthlyMinutes: await getMonthlyMinutes(w.user_id),
+          lastTwoMonthsMinutes: await getLastTwoMonthsMinutes(w.user_id),
         }))
       );
 
@@ -156,12 +176,21 @@ serve(async (req) => {
       const topEarnerMinutes = Math.max(...paidWithMinutes.map(w => w.monthlyMinutes), 1);
       const thresholdMinutes = topEarnerMinutes * 0.10;
       
-      console.log(`Top earner: ${topEarnerMinutes} mins, threshold: ${thresholdMinutes} mins`);
+      console.log(`Top earner: ${topEarnerMinutes} mins, threshold (10%): ${thresholdMinutes} mins`);
 
-      // Step 2: Demote women with less than 10% of top earner
+      // Step 2: Demote women who:
+      // - Have less than 10% of top earner's chat time, OR
+      // - Have been inactive (0 minutes) for last 2 months
       for (const woman of paidWithMinutes) {
-        if (woman.monthlyMinutes < thresholdMinutes) {
-          console.log(`Demoting ${woman.full_name}: ${woman.monthlyMinutes} mins < ${thresholdMinutes} threshold`);
+        const isLowPerformer = woman.monthlyMinutes < thresholdMinutes;
+        const isInactive = woman.lastTwoMonthsMinutes === 0;
+        
+        if (isLowPerformer || isInactive) {
+          const reason = isInactive 
+            ? `Inactive for 2 months (0 mins)` 
+            : `Low performance: ${woman.monthlyMinutes} mins < ${thresholdMinutes.toFixed(1)} threshold`;
+          
+          console.log(`Demoting ${woman.full_name}: ${reason}`);
           
           await supabase
             .from("female_profiles")
