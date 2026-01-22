@@ -85,6 +85,7 @@ interface OnlineWoman {
   active_chat_count?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
   is_available?: boolean;
   max_chats?: number;
+  is_earning_eligible?: boolean; // Badged women shown at top
 }
 
 interface DashboardStats {
@@ -671,10 +672,10 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch ONLY online women from female_profiles table (no photo filter - all users visible)
+      // Fetch ONLY online women from female_profiles table with earning eligibility
       const { data: femaleProfiles } = await supabase
         .from("female_profiles")
-        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
         .eq("approval_status", "approved")
         .eq("account_status", "active")
         .in("user_id", onlineUserIds)
@@ -685,7 +686,7 @@ const DashboardScreen = () => {
       // Also fetch from main profiles table for online women
       const { data: mainProfiles } = await supabase
         .from("profiles")
-        .select("id, user_id, full_name, photo_url, age, country, primary_language")
+        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
         .or("gender.eq.female,gender.eq.Female")
         .eq("approval_status", "approved")
         .in("user_id", onlineUserIds)
@@ -749,30 +750,35 @@ const DashboardScreen = () => {
           primary_language: womanLanguage,
           active_chat_count: chatCount,
           is_available: avail?.is_available !== false,
-          max_chats: avail?.max_concurrent_chats || 3
+          max_chats: avail?.max_concurrent_chats || 3,
+          is_earning_eligible: w.is_earning_eligible || false,
         };
       });
 
-      // Sort by load: lowest chat count first (load balancing)
-      const sortByLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
-        // First: available vs not available
+      // Sort: Badged (earning eligible) women first, then by availability and load
+      const sortByBadgeAndLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
+        // First: Badged (earning eligible) women on top
+        if (a.is_earning_eligible !== b.is_earning_eligible) {
+          return a.is_earning_eligible ? -1 : 1;
+        }
+        // Second: available vs not available
         if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
-        // Second: not at max capacity
+        // Third: not at max capacity
         const aAtMax = a.active_chat_count >= a.max_chats;
         const bAtMax = b.active_chat_count >= b.max_chats;
         if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
-        // Third: by chat count (lower first = less load)
+        // Fourth: by chat count (lower first = less load)
         return a.active_chat_count - b.active_chat_count;
       };
 
       // Split: same language first, others for auto-translate
       const sameLanguage = womenWithChatCount
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
-        .sort(sortByLoad);
+        .sort(sortByBadgeAndLoad);
 
       const otherWomen = womenWithChatCount
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
-        .sort(sortByLoad);
+        .sort(sortByBadgeAndLoad);
 
       console.log("[Dashboard] Online same-language women:", sameLanguage.length);
       console.log("[Dashboard] Online other-language women (auto-translate):", otherWomen.length);

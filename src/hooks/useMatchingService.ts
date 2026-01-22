@@ -26,6 +26,7 @@ export interface MatchableUser {
   isSameLanguage: boolean;
   isNllbSupported: boolean;
   requiresTranslation: boolean;
+  isEarningEligible: boolean;
 }
 
 export interface MatchingResult {
@@ -116,10 +117,10 @@ export const useMatchingService = () => {
 
       const onlineUserIds = onlineStatuses.map(s => s.user_id);
 
-      // Fetch female profiles
+      // Fetch female profiles with earning eligibility
       const { data: femaleProfiles } = await supabase
         .from("profiles")
-        .select("user_id, full_name, photo_url, country, primary_language, preferred_language, age, ai_approved, approval_status")
+        .select("user_id, full_name, photo_url, country, primary_language, preferred_language, age, ai_approved, approval_status, is_earning_eligible")
         .in("user_id", onlineUserIds)
         .eq("gender", "Female")
         .eq("approval_status", "approved");
@@ -182,6 +183,7 @@ export const useMatchingService = () => {
           isSameLanguage,
           isNllbSupported: isWomanNllbSupported,
           requiresTranslation: needsTranslation,
+          isEarningEligible: profile.is_earning_eligible || false,
         };
 
         if (isSameLanguage) {
@@ -196,12 +198,18 @@ export const useMatchingService = () => {
         }
       }
 
-      // Sort by load balancing (lowest chat count first)
-      const sortByLoad = (a: MatchableUser, b: MatchableUser) => 
-        a.currentChatCount - b.currentChatCount;
+      // Sort: Badged (earning eligible) women first, then by load balancing
+      const sortByBadgeAndLoad = (a: MatchableUser, b: MatchableUser) => {
+        // First: earning eligible (badged) women on top
+        if (a.isEarningEligible !== b.isEarningEligible) {
+          return a.isEarningEligible ? -1 : 1;
+        }
+        // Second: by chat count (lower first = less load)
+        return a.currentChatCount - b.currentChatCount;
+      };
 
-      sameLanguageUsers.sort(sortByLoad);
-      translatedUsers.sort(sortByLoad);
+      sameLanguageUsers.sort(sortByBadgeAndLoad);
+      translatedUsers.sort(sortByBadgeAndLoad);
 
       const allUsers = [...sameLanguageUsers, ...translatedUsers];
 
@@ -312,6 +320,7 @@ export const useMatchingService = () => {
               isSameLanguage,
               isNllbSupported: nllbLanguageNames.has(manLanguage.toLowerCase()),
               requiresTranslation: requiresTranslation(userLanguage, manLanguage),
+              isEarningEligible: false, // Men don't have earning eligibility
             });
           }
         }
