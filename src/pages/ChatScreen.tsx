@@ -1759,25 +1759,43 @@ const ChatScreen = () => {
                           </div>
                         )}
 
-                        {/* Original message for receiver (when translations shown) */}
-                        {showTranslations && !isMine && message.isTranslated && message.translatedMessage && (
-                          <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-border/50 rounded-bl-md">
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
-                              <Languages className="w-3 h-3" />
-                              Original
-                            </p>
-                            <p className="text-sm text-muted-foreground">{messageText}</p>
-                          </div>
+                        {/* Secondary view for receiver (dual display based on mode) */}
+                        {!isMine && (
+                          <>
+                            {/* In English Core mode: show native as secondary */}
+                            {viewerMode === 'english-core' && message.translatedMessage && message.originalEnglish && 
+                             message.translatedMessage !== message.originalEnglish && (
+                              <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Languages className="w-3 h-3" />
+                                  <span className="unicode-text" dir="auto">
+                                    {extractAttachment(message.translatedMessage).text}
+                                  </span>
+                                </p>
+                              </div>
+                            )}
+                            {/* In Native/English Meaning mode: show English as secondary */}
+                            {viewerMode !== 'english-core' && message.originalEnglish && message.translatedMessage &&
+                             message.originalEnglish !== message.translatedMessage && (
+                              <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Languages className="w-3 h-3" />
+                                  <span>{message.originalEnglish}</span>
+                                </p>
+                              </div>
+                            )}
+                          </>
                         )}
 
-                        {/* Translation preview for sender */}
-                        {showTranslations && isMine && message.isTranslated && message.translatedMessage && (
-                          <div className="px-4 py-2 rounded-2xl bg-info/10 border border-info/20 rounded-br-md">
-                            <p className="text-xs text-info flex items-center gap-1 mb-1">
+                        {/* Secondary view for sender - show what receiver sees */}
+                        {isMine && message.translatedMessage && messageText !== extractAttachment(message.translatedMessage).text && (
+                          <div className="px-3 py-1.5 rounded-xl bg-info/10 border border-info/20 rounded-br-md">
+                            <p className="text-xs text-info flex items-center gap-1">
                               <Languages className="w-3 h-3" />
-                              They see
+                              <span className="unicode-text" dir="auto">
+                                {extractAttachment(message.translatedMessage).text}
+                              </span>
                             </p>
-                            <p className="text-sm text-foreground">{extractAttachment(message.translatedMessage).text}</p>
                           </div>
                         )}
 
