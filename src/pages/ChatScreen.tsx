@@ -91,7 +91,7 @@ import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
 import { RealtimeChatInput, type MessageViews } from "@/components/chat/RealtimeChatInput";
-import { getSavedTypingMode } from "@/components/chat/TypingModeSelector";
+import { TypingModeSelector, useTypingMode } from "@/components/chat/TypingModeSelector";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -180,6 +180,9 @@ const ChatScreen = () => {
   
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
+  
+  // Typing mode for 9-combination display (persisted in localStorage)
+  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
   
   // Attachment states
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -1412,6 +1415,15 @@ const ChatScreen = () => {
             </div>
           )}
 
+          {/* Typing Mode Selector - Let user choose their typing mode */}
+          <TypingModeSelector
+            currentMode={typingMode}
+            onModeChange={setTypingMode}
+            userLanguage={currentUserLanguage || "your language"}
+            receiverLanguage={chatPartner?.preferredLanguage || "their language"}
+            compact={true}
+          />
+
           {/* Toggle translation visibility button */}
           <button
             onClick={() => setShowTranslations(!showTranslations)}
@@ -1661,7 +1673,7 @@ const ChatScreen = () => {
                 // Determine what the receiver sees based on their typing mode preference:
                 // - English Core: Show originalEnglish (if available), fallback to translatedMessage
                 // - Native/English Meaning: Show translatedMessage (receiver's native language)
-                const viewerMode = getSavedTypingMode();
+                // Use the typingMode state (persisted preference) instead of calling getSavedTypingMode() each time
                 let displayText: string;
                 
                 if (isMine) {
@@ -1669,7 +1681,7 @@ const ChatScreen = () => {
                   displayText = messageText;
                 } else {
                   // Receiver's display depends on their mode preference
-                  if (viewerMode === 'english-core' && message.originalEnglish) {
+                  if (typingMode === 'english-core' && message.originalEnglish) {
                     // Receiver wants English - show originalEnglish
                     displayText = extractAttachment(message.originalEnglish).text;
                   } else if (message.translatedMessage) {
@@ -1763,7 +1775,7 @@ const ChatScreen = () => {
                         {!isMine && (
                           <>
                             {/* In English Core mode: show native as secondary */}
-                            {viewerMode === 'english-core' && message.translatedMessage && message.originalEnglish && 
+                            {typingMode === 'english-core' && message.translatedMessage && message.originalEnglish && 
                              message.translatedMessage !== message.originalEnglish && (
                               <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1775,7 +1787,7 @@ const ChatScreen = () => {
                               </div>
                             )}
                             {/* In Native/English Meaning mode: show English as secondary */}
-                            {viewerMode !== 'english-core' && message.originalEnglish && message.translatedMessage &&
+                            {typingMode !== 'english-core' && message.originalEnglish && message.translatedMessage &&
                              message.originalEnglish !== message.translatedMessage && (
                               <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
