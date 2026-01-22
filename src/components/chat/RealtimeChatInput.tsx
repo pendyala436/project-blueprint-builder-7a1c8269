@@ -84,8 +84,14 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const [isComposing, setIsComposing] = useState(false);
   const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   
-  // Use persistent typing mode hook
-  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
+  // Use persistent typing mode hook with auto-detection
+  const { 
+    mode: typingMode, 
+    setMode: setTypingMode, 
+    isAutoMode,
+    handleInputForAutoDetect,
+    autoDetectEnabled 
+  } = useTypingMode();
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -143,10 +149,17 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
   /**
    * Handle input change - behavior depends on typing mode
+   * Also triggers auto-detection for Gboard/external keyboard native input
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setRawInput(value);
+
+    // AUTO-DETECTION: Check if user is typing in native script (Gboard, etc.)
+    // This takes priority - if native script detected, switch to native mode
+    if (autoDetectEnabled && value.length >= 2) {
+      handleInputForAutoDetect(value);
+    }
 
     // Mode 1: Native Mode - transliterate if needed
     if (typingMode === 'native') {
