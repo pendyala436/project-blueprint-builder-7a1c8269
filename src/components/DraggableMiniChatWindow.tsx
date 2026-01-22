@@ -780,23 +780,31 @@ const DraggableMiniChatWindow = ({
         typingMode: result.typingMode
       });
       
+      // Import reverse transliterate for Latin conversion
+      const { reverseTransliterate } = await import('@/lib/libre-translate/transliterator');
+      const { isLatinText: checkLatinText } = await import('@/lib/libre-translate/language-data');
+      
       // Determine what current user should see based on who sent the message
       const isSentByMe = senderId === currentUserId;
       
       // Get the display text for current user
       const displayText = isSentByMe ? result.senderView : result.receiverView;
-      const displayLanguage = isSentByMe ? currentUserLanguage : currentUserLanguage;
       
-      // Generate Latin transliteration for native script display
-      // Always include Latin when showing non-Latin text
+      // ALWAYS generate Latin transliteration when text contains non-Latin characters
+      // This ensures native script always has Latin below it
       let latinText: string | undefined;
-      if (displayText && !isLatinScriptLanguage(displayLanguage)) {
+      if (displayText && !checkLatinText(displayText)) {
         // Use reverse transliteration to get Latin version
-        const { reverseTransliterate } = await import('@/lib/libre-translate/transliterator');
-        latinText = reverseTransliterate(displayText, displayLanguage);
+        // Determine source language based on who the text belongs to
+        const sourceLanguage = isSentByMe ? currentUserLanguage : currentUserLanguage; // Receiver always sees their language
+        latinText = reverseTransliterate(displayText, sourceLanguage);
         // Only include if different from display and not empty
-        if (latinText === displayText || !latinText.trim()) {
-          latinText = undefined;
+        if (latinText === displayText || !latinText?.trim()) {
+          // Try with partner language if current user language didn't work
+          latinText = reverseTransliterate(displayText, partnerLanguage);
+          if (latinText === displayText || !latinText?.trim()) {
+            latinText = undefined;
+          }
         }
       }
       
@@ -841,33 +849,35 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // STEP 1: IMMEDIATE - Show messages instantly
+      // STEP 1: IMMEDIATE - Show messages instantly with Latin from original_english
       const immediateMessages = data.map((m) => ({
         id: m.id,
         senderId: m.sender_id,
         message: m.message,
-        translatedMessage: undefined,
-        englishMessage: undefined,
+        translatedMessage: m.message,
+        englishMessage: m.original_english || undefined,
+        // If sender stored Latin input in original_english, use it
+        latinMessage: m.sender_id === currentUserId && m.original_english && m.original_english !== m.message 
+          ? m.original_english 
+          : undefined,
         isTranslated: false,
         isTranslating: m.sender_id !== currentUserId,
         createdAt: m.created_at
       }));
       setMessages(immediateMessages);
 
-      // STEP 2: BACKGROUND - Translate partner's messages to native + English
-      const partnerMessages = data.filter(m => m.sender_id !== currentUserId);
-      
-      partnerMessages.forEach((m) => {
-        // Always translate to get both native and English
+      // STEP 2: BACKGROUND - Translate ALL messages to get native + Latin + English
+      data.forEach((m) => {
         translateMessage(m.message, m.sender_id)
           .then((result) => {
             setMessages(prev => prev.map(msg => 
               msg.id === m.id 
                 ? {
                     ...msg,
-                    translatedMessage: result.translatedMessage,
-                    englishMessage: result.englishMessage,
-                    latinMessage: result.latinMessage,
+                    translatedMessage: result.translatedMessage || msg.translatedMessage,
+                    englishMessage: result.englishMessage || msg.englishMessage,
+                    // Prefer generated Latin, fallback to stored original_english
+                    latinMessage: result.latinMessage || msg.latinMessage,
                     isTranslated: result.isTranslated,
                     isTranslating: false
                   }
@@ -906,8 +916,12 @@ const DraggableMiniChatWindow = ({
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: undefined,
-              englishMessage: undefined,
+              translatedMessage: newMsg.message,
+              englishMessage: newMsg.original_english || undefined,
+              // Own message: use stored Latin, Partner message: will be generated
+              latinMessage: !isPartnerMessage && newMsg.original_english && newMsg.original_english !== newMsg.message 
+                ? newMsg.original_english 
+                : undefined,
               isTranslated: false,
               isTranslating: isPartnerMessage,
               createdAt: newMsg.created_at
@@ -1007,6 +1021,7 @@ const DraggableMiniChatWindow = ({
   // Message stored as-is, receiver sees semantically translated version via translateText
   const sendMessage = async () => {
     const messageText = newMessage.trim();
+    const latinInput = rawInput.trim(); // Capture before clearing
     if (!messageText || isSending) return;
 
     if (messageText.length > MAX_MESSAGE_LENGTH) {
@@ -1034,17 +1049,22 @@ const DraggableMiniChatWindow = ({
     // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // For sender's own message, apply mode-specific display
-    // - native: Show native script (already converted if needed)
-    // - english-core: Show English as typed
-    // - english-meaning: Show native preview (sender sees native after typing English)
-    const displayMessage = typingMode === 'english-core' ? messageText : messageText;
+    // For sender's own message, determine Latin alongside native
+    // - If messageText differs from latinInput, latinInput is the Latin version
+    // - Otherwise check if messageText is already Latin
+    let latinForDisplay: string | undefined;
+    if (latinInput && latinInput !== messageText && needsTransliteration) {
+      // User typed Latin, got native - show Latin
+      latinForDisplay = latinInput;
+    }
     
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText, // Original message
-      translatedMessage: displayMessage, // For display
+      message: messageText, // Original message (native)
+      translatedMessage: messageText, // For display
+      latinMessage: latinForDisplay, // Latin version for display
+      englishMessage: typingMode === 'english-meaning' ? latinInput : undefined,
       isTranslated: false,
       createdAt: new Date().toISOString()
     }]);
@@ -1062,7 +1082,7 @@ const DraggableMiniChatWindow = ({
           receiver_id: partnerId,
           message: messageText,
           // Store original English for english-meaning mode
-          original_english: typingMode === 'english-meaning' ? rawInput || messageText : null
+          original_english: typingMode === 'english-meaning' ? latinInput || messageText : (latinInput !== messageText ? latinInput : null)
         });
 
       if (error) throw error;
