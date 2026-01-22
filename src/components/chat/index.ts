@@ -4,8 +4,9 @@ export { ChatMessageInput } from './ChatMessageInput';
 export { MultilingualChatRoom } from './MultilingualChatRoom';
 
 // Real-time translation components (production-ready, < 3ms UI response)
-export { RealtimeChatInput } from './RealtimeChatInput';
-export { RealtimeMessageBubble } from './RealtimeMessageBubble';
+// Supports all 9 sender×receiver mode combinations
+export { RealtimeChatInput, type MessageViews } from './RealtimeChatInput';
+export { RealtimeMessageBubble, type MessageViewData } from './RealtimeMessageBubble';
 
 // Typing mode selector (3 modes: Native, English Core, English Meaning-Based)
 export { 

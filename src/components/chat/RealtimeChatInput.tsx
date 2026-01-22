@@ -3,10 +3,18 @@
  * ==================================================
  * Zero-lag typing experience for all 1000+ languages
  * 
- * 3 TYPING MODES:
+ * 3 TYPING MODES (for both sender AND receiver):
  * 1. Native Mode - Type in mother tongue (native/Latin script)
  * 2. English Core - Type English, display English, receiver sees native
  * 3. English (Meaning-Based) - Type English, preview/display as native translation
+ * 
+ * ALL 9 COMBINATIONS SUPPORTED:
+ * Sender Mode × Receiver Mode = 9 possible combinations
+ * 
+ * Message Data Stored:
+ * - originalEnglish: English text for English Core mode
+ * - senderNative: Sender's native language view
+ * - receiverNative: Receiver's native language view
  * 
  * TYPING: Pure offline dynamic transliteration (Gboard-style)
  * TRANSLATION: Uses translateText from translate.ts via Edge Function
@@ -27,8 +35,22 @@ import {
   getSavedTypingMode 
 } from './TypingModeSelector';
 
+/**
+ * Message views for all 9 mode combinations
+ * These views are sent to the parent for storage
+ */
+export interface MessageViews {
+  messageToStore: string;   // What gets stored in database (sender's view)
+  senderView: string;       // What sender sees after sending
+  receiverView: string;     // What receiver sees (translated to their language)
+  originalEnglish: string;  // English text for English Core mode
+  senderNative: string;     // Sender's native language view
+  receiverNative: string;   // Receiver's native language view
+  senderMode: TypingMode;   // Sender's typing mode
+}
+
 interface RealtimeChatInputProps {
-  onSendMessage: (message: string, senderView: string, receiverView: string) => void;
+  onSendMessage: (message: string, senderView: string, receiverView: string, messageViews?: MessageViews) => void;
   onTyping?: (isTyping: boolean) => void;
   senderLanguage: string; // User's mother tongue from profile
   receiverLanguage: string; // Partner's mother tongue from profile
@@ -173,7 +195,9 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   }, [typingMode, needsTransliteration, transliterateNow, generateMeaningPreview, onTyping]);
 
   /**
-   * Handle send - behavior depends on typing mode
+   * Handle send - generates ALL views for 9 mode combinations
+   * Each message stores: originalEnglish, senderNative, receiverNative
+   * Display logic is handled by the receiving component based on receiver's mode
    */
   const handleSend = useCallback(() => {
     const rawMessage = rawInput.trim();
@@ -190,66 +214,145 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     setPreviewText('');
     onTyping?.(false);
 
-    // Process based on mode
+    // Process based on mode - generate ALL views for 9 combinations
     (async () => {
       let messageToStore = savedRaw;
       let senderView = savedRaw;
       let receiverView = savedRaw;
+      
+      // Additional views for 9 combinations
+      let originalEnglish = '';      // English version (for English Core receivers)
+      let senderNative = '';         // Sender's native language
+      let receiverNative = '';       // Receiver's native language
 
       try {
         const isEnglishSender = senderLanguage.toLowerCase() === 'english';
         const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
         const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
 
+        // ================================================
         // MODE 1: Native Mode
+        // Sender types in native script (or transliterated)
+        // ================================================
         if (savedMode === 'native') {
           messageToStore = savedNative;
           senderView = savedNative;
+          senderNative = savedNative;
           
-          if (!sameLanguage) {
-            const result = await translateText(savedNative, senderLanguage, receiverLanguage);
-            receiverView = result?.text || savedNative;
+          // Get English version (for English Core receivers)
+          if (!isEnglishSender) {
+            const toEnglish = await translateText(savedNative, senderLanguage, 'english');
+            originalEnglish = toEnglish?.text || savedNative;
           } else {
+            originalEnglish = savedNative;
+          }
+          
+          // Get receiver's native version
+          if (sameLanguage) {
             receiverView = savedNative;
-          }
-        }
-        // MODE 2: English Core
-        else if (savedMode === 'english-core') {
-          messageToStore = savedRaw; // Store English
-          senderView = savedRaw; // Display English to sender
-          
-          // Translate to receiver's language
-          if (!isEnglishReceiver) {
-            const result = await translateText(savedRaw, 'english', receiverLanguage);
-            receiverView = result?.text || savedRaw;
+            receiverNative = savedNative;
+          } else if (isEnglishReceiver) {
+            receiverView = originalEnglish;
+            receiverNative = originalEnglish;
           } else {
-            receiverView = savedRaw;
+            const toReceiver = await translateText(savedNative, senderLanguage, receiverLanguage);
+            receiverView = toReceiver?.text || savedNative;
+            receiverNative = receiverView;
           }
         }
+        
+        // ================================================
+        // MODE 2: English Core
+        // Sender types and sees English
+        // ================================================
+        else if (savedMode === 'english-core') {
+          messageToStore = savedRaw;
+          senderView = savedRaw;
+          originalEnglish = savedRaw;
+          
+          // Get sender's native version (for when they switch modes)
+          if (!isEnglishSender) {
+            const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
+            senderNative = toSenderNative?.text || savedRaw;
+          } else {
+            senderNative = savedRaw;
+          }
+          
+          // Get receiver's native version
+          if (isEnglishReceiver) {
+            receiverView = savedRaw;
+            receiverNative = savedRaw;
+          } else {
+            const toReceiver = await translateText(savedRaw, 'english', receiverLanguage);
+            receiverView = toReceiver?.text || savedRaw;
+            receiverNative = receiverView;
+          }
+        }
+        
+        // ================================================
         // MODE 3: English (Meaning-Based)
+        // Sender types English, sees in native language
+        // ================================================
         else if (savedMode === 'english-meaning') {
-          // Use preview if available, otherwise translate
+          originalEnglish = savedRaw;
+          
+          // Sender sees native (use preview if available)
           if (savedPreview) {
             senderView = savedPreview;
+            senderNative = savedPreview;
             messageToStore = savedPreview;
           } else if (!isEnglishSender) {
-            const result = await translateText(savedRaw, 'english', senderLanguage);
-            senderView = result?.text || savedRaw;
+            const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
+            senderView = toSenderNative?.text || savedRaw;
+            senderNative = senderView;
             messageToStore = senderView;
           } else {
             senderView = savedRaw;
+            senderNative = savedRaw;
             messageToStore = savedRaw;
           }
           
-          // Always translate to receiver's native language (even if English, show English translation)
-          const result = await translateText(savedRaw, 'english', receiverLanguage);
-          receiverView = result?.text || savedRaw;
+          // Get receiver's native version
+          if (isEnglishReceiver) {
+            receiverView = savedRaw; // Receiver is English, show English
+            receiverNative = savedRaw;
+          } else {
+            const toReceiver = await translateText(savedRaw, 'english', receiverLanguage);
+            receiverView = toReceiver?.text || savedRaw;
+            receiverNative = receiverView;
+          }
         }
+
+        // Log all views for debugging
+        console.log('[RealtimeChatInput] Message views generated:', {
+          mode: savedMode,
+          originalEnglish,
+          senderNative,
+          receiverNative,
+          senderView,
+          receiverView
+        });
+
       } catch (err) {
         console.error('[RealtimeChatInput] Translation error:', err);
+        // Fallback to raw text
+        originalEnglish = savedRaw;
+        senderNative = savedNative || savedRaw;
+        receiverNative = savedRaw;
       }
 
-      onSendMessage(messageToStore, senderView, receiverView);
+      // Create complete message views object
+      const messageViews: MessageViews = {
+        messageToStore,
+        senderView,
+        receiverView,
+        originalEnglish,
+        senderNative,
+        receiverNative,
+        senderMode: savedMode
+      };
+
+      onSendMessage(messageToStore, senderView, receiverView, messageViews);
     })();
 
     textareaRef.current?.focus();
