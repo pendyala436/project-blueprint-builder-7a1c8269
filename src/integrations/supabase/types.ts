@@ -381,6 +381,7 @@ export type Database = {
           is_translated: boolean | null
           message: string
           moderation_status: string | null
+          original_english: string | null
           receiver_id: string
           sender_id: string
           translated_message: string | null
@@ -397,6 +398,7 @@ export type Database = {
           is_translated?: boolean | null
           message: string
           moderation_status?: string | null
+          original_english?: string | null
           receiver_id: string
           sender_id: string
           translated_message?: string | null
@@ -413,6 +415,7 @@ export type Database = {
           is_translated?: boolean | null
           message?: string
           moderation_status?: string | null
+          original_english?: string | null
           receiver_id?: string
           sender_id?: string
           translated_message?: string | null

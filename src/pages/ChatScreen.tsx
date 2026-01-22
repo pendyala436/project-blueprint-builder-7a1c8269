@@ -90,7 +90,8 @@ import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
-import { RealtimeChatInput } from "@/components/chat/RealtimeChatInput";
+import { RealtimeChatInput, type MessageViews } from "@/components/chat/RealtimeChatInput";
+import { getSavedTypingMode } from "@/components/chat/TypingModeSelector";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -105,8 +106,9 @@ const DEFAULT_MAX_PARALLEL_CHATS = 3;
 interface Message {
   id: string;                    // UUID of the message
   senderId: string;              // UUID of sender
-  message: string;               // Original message text
-  translatedMessage?: string;    // Translated version (optional)
+  message: string;               // Original message text (senderView)
+  translatedMessage?: string;    // Translated version (receiverView)
+  originalEnglish?: string;      // English version for English Core mode
   isTranslated: boolean;         // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
@@ -361,6 +363,7 @@ const ChatScreen = () => {
               senderId: newMsg.sender_id,
               message: newMsg.message, // senderView
               translatedMessage: newMsg.translated_message || '', // receiverView
+              originalEnglish: newMsg.original_english || undefined, // English for English Core mode
               isTranslated: newMsg.is_translated || false,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
@@ -594,6 +597,7 @@ const ChatScreen = () => {
           senderId: msg.sender_id,
           message: msg.message,
           translatedMessage: msg.translated_message || undefined,
+          originalEnglish: msg.original_english || undefined, // English for English Core mode
           isTranslated: msg.is_translated || false,
           isRead: msg.is_read || false,
           createdAt: msg.created_at,
@@ -997,14 +1001,20 @@ const ChatScreen = () => {
    * 
    * Sends a new message to the chat partner:
    * 1. Validates input
-   * 2. Converts English typing to partner's language
-   * 3. Translates to partner's language
+   * 2. Uses pre-computed message views from RealtimeChatInput
+   * 3. Stores all views (senderView, receiverView, originalEnglish)
    * 4. Inserts into database
    * @param messageToStore - The message to store in database
    * @param senderView - What sender sees (their language)
    * @param receiverView - What receiver sees (their language, translated)
+   * @param messageViews - Extended views for 9 mode combinations
    */
-  const handleSendMessage = async (messageToStore: string, senderView: string, receiverView: string) => {
+  const handleSendMessage = async (
+    messageToStore: string, 
+    senderView: string, 
+    receiverView: string,
+    messageViews?: MessageViews
+  ) => {
     // ============= VALIDATION =============
     
     // Don't send empty messages or while already sending
@@ -1030,6 +1040,10 @@ const ChatScreen = () => {
       const isTranslated = senderView !== receiverView;
 
       // ============= INSERT MESSAGE INTO DATABASE =============
+      // Store all message views for 9 mode combinations
+      // - message: senderView (what sender sees)
+      // - translated_message: receiverView (what receiver sees in their language)
+      // - original_english: English version for English Core mode display
       
       const { error } = await supabase
         .from("chat_messages")
@@ -1039,6 +1053,7 @@ const ChatScreen = () => {
           receiver_id: chatPartner.userId,   // Partner as receiver
           message: senderView,               // Sender's view (what sender typed/sees)
           translated_message: receiverView,  // Receiver's view (translated for receiver)
+          original_english: messageViews?.originalEnglish || null, // English for English Core mode
           is_translated: isTranslated,       // Flag if translation occurred
         });
 
@@ -1641,10 +1656,30 @@ const ChatScreen = () => {
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
-                // Receiver always sees translated_message (receiverView), sender sees message (senderView)
-                const displayText = !isMine && message.translatedMessage 
-                  ? extractAttachment(message.translatedMessage).text 
-                  : messageText;
+                
+                // ============= RECEIVER VIEW LOGIC =============
+                // Determine what the receiver sees based on their typing mode preference:
+                // - English Core: Show originalEnglish (if available), fallback to translatedMessage
+                // - Native/English Meaning: Show translatedMessage (receiver's native language)
+                const viewerMode = getSavedTypingMode();
+                let displayText: string;
+                
+                if (isMine) {
+                  // Sender sees their own message (senderView)
+                  displayText = messageText;
+                } else {
+                  // Receiver's display depends on their mode preference
+                  if (viewerMode === 'english-core' && message.originalEnglish) {
+                    // Receiver wants English - show originalEnglish
+                    displayText = extractAttachment(message.originalEnglish).text;
+                  } else if (message.translatedMessage) {
+                    // Receiver wants native - show translatedMessage (receiverNative)
+                    displayText = extractAttachment(message.translatedMessage).text;
+                  } else {
+                    // Fallback to original message
+                    displayText = messageText;
+                  }
+                }
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
