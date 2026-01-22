@@ -431,6 +431,12 @@ const MiniChatWindow = ({
         return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
       }
       
+      // Target is English - no translation needed (English is universal)
+      if (isSameLanguage(targetLanguage, 'English')) {
+        console.log('[MiniChatWindow] Target is English, no translation needed');
+        return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
+      }
+      
       // Different languages - translate via Universal Translator
       console.log(`[MiniChatWindow] Translating via Universal Translator: ${sourceLanguage} -> ${targetLanguage}`);
       const result = await universalTranslate(text, sourceLanguage, targetLanguage);
