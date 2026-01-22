@@ -273,8 +273,8 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
   const modes: TypingModeInfo[] = [
     {
       id: 'native',
-      name: t('chat.mode.native', '🏠 Mother Tongue'),
-      description: t('chat.mode.nativeDesc', 'Type directly in your language using Gboard or transliteration'),
+      name: t('chat.mode.native', 'Mother Tongue & Latin'),
+      description: t('chat.mode.nativeDesc', 'Type in native script or Latin transliteration'),
       icon: <Languages className="h-4 w-4" />,
       preview: `Your ${userLanguage} text`,
       afterSend: `You see: ${userLanguage}`,
@@ -282,8 +282,8 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
     },
     {
       id: 'english-core',
-      name: t('chat.mode.englishCore', '🌍 English Only'),
-      description: t('chat.mode.englishCoreDesc', 'Type & read in English. Partner reads their language'),
+      name: t('chat.mode.englishCore', 'English Only'),
+      description: t('chat.mode.englishCoreDesc', 'Type & read in English only'),
       icon: <Globe className="h-4 w-4" />,
       preview: 'Your English text',
       afterSend: 'You see: English',
@@ -291,8 +291,8 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
     },
     {
       id: 'english-meaning',
-      name: t('chat.mode.englishMeaning', '✨ Smart Translate'),
-      description: t('chat.mode.englishMeaningDesc', 'Type English → Auto-converts to native language display'),
+      name: t('chat.mode.englishMeaning', 'English to Native'),
+      description: t('chat.mode.englishMeaningDesc', 'Type English → Shows in your native language'),
       icon: <MessageSquareText className="h-4 w-4" />,
       preview: `Shows as ${userLanguage}`,
       afterSend: `You see: ${userLanguage}`,
