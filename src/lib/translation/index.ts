@@ -271,3 +271,18 @@ export { useSemanticTranslation, useTranslate, useChatTranslation } from '@/hook
 export { useRealtimeChatTranslation } from '@/hooks/useRealtimeChatTranslation';
 export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTranslation';
 export type { ChatMessageResult, LivePreviewResult } from '@/hooks/useRealtimeChatTranslation';
+
+// ============================================================
+// LIBRE-TRANSLATE (Browser-Based Translation Engine)
+// ============================================================
+
+export {
+  useLibreTranslate,
+  processChatMessage,
+  getInstantPreview,
+  hasTransliteration,
+  type TypingMode,
+  type TranslationCombination,
+  type ChatMessageViews,
+  type ChatProcessingOptions,
+} from '@/lib/libre-translate';
