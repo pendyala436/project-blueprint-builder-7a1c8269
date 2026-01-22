@@ -133,6 +133,9 @@ const DraggableMiniChatWindow = ({
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
+  const [meaningPreview, setMeaningPreview] = useState<string>(''); // For english-meaning mode
+  const [isMeaningLoading, setIsMeaningLoading] = useState(false);
+  const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -237,7 +240,42 @@ const DraggableMiniChatWindow = ({
   
   const clearPreview = useCallback(() => {
     setSenderNativePreview('');
+    setMeaningPreview('');
   }, []);
+
+  // Generate meaning-based preview for "English to Native" mode
+  // Debounced translation: English → user's native language
+  const generateMeaningPreview = useCallback(async (englishText: string) => {
+    if (!englishText.trim() || typingMode !== 'english-meaning') {
+      setMeaningPreview('');
+      return;
+    }
+    
+    // Clear previous timeout
+    if (meaningPreviewTimeoutRef.current) {
+      clearTimeout(meaningPreviewTimeoutRef.current);
+    }
+    
+    // Debounce: wait 500ms before translating
+    meaningPreviewTimeoutRef.current = setTimeout(async () => {
+      try {
+        setIsMeaningLoading(true);
+        // Translate English to user's native language
+        const result = await translateText(englishText, 'english', currentUserLanguage);
+        const translatedText = typeof result === 'string' ? result : result?.text || '';
+        if (translatedText && translatedText !== englishText) {
+          setMeaningPreview(translatedText);
+        } else {
+          setMeaningPreview('');
+        }
+      } catch (error) {
+        console.error('[MeaningPreview] Error:', error);
+        setMeaningPreview('');
+      } finally {
+        setIsMeaningLoading(false);
+      }
+    }, 500);
+  }, [typingMode, currentUserLanguage]);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -1018,13 +1056,22 @@ const DraggableMiniChatWindow = ({
   const currentPreviewRef = useRef<string>('');
 
   // SEMANTIC TRANSLATION: Send message with optimistic UI update
-  // Message stored as-is, receiver sees semantically translated version via translateText
+  // Message stored based on typing mode:
+  // - native: Send as-is (native script or transliterated)
+  // - english-core: Send English, receiver gets translation
+  // - english-meaning: Send translated native, store original English
   const sendMessage = async () => {
-    const messageText = newMessage.trim();
-    const latinInput = rawInput.trim(); // Capture before clearing
-    if (!messageText || isSending) return;
+    let messageToSend = newMessage.trim();
+    const englishInput = rawInput.trim(); // Capture before clearing
+    
+    // For english-meaning mode, send the translated preview if available
+    if (typingMode === 'english-meaning' && meaningPreview) {
+      messageToSend = meaningPreview;
+    }
+    
+    if (!messageToSend || isSending) return;
 
-    if (messageText.length > MAX_MESSAGE_LENGTH) {
+    if (messageToSend.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
@@ -1035,7 +1082,8 @@ const DraggableMiniChatWindow = ({
 
     // IMMEDIATE: Clear input and UI
     setNewMessage("");
-    setRawInput(""); // Clear Latin input too
+    setRawInput("");
+    setMeaningPreview(""); // Clear meaning preview
     setLivePreview({ text: '', isLoading: false });
     currentPreviewRef.current = '';
     clearPreview();
@@ -1045,26 +1093,33 @@ const DraggableMiniChatWindow = ({
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
+    if (meaningPreviewTimeoutRef.current) {
+      clearTimeout(meaningPreviewTimeoutRef.current);
+      meaningPreviewTimeoutRef.current = null;
+    }
     
     // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // For sender's own message, determine Latin alongside native
-    // - If messageText differs from latinInput, latinInput is the Latin version
-    // - Otherwise check if messageText is already Latin
+    // Determine Latin/English for display based on mode
     let latinForDisplay: string | undefined;
-    if (latinInput && latinInput !== messageText && needsTransliteration) {
-      // User typed Latin, got native - show Latin
-      latinForDisplay = latinInput;
+    let englishForDisplay: string | undefined;
+    
+    if (typingMode === 'native' && englishInput && englishInput !== messageToSend && needsTransliteration) {
+      // User typed Latin phonetically, got native - show Latin
+      latinForDisplay = englishInput;
+    } else if (typingMode === 'english-meaning') {
+      // User typed English, got native translation - store English
+      englishForDisplay = englishInput;
     }
     
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText, // Original message (native)
-      translatedMessage: messageText, // For display
-      latinMessage: latinForDisplay, // Latin version for display
-      englishMessage: typingMode === 'english-meaning' ? latinInput : undefined,
+      message: messageToSend,
+      translatedMessage: messageToSend,
+      latinMessage: latinForDisplay,
+      englishMessage: englishForDisplay,
       isTranslated: false,
       createdAt: new Date().toISOString()
     }]);
@@ -1072,7 +1127,7 @@ const DraggableMiniChatWindow = ({
     // BACKGROUND: Send to database
     setIsSending(true);
     try {
-      console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageText.substring(0, 30));
+      console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToSend.substring(0, 30));
       
       const { error } = await supabase
         .from("chat_messages")
@@ -1080,9 +1135,9 @@ const DraggableMiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: messageText,
-          // Store original English for english-meaning mode
-          original_english: typingMode === 'english-meaning' ? latinInput || messageText : (latinInput !== messageText ? latinInput : null)
+          message: messageToSend,
+          // Store original English for english-meaning mode, or Latin for native mode
+          original_english: typingMode === 'english-meaning' ? englishInput : (typingMode === 'native' && englishInput !== messageToSend ? englishInput : null)
         });
 
       if (error) throw error;
@@ -1091,7 +1146,7 @@ const DraggableMiniChatWindow = ({
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(messageText);
+      setNewMessage(messageToSend);
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -1664,24 +1719,56 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Phonetic transliteration input for non-Latin languages */}
+              {/* Input area with mode-specific previews */}
               <div className="flex-1 relative">
-                {/* Transliteration hint for non-Latin languages */}
-                {needsTransliteration && (
+                {/* MODE: native - Transliteration hint */}
+                {typingMode === 'native' && needsTransliteration && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
                     <span>✨</span>
-                    <span>Type in English → shows in {currentUserLanguage}</span>
+                    <span>Type phonetically → shows in {currentUserLanguage}</span>
                   </div>
                 )}
-                {/* Native script preview for non-Latin languages */}
-                {needsTransliteration && newMessage && newMessage !== rawInput && (
+                
+                {/* MODE: native - Native script preview (transliteration) */}
+                {typingMode === 'native' && needsTransliteration && newMessage && newMessage !== rawInput && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
                     {newMessage}
                     {isSpellChecking && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
                   </div>
                 )}
+                
+                {/* MODE: english-meaning - Hint */}
+                {typingMode === 'english-meaning' && !userUsesLatinScript && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-blue-500/10 rounded text-[9px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                    <span>🌐</span>
+                    <span>Type English meaning → translates to {currentUserLanguage}</span>
+                  </div>
+                )}
+                
+                {/* MODE: english-meaning - Meaning preview (translation) */}
+                {typingMode === 'english-meaning' && meaningPreview && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-sm unicode-text" dir="auto">
+                    {meaningPreview}
+                    {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-blue-500/50" />}
+                  </div>
+                )}
+                {typingMode === 'english-meaning' && !meaningPreview && rawInput.trim() && isMeaningLoading && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Translating to {currentUserLanguage}...</span>
+                  </div>
+                )}
+                
+                {/* MODE: english-core - Hint */}
+                {typingMode === 'english-core' && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground flex items-center gap-1">
+                    <span>🔤</span>
+                    <span>English only - partner sees translated</span>
+                  </div>
+                )}
+                
                 {/* Spell check suggestion */}
-                {lastSuggestion?.wasChanged && (
+                {typingMode === 'native' && lastSuggestion?.wasChanged && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded text-[10px] flex items-center justify-between gap-2">
                     <span className="text-yellow-700 dark:text-yellow-400">
                       Did you mean: <strong>{lastSuggestion.corrected}</strong>?
@@ -1713,55 +1800,73 @@ const DraggableMiniChatWindow = ({
                     </div>
                   </div>
                 )}
+                
                 {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && !needsTransliteration && (
+                {!needsTranslation && newMessage.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                     Same language - direct chat
                   </div>
                 )}
                 <Input
-                  placeholder={needsTransliteration ? `Type "bagunnava" → బాగున్నావా` : userUsesLatinScript ? "Type your message..." : "Type in your language..."}
-                  value={needsTransliteration ? rawInput : newMessage}
-                onChange={(e) => {
+                  placeholder={
+                    typingMode === 'english-meaning' 
+                      ? 'Type English meaning (e.g., "How are you")...' 
+                      : typingMode === 'english-core'
+                        ? 'Type in English...'
+                        : typingMode === 'native' && needsTransliteration 
+                          ? `Type phonetically (e.g., "bagunnava")...`
+                          : 'Type your message...'
+                  }
+                  value={typingMode === 'native' && needsTransliteration ? rawInput : newMessage}
+                  onChange={(e) => {
                     const newValue = e.target.value;
                     
                     // AUTO-DETECTION: Check if user is typing in native script (Gboard, etc.)
-                    // This takes priority and will auto-switch to 'native' mode
                     if (autoDetectEnabled && newValue.length >= 2) {
                       handleInputForAutoDetect(newValue);
                     }
                     
-                    if (needsTransliteration) {
-                      // Detect if input contains ANY non-Latin characters (GBoard native input)
+                    // MODE: english-meaning - Type English, show translation preview
+                    if (typingMode === 'english-meaning') {
+                      setRawInput(newValue);
+                      setNewMessage(newValue);
+                      // Generate meaning-based translation preview
+                      generateMeaningPreview(newValue);
+                    }
+                    // MODE: english-core - Just type English
+                    else if (typingMode === 'english-core') {
+                      setRawInput(newValue);
+                      setNewMessage(newValue);
+                    }
+                    // MODE: native - Transliterate if needed
+                    else if (typingMode === 'native' && needsTransliteration) {
                       const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(newValue);
                       
                       if (hasNativeChars) {
-                        // PRIORITY: GBoard/native keyboard detected - use directly, no transliteration
-                        console.log('[DraggableMiniChatWindow] Native keyboard detected:', newValue);
-                        setRawInput(newValue); // Store as-is
-                        setNewMessage(newValue); // Use directly
+                        // GBoard/native keyboard - use directly
+                        setRawInput(newValue);
+                        setNewMessage(newValue);
                       } else if (newValue === '' || /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue)) {
-                        // Pure Latin input - apply transliteration
+                        // Latin input - transliterate
                         setRawInput(newValue);
                         if (newValue.trim()) {
                           try {
                             const native = dynamicTransliterate(newValue, currentUserLanguage);
-                            console.log('[DraggableMiniChatWindow] Transliterate:', newValue, '→', native);
                             setNewMessage(native || newValue);
                           } catch {
                             setNewMessage(newValue);
                           }
-                          // Trigger spell check
                           checkSpellingDebounced(newValue);
                         } else {
                           setNewMessage('');
                         }
                       } else {
-                        // Mixed or unknown - pass through
                         setRawInput(newValue);
                         setNewMessage(newValue);
                       }
-                    } else {
+                    }
+                    // Default: pass through
+                    else {
                       setRawInput(newValue);
                       setNewMessage(newValue);
                     }
@@ -1769,7 +1874,7 @@ const DraggableMiniChatWindow = ({
                     handleTyping(newValue);
                   }}
                   onKeyDown={handleKeyPress}
-                  lang={needsTransliteration ? "en" : currentUserLanguage}
+                  lang={typingMode === 'english-meaning' || typingMode === 'english-core' ? 'en' : needsTransliteration ? 'en' : currentUserLanguage}
                   dir="auto"
                   spellCheck={true}
                   autoComplete="off"
