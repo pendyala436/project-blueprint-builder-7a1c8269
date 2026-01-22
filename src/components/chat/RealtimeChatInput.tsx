@@ -241,13 +241,9 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             messageToStore = savedRaw;
           }
           
-          // Translate to receiver's language (always translate unless receiver speaks English)
-          if (!isEnglishReceiver) {
-            const result = await translateText(savedRaw, 'english', receiverLanguage);
-            receiverView = result?.text || savedRaw;
-          } else {
-            receiverView = savedRaw;
-          }
+          // Always translate to receiver's native language (even if English, show English translation)
+          const result = await translateText(savedRaw, 'english', receiverLanguage);
+          receiverView = result?.text || savedRaw;
         }
       } catch (err) {
         console.error('[RealtimeChatInput] Translation error:', err);
