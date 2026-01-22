@@ -1506,16 +1506,17 @@ const DraggableMiniChatWindow = ({
                         </a>
                       ) : msg.senderId === currentUserId ? (
                         // OWN MESSAGE: Display based on typing mode preference
+                        // Only show Latin transliteration if current user's language is non-Latin script
                         <div className="space-y-1">
                           {typingMode === 'english-core' ? (
                             // English Core mode: sender sees English
                             <p>{msg.message}</p>
                           ) : (
-                            // Native or English Meaning mode: sender sees native script + Latin
+                            // Native or English Meaning mode: sender sees their language
                             <>
                               <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
-                              {/* Always show Latin alongside native */}
-                              {msg.latinMessage && (
+                              {/* Show Latin only if user's mother tongue uses non-Latin script */}
+                              {!userUsesLatinScript && msg.latinMessage && (
                                 <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
                                   🔤 {msg.latinMessage}
                                 </p>
@@ -1536,13 +1537,15 @@ const DraggableMiniChatWindow = ({
                         </div>
                       ) : (
                         // PARTNER MESSAGE: Display based on typing mode preference
+                        // Receiver sees message in THEIR language - show Latin only if their language is non-Latin
                         <div className="space-y-1">
                           {/* Primary display based on mode */}
                           {typingMode === 'english-core' ? (
-                            // English Core mode: receiver sees English first, native + Latin below
+                            // English Core mode: receiver sees English first
                             <>
                               <p>{msg.englishMessage || msg.message}</p>
-                              {msg.translatedMessage && msg.translatedMessage !== (msg.englishMessage || msg.message) && (
+                              {/* Show native translation only if different and user's language is non-Latin */}
+                              {!userUsesLatinScript && msg.translatedMessage && msg.translatedMessage !== (msg.englishMessage || msg.message) && (
                                 <div className="border-t border-current/10 pt-0.5 mt-0.5">
                                   <p className="text-[9px] opacity-60 italic unicode-text" dir="auto">
                                     🌐 {msg.translatedMessage}
@@ -1556,11 +1559,11 @@ const DraggableMiniChatWindow = ({
                               )}
                             </>
                           ) : (
-                            // Native or English Meaning mode: receiver sees native first + Latin, then English
+                            // Native or English Meaning mode: receiver sees their native language
                             <>
                               <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
-                              {/* Always show Latin alongside native */}
-                              {msg.latinMessage && (
+                              {/* Show Latin only if receiver's mother tongue uses non-Latin script */}
+                              {!userUsesLatinScript && msg.latinMessage && (
                                 <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
                                   🔤 {msg.latinMessage}
                                 </p>
