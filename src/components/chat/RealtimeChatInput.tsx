@@ -332,7 +332,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           />
           <span className="text-xs text-muted-foreground">
             {typingMode === 'native' && t('chat.typingInNative', `Typing in ${senderLanguage}`)}
-            {typingMode === 'english-core' && t('chat.typingEnglishCore', 'English → English display')}
+            {typingMode === 'english-core' && t('chat.typingEnglishCore', 'You see English → Partner sees native')}
             {typingMode === 'english-meaning' && t('chat.typingEnglishMeaning', 'English → Native display')}
           </span>
         </div>
