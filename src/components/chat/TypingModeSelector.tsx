@@ -6,9 +6,12 @@
  * 1. Native Mode - Type in mother tongue (native/Latin script)
  * 2. English Core - Type English, display English, receiver sees native
  * 3. English (Meaning-Based) - Type English, preview/display as native translation
+ * 
+ * AUTO-DETECTION: Detects Gboard/external keyboard input and switches mode automatically
+ * Priority: External keyboard native input > Manual selection
  */
 
-import React, { memo, useState, useCallback, useEffect } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -19,7 +22,9 @@ import {
   Check, 
   ChevronDown,
   Pencil,
-  Save
+  Save,
+  Wand2,
+  Keyboard
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,6 +34,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
 // The 3 typing modes
 export type TypingMode = 'native' | 'english-core' | 'english-meaning';
@@ -50,10 +57,13 @@ interface TypingModeSelectorProps {
   receiverLanguage?: string;
   compact?: boolean;
   className?: string;
+  showAutoDetect?: boolean;
+  isAutoMode?: boolean;
 }
 
-// Storage key for persisting mode
+// Storage keys for persisting mode and auto-detect preference
 const TYPING_MODE_STORAGE_KEY = 'chat_typing_mode';
+const AUTO_DETECT_STORAGE_KEY = 'chat_auto_detect_mode';
 
 /**
  * Get saved typing mode from localStorage
@@ -83,17 +93,135 @@ export const saveTypingMode = (mode: TypingMode): void => {
 };
 
 /**
- * Hook to manage typing mode with persistence
+ * Get auto-detect preference
+ */
+export const getAutoDetectEnabled = (): boolean => {
+  try {
+    const saved = localStorage.getItem(AUTO_DETECT_STORAGE_KEY);
+    return saved !== 'false'; // Default: enabled
+  } catch (e) {
+    return true;
+  }
+};
+
+/**
+ * Save auto-detect preference
+ */
+export const saveAutoDetectEnabled = (enabled: boolean): void => {
+  try {
+    localStorage.setItem(AUTO_DETECT_STORAGE_KEY, String(enabled));
+  } catch (e) {
+    console.error('[TypingModeSelector] Error saving auto-detect:', e);
+  }
+};
+
+// Unicode ranges for script detection
+const SCRIPT_RANGES = {
+  latin: /[\u0041-\u007A\u00C0-\u024F\u1E00-\u1EFF]/,
+  devanagari: /[\u0900-\u097F]/,
+  bengali: /[\u0980-\u09FF]/,
+  gurmukhi: /[\u0A00-\u0A7F]/,
+  gujarati: /[\u0A80-\u0AFF]/,
+  oriya: /[\u0B00-\u0B7F]/,
+  tamil: /[\u0B80-\u0BFF]/,
+  telugu: /[\u0C00-\u0C7F]/,
+  kannada: /[\u0C80-\u0CFF]/,
+  malayalam: /[\u0D00-\u0D7F]/,
+  arabic: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/,
+  hebrew: /[\u0590-\u05FF]/,
+  chinese: /[\u4E00-\u9FFF\u3400-\u4DBF]/,
+  japanese: /[\u3040-\u309F\u30A0-\u30FF]/,
+  korean: /[\uAC00-\uD7AF\u1100-\u11FF]/,
+  thai: /[\u0E00-\u0E7F]/,
+  cyrillic: /[\u0400-\u04FF]/,
+  greek: /[\u0370-\u03FF]/,
+};
+
+/**
+ * Detect if text contains non-Latin (native) script
+ */
+export const detectNativeScript = (text: string): { isNative: boolean; script: string } => {
+  if (!text || text.trim().length === 0) {
+    return { isNative: false, script: 'latin' };
+  }
+
+  for (const [scriptName, regex] of Object.entries(SCRIPT_RANGES)) {
+    if (scriptName === 'latin') continue;
+    
+    const matches = text.match(regex);
+    if (matches && matches.length >= 2) {
+      return { isNative: true, script: scriptName };
+    }
+  }
+
+  return { isNative: false, script: 'latin' };
+};
+
+/**
+ * Hook to manage typing mode with persistence and auto-detection
  */
 export const useTypingMode = () => {
-  const [mode, setMode] = useState<TypingMode>(() => getSavedTypingMode());
+  const [mode, setModeState] = useState<TypingMode>(() => getSavedTypingMode());
+  const [autoDetectEnabled, setAutoDetectEnabledState] = useState(() => getAutoDetectEnabled());
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const lastManualModeRef = useRef<TypingMode>(mode);
+  const modeLockedUntilRef = useRef<number>(0);
 
-  const changeMode = useCallback((newMode: TypingMode) => {
-    setMode(newMode);
+  const setMode = useCallback((newMode: TypingMode, isAuto = false) => {
+    setModeState(newMode);
     saveTypingMode(newMode);
+    setIsAutoMode(isAuto);
+    
+    if (!isAuto) {
+      lastManualModeRef.current = newMode;
+      // Lock auto-detection for 3 seconds after manual change
+      modeLockedUntilRef.current = Date.now() + 3000;
+    }
   }, []);
 
-  return { mode, setMode: changeMode };
+  const setAutoDetect = useCallback((enabled: boolean) => {
+    setAutoDetectEnabledState(enabled);
+    saveAutoDetectEnabled(enabled);
+  }, []);
+
+  /**
+   * Handle input and auto-detect script to switch mode
+   */
+  const handleInputForAutoDetect = useCallback((input: string) => {
+    if (!autoDetectEnabled) return;
+    if (Date.now() < modeLockedUntilRef.current) return;
+    if (input.trim().length < 2) return;
+
+    const { isNative, script } = detectNativeScript(input);
+    
+    if (isNative && mode !== 'native') {
+      console.log('[TypingMode] Auto-detected native script:', script, '→ switching to native mode');
+      setModeState('native');
+      saveTypingMode('native');
+      setIsAutoMode(true);
+    }
+  }, [autoDetectEnabled, mode]);
+
+  /**
+   * Reset to last manual mode
+   */
+  const resetToManualMode = useCallback(() => {
+    if (isAutoMode) {
+      setModeState(lastManualModeRef.current);
+      saveTypingMode(lastManualModeRef.current);
+      setIsAutoMode(false);
+    }
+  }, [isAutoMode]);
+
+  return { 
+    mode, 
+    setMode, 
+    autoDetectEnabled, 
+    setAutoDetect, 
+    isAutoMode,
+    handleInputForAutoDetect,
+    resetToManualMode,
+  };
 };
 
 export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
@@ -103,9 +231,12 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
   receiverLanguage = 'their language',
   compact = false,
   className,
+  showAutoDetect = true,
+  isAutoMode = false,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [autoDetect, setAutoDetect] = useState(() => getAutoDetectEnabled());
 
   // Define the 3 modes with their behaviors
   const modes: TypingModeInfo[] = [
@@ -145,6 +276,11 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
     setIsOpen(false);
   }, [onModeChange]);
 
+  const handleAutoDetectToggle = useCallback((enabled: boolean) => {
+    setAutoDetect(enabled);
+    saveAutoDetectEnabled(enabled);
+  }, []);
+
   if (compact) {
     return (
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -154,18 +290,43 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
             size="sm"
             className={cn(
               'h-8 px-3 gap-2 text-xs',
+              isAutoMode && 'ring-1 ring-primary/50',
               className
             )}
           >
-            {currentModeInfo.icon}
+            {isAutoMode ? <Wand2 className="h-3.5 w-3.5 text-primary" /> : currentModeInfo.icon}
             <span className="hidden sm:inline">{currentModeInfo.name}</span>
+            {isAutoMode && <Badge variant="secondary" className="h-4 text-[9px] px-1">AUTO</Badge>}
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="start" 
-          className="w-72 bg-popover border border-border shadow-lg z-50"
+          className="w-80 bg-popover border border-border shadow-lg z-50"
         >
+          {/* Auto-detect toggle */}
+          {showAutoDetect && (
+            <>
+              <div className="p-3 flex items-center justify-between gap-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Keyboard className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium">
+                      {t('chat.autoDetect', 'Auto-detect Keyboard')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('chat.autoDetectDesc', 'Switch mode when Gboard/native keyboard detected')}
+                    </div>
+                  </div>
+                </div>
+                <Switch
+                  checked={autoDetect}
+                  onCheckedChange={handleAutoDetectToggle}
+                />
+              </div>
+            </>
+          )}
+          
           <DropdownMenuLabel className="text-xs text-muted-foreground">
             {t('chat.selectTypingMode', 'Select Typing Mode')}
           </DropdownMenuLabel>
@@ -185,6 +346,9 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
                   <span className="font-medium text-sm">{mode.name}</span>
                   {currentMode === mode.id && (
                     <Check className="h-3.5 w-3.5 text-primary" />
+                  )}
+                  {isAutoMode && currentMode === mode.id && (
+                    <Badge variant="outline" className="h-4 text-[9px] px-1">Auto</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">

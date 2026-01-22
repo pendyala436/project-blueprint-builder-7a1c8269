@@ -133,8 +133,14 @@ const DraggableMiniChatWindow = ({
   const [isTypingModeOpen, setIsTypingModeOpen] = useState(false);
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Typing mode for 9-combination display (persisted in localStorage)
-  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
+  // Typing mode for 9-combination display (persisted in localStorage) with auto-detection
+  const { 
+    mode: typingMode, 
+    setMode: setTypingMode, 
+    isAutoMode,
+    handleInputForAutoDetect,
+    autoDetectEnabled
+  } = useTypingMode();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -1288,7 +1294,7 @@ const DraggableMiniChatWindow = ({
                 <Type className="h-2.5 w-2.5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-2" side="bottom" align="end">
+            <PopoverContent className="w-72 p-2" side="bottom" align="end">
               <TypingModeSelector
                 currentMode={typingMode}
                 onModeChange={(mode) => {
@@ -1298,6 +1304,8 @@ const DraggableMiniChatWindow = ({
                 userLanguage={currentUserLanguage}
                 receiverLanguage={partnerLanguage}
                 compact={false}
+                showAutoDetect={true}
+                isAutoMode={isAutoMode}
               />
             </PopoverContent>
           </Popover>
@@ -1640,6 +1648,12 @@ const DraggableMiniChatWindow = ({
                   value={needsTransliteration ? rawInput : newMessage}
                 onChange={(e) => {
                     const newValue = e.target.value;
+                    
+                    // AUTO-DETECTION: Check if user is typing in native script (Gboard, etc.)
+                    // This takes priority and will auto-switch to 'native' mode
+                    if (autoDetectEnabled && newValue.length >= 2) {
+                      handleInputForAutoDetect(newValue);
+                    }
                     
                     if (needsTransliteration) {
                       // Detect if input contains ANY non-Latin characters (GBoard native input)
