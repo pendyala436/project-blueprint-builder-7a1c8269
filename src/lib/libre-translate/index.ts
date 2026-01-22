@@ -90,6 +90,19 @@ export {
 } from './engine';
 
 // ============================================================
+// PROFILE LANGUAGE SERVICE
+// ============================================================
+
+export {
+  getUserMotherTongue,
+  getChatParticipantLanguages,
+  prefetchUserLanguages,
+  invalidateUserLanguageCache,
+  clearLanguageCache,
+  getLanguageCacheStats,
+} from './profile-language';
+
+// ============================================================
 // LANGUAGE DATA
 // ============================================================
 

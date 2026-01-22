@@ -3,28 +3,28 @@
  * ============================
  * 
  * React hook for browser-based translation inspired by LibreTranslate.
- * Provides easy access to all translation features.
+ * Fetches mother tongue from user profiles automatically.
  * 
  * @example
  * ```tsx
  * import { useLibreTranslate } from '@/lib/libre-translate';
  * 
  * function ChatComponent() {
- *   const { translate, getPreview, isTranslating } = useLibreTranslate();
+ *   const { translateForChat, getPreview, isTranslating } = useLibreTranslate();
  *   
  *   // Get instant preview while typing
  *   const preview = getPreview('namaste', 'hindi'); // "नमस्ते"
  *   
- *   // Translate message
+ *   // Translate message using user profiles
  *   const handleSend = async (text: string) => {
- *     const result = await translate(text, 'english', 'hindi');
- *     console.log(result.text);
+ *     const result = await translateForChat(text, senderId, receiverId, 'native');
+ *     console.log(result.senderView, result.receiverView);
  *   };
  * }
  * ```
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   translate as coreTranslate,
   translateBidirectional as coreBidirectional,
@@ -42,11 +42,19 @@ import {
   isEnglish,
   detectScript,
 } from './engine';
+import {
+  getUserMotherTongue,
+  getChatParticipantLanguages,
+  prefetchUserLanguages,
+  invalidateUserLanguageCache,
+  clearLanguageCache,
+} from './profile-language';
 import type {
   TranslationResult,
   ChatMessageViews,
   ChatProcessingOptions,
   BidirectionalResult,
+  TypingMode,
 } from './types';
 
 export interface UseLibreTranslateReturn {
@@ -54,10 +62,26 @@ export interface UseLibreTranslateReturn {
   translate: (text: string, source: string, target: string) => Promise<TranslationResult>;
   translateBidirectional: (text: string, source: string, target: string) => Promise<BidirectionalResult>;
   
-  // Chat processing
+  // Chat processing with user IDs (fetches languages from profiles)
+  translateForChat: (
+    text: string,
+    senderId: string,
+    receiverId: string,
+    typingMode: TypingMode,
+    inputIsLatin?: boolean
+  ) => Promise<ChatMessageViews>;
+  
+  // Chat processing with explicit languages (legacy/override)
   processChatMessage: (text: string, options: ChatProcessingOptions) => Promise<ChatMessageViews>;
   processOutgoing: (text: string, senderLanguage: string) => { senderView: string; wasTransliterated: boolean };
   processIncoming: (text: string, senderLanguage: string, receiverLanguage: string) => Promise<{ receiverView: string; wasTranslated: boolean }>;
+  
+  // Get user's mother tongue from profile
+  getUserLanguage: (userId: string) => Promise<string>;
+  getParticipantLanguages: (senderId: string, receiverId: string) => Promise<{ senderLanguage: string; receiverLanguage: string }>;
+  
+  // Prefetch languages for multiple users
+  prefetchLanguages: (userIds: string[]) => Promise<void>;
   
   // Live preview (synchronous)
   getPreview: (text: string, targetLanguage: string) => string;
@@ -80,6 +104,8 @@ export interface UseLibreTranslateReturn {
   
   // Cache
   clearCache: () => void;
+  clearLanguageCache: () => void;
+  invalidateUserLanguage: (userId: string) => void;
 }
 
 export function useLibreTranslate(): UseLibreTranslateReturn {
@@ -145,7 +171,7 @@ export function useLibreTranslate(): UseLibreTranslateReturn {
     }
   }, []);
 
-  // Wrapped chat processing with state management
+  // Wrapped chat processing with state management (explicit languages)
   const processChatMessage = useCallback(async (
     text: string,
     options: ChatProcessingOptions
@@ -171,16 +197,86 @@ export function useLibreTranslate(): UseLibreTranslateReturn {
     }
   }, []);
 
+  /**
+   * Translate for chat using user IDs
+   * Automatically fetches mother tongue from profiles
+   */
+  const translateForChat = useCallback(async (
+    text: string,
+    senderId: string,
+    receiverId: string,
+    typingMode: TypingMode,
+    inputIsLatin?: boolean
+  ): Promise<ChatMessageViews> => {
+    setIsTranslating(true);
+    setError(null);
+    
+    try {
+      // Fetch languages from user profiles
+      const { senderLanguage, receiverLanguage } = await getChatParticipantLanguages(
+        senderId,
+        receiverId
+      );
+      
+      // Process message with fetched languages
+      return await coreProcessChat(text, {
+        senderLanguage,
+        receiverLanguage,
+        typingMode,
+        inputIsLatin,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Translation failed');
+      return {
+        originalText: text,
+        senderView: text,
+        receiverView: text,
+        wasTransliterated: false,
+        wasTranslated: false,
+        combination: 'same-native-native',
+        typingMode,
+      };
+    } finally {
+      setIsTranslating(false);
+    }
+  }, []);
+
+  // Get user's mother tongue
+  const getUserLanguage = useCallback(async (userId: string): Promise<string> => {
+    return getUserMotherTongue(userId);
+  }, []);
+
+  // Get languages for both participants
+  const getParticipantLanguages = useCallback(async (
+    senderId: string,
+    receiverId: string
+  ): Promise<{ senderLanguage: string; receiverLanguage: string }> => {
+    return getChatParticipantLanguages(senderId, receiverId);
+  }, []);
+
+  // Prefetch languages for multiple users
+  const prefetchLanguages = useCallback(async (userIds: string[]): Promise<void> => {
+    return prefetchUserLanguages(userIds);
+  }, []);
+
   // Memoized return object
   return useMemo(() => ({
     // Core translation
     translate,
     translateBidirectional,
     
-    // Chat processing
+    // Chat processing with user IDs
+    translateForChat,
+    
+    // Chat processing with explicit languages
     processChatMessage,
     processOutgoing,
     processIncoming,
+    
+    // Profile language functions
+    getUserLanguage,
+    getParticipantLanguages,
+    prefetchLanguages,
     
     // Live preview
     getPreview: getInstantPreview,
@@ -203,7 +299,9 @@ export function useLibreTranslate(): UseLibreTranslateReturn {
     
     // Cache
     clearCache,
-  }), [translate, translateBidirectional, processChatMessage, isTranslating, error]);
+    clearLanguageCache,
+    invalidateUserLanguage: invalidateUserLanguageCache,
+  }), [translate, translateBidirectional, translateForChat, processChatMessage, getUserLanguage, getParticipantLanguages, prefetchLanguages, isTranslating, error]);
 }
 
 export default useLibreTranslate;
