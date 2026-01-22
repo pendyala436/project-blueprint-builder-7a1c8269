@@ -455,34 +455,41 @@ export async function processChatMessage(
       break;
 
     case 'english-meaning':
-      // Mode 3: English to Native
-      // Sender types in English, sees native preview
-      // After send, both see native script
+      // Mode 3: English to Native (Meaning-based)
+      // Sender types in English, sees their mother tongue after send
+      // Receiver sees their mother tongue
+      // ALL translations are DIRECT from English (no double translation)
       
-      // Convert English to sender's native (for display)
+      // Store original English as the pivot
+      englishPivot = trimmed;
+      
+      // Translate English → Sender's mother tongue (for sender's view)
       if (!isEnglish(senderLanguage)) {
         const senderResult = await translate(trimmed, 'english', senderLanguage);
         senderView = senderResult.text;
         senderNative = senderView;
-        englishPivot = trimmed; // Original English is the pivot
         wasTranslated = senderResult.isTranslated;
       } else {
+        // Sender's language IS English - they see their English input
         senderView = trimmed;
+        senderNative = trimmed;
       }
       
-      // Translate to receiver's language
-      if (isSameLanguage(senderLanguage, receiverLanguage)) {
+      // Translate English → Receiver's mother tongue (DIRECTLY from English, not from sender's native)
+      if (isEnglish(receiverLanguage)) {
+        // Receiver's language IS English - they see English
+        receiverView = trimmed;
+        receiverNative = trimmed;
+      } else if (isSameLanguage(senderLanguage, receiverLanguage)) {
+        // Same language - receiver sees same as sender
         receiverView = senderView;
-        receiverNative = senderView;
+        receiverNative = senderNative;
       } else {
-        // Translate from sender's native to receiver's native
-        const result = await translate(senderView, senderLanguage, receiverLanguage);
-        receiverView = result.text;
+        // DIRECT translation from English → Receiver's language (no intermediate step)
+        const receiverResult = await translate(trimmed, 'english', receiverLanguage);
+        receiverView = receiverResult.text;
         receiverNative = receiverView;
-        if (!englishPivot) {
-          englishPivot = result.englishPivot;
-        }
-        wasTranslated = wasTranslated || result.isTranslated;
+        wasTranslated = wasTranslated || receiverResult.isTranslated;
       }
       break;
   }
