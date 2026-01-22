@@ -30,7 +30,8 @@ import {
   Mic,
   Square,
   Languages,
-  MoreHorizontal
+  MoreHorizontal,
+  Type
 } from "lucide-react";
 import {
   Popover,
@@ -51,6 +52,7 @@ import {
 } from "@/lib/translation";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
+import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components/chat/TypingModeSelector";
 
 console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via semantic translation (translateText)');
 
@@ -128,7 +130,11 @@ const DraggableMiniChatWindow = ({
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
+  const [isTypingModeOpen, setIsTypingModeOpen] = useState(false);
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Typing mode for 9-combination display (persisted in localStorage)
+  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -1270,6 +1276,32 @@ const DraggableMiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+          {/* Typing Mode Selector - Let user choose their viewing/typing mode */}
+          <Popover open={isTypingModeOpen} onOpenChange={setIsTypingModeOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                title="Change typing mode"
+              >
+                <Type className="h-2.5 w-2.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2" side="bottom" align="end">
+              <TypingModeSelector
+                currentMode={typingMode}
+                onModeChange={(mode) => {
+                  setTypingMode(mode);
+                  setIsTypingModeOpen(false);
+                }}
+                userLanguage={currentUserLanguage}
+                receiverLanguage={partnerLanguage}
+                compact={false}
+              />
+            </PopoverContent>
+          </Popover>
+          
           {/* Toggle button to show/hide action buttons */}
           <Button
             variant="ghost"
@@ -1436,13 +1468,29 @@ const DraggableMiniChatWindow = ({
                           <span className="opacity-70 italic">{msg.message}</span>
                         </div>
                       ) : (
-                        // PARTNER MESSAGE: Show native translation + English below
+                        // PARTNER MESSAGE: Display based on typing mode preference
                         <div className="space-y-1">
-                          <p>{msg.translatedMessage || msg.message}</p>
-                          {msg.englishMessage && !isSameLanguage(currentUserLanguage, 'English') && (
-                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              🌐 {msg.englishMessage}
-                            </p>
+                          {/* Primary display based on mode */}
+                          {typingMode === 'english-core' ? (
+                            // English Core mode: show English first, native below
+                            <>
+                              <p>{msg.englishMessage || msg.message}</p>
+                              {msg.translatedMessage && msg.translatedMessage !== (msg.englishMessage || msg.message) && (
+                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5 unicode-text" dir="auto">
+                                  🌐 {msg.translatedMessage}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            // Native or English Meaning mode: show native first, English below
+                            <>
+                              <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
+                              {msg.englishMessage && !isSameLanguage(currentUserLanguage, 'English') && (
+                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                  🌐 {msg.englishMessage}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
