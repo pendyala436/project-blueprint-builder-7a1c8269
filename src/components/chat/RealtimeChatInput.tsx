@@ -232,9 +232,12 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
         // ================================================
         // MODE 1: Native Mode
-        // Sender types in native script (or transliterated)
+        // Sender types in their mother tongue (any script - Latin or non-Latin)
+        // Works for ALL languages: Spanish, French, Hindi, Telugu, etc.
         // ================================================
         if (savedMode === 'native') {
+          // For Latin languages, savedNative = savedRaw (no transliteration needed)
+          // For non-Latin languages, savedNative = transliterated text
           messageToStore = savedNative;
           senderView = savedNative;
           senderNative = savedNative;
@@ -255,6 +258,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             receiverView = originalEnglish;
             receiverNative = originalEnglish;
           } else {
+            // Translate to receiver's language (works for Latin→Latin, Latin→Native, Native→Native)
             const toReceiver = await translateText(savedNative, senderLanguage, receiverLanguage);
             receiverView = toReceiver?.text || savedNative;
             receiverNative = receiverView;
@@ -263,14 +267,14 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         
         // ================================================
         // MODE 2: English Core
-        // Sender types and sees English
+        // Sender types and sees English (regardless of their mother tongue)
         // ================================================
         else if (savedMode === 'english-core') {
           messageToStore = savedRaw;
-          senderView = savedRaw;
+          senderView = savedRaw; // Always show English to sender
           originalEnglish = savedRaw;
           
-          // Get sender's native version (for when they switch modes)
+          // Get sender's native version (for when they switch modes or toggle)
           if (!isEnglishSender) {
             const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
             senderNative = toSenderNative?.text || savedRaw;
@@ -291,30 +295,35 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         
         // ================================================
         // MODE 3: English (Meaning-Based)
-        // Sender types English, sees in native language
+        // Sender types English BUT always sees their MOTHER TONGUE after sending
+        // This is the key difference from English Core
         // ================================================
         else if (savedMode === 'english-meaning') {
           originalEnglish = savedRaw;
           
-          // Sender sees native (use preview if available)
+          // ALWAYS translate to sender's mother tongue for display
+          // Even if sender is English native, show the message (English = their native)
           if (savedPreview) {
+            // Use the preview we already generated
             senderView = savedPreview;
             senderNative = savedPreview;
             messageToStore = savedPreview;
           } else if (!isEnglishSender) {
+            // Translate English input to sender's native language
             const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
             senderView = toSenderNative?.text || savedRaw;
             senderNative = senderView;
             messageToStore = senderView;
           } else {
+            // Sender's native IS English - show English
             senderView = savedRaw;
             senderNative = savedRaw;
             messageToStore = savedRaw;
           }
           
-          // Get receiver's native version
+          // Get receiver's native version - ALWAYS translate to receiver's mother tongue
           if (isEnglishReceiver) {
-            receiverView = savedRaw; // Receiver is English, show English
+            receiverView = savedRaw; // Receiver's native is English
             receiverNative = savedRaw;
           } else {
             const toReceiver = await translateText(savedRaw, 'english', receiverLanguage);
