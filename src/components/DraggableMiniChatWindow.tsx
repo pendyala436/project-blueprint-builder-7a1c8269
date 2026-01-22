@@ -136,6 +136,7 @@ const DraggableMiniChatWindow = ({
   const [meaningPreview, setMeaningPreview] = useState<string>(''); // For english-meaning mode
   const [isMeaningLoading, setIsMeaningLoading] = useState(false);
   const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -244,8 +245,9 @@ const DraggableMiniChatWindow = ({
   }, []);
 
   // Generate meaning-based preview for "English to Native" mode
+  // FULLY ASYNC: Runs in background, never blocks typing
   // Debounced translation: English → user's native language
-  const generateMeaningPreview = useCallback(async (englishText: string) => {
+  const generateMeaningPreview = useCallback((englishText: string) => {
     if (!englishText.trim() || typingMode !== 'english-meaning') {
       setMeaningPreview('');
       return;
@@ -256,25 +258,30 @@ const DraggableMiniChatWindow = ({
       clearTimeout(meaningPreviewTimeoutRef.current);
     }
     
-    // Debounce: wait 500ms before translating
-    meaningPreviewTimeoutRef.current = setTimeout(async () => {
-      try {
-        setIsMeaningLoading(true);
-        // Translate English to user's native language
-        const result = await translateText(englishText, 'english', currentUserLanguage);
-        const translatedText = typeof result === 'string' ? result : result?.text || '';
-        if (translatedText && translatedText !== englishText) {
-          setMeaningPreview(translatedText);
-        } else {
+    // Debounce: wait 600ms before translating (non-blocking)
+    meaningPreviewTimeoutRef.current = setTimeout(() => {
+      // BACKGROUND ASYNC: Fire and forget - never awaited
+      const capturedText = englishText; // Capture value to avoid closure issues
+      setIsMeaningLoading(true);
+      
+      // Run translation in background without blocking
+      translateText(capturedText, 'english', currentUserLanguage)
+        .then((result) => {
+          const translatedText = typeof result === 'string' ? result : result?.text || '';
+          if (translatedText && translatedText !== capturedText) {
+            setMeaningPreview(translatedText);
+          } else {
+            setMeaningPreview('');
+          }
+        })
+        .catch((error) => {
+          console.error('[MeaningPreview] Background error:', error);
           setMeaningPreview('');
-        }
-      } catch (error) {
-        console.error('[MeaningPreview] Error:', error);
-        setMeaningPreview('');
-      } finally {
-        setIsMeaningLoading(false);
-      }
-    }, 500);
+        })
+        .finally(() => {
+          setIsMeaningLoading(false);
+        });
+    }, 600);
   }, [typingMode, currentUserLanguage]);
 
   // Auto-close if blocked
@@ -1097,6 +1104,10 @@ const DraggableMiniChatWindow = ({
       clearTimeout(meaningPreviewTimeoutRef.current);
       meaningPreviewTimeoutRef.current = null;
     }
+    if (transliterationTimeoutRef.current) {
+      clearTimeout(transliterationTimeoutRef.current);
+      transliterationTimeoutRef.current = null;
+    }
     
     // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1838,30 +1849,37 @@ const DraggableMiniChatWindow = ({
                       setRawInput(newValue);
                       setNewMessage(newValue);
                     }
-                    // MODE: native - Transliterate if needed
+                    // MODE: native - Transliterate if needed (BACKGROUND, non-blocking)
                     else if (typingMode === 'native' && needsTransliteration) {
                       const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(newValue);
                       
+                      // IMMEDIATE: Update raw input (user sees what they type)
+                      setRawInput(newValue);
+                      
                       if (hasNativeChars) {
                         // GBoard/native keyboard - use directly
-                        setRawInput(newValue);
                         setNewMessage(newValue);
                       } else if (newValue === '' || /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue)) {
-                        // Latin input - transliterate
-                        setRawInput(newValue);
+                        // Latin input - transliterate in BACKGROUND
                         if (newValue.trim()) {
-                          try {
-                            const native = dynamicTransliterate(newValue, currentUserLanguage);
-                            setNewMessage(native || newValue);
-                          } catch {
-                            setNewMessage(newValue);
+                          // Clear previous timeout
+                          if (transliterationTimeoutRef.current) {
+                            clearTimeout(transliterationTimeoutRef.current);
                           }
+                          // DEBOUNCED BACKGROUND transliteration (50ms - very fast, non-blocking)
+                          transliterationTimeoutRef.current = setTimeout(() => {
+                            try {
+                              const native = dynamicTransliterate(newValue, currentUserLanguage);
+                              setNewMessage(native || newValue);
+                            } catch {
+                              setNewMessage(newValue);
+                            }
+                          }, 50);
                           checkSpellingDebounced(newValue);
                         } else {
                           setNewMessage('');
                         }
                       } else {
-                        setRawInput(newValue);
                         setNewMessage(newValue);
                       }
                     }
