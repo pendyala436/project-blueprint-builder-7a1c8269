@@ -53,6 +53,8 @@ import {
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components/chat/TypingModeSelector";
+// Browser-based translation with typing mode support
+import { useLibreTranslate } from "@/lib/libre-translate";
 
 console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via semantic translation (translateText)');
 
@@ -209,6 +211,14 @@ const DraggableMiniChatWindow = ({
 
   // Check block status
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
+
+  // Browser-based translation with 3 typing modes
+  const { 
+    translateForChat, 
+    isTranslating: isLibreTranslating,
+    getPreview: getInstantPreview,
+    transliterate,
+  } = useLibreTranslate();
 
   // Real-time typing indicator with bi-directional translation - FULLY ASYNC
   const {
@@ -730,69 +740,77 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // SEMANTIC TRANSLATION: Auto-translate partner's messages using translateText
-  // Uses the tested translation logic: direct for English/Latin, pivot for Native→Native
-  // Now also translates to English for display below native translation
+  // BROWSER-BASED TRANSLATION: Auto-translate messages using typing mode
+  // Uses translateForChat from useLibreTranslate with user profiles for mother tongue
   const translateMessage = useCallback(async (text: string, senderId: string): Promise<{
     translatedMessage?: string;
     englishMessage?: string;
+    senderView?: string;
+    receiverView?: string;
     isTranslated?: boolean;
     detectedLanguage?: string;
   }> => {
     try {
-      // Own messages - sender sees their own message as-is
-      if (senderId === currentUserId) {
-        return { translatedMessage: text, isTranslated: false };
-      }
-
-      // Partner's message - translate to current user's language AND English
-      const sourceLanguage = partnerLanguage;
-      const targetLanguage = currentUserLanguage;
-      
-      console.log('[DraggableMiniChatWindow] translateMessage (semantic + English):', {
+      console.log('[DraggableMiniChatWindow] translateMessage with typingMode:', {
         text: text.substring(0, 30),
-        sourceLanguage,
-        targetLanguage
+        senderId: senderId.substring(0, 8),
+        currentUserId: currentUserId.substring(0, 8),
+        typingMode,
+        partnerLanguage,
+        currentUserLanguage
       });
       
-      // Same language - no translation needed for native, but still get English
-      if (isSameLanguage(sourceLanguage, targetLanguage)) {
-        // If both speak English, no translations needed
-        if (isSameLanguage(sourceLanguage, 'English')) {
-          return { translatedMessage: text, isTranslated: false, detectedLanguage: sourceLanguage };
-        }
-        // Same non-English language - get English translation
-        const englishResult = await translateText(text, sourceLanguage, 'English');
-        return { 
-          translatedMessage: text, 
-          englishMessage: englishResult.isTranslated ? normalizeUnicode(englishResult.text) : undefined,
-          isTranslated: false, 
-          detectedLanguage: sourceLanguage 
+      // Use browser-based translation with the current typing mode
+      // This fetches mother tongue from profiles and applies correct mode logic
+      const result = await translateForChat(
+        text,
+        senderId,
+        partnerId,
+        typingMode
+      );
+      
+      console.log('[DraggableMiniChatWindow] Translation result:', {
+        senderView: result.senderView?.substring(0, 20),
+        receiverView: result.receiverView?.substring(0, 20),
+        englishPivot: result.englishPivot?.substring(0, 20),
+        wasTranslated: result.wasTranslated,
+        typingMode: result.typingMode
+      });
+      
+      // Determine what current user should see based on who sent the message
+      const isSentByMe = senderId === currentUserId;
+      
+      // DISPLAY LOGIC based on typing mode:
+      // - native: Both see native script
+      // - english-core: Sender sees English, receiver sees native
+      // - english-meaning: Both see native (sender typed English but sees native)
+      
+      if (isSentByMe) {
+        // Own message: show senderView
+        return {
+          translatedMessage: result.senderView,
+          englishMessage: result.englishPivot,
+          senderView: result.senderView,
+          receiverView: result.receiverView,
+          isTranslated: result.wasTranslated,
+          detectedLanguage: currentUserLanguage
+        };
+      } else {
+        // Partner's message: show receiverView (which is translated to current user's language)
+        return {
+          translatedMessage: result.receiverView,
+          englishMessage: result.englishPivot,
+          senderView: result.senderView,
+          receiverView: result.receiverView,
+          isTranslated: result.wasTranslated,
+          detectedLanguage: partnerLanguage
         };
       }
-      
-      // PARALLEL: Translate to both target language and English
-      console.log(`[DraggableMiniChatWindow] Semantic translation: ${sourceLanguage} -> ${targetLanguage} + English`);
-      
-      const [nativeResult, englishResult] = await Promise.all([
-        translateText(text, sourceLanguage, targetLanguage),
-        // Only translate to English if target is not English
-        isSameLanguage(targetLanguage, 'English') 
-          ? Promise.resolve({ text, isTranslated: false })
-          : translateText(text, sourceLanguage, 'English')
-      ]);
-      
-      return {
-        translatedMessage: nativeResult.isTranslated ? normalizeUnicode(nativeResult.text) : text,
-        englishMessage: englishResult.isTranslated ? normalizeUnicode(englishResult.text) : undefined,
-        isTranslated: nativeResult.isTranslated,
-        detectedLanguage: sourceLanguage
-      };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
       return { translatedMessage: text, isTranslated: false };
     }
-  }, [partnerLanguage, currentUserLanguage, currentUserId]);
+  }, [translateForChat, partnerId, typingMode, partnerLanguage, currentUserLanguage, currentUserId]);
 
   // SEMANTIC TRANSLATION: Load messages with immediate display + background translation
   const loadMessages = async () => {
@@ -994,13 +1012,20 @@ const DraggableMiniChatWindow = ({
       previewTimeoutRef.current = null;
     }
     
-    // OPTIMISTIC: Add message to UI immediately
+    // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // For sender's own message, apply mode-specific display
+    // - native: Show native script (already converted if needed)
+    // - english-core: Show English as typed
+    // - english-meaning: Show native preview (sender sees native after typing English)
+    const displayMessage = typingMode === 'english-core' ? messageText : messageText;
+    
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText, // Gboard native input - show as-is
-      translatedMessage: undefined,
+      message: messageText, // Original message
+      translatedMessage: displayMessage, // For display
       isTranslated: false,
       createdAt: new Date().toISOString()
     }]);
@@ -1008,7 +1033,7 @@ const DraggableMiniChatWindow = ({
     // BACKGROUND: Send to database
     setIsSending(true);
     try {
-      console.log('[DraggableMiniChatWindow] Sending:', messageText.substring(0, 30));
+      console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageText.substring(0, 30));
       
       const { error } = await supabase
         .from("chat_messages")
@@ -1016,7 +1041,9 @@ const DraggableMiniChatWindow = ({
           chat_id: chatId,
           sender_id: currentUserId,
           receiver_id: partnerId,
-          message: messageText
+          message: messageText,
+          // Store original English for english-meaning mode
+          original_english: typingMode === 'english-meaning' ? rawInput || messageText : null
         });
 
       if (error) throw error;
@@ -1282,21 +1309,6 @@ const DraggableMiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
-          {/* Typing Mode Selector - Let user choose their viewing/typing mode */}
-          {/* Typing Mode Selector - compact dropdown for quick mode switching */}
-          <TypingModeSelector
-            currentMode={typingMode}
-            onModeChange={(mode) => {
-              setTypingMode(mode);
-            }}
-            userLanguage={currentUserLanguage}
-            receiverLanguage={partnerLanguage}
-            compact={true}
-            showAutoDetect={true}
-            isAutoMode={isAutoMode}
-            className="h-5"
-          />
-          
           {/* Toggle button to show/hide action buttons */}
           <Button
             variant="ghost"
@@ -1454,8 +1466,23 @@ const DraggableMiniChatWindow = ({
                           <span>View Document</span>
                         </a>
                       ) : msg.senderId === currentUserId ? (
-                        // OWN MESSAGE: Show sender's native script (already converted)
-                        <p>{msg.message}</p>
+                        // OWN MESSAGE: Display based on typing mode preference
+                        <div className="space-y-1">
+                          {typingMode === 'english-core' ? (
+                            // English Core mode: sender sees English
+                            <p>{msg.message}</p>
+                          ) : (
+                            // Native or English Meaning mode: sender sees native script
+                            <>
+                              <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
+                              {typingMode === 'english-meaning' && msg.englishMessage && (
+                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                  🌐 {msg.englishMessage}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
                       ) : msg.isTranslating ? (
                         // PARTNER MESSAGE: Translation in progress - show loading indicator
                         <div className="flex items-center gap-1">
@@ -1467,7 +1494,7 @@ const DraggableMiniChatWindow = ({
                         <div className="space-y-1">
                           {/* Primary display based on mode */}
                           {typingMode === 'english-core' ? (
-                            // English Core mode: show English first, native below
+                            // English Core mode: receiver sees English first, native below
                             <>
                               <p>{msg.englishMessage || msg.message}</p>
                               {msg.translatedMessage && msg.translatedMessage !== (msg.englishMessage || msg.message) && (
@@ -1477,7 +1504,7 @@ const DraggableMiniChatWindow = ({
                               )}
                             </>
                           ) : (
-                            // Native or English Meaning mode: show native first, English below
+                            // Native or English Meaning mode: receiver sees native first, English below
                             <>
                               <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
                               {msg.englishMessage && !isSameLanguage(currentUserLanguage, 'English') && (
