@@ -19,6 +19,9 @@ interface FemaleProfile {
   avg_response_time_seconds: number;
   ai_approved: boolean;
   created_at: string;
+  country: string | null;
+  is_indian: boolean | null;
+  is_earning_eligible: boolean | null;
 }
 
 interface LanguageGroup {
@@ -27,6 +30,14 @@ interface LanguageGroup {
   languages: string[];
   max_women_users: number;
   current_women_count: number;
+}
+
+interface LanguageLimit {
+  id: string;
+  language_name: string;
+  max_earning_women: number;
+  current_earning_women: number;
+  is_active: boolean;
 }
 
 // Language name to code mapping for flexible matching
@@ -529,13 +540,21 @@ async function runAutoApproval(supabase: any) {
   // STEP 6: Auto-reactivate users who were inactive but are now active again
   await processInactiveReactivation(supabase, results);
 
+  // STEP 7: Assign earning slots to Indian women based on language limits
+  // This uses the database function that respects limits and first-registered priority
+  const earningSlotResult = await assignEarningSlots(supabase);
+  console.log("Earning slot assignment result:", earningSlotResult);
+
   console.log("AI Women Auto-Approval Process completed:", results);
 
   return new Response(
     JSON.stringify({
       success: true,
       message: "AI Women Auto-Approval process completed",
-      results,
+      results: {
+        ...results,
+        earningSlots: earningSlotResult
+      }
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
@@ -670,5 +689,153 @@ async function processInactiveReactivation(supabase: any, results: any) {
   } catch (error) {
     console.error("Error in reactivation process:", error);
     results.errors.push(`Reactivation error: ${error}`);
+  }
+}
+
+/**
+ * Assign earning slots to Indian women based on language limits
+ * Only Indian women can earn, respecting max_earning_women per language
+ * Priority: first registered (created_at ASC)
+ */
+async function assignEarningSlots(supabase: any) {
+  console.log("Starting earning slot assignment...");
+  
+  const results = {
+    slotsAssigned: 0,
+    languagesProcessed: 0,
+    errors: [] as string[]
+  };
+
+  try {
+    // Get all active language limits
+    const { data: languageLimits, error: llError } = await supabase
+      .from("language_limits")
+      .select("*")
+      .eq("is_active", true);
+
+    if (llError) {
+      console.error("Error fetching language limits:", llError);
+      results.errors.push(`Language limits error: ${llError.message}`);
+      return results;
+    }
+
+    // First, reset all earning slots
+    await supabase
+      .from("female_profiles")
+      .update({
+        is_earning_eligible: false,
+        earning_slot_assigned_at: null,
+        earning_badge_type: null
+      })
+      .eq("is_earning_eligible", true);
+
+    await supabase
+      .from("profiles")
+      .update({
+        is_earning_eligible: false,
+        earning_slot_assigned_at: null,
+        earning_badge_type: null
+      })
+      .eq("is_earning_eligible", true);
+
+    // Reset language_limits current_earning_women counts
+    await supabase
+      .from("language_limits")
+      .update({
+        current_earning_women: 0,
+        updated_at: new Date().toISOString()
+      });
+
+    // For each language, assign slots to Indian women (first registered priority)
+    for (const langLimit of (languageLimits || []) as LanguageLimit[]) {
+      console.log(`Processing language: ${langLimit.language_name}, max slots: ${langLimit.max_earning_women}`);
+
+      // Get Indian women for this language, ordered by created_at (first registered first)
+      const { data: indianWomen, error: iwError } = await supabase
+        .from("female_profiles")
+        .select("id, user_id, full_name, primary_language, created_at, country")
+        .eq("country", "India")
+        .eq("approval_status", "approved")
+        .eq("account_status", "active")
+        .ilike("primary_language", langLimit.language_name)
+        .order("created_at", { ascending: true })
+        .limit(langLimit.max_earning_women);
+
+      if (iwError) {
+        console.error(`Error fetching Indian women for ${langLimit.language_name}:`, iwError);
+        results.errors.push(`Error for ${langLimit.language_name}: ${iwError.message}`);
+        continue;
+      }
+
+      let assignedCount = 0;
+      for (const woman of (indianWomen || [])) {
+        // Assign earning slot with star badge
+        const { error: updateError } = await supabase
+          .from("female_profiles")
+          .update({
+            is_earning_eligible: true,
+            is_indian: true,
+            earning_slot_assigned_at: new Date().toISOString(),
+            earning_badge_type: "star",
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", woman.id);
+
+        if (updateError) {
+          console.error(`Error assigning slot to ${woman.full_name}:`, updateError);
+          continue;
+        }
+
+        // Sync to profiles table
+        await supabase
+          .from("profiles")
+          .update({
+            is_earning_eligible: true,
+            is_indian: true,
+            earning_slot_assigned_at: new Date().toISOString(),
+            earning_badge_type: "star",
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", woman.user_id);
+
+        assignedCount++;
+        results.slotsAssigned++;
+        console.log(`✓ Assigned earning slot to ${woman.full_name} (${langLimit.language_name})`);
+      }
+
+      // Update language limit current count
+      await supabase
+        .from("language_limits")
+        .update({
+          current_earning_women: assignedCount,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", langLimit.id);
+
+      results.languagesProcessed++;
+      console.log(`Completed ${langLimit.language_name}: ${assignedCount}/${langLimit.max_earning_women} slots assigned`);
+    }
+
+    // Mark all other Indian women as is_indian but not earning eligible
+    await supabase
+      .from("female_profiles")
+      .update({ is_indian: true })
+      .eq("country", "India")
+      .is("is_indian", null);
+
+    await supabase
+      .from("profiles")
+      .update({ is_indian: true })
+      .eq("country", "India")
+      .eq("gender", "female")
+      .is("is_indian", null);
+
+    console.log("Earning slot assignment completed:", results);
+    return results;
+
+  } catch (error: any) {
+    console.error("Error in earning slot assignment:", error);
+    results.errors.push(`General error: ${error?.message || error}`);
+    return results;
   }
 }
