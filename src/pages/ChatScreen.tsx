@@ -338,32 +338,30 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // ============= TRANSLATE INCOMING MESSAGES =============
-          
-          // Initialize translation variables
-          let translatedMessage = "";
-          let isTranslated = false;
-          
-          // Only translate messages from partner (not our own)
-          if (newMsg.sender_id !== currentUserId) {
-            // Translate to current user's preferred language
-            const translation = await translateMessage(newMsg.message, currentUserLanguage);
-            translatedMessage = translation.translatedMessage;
-            isTranslated = translation.isTranslated;
-          }
+          // ============= MESSAGE DISPLAY LOGIC =============
+          // The database stores:
+          // - message: senderView (what sender sees - their native script or English)
+          // - translated_message: receiverView (what receiver sees - their native script)
+          //
+          // For incoming messages (from partner):
+          // - Use translated_message directly - it was already prepared for us (the receiver)
+          //
+          // For our own messages (echoed back):
+          // - Use message directly - it's our senderView
 
           // Add message to state (with deduplication check)
           setMessages(prev => {
             // Check if message already exists to prevent duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
             
-            // Append new message
+            // Append new message - use database values directly
+            // translated_message already contains the receiverView for partner messages
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              message: newMsg.message,
-              translatedMessage: translatedMessage || newMsg.translated_message,
-              isTranslated: isTranslated || newMsg.is_translated,
+              message: newMsg.message, // senderView
+              translatedMessage: newMsg.translated_message || '', // receiverView
+              isTranslated: newMsg.is_translated || false,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
@@ -1010,7 +1008,8 @@ const ChatScreen = () => {
     // ============= VALIDATION =============
     
     // Don't send empty messages or while already sending
-    if (!messageToStore.trim() || !chatPartner || isSending) return;
+    // Use senderView for validation since that's what gets displayed
+    if (!senderView.trim() || !chatPartner || isSending) return;
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
