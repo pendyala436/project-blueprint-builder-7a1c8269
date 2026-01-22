@@ -57,6 +57,7 @@ const TYPING_MODE_STORAGE_KEY = 'chat_typing_mode';
 
 /**
  * Get saved typing mode from localStorage
+ * Default: english-meaning (Type English → display as native)
  */
 export const getSavedTypingMode = (): TypingMode => {
   try {
@@ -67,7 +68,7 @@ export const getSavedTypingMode = (): TypingMode => {
   } catch (e) {
     console.error('[TypingModeSelector] Error reading saved mode:', e);
   }
-  return 'native'; // Default
+  return 'english-meaning'; // Default: Type English, display as native
 };
 
 /**
