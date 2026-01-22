@@ -90,6 +90,7 @@ import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
+import { RealtimeChatInput } from "@/components/chat/RealtimeChatInput";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -1001,13 +1002,15 @@ const ChatScreen = () => {
    * 2. Converts English typing to partner's language
    * 3. Translates to partner's language
    * 4. Inserts into database
-   * 5. Clears input field
+   * @param messageToStore - The message to store in database
+   * @param senderView - What sender sees (their language)
+   * @param receiverView - What receiver sees (their language, translated)
    */
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (messageToStore: string, senderView: string, receiverView: string) => {
     // ============= VALIDATION =============
     
     // Don't send empty messages or while already sending
-    if (!newMessage.trim() || !chatPartner || isSending) return;
+    if (!messageToStore.trim() || !chatPartner || isSending) return;
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
@@ -1021,23 +1024,11 @@ const ChatScreen = () => {
       return;
     }
 
-    // Store message and clear input immediately for responsiveness
-    const messageText = newMessage.trim();
-    setNewMessage("");
     setIsSending(true);
 
     try {
-      // ============= CONVERT ENGLISH TYPING TO TARGET LANGUAGE =============
-      
-      // First, convert English typing to partner's language script
-      const convertedMessage = await convertMessageToTargetLanguage(messageText, chatPartner.preferredLanguage);
-      
-      // ============= TRANSLATE FOR RECEIVER =============
-      
-      // Translate message to partner's preferred language (for display)
-      const translation = await translateMessage(convertedMessage, chatPartner.preferredLanguage);
-      const translatedMessage = translation.translatedMessage;
-      const isTranslated = translation.isTranslated;
+      // Check if translation occurred (receiver view differs from sender view)
+      const isTranslated = senderView !== receiverView;
 
       // ============= INSERT MESSAGE INTO DATABASE =============
       
@@ -1047,8 +1038,8 @@ const ChatScreen = () => {
           chat_id: chatId.current,          // Consistent chat identifier
           sender_id: currentUserId,          // Current user as sender
           receiver_id: chatPartner.userId,   // Partner as receiver
-          message: convertedMessage,         // Converted message (English typing → target script)
-          translated_message: translatedMessage || null, // Translation if different
+          message: senderView,               // Sender's view (what sender typed/sees)
+          translated_message: receiverView,  // Receiver's view (translated for receiver)
           is_translated: isTranslated,       // Flag if translation occurred
         });
 
@@ -1063,8 +1054,6 @@ const ChatScreen = () => {
         description: "Failed to send message",
         variant: "destructive",
       });
-      // Restore message to input on failure
-      setNewMessage(messageText);
     } finally {
       setIsSending(false);
     }
@@ -1653,7 +1642,8 @@ const ChatScreen = () => {
                 const showAvatar = !isMine && (index === 0 || dateMessages[index - 1]?.senderId !== message.senderId);
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
-                const displayText = !isMine && message.isTranslated && message.translatedMessage 
+                // Receiver always sees translated_message (receiverView), sender sees message (senderView)
+                const displayText = !isMine && message.translatedMessage 
                   ? extractAttachment(message.translatedMessage).text 
                   : messageText;
                 
@@ -1815,11 +1805,11 @@ const ChatScreen = () => {
       )}
 
       {/* ============= MESSAGE INPUT AREA ============= */}
-      <footer className="sticky bottom-0 bg-background border-t border-border/50 px-4 py-3">
-        <div className="max-w-4xl mx-auto space-y-2">
+      <footer className="sticky bottom-0 bg-background">
+        <div className="max-w-4xl mx-auto">
           {/* Selected file preview */}
           {selectedFile && (
-            <div className="flex items-center gap-3 p-2 bg-muted rounded-lg">
+            <div className="flex items-center gap-3 p-2 mx-4 mt-2 bg-muted rounded-lg border-b border-border/50">
               {previewUrl ? (
                 <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded object-cover" />
               ) : (
@@ -1842,32 +1832,23 @@ const ChatScreen = () => {
             </div>
           )}
           
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (selectedFile) {
-                handleSendWithAttachment();
-              } else {
-                handleSendMessage();
-              }
-            }}
-            className="flex items-center gap-2"
-          >
-            {/* Hidden file inputs */}
-            <input 
-              ref={imageInputRef}
-              type="file" 
-              accept="image/*" 
-              className="hidden"
-              onChange={handleImageSelect}
-            />
-            <input 
-              ref={fileInputRef}
-              type="file" 
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            
+          {/* Hidden file inputs */}
+          <input 
+            ref={imageInputRef}
+            type="file" 
+            accept="image/*" 
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <input 
+            ref={fileInputRef}
+            type="file" 
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          
+          {/* Attachment and gift buttons row */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30">
             {/* Attachment button with popover */}
             <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
               <PopoverTrigger asChild>
@@ -1917,30 +1898,15 @@ const ChatScreen = () => {
                 disabled={isSending}
               />
             )}
-            
-            {/* Text input field */}
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={selectedFile ? "Add a caption..." : "Type or hold mic..."}
-              className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary"
-              disabled={isSending}
-            />
-            
-            {/* Send button */}
-            <Button 
-              type="submit"
-              size="icon"
-              className="rounded-full w-10 h-10 bg-primary hover:bg-primary/90"
-              disabled={(!newMessage.trim() && !selectedFile) || isSending}
-            >
-              {isSending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
-          </form>
+          </div>
+          
+          {/* Realtime Chat Input with typing modes */}
+          <RealtimeChatInput
+            onSendMessage={handleSendMessage}
+            senderLanguage={currentUserLanguage || "english"}
+            receiverLanguage={chatPartner?.preferredLanguage || "english"}
+            disabled={isSending || isBlocked || isBlockedByPartner}
+          />
         </div>
       </footer>
     </div>
