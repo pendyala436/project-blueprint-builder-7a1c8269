@@ -11,8 +11,9 @@ const corsHeaders = {
  * 
  * Runs on the 1st of each month to:
  * 1. Demote paid Indian women with <10% of top earner's chat time
- * 2. Promote top 5 free Indian women by chat time (up to 10 per language)
+ * 2. Promote top free Indian women by chat time (based on admin limits)
  * 
+ * IMPORTANT: This rotation only starts 3 months after system activation.
  * Only applies to Indian languages and Indian women.
  */
 serve(async (req) => {
@@ -27,8 +28,65 @@ serve(async (req) => {
 
     console.log("Starting Monthly Earning Rotation...");
 
-    // Get first day of previous month for calculations
+    // Check if rotation is enabled (starts 3 months after activation)
+    const { data: rotationSetting } = await supabase
+      .from("app_settings")
+      .select("setting_value")
+      .eq("setting_key", "earning_rotation_start_date")
+      .single();
+
     const now = new Date();
+    
+    // If no start date is set, set it to 3 months from now
+    if (!rotationSetting) {
+      const startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() + 3);
+      startDate.setDate(1); // First day of the month
+      startDate.setHours(0, 0, 0, 0);
+      
+      await supabase.from("app_settings").upsert({
+        setting_key: "earning_rotation_start_date",
+        setting_value: JSON.stringify(startDate.toISOString()),
+        setting_type: "date",
+        category: "earning",
+        description: "Date when monthly earning rotation begins (3 months after first activation)",
+        is_public: false,
+      }, { onConflict: "setting_key" });
+
+      console.log(`Rotation start date set to: ${startDate.toISOString()}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Monthly rotation will begin on ${startDate.toISOString().split('T')[0]}. Current month skipped.`,
+          rotationStartDate: startDate.toISOString(),
+          skipped: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if we've reached the rotation start date
+    const rotationStartDate = new Date(JSON.parse(rotationSetting.setting_value));
+    
+    if (now < rotationStartDate) {
+      const monthsRemaining = Math.ceil((rotationStartDate.getTime() - now.getTime()) / (30 * 24 * 60 * 60 * 1000));
+      console.log(`Rotation not yet active. Starts on: ${rotationStartDate.toISOString()}. ${monthsRemaining} months remaining.`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Rotation starts on ${rotationStartDate.toISOString().split('T')[0]}. ${monthsRemaining} month(s) remaining.`,
+          rotationStartDate: rotationStartDate.toISOString(),
+          skipped: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Rotation is active. Processing monthly rotation...");
+
+    // Get first day of previous month for calculations
     const monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
     
