@@ -854,8 +854,10 @@ export type Database = {
           is_premium: boolean | null
           is_verified: boolean | null
           last_active_at: string | null
+          last_rotation_date: string | null
           life_goals: string[] | null
           marital_status: string | null
+          monthly_chat_minutes: number | null
           occupation: string | null
           performance_score: number | null
           phone: string | null
@@ -863,6 +865,7 @@ export type Database = {
           preferred_language: string | null
           primary_language: string | null
           profile_completeness: number | null
+          promoted_from_free: boolean | null
           religion: string | null
           state: string | null
           suspended_at: string | null
@@ -896,8 +899,10 @@ export type Database = {
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
+          last_rotation_date?: string | null
           life_goals?: string[] | null
           marital_status?: string | null
+          monthly_chat_minutes?: number | null
           occupation?: string | null
           performance_score?: number | null
           phone?: string | null
@@ -905,6 +910,7 @@ export type Database = {
           preferred_language?: string | null
           primary_language?: string | null
           profile_completeness?: number | null
+          promoted_from_free?: boolean | null
           religion?: string | null
           state?: string | null
           suspended_at?: string | null
@@ -938,8 +944,10 @@ export type Database = {
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
+          last_rotation_date?: string | null
           life_goals?: string[] | null
           marital_status?: string | null
+          monthly_chat_minutes?: number | null
           occupation?: string | null
           performance_score?: number | null
           phone?: string | null
@@ -947,6 +955,7 @@ export type Database = {
           preferred_language?: string | null
           primary_language?: string | null
           profile_completeness?: number | null
+          promoted_from_free?: boolean | null
           religion?: string | null
           state?: string | null
           suspended_at?: string | null
@@ -1328,6 +1337,7 @@ export type Database = {
           max_call_women: number
           max_chat_women: number
           max_earning_women: number | null
+          max_monthly_promotions: number | null
           updated_at: string
         }
         Insert: {
@@ -1341,6 +1351,7 @@ export type Database = {
           max_call_women?: number
           max_chat_women?: number
           max_earning_women?: number | null
+          max_monthly_promotions?: number | null
           updated_at?: string
         }
         Update: {
@@ -1354,6 +1365,7 @@ export type Database = {
           max_call_women?: number
           max_chat_women?: number
           max_earning_women?: number | null
+          max_monthly_promotions?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -2140,10 +2152,12 @@ export type Database = {
           is_premium: boolean | null
           is_verified: boolean | null
           last_active_at: string | null
+          last_rotation_date: string | null
           latitude: number | null
           life_goals: string[] | null
           longitude: number | null
           marital_status: string | null
+          monthly_chat_minutes: number | null
           occupation: string | null
           performance_score: number | null
           personality_type: string | null
@@ -2153,6 +2167,7 @@ export type Database = {
           preferred_language: string | null
           primary_language: string | null
           profile_completeness: number | null
+          promoted_from_free: boolean | null
           religion: string | null
           smoking_habit: string | null
           state: string | null
@@ -2194,10 +2209,12 @@ export type Database = {
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
+          last_rotation_date?: string | null
           latitude?: number | null
           life_goals?: string[] | null
           longitude?: number | null
           marital_status?: string | null
+          monthly_chat_minutes?: number | null
           occupation?: string | null
           performance_score?: number | null
           personality_type?: string | null
@@ -2207,6 +2224,7 @@ export type Database = {
           preferred_language?: string | null
           primary_language?: string | null
           profile_completeness?: number | null
+          promoted_from_free?: boolean | null
           religion?: string | null
           smoking_habit?: string | null
           state?: string | null
@@ -2248,10 +2266,12 @@ export type Database = {
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
+          last_rotation_date?: string | null
           latitude?: number | null
           life_goals?: string[] | null
           longitude?: number | null
           marital_status?: string | null
+          monthly_chat_minutes?: number | null
           occupation?: string | null
           performance_score?: number | null
           personality_type?: string | null
@@ -2261,6 +2281,7 @@ export type Database = {
           preferred_language?: string | null
           primary_language?: string | null
           profile_completeness?: number | null
+          promoted_from_free?: boolean | null
           religion?: string | null
           smoking_habit?: string | null
           state?: string | null
@@ -3349,6 +3370,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_woman_monthly_chat_minutes: {
+        Args: { p_month_start: string; p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3362,6 +3387,7 @@ export type Database = {
       }
       is_indian_woman: { Args: { p_country: string }; Returns: boolean }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
+      perform_monthly_earning_rotation: { Args: never; Returns: Json }
       process_atomic_transfer: {
         Args: {
           p_amount: number
