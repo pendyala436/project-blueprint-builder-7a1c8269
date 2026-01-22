@@ -241,12 +241,12 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             messageToStore = savedRaw;
           }
           
-          // Translate to receiver's language
-          if (!sameLanguage) {
+          // Translate to receiver's language (always translate unless receiver speaks English)
+          if (!isEnglishReceiver) {
             const result = await translateText(savedRaw, 'english', receiverLanguage);
             receiverView = result?.text || savedRaw;
           } else {
-            receiverView = senderView;
+            receiverView = savedRaw;
           }
         }
       } catch (err) {
