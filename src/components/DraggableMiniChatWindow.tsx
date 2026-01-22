@@ -1525,6 +1525,18 @@ const DraggableMiniChatWindow = ({
             />
             
             <div className="flex items-center gap-1">
+              {/* Typing Mode Selector - compact dropdown */}
+              <TypingModeSelector
+                currentMode={typingMode}
+                onModeChange={setTypingMode}
+                userLanguage={currentUserLanguage}
+                receiverLanguage={partnerLanguage}
+                compact={true}
+                showAutoDetect={true}
+                isAutoMode={isAutoMode}
+                className="h-8"
+              />
+
               {/* Attach button */}
               <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
                 <PopoverTrigger asChild>
@@ -1542,7 +1554,7 @@ const DraggableMiniChatWindow = ({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-40 p-1" side="top" align="start">
+                <PopoverContent className="w-40 p-1 z-[100] bg-popover border shadow-lg" side="top" align="start">
                   <div className="flex flex-col gap-0.5">
                     <Button
                       variant="ghost"
