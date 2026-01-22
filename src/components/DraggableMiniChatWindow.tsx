@@ -1664,7 +1664,7 @@ const DraggableMiniChatWindow = ({
                 userLanguage={currentUserLanguage}
                 receiverLanguage={partnerLanguage}
                 compact={true}
-                showAutoDetect={true}
+                showAutoDetect={false}
                 isAutoMode={isAutoMode}
                 className="h-8"
               />
@@ -1884,23 +1884,7 @@ const DraggableMiniChatWindow = ({
                 />
               </div>
 
-              {/* Transliteration toggle */}
-              <Button
-                type="button"
-                variant={transliterationEnabled ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-8 w-8 shrink-0",
-                  transliterationEnabled && "bg-primary/20 text-primary hover:bg-primary/30"
-                )}
-                onClick={() => setTransliterationEnabled(!transliterationEnabled)}
-                title={transliterationEnabled ? "Auto-convert enabled" : "Auto-convert disabled"}
-              >
-                <Languages className={cn(
-                  "h-4 w-4",
-                  livePreview.isLoading && "animate-pulse"
-                )} />
-              </Button>
+              {/* Send button */}
 
               {/* Send button */}
               <Button
