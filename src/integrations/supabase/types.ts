@@ -842,11 +842,15 @@ export type Database = {
           country: string | null
           created_at: string
           date_of_birth: string | null
+          earning_badge_type: string | null
+          earning_slot_assigned_at: string | null
           education_level: string | null
           full_name: string | null
           height_cm: number | null
           id: string
           interests: string[] | null
+          is_earning_eligible: boolean | null
+          is_indian: boolean | null
           is_premium: boolean | null
           is_verified: boolean | null
           last_active_at: string | null
@@ -880,11 +884,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
+          earning_badge_type?: string | null
+          earning_slot_assigned_at?: string | null
           education_level?: string | null
           full_name?: string | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
@@ -918,11 +926,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           date_of_birth?: string | null
+          earning_badge_type?: string | null
+          earning_slot_assigned_at?: string | null
           education_level?: string | null
           full_name?: string | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
@@ -1309,33 +1321,39 @@ export type Database = {
           created_at: string
           current_call_women: number
           current_chat_women: number
+          current_earning_women: number | null
           id: string
           is_active: boolean
           language_name: string
           max_call_women: number
           max_chat_women: number
+          max_earning_women: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           current_call_women?: number
           current_chat_women?: number
+          current_earning_women?: number | null
           id?: string
           is_active?: boolean
           language_name: string
           max_call_women?: number
           max_chat_women?: number
+          max_earning_women?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           current_call_women?: number
           current_chat_women?: number
+          current_earning_women?: number | null
           id?: string
           is_active?: boolean
           language_name?: string
           max_call_women?: number
           max_chat_women?: number
+          max_earning_women?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -2106,6 +2124,8 @@ export type Database = {
           date_of_birth: string | null
           dietary_preference: string | null
           drinking_habit: string | null
+          earning_badge_type: string | null
+          earning_slot_assigned_at: string | null
           education_level: string | null
           email: string | null
           fitness_level: string | null
@@ -2115,6 +2135,8 @@ export type Database = {
           height_cm: number | null
           id: string
           interests: string[] | null
+          is_earning_eligible: boolean | null
+          is_indian: boolean | null
           is_premium: boolean | null
           is_verified: boolean | null
           last_active_at: string | null
@@ -2156,6 +2178,8 @@ export type Database = {
           date_of_birth?: string | null
           dietary_preference?: string | null
           drinking_habit?: string | null
+          earning_badge_type?: string | null
+          earning_slot_assigned_at?: string | null
           education_level?: string | null
           email?: string | null
           fitness_level?: string | null
@@ -2165,6 +2189,8 @@ export type Database = {
           height_cm?: number | null
           id?: string
           interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
@@ -2206,6 +2232,8 @@ export type Database = {
           date_of_birth?: string | null
           dietary_preference?: string | null
           drinking_habit?: string | null
+          earning_badge_type?: string | null
+          earning_slot_assigned_at?: string | null
           education_level?: string | null
           email?: string | null
           fitness_level?: string | null
@@ -2215,6 +2243,8 @@ export type Database = {
           height_cm?: number | null
           id?: string
           interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
           is_premium?: boolean | null
           is_verified?: boolean | null
           last_active_at?: string | null
@@ -3207,6 +3237,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_earning_slots: { Args: never; Returns: Json }
       check_group_video_access: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: Json
@@ -3329,6 +3360,7 @@ export type Database = {
         Args: { candidate_uuid: string }
         Returns: undefined
       }
+      is_indian_woman: { Args: { p_country: string }; Returns: boolean }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
       process_atomic_transfer: {
         Args: {
@@ -3403,6 +3435,7 @@ export type Database = {
       }
       rotate_monthly_shifts: { Args: never; Returns: undefined }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
+      should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
     }
     Enums: {
