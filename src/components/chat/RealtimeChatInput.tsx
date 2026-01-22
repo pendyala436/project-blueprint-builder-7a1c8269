@@ -3,12 +3,10 @@
  * ==================================================
  * Zero-lag typing experience for all 1000+ languages
  * 
- * Features:
- * - INSTANT offline transliteration on every keystroke (sync, < 2ms)
- * - Type "bagunnava" → see "బాగున్నావా" immediately in input
- * - Latin → Native script conversion based on sender's mother tongue
- * - Universal Translation for sender → receiver (different languages)
- * - Toggle between English and Native typing modes
+ * 3 TYPING MODES:
+ * 1. Native Mode - Type in mother tongue (native/Latin script)
+ * 2. English Core - Type English, display English, receiver sees native
+ * 3. English (Meaning-Based) - Type English, preview/display as native translation
  * 
  * TYPING: Pure offline dynamic transliteration (Gboard-style)
  * TRANSLATION: Uses translateText from translate.ts via Edge Function
@@ -19,9 +17,15 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Send, Languages, Globe } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { dynamicTransliterate, isLatinScriptLanguage as checkLatinScript } from '@/lib/translation/dynamic-transliterator';
 import { translateText, isSameLanguage } from '@/lib/translation/translate';
+import { 
+  TypingModeSelector, 
+  type TypingMode, 
+  useTypingMode,
+  getSavedTypingMode 
+} from './TypingModeSelector';
 
 interface RealtimeChatInputProps {
   onSendMessage: (message: string, senderView: string, receiverView: string) => void;
@@ -40,8 +44,6 @@ const isLatinText = (text: string): boolean => {
   return latinPattern.test(text);
 };
 
-type TypingMode = 'native' | 'english';
-
 export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   onSendMessage,
   onTyping,
@@ -55,15 +57,18 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
   // State
   const [rawInput, setRawInput] = useState(''); // What user typed (Latin)
-  const [nativeText, setNativeText] = useState(''); // Transliterated native script
+  const [nativeText, setNativeText] = useState(''); // Transliterated/translated native script
+  const [previewText, setPreviewText] = useState(''); // Preview text for meaning-based mode
   const [isComposing, setIsComposing] = useState(false);
+  const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   
-  // Toggle between English and Native typing mode
-  const [typingMode, setTypingMode] = useState<TypingMode>('native');
+  // Use persistent typing mode hook
+  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const previewTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Check if user's mother tongue uses non-Latin script
   const needsTransliteration = !checkLatinScript(senderLanguage);
@@ -92,268 +97,273 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   }, [needsTransliteration, senderLanguage]);
 
   /**
-   * Handle input change - INSTANT transliteration on every keystroke
-   * Key insight: We store raw Latin input separately and always display the transliterated version
+   * Generate preview for English (Meaning-Based) mode
+   * Translates English input to sender's native language
+   */
+  const generateMeaningPreview = useCallback(async (englishText: string) => {
+    if (!englishText.trim() || typingMode !== 'english-meaning') {
+      setPreviewText('');
+      return;
+    }
+
+    setIsTranslatingPreview(true);
+    try {
+      const result = await translateText(englishText, 'english', senderLanguage);
+      if (result?.text) {
+        setPreviewText(result.text);
+      }
+    } catch (e) {
+      console.error('[RealtimeChatInput] Preview translation error:', e);
+    } finally {
+      setIsTranslatingPreview(false);
+    }
+  }, [typingMode, senderLanguage]);
+
+  /**
+   * Handle input change - behavior depends on typing mode
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    
-    // If in English mode, just keep raw text - no transliteration
-    if (typingMode === 'english') {
-      setRawInput(value);
-      setNativeText(value); // In English mode, native = raw
-      
-      // Typing indicator
-      if (onTyping) {
-        onTyping(value.length > 0);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
-      }
-      return;
-    }
-    
-    // Native mode with transliteration
-    if (needsTransliteration) {
-      // PRIORITY CHECK: Detect if input contains ANY non-Latin characters (GBoard/native keyboard)
-      const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
-      
-      if (hasNativeChars) {
-        // GBoard/native keyboard detected - use directly, NO transliteration
-        setRawInput(value); // Store as-is
-        setNativeText(value); // Use directly - user is typing in native script
-      } else if (value === '' || isLatinText(value)) {
-        // Pure Latin input - apply transliteration
-        setRawInput(value);
+    setRawInput(value);
+
+    // Mode 1: Native Mode - transliterate if needed
+    if (typingMode === 'native') {
+      if (needsTransliteration) {
+        const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
         
-        if (value.trim()) {
-          const native = transliterateNow(value);
+        if (hasNativeChars) {
+          setNativeText(value);
+        } else if (value === '' || isLatinText(value)) {
+          const native = value.trim() ? transliterateNow(value) : '';
           setNativeText(native);
         } else {
-          setNativeText('');
+          setNativeText(value);
         }
       } else {
-        // Mixed or unknown - pass through
-        setRawInput(value);
         setNativeText(value);
       }
-    } else {
-      // Latin-script language - no transliteration needed
-      setRawInput(value);
+      setPreviewText('');
+    }
+    // Mode 2: English Core - keep as English
+    else if (typingMode === 'english-core') {
       setNativeText(value);
+      setPreviewText('');
+    }
+    // Mode 3: English (Meaning-Based) - translate preview
+    else if (typingMode === 'english-meaning') {
+      setNativeText(value);
+      
+      // Debounced preview translation
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+      if (value.trim()) {
+        previewTimeoutRef.current = setTimeout(() => {
+          generateMeaningPreview(value);
+        }, 500);
+      } else {
+        setPreviewText('');
+      }
     }
 
     // Typing indicator
     if (onTyping) {
       onTyping(value.length > 0);
-      
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      typingTimeoutRef.current = setTimeout(() => {
-        onTyping(false);
-      }, 2000);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [transliterateNow, needsTransliteration, typingMode, onTyping]);
+  }, [typingMode, needsTransliteration, transliterateNow, generateMeaningPreview, onTyping]);
 
   /**
-   * Handle send - Non-blocking Universal Translation
-   * 
-   * CRITICAL: Translations happen in BACKGROUND - typing never blocked
-   * 
-   * FLOW:
-   * 1. Clear input immediately (instant feedback)
-   * 2. Send message with original text first
-   * 3. Translations happen async and message updates when ready
+   * Handle send - behavior depends on typing mode
    */
   const handleSend = useCallback(() => {
-    // Get the raw input text
     const rawMessage = rawInput.trim();
-    const nativeMessage = (nativeText || rawInput).trim();
-    
-    // In English mode use raw English, in native mode use transliterated text
-    const messageToSend = typingMode === 'english' ? rawMessage : nativeMessage;
-      
-    if (!messageToSend || disabled || isComposing) return;
+    if (!rawMessage || disabled || isComposing) return;
 
-    // Clear input IMMEDIATELY - never block typing
-    const savedMessage = messageToSend;
-    const savedRawMessage = rawMessage; // Keep original English for English mode
-    const savedTypingMode = typingMode;
+    // Clear input IMMEDIATELY
+    const savedRaw = rawMessage;
+    const savedNative = (nativeText || rawMessage).trim();
+    const savedPreview = previewText.trim();
+    const savedMode = typingMode;
+    
     setRawInput('');
     setNativeText('');
+    setPreviewText('');
     onTyping?.(false);
 
-    // SEND MESSAGE IMMEDIATELY with original text first (optimistic)
-    // Then fire translations in background - completely non-blocking
-    
-    // For English mode: translate from English to both native languages
-    if (savedTypingMode === 'english') {
-      console.log('[RealtimeChatInput] English mode - translating:', savedRawMessage, 
-        'senderLang:', senderLanguage, 'receiverLang:', receiverLanguage);
-      
-      // Start translation immediately
-      (async () => {
-        let senderView = savedRawMessage;
-        let receiverView = savedRawMessage;
-        
-        try {
-          const isEnglishSender = senderLanguage.toLowerCase() === 'english';
-          const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
-          
-          console.log('[RealtimeChatInput] isEnglishSender:', isEnglishSender, 
-            'isEnglishReceiver:', isEnglishReceiver);
-          
-          // Parallel translations for maximum speed
-          const translations = await Promise.allSettled([
-            // English → Sender's native (only if sender is not English speaker)
-            !isEnglishSender 
-              ? translateText(savedRawMessage, 'english', senderLanguage)
-              : Promise.resolve({ text: savedRawMessage, isTranslated: false }),
-            // English → Receiver's native (only if receiver is not English speaker)
-            !isEnglishReceiver
-              ? translateText(savedRawMessage, 'english', receiverLanguage)
-              : Promise.resolve({ text: savedRawMessage, isTranslated: false })
-          ]);
-          
-          console.log('[RealtimeChatInput] Translation results:', translations);
-          
-          // Extract sender translation result
-          if (translations[0].status === 'fulfilled') {
-            const result = translations[0].value;
-            if (result && typeof result === 'object' && 'text' in result) {
-              senderView = result.text || savedRawMessage;
-            }
-          }
-          
-          // Extract receiver translation result
-          if (translations[1].status === 'fulfilled') {
-            const result = translations[1].value;
-            if (result && typeof result === 'object' && 'text' in result) {
-              receiverView = result.text || savedRawMessage;
-            }
-          }
-          
-          console.log('[RealtimeChatInput] English mode final:', { 
-            original: savedRawMessage, 
-            senderView, 
-            receiverView
-          });
-        } catch (err) {
-          console.error('[RealtimeChatInput] Translation error:', err);
-        }
-        
-        // ALWAYS send message, even if translation failed
-        onSendMessage(savedRawMessage, senderView, receiverView);
-      })();
-    } else {
-      // Native mode - translate to receiver's language
-      (async () => {
-        let receiverView = savedMessage;
-        
-        try {
-          if (!isSameLanguage(senderLanguage, receiverLanguage)) {
-            console.log('[RealtimeChatInput] Native mode - translating:', savedMessage,
-              'from:', senderLanguage, 'to:', receiverLanguage);
-            
-            const result = await translateText(savedMessage, senderLanguage, receiverLanguage);
-            console.log('[RealtimeChatInput] Native mode result:', result);
-            
-            if (result && result.text) {
-              receiverView = result.text;
-            }
-          }
-        } catch (err) {
-          console.error('[RealtimeChatInput] Translation error:', err);
-        }
-        
-        // ALWAYS send message
-        onSendMessage(savedMessage, savedMessage, receiverView);
-      })();
-    }
+    // Process based on mode
+    (async () => {
+      let messageToStore = savedRaw;
+      let senderView = savedRaw;
+      let receiverView = savedRaw;
 
-    // Focus textarea for continued typing
+      try {
+        const isEnglishSender = senderLanguage.toLowerCase() === 'english';
+        const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
+        const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
+
+        // MODE 1: Native Mode
+        if (savedMode === 'native') {
+          messageToStore = savedNative;
+          senderView = savedNative;
+          
+          if (!sameLanguage) {
+            const result = await translateText(savedNative, senderLanguage, receiverLanguage);
+            receiverView = result?.text || savedNative;
+          } else {
+            receiverView = savedNative;
+          }
+        }
+        // MODE 2: English Core
+        else if (savedMode === 'english-core') {
+          messageToStore = savedRaw; // Store English
+          senderView = savedRaw; // Display English to sender
+          
+          // Translate to receiver's language
+          if (!isEnglishReceiver) {
+            const result = await translateText(savedRaw, 'english', receiverLanguage);
+            receiverView = result?.text || savedRaw;
+          } else {
+            receiverView = savedRaw;
+          }
+        }
+        // MODE 3: English (Meaning-Based)
+        else if (savedMode === 'english-meaning') {
+          // Use preview if available, otherwise translate
+          if (savedPreview) {
+            senderView = savedPreview;
+            messageToStore = savedPreview;
+          } else if (!isEnglishSender) {
+            const result = await translateText(savedRaw, 'english', senderLanguage);
+            senderView = result?.text || savedRaw;
+            messageToStore = senderView;
+          } else {
+            senderView = savedRaw;
+            messageToStore = savedRaw;
+          }
+          
+          // Translate to receiver's language
+          if (!sameLanguage) {
+            const result = await translateText(savedRaw, 'english', receiverLanguage);
+            receiverView = result?.text || savedRaw;
+          } else {
+            receiverView = senderView;
+          }
+        }
+      } catch (err) {
+        console.error('[RealtimeChatInput] Translation error:', err);
+      }
+
+      onSendMessage(messageToStore, senderView, receiverView);
+    })();
+
     textareaRef.current?.focus();
-  }, [nativeText, rawInput, disabled, isComposing, typingMode, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
+  }, [rawInput, nativeText, previewText, typingMode, disabled, isComposing, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
 
   /**
    * Handle key press
    */
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (isComposing) return;
-
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   }, [isComposing, handleSend]);
 
-  // IME handlers for CJK input
+  // IME handlers
   const handleCompositionStart = useCallback(() => setIsComposing(true), []);
   const handleCompositionEnd = useCallback(() => setIsComposing(false), []);
 
-  // Auto-resize textarea based on content
+  // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
-  }, [nativeText]);
+  }, [nativeText, rawInput]);
 
   // Cleanup timeouts
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     };
   }, []);
 
-  // Display the native script text (transliterated) or raw in English mode
-  const displayText = typingMode === 'english' ? rawInput : (nativeText || rawInput);
-  
-  const defaultPlaceholder = typingMode === 'english'
-    ? t('chat.typeInEnglish', 'Type in English...')
-    : needsTransliteration 
-      ? t('chat.typeInLatin', 'Type in English letters - converts to your language')
-      : t('chat.typeMessage', 'Type a message...');
+  // Display text based on mode
+  const getDisplayText = () => {
+    if (typingMode === 'native' && needsTransliteration) {
+      return rawInput; // Show Latin, preview shows native
+    }
+    return rawInput;
+  };
 
-  // Show toggle only for non-English languages
-  const showModeToggle = !isEnglishLanguage;
+  // Get placeholder based on mode
+  const getPlaceholder = () => {
+    switch (typingMode) {
+      case 'native':
+        return needsTransliteration 
+          ? t('chat.typeInLatin', 'Type in English letters → converts to your language')
+          : t('chat.typeMessage', 'Type a message...');
+      case 'english-core':
+        return t('chat.typeInEnglish', 'Type in English...');
+      case 'english-meaning':
+        return t('chat.typeEnglishMeaning', 'Type in English → shows as your language');
+      default:
+        return t('chat.typeMessage', 'Type a message...');
+    }
+  };
+
+  // Show mode selector only for non-English users
+  const showModeSelector = !isEnglishLanguage;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Typing mode toggle for non-English languages */}
-      {showModeToggle && (
+      {/* Typing mode selector */}
+      {showModeSelector && (
         <div className="px-4 py-2 border-b border-border/50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={typingMode === 'native' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTypingMode('native')}
-              className="h-7 px-3 text-xs gap-1.5"
-            >
-              <Languages className="h-3.5 w-3.5" />
-              {senderLanguage}
-            </Button>
-            <Button
-              variant={typingMode === 'english' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTypingMode('english')}
-              className="h-7 px-3 text-xs gap-1.5"
-            >
-              <Globe className="h-3.5 w-3.5" />
-              English
-            </Button>
-          </div>
+          <TypingModeSelector
+            currentMode={typingMode}
+            onModeChange={setTypingMode}
+            userLanguage={senderLanguage}
+            receiverLanguage={receiverLanguage}
+            compact
+          />
           <span className="text-xs text-muted-foreground">
-            {typingMode === 'english' 
-              ? t('chat.typingInEnglish', 'Typing in English')
-              : t('chat.typingInNative', `Typing in ${senderLanguage}`)}
+            {typingMode === 'native' && t('chat.typingInNative', `Typing in ${senderLanguage}`)}
+            {typingMode === 'english-core' && t('chat.typingEnglishCore', 'English → English display')}
+            {typingMode === 'english-meaning' && t('chat.typingEnglishMeaning', 'English → Native display')}
           </span>
         </div>
       )}
 
-      {/* Hint for non-Latin languages (only in native mode) */}
+      {/* Native preview (Mode 1 with transliteration) */}
+      {typingMode === 'native' && needsTransliteration && nativeText && nativeText !== rawInput && (
+        <div className="px-4 py-2 border-b border-border/30">
+          <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-base unicode-text" dir="auto">
+            {nativeText}
+          </div>
+        </div>
+      )}
+
+      {/* Meaning-based preview (Mode 3) */}
+      {typingMode === 'english-meaning' && (previewText || isTranslatingPreview) && (
+        <div className="px-4 py-2 border-b border-border/30">
+          <div className="px-3 py-2 bg-accent/30 border border-accent/50 rounded-lg text-base unicode-text" dir="auto">
+            {isTranslatingPreview ? (
+              <span className="text-muted-foreground italic">{t('chat.translating', 'Translating...')}</span>
+            ) : (
+              previewText
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {t('chat.meaningPreview', 'Preview (meaning-based translation)')}
+          </div>
+        </div>
+      )}
+
+      {/* Hint for transliteration */}
       {typingMode === 'native' && needsTransliteration && (
         <div className="px-4 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5 border-b border-border/30">
           <span>✨</span>
@@ -364,23 +374,16 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       {/* Input area */}
       <div className="p-3 flex items-end gap-2">
         <div className="flex-1 relative">
-          {/* Native script preview when typing Latin for transliteration (only in native mode) */}
-          {typingMode === 'native' && needsTransliteration && nativeText && nativeText !== rawInput && (
-            <div className="mb-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-base unicode-text" dir="auto">
-              {nativeText}
-            </div>
-          )}
-          
           <Textarea
             ref={textareaRef}
-            value={typingMode === 'english' ? rawInput : (needsTransliteration ? rawInput : nativeText)}
+            value={getDisplayText()}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
-            placeholder={placeholder || defaultPlaceholder}
+            placeholder={placeholder || getPlaceholder()}
             disabled={disabled}
-            lang={typingMode === 'english' ? 'en' : (needsTransliteration ? 'en' : senderLanguage)}
+            lang={typingMode === 'native' && !needsTransliteration ? senderLanguage : 'en'}
             dir="auto"
             spellCheck={true}
             autoComplete="off"
@@ -400,7 +403,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         {/* Send button */}
         <Button
           onClick={handleSend}
-          disabled={!displayText.trim() || disabled}
+          disabled={!rawInput.trim() || disabled}
           size="icon"
           className={cn(
             'h-11 w-11 rounded-full flex-shrink-0',
