@@ -178,11 +178,12 @@ async function handleReapprovalRequest(supabase: any, userId: string) {
       }
     }
 
-    // Check if the user was disapproved due to inactivity
-    const isDisapproved = profile?.approval_status === "disapproved" || 
-                          profile?.ai_disapproval_reason?.includes("Inactive");
+    // Check if the user was disapproved due to inactivity or is inactive
+    const isInactive = profile?.approval_status === "inactive" || 
+                       profile?.approval_status === "disapproved" || 
+                       profile?.ai_disapproval_reason?.includes("Inactive");
 
-    if (!isDisapproved && profile?.approval_status === "approved") {
+    if (!isInactive && profile?.approval_status === "approved") {
       return new Response(
         JSON.stringify({ success: false, error: "User is already approved" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -222,8 +223,8 @@ async function handleReapprovalRequest(supabase: any, userId: string) {
 
     console.log(`✓ User ${userId} set to pending for re-approval`);
 
-    // Immediately run approval for this user
-    await approveSpecificUser(supabase, userId);
+    // Immediately run approval for this user (as reapproval - goes to FREE list)
+    await approveSpecificUser(supabase, userId, true);
 
     return new Response(
       JSON.stringify({ 
@@ -243,23 +244,36 @@ async function handleReapprovalRequest(supabase: any, userId: string) {
 }
 
 /**
- * Approve a specific user immediately
+ * Approve a specific user immediately (reapproval flow)
+ * Users who reapply after being inactive are approved but go to FREE users list
  */
-async function approveSpecificUser(supabase: any, userId: string) {
+async function approveSpecificUser(supabase: any, userId: string, isReapproval: boolean = true) {
+  // Reapproved users go to FREE list (not earning eligible)
+  // Only new users or monthly rotation can make them earning eligible
   const approvalData = {
     approval_status: "approved",
     ai_approved: true,
     auto_approved: true,
     ai_disapproval_reason: null,
+    account_status: "active",
     performance_score: 100, // Reset performance score
     last_active_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    // Reapproved users become FREE users (not earning eligible)
+    is_earning_eligible: isReapproval ? false : undefined,
+    earning_slot_assigned_at: isReapproval ? null : undefined,
+    earning_badge_type: isReapproval ? null : undefined,
   };
+
+  // Clean up undefined values
+  const cleanedData = Object.fromEntries(
+    Object.entries(approvalData).filter(([_, v]) => v !== undefined)
+  );
 
   // Update female_profiles
   await supabase
     .from("female_profiles")
-    .update(approvalData)
+    .update(cleanedData)
     .eq("user_id", userId);
 
   // Update profiles
@@ -269,13 +283,17 @@ async function approveSpecificUser(supabase: any, userId: string) {
       approval_status: "approved",
       ai_approved: true,
       ai_disapproval_reason: null,
+      account_status: "active",
       performance_score: 100,
       last_active_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      is_earning_eligible: isReapproval ? false : undefined,
+      earning_slot_assigned_at: isReapproval ? null : undefined,
+      earning_badge_type: isReapproval ? null : undefined,
     })
     .eq("user_id", userId);
 
-  // Ensure women_availability entry exists
+  // Ensure women_availability entry exists (user becomes online capable)
   await supabase
     .from("women_availability")
     .upsert({
@@ -290,7 +308,7 @@ async function approveSpecificUser(supabase: any, userId: string) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
-  console.log(`✓ User ${userId} approved successfully`);
+  console.log(`✓ User ${userId} approved successfully (isReapproval: ${isReapproval}, earning_eligible: ${!isReapproval})`);
 }
 
 /**
