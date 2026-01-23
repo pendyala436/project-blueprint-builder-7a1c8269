@@ -1000,13 +1000,9 @@ export async function translateUniversal(
 // ============================================================
 
 /**
- * Process chat message with bidirectional views - MEANING BASED
- * 
- * 1. Sender sees their message in their native script
- * 2. Receiver sees MEANING-BASED translation in receiver's mother tongue
- * 3. English meaning is generated (not phonetic Latin)
- * 
- * Example: Telugu "జాతి మనది" → English meaning "It's our nation" → Hindi meaning "यह हमारा राष्ट्र है"
+ * Process chat message with bidirectional views
+ * Sender sees their message in their script
+ * Receiver sees translated message in their script
  */
 export async function translateBidirectionalChat(
   text: string,
@@ -1036,102 +1032,51 @@ export async function translateBidirectionalChat(
   const senderIsLatin = isLatinScriptLanguage(normSender);
   const receiverIsLatin = isLatinScriptLanguage(normReceiver);
   
-  // ============================================================
-  // STEP 1: Generate sender view (in sender's native script)
-  // ============================================================
+  // Generate sender view (in sender's native script)
   let senderView = trimmed;
   let wasTransliterated = false;
   
   if (inputIsLatin && !senderIsLatin) {
-    // Latin input for non-Latin language → transliterate to native script
     senderView = dynamicTransliterate(trimmed, normSender) || trimmed;
     wasTransliterated = senderView !== trimmed;
   }
   
-  // ============================================================
-  // STEP 2: Generate MEANING-BASED English (not phonetic)
-  // This is the key difference from before - we translate the meaning
-  // ============================================================
+  // Generate English core (for storage and pivot)
   let englishCore: string;
+  if (inputIsLatin) {
+    englishCore = trimmed;
+  } else {
+    englishCore = reverseTransliterate(trimmed, normSender) || trimmed;
+  }
+  
+  // Generate receiver view
+  let receiverView: string;
   let wasTranslated = false;
   
-  if (isEnglish(normSender)) {
-    // Sender is English - input IS English meaning
-    englishCore = trimmed;
-  } else if (inputIsLatin && !senderIsLatin) {
-    // User typed Latin phonetically for non-Latin language
-    // First get native script, then try to get English meaning
-    const nativeText = senderView;
-    
-    // Try to translate native text to English meaning
-    const englishResult = await translateToEnglishMeaning(nativeText, normSender);
-    if (englishResult && englishResult !== nativeText) {
-      englishCore = englishResult;
-      wasTranslated = true;
-    } else {
-      // Fallback: try phrase lookup with the phonetic input
-      const phraseEnglish = lookupEnglishFromPhrase(trimmed, normSender);
-      if (phraseEnglish) {
-        englishCore = phraseEnglish;
-        wasTranslated = true;
-      } else {
-        // Last resort: use phonetic as English approximation
-        englishCore = trimmed;
-      }
-    }
-  } else if (!inputIsLatin) {
-    // User typed in native script directly (e.g., via Gboard)
-    const englishResult = await translateToEnglishMeaning(trimmed, normSender);
-    if (englishResult && englishResult !== trimmed) {
-      englishCore = englishResult;
-      wasTranslated = true;
-    } else {
-      // Fallback: reverse transliterate
-      englishCore = reverseTransliterate(trimmed, normSender) || trimmed;
-    }
-  } else {
-    // Latin language typing Latin - use as-is
-    englishCore = trimmed;
-  }
-  
-  // ============================================================
-  // STEP 3: Generate MEANING-BASED receiver view
-  // Translate from English meaning to receiver's mother tongue
-  // ============================================================
-  let receiverView: string;
-  
   if (isSameLanguage(normSender, normReceiver)) {
-    // Same language - receiver sees same as sender
     receiverView = senderView;
-  } else if (isEnglish(normReceiver)) {
-    // Receiver is English - show English meaning
-    receiverView = englishCore;
-    wasTranslated = englishCore !== trimmed;
   } else {
-    // Different languages - translate English meaning to receiver's language
-    const receiverResult = await translateFromEnglishMeaning(englishCore, normReceiver);
+    // Try common phrase lookup
+    const phraseResult = lookupCommonPhrase(englishCore, normReceiver);
     
-    if (receiverResult && receiverResult !== englishCore) {
-      receiverView = receiverResult;
+    if (phraseResult) {
+      receiverView = phraseResult;
       wasTranslated = true;
     } else {
-      // Fallback: transliterate English to receiver's script
-      if (!receiverIsLatin) {
-        receiverView = dynamicTransliterate(englishCore, normReceiver) || englishCore;
-        wasTransliterated = receiverView !== englishCore;
-      } else {
+      // Try semantic translation
+      const transResult = await translateWordByWord(englishCore, 'english', normReceiver);
+      
+      if (transResult.translated) {
+        receiverView = transResult.result;
+        wasTranslated = true;
+      } else if (receiverIsLatin) {
         receiverView = englishCore;
+      } else {
+        receiverView = dynamicTransliterate(englishCore, normReceiver) || englishCore;
+        wasTransliterated = true;
       }
     }
   }
-  
-  console.log('[UniversalOffline] BidirectionalChat result:', {
-    input: trimmed.substring(0, 30),
-    senderView: senderView.substring(0, 30),
-    englishCore: englishCore.substring(0, 30),
-    receiverView: receiverView.substring(0, 30),
-    wasTranslated
-  });
   
   return {
     senderView,
@@ -1142,140 +1087,6 @@ export async function translateBidirectionalChat(
     wasTranslated,
     confidence: wasTranslated ? 0.8 : 0.5,
   };
-}
-
-/**
- * Translate text to English meaning using dictionary and phrase lookups
- */
-async function translateToEnglishMeaning(text: string, sourceLanguage: string): Promise<string | null> {
-  if (!text.trim()) return null;
-  
-  const normSource = normalizeLanguage(sourceLanguage);
-  const textLower = text.toLowerCase().trim();
-  
-  // First try: Check common_phrases for direct English translation
-  for (const [key, phrase] of commonPhrasesCache.entries()) {
-    const column = getLanguageColumn(normSource);
-    const sourceValue = phrase[column];
-    
-    if (sourceValue && typeof sourceValue === 'string') {
-      // Check if source language value matches
-      if (sourceValue.toLowerCase().trim() === textLower ||
-          // Also check if the key itself matches (some phrases are keyed by phonetic)
-          key === textLower) {
-        return phrase.english;
-      }
-    }
-  }
-  
-  // Second try: Dictionary lookup
-  const dictEntry = await lookupSemanticDictionary(text, normSource);
-  if (dictEntry && dictEntry.english_meaning) {
-    return dictEntry.english_meaning;
-  }
-  
-  // Third try: Word-by-word translation
-  const words = text.split(/\s+/);
-  if (words.length > 1) {
-    const translatedWords: string[] = [];
-    let anyTranslated = false;
-    
-    for (const word of words) {
-      const wordEntry = await lookupSemanticDictionary(word, normSource);
-      if (wordEntry && wordEntry.english_meaning) {
-        translatedWords.push(wordEntry.english_meaning);
-        anyTranslated = true;
-      } else {
-        // Try phrase lookup for individual word
-        for (const [, phrase] of commonPhrasesCache.entries()) {
-          const column = getLanguageColumn(normSource);
-          const sourceValue = phrase[column];
-          if (sourceValue && typeof sourceValue === 'string' && 
-              sourceValue.toLowerCase().trim() === word.toLowerCase()) {
-            translatedWords.push(phrase.english);
-            anyTranslated = true;
-            break;
-          }
-        }
-        if (!anyTranslated || translatedWords.length < words.indexOf(word) + 1) {
-          translatedWords.push(word); // Keep original if no translation
-        }
-      }
-    }
-    
-    if (anyTranslated) {
-      return translatedWords.join(' ');
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Translate English meaning to target language
- */
-async function translateFromEnglishMeaning(englishText: string, targetLanguage: string): Promise<string | null> {
-  if (!englishText.trim()) return null;
-  
-  const normTarget = normalizeLanguage(targetLanguage);
-  const targetIsLatin = isLatinScriptLanguage(normTarget);
-  
-  // First try: Common phrase lookup
-  const phraseResult = lookupCommonPhrase(englishText, normTarget);
-  if (phraseResult) {
-    return phraseResult;
-  }
-  
-  // Second try: Word-by-word semantic translation
-  const wordResult = await translateWordByWord(englishText, 'english', normTarget);
-  
-  if (wordResult.translated) {
-    let result = wordResult.result;
-    
-    // Apply script conversion if needed
-    if (!targetIsLatin && isLatinText(result)) {
-      result = dynamicTransliterate(result, normTarget) || result;
-    }
-    
-    return result;
-  }
-  
-  // Third try: If target needs non-Latin script, transliterate
-  if (!targetIsLatin) {
-    return dynamicTransliterate(englishText, normTarget) || null;
-  }
-  
-  return null;
-}
-
-/**
- * Lookup English from phrase cache by matching source language value
- */
-function lookupEnglishFromPhrase(text: string, sourceLanguage: string): string | null {
-  const normSource = normalizeLanguage(sourceLanguage);
-  const textLower = text.toLowerCase().trim();
-  
-  // Check if the text matches any English phrase
-  const directEnglish = commonPhrasesCache.get(textLower);
-  if (directEnglish) {
-    return directEnglish.english;
-  }
-  
-  // Check source language column
-  for (const [, phrase] of commonPhrasesCache.entries()) {
-    const column = getLanguageColumn(normSource);
-    const sourceValue = phrase[column];
-    
-    if (sourceValue && typeof sourceValue === 'string') {
-      // Check phonetic match (Latin representation)
-      const phonetic = reverseTransliterate(sourceValue, normSource);
-      if (phonetic && phonetic.toLowerCase().trim() === textLower) {
-        return phrase.english;
-      }
-    }
-  }
-  
-  return null;
 }
 
 // ============================================================

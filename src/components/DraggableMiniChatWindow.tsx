@@ -44,11 +44,8 @@ import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Real-time typing with broadcast to partner
 import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-
-// ===========================================
-// UNIVERSAL OFFLINE TRANSLATION ENGINE (ONLY)
+// OFFLINE SEMANTIC TRANSLATION: Use translateUniversal from universal-offline-engine
 // NO external APIs - NO NLLB-200 - NO hardcoding
-// ===========================================
 import {
   isSameLanguage,
   isLatinScriptLanguage,
@@ -56,9 +53,7 @@ import {
 } from "@/lib/translation";
 import { 
   translateUniversal,
-  translateBidirectionalChat,
   isEnglish as checkIsEnglish,
-  reverseTransliterate,
 } from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
@@ -66,7 +61,7 @@ import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - UNIVERSAL OFFLINE TRANSLATION ONLY (NO APIs, NO NLLB-200)');
+console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via OFFLINE universal translation (NO APIs)');
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
@@ -797,17 +792,10 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // ===========================================
-  // UNIVERSAL OFFLINE TRANSLATION (MEANING-BASED ONLY)
-  // ===========================================
-  // NO external APIs - NO NLLB-200 - NO hardcoding
-  // Uses ONLY translateBidirectionalChat and translateUniversal
-  // 
-  // MOTHER TONGUE & LATIN MODE:
-  // - Sender types native or Latin → displays as-is
-  // - After send: sender sees message + English meaning below
-  // - Receiver sees meaning-based translation + English meaning below
-  // ===========================================
+  // UNIVERSAL OFFLINE TRANSLATION: Auto-translate messages for display
+  // Uses translateUniversal for meaning-based translation (NO external APIs)
+  // For RECEIVER: Always translate to receiver's mother tongue + show English meaning
+  // For SENDER: Show their original message + English meaning below
   const translateMessage = useCallback(async (text: string, senderId: string, originalEnglish?: string): Promise<{
     translatedMessage?: string;
     englishMessage?: string;
@@ -820,132 +808,156 @@ const DraggableMiniChatWindow = ({
     try {
       const isSentByMe = senderId === currentUserId;
       
-      // Determine source and target languages based on sender
-      const senderLanguage = isSentByMe ? currentUserLanguage : partnerLanguage;
-      const receiverLanguage = isSentByMe ? partnerLanguage : currentUserLanguage;
-      
-      console.log('[DraggableMiniChatWindow] translateMessage (OFFLINE ONLY):', {
+      console.log('[DraggableMiniChatWindow] translateMessage with Universal Offline:', {
         text: text.substring(0, 50),
         originalEnglish: originalEnglish?.substring(0, 50),
         isSentByMe,
-        senderLanguage,
-        receiverLanguage
+        senderLanguage: isSentByMe ? currentUserLanguage : partnerLanguage,
+        receiverLanguage: isSentByMe ? partnerLanguage : currentUserLanguage
       });
       
-      // Use ONLY universal offline engine for ALL translations
-      const chatResult = await translateBidirectionalChat(text, senderLanguage, receiverLanguage);
+      // Import utilities for Latin script handling
+      const { reverseTransliterate } = await import('@/lib/libre-translate/transliterator');
+      const { isLatinText: checkLatinText } = await import('@/lib/libre-translate/language-data');
       
-      let displayText: string;
-      let englishText: string | undefined;
-      let latinText: string | undefined;
+      let displayText: string = text;
+      let englishText: string | undefined = originalEnglish;
       let wasTranslated = false;
       
-      // ===========================================
-      // SENDER VIEW: Display as-is + English meaning
-      // ===========================================
+      // Determine source language based on sender
+      const senderLanguage = isSentByMe ? currentUserLanguage : partnerLanguage;
+      const receiverLanguage = isSentByMe ? partnerLanguage : currentUserLanguage;
+      
       if (isSentByMe) {
-        // Primary: Sender's message in their native script (as-is)
-        displayText = chatResult.senderView;
+        // ===========================================
+        // SENDER VIEW: Show what sender typed + English meaning
+        // ===========================================
+        displayText = text;
         
-        // English meaning (MEANING-BASED, not phonetic)
-        if (originalEnglish && isActualEnglishMeaning(originalEnglish)) {
-          // Stored English is actual meaning
-          englishText = originalEnglish;
-        } else if (chatResult.wasTranslated && chatResult.englishCore) {
-          // Use bidirectional result's English core
-          englishText = chatResult.englishCore;
-        } else {
-          // Fallback: try to get English meaning via universal offline
-          try {
-            const englishResult = await translateUniversal(displayText, senderLanguage, 'english');
-            if (englishResult?.isTranslated && englishResult.text !== displayText) {
-              englishText = englishResult.text;
-            } else {
-              englishText = chatResult.englishCore || text;
+        // MANDATORY: Generate English meaning if not available
+        if (!englishText) {
+          if (checkIsEnglish(currentUserLanguage)) {
+            englishText = text;
+          } else {
+            try {
+              console.log('[translateMessage] Sender: Generating English from', currentUserLanguage);
+              const englishResult = await translateUniversal(text, currentUserLanguage, 'english');
+              englishText = englishResult?.text || text;
+              console.log('[translateMessage] Sender English result:', englishText?.substring(0, 50));
+            } catch (e) {
+              console.error('[translateMessage] Sender English generation failed:', e);
+              englishText = text;
             }
-          } catch {
-            englishText = chatResult.englishCore || text;
           }
         }
+      } else {
+        // ===========================================
+        // RECEIVER VIEW: ALWAYS translate to receiver's mother tongue
+        // + ALWAYS show English meaning below
+        // ===========================================
         
-        // Latin transliteration for non-Latin scripts
-        if (displayText && !isLatinTextCheck(displayText)) {
-          const latin = reverseTransliterateText(displayText, currentUserLanguage);
-          if (latin && latin !== displayText) {
-            latinText = latin;
-          }
-        }
+        // Check if originalEnglish is actually English or just Latin phonetic
+        const isActualEnglish = originalEnglish && originalEnglish.trim() && 
+          !originalEnglish.match(/^[a-z\s]+$/i) || // Has punctuation/numbers
+          originalEnglish.split(' ').some(word => 
+            ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with'].includes(word.toLowerCase())
+          ); // Contains common English words
         
-        wasTranslated = chatResult.wasTranslated;
-      } 
-      // ===========================================
-      // RECEIVER VIEW: Meaning-based translation + English meaning
-      // ===========================================
-      else {
-        // Check if we have actual English meaning stored
-        const hasActualEnglish = originalEnglish && isActualEnglishMeaning(originalEnglish);
-        
-        if (hasActualEnglish && originalEnglish) {
-          // Best case: We have actual English meaning stored
-          englishText = originalEnglish;
+        // Step 1: Translate to receiver's native language
+        if (isActualEnglish && originalEnglish && originalEnglish.trim()) {
+          // Best case: We have English source - translate directly to receiver's language
+          console.log('[translateMessage] Receiver: Have actual English, translating to:', currentUserLanguage);
           
           if (checkIsEnglish(currentUserLanguage)) {
-            // Receiver is English - show English
+            // Receiver's language IS English - just show English
             displayText = originalEnglish;
           } else {
-            // Translate English meaning → Receiver's mother tongue (OFFLINE ONLY)
-            const meaningResult = await translateUniversal(originalEnglish, 'english', currentUserLanguage);
-            displayText = meaningResult?.text || chatResult.receiverView;
-            wasTranslated = meaningResult?.isTranslated || chatResult.wasTranslated;
-          }
-        } else {
-          // Use bidirectional chat result (meaning-based)
-          displayText = chatResult.receiverView;
-          englishText = chatResult.englishCore;
-          wasTranslated = chatResult.wasTranslated;
-          
-          // If englishCore is not actual English meaning, try to generate it
-          if (!isActualEnglishMeaning(englishText || '')) {
+            // Translate English → Receiver's mother tongue using Universal Offline
             try {
-              const meaningResult = await translateUniversal(text, partnerLanguage, 'english');
-              if (meaningResult?.isTranslated && meaningResult.text !== text) {
-                englishText = meaningResult.text;
-              }
-            } catch {
-              // Keep existing englishText
+              const result = await translateUniversal(originalEnglish, 'english', currentUserLanguage);
+              displayText = result?.text || text;
+              wasTranslated = result?.isTranslated || (result?.text !== originalEnglish);
+              console.log('[translateMessage] Receiver native result:', displayText.substring(0, 50));
+            } catch (e) {
+              console.error('[translateMessage] Translation to receiver failed:', e);
+              displayText = text;
             }
           }
-        }
-        
-        // Latin transliteration for non-Latin scripts
-        if (displayText && !isLatinTextCheck(displayText)) {
-          const latin = reverseTransliterateText(displayText, currentUserLanguage);
-          if (latin && latin !== displayText) {
-            latinText = latin;
+          englishText = originalEnglish;
+        } else {
+          // No actual English available - translate from partner's language to receiver's language
+          console.log('[translateMessage] Receiver: No actual English (might be phonetic), translating from', partnerLanguage, 'to', currentUserLanguage);
+          
+          if (!isSameLanguage(partnerLanguage, currentUserLanguage)) {
+            // Different languages - need translation
+            try {
+              const result = await translateUniversal(text, partnerLanguage, currentUserLanguage);
+              displayText = result?.text || text;
+              wasTranslated = result?.isTranslated || (result?.text !== text);
+              console.log('[translateMessage] Receiver cross-lang result:', displayText.substring(0, 50));
+            } catch (e) {
+              console.error('[translateMessage] Cross-language translation failed:', e);
+              displayText = text;
+            }
+          } else {
+            // Same language - no translation needed
+            displayText = text;
+          }
+          
+          // MANDATORY: Generate ACTUAL English meaning from sender's message
+          // This is needed when original_english contains phonetic text
+          try {
+            console.log('[translateMessage] Generating actual English meaning from:', partnerLanguage);
+            const englishResult = await translateUniversal(text, partnerLanguage, 'english');
+            if (englishResult?.text && englishResult.isTranslated) {
+              englishText = englishResult.text;
+              console.log('[translateMessage] English MEANING result:', englishText?.substring(0, 50));
+            } else if (englishResult?.text && englishResult.text !== text) {
+              englishText = englishResult.text;
+            } else {
+              // Fallback to showing "Translation pending" rather than phonetic
+              englishText = originalEnglish || '(English pending...)';
+            }
+          } catch (e) {
+            console.error('[translateMessage] English meaning generation failed:', e);
+            englishText = originalEnglish || text;
           }
         }
       }
       
-      // Final fallback for English meaning
+      // Generate Latin transliteration for non-Latin scripts
+      let latinText: string | undefined;
+      if (displayText && !checkLatinText(displayText)) {
+        latinText = reverseTransliterate(displayText, currentUserLanguage);
+        if (latinText === displayText || !latinText?.trim()) {
+          latinText = reverseTransliterate(displayText, partnerLanguage);
+          if (latinText === displayText || !latinText?.trim()) {
+            latinText = undefined;
+          }
+        }
+      }
+      
+      // FINAL FALLBACK: Ensure we ALWAYS have English for all 9 combinations
       if (!englishText || englishText === text) {
+        // If English still equals the original text and it's not English, try one more time
         if (!checkIsEnglish(senderLanguage)) {
           try {
-            const finalResult = await translateUniversal(text, senderLanguage, 'english');
-            if (finalResult?.text && finalResult.text !== text && finalResult.isTranslated) {
-              englishText = finalResult.text;
+            const finalEnglishResult = await translateUniversal(text, senderLanguage, 'english');
+            if (finalEnglishResult?.text && finalEnglishResult.text !== text) {
+              englishText = finalEnglishResult.text;
             }
           } catch {
-            // Keep existing
+            // Keep existing englishText
           }
         }
       }
       
       // Absolute fallback
       if (!englishText) {
-        englishText = originalEnglish || text;
+        englishText = text;
       }
       
-      console.log('[translateMessage] OFFLINE result:', {
+      console.log('[translateMessage] Final result:', {
         displayText: displayText.substring(0, 30),
         englishText: englishText?.substring(0, 30),
         latinText: latinText?.substring(0, 30),
@@ -963,44 +975,9 @@ const DraggableMiniChatWindow = ({
       };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
-      return { translatedMessage: text, englishMessage: originalEnglish || text, isTranslated: false };
+      return { translatedMessage: text, englishMessage: text, isTranslated: false };
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
-  
-  // Helper: Check if text is actual English meaning (not phonetic)
-  const isActualEnglishMeaning = (text: string): boolean => {
-    if (!text || !text.trim()) return false;
-    
-    // Common English words that indicate actual meaning
-    const englishIndicators = [
-      'how', 'are', 'you', 'what', 'where', 'when', 'why', 'who',
-      'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for',
-      'in', 'on', 'with', 'it', 'our', 'my', 'your', 'we', 'they',
-      'this', 'that', 'have', 'has', 'had', 'will', 'would', 'can',
-      'could', 'should', 'do', 'does', 'did', 'am', 'was', 'were',
-      'been', 'being', 'i', 'and', 'or', 'but', 'not', 'all', 'some'
-    ];
-    
-    const words = text.toLowerCase().split(/\s+/);
-    return words.some(word => englishIndicators.includes(word));
-  };
-  
-  // Helper: Check if text is Latin script
-  const isLatinTextCheck = (text: string): boolean => {
-    const latinChars = text.match(/[a-zA-Z]/g);
-    const totalChars = text.replace(/[\s\d\.,!?'";\-:()@#$%^&*+=\[\]{}|\\/<>~`]/g, '');
-    return latinChars !== null && totalChars.length > 0 && (latinChars.length / totalChars.length) > 0.7;
-  };
-  
-  // Helper: Reverse transliterate using imported function
-  const reverseTransliterateText = (text: string, lang: string): string | undefined => {
-    try {
-      const result = reverseTransliterate(text, lang);
-      return result && result !== text ? result : undefined;
-    } catch {
-      return undefined;
-    }
-  };
 
   // SEMANTIC TRANSLATION: Load messages with immediate display + background translation
   const loadMessages = async () => {
@@ -1297,117 +1274,120 @@ const DraggableMiniChatWindow = ({
       createdAt: new Date().toISOString()
     }]);
 
-    // ===========================================
-    // UNIVERSAL OFFLINE TRANSLATION ONLY
-    // NO external APIs - NO NLLB-200 - NO hardcoding
-    // Uses ONLY: translateBidirectionalChat + translateUniversal
-    // 
-    // MOTHER TONGUE & LATIN MODE:
-    // 1. senderView: Message as sender typed (native or Latin)
-    // 2. receiverView: MEANING-based translation in receiver's mother tongue
-    // 3. englishCore: MEANING-based English (not phonetic)
-    // ===========================================
+    // BACKGROUND: Send to database with pre-translation for English input modes
     setIsSending(true);
     try {
-      console.log('[DraggableMiniChatWindow] Sending with UNIVERSAL OFFLINE:', typingMode, messageToSend.substring(0, 30));
+      console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToSend.substring(0, 30));
+      
+      // ===========================================
+      // ALWAYS translate to receiver's mother tongue for ALL 9 combinations
+      // AND always generate English meaning
+      // ===========================================
       let translatedForReceiver: string | null = null;
       let originalEnglishToStore: string | null = null;
       
+      // Determine source language and text for translation
+      let sourceLanguage: string;
+      let textForReceiverTranslation: string;
+      
       if (typingMode === 'english-core') {
         // english-core: message IS English
+        sourceLanguage = 'english';
+        textForReceiverTranslation = messageToSend;
         originalEnglishToStore = messageToSend;
-        
-        // Translate English to receiver's language
-        if (!checkIsEnglish(partnerLanguage)) {
-          const result = await translateUniversal(messageToSend, 'english', partnerLanguage);
-          translatedForReceiver = result?.text || null;
-        } else {
-          translatedForReceiver = messageToSend;
-        }
       } else if (typingMode === 'english-meaning') {
-        // english-meaning: englishInput is the original English, messageToSend is native translation
+        // english-meaning: englishInput is the original English
+        sourceLanguage = 'english';
+        textForReceiverTranslation = englishInput;
         originalEnglishToStore = englishInput;
-        
-        // Translate English to receiver's language
-        if (!checkIsEnglish(partnerLanguage)) {
-          const result = await translateUniversal(englishInput, 'english', partnerLanguage);
-          translatedForReceiver = result?.text || null;
-        } else {
-          translatedForReceiver = englishInput;
-        }
       } else {
-        // ===========================================
-        // NATIVE MODE: Use translateBidirectionalChat for MEANING-BASED translation
-        // ===========================================
-        try {
-          console.log('[DraggableMiniChatWindow] native mode: Using translateBidirectionalChat for MEANING-BASED translation');
-          const chatResult = await translateBidirectionalChat(messageToSend, currentUserLanguage, partnerLanguage);
-          
-          // Get MEANING-BASED English (not phonetic)
-          if (chatResult.wasTranslated && chatResult.englishCore) {
-            originalEnglishToStore = chatResult.englishCore;
-          } else {
-            // Fallback: try translateUniversal for English meaning
+        // native mode: message is in sender's native language
+        sourceLanguage = currentUserLanguage;
+        textForReceiverTranslation = messageToSend;
+        
+        // MANDATORY: Generate ACTUAL English meaning from sender's native message
+        // DO NOT use Latin phonetic input - that's not a translation!
+        if (!checkIsEnglish(currentUserLanguage)) {
+          try {
+            console.log('[DraggableMiniChatWindow] native mode: Generating MEANING English from', currentUserLanguage, ':', messageToSend.substring(0, 50));
             const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
-            if (englishResult?.isTranslated && englishResult.text !== messageToSend) {
+            
+            // Only use result if it's actually different from the input (meaning translation happened)
+            if (englishResult?.text && englishResult.isTranslated) {
               originalEnglishToStore = englishResult.text;
+              console.log('[DraggableMiniChatWindow] native mode English MEANING result:', originalEnglishToStore?.substring(0, 50));
+              
+              // Update optimistic message with English immediately
+              setMessages(prev => prev.map(m => 
+                m.id === tempId 
+                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
+                  : m
+              ));
+            } else if (englishResult?.text) {
+              // Even if not marked as translated, use it if it's different
+              originalEnglishToStore = englishResult.text;
+              setMessages(prev => prev.map(m => 
+                m.id === tempId 
+                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
+                  : m
+              ));
             } else {
-              originalEnglishToStore = chatResult.englishCore;
+              // Translation failed - mark as "Translation pending"
+              console.warn('[DraggableMiniChatWindow] English translation returned no result');
+              originalEnglishToStore = null; // Will be generated by receiver
+              setMessages(prev => prev.map(m => 
+                m.id === tempId 
+                  ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
+                  : m
+              ));
             }
-          }
-          
-          // Get MEANING-BASED receiver view
-          if (chatResult.wasTranslated && chatResult.receiverView) {
-            translatedForReceiver = chatResult.receiverView;
-          } else if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
-            // Fallback: try translateUniversal
-            const receiverResult = await translateUniversal(messageToSend, currentUserLanguage, partnerLanguage);
-            translatedForReceiver = receiverResult?.text || null;
-          } else {
-            translatedForReceiver = messageToSend;
-          }
-          
-          console.log('[DraggableMiniChatWindow] MEANING-BASED result:', {
-            englishMeaning: originalEnglishToStore?.substring(0, 50),
-            receiverView: translatedForReceiver?.substring(0, 50)
-          });
-          
-          // Update optimistic message with English meaning
-          if (originalEnglishToStore) {
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] native mode English MEANING failed:', error);
+            // DO NOT fallback to Latin phonetic - it's not English meaning!
+            // Leave it null so receiver can generate it
+            originalEnglishToStore = null;
             setMessages(prev => prev.map(m => 
               m.id === tempId 
-                ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
+                ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
                 : m
             ));
           }
-        } catch (error) {
-          console.error('[DraggableMiniChatWindow] MEANING-BASED translation failed:', error);
-          // Fallback to translateUniversal
-          try {
-            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
-            originalEnglishToStore = englishResult?.text || null;
-            
-            if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
-              const receiverResult = await translateUniversal(messageToSend, currentUserLanguage, partnerLanguage);
-              translatedForReceiver = receiverResult?.text || null;
-            }
-          } catch {
-            console.error('[DraggableMiniChatWindow] Fallback translation also failed');
-          }
+        } else {
+          originalEnglishToStore = messageToSend;
         }
       }
       
-      // Final fallback: ensure we have some English
+      // ===========================================
+      // ALWAYS translate to receiver's mother tongue
+      // This ensures receiver sees message in their native language/script
+      // ===========================================
+      if (!isSameLanguage(sourceLanguage, partnerLanguage)) {
+        try {
+          console.log('[DraggableMiniChatWindow] Translating from', sourceLanguage, 'to receiver:', partnerLanguage);
+          const result = await translateUniversal(textForReceiverTranslation, sourceLanguage, partnerLanguage);
+          translatedForReceiver = result?.text || null;
+          console.log('[DraggableMiniChatWindow] Translated for receiver:', translatedForReceiver?.substring(0, 50));
+        } catch (error) {
+          console.error('[DraggableMiniChatWindow] Translation to receiver failed:', error);
+        }
+      } else {
+        // Same language - receiver sees the same message
+        translatedForReceiver = textForReceiverTranslation;
+      }
+      
+      // Ensure English is ALWAYS generated for all 9 combinations
       if (!originalEnglishToStore && messageToSend) {
         try {
-          if (!checkIsEnglish(currentUserLanguage)) {
-            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
-            originalEnglishToStore = englishResult?.text || null;
+          if (!checkIsEnglish(sourceLanguage)) {
+            const englishResult = await translateUniversal(messageToSend, sourceLanguage, 'english');
+            originalEnglishToStore = englishResult?.text || messageToSend;
+            console.log('[DraggableMiniChatWindow] Fallback English:', originalEnglishToStore?.substring(0, 50));
           } else {
             originalEnglishToStore = messageToSend;
           }
-        } catch {
-          console.error('[DraggableMiniChatWindow] Final English fallback failed');
+        } catch (error) {
+          console.error('[DraggableMiniChatWindow] Fallback English failed:', error);
+          originalEnglishToStore = messageToSend;
         }
       }
       
@@ -1418,9 +1398,9 @@ const DraggableMiniChatWindow = ({
           sender_id: currentUserId,
           receiver_id: partnerId,
           message: messageToSend,
-          // ALWAYS store MEANING-BASED translated message for receiver's mother tongue
+          // ALWAYS store translated message for receiver's mother tongue
           translated_message: translatedForReceiver,
-          // ALWAYS store MEANING-BASED English (not phonetic)
+          // ALWAYS store English for all 9 combinations
           original_english: originalEnglishToStore
         });
 
@@ -1834,9 +1814,8 @@ const DraggableMiniChatWindow = ({
                         </a>
                       ) : msg.senderId === currentUserId ? (
                         // ===========================================
-                        // OWN MESSAGE (SENDER VIEW) - Mother Tongue & Latin Mode
-                        // Primary: Message AS-IS (native or Latin as typed)
-                        // Below: English MEANING (not phonetic)
+                        // OWN MESSAGE (SENDER VIEW)
+                        // ALWAYS show English meaning for ALL 9 combinations
                         // ===========================================
                         msg.isTranslating ? (
                           <div className="flex items-center gap-1">
@@ -1845,21 +1824,21 @@ const DraggableMiniChatWindow = ({
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            {/* PRIMARY: Message as-is (sender's native or Latin) */}
-                            <p className="unicode-text font-medium" dir="auto">
+                            {/* Primary message display */}
+                            <p className="unicode-text" dir="auto">
                               {msg.translatedMessage || msg.message}
                             </p>
                             
-                            {/* SECONDARY: Latin transliteration if sender uses non-Latin script */}
-                            {!userUsesLatinScript && msg.latinMessage && msg.latinMessage !== (msg.translatedMessage || msg.message) && (
-                              <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                <span className="text-muted-foreground">🔤</span> {msg.latinMessage}
+                            {/* Latin transliteration - show if non-Latin script */}
+                            {!userUsesLatinScript && msg.latinMessage && (
+                              <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                🔤 {msg.latinMessage}
                               </p>
                             )}
                             
-                            {/* ENGLISH MEANING (MANDATORY) - Universal Offline Translation */}
-                            <p className="text-[9px] opacity-50 italic border-t border-current/10 pt-0.5 mt-0.5 text-muted-foreground">
-                              <span>🌐</span> {msg.englishMessage || msg.message}
+                            {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🌐 {msg.englishMessage || msg.message}
                             </p>
                           </div>
                         )
@@ -1867,30 +1846,29 @@ const DraggableMiniChatWindow = ({
                         // PARTNER MESSAGE: Translation in progress
                         <div className="flex items-center gap-1">
                           <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="opacity-70 italic unicode-text" dir="auto">{msg.message}</span>
+                          <span className="opacity-70 italic">{msg.message}</span>
                         </div>
                       ) : (
                         // ===========================================
-                        // PARTNER MESSAGE (RECEIVER VIEW) - Mother Tongue & Latin Mode
-                        // Primary: MEANING-BASED translation in receiver's mother tongue
-                        // Below: English MEANING (not phonetic)
+                        // PARTNER MESSAGE (RECEIVER VIEW)
+                        // ALWAYS show English meaning for ALL 9 combinations
                         // ===========================================
                         <div className="space-y-1">
-                          {/* PRIMARY: Meaning-based translation in receiver's native language */}
-                          <p className="unicode-text font-medium" dir="auto">
+                          {/* Primary message display - always show translated/native view */}
+                          <p className="unicode-text" dir="auto">
                             {msg.translatedMessage || msg.message}
                           </p>
                           
-                          {/* SECONDARY: Latin transliteration if receiver uses non-Latin script */}
-                          {!userUsesLatinScript && msg.latinMessage && msg.latinMessage !== (msg.translatedMessage || msg.message) && (
-                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              <span className="text-muted-foreground">🔤</span> {msg.latinMessage}
+                          {/* Latin transliteration - show if non-Latin script */}
+                          {!userUsesLatinScript && msg.latinMessage && (
+                            <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🔤 {msg.latinMessage}
                             </p>
                           )}
                           
-                          {/* ENGLISH MEANING (MANDATORY) - Universal Offline Translation */}
-                          <p className="text-[9px] opacity-50 italic border-t border-current/10 pt-0.5 mt-0.5 text-muted-foreground">
-                            <span>🌐</span> {msg.englishMessage || msg.message}
+                          {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                          <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                            🌐 {msg.englishMessage || msg.message}
                           </p>
                         </div>
                       )}
@@ -1992,53 +1970,43 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Input area with Mother Tongue & Latin Mode previews */}
+              {/* Input area with mode-specific previews */}
               <div className="flex-1 relative">
-                {/* MODE: native - Input hint (typing in mother tongue) */}
-                {typingMode === 'native' && needsTransliteration && !rawInput.trim() && (
+                {/* MODE: native - Transliteration hint */}
+                {typingMode === 'native' && needsTransliteration && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
                     <span>✨</span>
-                    <span>Type in {currentUserLanguage} (Latin or native keyboard)</span>
+                    <span>Type phonetically → shows in {currentUserLanguage}</span>
                   </div>
                 )}
                 
-                {/* MODE: native - AS-IS Preview (shows exactly what will be sent) */}
-                {typingMode === 'native' && newMessage && newMessage.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded">
-                    {/* Primary: Native script preview */}
-                    <p className="text-sm unicode-text font-medium" dir="auto">
-                      {newMessage}
-                    </p>
-                    {/* Secondary: Latin (if typing phonetically for non-Latin language) */}
-                    {needsTransliteration && rawInput !== newMessage && (
-                      <p className="text-[9px] text-muted-foreground mt-0.5">
-                        <span>🔤</span> {rawInput}
-                      </p>
-                    )}
+                {/* MODE: native - Native script preview (transliteration) */}
+                {typingMode === 'native' && needsTransliteration && newMessage && newMessage !== rawInput && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
+                    {newMessage}
                     {isSpellChecking && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
                   </div>
                 )}
                 
-                {/* MODE: english-meaning - Hint (type English meaning) */}
-                {typingMode === 'english-meaning' && !rawInput.trim() && !isSameLanguage(currentUserLanguage, 'english') && (
+                {/* MODE: english-meaning - Hint (works for ALL languages - Latin or non-Latin) */}
+                {typingMode === 'english-meaning' && !isSameLanguage(currentUserLanguage, 'english') && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-blue-500/10 rounded text-[9px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
                     <span>🌐</span>
                     <span>Type English meaning → translates to {currentUserLanguage}</span>
                   </div>
                 )}
                 
-                {/* MODE: english-meaning - Preview (English + translation preview) */}
-                {typingMode === 'english-meaning' && rawInput.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded">
-                    {/* Primary: What will be sent (native translation) */}
-                    <p className="text-sm unicode-text font-medium" dir="auto">
-                      {meaningPreview || rawInput}
-                      {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-blue-500/50" />}
-                    </p>
-                    {/* Secondary: English meaning */}
-                    <p className="text-[9px] text-muted-foreground mt-0.5">
-                      <span>🌐</span> {rawInput}
-                    </p>
+                {/* MODE: english-meaning - Meaning preview (translation) */}
+                {typingMode === 'english-meaning' && meaningPreview && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-sm unicode-text" dir="auto">
+                    {meaningPreview}
+                    {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-blue-500/50" />}
+                  </div>
+                )}
+                {typingMode === 'english-meaning' && !meaningPreview && rawInput.trim() && isMeaningLoading && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Translating to {currentUserLanguage}...</span>
                   </div>
                 )}
                 
@@ -2046,21 +2014,17 @@ const DraggableMiniChatWindow = ({
                 {typingMode === 'english-core' && !rawInput.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground flex items-center gap-1">
                     <span>🔤</span>
-                    <span>English only - partner sees in their language</span>
+                    <span>English only - partner sees translated</span>
                   </div>
                 )}
                 
-                {/* MODE: english-core - Preview (English stays English) */}
+                {/* MODE: english-core - English preview (sender sees English) */}
                 {typingMode === 'english-core' && rawInput.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded">
-                    {/* Primary: English message */}
-                    <p className="text-sm font-medium" dir="ltr">
-                      {rawInput}
-                    </p>
-                    {/* Info: Partner sees translated */}
-                    <p className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5">
-                      Partner sees this in {partnerLanguage || 'their language'}
-                    </p>
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded text-sm" dir="ltr">
+                    {rawInput}
+                    <div className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5">
+                      You see English → Partner sees {partnerLanguage || 'translated'}
+                    </div>
                   </div>
                 )}
                 
