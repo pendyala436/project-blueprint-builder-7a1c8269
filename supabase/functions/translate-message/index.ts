@@ -720,6 +720,7 @@ async function translateWithLibre(
 }
 
 // Translate using MyMemory (fallback)
+// FIXED: Split long messages into chunks to avoid URL length limits
 async function translateWithMyMemory(
   text: string,
   sourceCode: string,
@@ -727,10 +728,48 @@ async function translateWithMyMemory(
 ): Promise<{ translatedText: string; success: boolean }> {
   try {
     console.log('[dl-translate] Trying MyMemory fallback...');
+    
+    // MyMemory has a 500 character limit per request
+    const MAX_CHUNK_SIZE = 450;
+    
+    if (text.length > MAX_CHUNK_SIZE) {
+      console.log(`[dl-translate] Long message for MyMemory (${text.length} chars), splitting into chunks`);
+      const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
+      const translatedChunks: string[] = [];
+      
+      for (const chunk of chunks) {
+        const result = await translateChunkWithMyMemory(chunk, sourceCode, targetCode);
+        if (result.success) {
+          translatedChunks.push(result.translatedText);
+        } else {
+          return { translatedText: text, success: false };
+        }
+      }
+      
+      const fullTranslation = translatedChunks.join(' ').trim();
+      console.log(`[dl-translate] MyMemory chunked success: ${chunks.length} chunks`);
+      return { translatedText: fullTranslation, success: true };
+    }
+    
+    return await translateChunkWithMyMemory(text, sourceCode, targetCode);
+  } catch (error) {
+    console.log('[dl-translate] MyMemory failed');
+  }
+
+  return { translatedText: text, success: false };
+}
+
+// Helper: Translate a single chunk with MyMemory
+async function translateChunkWithMyMemory(
+  text: string,
+  sourceCode: string,
+  targetCode: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
     const langPair = `${sourceCode}|${targetCode}`;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
     
     const response = await fetch(
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`,
@@ -746,18 +785,18 @@ async function translateWithMyMemory(
           translated !== text &&
           !translated.includes('MYMEMORY WARNING') &&
           translated.toLowerCase() !== text.toLowerCase()) {
-        console.log('[dl-translate] MyMemory success');
         return { translatedText: translated, success: true };
       }
     }
   } catch (error) {
-    console.log('[dl-translate] MyMemory failed');
+    console.log('[dl-translate] MyMemory chunk failed');
   }
 
   return { translatedText: text, success: false };
 }
 
 // Translate using Google Translate (unofficial free API)
+// FIXED: Split long messages into chunks to avoid URL length limits
 async function translateWithGoogle(
   text: string,
   sourceCode: string,
@@ -766,8 +805,85 @@ async function translateWithGoogle(
   try {
     console.log('[dl-translate] Trying Google Translate fallback...');
     
+    // URL length limit is ~2000 chars, but encoded text can be 3x longer
+    // Split messages longer than 500 chars into chunks
+    const MAX_CHUNK_SIZE = 500;
+    
+    if (text.length > MAX_CHUNK_SIZE) {
+      console.log(`[dl-translate] Long message (${text.length} chars), splitting into chunks`);
+      const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
+      const translatedChunks: string[] = [];
+      
+      for (const chunk of chunks) {
+        const result = await translateChunkWithGoogle(chunk, sourceCode, targetCode);
+        if (result.success) {
+          translatedChunks.push(result.translatedText);
+        } else {
+          // If any chunk fails, return failure
+          return { translatedText: text, success: false };
+        }
+      }
+      
+      const fullTranslation = translatedChunks.join(' ').trim();
+      console.log(`[dl-translate] Google Translate chunked success: ${chunks.length} chunks`);
+      return { translatedText: fullTranslation, success: true };
+    }
+    
+    return await translateChunkWithGoogle(text, sourceCode, targetCode);
+  } catch (error) {
+    console.log('[dl-translate] Google Translate failed:', error);
+  }
+
+  return { translatedText: text, success: false };
+}
+
+// Helper: Split text into chunks at sentence/word boundaries
+function splitTextIntoChunks(text: string, maxSize: number): string[] {
+  const chunks: string[] = [];
+  let remaining = text;
+  
+  while (remaining.length > 0) {
+    if (remaining.length <= maxSize) {
+      chunks.push(remaining);
+      break;
+    }
+    
+    // Try to split at sentence boundary
+    let splitPoint = remaining.lastIndexOf('. ', maxSize);
+    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
+      splitPoint = remaining.lastIndexOf('। ', maxSize); // Hindi/Devanagari sentence end
+    }
+    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
+      splitPoint = remaining.lastIndexOf('? ', maxSize);
+    }
+    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
+      splitPoint = remaining.lastIndexOf('! ', maxSize);
+    }
+    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
+      // Fall back to word boundary
+      splitPoint = remaining.lastIndexOf(' ', maxSize);
+    }
+    if (splitPoint === -1 || splitPoint < maxSize * 0.3) {
+      // Last resort: hard split
+      splitPoint = maxSize;
+    }
+    
+    chunks.push(remaining.substring(0, splitPoint + 1).trim());
+    remaining = remaining.substring(splitPoint + 1).trim();
+  }
+  
+  return chunks;
+}
+
+// Helper: Translate a single chunk with Google
+async function translateChunkWithGoogle(
+  text: string,
+  sourceCode: string,
+  targetCode: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for reliability
     
     // Using the free Google Translate API endpoint
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceCode}&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
@@ -789,13 +905,12 @@ async function translateWithGoogle(
         }
         translated = translated.trim();
         if (translated && translated !== text && translated.toLowerCase() !== text.toLowerCase()) {
-          console.log('[dl-translate] Google Translate success');
           return { translatedText: translated, success: true };
         }
       }
     }
   } catch (error) {
-    console.log('[dl-translate] Google Translate failed:', error);
+    console.log('[dl-translate] Google chunk translation failed:', error);
   }
 
   return { translatedText: text, success: false };
