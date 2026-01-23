@@ -456,25 +456,7 @@ export async function processChatMessage(
       }
       break;
 
-    case 'english-core':
-      // Mode 2: English Only
-      // Sender types and reads in English
-      // Receiver sees their native language
-      // ALWAYS store English as pivot for all 9 combinations
-      
-      senderView = trimmed; // Keep as English
-      englishPivot = trimmed; // Store English for display
-      
-      if (isSameLanguage(senderLanguage, receiverLanguage)) {
-        receiverView = trimmed;
-      } else {
-        // Translate from English to receiver's language
-        const result = await translate(trimmed, 'english', receiverLanguage);
-        receiverView = result.text;
-        receiverNative = receiverView;
-        wasTranslated = result.isTranslated;
-      }
-      break;
+    // english-core mode removed - only 'native' and 'english-meaning' supported
 
     case 'english-meaning':
       // Mode 3: English to Native (Meaning-based)

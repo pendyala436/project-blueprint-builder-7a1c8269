@@ -37,8 +37,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 
-// The 3 typing modes
-export type TypingMode = 'native' | 'english-core' | 'english-meaning';
+// The 2 typing modes (english-core removed)
+export type TypingMode = 'native' | 'english-meaning';
 
 export interface TypingModeInfo {
   id: TypingMode;
@@ -269,7 +269,7 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
   const [isOpen, setIsOpen] = useState(false);
   const [autoDetect, setAutoDetect] = useState(() => getAutoDetectEnabled());
 
-  // Define the 3 modes with meaningful names and clear behaviors
+  // Define the 2 modes with meaningful names and clear behaviors
   const modes: TypingModeInfo[] = [
     {
       id: 'native',
@@ -278,15 +278,6 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
       icon: <Languages className="h-4 w-4" />,
       preview: `Your ${userLanguage} text`,
       afterSend: `You see: ${userLanguage}`,
-      receiverSees: `Partner sees: ${receiverLanguage}`,
-    },
-    {
-      id: 'english-core',
-      name: t('chat.mode.englishCore', 'English Only'),
-      description: t('chat.mode.englishCoreDesc', 'Type & read in English only'),
-      icon: <Globe className="h-4 w-4" />,
-      preview: 'Your English text',
-      afterSend: 'You see: English',
       receiverSees: `Partner sees: ${receiverLanguage}`,
     },
     {
