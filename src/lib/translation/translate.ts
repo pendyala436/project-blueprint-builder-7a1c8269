@@ -132,8 +132,20 @@ const LATIN_SCRIPT_LANGUAGES = new Set(
 const translationCache = new Map<string, TranslationResult>();
 const MAX_CACHE_SIZE = 5000;
 
+// Simple hash function for cache keys to avoid collisions with long messages
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 function getCacheKey(text: string, source: string, target: string): string {
-  return `${source}:${target}:${text.substring(0, 100)}`;
+  // Use hash of full text + length to avoid collisions with long messages
+  return `${source}:${target}:${simpleHash(text)}:${text.length}`;
 }
 
 function getFromCache(key: string): TranslationResult | undefined {
