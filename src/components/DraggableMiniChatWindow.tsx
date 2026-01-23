@@ -1266,7 +1266,7 @@ const DraggableMiniChatWindow = ({
         }
       } else if (typingMode === 'native') {
         // native mode: Translate from sender's language to receiver's language
-        // AND generate English meaning for receiver to see
+        // AND generate English meaning for ALL users to see
         
         // First, generate English meaning from sender's native message
         if (!checkIsEnglish(currentUserLanguage)) {
@@ -1297,6 +1297,25 @@ const DraggableMiniChatWindow = ({
           } catch (error) {
             console.error('[DraggableMiniChatWindow] native mode translation failed:', error);
           }
+        }
+      }
+      
+      // ALWAYS ensure English is generated for all modes
+      // This ensures all 9 combinations show English meaning
+      if (!originalEnglishToStore && messageToSend) {
+        try {
+          // Fallback: translate the message to English if not already set
+          const sourceLanguage = typingMode === 'native' ? currentUserLanguage : 'english';
+          if (!checkIsEnglish(sourceLanguage)) {
+            const englishResult = await translateUniversal(messageToSend, sourceLanguage, 'english');
+            originalEnglishToStore = englishResult?.text || messageToSend;
+            console.log('[DraggableMiniChatWindow] Fallback English generation:', originalEnglishToStore?.substring(0, 50));
+          } else {
+            originalEnglishToStore = messageToSend;
+          }
+        } catch (error) {
+          console.error('[DraggableMiniChatWindow] Fallback English generation failed:', error);
+          originalEnglishToStore = messageToSend; // Last resort: use original message
         }
       }
       
@@ -1734,7 +1753,13 @@ const DraggableMiniChatWindow = ({
                           <div className="space-y-1">
                             {typingMode === 'english-core' ? (
                               // English Core mode: sender sees English
-                              <p>{msg.message}</p>
+                              <>
+                                <p>{msg.message}</p>
+                                {/* Always show English meaning label for clarity */}
+                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                  🌐 English
+                                </p>
+                              </>
                             ) : (
                               // Native or English Meaning mode: sender sees their language
                               <>
@@ -1745,8 +1770,9 @@ const DraggableMiniChatWindow = ({
                                     🔤 {msg.latinMessage}
                                   </p>
                                 )}
-                                {typingMode === 'english-meaning' && msg.englishMessage && (
-                                  <p className="text-[9px] opacity-60 italic">
+                                {/* ALWAYS show English meaning for ALL modes */}
+                                {msg.englishMessage && (
+                                  <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
                                     🌐 {msg.englishMessage}
                                   </p>
                                 )}
@@ -1801,6 +1827,7 @@ const DraggableMiniChatWindow = ({
                             </>
                           ) : (
                             // Native or English Meaning mode: receiver sees their native language
+                            // ALWAYS show English meaning for ALL messages
                             <>
                               <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
                               {/* Show Latin only if receiver's mother tongue uses non-Latin script */}
@@ -1809,8 +1836,9 @@ const DraggableMiniChatWindow = ({
                                   🔤 {msg.latinMessage}
                                 </p>
                               )}
-                              {msg.englishMessage && !isSameLanguage(currentUserLanguage, 'English') && (
-                                <p className="text-[9px] opacity-60 italic">
+                              {/* ALWAYS show English meaning for ALL 9 combinations */}
+                              {msg.englishMessage && (
+                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
                                   🌐 {msg.englishMessage}
                                 </p>
                               )}
