@@ -1,7 +1,7 @@
 /**
- * Real-Time Chat Input with INSTANT Transliteration
- * ==================================================
- * Zero-lag typing experience for all 1000+ languages
+ * Real-Time Chat Input with OFFLINE Universal Translation
+ * ========================================================
+ * 100% OFFLINE - NO EXTERNAL APIs - Meaning-based translation
  * 
  * 3 TYPING MODES (for both sender AND receiver):
  * 1. Native Mode - Type in mother tongue (native/Latin script)
@@ -16,8 +16,12 @@
  * - senderNative: Sender's native language view
  * - receiverNative: Receiver's native language view
  * 
- * TYPING: Pure offline dynamic transliteration (Gboard-style)
- * TRANSLATION: Uses translateText from translate.ts via Edge Function
+ * TRANSLATION ENGINE:
+ * Uses Universal Offline Engine from universal-offline-engine.ts
+ * - Meaning-based translation via Supabase dictionaries
+ * - English pivot for cross-language semantic translation
+ * - Script conversion for non-Latin scripts
+ * - Zero external API calls
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
@@ -26,8 +30,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Send } from 'lucide-react';
-import { dynamicTransliterate, isLatinScriptLanguage as checkLatinScript } from '@/lib/translation/dynamic-transliterator';
-import { translateText, isSameLanguage } from '@/lib/translation/translate';
+import { 
+  translateUniversal,
+  translateBidirectionalChat,
+  getLiveNativePreview,
+  isSameLanguage,
+  isLatinScriptLanguage as checkLatinScript,
+  isLatinText as checkLatinTextUtil,
+  isEnglish,
+  dynamicTransliterate,
+  reverseTransliterate,
+} from '@/lib/translation/universal-offline-engine';
 import { 
   TypingModeSelector, 
   type TypingMode, 
@@ -59,12 +72,8 @@ interface RealtimeChatInputProps {
   className?: string;
 }
 
-// Quick check if text is Latin script
-const isLatinText = (text: string): boolean => {
-  if (!text) return true;
-  const latinPattern = /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()\-:;@#$%^&*+=\[\]{}|\\/<>~`]+$/;
-  return latinPattern.test(text);
-};
+// Use universal offline engine's isLatinText
+const isLatinText = (text: string): boolean => checkLatinTextUtil(text);
 
 export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   onSendMessage,
@@ -105,38 +114,35 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   // For Latin-script languages (Spanish, French, etc.) - no transliteration needed
   // For non-Latin languages (Hindi, Telugu, etc.) - transliteration converts Latin → Native
   const needsTransliteration = !checkLatinScript(senderLanguage);
-  const isEnglishLanguage = senderLanguage.toLowerCase() === 'english';
+  const isEnglishLanguage = isEnglish(senderLanguage);
   const isSenderLatinScript = checkLatinScript(senderLanguage);
 
   /**
    * INSTANT transliteration - sync, < 2ms
+   * Uses Universal Offline Engine's getLiveNativePreview
    * Converts Latin text to native script immediately
-   * Only applies for NON-LATIN script languages (Hindi, Telugu, etc.)
-   * Latin-script languages (Spanish, French, Tulu written in Kannada) pass through
    */
   const transliterateNow = useCallback((latinText: string): string => {
     if (!latinText.trim()) return '';
     
-    // Only transliterate if:
-    // 1. Language uses non-Latin script (Hindi, Telugu, Kannada, etc.)
-    // 2. Text is currently in Latin script
+    // Use universal offline engine for instant preview
     if (needsTransliteration && isLatinText(latinText)) {
       try {
-        const result = dynamicTransliterate(latinText, senderLanguage);
-        return result || latinText;
+        return getLiveNativePreview(latinText, senderLanguage);
       } catch (e) {
         console.error('[RealtimeChatInput] Transliteration error:', e);
         return latinText;
       }
     }
     
-    // Latin-script languages (Spanish, French, Mizo, Khasi, etc.) - no transliteration
+    // Latin-script languages - no transliteration
     return latinText;
   }, [needsTransliteration, senderLanguage]);
 
   /**
    * Generate preview for English typing - shows SENDER'S MOTHER TONGUE
-   * This is the key feature: type in English, see your native language preview
+   * Uses Universal Offline Engine for meaning-based translation
+   * Type in English → See meaning-based preview in your native language
    */
   const generateSenderNativePreview = useCallback(async (englishText: string) => {
     if (!englishText.trim()) {
@@ -145,18 +151,23 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     }
 
     // If sender's native is English, no preview needed
-    const isEnglishNative = senderLanguage.toLowerCase() === 'english';
-    if (isEnglishNative) {
+    if (isEnglish(senderLanguage)) {
       setPreviewText('');
       return;
     }
 
     setIsTranslatingPreview(true);
     try {
-      // Translate English to sender's mother tongue for preview
-      const result = await translateText(englishText, 'english', senderLanguage);
+      // Use Universal Offline Engine for meaning-based translation
+      const result = await translateUniversal(englishText, 'english', senderLanguage);
       if (result?.text && result.text !== englishText) {
         setPreviewText(result.text);
+        console.log('[RealtimeChatInput] Sender preview:', {
+          input: englishText,
+          output: result.text,
+          method: result.method,
+          confidence: result.confidence,
+        });
       } else {
         setPreviewText('');
       }
@@ -172,6 +183,10 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
    * Generate receiver preview - shows RECEIVER'S MOTHER TONGUE
    * Shows what the receiver will see in their native language
    */
+  /**
+   * Generate receiver preview - shows RECEIVER'S MOTHER TONGUE
+   * Uses Universal Offline Engine for meaning-based translation
+   */
   const generateReceiverPreview = useCallback(async (sourceText: string, sourceLanguage: string) => {
     // Skip if same language or empty
     if (!sourceText.trim() || isSameLanguage(sourceLanguage, receiverLanguage)) {
@@ -181,9 +196,16 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
     setIsTranslatingReceiverPreview(true);
     try {
-      const result = await translateText(sourceText, sourceLanguage, receiverLanguage);
+      // Use Universal Offline Engine for meaning-based translation
+      const result = await translateUniversal(sourceText, sourceLanguage, receiverLanguage);
       if (result?.text && result.text !== sourceText) {
         setReceiverPreview(result.text);
+        console.log('[RealtimeChatInput] Receiver preview:', {
+          input: sourceText,
+          output: result.text,
+          method: result.method,
+          confidence: result.confidence,
+        });
       } else {
         setReceiverPreview('');
       }
@@ -212,7 +234,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (receiverPreviewTimeoutRef.current) clearTimeout(receiverPreviewTimeoutRef.current);
 
-    const isEnglishNative = senderLanguage.toLowerCase() === 'english';
+    const isEnglishNative = isEnglish(senderLanguage);
     const isTypingLatin = isLatinText(value);
 
     // Mode 1: Native Mode - works for ALL languages (Latin and non-Latin)
@@ -264,7 +286,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       setPreviewText(''); // No sender preview in English Core mode
       
       // Generate receiver preview from English → receiver's mother tongue
-      if (value.trim() && receiverLanguage.toLowerCase() !== 'english') {
+      if (value.trim() && !isEnglish(receiverLanguage)) {
         receiverPreviewTimeoutRef.current = setTimeout(() => {
           generateReceiverPreview(value, 'english');
         }, 600);
@@ -286,7 +308,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       }
       
       // Also generate receiver preview (English → receiver's mother tongue)
-      if (value.trim() && receiverLanguage.toLowerCase() !== 'english') {
+      if (value.trim() && !isEnglish(receiverLanguage)) {
         receiverPreviewTimeoutRef.current = setTimeout(() => {
           generateReceiverPreview(value, 'english');
         }, 600);
@@ -336,8 +358,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       let receiverNative = '';       // Receiver's native language
 
       try {
-        const isEnglishSender = senderLanguage.toLowerCase() === 'english';
-        const isEnglishReceiver = receiverLanguage.toLowerCase() === 'english';
+        const isEnglishSender = isEnglish(senderLanguage);
+        const isEnglishReceiver = isEnglish(receiverLanguage);
         const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
 
         // ================================================
@@ -365,9 +387,9 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           senderNative = savedNative;
           
           // Get English version (for English Core receivers)
-          // Regional languages use fallback (Tulu→Kannada→English)
+          // Using Universal Offline Engine for meaning-based translation
           if (!isEnglishSender) {
-            const toEnglish = await translateText(savedNative, senderLanguage, 'english');
+            const toEnglish = await translateUniversal(savedNative, senderLanguage, 'english');
             originalEnglish = toEnglish?.text || savedNative;
           } else {
             originalEnglish = savedNative;
@@ -382,9 +404,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             receiverView = originalEnglish;
             receiverNative = originalEnglish;
           } else {
-            // Translate to receiver's language
-            // Works with regional language fallback (Tulu→Kannada translation API)
-            const toReceiver = await translateText(savedNative, senderLanguage, receiverLanguage);
+            // Translate to receiver's language using Universal Offline Engine
+            const toReceiver = await translateUniversal(savedNative, senderLanguage, receiverLanguage);
             receiverView = toReceiver?.text || savedNative;
             receiverNative = receiverView;
           }
@@ -401,7 +422,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           
           // Get sender's native version (for when they switch modes or toggle)
           if (!isEnglishSender) {
-            const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
+            const toSenderNative = await translateUniversal(savedRaw, 'english', senderLanguage);
             senderNative = toSenderNative?.text || savedRaw;
           } else {
             senderNative = savedRaw;
@@ -412,7 +433,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             receiverView = savedRaw;
             receiverNative = savedRaw;
           } else {
-            const toReceiver = await translateText(savedRaw, 'english', receiverLanguage);
+            const toReceiver = await translateUniversal(savedRaw, 'english', receiverLanguage);
             receiverView = toReceiver?.text || savedRaw;
             receiverNative = receiverView;
           }
@@ -438,8 +459,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             senderNative = savedPreview;
             messageToStore = savedPreview;
           } else {
-            // Translate English input to sender's mother tongue
-            const toSenderNative = await translateText(savedRaw, 'english', senderLanguage);
+            // Translate English input to sender's mother tongue using Universal Offline Engine
+            const toSenderNative = await translateUniversal(savedRaw, 'english', senderLanguage);
             senderView = toSenderNative?.text || savedRaw;
             senderNative = senderView;
             messageToStore = senderView;
@@ -455,7 +476,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             receiverNative = senderNative;
           } else {
             // Different languages - translate English to receiver's mother tongue
-            const toReceiver = await translateText(savedRaw, 'english', receiverLanguage);
+            const toReceiver = await translateUniversal(savedRaw, 'english', receiverLanguage);
             receiverView = toReceiver?.text || savedRaw;
             receiverNative = receiverView;
           }
