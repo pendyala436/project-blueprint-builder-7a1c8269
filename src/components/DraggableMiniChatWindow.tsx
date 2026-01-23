@@ -44,8 +44,8 @@ import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Real-time typing with broadcast to partner
 import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-// OFFLINE SEMANTIC TRANSLATION: Use translateUniversal from universal-offline-engine
-// NO external APIs - NO NLLB-200 - NO hardcoding
+// MEANING-BASED OFFLINE TRANSLATION: Uses universal-offline-engine
+// NO external APIs - NO NLLB-200 - Only translateBidirectionalChat + translateUniversal
 import {
   isSameLanguage,
   isLatinScriptLanguage,
@@ -53,6 +53,7 @@ import {
 } from "@/lib/translation";
 import { 
   translateUniversal,
+  translateBidirectionalChat,
   isEnglish as checkIsEnglish,
 } from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
@@ -61,7 +62,7 @@ import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via OFFLINE universal translation (NO APIs)');
+console.log('[DraggableMiniChatWindow] Module loaded - MEANING-BASED universal offline translation (NO APIs)');
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
@@ -792,10 +793,19 @@ const DraggableMiniChatWindow = ({
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // UNIVERSAL OFFLINE TRANSLATION: Auto-translate messages for display
-  // Uses translateUniversal for meaning-based translation (NO external APIs)
-  // For RECEIVER: Always translate to receiver's mother tongue + show English meaning
-  // For SENDER: Show their original message + English meaning below
+  // ===========================================
+  // UNIVERSAL OFFLINE TRANSLATION (MEANING-BASED)
+  // ===========================================
+  // NO external APIs - Uses translateBidirectionalChat for semantic translation
+  // 
+  // For RECEIVER: 
+  //   1. Primary: Meaning-based translation in receiver's mother tongue
+  //   2. Below: Meaning-based English translation (NOT phonetic)
+  // 
+  // For SENDER:
+  //   1. Primary: Their message in native script
+  //   2. Below: Meaning-based English translation (NOT phonetic)
+  // ===========================================
   const translateMessage = useCallback(async (text: string, senderId: string, originalEnglish?: string): Promise<{
     translatedMessage?: string;
     englishMessage?: string;
@@ -808,156 +818,138 @@ const DraggableMiniChatWindow = ({
     try {
       const isSentByMe = senderId === currentUserId;
       
-      console.log('[DraggableMiniChatWindow] translateMessage with Universal Offline:', {
-        text: text.substring(0, 50),
-        originalEnglish: originalEnglish?.substring(0, 50),
-        isSentByMe,
-        senderLanguage: isSentByMe ? currentUserLanguage : partnerLanguage,
-        receiverLanguage: isSentByMe ? partnerLanguage : currentUserLanguage
-      });
-      
-      // Import utilities for Latin script handling
+      // Import bidirectional chat translation from universal offline engine
+      const { translateBidirectionalChat } = await import('@/lib/translation/universal-offline-engine');
       const { reverseTransliterate } = await import('@/lib/libre-translate/transliterator');
       const { isLatinText: checkLatinText } = await import('@/lib/libre-translate/language-data');
       
-      let displayText: string = text;
-      let englishText: string | undefined = originalEnglish;
-      let wasTranslated = false;
-      
-      // Determine source language based on sender
+      // Determine source and target languages
       const senderLanguage = isSentByMe ? currentUserLanguage : partnerLanguage;
       const receiverLanguage = isSentByMe ? partnerLanguage : currentUserLanguage;
       
+      console.log('[DraggableMiniChatWindow] translateMessage MEANING-BASED:', {
+        text: text.substring(0, 50),
+        originalEnglish: originalEnglish?.substring(0, 50),
+        isSentByMe,
+        senderLanguage,
+        receiverLanguage
+      });
+      
+      // Use bidirectional chat translation for MEANING-BASED results
+      const chatResult = await translateBidirectionalChat(text, senderLanguage, receiverLanguage);
+      
+      let displayText: string;
+      let englishText: string | undefined;
+      let latinText: string | undefined;
+      let wasTranslated = false;
+      
       if (isSentByMe) {
         // ===========================================
-        // SENDER VIEW: Show what sender typed + English meaning
+        // SENDER VIEW: Show sender's native + English meaning
         // ===========================================
-        displayText = text;
+        displayText = chatResult.senderView;
         
-        // MANDATORY: Generate English meaning if not available
-        if (!englishText) {
-          if (checkIsEnglish(currentUserLanguage)) {
-            englishText = text;
+        // Use the MEANING-BASED English from bidirectional translation
+        if (chatResult.englishCore && chatResult.wasTranslated) {
+          englishText = chatResult.englishCore;
+        } else if (originalEnglish && originalEnglish.trim()) {
+          // Check if originalEnglish is actual English meaning (not phonetic)
+          const looksLikeEnglish = /^[a-zA-Z\s.,!?'"()-]+$/.test(originalEnglish) &&
+            originalEnglish.split(' ').some(word => 
+              ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with', 'it', 'our', 'nation', 'bright'].includes(word.toLowerCase())
+            );
+          if (looksLikeEnglish) {
+            englishText = originalEnglish;
           } else {
-            try {
-              console.log('[translateMessage] Sender: Generating English from', currentUserLanguage);
-              const englishResult = await translateUniversal(text, currentUserLanguage, 'english');
-              englishText = englishResult?.text || text;
-              console.log('[translateMessage] Sender English result:', englishText?.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Sender English generation failed:', e);
-              englishText = text;
-            }
+            // originalEnglish is phonetic, use meaning from translation
+            englishText = chatResult.englishCore;
           }
+        } else {
+          englishText = chatResult.englishCore;
         }
+        
+        // Generate Latin transliteration for non-Latin scripts
+        if (displayText && !checkLatinText(displayText)) {
+          latinText = reverseTransliterate(displayText, currentUserLanguage);
+          if (latinText === displayText) latinText = undefined;
+        }
+        
       } else {
         // ===========================================
-        // RECEIVER VIEW: ALWAYS translate to receiver's mother tongue
-        // + ALWAYS show English meaning below
+        // RECEIVER VIEW: MEANING-BASED translation
+        // Primary: Message in receiver's mother tongue (meaning-based)
+        // Secondary: English meaning (not phonetic)
         // ===========================================
         
-        // Check if originalEnglish is actually English or just Latin phonetic
-        const isActualEnglish = originalEnglish && originalEnglish.trim() && 
-          !originalEnglish.match(/^[a-z\s]+$/i) || // Has punctuation/numbers
+        // Check if we have actual English meaning stored
+        const hasActualEnglish = originalEnglish && 
           originalEnglish.split(' ').some(word => 
-            ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with'].includes(word.toLowerCase())
-          ); // Contains common English words
+            ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with', 'it', 'our', 'nation', 'bright', 'full', 'light'].includes(word.toLowerCase())
+          );
         
-        // Step 1: Translate to receiver's native language
-        if (isActualEnglish && originalEnglish && originalEnglish.trim()) {
-          // Best case: We have English source - translate directly to receiver's language
-          console.log('[translateMessage] Receiver: Have actual English, translating to:', currentUserLanguage);
+        if (hasActualEnglish && originalEnglish) {
+          // Best case: We have actual English meaning
+          // Translate English → Receiver's mother tongue
+          englishText = originalEnglish;
           
           if (checkIsEnglish(currentUserLanguage)) {
-            // Receiver's language IS English - just show English
             displayText = originalEnglish;
           } else {
-            // Translate English → Receiver's mother tongue using Universal Offline
-            try {
-              const result = await translateUniversal(originalEnglish, 'english', currentUserLanguage);
-              displayText = result?.text || text;
-              wasTranslated = result?.isTranslated || (result?.text !== originalEnglish);
-              console.log('[translateMessage] Receiver native result:', displayText.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Translation to receiver failed:', e);
-              displayText = text;
-            }
+            // Get meaning-based translation from English to receiver's language
+            const meaningResult = await translateUniversal(originalEnglish, 'english', currentUserLanguage);
+            displayText = meaningResult?.text || chatResult.receiverView;
+            wasTranslated = meaningResult?.isTranslated || chatResult.wasTranslated;
           }
-          englishText = originalEnglish;
         } else {
-          // No actual English available - translate from partner's language to receiver's language
-          console.log('[translateMessage] Receiver: No actual English (might be phonetic), translating from', partnerLanguage, 'to', currentUserLanguage);
+          // Use bidirectional chat result - it handles meaning-based translation
+          displayText = chatResult.receiverView;
+          englishText = chatResult.englishCore;
+          wasTranslated = chatResult.wasTranslated;
           
-          if (!isSameLanguage(partnerLanguage, currentUserLanguage)) {
-            // Different languages - need translation
+          // If englishCore looks like phonetic (not actual English), try to get meaning
+          if (englishText && !englishText.split(' ').some(word => 
+            ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with', 'it', 'our'].includes(word.toLowerCase())
+          )) {
+            // englishCore is phonetic - try to generate meaning from sender's language
             try {
-              const result = await translateUniversal(text, partnerLanguage, currentUserLanguage);
-              displayText = result?.text || text;
-              wasTranslated = result?.isTranslated || (result?.text !== text);
-              console.log('[translateMessage] Receiver cross-lang result:', displayText.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Cross-language translation failed:', e);
-              displayText = text;
+              const meaningResult = await translateUniversal(text, partnerLanguage, 'english');
+              if (meaningResult?.isTranslated && meaningResult.text !== text) {
+                englishText = meaningResult.text;
+              }
+            } catch {
+              // Keep existing englishText
             }
-          } else {
-            // Same language - no translation needed
-            displayText = text;
           }
-          
-          // MANDATORY: Generate ACTUAL English meaning from sender's message
-          // This is needed when original_english contains phonetic text
-          try {
-            console.log('[translateMessage] Generating actual English meaning from:', partnerLanguage);
-            const englishResult = await translateUniversal(text, partnerLanguage, 'english');
-            if (englishResult?.text && englishResult.isTranslated) {
-              englishText = englishResult.text;
-              console.log('[translateMessage] English MEANING result:', englishText?.substring(0, 50));
-            } else if (englishResult?.text && englishResult.text !== text) {
-              englishText = englishResult.text;
-            } else {
-              // Fallback to showing "Translation pending" rather than phonetic
-              englishText = originalEnglish || '(English pending...)';
-            }
-          } catch (e) {
-            console.error('[translateMessage] English meaning generation failed:', e);
-            englishText = originalEnglish || text;
-          }
+        }
+        
+        // Generate Latin transliteration for non-Latin scripts
+        if (displayText && !checkLatinText(displayText)) {
+          latinText = reverseTransliterate(displayText, currentUserLanguage);
+          if (latinText === displayText) latinText = undefined;
         }
       }
       
-      // Generate Latin transliteration for non-Latin scripts
-      let latinText: string | undefined;
-      if (displayText && !checkLatinText(displayText)) {
-        latinText = reverseTransliterate(displayText, currentUserLanguage);
-        if (latinText === displayText || !latinText?.trim()) {
-          latinText = reverseTransliterate(displayText, partnerLanguage);
-          if (latinText === displayText || !latinText?.trim()) {
-            latinText = undefined;
-          }
-        }
-      }
-      
-      // FINAL FALLBACK: Ensure we ALWAYS have English for all 9 combinations
+      // Final fallback for English
       if (!englishText || englishText === text) {
-        // If English still equals the original text and it's not English, try one more time
+        // Try one more time to get actual English meaning
         if (!checkIsEnglish(senderLanguage)) {
           try {
-            const finalEnglishResult = await translateUniversal(text, senderLanguage, 'english');
-            if (finalEnglishResult?.text && finalEnglishResult.text !== text) {
-              englishText = finalEnglishResult.text;
+            const finalResult = await translateUniversal(text, senderLanguage, 'english');
+            if (finalResult?.text && finalResult.text !== text && finalResult.isTranslated) {
+              englishText = finalResult.text;
             }
           } catch {
-            // Keep existing englishText
+            // Keep existing
           }
         }
       }
       
       // Absolute fallback
       if (!englishText) {
-        englishText = text;
+        englishText = originalEnglish || text;
       }
       
-      console.log('[translateMessage] Final result:', {
+      console.log('[translateMessage] MEANING-BASED result:', {
         displayText: displayText.substring(0, 30),
         englishText: englishText?.substring(0, 30),
         latinText: latinText?.substring(0, 30),
@@ -975,7 +967,7 @@ const DraggableMiniChatWindow = ({
       };
     } catch (error) {
       console.error('[DraggableMiniChatWindow] Translation error:', error);
-      return { translatedMessage: text, englishMessage: text, isTranslated: false };
+      return { translatedMessage: text, englishMessage: originalEnglish || text, isTranslated: false };
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
@@ -1274,120 +1266,116 @@ const DraggableMiniChatWindow = ({
       createdAt: new Date().toISOString()
     }]);
 
-    // BACKGROUND: Send to database with pre-translation for English input modes
+    // BACKGROUND: Send to database with MEANING-BASED translation
     setIsSending(true);
     try {
       console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToSend.substring(0, 30));
       
       // ===========================================
-      // ALWAYS translate to receiver's mother tongue for ALL 9 combinations
-      // AND always generate English meaning
+      // USE translateBidirectionalChat FOR MEANING-BASED TRANSLATION
+      // This generates:
+      // 1. senderView: Message in sender's native script
+      // 2. receiverView: MEANING-based translation in receiver's mother tongue
+      // 3. englishCore: MEANING-based English (not phonetic)
       // ===========================================
       let translatedForReceiver: string | null = null;
       let originalEnglishToStore: string | null = null;
       
-      // Determine source language and text for translation
-      let sourceLanguage: string;
-      let textForReceiverTranslation: string;
-      
       if (typingMode === 'english-core') {
         // english-core: message IS English
-        sourceLanguage = 'english';
-        textForReceiverTranslation = messageToSend;
         originalEnglishToStore = messageToSend;
-      } else if (typingMode === 'english-meaning') {
-        // english-meaning: englishInput is the original English
-        sourceLanguage = 'english';
-        textForReceiverTranslation = englishInput;
-        originalEnglishToStore = englishInput;
-      } else {
-        // native mode: message is in sender's native language
-        sourceLanguage = currentUserLanguage;
-        textForReceiverTranslation = messageToSend;
         
-        // MANDATORY: Generate ACTUAL English meaning from sender's native message
-        // DO NOT use Latin phonetic input - that's not a translation!
-        if (!checkIsEnglish(currentUserLanguage)) {
-          try {
-            console.log('[DraggableMiniChatWindow] native mode: Generating MEANING English from', currentUserLanguage, ':', messageToSend.substring(0, 50));
+        // Translate English to receiver's language
+        if (!checkIsEnglish(partnerLanguage)) {
+          const result = await translateUniversal(messageToSend, 'english', partnerLanguage);
+          translatedForReceiver = result?.text || null;
+        } else {
+          translatedForReceiver = messageToSend;
+        }
+      } else if (typingMode === 'english-meaning') {
+        // english-meaning: englishInput is the original English, messageToSend is native translation
+        originalEnglishToStore = englishInput;
+        
+        // Translate English to receiver's language
+        if (!checkIsEnglish(partnerLanguage)) {
+          const result = await translateUniversal(englishInput, 'english', partnerLanguage);
+          translatedForReceiver = result?.text || null;
+        } else {
+          translatedForReceiver = englishInput;
+        }
+      } else {
+        // ===========================================
+        // NATIVE MODE: Use translateBidirectionalChat for MEANING-BASED translation
+        // ===========================================
+        try {
+          console.log('[DraggableMiniChatWindow] native mode: Using translateBidirectionalChat for MEANING-BASED translation');
+          const chatResult = await translateBidirectionalChat(messageToSend, currentUserLanguage, partnerLanguage);
+          
+          // Get MEANING-BASED English (not phonetic)
+          if (chatResult.wasTranslated && chatResult.englishCore) {
+            originalEnglishToStore = chatResult.englishCore;
+          } else {
+            // Fallback: try translateUniversal for English meaning
             const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
-            
-            // Only use result if it's actually different from the input (meaning translation happened)
-            if (englishResult?.text && englishResult.isTranslated) {
+            if (englishResult?.isTranslated && englishResult.text !== messageToSend) {
               originalEnglishToStore = englishResult.text;
-              console.log('[DraggableMiniChatWindow] native mode English MEANING result:', originalEnglishToStore?.substring(0, 50));
-              
-              // Update optimistic message with English immediately
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
-                  : m
-              ));
-            } else if (englishResult?.text) {
-              // Even if not marked as translated, use it if it's different
-              originalEnglishToStore = englishResult.text;
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
-                  : m
-              ));
             } else {
-              // Translation failed - mark as "Translation pending"
-              console.warn('[DraggableMiniChatWindow] English translation returned no result');
-              originalEnglishToStore = null; // Will be generated by receiver
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
-                  : m
-              ));
+              originalEnglishToStore = chatResult.englishCore;
             }
-          } catch (error) {
-            console.error('[DraggableMiniChatWindow] native mode English MEANING failed:', error);
-            // DO NOT fallback to Latin phonetic - it's not English meaning!
-            // Leave it null so receiver can generate it
-            originalEnglishToStore = null;
+          }
+          
+          // Get MEANING-BASED receiver view
+          if (chatResult.wasTranslated && chatResult.receiverView) {
+            translatedForReceiver = chatResult.receiverView;
+          } else if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
+            // Fallback: try translateUniversal
+            const receiverResult = await translateUniversal(messageToSend, currentUserLanguage, partnerLanguage);
+            translatedForReceiver = receiverResult?.text || null;
+          } else {
+            translatedForReceiver = messageToSend;
+          }
+          
+          console.log('[DraggableMiniChatWindow] MEANING-BASED result:', {
+            englishMeaning: originalEnglishToStore?.substring(0, 50),
+            receiverView: translatedForReceiver?.substring(0, 50)
+          });
+          
+          // Update optimistic message with English meaning
+          if (originalEnglishToStore) {
             setMessages(prev => prev.map(m => 
               m.id === tempId 
-                ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
+                ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
                 : m
             ));
           }
-        } else {
-          originalEnglishToStore = messageToSend;
-        }
-      }
-      
-      // ===========================================
-      // ALWAYS translate to receiver's mother tongue
-      // This ensures receiver sees message in their native language/script
-      // ===========================================
-      if (!isSameLanguage(sourceLanguage, partnerLanguage)) {
-        try {
-          console.log('[DraggableMiniChatWindow] Translating from', sourceLanguage, 'to receiver:', partnerLanguage);
-          const result = await translateUniversal(textForReceiverTranslation, sourceLanguage, partnerLanguage);
-          translatedForReceiver = result?.text || null;
-          console.log('[DraggableMiniChatWindow] Translated for receiver:', translatedForReceiver?.substring(0, 50));
         } catch (error) {
-          console.error('[DraggableMiniChatWindow] Translation to receiver failed:', error);
+          console.error('[DraggableMiniChatWindow] MEANING-BASED translation failed:', error);
+          // Fallback to translateUniversal
+          try {
+            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
+            originalEnglishToStore = englishResult?.text || null;
+            
+            if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
+              const receiverResult = await translateUniversal(messageToSend, currentUserLanguage, partnerLanguage);
+              translatedForReceiver = receiverResult?.text || null;
+            }
+          } catch {
+            console.error('[DraggableMiniChatWindow] Fallback translation also failed');
+          }
         }
-      } else {
-        // Same language - receiver sees the same message
-        translatedForReceiver = textForReceiverTranslation;
       }
       
-      // Ensure English is ALWAYS generated for all 9 combinations
+      // Final fallback: ensure we have some English
       if (!originalEnglishToStore && messageToSend) {
         try {
-          if (!checkIsEnglish(sourceLanguage)) {
-            const englishResult = await translateUniversal(messageToSend, sourceLanguage, 'english');
-            originalEnglishToStore = englishResult?.text || messageToSend;
-            console.log('[DraggableMiniChatWindow] Fallback English:', originalEnglishToStore?.substring(0, 50));
+          if (!checkIsEnglish(currentUserLanguage)) {
+            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
+            originalEnglishToStore = englishResult?.text || null;
           } else {
             originalEnglishToStore = messageToSend;
           }
-        } catch (error) {
-          console.error('[DraggableMiniChatWindow] Fallback English failed:', error);
-          originalEnglishToStore = messageToSend;
+        } catch {
+          console.error('[DraggableMiniChatWindow] Final English fallback failed');
         }
       }
       
@@ -1398,9 +1386,9 @@ const DraggableMiniChatWindow = ({
           sender_id: currentUserId,
           receiver_id: partnerId,
           message: messageToSend,
-          // ALWAYS store translated message for receiver's mother tongue
+          // ALWAYS store MEANING-BASED translated message for receiver's mother tongue
           translated_message: translatedForReceiver,
-          // ALWAYS store English for all 9 combinations
+          // ALWAYS store MEANING-BASED English (not phonetic)
           original_english: originalEnglishToStore
         });
 
