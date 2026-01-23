@@ -1757,7 +1757,7 @@ const ChatScreen = () => {
                           </div>
                         )}
                         
-                        {/* Primary message bubble */}
+                        {/* Primary message bubble - Native language (large) */}
                         {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
                           <div
                             className={`px-4 py-2.5 rounded-2xl ${
@@ -1766,35 +1766,19 @@ const ChatScreen = () => {
                                 : "bg-muted text-foreground rounded-bl-md"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words">{displayText}</p>
-                          </div>
-                        )}
-
-                        {/* Secondary view for receiver - show English */}
-                        {!isMine && (
-                          <>
-                            {/* Show English as secondary when available and different from native */}
-                            {message.originalEnglish && message.translatedMessage &&
-                             message.originalEnglish !== message.translatedMessage && (
-                              <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Languages className="w-3 h-3" />
-                                  <span>{message.originalEnglish}</span>
-                                </p>
-                              </div>
+                            <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
+                            
+                            {/* MANDATORY English meaning (small letters) - for ALL messages */}
+                            {message.originalEnglish && message.originalEnglish !== displayText && (
+                              <p className={`text-xs mt-1 pt-1 border-t flex items-center gap-1 ${
+                                isMine 
+                                  ? "border-primary-foreground/20 text-primary-foreground/70" 
+                                  : "border-border/50 text-muted-foreground"
+                              }`}>
+                                <Languages className="w-3 h-3 flex-shrink-0" />
+                                <span>🌐 {message.originalEnglish}</span>
+                              </p>
                             )}
-                          </>
-                        )}
-
-                        {/* Secondary view for sender - show what receiver sees */}
-                        {isMine && message.translatedMessage && messageText !== extractAttachment(message.translatedMessage).text && (
-                          <div className="px-3 py-1.5 rounded-xl bg-info/10 border border-info/20 rounded-br-md">
-                            <p className="text-xs text-info flex items-center gap-1">
-                              <Languages className="w-3 h-3" />
-                              <span className="unicode-text" dir="auto">
-                                {extractAttachment(message.translatedMessage).text}
-                              </span>
-                            </p>
                           </div>
                         )}
 

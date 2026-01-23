@@ -120,22 +120,27 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     setIsGeneratingPreview(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
+        // Import getEnglishMeaning for English pivot extraction
+        const { getEnglishMeaning } = await import('@/lib/translation/extended-universal-engine');
+        
         // Generate sender's native preview
         const senderPreview = await generateLivePreview(value, senderLanguage);
         setNativePreview(senderPreview.nativePreview);
         
-        // Generate receiver's preview
+        // Always get English meaning (for display below native)
+        const { english: englishMeaning } = await getEnglishMeaning(value, detection.language);
+        setEnglishPreview(englishMeaning);
+        
+        // Generate receiver's preview if different language
         if (!sameLanguage) {
-          const { preview, englishMeaning } = await generateReceiverPreviewFn(
+          const { preview } = await generateReceiverPreviewFn(
             value,
             senderLanguage,
             receiverLanguage
           );
           setReceiverNativePreview(preview);
-          setEnglishPreview(englishMeaning);
         } else {
           setReceiverNativePreview('');
-          setEnglishPreview('');
         }
       } catch (err) {
         console.error('[RealtimeChatInput] Preview error:', err);
@@ -258,8 +263,11 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     };
   }, []);
 
-  const showSenderPreview = rawInput.trim() && !isEnglishSender && nativePreview;
-  const showReceiverPreview = rawInput.trim() && !sameLanguage;
+  // Show sender preview when there's input and native preview differs from raw input
+  // This handles romanized typing like "kaise ho" → "कैसे हो"
+  const showSenderPreview = rawInput.trim() && nativePreview && nativePreview !== rawInput.trim();
+  // Show receiver preview when different languages
+  const showReceiverPreview = rawInput.trim() && !sameLanguage && receiverNativePreview;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
@@ -295,13 +303,26 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
               <p className="text-base">{nativePreview}</p>
             )}
           </div>
-          {/* English meaning hint */}
-          {englishPreview && englishPreview !== nativePreview && (
+          {/* MANDATORY English meaning hint */}
+          {englishPreview && (
             <div className="mt-1 px-3 flex items-center gap-1 text-xs text-muted-foreground">
               <Languages className="h-3 w-3" />
               <span className="italic">🌐 {englishPreview}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Always show English meaning when typing in non-English (even if no native preview) */}
+      {!showSenderPreview && rawInput.trim() && englishPreview && !isEnglishSender && (
+        <div className="px-4 py-2 border-b border-border/30">
+          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+            <Languages className="h-3.5 w-3.5" />
+            <span>{t('chat.englishMeaning', 'English meaning')}</span>
+          </div>
+          <div className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-sm">🌐 {englishPreview}</p>
+          </div>
         </div>
       )}
 
