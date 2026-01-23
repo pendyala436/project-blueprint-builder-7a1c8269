@@ -48,8 +48,6 @@ import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
-import AIShiftDisplay from "@/components/AIShiftDisplay";
-import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
@@ -1044,20 +1042,6 @@ const WomenDashboardScreen = () => {
             </div>
           </Card>
 
-          <Card 
-            className="p-4 bg-gradient-aurora border-accent/30 shadow-glow cursor-pointer col-span-2"
-            onClick={() => navigate("/shift-management")}
-          >
-            <AIShiftDisplay userId={currentUserId} compact />
-          </Card>
-        </div>
-
-        {/* Section 2.5: Language Group 24/7 Coverage */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.09s" }}>
-          <LanguageGroupShiftsPanel 
-            userId={currentUserId} 
-            language={currentWomanLanguage}
-          />
         </div>
 
         {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
@@ -1188,23 +1172,6 @@ const WomenDashboardScreen = () => {
           )}
         </div>
 
-        {/* Section 8: Shift CTA Card */}
-        <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.32s" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/20">
-                <Clock className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold">Start your shift</p>
-                <p className="text-sm text-muted-foreground">Track earnings automatically</p>
-              </div>
-            </div>
-            <Button variant="aurora" onClick={() => navigate("/shift-management")}>
-              Go <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </Card>
 
       </main>
 
