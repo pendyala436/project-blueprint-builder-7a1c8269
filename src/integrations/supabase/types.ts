@@ -500,6 +500,108 @@ export type Database = {
         }
         Relationships: []
       }
+      common_phrases: {
+        Row: {
+          arabic: string | null
+          bengali: string | null
+          category: string | null
+          chinese: string | null
+          created_at: string
+          english: string
+          french: string | null
+          gujarati: string | null
+          hindi: string | null
+          id: string
+          indonesian: string | null
+          japanese: string | null
+          kannada: string | null
+          korean: string | null
+          malayalam: string | null
+          marathi: string | null
+          odia: string | null
+          persian: string | null
+          phrase_key: string
+          portuguese: string | null
+          punjabi: string | null
+          russian: string | null
+          spanish: string | null
+          tamil: string | null
+          telugu: string | null
+          thai: string | null
+          turkish: string | null
+          updated_at: string
+          urdu: string | null
+          usage_count: number | null
+          vietnamese: string | null
+        }
+        Insert: {
+          arabic?: string | null
+          bengali?: string | null
+          category?: string | null
+          chinese?: string | null
+          created_at?: string
+          english: string
+          french?: string | null
+          gujarati?: string | null
+          hindi?: string | null
+          id?: string
+          indonesian?: string | null
+          japanese?: string | null
+          kannada?: string | null
+          korean?: string | null
+          malayalam?: string | null
+          marathi?: string | null
+          odia?: string | null
+          persian?: string | null
+          phrase_key: string
+          portuguese?: string | null
+          punjabi?: string | null
+          russian?: string | null
+          spanish?: string | null
+          tamil?: string | null
+          telugu?: string | null
+          thai?: string | null
+          turkish?: string | null
+          updated_at?: string
+          urdu?: string | null
+          usage_count?: number | null
+          vietnamese?: string | null
+        }
+        Update: {
+          arabic?: string | null
+          bengali?: string | null
+          category?: string | null
+          chinese?: string | null
+          created_at?: string
+          english?: string
+          french?: string | null
+          gujarati?: string | null
+          hindi?: string | null
+          id?: string
+          indonesian?: string | null
+          japanese?: string | null
+          kannada?: string | null
+          korean?: string | null
+          malayalam?: string | null
+          marathi?: string | null
+          odia?: string | null
+          persian?: string | null
+          phrase_key?: string
+          portuguese?: string | null
+          punjabi?: string | null
+          russian?: string | null
+          spanish?: string | null
+          tamil?: string | null
+          telugu?: string | null
+          thai?: string | null
+          turkish?: string | null
+          updated_at?: string
+          urdu?: string | null
+          usage_count?: number | null
+          vietnamese?: string | null
+        }
+        Relationships: []
+      }
       community_announcements: {
         Row: {
           content: string
@@ -2572,6 +2674,48 @@ export type Database = {
           network_out?: number | null
           recorded_at?: string
           response_time?: number
+        }
+        Relationships: []
+      }
+      translation_dictionaries: {
+        Row: {
+          category: string | null
+          created_at: string
+          english_text: string
+          frequency: number | null
+          id: string
+          source_language: string
+          source_text: string
+          target_language: string | null
+          target_text: string | null
+          updated_at: string
+          verified: boolean | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          english_text: string
+          frequency?: number | null
+          id?: string
+          source_language: string
+          source_text: string
+          target_language?: string | null
+          target_text?: string | null
+          updated_at?: string
+          verified?: boolean | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          english_text?: string
+          frequency?: number | null
+          id?: string
+          source_language?: string
+          source_text?: string
+          target_language?: string | null
+          target_text?: string | null
+          updated_at?: string
+          verified?: boolean | null
         }
         Relationships: []
       }
