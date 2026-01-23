@@ -66,7 +66,7 @@ const ProfileDetailScreen = lazy(() => import(/* webpackChunkName: "profile" */ 
 const WalletScreen = lazy(() => import(/* webpackChunkName: "wallet" */ "./pages/WalletScreen"));
 const TransactionHistoryScreen = lazy(() => import(/* webpackChunkName: "wallet" */ "./pages/TransactionHistoryScreen"));
 const SettingsScreen = lazy(() => import(/* webpackChunkName: "settings" */ "./pages/SettingsScreen"));
-const ShiftManagementScreen = lazy(() => import(/* webpackChunkName: "shifts" */ "./pages/ShiftManagementScreen"));
+
 const WomenDashboardScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/WomenDashboardScreen"));
 const WomenWalletScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/WomenWalletScreen"));
 const ApprovalPendingScreen = lazy(() => import(/* webpackChunkName: "women" */ "./pages/ApprovalPendingScreen"));
@@ -197,7 +197,7 @@ const App = () => (
             <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
             <Route path="/transactions" element={<LazyRoute component={TransactionHistoryScreen} />} />
             <Route path="/settings" element={<LazyRoute component={SettingsScreen} />} />
-            <Route path="/shift-management" element={<LazyRoute component={ShiftManagementScreen} />} />
+            
             <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
             <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} />} />
             <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} />} />
