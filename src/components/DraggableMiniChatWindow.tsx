@@ -42,7 +42,8 @@ import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-import { useRealtimeChatTranslation } from "@/lib/translation";
+// Real-time typing with broadcast to partner
+import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
 // SEMANTIC TRANSLATION: Use translateText from translate.ts for tested functionality
 import {
   isSameLanguage,
@@ -225,24 +226,25 @@ const DraggableMiniChatWindow = ({
     transliterate,
   } = useLibreTranslate();
 
-  // Real-time typing indicator with bi-directional translation - FULLY ASYNC
+  // Real-time typing indicator with bi-directional broadcast - FULLY ASYNC
   const {
-    getLivePreview,
-    processMessage,
-  } = useRealtimeChatTranslation(currentUserLanguage, partnerLanguage);
-  
-  const [senderNativePreview, setSenderNativePreview] = useState('');
-  const [partnerTyping, setPartnerTyping] = useState<any>(null);
-  
-  const sendTypingIndicator = useCallback((text: string) => {
-    const preview = getLivePreview(text, currentUserLanguage);
-    setSenderNativePreview(preview.preview);
-  }, [getLivePreview, currentUserLanguage]);
+    sendTypingIndicator: broadcastTyping,
+    clearPreview: clearTypingBroadcast,
+    senderNativePreview,
+    partnerTyping,
+    isTyping,
+    isTranslating: isTypingTranslating,
+  } = useRealtimeTranslation({
+    currentUserId,
+    currentUserLanguage,
+    channelId: chatId,
+    enabled: true,
+  });
   
   const clearPreview = useCallback(() => {
-    setSenderNativePreview('');
     setMeaningPreview('');
-  }, []);
+    clearTypingBroadcast();
+  }, [clearTypingBroadcast]);
 
   // Generate meaning-based preview for "English to Native" mode
   // FULLY ASYNC: Runs in background, never blocks typing
@@ -1121,11 +1123,11 @@ const DraggableMiniChatWindow = ({
 
   const handleTyping = useCallback((text: string) => {
     setLastActivityTime(Date.now());
-    // Send typing indicator with native script preview
+    // Send typing indicator with native script preview - broadcasts to partner
     if (text.trim()) {
-      sendTypingIndicator(text.trim());
+      broadcastTyping(text.trim(), partnerLanguage);
     }
-  }, [sendTypingIndicator, partnerLanguage]);
+  }, [broadcastTyping, partnerLanguage]);
 
   const MAX_MESSAGE_LENGTH = 10000; // Support very large messages
 
