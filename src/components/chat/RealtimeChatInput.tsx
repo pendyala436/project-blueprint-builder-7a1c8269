@@ -468,6 +468,18 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         </div>
       )}
 
+      {/* English Only preview (Mode 2) - Show English text */}
+      {typingMode === 'english-core' && rawInput.trim() && (
+        <div className="px-4 py-2 border-b border-border/30">
+          <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-base" dir="ltr">
+            {rawInput}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {t('chat.englishOnlyPreview', 'You see English → Partner sees translated')}
+          </div>
+        </div>
+      )}
+
       {/* Meaning-based preview (Mode 3) */}
       {typingMode === 'english-meaning' && (previewText || isTranslatingPreview) && (
         <div className="px-4 py-2 border-b border-border/30">

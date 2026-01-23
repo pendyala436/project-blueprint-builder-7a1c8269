@@ -1815,10 +1815,20 @@ const DraggableMiniChatWindow = ({
                 )}
                 
                 {/* MODE: english-core - Hint */}
-                {typingMode === 'english-core' && (
+                {typingMode === 'english-core' && !rawInput.trim() && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground flex items-center gap-1">
                     <span>🔤</span>
                     <span>English only - partner sees translated</span>
+                  </div>
+                )}
+                
+                {/* MODE: english-core - English preview (sender sees English) */}
+                {typingMode === 'english-core' && rawInput.trim() && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded text-sm" dir="ltr">
+                    {rawInput}
+                    <div className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5">
+                      You see English → Partner sees {partnerLanguage || 'translated'}
+                    </div>
                   </div>
                 )}
                 
