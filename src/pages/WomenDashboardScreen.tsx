@@ -100,6 +100,7 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
@@ -350,9 +351,12 @@ const WomenDashboardScreen = () => {
       // First check gender and approval from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
         .eq("user_id", user.id)
         .maybeSingle();
+        
+      // Store user's photo for chat validation
+      setUserPhoto(mainProfile?.photo_url || null);
 
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
@@ -468,8 +472,11 @@ const WomenDashboardScreen = () => {
         };
       });
 
+      // PHOTO VALIDATION: Only show users with photos
+      const menWithPhotos = onlineMen.filter(m => m.photoUrl);
+
       // Sort by load: lowest chat count first, then same language, then wallet balance
-      const sortedMen = onlineMen.sort((a, b) => {
+      const sortedMen = menWithPhotos.sort((a, b) => {
         // First: by active chat count (load balancing - lower is better)
         if (a.activeChatCount !== b.activeChatCount) {
           return (a.activeChatCount || 0) - (b.activeChatCount || 0);
