@@ -1077,32 +1077,67 @@ serve(async (req) => {
       const langA = effectiveSourceParam || "english";
       const langB = effectiveTargetParam || "english";
       
-      console.log(`[dl-translate] Bidirectional: ${langA} ↔ ${langB}`);
+      console.log(`[dl-translate] Bidirectional chat: sender=${langA}, receiver=${langB}`);
       
-      // Forward: A → English → B
-      const forward = await translateText(inputText, langA, langB);
+      // Detect if input is Latin script
+      const inputDetected = detectScriptFromText(inputText);
+      const inputIsLatinText = inputDetected.isLatin;
       
-      // Reverse: B → English → A (translate the forward result back)
-      const reverse = await translateText(forward.translatedText, langB, langA);
+      // STEP 1: Get English version (semantic core)
+      let englishCore = inputText;
+      let senderNativeText = inputText;
+      
+      // If sender typed in Latin but speaks non-Latin language, transliterate for sender view
+      if (inputIsLatinText && isNonLatinLanguage(langA)) {
+        const senderNative = await transliterateToNative(inputText, langA);
+        if (senderNative.success) {
+          senderNativeText = senderNative.text;
+          console.log(`[dl-translate] Sender transliteration: "${inputText}" → "${senderNativeText}"`);
+        }
+      }
+      
+      // Get English semantic meaning from sender's input
+      if (!isSameLanguage(langA, 'english')) {
+        // Use the native text (or original if no transliteration) for translation
+        const sourceText = senderNativeText !== inputText ? senderNativeText : inputText;
+        const toEnglish = await translateText(sourceText, langA, 'english');
+        if (toEnglish.success) {
+          englishCore = toEnglish.translatedText;
+          console.log(`[dl-translate] English core: "${englishCore.substring(0, 50)}..."`);
+        }
+      }
+      
+      // STEP 2: Translate to receiver's language from English (for meaning accuracy)
+      let receiverText = inputText;
+      if (!isSameLanguage(langB, 'english') && !isSameLanguage(langA, langB)) {
+        const toReceiver = await translateText(englishCore, 'english', langB);
+        if (toReceiver.success) {
+          receiverText = toReceiver.translatedText;
+          console.log(`[dl-translate] Receiver translation: "${receiverText.substring(0, 50)}..."`);
+        }
+      } else if (isSameLanguage(langB, 'english')) {
+        receiverText = englishCore;
+      } else if (isSameLanguage(langA, langB)) {
+        // Same language - receiver sees sender's native text
+        receiverText = senderNativeText;
+      }
       
       return new Response(
         JSON.stringify({
-          forward: {
-            translatedText: cleanTextOutput(forward.translatedText),
-            originalText: inputText,
-            sourceLanguage: langA,
-            targetLanguage: langB,
-            isTranslated: forward.success,
-            pivotUsed: forward.pivotUsed,
-          },
-          reverse: {
-            translatedText: cleanTextOutput(reverse.translatedText),
-            originalText: forward.translatedText,
-            sourceLanguage: langB,
-            targetLanguage: langA,
-            isTranslated: reverse.success,
-            pivotUsed: reverse.pivotUsed,
-          },
+          // Sender's view (their native language)
+          senderView: cleanTextOutput(senderNativeText),
+          // Receiver's view (their native language)  
+          receiverView: cleanTextOutput(receiverText),
+          // English semantic core for reference
+          englishCore: cleanTextOutput(englishCore),
+          // Original input (what was typed)
+          originalText: inputText,
+          // Metadata
+          senderLanguage: langA,
+          receiverLanguage: langB,
+          wasTransliterated: senderNativeText !== inputText,
+          wasTranslated: receiverText !== inputText && receiverText !== senderNativeText,
+          inputWasLatin: inputIsLatinText,
           mode: "bidirectional",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

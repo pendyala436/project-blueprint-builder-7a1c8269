@@ -385,6 +385,161 @@ export async function translateText(
 }
 
 // ============================================================
+// EDGE FUNCTION TRANSLATION (Meaning-Based via APIs)
+// ============================================================
+
+/**
+ * Meaning-based translation using Edge Function
+ * Uses free translation APIs (Google, MyMemory, LibreTranslate)
+ * Falls back to browser-based transliteration if Edge fails
+ */
+export async function translateWithEdgeFunction(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return {
+      text: '',
+      originalText: '',
+      sourceLanguage,
+      targetLanguage,
+      isTranslated: false,
+      isSameLanguage: true,
+      confidence: 0,
+    };
+  }
+
+  // Same language check
+  if (isSameLanguage(sourceLanguage, targetLanguage)) {
+    return translateText(trimmed, sourceLanguage, targetLanguage);
+  }
+
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text: trimmed,
+        sourceLanguage: normalizeLanguage(sourceLanguage),
+        targetLanguage: normalizeLanguage(targetLanguage),
+        mode: 'translate',
+      },
+    });
+
+    if (error) {
+      console.warn('[EdgeTranslate] Error:', error);
+      return translateText(trimmed, sourceLanguage, targetLanguage);
+    }
+
+    if (data?.translatedText) {
+      return {
+        text: data.translatedText,
+        originalText: trimmed,
+        sourceLanguage: data.sourceLanguage || sourceLanguage,
+        targetLanguage: data.targetLanguage || targetLanguage,
+        isTranslated: data.isTranslated ?? true,
+        isSameLanguage: false,
+        englishPivot: data.englishText,
+        confidence: data.isTranslated ? 0.95 : 0.5,
+      };
+    }
+
+    return translateText(trimmed, sourceLanguage, targetLanguage);
+  } catch (err) {
+    console.warn('[EdgeTranslate] Failed, using browser:', err);
+    return translateText(trimmed, sourceLanguage, targetLanguage);
+  }
+}
+
+/**
+ * Bidirectional chat translation using Edge Function
+ * Generates sender view, receiver view, and English core
+ */
+export async function translateBidirectional(
+  text: string,
+  senderLanguage: string,
+  receiverLanguage: string
+): Promise<{
+  senderView: string;
+  receiverView: string;
+  englishCore: string;
+  originalText: string;
+  wasTransliterated: boolean;
+  wasTranslated: boolean;
+}> {
+  const trimmed = text.trim();
+  const defaultResult = {
+    senderView: trimmed,
+    receiverView: trimmed,
+    englishCore: trimmed,
+    originalText: trimmed,
+    wasTransliterated: false,
+    wasTranslated: false,
+  };
+
+  if (!trimmed) return defaultResult;
+
+  // Same language - just convert script if needed
+  if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    const converted = await translateText(trimmed, senderLanguage, senderLanguage);
+    return {
+      senderView: converted.text,
+      receiverView: converted.text,
+      englishCore: converted.englishPivot || trimmed,
+      originalText: trimmed,
+      wasTransliterated: converted.text !== trimmed,
+      wasTranslated: false,
+    };
+  }
+
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text: trimmed,
+        sourceLanguage: normalizeLanguage(senderLanguage),
+        targetLanguage: normalizeLanguage(receiverLanguage),
+        mode: 'bidirectional',
+      },
+    });
+
+    if (error) {
+      console.warn('[Bidirectional] Edge error:', error);
+      // Fallback to browser-based
+      const senderResult = await translateText(trimmed, senderLanguage, senderLanguage);
+      const receiverResult = await translateText(trimmed, senderLanguage, receiverLanguage);
+      return {
+        senderView: senderResult.text,
+        receiverView: receiverResult.text,
+        englishCore: senderResult.englishPivot || trimmed,
+        originalText: trimmed,
+        wasTransliterated: senderResult.text !== trimmed,
+        wasTranslated: receiverResult.text !== trimmed,
+      };
+    }
+
+    if (data?.senderView && data?.receiverView) {
+      return {
+        senderView: data.senderView,
+        receiverView: data.receiverView,
+        englishCore: data.englishCore || trimmed,
+        originalText: trimmed,
+        wasTransliterated: data.wasTransliterated ?? false,
+        wasTranslated: data.wasTranslated ?? false,
+      };
+    }
+
+    return defaultResult;
+  } catch (err) {
+    console.warn('[Bidirectional] Failed:', err);
+    return defaultResult;
+  }
+}
+
+// ============================================================
 // GET TRANSLATOR INTERFACE
 // ============================================================
 

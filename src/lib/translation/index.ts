@@ -39,6 +39,10 @@ export {
   // Main translation function - THE SINGLE SOURCE OF TRUTH
   translateText,
   
+  // Edge Function translation (meaning-based via APIs)
+  translateWithEdgeFunction,
+  translateBidirectional as translateBidirectionalEdge,
+  
   // Language discovery
   getLanguages,
   getLanguageCount,
@@ -119,6 +123,10 @@ export interface ChatProcessResult {
   wasTranslated: boolean;
 }
 
+/**
+ * Process message for chat - uses Edge Function for meaning-based translation
+ * Generates proper sender and receiver views
+ */
 export async function processMessageForChat(
   text: string,
   senderLanguage: string,
@@ -136,56 +144,59 @@ export async function processMessageForChat(
     };
   }
 
-  const { isSameLanguage, isLatinScriptLanguage, isLatinText, needsScriptConversion } = await import('./translate');
-  
-  let senderView = trimmed;
-  let wasTransliterated = false;
+  try {
+    // Use Edge Function for meaning-based bidirectional translation
+    const { translateBidirectional } = await import('./translate');
+    const result = await translateBidirectional(trimmed, senderLanguage, receiverLanguage);
+    
+    return {
+      senderView: result.senderView,
+      receiverView: result.receiverView,
+      originalText: trimmed,
+      wasTransliterated: result.wasTransliterated,
+      wasTranslated: result.wasTranslated,
+    };
+  } catch (err) {
+    console.error('[processMessageForChat] Error:', err);
+    
+    // Fallback to browser-based transliteration
+    const { isSameLanguage, isLatinText, needsScriptConversion } = await import('./translate');
+    
+    let senderView = trimmed;
+    let wasTransliterated = false;
 
-  // Convert Latin input to sender's native script if needed
-  if (needsScriptConversion(senderLanguage) && isLatinText(trimmed)) {
-    senderView = transliterateToNative(trimmed, senderLanguage);
-    wasTransliterated = senderView !== trimmed;
-  }
+    if (needsScriptConversion(senderLanguage) && isLatinText(trimmed)) {
+      senderView = transliterateToNative(trimmed, senderLanguage);
+      wasTransliterated = senderView !== trimmed;
+    }
 
-  // Same language - receiver sees same as sender
-  if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    if (isSameLanguage(senderLanguage, receiverLanguage)) {
+      return {
+        senderView,
+        receiverView: senderView,
+        originalText: trimmed,
+        wasTransliterated,
+        wasTranslated: false,
+      };
+    }
+
     return {
       senderView,
-      receiverView: senderView,
+      receiverView: senderView, // Fallback: same as sender
       originalText: trimmed,
       wasTransliterated,
       wasTranslated: false,
     };
   }
-
-  // Translate using translateText
-  let receiverView = senderView;
-  let wasTranslated = false;
-
-  try {
-    const result = await translateText(senderView, senderLanguage, receiverLanguage);
-    if (result.isTranslated && result.text !== senderView) {
-      receiverView = result.text;
-      wasTranslated = true;
-    }
-  } catch (err) {
-    console.error('[processMessageForChat] Translation error:', err);
-  }
-
-  return {
-    senderView,
-    receiverView,
-    originalText: trimmed,
-    wasTransliterated,
-    wasTranslated,
-  };
 }
 
-// Bidirectional translation helper
+// Bidirectional translation helper - uses Edge Function
 export interface BidirectionalResult {
   forward: string;
   backward: string;
   pivot?: string;
+  senderView?: string;
+  receiverView?: string;
 }
 
 export async function translateBidirectional(
@@ -193,14 +204,29 @@ export async function translateBidirectional(
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<BidirectionalResult> {
-  const forward = await translateText(text, sourceLanguage, targetLanguage);
-  const backward = await translateText(forward.text, targetLanguage, sourceLanguage);
-  
-  return {
-    forward: forward.text,
-    backward: backward.text,
-    pivot: forward.englishPivot,
-  };
+  try {
+    // Use Edge Function for proper bidirectional translation
+    const { translateBidirectional: edgeBidirectional } = await import('./translate');
+    const result = await edgeBidirectional(text, sourceLanguage, targetLanguage);
+    
+    return {
+      forward: result.receiverView,
+      backward: result.senderView,
+      pivot: result.englishCore,
+      senderView: result.senderView,
+      receiverView: result.receiverView,
+    };
+  } catch (err) {
+    console.warn('[translateBidirectional] Edge failed, using browser:', err);
+    const forward = await translateText(text, sourceLanguage, targetLanguage);
+    const backward = await translateText(forward.text, targetLanguage, sourceLanguage);
+    
+    return {
+      forward: forward.text,
+      backward: backward.text,
+      pivot: forward.englishPivot,
+    };
+  }
 }
 
 export const semanticTranslateBidirectional = translateBidirectional;
