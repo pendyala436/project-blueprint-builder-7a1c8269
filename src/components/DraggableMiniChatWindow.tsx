@@ -876,27 +876,57 @@ const DraggableMiniChatWindow = ({
         }
       }
       
-      // Determine the English message to return - ALWAYS ensure we have English for all 9 combinations
+      // ===========================================
+      // MANDATORY ENGLISH TRANSLATION FOR ALL MESSAGES
+      // Ensure English is ALWAYS generated for both sender and receiver
+      // ===========================================
       let englishToReturn = result.englishPivot || originalEnglish;
       
-      // If still no English, generate it from the display text
-      if (!englishToReturn && result.senderView) {
+      // MANDATORY: Generate English if not available
+      if (!englishToReturn) {
         try {
-          const { isEnglish: checkIsEnglish } = await import('@/lib/libre-translate/engine');
+          const { isEnglish: checkEngLang } = await import('@/lib/libre-translate/engine');
+          // Determine source text and language for English translation
+          const sourceText = result.senderView || text;
           const sourceForEnglish = isSentByMe ? currentUserLanguage : partnerLanguage;
-          if (!checkIsEnglish(sourceForEnglish)) {
-            const englishResult = await translateUniversal(result.senderView, sourceForEnglish, 'english');
+          
+          if (!checkEngLang(sourceForEnglish)) {
+            console.log('[DraggableMiniChatWindow] Generating MANDATORY English from:', sourceForEnglish);
+            const englishResult = await translateUniversal(sourceText, sourceForEnglish, 'english');
             englishToReturn = englishResult?.text || undefined;
+            console.log('[DraggableMiniChatWindow] Generated English:', englishToReturn?.substring(0, 50));
           } else {
-            englishToReturn = result.senderView;
+            // Source is already English
+            englishToReturn = sourceText;
           }
         } catch (e) {
-          console.error('[DraggableMiniChatWindow] Failed to generate English fallback:', e);
+          console.error('[DraggableMiniChatWindow] English generation failed:', e);
         }
       }
       
+      // FALLBACK: If still no English, try translating the display text
+      if (!englishToReturn) {
+        try {
+          const displayText = isSentByMe ? result.senderView : result.receiverView;
+          const displayLang = isSentByMe ? currentUserLanguage : currentUserLanguage; // Receiver's lang for display
+          if (displayText && displayLang) {
+            const englishResult = await translateUniversal(displayText, displayLang, 'english');
+            englishToReturn = englishResult?.text || displayText;
+            console.log('[DraggableMiniChatWindow] Fallback English from display:', englishToReturn?.substring(0, 50));
+          }
+        } catch (e) {
+          console.error('[DraggableMiniChatWindow] Fallback English failed:', e);
+        }
+      }
+      
+      // LAST RESORT: Use original text if all translation fails
+      if (!englishToReturn) {
+        englishToReturn = text;
+        console.log('[DraggableMiniChatWindow] Using original text as English fallback');
+      }
+      
       if (isSentByMe) {
-        // Own message: show senderView with Latin
+        // Own message: show senderView with Latin and MANDATORY English
         return {
           translatedMessage: result.senderView,
           englishMessage: englishToReturn,
@@ -907,7 +937,7 @@ const DraggableMiniChatWindow = ({
           detectedLanguage: currentUserLanguage
         };
       } else {
-        // Partner's message: show receiverView with Latin
+        // Partner's message: show receiverView with Latin and MANDATORY English
         return {
           translatedMessage: result.receiverView,
           englishMessage: englishToReturn,
@@ -1744,12 +1774,10 @@ const DraggableMiniChatWindow = ({
                               </p>
                             )}
                             
-                            {/* ALWAYS show English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
-                            {msg.englishMessage && (
-                              <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                🌐 {msg.englishMessage}
-                              </p>
-                            )}
+                            {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🌐 {msg.englishMessage || msg.message}
+                            </p>
                           </div>
                         )
                       ) : msg.isTranslating ? (
@@ -1776,12 +1804,10 @@ const DraggableMiniChatWindow = ({
                             </p>
                           )}
                           
-                          {/* ALWAYS show English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
-                          {msg.englishMessage && (
-                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              🌐 {msg.englishMessage}
-                            </p>
-                          )}
+                          {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                          <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                            🌐 {msg.englishMessage || msg.message}
+                          </p>
                         </div>
                       )}
                     </div>
