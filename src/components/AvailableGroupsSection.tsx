@@ -79,6 +79,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
+        .eq('is_live', true)
         .neq('owner_id', currentUserId)
         .order('participant_count', { ascending: false })
         .order('created_at', { ascending: false });
