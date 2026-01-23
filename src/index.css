@@ -2231,3 +2231,26 @@
     --hover-color: color-mix(in srgb, hsl(var(--primary)) 90%, black);
   }
 }
+
+/* ========================================
+   ROCKET GIFT ANIMATION
+   ======================================== */
+
+@keyframes rocket-fly {
+  0%, 100% {
+    transform: translateX(0) translateY(0) rotate(-5deg);
+  }
+  25% {
+    transform: translateX(5px) translateY(-3px) rotate(0deg);
+  }
+  50% {
+    transform: translateX(0) translateY(-5px) rotate(5deg);
+  }
+  75% {
+    transform: translateX(-3px) translateY(-2px) rotate(0deg);
+  }
+}
+
+.animate-rocket-fly {
+  animation: rocket-fly 2s ease-in-out infinite;
+}
