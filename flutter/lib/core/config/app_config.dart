@@ -28,6 +28,12 @@ class AppConfig {
   static const int maxParallelChats = 3; // synced with React LIMITS.MAX_PARALLEL_CHATS
   static const int chatSessionTimeout = 30; // minutes
 
+  /// Private Group Call Configuration
+  static const int maxGroupCallParticipants = 50;
+  static const int maxGroupCallDurationMinutes = 30;
+  static const double maxGiftPerSession = 120.0; // Max ₹120 per 30 mins per person
+  static const int extensionsPerMonthPerGroup = 1; // Only one extension per month
+
   /// Media Configuration
   static const int maxImageSize = 5 * 1024 * 1024; // 5MB
   static const int maxVideoSize = 50 * 1024 * 1024; // 50MB
