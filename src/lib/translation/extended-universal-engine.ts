@@ -856,13 +856,12 @@ export async function generateLivePreview(
   // Detect input language
   const detection = detectInputLanguage(trimmed);
   
-  // Generate native preview
+  // Generate native preview - ALWAYS meaning-based, never phonetic
   let nativePreview = trimmed;
   
   if (isEnglish(normSender)) {
-    // Sender's native is English - show as-is or translate to English
+    // Sender's native is English - get English meaning
     if (!detection.isEnglish) {
-      // Input is not English, try to get English meaning
       try {
         const { english } = await getEnglishMeaning(trimmed, detection.language);
         nativePreview = english || trimmed;
@@ -870,17 +869,24 @@ export async function generateLivePreview(
         nativePreview = trimmed;
       }
     }
-  } else if (isSameLanguage(detection.language, normSender)) {
-    // Input is in sender's language
-    if (detection.isLatin && !isLatinScriptLanguage(normSender)) {
-      // Latin input, non-Latin language - transliterate
-      nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
-    }
+  } else if (isSameLanguage(detection.language, normSender) && !detection.isLatin) {
+    // Input is already in sender's native script - show as-is
+    nativePreview = trimmed;
   } else {
-    // Input is in different language - translate to sender's native
+    // Input is in different language OR Latin/romanized input
+    // ALWAYS translate MEANING to sender's native (not phonetic transliteration)
     try {
-      const result = await translateUniversal(trimmed, detection.language, normSender);
-      nativePreview = result.text || trimmed;
+      // First get English meaning, then translate to sender's native
+      const { english } = await getEnglishMeaning(trimmed, detection.language);
+      if (english && english !== trimmed) {
+        // Translate English meaning to sender's native language
+        const result = await translateUniversal(english, 'english', normSender);
+        nativePreview = result.text || english;
+      } else {
+        // Direct translation if English extraction didn't work
+        const result = await translateUniversal(trimmed, detection.language, normSender);
+        nativePreview = result.text || trimmed;
+      }
     } catch {
       nativePreview = trimmed;
     }
