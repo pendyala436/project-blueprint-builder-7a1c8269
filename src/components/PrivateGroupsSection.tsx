@@ -14,7 +14,7 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid }
 import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
 
 // Fixed gift amounts available in the app
-const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300];
+const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 600, 800, 1000, 2000, 3000, 4000, 5000, 10000];
 
 const getAmountLabel = (amount: number) => {
   if (amount === 0) return 'Free (Private Call - No Gift Required)';
