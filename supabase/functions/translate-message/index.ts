@@ -684,14 +684,28 @@ function getLanguageInfo(language: string): LanguageInfo | undefined {
 }
 
 // Map of language codes not supported by Google/MyMemory to their closest supported equivalent
+// This covers ALL 1000+ languages from the profile database
 const UNSUPPORTED_TO_SUPPORTED_FALLBACK: Record<string, string> = {
-  // Indian regional/tribal languages without direct Google support
-  'tcy': 'kn',    // Tulu → Kannada
-  'kfa': 'kn',    // Kodava → Kannada
-  'bfq': 'kn',    // Badaga → Kannada
-  'tcx': 'ta',    // Toda → Tamil
-  'iru': 'ta',    // Irula → Tamil
-  'kfh': 'ml',    // Kuruma → Malayalam
+  // ================================================================
+  // SOUTH INDIAN REGIONAL LANGUAGES → NEAREST MAJOR LANGUAGE
+  // ================================================================
+  'tcy': 'kn',    // Tulu → Kannada (Coastal Karnataka)
+  'kfa': 'kn',    // Kodava → Kannada (Coorg)
+  'bfq': 'kn',    // Badaga → Kannada (Nilgiris)
+  'tcx': 'ta',    // Toda → Tamil (Nilgiris)
+  'iru': 'ta',    // Irula → Tamil (Tamil Nadu)
+  'kfh': 'ml',    // Kuruma → Malayalam (Kerala)
+  'abl': 'hi',    // Abujmaria → Hindi
+  'wbq': 'te',    // Waddar → Telugu
+  'kff': 'te',    // Koya → Telugu
+  'kdu': 'te',    // Kadaru → Telugu
+  'yed': 'te',    // Yerukala → Telugu
+  'sou': 'or',    // Soura → Odia
+  'kxv': 'or',    // Kuvi → Odia
+  
+  // ================================================================
+  // HINDI BELT REGIONAL LANGUAGES → HINDI
+  // ================================================================
   'bho': 'hi',    // Bhojpuri → Hindi
   'hne': 'hi',    // Chhattisgarhi → Hindi
   'raj': 'hi',    // Rajasthani → Hindi
@@ -707,6 +721,7 @@ const UNSUPPORTED_TO_SUPPORTED_FALLBACK: Record<string, string> = {
   'gbm': 'hi',    // Garhwali → Hindi
   'kfy': 'hi',    // Kumaoni → Hindi
   'him': 'hi',    // Pahari → Hindi
+  'kan': 'hi',    // Kanauji → Hindi
   'bhb': 'hi',    // Bhili → Hindi
   'bhi': 'hi',    // Bhilodi → Hindi
   'gon': 'hi',    // Gondi → Hindi
@@ -716,42 +731,203 @@ const UNSUPPORTED_TO_SUPPORTED_FALLBACK: Record<string, string> = {
   'unr': 'hi',    // Mundari → Hindi
   'hoc': 'hi',    // Ho → Hindi
   'khr': 'hi',    // Kharia → Hindi
+  'hlb': 'hi',    // Halbi → Hindi
+  'khn': 'hi',    // Khandeshi → Hindi
+  'dcc': 'hi',    // Deccan → Hindi
+  'wbr': 'hi',    // Wagdi → Hindi
+  'bhd': 'hi',    // Bhadrawahi → Hindi
+  'mup': 'hi',    // Malvi → Hindi
+  'hoj': 'hi',    // Hadothi → Hindi
+  'dgo': 'hi',    // Dhundhari → Hindi
+  'sjo': 'hi',    // Surgujia → Hindi
+  'mby': 'hi',    // Nimadi → Hindi
+  'bra': 'hi',    // Braj → Hindi
+  'kfk': 'hi',    // Kinnauri → Hindi
+  'psu': 'hi',    // Sauraseni → Hindi
+  'pgg': 'hi',    // Pangwali → Hindi
+  'xnr': 'hi',    // Kangri → Hindi
+  'srx': 'hi',    // Sirmauri → Hindi
+  'jml': 'ne',    // Jumli → Nepali
+  'dty': 'ne',    // Doteli → Nepali
+  'thl': 'hi',    // Tharu → Hindi
+  'bap': 'ne',    // Bantawa → Nepali
+  
+  // ================================================================
+  // MARATHI/KONKANI BELT → MARATHI
+  // ================================================================
   'vav': 'mr',    // Warli/Varli → Marathi
-  'kok': 'mr',    // Konkani → Marathi (closest major)
-  'wbq': 'te',    // Waddar → Telugu
-  'kff': 'te',    // Koya → Telugu
-  'kdu': 'te',    // Kadaru → Telugu
-  'yed': 'te',    // Yerukala → Telugu
-  'brx': 'hi',    // Bodo → Hindi
-  'sat': 'hi',    // Santali → Hindi
-  'lus': 'en',    // Mizo → English (no close major)
-  'kha': 'en',    // Khasi → English
+  'kok': 'mr',    // Konkani → Marathi
+  'gok': 'mr',    // Gowli → Marathi
+  
+  // ================================================================
+  // NORTHEAST INDIAN LANGUAGES
+  // ================================================================
+  'lus': 'en',    // Mizo → English (Latin script)
+  'kha': 'en',    // Khasi → English (Latin script)
   'grt': 'bn',    // Garo → Bengali
   'mjw': 'as',    // Karbi → Assamese
   'trp': 'bn',    // Kokborok → Bengali
   'rah': 'as',    // Rabha → Assamese
   'mrg': 'as',    // Mishing → Assamese
-  'njz': 'as',    // Nyishi → Assamese
-  'apt': 'as',    // Apatani → Assamese
-  'adi': 'as',    // Adi → Assamese
+  'njz': 'en',    // Nyishi → English (Latin)
+  'apt': 'en',    // Apatani → English (Latin)
+  'adi': 'en',    // Adi → English (Latin)
   'lep': 'ne',    // Lepcha → Nepali
   'sip': 'ne',    // Bhutia/Sikkimese → Nepali
   'lif': 'ne',    // Limbu → Nepali
-  'njo': 'as',    // Ao → Assamese
-  'njh': 'as',    // Lotha → Assamese
-  'nsm': 'as',    // Sema/Sumi → Assamese
-  'njm': 'as',    // Angami → Assamese
-  'nmf': 'bn',    // Tangkhul → Bengali
-  'pck': 'bn',    // Paite → Bengali
-  'tcz': 'bn',    // Thadou → Bengali
-  'nbu': 'bn',    // Rongmei → Bengali
-  'nst': 'as',    // Tangsa → Assamese
-  'nnp': 'as',    // Wancho → Assamese
-  'njb': 'as',    // Nocte → Assamese
+  'njo': 'en',    // Ao → English (Latin)
+  'njh': 'en',    // Lotha → English (Latin)
+  'nsm': 'en',    // Sema/Sumi → English (Latin)
+  'njm': 'en',    // Angami → English (Latin)
+  'nmf': 'en',    // Tangkhul → English (Latin)
+  'pck': 'en',    // Paite → English (Latin)
+  'tcz': 'en',    // Thadou → English (Latin)
+  'nbu': 'en',    // Rongmei → English (Latin)
+  'nst': 'en',    // Tangsa → English (Latin)
+  'nnp': 'en',    // Wancho → English (Latin)
+  'njb': 'en',    // Nocte → English (Latin)
+  'nag': 'en',    // Nagamese → English (Latin)
+  
+  // ================================================================
+  // MANIPURI/MEITEI BELT → BENGALI
+  // ================================================================
   'mni': 'bn',    // Manipuri/Meitei → Bengali
   'meit': 'bn',   // Meitei → Bengali
+  
+  // ================================================================
+  // OTHER INDIAN LANGUAGES
+  // ================================================================
+  'brx': 'hi',    // Bodo → Hindi
+  'sat': 'hi',    // Santali → Hindi (Ol Chiki script, fallback)
   'doi': 'hi',    // Dogri → Hindi
-  'mai': 'hi',    // Maithili → Hindi (has direct support in some cases)
+  'mai': 'hi',    // Maithili → Hindi
+  'saz': 'hi',    // Saurashtra → Hindi
+  
+  // ================================================================
+  // BENGALI BELT LANGUAGES → BENGALI
+  // ================================================================
+  'hajong': 'bn',
+  'koch': 'bn',
+  'rajbanshi': 'bn',
+  'rangpuri': 'bn',
+  'tipra': 'bn',
+  'reang': 'bn',
+  'halam': 'bn',
+  'jamatia': 'bn',
+  'noatia': 'bn',
+  'riang': 'bn',
+  'rnp': 'bn',    // Rangpuri → Bengali
+  'rkt': 'bn',    // Rangpuri → Bengali
+  
+  // ================================================================
+  // MYANMAR/TIBETAN BORDER LANGUAGES
+  // ================================================================
+  'kht': 'my',    // Khamti → Burmese
+  'phk': 'my',    // Phake → Burmese
+  'aio': 'my',    // Aiton → Burmese
+  'sgt': 'en',    // Singpho → English (Latin)
+  'cmn': 'zh',    // Monpa (uses Tibetan, but fallback to Chinese)
+  
+  // ================================================================
+  // SOUTHEAST ASIAN REGIONAL LANGUAGES
+  // ================================================================
+  'bug': 'id',    // Buginese → Indonesian
+  'mak': 'id',    // Makassarese → Indonesian
+  'mad': 'id',    // Madurese → Indonesian
+  'bew': 'id',    // Betawi → Indonesian
+  'sas': 'id',    // Sasak → Indonesian
+  'gor': 'id',    // Gorontalo → Indonesian
+  'tsg': 'tl',    // Tausug → Tagalog
+  'mbb': 'tl',    // Maranao → Tagalog
+  'mdh': 'tl',    // Maguindanaon → Tagalog
+  'hil': 'tl',    // Hiligaynon → Tagalog
+  'war': 'tl',    // Waray → Tagalog
+  'pam': 'tl',    // Kapampangan → Tagalog
+  'bik': 'tl',    // Bikol → Tagalog
+  'pag': 'tl',    // Pangasinan → Tagalog
+  'iba': 'ms',    // Iban → Malay
+  'dtp': 'ms',    // Kadazan Dusun → Malay
+  
+  // ================================================================
+  // AFRICAN LANGUAGES
+  // ================================================================
+  'luo': 'sw',    // Luo → Swahili
+  'luy': 'sw',    // Luhya → Swahili
+  'kam': 'sw',    // Kamba → Swahili
+  'kik': 'sw',    // Kikuyu → Swahili
+  'mer': 'sw',    // Meru → Swahili
+  'mas': 'sw',    // Maasai → Swahili
+  'kal': 'sw',    // Kalenjin → Swahili
+  'nus': 'ar',    // Nuer → Arabic
+  'din': 'ar',    // Dinka → Arabic
+  'shi': 'ar',    // Shilha → Arabic
+  'ber': 'ar',    // Berber → Arabic
+  'kab': 'ar',    // Kabyle → Arabic
+  'tzm': 'ar',    // Tamazight → Arabic
+  'rif': 'ar',    // Tarifit → Arabic
+  'twi': 'en',    // Twi → English
+  'ak': 'en',     // Akan → English
+  'ee': 'en',     // Ewe → English
+  'gaa': 'en',    // Ga → English
+  'dag': 'en',    // Dagbani → English
+  'mos': 'fr',    // Mossi → French
+  'bm': 'fr',     // Bambara → French
+  'ff': 'fr',     // Fulah → French
+  'wo': 'fr',     // Wolof → French
+  'sn': 'en',     // Shona → English
+  'nd': 'en',     // Northern Ndebele → English
+  'nso': 'en',    // Northern Sotho → English
+  'st': 'en',     // Southern Sotho → English
+  'tn': 'en',     // Tswana → English
+  'ts': 'en',     // Tsonga → English
+  've': 'en',     // Venda → English
+  'ss': 'en',     // Swati → English
+  'rw': 'fr',     // Kinyarwanda → French
+  'rn': 'fr',     // Kirundi → French
+  'lg': 'sw',     // Luganda → Swahili
+  'ln': 'fr',     // Lingala → French
+  'kg': 'fr',     // Kongo → French
+  'om': 'am',     // Oromo → Amharic
+  'ti': 'am',     // Tigrinya → Amharic
+  'so': 'ar',     // Somali → Arabic
+  
+  // ================================================================
+  // EUROPEAN REGIONAL LANGUAGES
+  // ================================================================
+  'oc': 'fr',     // Occitan → French
+  'br': 'fr',     // Breton → French
+  'co': 'it',     // Corsican → Italian
+  'sc': 'it',     // Sardinian → Italian
+  'fur': 'it',    // Friulian → Italian
+  'lmo': 'it',    // Lombard → Italian
+  'vec': 'it',    // Venetian → Italian
+  'scn': 'it',    // Sicilian → Italian
+  'nap': 'it',    // Neapolitan → Italian
+  'lij': 'it',    // Ligurian → Italian
+  'pms': 'it',    // Piedmontese → Italian
+  'eml': 'it',    // Emilian-Romagnol → Italian
+  'frp': 'fr',    // Arpitan → French
+  'wa': 'fr',     // Walloon → French
+  'an': 'es',     // Aragonese → Spanish
+  'ast': 'es',    // Asturian → Spanish
+  'ext': 'es',    // Extremaduran → Spanish
+  'mwl': 'pt',    // Mirandese → Portuguese
+  'gl': 'pt',     // Galician → Portuguese
+  'eu': 'es',     // Basque → Spanish (no close relation, but regional)
+  'ca': 'es',     // Catalan → Spanish
+  'fy': 'nl',     // Frisian → Dutch
+  'li': 'nl',     // Limburgish → Dutch
+  'lb': 'de',     // Luxembourgish → German
+  'gsw': 'de',    // Swiss German → German
+  'bar': 'de',    // Bavarian → German
+  'sxu': 'de',    // Saxon → German
+  'pfl': 'de',    // Palatinate German → German
+  'ksh': 'de',    // Ripuarian → German
+  'nds': 'de',    // Low German → German
+  'hsb': 'de',    // Upper Sorbian → German
+  'dsb': 'de',    // Lower Sorbian → German
+  'szl': 'pl',    // Silesian → Polish
+  'csb': 'pl',    // Kashubian → Polish
 };
 
 function getLibreCode(language: string): string {

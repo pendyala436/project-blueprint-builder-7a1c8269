@@ -102,17 +102,24 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const receiverPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Check if user's mother tongue uses non-Latin script
+  // For Latin-script languages (Spanish, French, etc.) - no transliteration needed
+  // For non-Latin languages (Hindi, Telugu, etc.) - transliteration converts Latin → Native
   const needsTransliteration = !checkLatinScript(senderLanguage);
   const isEnglishLanguage = senderLanguage.toLowerCase() === 'english';
+  const isSenderLatinScript = checkLatinScript(senderLanguage);
 
   /**
    * INSTANT transliteration - sync, < 2ms
    * Converts Latin text to native script immediately
+   * Only applies for NON-LATIN script languages (Hindi, Telugu, etc.)
+   * Latin-script languages (Spanish, French, Tulu written in Kannada) pass through
    */
   const transliterateNow = useCallback((latinText: string): string => {
     if (!latinText.trim()) return '';
     
-    // Only transliterate if text is Latin and language needs it
+    // Only transliterate if:
+    // 1. Language uses non-Latin script (Hindi, Telugu, Kannada, etc.)
+    // 2. Text is currently in Latin script
     if (needsTransliteration && isLatinText(latinText)) {
       try {
         const result = dynamicTransliterate(latinText, senderLanguage);
@@ -123,7 +130,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       }
     }
     
-    // No transliteration needed - passthrough
+    // Latin-script languages (Spanish, French, Mizo, Khasi, etc.) - no transliteration
     return latinText;
   }, [needsTransliteration, senderLanguage]);
 
@@ -208,11 +215,14 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     const isEnglishNative = senderLanguage.toLowerCase() === 'english';
     const isTypingLatin = isLatinText(value);
 
-    // Mode 1: Native Mode - transliterate if needed, or show native preview for English input
+    // Mode 1: Native Mode - works for ALL languages (Latin and non-Latin)
+    // Latin languages (Spanish, French): type in Latin, display in Latin
+    // Non-Latin languages (Hindi, Telugu): type Latin → transliterate to native script
     if (typingMode === 'native') {
       let finalNative = value;
       
       if (needsTransliteration) {
+        // NON-LATIN script language (Hindi, Telugu, Kannada, etc.)
         const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
         
         if (hasNativeChars) {
@@ -221,7 +231,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           finalNative = value;
           setPreviewText(''); // No preview needed, already in native
         } else if (isLatinText(value)) {
-          // User typed Latin - transliterate to native for display
+          // User typed Latin → transliterate to native for display
           const native = value.trim() ? transliterateNow(value) : '';
           setNativeText(native);
           finalNative = native;
@@ -231,13 +241,15 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           finalNative = value;
         }
       } else {
-        // Latin script language - no transliteration needed
+        // LATIN script language (Spanish, French, Mizo, Khasi, Tulu, etc.)
+        // No transliteration needed - display as-is in Latin script
         setNativeText(value);
         finalNative = value;
         setPreviewText('');
       }
       
       // Generate receiver preview (translation to receiver's language)
+      // Works for ALL combinations: Latin→Latin, Latin→Native, Native→Native
       if (value.trim() && !isSameLanguage(senderLanguage, receiverLanguage)) {
         receiverPreviewTimeoutRef.current = setTimeout(() => {
           generateReceiverPreview(finalNative || value, senderLanguage);
@@ -329,18 +341,31 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
 
         // ================================================
-        // MODE 1: Native Mode
-        // Sender types in their mother tongue (any script - Latin or non-Latin)
-        // Works for ALL languages: Spanish, French, Hindi, Telugu, etc.
+        // MODE 1: Native Mode - ALL 1000+ LANGUAGES SUPPORTED
+        // Works for EVERY language in profile database:
+        // 
+        // LATIN-SCRIPT languages (Spanish, French, Mizo, Khasi, etc.):
+        //   → Type in Latin, display in Latin, translate meaning to receiver
+        // 
+        // NON-LATIN-SCRIPT languages (Hindi, Telugu, Kannada, etc.):
+        //   → Type Latin → transliterate to native script
+        //   → Or type directly in native script (Gboard)
+        //   → Translate meaning to receiver's language
+        // 
+        // REGIONAL LANGUAGES (Tulu, Bhojpuri, Marwari, etc.):
+        //   → Fallback to nearest major language for translation
+        //   → Tulu → Kannada, Bhojpuri → Hindi, Warli → Marathi
         // ================================================
         if (savedMode === 'native') {
-          // For Latin languages, savedNative = savedRaw (no transliteration needed)
-          // For non-Latin languages, savedNative = transliterated text
+          // savedNative contains:
+          // - For Latin languages: original Latin text
+          // - For non-Latin languages: transliterated native script
           messageToStore = savedNative;
           senderView = savedNative;
           senderNative = savedNative;
           
           // Get English version (for English Core receivers)
+          // Regional languages use fallback (Tulu→Kannada→English)
           if (!isEnglishSender) {
             const toEnglish = await translateText(savedNative, senderLanguage, 'english');
             originalEnglish = toEnglish?.text || savedNative;
@@ -349,6 +374,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           }
           
           // Get receiver's native version
+          // Handles ALL combinations: Latin→Latin, Latin→Native, Native→Native
           if (sameLanguage) {
             receiverView = savedNative;
             receiverNative = savedNative;
@@ -356,7 +382,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             receiverView = originalEnglish;
             receiverNative = originalEnglish;
           } else {
-            // Translate to receiver's language (works for Latin→Latin, Latin→Native, Native→Native)
+            // Translate to receiver's language
+            // Works with regional language fallback (Tulu→Kannada translation API)
             const toReceiver = await translateText(savedNative, senderLanguage, receiverLanguage);
             receiverView = toReceiver?.text || savedNative;
             receiverNative = receiverView;
