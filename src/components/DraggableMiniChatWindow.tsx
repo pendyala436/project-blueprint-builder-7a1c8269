@@ -44,20 +44,24 @@ import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Real-time typing with broadcast to partner
 import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-// SEMANTIC TRANSLATION: Use translateText from translate.ts for tested functionality
+// OFFLINE SEMANTIC TRANSLATION: Use translateUniversal from universal-offline-engine
+// NO external APIs - NO NLLB-200 - NO hardcoding
 import {
   isSameLanguage,
   isLatinScriptLanguage,
   normalizeUnicode,
-  translateText,
 } from "@/lib/translation";
+import { 
+  translateUniversal,
+  isEnglish as checkIsEnglish,
+} from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components/chat/TypingModeSelector";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via semantic translation (translateText)');
+console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via OFFLINE universal translation (NO APIs)');
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
@@ -266,10 +270,10 @@ const DraggableMiniChatWindow = ({
       const capturedText = englishText; // Capture value to avoid closure issues
       setIsMeaningLoading(true);
       
-      // Run translation in background without blocking
-      translateText(capturedText, 'english', currentUserLanguage)
+      // Run translation in background without blocking using OFFLINE engine
+      translateUniversal(capturedText, 'english', currentUserLanguage)
         .then((result) => {
-          const translatedText = typeof result === 'string' ? result : result?.text || '';
+          const translatedText = result?.text || '';
           if (translatedText && translatedText !== capturedText) {
             setMeaningPreview(translatedText);
           } else {
@@ -1233,30 +1237,30 @@ const DraggableMiniChatWindow = ({
       let originalEnglishToStore: string | null = null;
       
       if (typingMode === 'english-core') {
-        // english-core: message IS English, translate to receiver's language
+        // english-core: message IS English, translate to receiver's language using OFFLINE engine
         originalEnglishToStore = messageToSend;
-        if (!isSameLanguage(partnerLanguage, 'english')) {
+        if (!isSameLanguage(partnerLanguage, 'english') && !checkIsEnglish(partnerLanguage)) {
           try {
-            const result = await translateText(messageToSend, 'english', partnerLanguage);
-            translatedForReceiver = typeof result === 'string' ? result : result?.text || null;
-            console.log('[DraggableMiniChatWindow] english-core pre-translated for receiver:', translatedForReceiver?.substring(0, 50));
+            const result = await translateUniversal(messageToSend, 'english', partnerLanguage);
+            translatedForReceiver = result?.text || null;
+            console.log('[DraggableMiniChatWindow] english-core OFFLINE translated for receiver:', translatedForReceiver?.substring(0, 50));
           } catch (error) {
-            console.error('[DraggableMiniChatWindow] english-core pre-translation failed:', error);
+            console.error('[DraggableMiniChatWindow] english-core OFFLINE translation failed:', error);
           }
         }
       } else if (typingMode === 'english-meaning') {
-        // english-meaning: englishInput is the original English, translate to receiver's language
+        // english-meaning: englishInput is the original English, translate to receiver's language using OFFLINE engine
         originalEnglishToStore = englishInput;
-        if (englishInput && !isSameLanguage(partnerLanguage, 'english')) {
+        if (englishInput && !isSameLanguage(partnerLanguage, 'english') && !checkIsEnglish(partnerLanguage)) {
           try {
-            // Translate from English input directly to receiver's language for best quality
-            const result = await translateText(englishInput, 'english', partnerLanguage);
-            translatedForReceiver = typeof result === 'string' ? result : result?.text || null;
-            console.log('[DraggableMiniChatWindow] english-meaning pre-translated for receiver:', translatedForReceiver?.substring(0, 50));
+            // Translate from English input directly to receiver's language using OFFLINE engine
+            const result = await translateUniversal(englishInput, 'english', partnerLanguage);
+            translatedForReceiver = result?.text || null;
+            console.log('[DraggableMiniChatWindow] english-meaning OFFLINE translated for receiver:', translatedForReceiver?.substring(0, 50));
           } catch (error) {
-            console.error('[DraggableMiniChatWindow] english-meaning pre-translation failed:', error);
+            console.error('[DraggableMiniChatWindow] english-meaning OFFLINE translation failed:', error);
           }
-        } else if (isSameLanguage(partnerLanguage, 'english')) {
+        } else if (isSameLanguage(partnerLanguage, 'english') || checkIsEnglish(partnerLanguage)) {
           // Receiver speaks English, show them the original English input
           translatedForReceiver = englishInput;
         }

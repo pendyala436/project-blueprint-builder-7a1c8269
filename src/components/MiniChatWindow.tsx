@@ -36,7 +36,12 @@ import {
   initWorker,
   normalizeUnicode,
 } from "@/lib/translation";
-import { translateText as universalTranslate, isLatinText, isLatinScriptLanguage as isLatinLang } from "@/lib/translation/translate";
+// OFFLINE TRANSLATION - NO external APIs - NO NLLB-200 - NO hardcoding
+import { 
+  translateUniversal as universalTranslate,
+  isLatinText,
+  isLatinScriptLanguage as isLatinLang,
+} from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 
