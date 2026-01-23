@@ -876,8 +876,24 @@ const DraggableMiniChatWindow = ({
         }
       }
       
-      // Determine the English message to return
-      const englishToReturn = result.englishPivot || originalEnglish;
+      // Determine the English message to return - ALWAYS ensure we have English for all 9 combinations
+      let englishToReturn = result.englishPivot || originalEnglish;
+      
+      // If still no English, generate it from the display text
+      if (!englishToReturn && result.senderView) {
+        try {
+          const { isEnglish: checkIsEnglish } = await import('@/lib/libre-translate/engine');
+          const sourceForEnglish = isSentByMe ? currentUserLanguage : partnerLanguage;
+          if (!checkIsEnglish(sourceForEnglish)) {
+            const englishResult = await translateUniversal(result.senderView, sourceForEnglish, 'english');
+            englishToReturn = englishResult?.text || undefined;
+          } else {
+            englishToReturn = result.senderView;
+          }
+        } catch (e) {
+          console.error('[DraggableMiniChatWindow] Failed to generate English fallback:', e);
+        }
+      }
       
       if (isSentByMe) {
         // Own message: show senderView with Latin
@@ -927,14 +943,13 @@ const DraggableMiniChatWindow = ({
         
         // Check if this is an English input message (english-core or english-meaning)
         // english-core: original_english === message (both English)
-        // english-meaning: original_english !== message (original is English, message is sender's native)
-        const isEnglishCoreMessage = m.original_english && m.original_english === m.message;
-        const isEnglishMeaningMessage = m.original_english && m.original_english !== m.message;
+        // english-meaning: original_english !== message AND message is in sender's native
+        // native mode: original_english is English translation (not same as message)
         const hasPreTranslation = m.translated_message && m.translated_message.length > 0;
         
-        // For partner's English input messages, use pre-translated message if available
+        // For partner messages, use pre-translated message if available
         let displayMessage = m.message;
-        if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
+        if (isPartnerMessage && hasPreTranslation) {
           displayMessage = m.translated_message;
         }
         
@@ -943,33 +958,18 @@ const DraggableMiniChatWindow = ({
           senderId: m.sender_id,
           message: m.message,
           translatedMessage: displayMessage,
+          // ALWAYS include English for all modes and combinations
           englishMessage: m.original_english || undefined,
-          // If sender stored Latin input in original_english (for native mode), use it
-          latinMessage: !isPartnerMessage && m.original_english && m.original_english !== m.message 
-            ? m.original_english 
-            : undefined,
-          isTranslated: isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation,
-          isTranslating: !(isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation),
+          latinMessage: undefined, // Will be generated in background translation
+          isTranslated: isPartnerMessage && hasPreTranslation,
+          isTranslating: true, // Always run background translation to get Latin
           createdAt: m.created_at
         };
       });
       setMessages(immediateMessages);
 
-      // STEP 2: BACKGROUND - Translate messages that need it (skip pre-translated ones)
+      // STEP 2: BACKGROUND - Translate ALL messages to get Latin and ensure proper display
       data.forEach((m) => {
-        const isPartnerMessage = m.sender_id !== currentUserId;
-        const isEnglishCoreMessage = m.original_english && m.original_english === m.message;
-        const isEnglishMeaningMessage = m.original_english && m.original_english !== m.message;
-        const hasPreTranslation = m.translated_message && m.translated_message.length > 0;
-        
-        // Skip translation for partner's English input messages that are already pre-translated
-        if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
-          setMessages(prev => prev.map(msg => 
-            msg.id === m.id ? { ...msg, isTranslating: false } : msg
-          ));
-          return;
-        }
-        
         translateMessage(m.message, m.sender_id, m.original_english || undefined)
           .then((result) => {
             setMessages(prev => prev.map(msg => 
@@ -977,8 +977,9 @@ const DraggableMiniChatWindow = ({
                 ? {
                     ...msg,
                     translatedMessage: result.translatedMessage || msg.translatedMessage,
-                    englishMessage: result.englishMessage || msg.englishMessage,
-                    // Prefer generated Latin, fallback to stored original_english
+                    // ALWAYS use English from result or stored value
+                    englishMessage: result.englishMessage || msg.englishMessage || m.original_english,
+                    // Get Latin transliteration
                     latinMessage: result.latinMessage || msg.latinMessage,
                     isTranslated: result.isTranslated,
                     isTranslating: false
@@ -1011,14 +1012,11 @@ const DraggableMiniChatWindow = ({
           const newMsg = payload.new;
           const isPartnerMessage = newMsg.sender_id !== currentUserId;
           
-          // Check if this is an English input message (english-core or english-meaning)
-          const isEnglishCoreMessage = newMsg.original_english && newMsg.original_english === newMsg.message;
-          const isEnglishMeaningMessage = newMsg.original_english && newMsg.original_english !== newMsg.message;
+          // For partner messages with pre-translation, use it immediately
           const hasPreTranslation = newMsg.translated_message && newMsg.translated_message.length > 0;
           
-          // For partner's English input messages, use pre-translated message if available
           let displayMessage = newMsg.message;
-          if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
+          if (isPartnerMessage && hasPreTranslation) {
             displayMessage = newMsg.translated_message;
           }
           
@@ -1030,13 +1028,11 @@ const DraggableMiniChatWindow = ({
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage: displayMessage,
+              // ALWAYS include English for all 9 combinations
               englishMessage: newMsg.original_english || undefined,
-              // Own message: use stored Latin, Partner message: will be generated
-              latinMessage: !isPartnerMessage && newMsg.original_english && newMsg.original_english !== newMsg.message 
-                ? newMsg.original_english 
-                : undefined,
-              isTranslated: isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation,
-              isTranslating: !(isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation),
+              latinMessage: undefined, // Will be generated in background
+              isTranslated: isPartnerMessage && hasPreTranslation,
+              isTranslating: true, // Always run background translation
               createdAt: newMsg.created_at
             }];
           });
@@ -1049,23 +1045,16 @@ const DraggableMiniChatWindow = ({
             }
           }
           
-          // STEP 2: BACKGROUND - Translate messages that need it
-          // Skip translation for partner's English input messages that are already pre-translated
-          if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
-            setMessages(prev => prev.map(msg => 
-              msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
-            ));
-            return;
-          }
-          
+          // STEP 2: BACKGROUND - Translate ALL messages to get Latin and ensure proper display
           translateMessage(newMsg.message, newMsg.sender_id, newMsg.original_english || undefined)
             .then((result) => {
               setMessages(prev => prev.map(msg => 
                 msg.id === newMsg.id 
                   ? {
                       ...msg,
-                      translatedMessage: result.translatedMessage,
-                      englishMessage: result.englishMessage || msg.englishMessage,
+                      translatedMessage: result.translatedMessage || msg.translatedMessage,
+                      // ALWAYS use English from result or stored value
+                      englishMessage: result.englishMessage || msg.englishMessage || newMsg.original_english,
                       latinMessage: result.latinMessage || msg.latinMessage,
                       isTranslated: result.isTranslated,
                       isTranslating: false

@@ -427,6 +427,7 @@ export async function processChatMessage(
       // Mode 1: Mother Tongue & Latin
       // User types in native script or Latin transliteration
       // Both sides see native script
+      // ALWAYS generate English meaning for all 9 combinations
       
       // Convert Latin to sender's native script if needed
       if (inputIsLatin && !isLatinScriptLanguage(senderLanguage)) {
@@ -435,12 +436,19 @@ export async function processChatMessage(
       }
       senderNative = senderView;
       
+      // ALWAYS generate English meaning (for all 9 combinations)
+      if (!isEnglish(senderLanguage)) {
+        const englishResult = await translate(senderView, senderLanguage, 'english');
+        englishPivot = englishResult.text;
+      } else {
+        englishPivot = senderView;
+      }
+      
       // Translate for receiver if different language
       if (!isSameLanguage(senderLanguage, receiverLanguage)) {
         const result = await translate(senderView, senderLanguage, receiverLanguage);
         receiverView = result.text;
         receiverNative = receiverView;
-        englishPivot = result.englishPivot;
         wasTranslated = result.isTranslated;
       } else {
         receiverView = senderView;
@@ -452,8 +460,10 @@ export async function processChatMessage(
       // Mode 2: English Only
       // Sender types and reads in English
       // Receiver sees their native language
+      // ALWAYS store English as pivot for all 9 combinations
       
       senderView = trimmed; // Keep as English
+      englishPivot = trimmed; // Store English for display
       
       if (isSameLanguage(senderLanguage, receiverLanguage)) {
         receiverView = trimmed;
