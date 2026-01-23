@@ -302,17 +302,16 @@ function browserTranslate(
 }
 
 // ============================================================
-// CORE TRANSLATION FUNCTION - BROWSER-BASED ONLY
+// CORE TRANSLATION FUNCTION - USES EDGE FUNCTION FOR MEANING
 // ============================================================
 
 /**
- * Main translation function - 100% BROWSER-BASED
+ * Main translation function - Uses Edge Function for semantic translation
  * 
  * Translation Logic:
  * 1. Same language → return as-is (optionally convert script)
- * 2. Different languages → Script conversion via dynamic transliterator
- * 3. English reference provided for cross-script translations
- * 4. No external API calls
+ * 2. Different languages → Edge Function for meaning-based translation
+ * 3. Falls back to browser-based transliteration if Edge fails
  */
 export async function translateText(
   text: string,
@@ -364,8 +363,49 @@ export async function translateText(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // Browser-based translation
-  console.log(`[Translate] Browser: ${normSource} → ${normTarget}`);
+  // TRY EDGE FUNCTION FIRST for semantic/meaning translation
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    console.log(`[Translate] Edge: ${normSource} → ${normTarget}`);
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text: trimmed,
+        sourceLanguage: normSource,
+        targetLanguage: normTarget,
+        source: getLanguageCode(normSource),
+        target: getLanguageCode(normTarget),
+        mode: 'translate',
+      },
+    });
+
+    if (!error && data?.translatedText) {
+      const result: TranslationResult = {
+        text: data.translatedText,
+        originalText: trimmed,
+        sourceLanguage: normSource,
+        targetLanguage: normTarget,
+        isTranslated: data.isTranslated ?? (data.translatedText !== trimmed),
+        isSameLanguage: false,
+        englishPivot: data.englishText,
+        confidence: 0.95,
+      };
+
+      // Cache successful translations
+      setInCache(cacheKey, result);
+      return result;
+    }
+    
+    if (error) {
+      console.warn('[Translate] Edge error, falling back to browser:', error);
+    }
+  } catch (err) {
+    console.warn('[Translate] Edge failed, falling back to browser:', err);
+  }
+
+  // FALLBACK: Browser-based transliteration (script conversion only)
+  console.log(`[Translate] Browser fallback: ${normSource} → ${normTarget}`);
   const browserResult = browserTranslate(trimmed, normSource, normTarget);
 
   const result: TranslationResult = {
@@ -376,13 +416,8 @@ export async function translateText(
     isTranslated: browserResult.success && browserResult.translatedText !== trimmed,
     isSameLanguage: false,
     englishPivot: browserResult.englishRef,
-    confidence: browserResult.success ? 0.85 : 0.3,
+    confidence: browserResult.success ? 0.5 : 0.3, // Lower confidence for browser fallback
   };
-
-  // Cache successful translations
-  if (result.isTranslated) {
-    setInCache(cacheKey, result);
-  }
 
   return result;
 }
