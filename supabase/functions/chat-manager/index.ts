@@ -1681,19 +1681,99 @@ async function endChatSession(supabase: any, chatId: string, reason: string, ses
     })
     .eq("chat_id", chatId);
 
-  // Decrease woman's chat count
-  const { data: availability } = await supabase
-    .from("women_availability")
-    .select("current_chat_count")
-    .eq("user_id", session.woman_user_id)
-    .maybeSingle();
+  // Sync woman's availability with ACTUAL active session count (not just decrement)
+  const { count: actualActiveCount } = await supabase
+    .from("active_chat_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("woman_user_id", session.woman_user_id)
+    .eq("status", "active");
 
-  if (availability) {
-    await supabase
-      .from("women_availability")
-      .update({
-        current_chat_count: Math.max(0, availability.current_chat_count - 1)
-      })
-      .eq("user_id", session.woman_user_id);
+  const newChatCount = actualActiveCount || 0;
+
+  // Update women_availability with accurate count
+  await supabase
+    .from("women_availability")
+    .update({
+      current_chat_count: newChatCount,
+      is_available: newChatCount < 3
+    })
+    .eq("user_id", session.woman_user_id);
+
+  // Update user_status to reflect correct status based on actual chat count
+  let newStatusText = "online";
+  if (newChatCount >= 3) {
+    newStatusText = "busy";
   }
+
+  await supabase
+    .from("user_status")
+    .update({
+      status_text: newStatusText,
+      last_seen: new Date().toISOString()
+    })
+    .eq("user_id", session.woman_user_id);
+
+  // Also update man's status
+  const { count: manActiveCount } = await supabase
+    .from("active_chat_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("man_user_id", session.man_user_id)
+    .eq("status", "active");
+
+  let manStatusText = "online";
+  if ((manActiveCount || 0) >= 3) {
+    manStatusText = "busy";
+  }
+
+  await supabase
+    .from("user_status")
+    .update({
+      status_text: manStatusText,
+      last_seen: new Date().toISOString()
+    })
+    .eq("user_id", session.man_user_id);
+}
+
+// Sync function to fix stale status data - call periodically or on disconnect
+async function syncUserStatus(supabase: any, userId: string) {
+  // Get actual active chat count
+  const { count: manChats } = await supabase
+    .from("active_chat_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("man_user_id", userId)
+    .eq("status", "active");
+
+  const { count: womanChats } = await supabase
+    .from("active_chat_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("woman_user_id", userId)
+    .eq("status", "active");
+
+  const totalChats = (manChats || 0) + (womanChats || 0);
+  
+  // Determine correct status
+  let statusText = "online";
+  if (totalChats >= 3) {
+    statusText = "busy";
+  }
+
+  // Update user_status
+  await supabase
+    .from("user_status")
+    .update({
+      status_text: statusText,
+      last_seen: new Date().toISOString()
+    })
+    .eq("user_id", userId);
+
+  // Update women_availability if applicable
+  await supabase
+    .from("women_availability")
+    .update({
+      current_chat_count: womanChats || 0,
+      is_available: (womanChats || 0) < 3
+    })
+    .eq("user_id", userId);
+
+  return { totalChats, statusText };
 }
