@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio } from 'lucide-react';
+import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio, Clock } from 'lucide-react';
 import { GroupChatWindow } from './GroupChatWindow';
-import { GroupVideoCall } from './GroupVideoCall';
+import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
+import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
 interface PrivateGroup {
   id: string;
@@ -305,8 +306,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     </Badge>
                     <Badge variant="outline" className="gap-1">
                       <Users className="h-3 w-3" />
-                      {group.participant_count}
+                      {group.participant_count}/{MAX_PARTICIPANTS}
                     </Badge>
+                    {group.is_live && (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <Clock className="h-3 w-3" />
+                        {MAX_DURATION_MINUTES}min
+                      </Badge>
+                    )}
                   </div>
 
                   {unlocked ? (
@@ -328,10 +335,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                           variant="default"
                           className="flex-1 gap-2"
                           onClick={() => setActiveGroupVideo(group)}
-                          disabled={!group.is_live}
+                          disabled={!group.is_live || group.participant_count >= MAX_PARTICIPANTS}
                         >
                           <Video className="h-4 w-4" />
-                          {group.is_live ? 'Watch' : 'Offline'}
+                          {group.participant_count >= MAX_PARTICIPANTS ? 'Full' : group.is_live ? 'Join Call' : 'Offline'}
                         </Button>
                       )}
                     </div>
@@ -428,10 +435,13 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         />
       )}
 
-      {/* Group Video Call */}
+      {/* Private Group Call Window (Host-only video, participants audio-only) */}
       {activeGroupVideo && (
-        <GroupVideoCall
-          group={activeGroupVideo}
+        <PrivateGroupCallWindow
+          group={{
+            ...activeGroupVideo,
+            owner_id: activeGroupVideo.owner_id
+          }}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}

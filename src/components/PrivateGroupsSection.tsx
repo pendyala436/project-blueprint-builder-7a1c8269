@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid } from 'lucide-react';
-import { TeamsStyleGroupWindow } from './TeamsStyleGroupWindow';
+import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
+import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
 // Fixed gift amounts available in the app
 const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 600, 800, 1000, 2000, 3000, 4000, 5000, 10000];
@@ -338,7 +339,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
-                    {group.participant_count} members
+                    {group.participant_count}/{MAX_PARTICIPANTS}
+                  </Badge>
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    ⏱️ {MAX_DURATION_MINUTES}min max
                   </Badge>
                   {(group.access_type === 'chat' || group.access_type === 'both') && (
                     <Badge variant="outline" className="gap-1">
@@ -431,10 +435,13 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         </DialogContent>
       </Dialog>
 
-      {/* Teams-Style Group Window (Chat + Video Combined) */}
+      {/* Private Group Call Window (Host-only video, 30min limit, refunds) */}
       {activeGroup && (
-        <TeamsStyleGroupWindow
-          group={activeGroup}
+        <PrivateGroupCallWindow
+          group={{
+            ...activeGroup,
+            owner_id: currentUserId
+          }}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
