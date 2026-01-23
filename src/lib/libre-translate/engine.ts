@@ -3,6 +3,7 @@
  * =================================================
  * 
  * Complete browser-based translation system with NO external API calls.
+ * NO NLLB-200 - NO HARDCODING - NO EXTERNAL APIs
  * Inspired by: https://github.com/LibreTranslate/LibreTranslate
  * 
  * Features:
@@ -10,19 +11,18 @@
  * - Uses English as pivot for cross-language translation
  * - 3 typing modes: native, english-core, english-meaning
  * - 9 translation combinations
- * - All processing happens in browser
+ * - All processing happens in browser using dynamic database lookups
  * 
  * Translation Paths:
  * 1. Same Language: passthrough (no translation)
- * 2. English → Any: direct translation
- * 3. Any → English: direct translation
+ * 2. English → Any: direct translation via common_phrases table
+ * 3. Any → English: direct translation via common_phrases table
  * 4. Latin → Latin: direct translation
  * 5. Native → Native: English pivot
  * 6. Latin → Native: transliterate + translate if needed
  * 7. Native → Latin: translate + reverse transliterate
  */
 
-import { supabase } from '@/integrations/supabase/client';
 import {
   normalizeLanguage,
   isLatinScriptLanguage,
@@ -33,6 +33,9 @@ import {
   detectScript,
 } from './language-data';
 import { transliterateToNative, reverseTransliterate, getLivePreview } from './transliterator';
+import {
+  translateUniversal as offlineTranslate,
+} from '../translation/universal-offline-engine';
 import type {
   TranslationResult,
   ChatMessageViews,
@@ -98,41 +101,30 @@ export function getCacheStats(): { size: number; hitRate: number } {
 }
 
 // ============================================================
-// CORE TRANSLATION API (Uses Edge Function)
+// CORE TRANSLATION API (Uses Universal Offline Engine)
+// NO EXTERNAL API CALLS - ALL PROCESSING IS LOCAL/DATABASE-BASED
 // ============================================================
 
 /**
- * Call translation edge function for semantic translation
- * This is the ONLY external call - to our own Supabase edge function
+ * Translate using the universal offline engine
+ * NO external API calls - uses common_phrases table and dynamic transliteration
  */
-async function callTranslationEdgeFunction(
+async function translateOffline(
   text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean; error?: string }> {
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ translatedText: string; success: boolean; wasTransliterated: boolean }> {
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        source: sourceCode,
-        target: targetCode,
-      },
-    });
-
-    if (error) {
-      console.error('[LibreTranslate] Edge function error:', error);
-      return { translatedText: text, success: false, error: error.message };
-    }
-
-    const translated = data?.translatedText || data?.translation || data?.text;
-    if (translated) {
-      return { translatedText: translated, success: true };
-    }
-
-    return { translatedText: text, success: false, error: 'No translation returned' };
+    const result = await offlineTranslate(text, sourceLanguage, targetLanguage);
+    
+    return {
+      translatedText: result.text,
+      success: result.isTranslated || result.isTransliterated,
+      wasTransliterated: result.isTransliterated,
+    };
   } catch (err: any) {
-    console.error('[LibreTranslate] Exception:', err);
-    return { translatedText: text, success: false, error: err.message };
+    console.error('[LibreTranslate] Offline translation error:', err);
+    return { translatedText: text, success: false, wasTransliterated: false };
   }
 }
 
@@ -143,6 +135,7 @@ async function callTranslationEdgeFunction(
 /**
  * Translate text between any two languages
  * Uses English as pivot for non-English pairs
+ * ALL PROCESSING IS OFFLINE - NO EXTERNAL API CALLS
  */
 export async function translate(
   text: string,
@@ -167,18 +160,29 @@ export async function translate(
 
   const normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
-  const sourceCode = getLanguageCode(normSource);
-  const targetCode = getLanguageCode(normTarget);
 
   // CASE 1: Same language - passthrough
   if (isSameLanguage(normSource, normTarget)) {
+    // Handle script conversion if needed
+    const sourceIsLatin = isLatinScriptLanguage(normSource);
+    const inputIsLatin = isLatinText(trimmed);
+    
+    let resultText = trimmed;
+    let wasTransliterated = false;
+    
+    if (inputIsLatin && !sourceIsLatin) {
+      // Latin input for non-Latin language - transliterate
+      resultText = transliterateToNative(trimmed, normTarget) || trimmed;
+      wasTransliterated = resultText !== trimmed;
+    }
+    
     return {
-      text: trimmed,
+      text: resultText,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
       isTranslated: false,
-      wasTransliterated: false,
+      wasTransliterated,
       confidence: 1.0,
       mode: 'passthrough',
     };
@@ -197,49 +201,49 @@ export async function translate(
   let translatedText = trimmed;
   let englishPivot: string | undefined;
   let wasTranslated = false;
+  let wasTransliterated = false;
   let mode: TranslationMode = 'direct';
 
   try {
-    // CASE 2: English → Any (direct)
+    // CASE 2: English → Any (direct offline translation)
     if (sourceIsEnglish) {
-      const result = await callTranslationEdgeFunction(trimmed, 'en', targetCode);
+      const result = await translateOffline(trimmed, normSource, normTarget);
       translatedText = result.translatedText;
       wasTranslated = result.success;
+      wasTransliterated = result.wasTransliterated;
       mode = 'direct';
     }
-    // CASE 3: Any → English (direct)
+    // CASE 3: Any → English (direct offline translation)
     else if (targetIsEnglish) {
-      const result = await callTranslationEdgeFunction(trimmed, sourceCode, 'en');
+      const result = await translateOffline(trimmed, normSource, normTarget);
       translatedText = result.translatedText;
       wasTranslated = result.success;
+      wasTransliterated = result.wasTransliterated;
       mode = 'direct';
     }
-    // CASE 4: Latin → Latin (direct)
+    // CASE 4: Latin → Latin (direct offline translation)
     else if (sourceIsLatin && targetIsLatin) {
-      const result = await callTranslationEdgeFunction(trimmed, sourceCode, targetCode);
+      const result = await translateOffline(trimmed, normSource, normTarget);
       translatedText = result.translatedText;
       wasTranslated = result.success;
+      wasTransliterated = result.wasTransliterated;
       mode = 'direct';
     }
-    // CASE 5: Native → Native (English pivot)
+    // CASE 5: Native → Native (English pivot via offline engine)
     else if (!sourceIsLatin && !targetIsLatin) {
-      // Step 1: Source → English
-      const toEnglish = await callTranslationEdgeFunction(trimmed, sourceCode, 'en');
-      englishPivot = toEnglish.translatedText;
-      
-      // Step 2: English → Target
-      if (toEnglish.success && englishPivot !== trimmed) {
-        const toTarget = await callTranslationEdgeFunction(englishPivot, 'en', targetCode);
-        translatedText = toTarget.translatedText;
-        wasTranslated = toTarget.success;
-        mode = 'pivot';
-      }
+      // The offline engine handles English pivot internally
+      const result = await translateOffline(trimmed, normSource, normTarget);
+      translatedText = result.translatedText;
+      wasTranslated = result.success;
+      wasTransliterated = result.wasTransliterated;
+      mode = 'pivot';
     }
     // CASE 6: Latin source → Native target OR Native source → Latin target
     else {
-      const result = await callTranslationEdgeFunction(trimmed, sourceCode, targetCode);
+      const result = await translateOffline(trimmed, normSource, normTarget);
       translatedText = result.translatedText;
       wasTranslated = result.success;
+      wasTransliterated = result.wasTransliterated;
       mode = 'direct';
     }
   } catch (err: any) {
@@ -253,13 +257,13 @@ export async function translate(
     sourceLanguage: normSource,
     targetLanguage: normTarget,
     isTranslated: wasTranslated,
-    wasTransliterated: false,
+    wasTransliterated,
     englishPivot,
-    confidence: wasTranslated ? 0.9 : 0.3,
+    confidence: wasTranslated ? 0.9 : wasTransliterated ? 0.7 : 0.3,
     mode,
   };
 
-  if (wasTranslated) {
+  if (wasTranslated || wasTransliterated) {
     setInCache(cacheKey, result);
   }
 

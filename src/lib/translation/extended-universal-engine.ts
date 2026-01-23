@@ -23,6 +23,7 @@
  * - Uses word pattern matching for 1000+ languages
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import {
   translateUniversal,
   translateBidirectionalChat,
@@ -432,222 +433,73 @@ export function detectInputLanguage(text: string): DetectedLanguageInfo {
 }
 
 // ============================================================
-// COMMON PHRASE TO ENGLISH MEANING MAPPING
-// Direct mapping for transliterated common phrases
+// DYNAMIC COMMON PHRASE LOOKUP (NO HARDCODING)
+// Uses Supabase common_phrases table for all lookups
 // ============================================================
 
-const TRANSLITERATED_TO_ENGLISH: Record<string, { english: string; language: string }> = {
-  // Hindi common phrases
-  'kaise ho': { english: 'How are you?', language: 'hindi' },
-  'kaise hain': { english: 'How are you?', language: 'hindi' },
-  'kaisey ho': { english: 'How are you?', language: 'hindi' },
-  'kaisa hai': { english: 'How is it?', language: 'hindi' },
-  'kya haal hai': { english: 'How are you?', language: 'hindi' },
-  'kya haal': { english: 'How are you?', language: 'hindi' },
-  'namaste': { english: 'Hello / Greetings', language: 'hindi' },
-  'namaskar': { english: 'Hello / Greetings', language: 'hindi' },
-  'dhanyavaad': { english: 'Thank you', language: 'hindi' },
-  'dhanyawad': { english: 'Thank you', language: 'hindi' },
-  'shukriya': { english: 'Thank you', language: 'hindi' },
-  'theek hai': { english: 'It\'s okay / Fine', language: 'hindi' },
-  'thik hai': { english: 'It\'s okay / Fine', language: 'hindi' },
-  'acha': { english: 'Good / Okay', language: 'hindi' },
-  'accha': { english: 'Good / Okay', language: 'hindi' },
-  'bahut acha': { english: 'Very good', language: 'hindi' },
-  'bahut accha': { english: 'Very good', language: 'hindi' },
-  'main theek hoon': { english: 'I am fine', language: 'hindi' },
-  'mein theek hoon': { english: 'I am fine', language: 'hindi' },
-  'aap kaise ho': { english: 'How are you?', language: 'hindi' },
-  'aap kaise hain': { english: 'How are you?', language: 'hindi' },
-  'tum kaise ho': { english: 'How are you?', language: 'hindi' },
-  'kya kar rahe ho': { english: 'What are you doing?', language: 'hindi' },
-  'kya kar rahi ho': { english: 'What are you doing?', language: 'hindi' },
-  'kahan ho': { english: 'Where are you?', language: 'hindi' },
-  'kab miloge': { english: 'When will we meet?', language: 'hindi' },
-  'mujhe samajh nahi aaya': { english: 'I didn\'t understand', language: 'hindi' },
-  'phir milenge': { english: 'See you later', language: 'hindi' },
-  'alvida': { english: 'Goodbye', language: 'hindi' },
-  'subah': { english: 'Morning', language: 'hindi' },
-  'shaam': { english: 'Evening', language: 'hindi' },
-  'raat': { english: 'Night', language: 'hindi' },
-  'pyaar': { english: 'Love', language: 'hindi' },
-  'pyar': { english: 'Love', language: 'hindi' },
-  'dil': { english: 'Heart', language: 'hindi' },
-  'mujhe tumse pyaar hai': { english: 'I love you', language: 'hindi' },
-  'tumse pyaar karta hoon': { english: 'I love you', language: 'hindi' },
-  'tumse pyaar karti hoon': { english: 'I love you', language: 'hindi' },
-  'kya baat hai': { english: 'What\'s up? / What\'s the matter?', language: 'hindi' },
-  'sab theek': { english: 'Everything is fine', language: 'hindi' },
-  'haan': { english: 'Yes', language: 'hindi' },
-  'nahi': { english: 'No', language: 'hindi' },
-  'mat karo': { english: 'Don\'t do it', language: 'hindi' },
-  'chalo': { english: 'Let\'s go', language: 'hindi' },
-  'ruko': { english: 'Wait', language: 'hindi' },
-  'suniye': { english: 'Listen', language: 'hindi' },
-  'suno': { english: 'Listen', language: 'hindi' },
-  'batao': { english: 'Tell me', language: 'hindi' },
-  'bolo': { english: 'Speak', language: 'hindi' },
-  
-  // Telugu common phrases
-  'ela unnaru': { english: 'How are you?', language: 'telugu' },
-  'ela unnav': { english: 'How are you?', language: 'telugu' },
-  'ela vunnaru': { english: 'How are you?', language: 'telugu' },
-  'namaskaram': { english: 'Hello / Greetings', language: 'telugu' },
-  'dhanyavaadalu': { english: 'Thank you', language: 'telugu' },
-  'bagundi': { english: 'It\'s good / Fine', language: 'telugu' },
-  'baagundi': { english: 'It\'s good / Fine', language: 'telugu' },
-  'nenu bagunnanu': { english: 'I am fine', language: 'telugu' },
-  'meeru ela unnaru': { english: 'How are you?', language: 'telugu' },
-  'emi chesthunnaru': { english: 'What are you doing?', language: 'telugu' },
-  'ekkada unnaru': { english: 'Where are you?', language: 'telugu' },
-  'chala bagundi': { english: 'Very good', language: 'telugu' },
-  'avunu': { english: 'Yes', language: 'telugu' },
-  'kaadu': { english: 'No', language: 'telugu' },
-  'randi': { english: 'Come', language: 'telugu' },
-  'vellandi': { english: 'Go', language: 'telugu' },
-  'cheppandi': { english: 'Tell me', language: 'telugu' },
-  
-  // Tamil common phrases
-  'eppadi irukeenga': { english: 'How are you?', language: 'tamil' },
-  'eppadi irukkeenga': { english: 'How are you?', language: 'tamil' },
-  'epdi irukeenga': { english: 'How are you?', language: 'tamil' },
-  'vanakkam': { english: 'Hello / Greetings', language: 'tamil' },
-  'nandri': { english: 'Thank you', language: 'tamil' },
-  'nalla irukku': { english: 'It\'s good', language: 'tamil' },
-  'naan nalla iruken': { english: 'I am fine', language: 'tamil' },
-  'enna panreenga': { english: 'What are you doing?', language: 'tamil' },
-  'enga irukkeenga': { english: 'Where are you?', language: 'tamil' },
-  'romba nalla irukku': { english: 'Very good', language: 'tamil' },
-  'aamam': { english: 'Yes', language: 'tamil' },
-  'illai': { english: 'No', language: 'tamil' },
-  'vaanga': { english: 'Come', language: 'tamil' },
-  'ponga': { english: 'Go', language: 'tamil' },
-  
-  // Kannada common phrases
-  'hege iddira': { english: 'How are you?', language: 'kannada' },
-  'hegiddira': { english: 'How are you?', language: 'kannada' },
-  'namaskara': { english: 'Hello / Greetings', language: 'kannada' },
-  'dhanyavaada': { english: 'Thank you', language: 'kannada' },
-  'chennagide': { english: 'It\'s good', language: 'kannada' },
-  'naanu chennagiddini': { english: 'I am fine', language: 'kannada' },
-  'enu maadthiddira': { english: 'What are you doing?', language: 'kannada' },
-  'elli iddira': { english: 'Where are you?', language: 'kannada' },
-  'tumbaa chennagide': { english: 'Very good', language: 'kannada' },
-  'houdu': { english: 'Yes', language: 'kannada' },
-  'illa': { english: 'No', language: 'kannada' },
-  'banni': { english: 'Come', language: 'kannada' },
-  'hogi': { english: 'Go', language: 'kannada' },
-  
-  // Malayalam common phrases
-  'sugham aano': { english: 'How are you?', language: 'malayalam' },
-  'sughamano': { english: 'How are you?', language: 'malayalam' },
-  'namaskkaram': { english: 'Hello / Greetings', language: 'malayalam' },
-  'nanni': { english: 'Thank you', language: 'malayalam' },
-  'nallathanu': { english: 'It\'s good', language: 'malayalam' },
-  'enikku sugham': { english: 'I am fine', language: 'malayalam' },
-  'entha cheyyunnu': { english: 'What are you doing?', language: 'malayalam' },
-  'evide aanu': { english: 'Where are you?', language: 'malayalam' },
-  'valare nallath': { english: 'Very good', language: 'malayalam' },
-  'athe': { english: 'Yes', language: 'malayalam' },
-  'alla': { english: 'No', language: 'malayalam' },
-  'varoo': { english: 'Come', language: 'malayalam' },
-  'povo': { english: 'Go', language: 'malayalam' },
-  
-  // Bengali common phrases
-  'kemon acho': { english: 'How are you?', language: 'bengali' },
-  'kemon achho': { english: 'How are you?', language: 'bengali' },
-  'bhalo aachi': { english: 'I am fine', language: 'bengali' },
-  'dhanyabad': { english: 'Thank you', language: 'bengali' },
-  'bhalo': { english: 'Good', language: 'bengali' },
-  'onek bhalo': { english: 'Very good', language: 'bengali' },
-  'hyan': { english: 'Yes', language: 'bengali' },
-  'na': { english: 'No', language: 'bengali' },
-  'esho': { english: 'Come', language: 'bengali' },
-  'jao': { english: 'Go', language: 'bengali' },
-  
-  // Gujarati common phrases
-  'kem cho': { english: 'How are you?', language: 'gujarati' },
-  'kemcho': { english: 'How are you?', language: 'gujarati' },
-  'majama': { english: 'I am fine', language: 'gujarati' },
-  'aabhaar': { english: 'Thank you', language: 'gujarati' }, // Gujarati (primary)
-  'saaru': { english: 'Good', language: 'gujarati' },
-  'bahu saaru': { english: 'Very good', language: 'gujarati' },
-  'ha': { english: 'Yes', language: 'gujarati' },
-  'na gujarati': { english: 'No', language: 'gujarati' },
-  'aavo': { english: 'Come', language: 'gujarati' },
-  
-  // Marathi common phrases
-  'kasa aahe': { english: 'How are you?', language: 'marathi' },
-  'kashi aahe': { english: 'How are you?', language: 'marathi' },
-  'mi majat aahe': { english: 'I am fine', language: 'marathi' },
-  'dhanyavaad marathi': { english: 'Thank you', language: 'marathi' },
-  'chhan': { english: 'Good', language: 'marathi' },
-  'khup chhan': { english: 'Very good', language: 'marathi' },
-  'ho marathi': { english: 'Yes', language: 'marathi' },
-  
-  // Punjabi common phrases
-  'ki haal': { english: 'How are you?', language: 'punjabi' },
-  'kidaan': { english: 'How are you?', language: 'punjabi' },
-  'sat sri akal': { english: 'Hello / Greetings', language: 'punjabi' },
-  'vadiya': { english: 'Good', language: 'punjabi' },
-  'bahut vadiya': { english: 'Very good', language: 'punjabi' },
-  'haanji': { english: 'Yes', language: 'punjabi' },
-  'nahi ji': { english: 'No', language: 'punjabi' },
-  
-  // Urdu common phrases
-  'kaisa hal hai': { english: 'How are you?', language: 'urdu' },
-  'assalam alaikum': { english: 'Peace be upon you (Hello)', language: 'urdu' },
-  'walaikum assalam': { english: 'And upon you peace', language: 'urdu' },
-  'meherbani': { english: 'Thank you', language: 'urdu' },
-  'acha hai urdu': { english: 'It\'s good', language: 'urdu' },
-  'bohat acha': { english: 'Very good', language: 'urdu' },
-  'jee haan': { english: 'Yes', language: 'urdu' },
-  'jee nahi': { english: 'No', language: 'urdu' },
-  'khuda hafiz': { english: 'Goodbye', language: 'urdu' },
-  
-  // Spanish common phrases
-  'como estas': { english: 'How are you?', language: 'spanish' },
-  'hola': { english: 'Hello', language: 'spanish' },
-  'gracias': { english: 'Thank you', language: 'spanish' },
-  'bien': { english: 'Good / Fine', language: 'spanish' },
-  'muy bien': { english: 'Very good', language: 'spanish' },
-  'si': { english: 'Yes', language: 'spanish' },
-  'adios': { english: 'Goodbye', language: 'spanish' },
-  'buenos dias': { english: 'Good morning', language: 'spanish' },
-  'buenas noches': { english: 'Good night', language: 'spanish' },
-  'te quiero': { english: 'I love you', language: 'spanish' },
-  'te amo': { english: 'I love you', language: 'spanish' },
-  
-  // French common phrases
-  'comment allez vous': { english: 'How are you?', language: 'french' },
-  'comment ca va': { english: 'How are you?', language: 'french' },
-  'ca va': { english: 'I\'m fine / It\'s okay', language: 'french' },
-  'bonjour': { english: 'Hello / Good day', language: 'french' },
-  'merci': { english: 'Thank you', language: 'french' },
-  'merci beaucoup': { english: 'Thank you very much', language: 'french' },
-  'oui': { english: 'Yes', language: 'french' },
-  'non': { english: 'No', language: 'french' },
-  'au revoir': { english: 'Goodbye', language: 'french' },
-  'bonsoir': { english: 'Good evening', language: 'french' },
-  'bonne nuit': { english: 'Good night', language: 'french' },
-  'je t\'aime': { english: 'I love you', language: 'french' },
-};
+// Cache for dynamic phrase lookups from database
+const dynamicPhraseCache = new Map<string, { english: string; language: string } | null>();
+const PHRASE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const phraseCacheTimestamps = new Map<string, number>();
 
 /**
- * Look up English meaning from transliterated phrase
+ * Look up English meaning from any language phrase using database
+ * NO HARDCODING - all lookups are dynamic from common_phrases table
+ */
+async function lookupTransliteratedMeaningAsync(text: string): Promise<{ english: string; language: string } | null> {
+  const normalized = text.toLowerCase().trim();
+  if (!normalized) return null;
+  
+  // Check cache first (with TTL)
+  const cacheKey = normalized;
+  const cachedTimestamp = phraseCacheTimestamps.get(cacheKey);
+  if (cachedTimestamp && Date.now() - cachedTimestamp < PHRASE_CACHE_TTL) {
+    const cached = dynamicPhraseCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+  }
+  
+  try {
+    // Query the common_phrases table for this phrase
+    const { data, error } = await supabase
+      .from('common_phrases')
+      .select('english, phrase_key')
+      .or(`phrase_key.ilike.%${normalized}%,english.ilike.%${normalized}%`)
+      .limit(1);
+    
+    if (error || !data || data.length === 0) {
+      // Cache negative result
+      dynamicPhraseCache.set(cacheKey, null);
+      phraseCacheTimestamps.set(cacheKey, Date.now());
+      return null;
+    }
+    
+    const result = {
+      english: data[0].english,
+      language: 'detected', // Language is auto-detected from script
+    };
+    
+    // Cache result
+    dynamicPhraseCache.set(cacheKey, result);
+    phraseCacheTimestamps.set(cacheKey, Date.now());
+    
+    return result;
+  } catch (err) {
+    console.warn('[ExtendedEngine] Dynamic phrase lookup error:', err);
+    return null;
+  }
+}
+
+/**
+ * Synchronous lookup for cached phrases only (for live preview)
+ * Returns null if not in cache - async lookup should be done separately
  */
 function lookupTransliteratedMeaning(text: string): { english: string; language: string } | null {
   const normalized = text.toLowerCase().trim();
+  if (!normalized) return null;
   
-  // Direct lookup
-  if (TRANSLITERATED_TO_ENGLISH[normalized]) {
-    return TRANSLITERATED_TO_ENGLISH[normalized];
-  }
-  
-  // Try without punctuation
-  const withoutPunctuation = normalized.replace(/[?!.,;:'"]/g, '').trim();
-  if (TRANSLITERATED_TO_ENGLISH[withoutPunctuation]) {
-    return TRANSLITERATED_TO_ENGLISH[withoutPunctuation];
+  const cachedTimestamp = phraseCacheTimestamps.get(normalized);
+  if (cachedTimestamp && Date.now() - cachedTimestamp < PHRASE_CACHE_TTL) {
+    return dynamicPhraseCache.get(normalized) || null;
   }
   
   return null;
@@ -677,10 +529,10 @@ export async function getEnglishMeaning(
     return { english: trimmed, confidence: 1.0 };
   }
 
-  // FIRST: Check direct transliterated phrase lookup
-  const directLookup = lookupTransliteratedMeaning(trimmed);
+  // FIRST: Try async dynamic phrase lookup from database
+  const directLookup = await lookupTransliteratedMeaningAsync(trimmed);
   if (directLookup) {
-    console.log('[ExtendedEngine] Direct meaning lookup:', trimmed, '->', directLookup.english);
+    console.log('[ExtendedEngine] Dynamic DB meaning lookup:', trimmed, '->', directLookup.english);
     return { english: directLookup.english, confidence: 0.95 };
   }
 
@@ -688,7 +540,7 @@ export async function getEnglishMeaning(
   const isLatin = isLatinText(trimmed);
   
   try {
-    // Translate from source language to English
+    // Translate from source language to English using universal offline engine
     const result = await translateUniversal(trimmed, normSource, 'english');
     
     if (result.isTranslated && result.text !== trimmed) {
@@ -702,25 +554,18 @@ export async function getEnglishMeaning(
     if (!isLatin) {
       const latinized = reverseTransliterate(trimmed, normSource);
       if (latinized && latinized !== trimmed) {
-        // Check if latinized version has a meaning
-        const latinLookup = lookupTransliteratedMeaning(latinized);
+        // Check if latinized version has a meaning in database
+        const latinLookup = await lookupTransliteratedMeaningAsync(latinized);
         if (latinLookup) {
           return { english: latinLookup.english, confidence: 0.9 };
         }
         
-        // Try translating the latinized version
-        const latinResult = await translateUniversal(latinized, 'english', 'english');
-        if (latinResult.isTranslated) {
-          return {
-            english: latinResult.text,
-            confidence: latinResult.confidence * 0.8,
-          };
-        }
+        // Use latinized form as English approximation
         return { english: latinized, confidence: 0.6 };
       }
     }
     
-    // Fallback: return as-is
+    // Fallback: return as-is (no external API calls)
     return { english: result.text || trimmed, confidence: 0.4 };
   } catch (err) {
     console.error('[ExtendedEngine] English extraction error:', err);

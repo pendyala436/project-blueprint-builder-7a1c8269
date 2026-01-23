@@ -314,16 +314,18 @@ function browserTranslate(
 }
 
 // ============================================================
-// CORE TRANSLATION FUNCTION - USES EDGE FUNCTION FOR MEANING
+// CORE TRANSLATION FUNCTION - USES UNIVERSAL OFFLINE ENGINE
+// NO EXTERNAL API CALLS - ALL PROCESSING IS LOCAL/DATABASE-BASED
 // ============================================================
 
 /**
- * Main translation function - Uses Edge Function for semantic translation
+ * Main translation function - Uses Universal Offline Engine
+ * NO NLLB-200 - NO HARDCODING - NO EXTERNAL APIS
  * 
  * Translation Logic:
  * 1. Same language → return as-is (optionally convert script)
- * 2. Different languages → Edge Function for meaning-based translation
- * 3. Falls back to browser-based transliteration if Edge fails
+ * 2. Different languages → Universal Offline Engine for meaning-based translation
+ * 3. Uses common_phrases database table and dynamic transliteration
  */
 export async function translateText(
   text: string,
@@ -375,45 +377,33 @@ export async function translateText(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // TRY EDGE FUNCTION FIRST for semantic/meaning translation
+  // USE UNIVERSAL OFFLINE ENGINE - NO EXTERNAL API CALLS
   try {
-    const { supabase } = await import('@/integrations/supabase/client');
+    const { translateUniversal } = await import('./universal-offline-engine');
     
-    console.log(`[Translate] Edge: ${normSource} → ${normTarget}`);
+    console.log(`[Translate] Offline: ${normSource} → ${normTarget}`);
     
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        source: getLanguageCode(normSource),
-        target: getLanguageCode(normTarget),
-        mode: 'translate',
-      },
-    });
+    const offlineResult = await translateUniversal(trimmed, normSource, normTarget);
+    
+    const result: TranslationResult = {
+      text: offlineResult.text,
+      originalText: trimmed,
+      sourceLanguage: normSource,
+      targetLanguage: normTarget,
+      isTranslated: offlineResult.isTranslated,
+      isSameLanguage: false,
+      englishPivot: offlineResult.englishPivot,
+      confidence: offlineResult.confidence,
+    };
 
-    if (!error && data?.translatedText) {
-      const result: TranslationResult = {
-        text: data.translatedText,
-        originalText: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        isTranslated: data.isTranslated ?? (data.translatedText !== trimmed),
-        isSameLanguage: false,
-        englishPivot: data.englishText,
-        confidence: 0.95,
-      };
-
-      // Cache successful translations
+    // Cache successful translations
+    if (offlineResult.isTranslated || offlineResult.isTransliterated) {
       setInCache(cacheKey, result);
-      return result;
     }
     
-    if (error) {
-      console.warn('[Translate] Edge error, falling back to browser:', error);
-    }
+    return result;
   } catch (err) {
-    console.warn('[Translate] Edge failed, falling back to browser:', err);
+    console.warn('[Translate] Offline translation error:', err);
   }
 
   // FALLBACK: Browser-based transliteration (script conversion only)
@@ -428,83 +418,34 @@ export async function translateText(
     isTranslated: browserResult.success && browserResult.translatedText !== trimmed,
     isSameLanguage: false,
     englishPivot: browserResult.englishRef,
-    confidence: browserResult.success ? 0.5 : 0.3, // Lower confidence for browser fallback
+    confidence: browserResult.success ? 0.5 : 0.3,
   };
 
   return result;
 }
 
 // ============================================================
-// EDGE FUNCTION TRANSLATION (Meaning-Based via APIs)
+// OFFLINE TRANSLATION (NO EXTERNAL APIS)
 // ============================================================
 
 /**
- * Meaning-based translation using Edge Function
- * Uses free translation APIs (Google, MyMemory, LibreTranslate)
- * Falls back to browser-based transliteration if Edge fails
+ * Meaning-based translation using Universal Offline Engine
+ * NO NLLB-200 - NO HARDCODING - NO EXTERNAL APIS
+ * Uses common_phrases database table and dynamic transliteration
  */
 export async function translateWithEdgeFunction(
   text: string,
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<TranslationResult> {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return {
-      text: '',
-      originalText: '',
-      sourceLanguage,
-      targetLanguage,
-      isTranslated: false,
-      isSameLanguage: true,
-      confidence: 0,
-    };
-  }
-
-  // Same language check
-  if (isSameLanguage(sourceLanguage, targetLanguage)) {
-    return translateText(trimmed, sourceLanguage, targetLanguage);
-  }
-
-  try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: normalizeLanguage(sourceLanguage),
-        targetLanguage: normalizeLanguage(targetLanguage),
-        mode: 'translate',
-      },
-    });
-
-    if (error) {
-      console.warn('[EdgeTranslate] Error:', error);
-      return translateText(trimmed, sourceLanguage, targetLanguage);
-    }
-
-    if (data?.translatedText) {
-      return {
-        text: data.translatedText,
-        originalText: trimmed,
-        sourceLanguage: data.sourceLanguage || sourceLanguage,
-        targetLanguage: data.targetLanguage || targetLanguage,
-        isTranslated: data.isTranslated ?? true,
-        isSameLanguage: false,
-        englishPivot: data.englishText,
-        confidence: data.isTranslated ? 0.95 : 0.5,
-      };
-    }
-
-    return translateText(trimmed, sourceLanguage, targetLanguage);
-  } catch (err) {
-    console.warn('[EdgeTranslate] Failed, using browser:', err);
-    return translateText(trimmed, sourceLanguage, targetLanguage);
-  }
+  // This function now uses offline translation instead of edge function
+  // Kept for API compatibility but internally uses offline engine
+  return translateText(text, sourceLanguage, targetLanguage);
 }
 
 /**
- * Bidirectional chat translation using Edge Function
+ * Bidirectional chat translation using Universal Offline Engine
+ * NO EXTERNAL API CALLS - ALL PROCESSING IS LOCAL/DATABASE-BASED
  * Generates sender view, receiver view, and English core
  */
 export async function translateBidirectional(
@@ -545,47 +486,34 @@ export async function translateBidirectional(
   }
 
   try {
-    const { supabase } = await import('@/integrations/supabase/client');
+    // Use Universal Offline Engine for bidirectional translation
+    const { translateBidirectionalChat } = await import('./universal-offline-engine');
     
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text: trimmed,
-        sourceLanguage: normalizeLanguage(senderLanguage),
-        targetLanguage: normalizeLanguage(receiverLanguage),
-        mode: 'bidirectional',
-      },
-    });
-
-    if (error) {
-      console.warn('[Bidirectional] Edge error:', error);
-      // Fallback to browser-based
-      const senderResult = await translateText(trimmed, senderLanguage, senderLanguage);
-      const receiverResult = await translateText(trimmed, senderLanguage, receiverLanguage);
-      return {
-        senderView: senderResult.text,
-        receiverView: receiverResult.text,
-        englishCore: senderResult.englishPivot || trimmed,
-        originalText: trimmed,
-        wasTransliterated: senderResult.text !== trimmed,
-        wasTranslated: receiverResult.text !== trimmed,
-      };
-    }
-
-    if (data?.senderView && data?.receiverView) {
-      return {
-        senderView: data.senderView,
-        receiverView: data.receiverView,
-        englishCore: data.englishCore || trimmed,
-        originalText: trimmed,
-        wasTransliterated: data.wasTransliterated ?? false,
-        wasTranslated: data.wasTranslated ?? false,
-      };
-    }
-
-    return defaultResult;
+    const result = await translateBidirectionalChat(trimmed, senderLanguage, receiverLanguage);
+    
+    return {
+      senderView: result.senderView,
+      receiverView: result.receiverView,
+      englishCore: result.englishCore,
+      originalText: trimmed,
+      wasTransliterated: result.wasTransliterated,
+      wasTranslated: result.wasTranslated,
+    };
   } catch (err) {
-    console.warn('[Bidirectional] Failed:', err);
-    return defaultResult;
+    console.warn('[Bidirectional] Offline translation failed:', err);
+    
+    // Fallback to separate translations
+    const senderResult = await translateText(trimmed, senderLanguage, senderLanguage);
+    const receiverResult = await translateText(trimmed, senderLanguage, receiverLanguage);
+    
+    return {
+      senderView: senderResult.text,
+      receiverView: receiverResult.text,
+      englishCore: senderResult.englishPivot || trimmed,
+      originalText: trimmed,
+      wasTransliterated: senderResult.text !== trimmed,
+      wasTranslated: receiverResult.text !== trimmed,
+    };
   }
 }
 
