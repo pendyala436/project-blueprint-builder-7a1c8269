@@ -299,6 +299,24 @@ export { useRealtimeTranslation, type TypingIndicator } from './useRealtimeTrans
 export type { ChatMessageResult, LivePreviewResult } from '@/hooks/useRealtimeChatTranslation';
 
 // ============================================================
+// OFFLINE TRANSLATOR (No External APIs)
+// ============================================================
+
+export {
+  translateOffline,
+  translateBidirectionalOffline,
+  initializeOfflineTranslator,
+  clearCache as clearOfflineCache,
+  getCacheStats as getOfflineCacheStats,
+} from './offline-translator';
+
+export {
+  useOfflineTranslation,
+  useTranslateOffline,
+  useChatTranslationOffline,
+} from '@/hooks/useOfflineTranslation';
+
+// ============================================================
 // LIBRE-TRANSLATE (Browser-Based Translation Engine)
 // ============================================================
 
