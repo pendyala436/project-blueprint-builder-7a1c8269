@@ -801,7 +801,7 @@ const MiniChatWindow = ({
             )}
             {!billingStarted && (
               <p className="text-[10px] text-muted-foreground">
-                {userGender === "male" ? `₹${ratePerMinute}/min - Type to start` : `Earn ₹${earningRate}/min`}
+                {userGender === "male" ? `₹${ratePerMinute}/min - Type to start` : "Type to start earning"}
               </p>
             )}
           </div>

@@ -478,7 +478,7 @@ const DraggableMiniChatWindow = ({
             title: "Chat Started",
             description: userGender === "male" 
               ? `You're being charged ₹${ratePerMinute}/min`
-              : `You'll earn ₹${earningRatePerMinute}/min`,
+              : "Start chatting to earn!",
           });
         }
       } catch (error) {
@@ -1530,7 +1530,7 @@ const DraggableMiniChatWindow = ({
               <p className="text-[10px] text-muted-foreground">
                 {userGender === "male" 
                   ? `₹${ratePerMinute}/min - Both reply to start` 
-                  : `Earn ₹${earningRatePerMinute}/min - Both reply to start`}
+                  : "Reply to start earning"}
               </p>
             )}
           </div>

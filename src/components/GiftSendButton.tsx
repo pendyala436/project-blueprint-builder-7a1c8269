@@ -289,10 +289,6 @@ export const GiftSendButton = ({
             </DialogTitle>
             <DialogDescription>
               This will cost ₹{selectedGift?.price} from your wallet.
-              <br />
-              <span className="text-xs text-muted-foreground">
-                ({receiverName} will receive 50% of the gift value)
-              </span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
