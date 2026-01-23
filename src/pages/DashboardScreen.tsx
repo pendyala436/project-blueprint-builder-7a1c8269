@@ -517,17 +517,7 @@ const DashboardScreen = () => {
       // Super users (matching email pattern) bypass balance check entirely
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
       
-      // PHOTO VALIDATION: Users must have at least one photo to chat
-      if (!userPhoto) {
-        toast({
-          title: t('photoRequired', 'Photo Required'),
-          description: t('uploadPhotoToChat', 'Please upload at least one photo to start chatting'),
-          variant: "destructive",
-        });
-        setProfileEditOpen(true);
-        setIsConnecting(false);
-        return;
-      }
+      // Note: Photo validation not needed at runtime - photos are mandatory during registration
 
       // Check wallet balance using admin-configured pricing (skip for super users)
       if (!isSuperUser) {
@@ -757,10 +747,7 @@ const DashboardScreen = () => {
 
       const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-      // PHOTO VALIDATION: Only show users with photos
-      const womenWithPhotos = onlineWomenList.filter(w => w.photo_url);
-
-      const womenWithChatCount = womenWithPhotos.map(w => {
+      const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
         const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
         const womanLanguage = languageMap.get(w.user_id) || w.primary_language || "Unknown";
@@ -816,16 +803,7 @@ const DashboardScreen = () => {
   const handleQuickConnect = async () => {
     if (isConnecting || isReconnecting) return;
     
-    // PHOTO VALIDATION: Users must have at least one photo to chat
-    if (!userPhoto) {
-      toast({
-        title: t('photoRequired', 'Photo Required'),
-        description: t('uploadPhotoToChat', 'Please upload at least one photo to start chatting'),
-        variant: "destructive",
-      });
-      setProfileEditOpen(true);
-      return;
-    }
+    // Note: Photo validation not needed at runtime - photos are mandatory during registration
 
     // Check balance first
     if (!hasSufficientBalance(walletBalance, 2)) {
