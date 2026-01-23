@@ -4,7 +4,7 @@
  * 
  * Shows different views based on:
  * - Who is viewing (sender vs receiver)
- * - Viewer's typing mode preference (native, english-core, english-meaning)
+ * - Viewer's typing mode preference (native, english-meaning)
  * 
  * 9 COMBINATIONS:
  * Sender Mode × Receiver Mode = 9 display scenarios
@@ -91,18 +91,13 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
    * 1. Who is viewing (sender vs receiver)
    * 2. Viewer's typing mode preference
    * 
-   * 9 COMBINATIONS:
+   * COMBINATIONS:
    * ---------------
    * Sender Mode | Receiver Mode | Receiver Sees
    * ------------|---------------|---------------
    * native      | native        | receiverNative
-   * native      | english-core  | originalEnglish
    * native      | english-meaning| receiverNative
-   * english-core| native        | receiverNative
-   * english-core| english-core  | originalEnglish
-   * english-core| english-meaning| receiverNative
    * english-meaning| native     | receiverNative
-   * english-meaning| english-core| originalEnglish
    * english-meaning| english-meaning| receiverNative
    */
   const displayContent = useMemo(() => {
@@ -121,24 +116,11 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
     if (messageViews) {
       const { originalEnglish, receiverNative } = messageViews;
       
-      // Receiver's view depends on their mode preference
-      switch (viewerMode) {
-        case 'english-core':
-          // Receiver prefers English - show English version
-          if (showAlternateView) {
-            return receiverNative || receiverView;
-          }
-          return originalEnglish || receiverView;
-          
-        case 'native':
-        case 'english-meaning':
-        default:
-          // Receiver prefers native language
-          if (showAlternateView) {
-            return originalEnglish || senderView;
-          }
-          return receiverNative || receiverView;
+      // Receiver prefers native language
+      if (showAlternateView) {
+        return originalEnglish || senderView;
       }
+      return receiverNative || receiverView;
     }
     
     // Fallback for legacy messages without extended views
@@ -146,63 +128,46 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
       return senderView;
     }
     return receiverView;
-  }, [isSentByMe, showAlternateView, viewerMode, senderView, receiverView, originalText, messageViews]);
+  }, [isSentByMe, showAlternateView, senderView, receiverView, originalText, messageViews]);
 
   // Secondary text (shown smaller below primary)
-  // Shows original English to receiver when message was sent in english-core mode
+  // Shows original English to receiver when available
   const secondaryContent = useMemo(() => {
     if (!messageViews) return null;
     
-    // For receivers in english-core mode viewing received messages, show native as secondary
-    if (!isSentByMe && viewerMode === 'english-core' && !showAlternateView) {
-      const native = messageViews.receiverNative || receiverView;
-      const english = messageViews.originalEnglish;
-      if (native && english && native !== english) {
-        return { text: native, label: 'Translated' };
-      }
-    }
-    
-    // For receivers NOT in english-core mode, show English as secondary
-    // This is especially important when sender used english-core mode
-    if (!isSentByMe && viewerMode !== 'english-core' && !showAlternateView) {
+    // For receivers, show English as secondary
+    if (!isSentByMe && !showAlternateView) {
       const english = messageViews.originalEnglish;
       const native = messageViews.receiverNative || receiverView;
       
-      // If sender sent in English mode and receiver sees translated
+      // If we have English and it's different from native display
       if (english && native && english !== native) {
-        // Check if sender used english-core mode
-        const senderUsedEnglishCore = messageViews.senderMode === 'english-core';
         return { 
           text: english, 
-          label: senderUsedEnglishCore ? 'Original English' : 'English' 
+          label: 'English' 
         };
       }
     }
     
-    // For sender viewing their own message - show receiver's translation
-    if (isSentByMe && messageViews.senderMode === 'english-core' && !showAlternateView) {
+    // For sender viewing their own message - show what receiver sees
+    if (isSentByMe && !showAlternateView) {
       const receiverNative = messageViews.receiverNative;
-      const english = messageViews.originalEnglish;
-      if (receiverNative && english && receiverNative !== english) {
+      const senderNative = messageViews.senderNative || senderView;
+      if (receiverNative && senderNative && receiverNative !== senderNative) {
         return { text: receiverNative, label: 'Partner sees' };
       }
     }
     
     return null;
-  }, [isSentByMe, viewerMode, showAlternateView, messageViews, receiverView]);
+  }, [isSentByMe, showAlternateView, messageViews, receiverView, senderView]);
 
   // Language for display (for font rendering)
   const displayLanguage = useMemo(() => {
     if (isSentByMe) {
       return senderLanguage || currentUserLanguage;
     }
-    
-    // Receiver's display language based on their mode
-    if (viewerMode === 'english-core' && !showAlternateView) {
-      return 'english';
-    }
     return showAlternateView ? senderLanguage : currentUserLanguage;
-  }, [isSentByMe, showAlternateView, viewerMode, senderLanguage, currentUserLanguage]);
+  }, [isSentByMe, showAlternateView, senderLanguage, currentUserLanguage]);
 
   // Format timestamp
   const formattedTime = useMemo(() => {
@@ -242,11 +207,8 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
     if (isSentByMe) {
       return showAlternateView ? 'Native' : 'English';
     }
-    if (viewerMode === 'english-core') {
-      return showAlternateView ? 'English' : 'Native';
-    }
     return showAlternateView ? 'Native' : 'English';
-  }, [isSentByMe, viewerMode, showAlternateView]);
+  }, [isSentByMe, showAlternateView]);
 
   return (
     <div

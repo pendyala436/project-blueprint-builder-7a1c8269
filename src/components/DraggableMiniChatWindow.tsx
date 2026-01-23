@@ -1256,9 +1256,6 @@ const DraggableMiniChatWindow = ({
     } else if (typingMode === 'english-meaning') {
       // User typed English, got native translation - store English
       englishForDisplay = englishInput;
-    } else if (typingMode === 'english-core') {
-      // User typed English, show English - store English for receiver reference
-      englishForDisplay = englishInput;
     }
     
     // Add optimistic message first (English will be updated after background translation)
@@ -1290,12 +1287,7 @@ const DraggableMiniChatWindow = ({
       let sourceLanguage: string;
       let textForReceiverTranslation: string;
       
-      if (typingMode === 'english-core') {
-        // english-core: message IS English
-        sourceLanguage = 'english';
-        textForReceiverTranslation = messageToSend;
-        originalEnglishToStore = messageToSend;
-      } else if (typingMode === 'english-meaning') {
+      if (typingMode === 'english-meaning') {
         // english-meaning: englishInput is the original English
         sourceLanguage = 'english';
         textForReceiverTranslation = englishInput;
@@ -2010,23 +2002,6 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 
-                {/* MODE: english-core - Hint */}
-                {typingMode === 'english-core' && !rawInput.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground flex items-center gap-1">
-                    <span>🔤</span>
-                    <span>English only - partner sees translated</span>
-                  </div>
-                )}
-                
-                {/* MODE: english-core - English preview (sender sees English) */}
-                {typingMode === 'english-core' && rawInput.trim() && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/10 border border-blue-500/30 rounded text-sm" dir="ltr">
-                    {rawInput}
-                    <div className="text-[9px] text-blue-600 dark:text-blue-400 mt-0.5">
-                      You see English → Partner sees {partnerLanguage || 'translated'}
-                    </div>
-                  </div>
-                )}
                 
                 {/* Spell check suggestion */}
                 {typingMode === 'native' && lastSuggestion?.wasChanged && (
@@ -2072,11 +2047,9 @@ const DraggableMiniChatWindow = ({
                   placeholder={
                     typingMode === 'english-meaning' 
                       ? 'Type English meaning (e.g., "How are you")...' 
-                      : typingMode === 'english-core'
-                        ? 'Type in English...'
-                        : typingMode === 'native' && needsTransliteration 
-                          ? `Type phonetically (e.g., "bagunnava")...`
-                          : 'Type your message...'
+                      : typingMode === 'native' && needsTransliteration 
+                        ? `Type phonetically (e.g., "bagunnava")...`
+                        : 'Type your message...'
                   }
                   value={typingMode === 'native' && needsTransliteration ? rawInput : newMessage}
                   onChange={(e) => {
@@ -2093,11 +2066,6 @@ const DraggableMiniChatWindow = ({
                       setNewMessage(newValue);
                       // Generate meaning-based translation preview
                       generateMeaningPreview(newValue);
-                    }
-                    // MODE: english-core - Just type English
-                    else if (typingMode === 'english-core') {
-                      setRawInput(newValue);
-                      setNewMessage(newValue);
                     }
                     // MODE: native - Transliterate if needed (BACKGROUND, non-blocking)
                     else if (typingMode === 'native' && needsTransliteration) {
@@ -2142,7 +2110,7 @@ const DraggableMiniChatWindow = ({
                     handleTyping(newValue);
                   }}
                   onKeyDown={handleKeyPress}
-                  lang={typingMode === 'english-meaning' || typingMode === 'english-core' ? 'en' : needsTransliteration ? 'en' : currentUserLanguage}
+                  lang={typingMode === 'english-meaning' ? 'en' : needsTransliteration ? 'en' : currentUserLanguage}
                   dir="auto"
                   spellCheck={true}
                   autoComplete="off"

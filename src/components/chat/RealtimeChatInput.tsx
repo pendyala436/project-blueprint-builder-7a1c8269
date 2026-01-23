@@ -297,21 +297,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         setReceiverPreview('');
       }
     }
-    // Mode 2: English Core - keep English display, show receiver's native preview
-    else if (typingMode === 'english-core') {
-      setNativeText(value);
-      setPreviewText(''); // No sender preview in English Core mode
-      
-      // Generate receiver preview from English → receiver's mother tongue
-      if (value.trim() && !isEnglish(receiverLanguage)) {
-        receiverPreviewTimeoutRef.current = setTimeout(() => {
-          generateReceiverPreview(value, 'english');
-        }, 600);
-      } else {
-        setReceiverPreview('');
-      }
-    }
-    // Mode 3: English (Meaning-Based) - Type English, preview in SENDER'S mother tongue
+    // Mode 2: English (Meaning-Based) - Type English, preview in SENDER'S mother tongue
     else if (typingMode === 'english-meaning') {
       setNativeText(value);
       
@@ -429,35 +415,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         }
         
         // ================================================
-        // MODE 2: English Core
-        // Sender types and sees English (regardless of their mother tongue)
-        // ================================================
-        else if (savedMode === 'english-core') {
-          messageToStore = savedRaw;
-          senderView = savedRaw; // Always show English to sender
-          originalEnglish = savedRaw;
-          
-          // Get sender's native version (for when they switch modes or toggle)
-          if (!isEnglishSender) {
-            const toSenderNative = await translateUniversal(savedRaw, 'english', senderLanguage);
-            senderNative = toSenderNative?.text || savedRaw;
-          } else {
-            senderNative = savedRaw;
-          }
-          
-          // Get receiver's native version
-          if (isEnglishReceiver) {
-            receiverView = savedRaw;
-            receiverNative = savedRaw;
-          } else {
-            const toReceiver = await translateUniversal(savedRaw, 'english', receiverLanguage);
-            receiverView = toReceiver?.text || savedRaw;
-            receiverNative = receiverView;
-          }
-        }
-        
-        // ================================================
-        // MODE 3: English (Meaning-Based)
+        // MODE 2: English (Meaning-Based)
         // Sender types English → Sender sees THEIR mother tongue
         // Receiver sees THEIR mother tongue (translated)
         // ================================================
@@ -582,8 +540,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         return needsTransliteration 
           ? t('chat.typeInLatin', 'Type in English letters → converts to your language')
           : t('chat.typeMessage', 'Type a message...');
-      case 'english-core':
-        return t('chat.typeInEnglish', 'Type in English...');
       case 'english-meaning':
         return t('chat.typeEnglishMeaning', 'Type in English → shows as your language');
       default:
@@ -608,7 +564,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           />
           <span className="text-xs text-muted-foreground max-w-[200px] truncate">
             {typingMode === 'native' && t('chat.typingInNative', `You & partner see native scripts`)}
-            {typingMode === 'english-core' && t('chat.typingEnglishCore', `You see English → Partner sees ${receiverLanguage}`)}
             {typingMode === 'english-meaning' && t('chat.typingEnglishMeaning', `Type English → Both see native`)}
           </span>
         </div>
@@ -627,20 +582,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         </div>
       )}
 
-      {/* English Core preview (Mode 2) - show that partner will see translation */}
-      {typingMode === 'english-core' && rawInput.trim() && (
-        <div className="px-4 py-2 border-b border-border/30">
-          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-            <span>👁️</span>
-            <span>{t('chat.yourView', 'You see')} (English)</span>
-          </div>
-          <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-base" dir="ltr">
-            {rawInput}
-          </div>
-        </div>
-      )}
-
-      {/* English Meaning preview (Mode 3) - shows SENDER'S MOTHER TONGUE */}
+      {/* English Meaning preview - shows SENDER'S MOTHER TONGUE */}
       {/* Works for BOTH Latin (Spanish, French) and non-Latin (Hindi, Telugu) languages */}
       {typingMode === 'english-meaning' && rawInput.trim() && !isEnglish(senderLanguage) && (
         <div className="px-4 py-2 border-b border-border/30">

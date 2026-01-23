@@ -1692,12 +1692,9 @@ const ChatScreen = () => {
                   // Sender sees their own message (senderView)
                   displayText = messageText;
                 } else {
-                  // Receiver's display depends on their mode preference
-                  if (typingMode === 'english-core' && message.originalEnglish) {
-                    // Receiver wants English - show originalEnglish
-                    displayText = extractAttachment(message.originalEnglish).text;
-                  } else if (message.translatedMessage) {
-                    // Receiver wants native - show translatedMessage (receiverNative)
+                  // Receiver sees translated message
+                  if (message.translatedMessage) {
+                    // Show translatedMessage (receiverNative)
                     displayText = extractAttachment(message.translatedMessage).text;
                   } else {
                     // Fallback to original message
@@ -1783,23 +1780,11 @@ const ChatScreen = () => {
                           </div>
                         )}
 
-                        {/* Secondary view for receiver (dual display based on mode) */}
+                        {/* Secondary view for receiver - show English */}
                         {!isMine && (
                           <>
-                            {/* In English Core mode: show native as secondary */}
-                            {typingMode === 'english-core' && message.translatedMessage && message.originalEnglish && 
-                             message.translatedMessage !== message.originalEnglish && (
-                              <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Languages className="w-3 h-3" />
-                                  <span className="unicode-text" dir="auto">
-                                    {extractAttachment(message.translatedMessage).text}
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                            {/* In Native/English Meaning mode: show English as secondary */}
-                            {typingMode !== 'english-core' && message.originalEnglish && message.translatedMessage &&
+                            {/* Show English as secondary when available and different from native */}
+                            {message.originalEnglish && message.translatedMessage &&
                              message.originalEnglish !== message.translatedMessage && (
                               <div className="px-3 py-1.5 rounded-xl bg-muted/30 border border-border/30 rounded-bl-md">
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
