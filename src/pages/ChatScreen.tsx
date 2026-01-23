@@ -1036,6 +1036,18 @@ const ChatScreen = () => {
       return;
     }
 
+    // Content moderation - block phone numbers, emails, social media
+    const { moderateMessage } = await import('@/lib/content-moderation');
+    const moderationResult = moderateMessage(senderView);
+    if (moderationResult.isBlocked) {
+      toast({
+        title: "Message Blocked",
+        description: moderationResult.reason,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSending(true);
 
     try {

@@ -1111,6 +1111,18 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
+    // Content moderation - block phone numbers, emails, social media
+    const { moderateMessage } = await import('@/lib/content-moderation');
+    const moderationResult = moderateMessage(messageToSend);
+    if (moderationResult.isBlocked) {
+      toast({
+        title: "Message Blocked",
+        description: moderationResult.reason,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // IMMEDIATE: Clear input and UI
     setNewMessage("");
     setRawInput("");

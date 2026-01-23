@@ -117,6 +117,14 @@ export function GroupChatWindow({
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
+    // Content moderation - block phone numbers, emails, social media
+    const { moderateMessage } = await import('@/lib/content-moderation');
+    const moderationResult = moderateMessage(newMessage.trim());
+    if (moderationResult.isBlocked) {
+      console.warn('Message blocked:', moderationResult.reason);
+      return;
+    }
+
     setIsSending(true);
     try {
       const { error } = await supabase
