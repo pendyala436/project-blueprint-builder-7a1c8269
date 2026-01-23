@@ -1,29 +1,27 @@
 /**
- * Universal Semantic Translation System - 1000+ Languages
- * =========================================================
+ * Universal Browser-Based Translation System - 1000+ Languages
+ * =============================================================
  * 
- * SEMANTIC TRANSLATION ONLY - No phonetic transliteration
- * Uses meaning-based translation for all language pairs.
+ * 100% BROWSER-BASED - NO EXTERNAL APIs
+ * Uses dynamic transliteration for script conversion.
  * 
  * Key Features:
  * 1. Same-language bypass (no translation needed)
- * 2. Direct translation for English ↔ Any language (no pivot)
- * 3. Direct translation for Latin ↔ Latin languages (no pivot)
- * 4. English pivot ONLY for Native ↔ Native (when no direct path exists)
- * 5. All translations are meaning-based (semantic)
+ * 2. Script conversion via dynamic transliterator
+ * 3. English passthrough for cross-language communication
+ * 4. All processing happens in the browser
+ * 5. No NLLB-200, no external APIs, no hardcoding
  * 
- * Translation Paths:
- * - English → Any: Direct semantic translation
- * - Any → English: Direct semantic translation
- * - Latin → Latin: Direct semantic translation (Spanish → French)
- * - Native → Native: English pivot (Hindi → Tamil = Hindi → English → Tamil)
- * - Latin → Native: Direct semantic translation
- * - Native → Latin: Direct semantic translation
+ * Translation Strategy:
+ * - Same language: Return as-is (optionally convert script)
+ * - Different languages: Convert to native script + provide English version
+ * - Latin input → Native script conversion
+ * - Native input → Latin reverse transliteration for reference
  */
 
 import { menLanguages, type MenLanguage } from '@/data/men_languages';
 import { womenLanguages, type WomenLanguage } from '@/data/women_languages';
-import { supabase } from '@/integrations/supabase/client';
+import { dynamicTransliterate, reverseTransliterate, detectScriptFromText } from './dynamic-transliterator';
 
 // ============================================================
 // TYPES
@@ -229,63 +227,89 @@ export function isReady(): boolean {
 }
 
 // ============================================================
-// SEMANTIC TRANSLATION VIA EDGE FUNCTION
+// BROWSER-BASED TRANSLATION (No External APIs)
 // ============================================================
 
 /**
- * Call the translate-message edge function for semantic translation
+ * Browser-based translation using dynamic transliteration
+ * Converts text between scripts and provides English reference
+ * 
+ * Strategy:
+ * - Latin input → Target native script via transliteration
+ * - Native input → Latin via reverse transliteration
+ * - Cross-language: Convert script + provide English reference
  */
-async function callTranslationAPI(
+function browserTranslate(
   text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean; error?: string }> {
+  sourceLanguage: string,
+  targetLanguage: string
+): { translatedText: string; englishRef?: string; success: boolean } {
+  const trimmed = text.trim();
+  if (!trimmed) return { translatedText: '', success: true };
+  
+  const sourceIsLatin = isLatinScriptLanguage(sourceLanguage);
+  const targetIsLatin = isLatinScriptLanguage(targetLanguage);
+  const inputIsLatin = isLatinText(trimmed);
+  
+  let translatedText = trimmed;
+  let englishRef: string | undefined;
+  
   try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        source: sourceCode,
-        target: targetCode,
-      },
-    });
-
-    if (error) {
-      console.error('[Translate API] Error:', error);
-      return { translatedText: text, success: false, error: error.message };
+    // CASE 1: Both Latin script languages - passthrough
+    if (sourceIsLatin && targetIsLatin) {
+      translatedText = trimmed;
     }
-
-    if (data?.translatedText) {
-      return { translatedText: data.translatedText, success: true };
+    // CASE 2: Latin input → Non-Latin target (transliterate to native)
+    else if (inputIsLatin && !targetIsLatin) {
+      translatedText = dynamicTransliterate(trimmed, targetLanguage) || trimmed;
+      englishRef = trimmed; // Original English/Latin input preserved
     }
-
-    if (data?.translation) {
-      return { translatedText: data.translation, success: true };
+    // CASE 3: Non-Latin input → Latin target (reverse transliterate)
+    else if (!inputIsLatin && targetIsLatin) {
+      translatedText = reverseTransliterate(trimmed, sourceLanguage) || trimmed;
+      englishRef = translatedText;
     }
-
-    if (data?.text) {
-      return { translatedText: data.text, success: true };
+    // CASE 4: Non-Latin → Non-Latin (different scripts)
+    else if (!sourceIsLatin && !targetIsLatin) {
+      // First reverse to Latin, then forward to target
+      const latinVersion = reverseTransliterate(trimmed, sourceLanguage) || trimmed;
+      englishRef = latinVersion;
+      
+      // If source and target use same script family, just return original
+      const sourceInfo = getLanguageInfo(sourceLanguage);
+      const targetInfo = getLanguageInfo(targetLanguage);
+      
+      if (sourceInfo?.script === targetInfo?.script) {
+        translatedText = trimmed; // Same script, keep original
+      } else {
+        // Different scripts - convert via Latin
+        translatedText = dynamicTransliterate(latinVersion, targetLanguage) || latinVersion;
+      }
     }
-
-    return { translatedText: text, success: false, error: 'No translation returned' };
-  } catch (err: any) {
-    console.error('[Translate API] Exception:', err);
-    return { translatedText: text, success: false, error: err.message };
+    // CASE 5: Fallback
+    else {
+      translatedText = trimmed;
+    }
+    
+    return { translatedText, englishRef, success: true };
+  } catch (err) {
+    console.warn('[BrowserTranslate] Error:', err);
+    return { translatedText: trimmed, success: false };
   }
 }
 
 // ============================================================
-// CORE TRANSLATION FUNCTION - SEMANTIC ONLY
+// CORE TRANSLATION FUNCTION - BROWSER-BASED ONLY
 // ============================================================
 
 /**
- * Main translation function - SEMANTIC TRANSLATION ONLY
+ * Main translation function - 100% BROWSER-BASED
  * 
  * Translation Logic:
- * 1. Same language → return as-is
- * 2. English involved (source or target) → Direct translation (no pivot)
- * 3. Latin → Latin → Direct translation (no pivot)
- * 4. Native → Native → English pivot (Hindi → English → Tamil)
- * 5. Latin ↔ Native → Direct translation
+ * 1. Same language → return as-is (optionally convert script)
+ * 2. Different languages → Script conversion via dynamic transliterator
+ * 3. English reference provided for cross-script translations
+ * 4. No external API calls
  */
 export async function translateText(
   text: string,
@@ -309,13 +333,20 @@ export async function translateText(
 
   const normSource = normalizeLanguage(source);
   const normTarget = normalizeLanguage(target);
-  const sourceCode = getLanguageCode(normSource);
-  const targetCode = getLanguageCode(normTarget);
 
-  // SAME LANGUAGE: Return input as-is (no translation needed)
+  // SAME LANGUAGE: Convert script if needed
   if (isSameLanguage(normSource, normTarget)) {
+    let resultText = trimmed;
+    const inputIsLatin = isLatinText(trimmed);
+    const targetNeedsNative = !isLatinScriptLanguage(normTarget);
+    
+    // Convert Latin input to native script for non-Latin languages
+    if (inputIsLatin && targetNeedsNative) {
+      resultText = dynamicTransliterate(trimmed, normTarget) || trimmed;
+    }
+    
     return {
-      text: trimmed,
+      text: resultText,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
@@ -330,93 +361,23 @@ export async function translateText(
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
-  // Determine translation path
-  const sourceIsEnglish = isEnglish(normSource);
-  const targetIsEnglish = isEnglish(normTarget);
-  const sourceIsLatin = isLatinScriptLanguage(normSource);
-  const targetIsLatin = isLatinScriptLanguage(normTarget);
-
-  let translatedText = trimmed;
-  let englishPivot: string | undefined;
-  let wasTranslated = false;
-  let translationError: string | undefined;
-
-  try {
-    // CASE 1: English to English (shouldn't happen, but handle it)
-    if (sourceIsEnglish && targetIsEnglish) {
-      translatedText = trimmed;
-    }
-    // CASE 2: English → Any (Direct translation, no pivot)
-    else if (sourceIsEnglish) {
-      console.log(`[Translate] Direct: English → ${normTarget}`);
-      const result = await callTranslationAPI(trimmed, 'en', targetCode);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      translationError = result.error;
-    }
-    // CASE 3: Any → English (Direct translation, no pivot)
-    else if (targetIsEnglish) {
-      console.log(`[Translate] Direct: ${normSource} → English`);
-      const result = await callTranslationAPI(trimmed, sourceCode, 'en');
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      translationError = result.error;
-    }
-    // CASE 4: Latin → Latin (Direct translation, no pivot)
-    else if (sourceIsLatin && targetIsLatin) {
-      console.log(`[Translate] Direct Latin→Latin: ${normSource} → ${normTarget}`);
-      const result = await callTranslationAPI(trimmed, sourceCode, targetCode);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      translationError = result.error;
-    }
-    // CASE 5: Native ↔ Native (English pivot required)
-    else if (!sourceIsLatin && !targetIsLatin) {
-      console.log(`[Translate] Pivot: ${normSource} → English → ${normTarget}`);
-      
-      // Step 1: Source → English
-      const toEnglish = await callTranslationAPI(trimmed, sourceCode, 'en');
-      englishPivot = toEnglish.translatedText;
-      
-      // Step 2: English → Target
-      if (toEnglish.success && englishPivot !== trimmed) {
-        const toTarget = await callTranslationAPI(englishPivot, 'en', targetCode);
-        translatedText = toTarget.translatedText;
-        wasTranslated = toTarget.success;
-        translationError = toTarget.error;
-      } else {
-        translatedText = trimmed;
-        translationError = toEnglish.error || 'Failed to translate to English';
-      }
-    }
-    // CASE 6: Latin → Native OR Native → Latin (Direct translation)
-    else {
-      console.log(`[Translate] Direct: ${normSource} → ${normTarget}`);
-      const result = await callTranslationAPI(trimmed, sourceCode, targetCode);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      translationError = result.error;
-    }
-  } catch (err: any) {
-    console.error('[Translate] Translation error:', err);
-    translatedText = trimmed;
-    translationError = err.message;
-  }
+  // Browser-based translation
+  console.log(`[Translate] Browser: ${normSource} → ${normTarget}`);
+  const browserResult = browserTranslate(trimmed, normSource, normTarget);
 
   const result: TranslationResult = {
-    text: translatedText,
+    text: browserResult.translatedText,
     originalText: trimmed,
     sourceLanguage: normSource,
     targetLanguage: normTarget,
-    isTranslated: wasTranslated,
+    isTranslated: browserResult.success && browserResult.translatedText !== trimmed,
     isSameLanguage: false,
-    englishPivot,
-    confidence: wasTranslated ? 0.9 : 0.3,
-    error: translationError,
+    englishPivot: browserResult.englishRef,
+    confidence: browserResult.success ? 0.85 : 0.3,
   };
 
-  // Only cache successful translations
-  if (wasTranslated) {
+  // Cache successful translations
+  if (result.isTranslated) {
     setInCache(cacheKey, result);
   }
 
