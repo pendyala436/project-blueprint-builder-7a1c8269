@@ -143,6 +143,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
    * Generate preview for English typing - shows SENDER'S MOTHER TONGUE
    * Uses Universal Offline Engine for meaning-based translation
    * Type in English → See meaning-based preview in your native language
+   * Works for BOTH Latin and non-Latin script languages
    */
   const generateSenderNativePreview = useCallback(async (englishText: string) => {
     if (!englishText.trim()) {
@@ -150,7 +151,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       return;
     }
 
-    // If sender's native is English, no preview needed
+    // If sender's native is English, no translation needed
     if (isEnglish(senderLanguage)) {
       setPreviewText('');
       return;
@@ -159,15 +160,23 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     setIsTranslatingPreview(true);
     try {
       // Use Universal Offline Engine for meaning-based translation
+      // Works for all languages: Latin (Spanish, French) and non-Latin (Hindi, Telugu)
       const result = await translateUniversal(englishText, 'english', senderLanguage);
-      if (result?.text && result.text !== englishText) {
+      
+      // Show preview if translation happened OR if script conversion happened
+      if (result?.text && (result.isTranslated || result.isTransliterated || result.text !== englishText)) {
         setPreviewText(result.text);
         console.log('[RealtimeChatInput] Sender preview:', {
           input: englishText,
           output: result.text,
           method: result.method,
           confidence: result.confidence,
+          isTranslated: result.isTranslated,
+          isTransliterated: result.isTransliterated,
         });
+      } else if (result?.text) {
+        // Even if same text, still show as preview for Latin languages (semantic equivalence)
+        setPreviewText(result.text);
       } else {
         setPreviewText('');
       }
@@ -186,6 +195,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   /**
    * Generate receiver preview - shows RECEIVER'S MOTHER TONGUE
    * Uses Universal Offline Engine for meaning-based translation
+   * Works for BOTH Latin and non-Latin script languages
    */
   const generateReceiverPreview = useCallback(async (sourceText: string, sourceLanguage: string) => {
     // Skip if same language or empty
@@ -197,15 +207,22 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     setIsTranslatingReceiverPreview(true);
     try {
       // Use Universal Offline Engine for meaning-based translation
+      // Works for all language combinations including Latin→Latin
       const result = await translateUniversal(sourceText, sourceLanguage, receiverLanguage);
-      if (result?.text && result.text !== sourceText) {
+      
+      // Show preview for any translation or script conversion
+      if (result?.text && (result.isTranslated || result.isTransliterated || result.text !== sourceText)) {
         setReceiverPreview(result.text);
         console.log('[RealtimeChatInput] Receiver preview:', {
           input: sourceText,
           output: result.text,
           method: result.method,
           confidence: result.confidence,
+          isTranslated: result.isTranslated,
         });
+      } else if (result?.text) {
+        // Show even for same-script languages (semantic preview)
+        setReceiverPreview(result.text);
       } else {
         setReceiverPreview('');
       }
@@ -624,34 +641,40 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       )}
 
       {/* English Meaning preview (Mode 3) - shows SENDER'S MOTHER TONGUE */}
-      {typingMode === 'english-meaning' && rawInput.trim() && (previewText || isTranslatingPreview) && (
+      {/* Works for BOTH Latin (Spanish, French) and non-Latin (Hindi, Telugu) languages */}
+      {typingMode === 'english-meaning' && rawInput.trim() && !isEnglish(senderLanguage) && (
         <div className="px-4 py-2 border-b border-border/30">
           <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
             <span>👁️</span>
-            <span>{t('chat.yourView', 'You see')} ({senderLanguage})</span>
+            <span>{t('chat.yourView', 'You will see')} ({senderLanguage})</span>
           </div>
           <div className="px-3 py-2 bg-accent/30 border border-accent/50 rounded-lg text-base unicode-text" dir="auto">
             {isTranslatingPreview ? (
-              <span className="text-muted-foreground italic">{t('chat.translating', 'Translating...')}</span>
-            ) : (
+              <span className="text-muted-foreground italic animate-pulse">{t('chat.translating', 'Translating...')}</span>
+            ) : previewText ? (
               previewText
+            ) : (
+              <span className="text-muted-foreground italic">{t('chat.awaitingTranslation', 'Type more for preview...')}</span>
             )}
           </div>
         </div>
       )}
 
       {/* Receiver preview - shows what PARTNER will see (their mother tongue) */}
-      {(receiverPreview || isTranslatingReceiverPreview) && rawInput.trim() && !isSameLanguage(senderLanguage, receiverLanguage) && (
+      {/* Shown for ALL language combinations including Latin→Latin */}
+      {rawInput.trim() && !isSameLanguage(senderLanguage, receiverLanguage) && (
         <div className="px-4 py-2 border-b border-border/30">
           <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
             <span>👤</span>
-            <span>{t('chat.partnerSees', 'Partner sees')} ({receiverLanguage})</span>
+            <span>{t('chat.partnerSees', 'Partner will see')} ({receiverLanguage})</span>
           </div>
           <div className="px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-base unicode-text" dir="auto">
             {isTranslatingReceiverPreview ? (
-              <span className="text-muted-foreground italic">{t('chat.translatingForPartner', 'Translating...')}</span>
-            ) : (
+              <span className="text-muted-foreground italic animate-pulse">{t('chat.translatingForPartner', 'Translating...')}</span>
+            ) : receiverPreview ? (
               receiverPreview
+            ) : (
+              <span className="text-muted-foreground italic">{t('chat.awaitingTranslation', 'Type more for preview...')}</span>
             )}
           </div>
         </div>
