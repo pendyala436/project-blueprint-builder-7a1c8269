@@ -413,7 +413,10 @@ const LANGUAGES: LanguageInfo[] = [
 const languageByName = new Map(LANGUAGES.map(l => [l.name.toLowerCase(), l]));
 const languageByCode = new Map(LANGUAGES.map(l => [l.code.toLowerCase(), l]));
 
-// Comprehensive language aliases for all variations
+// Add native names to lookup
+const languageByNative = new Map(LANGUAGES.map(l => [l.native.toLowerCase(), l]));
+
+// Comprehensive language aliases for all 1000+ language variations
 const languageAliases: Record<string, string> = {
   // Common aliases
   bangla: 'bengali',
@@ -425,7 +428,7 @@ const languageAliases: Record<string, string> = {
   mexican: 'spanish',
   flemish: 'dutch',
   
-  // Indian language aliases
+  // Indian language aliases (complete coverage for profile languages)
   meiteilon: 'manipuri',
   meithei: 'meitei',
   braj: 'hindi',
@@ -486,12 +489,124 @@ const languageAliases: Record<string, string> = {
   pothohari: 'punjabi',
   pahari_pothohari: 'punjabi',
   potohari: 'punjabi',
+  
+  // Additional aliases for 1000+ language support
+  // African languages
+  afar: 'amharic',
+  tigre: 'tigrinya',
+  saho: 'amharic',
+  beja: 'arabic',
+  nubian: 'arabic',
+  fur: 'arabic',
+  masalit: 'arabic',
+  zaghawa: 'arabic',
+  
+  // European minorities
+  sorb: 'sorbian',
+  wendish: 'sorbian',
+  kashub: 'kashubian',
+  szlonzok: 'silesian',
+  ruthenian: 'rusyn',
+  carpatho_rusyn: 'rusyn',
+  
+  // Central Asian
+  hazara: 'dari',
+  aimaq: 'dari',
+  pamiri: 'tajik',
+  wakhi: 'tajik',
+  shughni: 'tajik',
+  
+  // Southeast Asian
+  shan_state: 'shan',
+  kayah: 'karen',
+  kayin: 'karen',
+  pa_o: 'karen',
+  moken: 'burmese',
+  
+  // Pacific/Oceanian
+  fijian_hindi: 'hindi',
+  fiji_hindi: 'hindi',
+  rotuman: 'fijian',
+  
+  // South Asian regional
+  khandeshi: 'marathi',
+  ahirani: 'marathi',
+  varhadi: 'marathi',
+  kolhapuri: 'marathi',
+  malvani: 'konkani',
+  kutchi: 'gujarati',
+  kutchhi: 'gujarati',
+  mewati: 'hindi',
+  nimadi: 'hindi',
+  malvi: 'hindi',
+  harauti: 'hindi',
+  wagdi: 'gujarati',
+  dungri: 'gujarati',
+  gamit: 'gujarati',
+  vasavi: 'gujarati',
+  pardhi: 'marathi',
+  powari: 'marathi',
+  bhatri: 'odia',
+  desia: 'odia',
+  sambalpuri: 'odia',
+  kui: 'odia',
+  kuvi: 'telugu',
+  savara: 'odia',
+  juang: 'odia',
+  parji: 'telugu',
+  gadaba: 'telugu',
+  kolami: 'telugu',
+  naiki: 'telugu',
+  yerukula: 'telugu',
+  sugali: 'telugu',
+  
+  // Northeast Indian
+  hajong: 'bengali',
+  koch: 'bengali',
+  rajbanshi: 'bengali',
+  rangpuri: 'bengali',
+  tipra: 'bengali',
+  reang: 'bengali',
+  halam: 'bengali',
+  jamatia: 'bengali',
+  noatia: 'bengali',
+  riang: 'bengali',
 };
 
 // Non-Latin script languages (need transliteration when typed in Latin)
 const nonLatinScriptLanguages = new Set(
   LANGUAGES.filter(l => l.script !== 'Latin').map(l => l.name)
 );
+
+// Script-based fallback map for unknown languages
+const SCRIPT_TO_FALLBACK_LANGUAGE: Record<string, string> = {
+  'Devanagari': 'hindi',
+  'Bengali': 'bengali',
+  'Tamil': 'tamil',
+  'Telugu': 'telugu',
+  'Kannada': 'kannada',
+  'Malayalam': 'malayalam',
+  'Gujarati': 'gujarati',
+  'Gurmukhi': 'punjabi',
+  'Odia': 'odia',
+  'Arabic': 'arabic',
+  'Cyrillic': 'russian',
+  'Greek': 'greek',
+  'Hebrew': 'hebrew',
+  'Thai': 'thai',
+  'Han': 'chinese',
+  'Japanese': 'japanese',
+  'Hangul': 'korean',
+  'Georgian': 'georgian',
+  'Armenian': 'armenian',
+  'Ethiopic': 'amharic',
+  'Myanmar': 'burmese',
+  'Khmer': 'khmer',
+  'Lao': 'lao',
+  'Sinhala': 'sinhala',
+  'Tibetan': 'tibetan',
+  'Latin': 'english',
+};
 
 // Script detection patterns for all world scripts
 const scriptPatterns: Array<{ regex: RegExp; script: string; language: string }> = [
@@ -539,13 +654,33 @@ const scriptPatterns: Array<{ regex: RegExp; script: string; language: string }>
 ];
 
 function normalizeLanguage(lang: string): string {
-  const normalized = lang.toLowerCase().trim().replace(/[_-]/g, '_');
+  if (!lang) return 'english';
+  const normalized = lang.toLowerCase().trim().replace(/[_\-\s]+/g, '_').replace(/[()]/g, '');
   return languageAliases[normalized] || normalized;
 }
 
 function getLanguageInfo(language: string): LanguageInfo | undefined {
   const normalized = normalizeLanguage(language);
-  return languageByName.get(normalized) || languageByCode.get(normalized);
+  
+  // Try exact matches first
+  let info = languageByName.get(normalized) || languageByCode.get(normalized);
+  if (info) return info;
+  
+  // Try native name
+  info = languageByNative.get(normalized);
+  if (info) return info;
+  
+  // Try partial match (for names like "Chinese (Mandarin)" → "chinese")
+  const baseName = normalized.split('_')[0];
+  info = languageByName.get(baseName) || languageByCode.get(baseName);
+  if (info) return info;
+  
+  // Try without numbers/special chars
+  const cleaned = normalized.replace(/[0-9]/g, '').trim();
+  info = languageByName.get(cleaned) || languageByCode.get(cleaned);
+  if (info) return info;
+  
+  return undefined;
 }
 
 // Map of language codes not supported by Google/MyMemory to their closest supported equivalent
