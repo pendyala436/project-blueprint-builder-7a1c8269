@@ -56,10 +56,16 @@ export interface AutoDetectedLanguage {
 // ============================================================
 
 const previewCache = new Map<string, string>();
+const meaningPreviewCache = new Map<string, string>();
 const MAX_CACHE = 2000;
 
 function getCacheKey(text: string, lang: string): string {
   return text.length <= 50 ? `${lang}|${text}` : `${lang}|${text.slice(0, 50)}`;
+}
+
+function getMeaningCacheKey(text: string, srcLang: string, tgtLang: string): string {
+  const key = `${srcLang}|${tgtLang}|${text.slice(0, 30)}`;
+  return key;
 }
 
 // ============================================================
@@ -124,7 +130,7 @@ export function useRealtimeChatTranslation(
   }, []);
 
   // ============================================================
-  // INSTANT PREVIEW (Sync, dynamic transliterator)
+  // INSTANT PREVIEW (Sync, for non-Latin script conversion only)
   // ============================================================
 
   const getLivePreview = useCallback((text: string, language?: string): LivePreviewResult => {
@@ -137,14 +143,17 @@ export function useRealtimeChatTranslation(
 
     const isLatin = isQuickLatinText(text);
 
+    // Latin-script languages: no conversion needed for instant preview
     if (isLatinScriptLanguage(targetLang)) {
       return { preview: text, isLatin, processingTime: performance.now() - startTime };
     }
 
+    // Already in native script
     if (!isLatin) {
       return { preview: text, isLatin: false, processingTime: performance.now() - startTime };
     }
 
+    // Transliterate Latin to native script for instant feedback
     const cacheKey = getCacheKey(text, targetLang);
     const cached = previewCache.get(cacheKey);
     if (cached) {
@@ -163,6 +172,56 @@ export function useRealtimeChatTranslation(
   }, [senderLanguage]);
 
   const getInstantPreview = getLivePreview;
+
+  // ============================================================
+  // MEANING-BASED PREVIEW (Async, uses Edge Function)
+  // ============================================================
+
+  const getMeaningPreview = useCallback(async (
+    text: string,
+    fromLanguage?: string,
+    toLanguage?: string
+  ): Promise<{ preview: string; isMeaningBased: boolean }> => {
+    const srcLang = normalizeLang(fromLanguage || senderLanguage);
+    const tgtLang = normalizeLang(toLanguage || receiverLanguage);
+
+    if (!text || !text.trim()) {
+      return { preview: '', isMeaningBased: false };
+    }
+
+    // Same language: just transliterate if needed
+    if (isSameLanguage(srcLang, tgtLang)) {
+      const instant = getLivePreview(text, srcLang);
+      return { preview: instant.preview, isMeaningBased: false };
+    }
+
+    // Check cache
+    const cacheKey = getMeaningCacheKey(text, srcLang, tgtLang);
+    const cached = meaningPreviewCache.get(cacheKey);
+    if (cached) {
+      return { preview: cached, isMeaningBased: true };
+    }
+
+    // Use Edge Function for meaning-based translation
+    try {
+      const result = await translateText(text, srcLang, tgtLang);
+      if (result.isTranslated && result.text !== text) {
+        // Cache it
+        if (meaningPreviewCache.size >= MAX_CACHE) {
+          const firstKey = meaningPreviewCache.keys().next().value;
+          if (firstKey) meaningPreviewCache.delete(firstKey);
+        }
+        meaningPreviewCache.set(cacheKey, result.text);
+        return { preview: result.text, isMeaningBased: true };
+      }
+    } catch (err) {
+      console.warn('[MeaningPreview] Edge failed:', err);
+    }
+
+    // Fallback to instant preview
+    const instant = getLivePreview(text, srcLang);
+    return { preview: instant.preview, isMeaningBased: false };
+  }, [senderLanguage, receiverLanguage, getLivePreview]);
 
   // ============================================================
   // PROCESS MESSAGE (Async, uses translateText)
@@ -324,6 +383,7 @@ export function useRealtimeChatTranslation(
     sameLanguage,
     getLivePreview,
     getInstantPreview,
+    getMeaningPreview, // NEW: Async meaning-based preview
     updatePreviewDebounced,
     cancelPreview,
     processMessage,

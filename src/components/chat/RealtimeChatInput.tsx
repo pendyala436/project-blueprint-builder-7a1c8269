@@ -81,8 +81,10 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const [rawInput, setRawInput] = useState(''); // What user typed (Latin)
   const [nativeText, setNativeText] = useState(''); // Transliterated/translated native script
   const [previewText, setPreviewText] = useState(''); // Preview text for meaning-based mode
+  const [receiverPreview, setReceiverPreview] = useState(''); // Preview of what receiver will see
   const [isComposing, setIsComposing] = useState(false);
   const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
+  const [isTranslatingReceiverPreview, setIsTranslatingReceiverPreview] = useState(false);
   
   // Use persistent typing mode hook with auto-detection
   const { 
@@ -97,6 +99,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const receiverPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Check if user's mother tongue uses non-Latin script
   const needsTransliteration = !checkLatinScript(senderLanguage);
@@ -148,8 +151,36 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   }, [typingMode, senderLanguage]);
 
   /**
+   * Generate receiver preview for ALL modes
+   * Shows what the receiver will see in their native language
+   */
+  const generateReceiverPreview = useCallback(async (sourceText: string, sourceLanguage: string) => {
+    // Skip if same language or empty
+    if (!sourceText.trim() || isSameLanguage(sourceLanguage, receiverLanguage)) {
+      setReceiverPreview('');
+      return;
+    }
+
+    setIsTranslatingReceiverPreview(true);
+    try {
+      const result = await translateText(sourceText, sourceLanguage, receiverLanguage);
+      if (result?.text && result.text !== sourceText) {
+        setReceiverPreview(result.text);
+      } else {
+        setReceiverPreview('');
+      }
+    } catch (e) {
+      console.error('[RealtimeChatInput] Receiver preview error:', e);
+      setReceiverPreview('');
+    } finally {
+      setIsTranslatingReceiverPreview(false);
+    }
+  }, [receiverLanguage]);
+
+  /**
    * Handle input change - behavior depends on typing mode
    * Also triggers auto-detection for Gboard/external keyboard native input
+   * Now also generates receiver preview for meaning-based translation
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -161,28 +192,54 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       handleInputForAutoDetect(value);
     }
 
+    // Clear receiver preview timeout
+    if (receiverPreviewTimeoutRef.current) clearTimeout(receiverPreviewTimeoutRef.current);
+
     // Mode 1: Native Mode - transliterate if needed
     if (typingMode === 'native') {
+      let finalNative = value;
       if (needsTransliteration) {
         const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
         
         if (hasNativeChars) {
           setNativeText(value);
+          finalNative = value;
         } else if (value === '' || isLatinText(value)) {
           const native = value.trim() ? transliterateNow(value) : '';
           setNativeText(native);
+          finalNative = native;
         } else {
           setNativeText(value);
+          finalNative = value;
         }
       } else {
         setNativeText(value);
+        finalNative = value;
       }
       setPreviewText('');
+      
+      // Generate receiver preview (meaning-based translation)
+      if (value.trim() && !isSameLanguage(senderLanguage, receiverLanguage)) {
+        receiverPreviewTimeoutRef.current = setTimeout(() => {
+          generateReceiverPreview(finalNative || value, senderLanguage);
+        }, 600);
+      } else {
+        setReceiverPreview('');
+      }
     }
     // Mode 2: English Core - keep as English
     else if (typingMode === 'english-core') {
       setNativeText(value);
       setPreviewText('');
+      
+      // Generate receiver preview from English
+      if (value.trim() && receiverLanguage.toLowerCase() !== 'english') {
+        receiverPreviewTimeoutRef.current = setTimeout(() => {
+          generateReceiverPreview(value, 'english');
+        }, 600);
+      } else {
+        setReceiverPreview('');
+      }
     }
     // Mode 3: English (Meaning-Based) - translate preview
     else if (typingMode === 'english-meaning') {
@@ -194,8 +251,16 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         previewTimeoutRef.current = setTimeout(() => {
           generateMeaningPreview(value);
         }, 500);
+        
+        // Also generate receiver preview
+        if (receiverLanguage.toLowerCase() !== 'english' && !isSameLanguage(senderLanguage, receiverLanguage)) {
+          receiverPreviewTimeoutRef.current = setTimeout(() => {
+            generateReceiverPreview(value, 'english');
+          }, 600);
+        }
       } else {
         setPreviewText('');
+        setReceiverPreview('');
       }
     }
 
@@ -205,7 +270,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [typingMode, needsTransliteration, transliterateNow, generateMeaningPreview, onTyping]);
+  }, [typingMode, needsTransliteration, transliterateNow, generateMeaningPreview, generateReceiverPreview, onTyping, senderLanguage, receiverLanguage]);
 
   /**
    * Handle send - generates ALL views for 9 mode combinations
@@ -225,6 +290,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     setRawInput('');
     setNativeText('');
     setPreviewText('');
+    setReceiverPreview('');
     onTyping?.(false);
 
     // Process based on mode - generate ALL views for 9 combinations
@@ -409,6 +475,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+      if (receiverPreviewTimeoutRef.current) clearTimeout(receiverPreviewTimeoutRef.current);
     };
   }, []);
 
@@ -491,7 +558,24 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {t('chat.meaningPreview', 'Preview (meaning-based translation)')}
+            {t('chat.meaningPreview', 'You see (meaning-based)')}
+          </div>
+        </div>
+      )}
+
+      {/* Receiver preview - shows what partner will see (meaning-based translation) */}
+      {(receiverPreview || isTranslatingReceiverPreview) && !isSameLanguage(senderLanguage, receiverLanguage) && (
+        <div className="px-4 py-2 border-b border-border/30">
+          <div className="px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-base unicode-text" dir="auto">
+            {isTranslatingReceiverPreview ? (
+              <span className="text-muted-foreground italic">{t('chat.translatingForPartner', 'Translating for partner...')}</span>
+            ) : (
+              receiverPreview
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <span>👤</span>
+            <span>{t('chat.partnerSees', 'Partner sees')} ({receiverLanguage})</span>
           </div>
         </div>
       )}
