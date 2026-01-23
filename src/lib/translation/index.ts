@@ -317,6 +317,39 @@ export {
 } from '@/hooks/useOfflineTranslation';
 
 // ============================================================
+// UNIVERSAL OFFLINE ENGINE (1000+ Languages - No External APIs)
+// ============================================================
+
+export {
+  translateUniversal,
+  translateBidirectionalChat,
+  getLiveNativePreview,
+  getLiveLatinPreview,
+  autoDetectLanguage as detectLanguageOffline,
+  initializeEngine as initUniversalEngine,
+  isEngineReady as isUniversalEngineReady,
+  clearAllCaches as clearUniversalCache,
+  getCacheStats as getUniversalCacheStats,
+  normalizeLanguage as normalizeUniversalLanguage,
+  getLanguageInfo as getUniversalLanguageInfo,
+  getAllLanguages as getUniversalLanguages,
+  getLanguageCount as getUniversalLanguageCount,
+  isLanguageSupported as isUniversalLanguageSupported,
+  isRTL as isUniversalRTL,
+  type UniversalTranslationResult,
+  type BidirectionalChatResult,
+  type SemanticDictionaryEntry,
+} from './universal-offline-engine';
+
+export {
+  useUniversalTranslation,
+  useTranslateUniversal,
+  useChatTranslationUniversal,
+  useLiveTransliterationPreview,
+  useLanguageSelector,
+} from '@/hooks/useUniversalOfflineTranslation';
+
+// ============================================================
 // LIBRE-TRANSLATE (Browser-Based Translation Engine)
 // ============================================================
 
