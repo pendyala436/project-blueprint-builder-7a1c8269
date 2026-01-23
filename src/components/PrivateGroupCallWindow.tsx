@@ -594,40 +594,74 @@ export function PrivateGroupCallWindow({
         </div>
       )}
 
-      {/* Gift Tickets Display - Shows at top for 1 minute based on price */}
+      {/* Gift Rocket Display - Shows at top with sender name on rocket */}
       {giftTickets.length > 0 && (
-        <div className="px-4 py-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-orange-500/20 border-b border-yellow-500/30 overflow-hidden">
-          <div className="flex flex-col gap-1">
+        <div className="px-4 py-3 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 border-b border-orange-500/30 overflow-hidden relative">
+          <div className="flex flex-col gap-2">
             {giftTickets.slice(0, 3).map((ticket) => {
               const remainingMs = ticket.expiresAt - Date.now();
               const totalMs = getTicketDisplayDuration(ticket.price);
               const progressPercent = Math.max(0, (remainingMs / totalMs) * 100);
+              // Scale rocket size based on price (larger price = larger rocket)
+              const rocketScale = 0.8 + (ticket.price / 120) * 0.6;
               
               return (
                 <div 
                   key={ticket.id} 
-                  className="flex items-center gap-2 animate-fade-in"
+                  className="flex items-center gap-3 animate-fade-in"
                 >
+                  {/* Animated Rocket with Sender Name */}
+                  <div 
+                    className="relative flex items-center animate-rocket-fly"
+                    style={{ transform: `scale(${rocketScale})` }}
+                  >
+                    {/* Rocket Body */}
+                    <div className="relative">
+                      <span className="text-3xl drop-shadow-lg">🚀</span>
+                      {/* Sender Name on Rocket */}
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                        <span className="text-[10px] font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 px-1.5 py-0.5 rounded-full shadow-lg border border-white/30">
+                          {ticket.senderName}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Flame Trail */}
+                    <div className="flex items-center -ml-2 animate-pulse">
+                      <span className="text-xl">🔥</span>
+                      {ticket.price >= 50 && <span className="text-lg -ml-1">🔥</span>}
+                      {ticket.price >= 100 && <span className="text-sm -ml-1">🔥</span>}
+                    </div>
+                  </div>
+                  
+                  {/* Gift Info */}
                   <div className="flex items-center gap-2 flex-1">
-                    <Ticket className="h-4 w-4 text-yellow-500" />
                     <span className="text-2xl">{ticket.giftEmoji}</span>
-                    <span className="font-medium text-sm">
-                      {ticket.senderName} sent <span className="text-yellow-500">{ticket.giftName}</span>
-                    </span>
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-500/50">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm text-foreground">
+                        {ticket.senderName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        sent <span className="text-orange-500 font-medium">{ticket.giftName}</span>
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-orange-600 border-orange-500/50 bg-orange-500/10">
                       ₹{ticket.price}
                     </Badge>
                   </div>
-                  <div className="w-20">
-                    <Progress value={progressPercent} className="h-1 bg-yellow-500/20" />
+                  
+                  {/* Progress Timer */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-16">
+                      <Progress value={progressPercent} className="h-1.5 bg-orange-500/20" />
+                    </div>
+                    <Timer className="h-3 w-3 text-orange-500" />
                   </div>
-                  <Timer className="h-3 w-3 text-muted-foreground" />
                 </div>
               );
             })}
             {giftTickets.length > 3 && (
               <p className="text-xs text-muted-foreground text-center">
-                +{giftTickets.length - 3} more gifts
+                +{giftTickets.length - 3} more rocket gifts incoming! 🚀
               </p>
             )}
           </div>
