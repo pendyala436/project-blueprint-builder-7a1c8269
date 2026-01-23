@@ -89,6 +89,17 @@ interface LanguageInfo {
   rtl: boolean;
 }
 
+// Simple hash function for cache keys to avoid collisions with long messages
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 // Build unified language database from languages.ts
 const languageDatabase = new Map<string, LanguageInfo>();
 const languageByCode = new Map<string, LanguageInfo>();
@@ -525,8 +536,9 @@ export async function translateUniversal(
   const normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
   
-  // Check result cache
-  const cacheKey = `${normSource}:${normTarget}:${trimmed.substring(0, 100)}`;
+  // Check result cache - use hash of full text to avoid collisions with long messages
+  const textHash = simpleHash(trimmed);
+  const cacheKey = `${normSource}:${normTarget}:${textHash}:${trimmed.length}`;
   const cached = translationResultCache.get(cacheKey);
   if (cached) {
     return { ...cached, method: 'cached' };
