@@ -149,24 +149,42 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
   }, [isSentByMe, showAlternateView, viewerMode, senderView, receiverView, originalText, messageViews]);
 
   // Secondary text (shown smaller below primary)
+  // Shows original English to receiver when message was sent in english-core mode
   const secondaryContent = useMemo(() => {
     if (!messageViews) return null;
     
-    // For receivers in english-core mode, show native as secondary
+    // For receivers in english-core mode viewing received messages, show native as secondary
     if (!isSentByMe && viewerMode === 'english-core' && !showAlternateView) {
       const native = messageViews.receiverNative || receiverView;
       const english = messageViews.originalEnglish;
-      if (native !== english) {
-        return native;
+      if (native && english && native !== english) {
+        return { text: native, label: 'Translated' };
       }
     }
     
-    // For receivers in native mode, show English as secondary (dual display)
+    // For receivers NOT in english-core mode, show English as secondary
+    // This is especially important when sender used english-core mode
     if (!isSentByMe && viewerMode !== 'english-core' && !showAlternateView) {
       const english = messageViews.originalEnglish;
       const native = messageViews.receiverNative || receiverView;
-      if (english && english !== native) {
-        return english;
+      
+      // If sender sent in English mode and receiver sees translated
+      if (english && native && english !== native) {
+        // Check if sender used english-core mode
+        const senderUsedEnglishCore = messageViews.senderMode === 'english-core';
+        return { 
+          text: english, 
+          label: senderUsedEnglishCore ? 'Original English' : 'English' 
+        };
+      }
+    }
+    
+    // For sender viewing their own message - show receiver's translation
+    if (isSentByMe && messageViews.senderMode === 'english-core' && !showAlternateView) {
+      const receiverNative = messageViews.receiverNative;
+      const english = messageViews.originalEnglish;
+      if (receiverNative && english && receiverNative !== english) {
+        return { text: receiverNative, label: 'Partner sees' };
       }
     }
     
@@ -276,20 +294,28 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
         {/* Secondary content (dual display) */}
         {secondaryContent && (
           <div className={cn(
-            'mt-1.5 pt-1.5 border-t flex items-start gap-1',
+            'mt-1.5 pt-1.5 border-t flex flex-col gap-0.5',
             isSentByMe 
               ? 'border-primary-foreground/20' 
               : 'border-foreground/10'
           )}>
-            <Globe className={cn(
-              'h-3 w-3 mt-0.5 flex-shrink-0',
-              isSentByMe ? 'text-primary-foreground/50' : 'text-muted-foreground'
-            )} />
+            <div className="flex items-center gap-1">
+              <Globe className={cn(
+                'h-3 w-3 flex-shrink-0',
+                isSentByMe ? 'text-primary-foreground/50' : 'text-blue-500'
+              )} />
+              <span className={cn(
+                'text-[9px] font-medium',
+                isSentByMe ? 'text-primary-foreground/50' : 'text-blue-500'
+              )}>
+                {secondaryContent.label}
+              </span>
+            </div>
             <p className={cn(
-              'text-xs unicode-text whitespace-pre-wrap break-words',
+              'text-xs unicode-text whitespace-pre-wrap break-words pl-4',
               isSentByMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
             )} dir="auto">
-              {secondaryContent}
+              {secondaryContent.text}
             </p>
           </div>
         )}
