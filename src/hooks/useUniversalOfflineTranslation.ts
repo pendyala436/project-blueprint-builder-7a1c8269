@@ -24,6 +24,7 @@ import {
   normalizeLanguage,
   getLanguageInfo,
   getLanguageCode,
+  getTranslationLanguage,
   isLatinScriptLanguage,
   isLatinText,
   isSameLanguage,
@@ -61,6 +62,7 @@ export interface UseUniversalTranslationReturn {
   normalizeLanguage: typeof normalizeLanguage;
   getLanguageInfo: typeof getLanguageInfo;
   getLanguageCode: typeof getLanguageCode;
+  getTranslationLanguage: typeof getTranslationLanguage; // Resolves dialects to major languages
   isLatinScript: (lang: string) => boolean;
   isLatinText: (text: string) => boolean;
   isSameLanguage: (lang1: string, lang2: string) => boolean;
@@ -204,6 +206,7 @@ export function useUniversalTranslation(
     normalizeLanguage,
     getLanguageInfo,
     getLanguageCode,
+    getTranslationLanguage,
     isLatinScript: isLatinScriptLanguage,
     isLatinText,
     isSameLanguage,

@@ -161,6 +161,298 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   'ଓଡ଼ିଆ': 'odia',
 };
 
+// ============================================================
+// LANGUAGE FALLBACK SYSTEM - For 1000+ languages
+// Maps unsupported/dialect languages to nearest major language
+// ============================================================
+
+const LANGUAGE_FALLBACK_MAP: Record<string, string> = {
+  // South Indian Regional → Nearest Major
+  'tulu': 'kannada',
+  'kodava': 'kannada',
+  'badaga': 'kannada',
+  'konkani': 'marathi',
+  'saurashtra': 'gujarati',
+  
+  // Hindi Belt Dialects → Hindi
+  'bhojpuri': 'hindi',
+  'maithili': 'hindi',
+  'magahi': 'hindi',
+  'angika': 'hindi',
+  'bajjika': 'hindi',
+  'awadhi': 'hindi',
+  'chhattisgarhi': 'hindi',
+  'marwari': 'hindi',
+  'mewari': 'hindi',
+  'rajasthani': 'hindi',
+  'haryanvi': 'hindi',
+  'bundeli': 'hindi',
+  'bagheli': 'hindi',
+  'kumaoni': 'hindi',
+  'garhwali': 'hindi',
+  'pahari': 'hindi',
+  'kanauji': 'hindi',
+  'braj': 'hindi',
+  'dhundhari': 'hindi',
+  'hadothi': 'hindi',
+  'nimadi': 'hindi',
+  'malvi': 'hindi',
+  'wagdi': 'hindi',
+  'nagpuri': 'hindi',
+  'surgujia': 'hindi',
+  
+  // Tribal Languages → Nearest Major
+  'bhili': 'hindi',
+  'gondi': 'hindi',
+  'lambadi': 'hindi',
+  'kurukh': 'hindi',
+  'mundari': 'hindi',
+  'ho': 'hindi',
+  'kharia': 'hindi',
+  'halbi': 'hindi',
+  'khandeshi': 'marathi',
+  'deccan': 'hindi',
+  'santali': 'hindi',
+  'bodo': 'hindi',
+  'dogri': 'hindi',
+  
+  // Bengali Script Languages → Bengali
+  'assamese': 'bengali',
+  'sylheti': 'bengali',
+  'chittagonian': 'bengali',
+  'rangpuri': 'bengali',
+  'rabha': 'bengali',
+  'manipuri': 'bengali',
+  
+  // Telugu Script Languages → Telugu
+  'waddar': 'telugu',
+  'koya': 'telugu',
+  'kadaru': 'telugu',
+  'yerukala': 'telugu',
+  
+  // Tamil Script Languages → Tamil
+  'toda': 'tamil',
+  'irula': 'tamil',
+  // 'badaga' already mapped to Kannada above
+  
+  // Odia Script Languages → Odia
+  'kuvi': 'odia',
+  'soura': 'odia',
+  
+  // Malayalam Script Languages → Malayalam
+  'kuruma': 'malayalam',
+  
+  // Northeast Indian → Nearest Major
+  'mizo': 'bengali',
+  'khasi': 'bengali',
+  'garo': 'bengali',
+  'karbi': 'bengali',
+  'kokborok': 'bengali',
+  'mishing': 'bengali',
+  'nagamese': 'hindi',
+  
+  // Tibetan Script Languages → Tibetan/Hindi
+  'bhutia': 'hindi',
+  'dzongkha': 'hindi',
+  'monpa': 'hindi',
+  'lepcha': 'hindi',
+  'limbu': 'hindi',
+  
+  // Arabic Script Languages → Arabic/Urdu
+  'kashmiri': 'urdu',
+  'sindhi': 'urdu',
+  'balochi': 'urdu',
+  'brahui': 'urdu',
+  'pashto': 'urdu',
+  'dari': 'persian',
+  'tajik': 'persian',
+  'lahnda': 'punjabi',
+  
+  // Myanmar Script Languages → Burmese
+  'shan': 'burmese',
+  'kachin': 'burmese',
+  'chin': 'burmese',
+  'karen': 'burmese',
+  'mon': 'burmese',
+  'khamti': 'burmese',
+  'phake': 'burmese',
+  'aiton': 'burmese',
+  
+  // Southeast Asian → Nearest Major
+  'lao': 'thai',
+  'isan': 'thai',
+  'northern thai': 'thai',
+  'southern thai': 'thai',
+  
+  // Chinese Varieties → Chinese (Mandarin)
+  'cantonese': 'chinese (mandarin)',
+  'hokkien': 'chinese (mandarin)',
+  'hakka': 'chinese (mandarin)',
+  'teochew': 'chinese (mandarin)',
+  'shanghainese': 'chinese (mandarin)',
+  'taiwanese': 'chinese (mandarin)',
+  'min nan': 'chinese (mandarin)',
+  'wu': 'chinese (mandarin)',
+  
+  // Indonesian Languages → Indonesian
+  'javanese': 'indonesian',
+  'sundanese': 'indonesian',
+  'madurese': 'indonesian',
+  'minangkabau': 'indonesian',
+  'acehnese': 'indonesian',
+  'balinese': 'indonesian',
+  'banjar': 'indonesian',
+  'buginese': 'indonesian',
+  'makassarese': 'indonesian',
+  'betawi': 'indonesian',
+  'sasak': 'indonesian',
+  
+  // Philippine Languages → Tagalog
+  'cebuano': 'tagalog',
+  'ilocano': 'tagalog',
+  'hiligaynon': 'tagalog',
+  'waray': 'tagalog',
+  'kapampangan': 'tagalog',
+  'bikol': 'tagalog',
+  'pangasinan': 'tagalog',
+  'maranao': 'tagalog',
+  'maguindanaon': 'tagalog',
+  'tausug': 'tagalog',
+  
+  // African Languages → Nearest Major
+  'tigrinya': 'amharic',
+  'oromo': 'amharic',
+  'somali': 'arabic',
+  'wolof': 'french',
+  'fulani': 'french',
+  'bambara': 'french',
+  'lingala': 'french',
+  'kikongo': 'french',
+  'zulu': 'english',
+  'xhosa': 'english',
+  'sotho': 'english',
+  'tswana': 'english',
+  'shona': 'english',
+  'nyanja': 'english',
+  
+  // European Languages → Nearest Major
+  'catalan': 'spanish',
+  'galician': 'portuguese',
+  'occitan': 'french',
+  'breton': 'french',
+  'corsican': 'italian',
+  'sardinian': 'italian',
+  'sicilian': 'italian',
+  'neapolitan': 'italian',
+  'venetian': 'italian',
+  'friulian': 'italian',
+  'luxembourgish': 'german',
+  'alemannic': 'german',
+  'bavarian': 'german',
+  'low german': 'german',
+  'swiss german': 'german',
+  'austrian german': 'german',
+  'yiddish': 'german',
+  'frisian': 'dutch',
+  'flemish': 'dutch',
+  'scots': 'english',
+  'irish': 'english',
+  'welsh': 'english',
+  'scottish gaelic': 'english',
+  
+  // Slavic Languages → Russian/nearest
+  'ukrainian': 'russian',
+  'belarusian': 'russian',
+  'bulgarian': 'russian',
+  'macedonian': 'russian',
+  'serbian': 'russian',
+  
+  // Turkic Languages → Turkish
+  'azerbaijani': 'turkish',
+  'uzbek': 'turkish',
+  'kazakh': 'turkish',
+  'kyrgyz': 'turkish',
+  'turkmen': 'turkish',
+  'uyghur': 'turkish',
+  'tatar': 'turkish',
+  'bashkir': 'turkish',
+};
+
+// Script-based fallbacks for unknown languages
+const SCRIPT_TO_FALLBACK_LANGUAGE: Record<string, string> = {
+  'Devanagari': 'hindi',
+  'Bengali': 'bengali',
+  'Tamil': 'tamil',
+  'Telugu': 'telugu',
+  'Kannada': 'kannada',
+  'Malayalam': 'malayalam',
+  'Gujarati': 'gujarati',
+  'Gurmukhi': 'punjabi',
+  'Odia': 'odia',
+  'Arabic': 'arabic',
+  'Cyrillic': 'russian',
+  'Greek': 'greek',
+  'Hebrew': 'hebrew',
+  'Thai': 'thai',
+  'Han': 'chinese (mandarin)',
+  'Japanese': 'japanese',
+  'Hangul': 'korean',
+  'Georgian': 'georgian',
+  'Armenian': 'armenian',
+  'Ethiopic': 'amharic',
+  'Myanmar': 'burmese',
+  'Khmer': 'khmer',
+  'Lao': 'lao',
+  'Sinhala': 'sinhala',
+  'Tibetan': 'hindi',
+  'Latin': 'english',
+};
+
+/**
+ * Get the effective language for translation
+ * Resolves dialects and unsupported languages to nearest major language
+ */
+function getEffectiveLanguage(lang: string): string {
+  const normalized = lang.toLowerCase().trim();
+  
+  // Check direct fallback map first
+  if (LANGUAGE_FALLBACK_MAP[normalized]) {
+    return LANGUAGE_FALLBACK_MAP[normalized];
+  }
+  
+  // Check if it's a supported major language
+  if (languageDatabase.has(normalized)) {
+    const info = languageDatabase.get(normalized);
+    // If the language has a non-Latin script and we have phrase support, use it
+    if (info && LANGUAGE_COLUMN_MAP[normalized]) {
+      return normalized;
+    }
+    // Otherwise check for script-based fallback
+    if (info?.script && SCRIPT_TO_FALLBACK_LANGUAGE[info.script]) {
+      const fallback = SCRIPT_TO_FALLBACK_LANGUAGE[info.script];
+      // If we have phrase support for the fallback, use it
+      if (LANGUAGE_COLUMN_MAP[fallback]) {
+        return fallback;
+      }
+    }
+  }
+  
+  // Check by code
+  const byCode = languageByCode.get(normalized);
+  if (byCode) {
+    const name = byCode.name;
+    if (LANGUAGE_FALLBACK_MAP[name]) {
+      return LANGUAGE_FALLBACK_MAP[name];
+    }
+    if (byCode.script && SCRIPT_TO_FALLBACK_LANGUAGE[byCode.script]) {
+      return SCRIPT_TO_FALLBACK_LANGUAGE[byCode.script];
+    }
+    return name;
+  }
+  
+  return normalized;
+}
+
 // Database column mapping for common_phrases table
 const LANGUAGE_COLUMN_MAP: Record<string, string> = {
   'hindi': 'hindi',
@@ -247,6 +539,15 @@ export function normalizeLanguage(lang: string): string {
   return normalizeFromTransliterator(normalized);
 }
 
+/**
+ * Get the translation-effective language (resolves dialects to major languages)
+ * Use this when looking up phrases/dictionaries
+ */
+export function getTranslationLanguage(lang: string): string {
+  const normalized = normalizeLanguage(lang);
+  return getEffectiveLanguage(normalized);
+}
+
 export function getLanguageInfo(lang: string): LanguageInfo | null {
   const normalized = normalizeLanguage(lang);
   return languageDatabase.get(normalized) || languageByCode.get(lang.toLowerCase()) || null;
@@ -259,7 +560,13 @@ export function getLanguageCode(lang: string): string {
 
 export function getLanguageColumn(lang: string): string {
   const normalized = normalizeLanguage(lang);
-  return LANGUAGE_COLUMN_MAP[normalized] || 'english';
+  // First check if there's a direct column for this language
+  if (LANGUAGE_COLUMN_MAP[normalized]) {
+    return LANGUAGE_COLUMN_MAP[normalized];
+  }
+  // Otherwise, get the effective/fallback language
+  const effective = getEffectiveLanguage(normalized);
+  return LANGUAGE_COLUMN_MAP[effective] || 'english';
 }
 
 export function isLatinScriptLanguage(lang: string): boolean {
@@ -271,7 +578,14 @@ export function isLatinText(text: string): boolean {
 }
 
 export function isSameLanguage(lang1: string, lang2: string): boolean {
-  return checkSameLanguage(lang1, lang2);
+  // First check direct match
+  if (checkSameLanguage(lang1, lang2)) return true;
+  
+  // Also check if both languages have the same effective fallback
+  const effective1 = getEffectiveLanguage(normalizeLanguage(lang1));
+  const effective2 = getEffectiveLanguage(normalizeLanguage(lang2));
+  
+  return effective1 === effective2;
 }
 
 export function isEnglish(lang: string): boolean {
@@ -352,7 +666,9 @@ async function lookupSemanticDictionary(
   sourceLanguage: string
 ): Promise<SemanticDictionaryEntry | null> {
   const normalizedSource = normalizeLanguage(sourceLanguage);
-  const cacheKey = `${normalizedSource}:${text.toLowerCase().substring(0, 100)}`;
+  const effectiveSource = getEffectiveLanguage(normalizedSource);
+  const textHash = simpleHash(text.toLowerCase());
+  const cacheKey = `${effectiveSource}:${textHash}:${text.length}`;
   
   // Check cache
   const cached = semanticDictionaryCache.get(cacheKey);
@@ -364,7 +680,8 @@ async function lookupSemanticDictionary(
     const { data, error } = await supabase
       .from('translation_dictionaries')
       .select('*')
-      .eq('source_language', normalizedSource)
+      .eq('source_language', effectiveSource)
+      .ilike('source_text', text.trim())
       .ilike('source_text', text.trim())
       .limit(1);
     
