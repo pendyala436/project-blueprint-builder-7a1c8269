@@ -57,7 +57,6 @@ import {
 } from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
-import { TypingModeSelector, useTypingMode, type TypingMode } from "@/components/chat/TypingModeSelector";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
@@ -145,14 +144,8 @@ const DraggableMiniChatWindow = ({
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Typing mode for 9-combination display (persisted in localStorage) with auto-detection
-  const { 
-    mode: typingMode, 
-    setMode: setTypingMode, 
-    isAutoMode,
-    handleInputForAutoDetect,
-    autoDetectEnabled
-  } = useTypingMode();
+  // Single typing mode - always english-meaning
+  const typingMode = 'english-meaning' as const;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -1889,18 +1882,6 @@ const DraggableMiniChatWindow = ({
             />
             
             <div className="flex items-center gap-1">
-              {/* Typing Mode Selector - compact dropdown */}
-              <TypingModeSelector
-                currentMode={typingMode}
-                onModeChange={setTypingMode}
-                userLanguage={currentUserLanguage}
-                receiverLanguage={partnerLanguage}
-                compact={true}
-                showAutoDetect={false}
-                isAutoMode={isAutoMode}
-                className="h-8"
-              />
-
               {/* Attach button */}
               <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
                 <PopoverTrigger asChild>
