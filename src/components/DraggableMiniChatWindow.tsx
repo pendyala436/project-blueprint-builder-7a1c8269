@@ -919,12 +919,16 @@ const DraggableMiniChatWindow = ({
       const immediateMessages = data.map((m) => {
         const isPartnerMessage = m.sender_id !== currentUserId;
         
-        // Check if this is an english-core message (has original_english same as message = English)
+        // Check if this is an English input message (english-core or english-meaning)
+        // english-core: original_english === message (both English)
+        // english-meaning: original_english !== message (original is English, message is sender's native)
         const isEnglishCoreMessage = m.original_english && m.original_english === m.message;
+        const isEnglishMeaningMessage = m.original_english && m.original_english !== m.message;
+        const hasPreTranslation = m.translated_message && m.translated_message.length > 0;
         
-        // For partner's english-core messages, use pre-translated message if available
+        // For partner's English input messages, use pre-translated message if available
         let displayMessage = m.message;
-        if (isPartnerMessage && isEnglishCoreMessage && m.translated_message) {
+        if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
           displayMessage = m.translated_message;
         }
         
@@ -938,8 +942,8 @@ const DraggableMiniChatWindow = ({
           latinMessage: !isPartnerMessage && m.original_english && m.original_english !== m.message 
             ? m.original_english 
             : undefined,
-          isTranslated: isPartnerMessage && isEnglishCoreMessage && m.translated_message ? true : false,
-          isTranslating: !(isPartnerMessage && isEnglishCoreMessage && m.translated_message), // Skip translation if already translated
+          isTranslated: isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation,
+          isTranslating: !(isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation),
           createdAt: m.created_at
         };
       });
@@ -949,9 +953,11 @@ const DraggableMiniChatWindow = ({
       data.forEach((m) => {
         const isPartnerMessage = m.sender_id !== currentUserId;
         const isEnglishCoreMessage = m.original_english && m.original_english === m.message;
+        const isEnglishMeaningMessage = m.original_english && m.original_english !== m.message;
+        const hasPreTranslation = m.translated_message && m.translated_message.length > 0;
         
-        // Skip translation for partner's english-core messages that are already pre-translated
-        if (isPartnerMessage && isEnglishCoreMessage && m.translated_message) {
+        // Skip translation for partner's English input messages that are already pre-translated
+        if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
           setMessages(prev => prev.map(msg => 
             msg.id === m.id ? { ...msg, isTranslating: false } : msg
           ));
@@ -999,12 +1005,14 @@ const DraggableMiniChatWindow = ({
           const newMsg = payload.new;
           const isPartnerMessage = newMsg.sender_id !== currentUserId;
           
-          // Check if this is an english-core message (original_english same as message = English)
+          // Check if this is an English input message (english-core or english-meaning)
           const isEnglishCoreMessage = newMsg.original_english && newMsg.original_english === newMsg.message;
+          const isEnglishMeaningMessage = newMsg.original_english && newMsg.original_english !== newMsg.message;
+          const hasPreTranslation = newMsg.translated_message && newMsg.translated_message.length > 0;
           
-          // For partner's english-core messages, use pre-translated message if available
+          // For partner's English input messages, use pre-translated message if available
           let displayMessage = newMsg.message;
-          if (isPartnerMessage && isEnglishCoreMessage && newMsg.translated_message) {
+          if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
             displayMessage = newMsg.translated_message;
           }
           
@@ -1021,8 +1029,8 @@ const DraggableMiniChatWindow = ({
               latinMessage: !isPartnerMessage && newMsg.original_english && newMsg.original_english !== newMsg.message 
                 ? newMsg.original_english 
                 : undefined,
-              isTranslated: isPartnerMessage && isEnglishCoreMessage && newMsg.translated_message ? true : false,
-              isTranslating: !(isPartnerMessage && isEnglishCoreMessage && newMsg.translated_message),
+              isTranslated: isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation,
+              isTranslating: !(isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation),
               createdAt: newMsg.created_at
             }];
           });
@@ -1036,8 +1044,8 @@ const DraggableMiniChatWindow = ({
           }
           
           // STEP 2: BACKGROUND - Translate messages that need it
-          // Skip translation for partner's english-core messages that are already pre-translated
-          if (isPartnerMessage && isEnglishCoreMessage && newMsg.translated_message) {
+          // Skip translation for partner's English input messages that are already pre-translated
+          if (isPartnerMessage && (isEnglishCoreMessage || isEnglishMeaningMessage) && hasPreTranslation) {
             setMessages(prev => prev.map(msg => 
               msg.id === newMsg.id ? { ...msg, isTranslating: false } : msg
             ));
@@ -1212,21 +1220,47 @@ const DraggableMiniChatWindow = ({
       createdAt: new Date().toISOString()
     }]);
 
-    // BACKGROUND: Send to database with pre-translation for english-core mode
+    // BACKGROUND: Send to database with pre-translation for English input modes
     setIsSending(true);
     try {
       console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToSend.substring(0, 30));
       
-      // For english-core mode, pre-translate the message for the receiver
+      // Pre-translate the message for the receiver in English input modes
+      // Both english-core and english-meaning need receiver translation from English
       let translatedForReceiver: string | null = null;
-      if (typingMode === 'english-core' && !isSameLanguage(partnerLanguage, 'english')) {
-        try {
-          const result = await translateText(messageToSend, 'english', partnerLanguage);
-          translatedForReceiver = typeof result === 'string' ? result : result?.text || null;
-          console.log('[DraggableMiniChatWindow] Pre-translated for receiver:', translatedForReceiver?.substring(0, 50));
-        } catch (error) {
-          console.error('[DraggableMiniChatWindow] Pre-translation failed:', error);
+      let originalEnglishToStore: string | null = null;
+      
+      if (typingMode === 'english-core') {
+        // english-core: message IS English, translate to receiver's language
+        originalEnglishToStore = messageToSend;
+        if (!isSameLanguage(partnerLanguage, 'english')) {
+          try {
+            const result = await translateText(messageToSend, 'english', partnerLanguage);
+            translatedForReceiver = typeof result === 'string' ? result : result?.text || null;
+            console.log('[DraggableMiniChatWindow] english-core pre-translated for receiver:', translatedForReceiver?.substring(0, 50));
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] english-core pre-translation failed:', error);
+          }
         }
+      } else if (typingMode === 'english-meaning') {
+        // english-meaning: englishInput is the original English, translate to receiver's language
+        originalEnglishToStore = englishInput;
+        if (englishInput && !isSameLanguage(partnerLanguage, 'english')) {
+          try {
+            // Translate from English input directly to receiver's language for best quality
+            const result = await translateText(englishInput, 'english', partnerLanguage);
+            translatedForReceiver = typeof result === 'string' ? result : result?.text || null;
+            console.log('[DraggableMiniChatWindow] english-meaning pre-translated for receiver:', translatedForReceiver?.substring(0, 50));
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] english-meaning pre-translation failed:', error);
+          }
+        } else if (isSameLanguage(partnerLanguage, 'english')) {
+          // Receiver speaks English, show them the original English input
+          translatedForReceiver = englishInput;
+        }
+      } else if (typingMode === 'native' && englishInput !== messageToSend) {
+        // native mode with Latin input: store the Latin input as original_english for reference
+        originalEnglishToStore = englishInput;
       }
       
       const { error } = await supabase
@@ -1236,14 +1270,10 @@ const DraggableMiniChatWindow = ({
           sender_id: currentUserId,
           receiver_id: partnerId,
           message: messageToSend,
-          // Store translated message for receiver to display
+          // Store pre-translated message for receiver to display immediately
           translated_message: translatedForReceiver,
           // Store original English for all English input modes
-          original_english: typingMode === 'english-core' 
-            ? messageToSend 
-            : typingMode === 'english-meaning' 
-              ? englishInput 
-              : (typingMode === 'native' && englishInput !== messageToSend ? englishInput : null)
+          original_english: originalEnglishToStore
         });
 
       if (error) throw error;
