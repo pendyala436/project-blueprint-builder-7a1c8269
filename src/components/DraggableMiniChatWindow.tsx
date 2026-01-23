@@ -1264,9 +1264,25 @@ const DraggableMiniChatWindow = ({
           // Receiver speaks English, show them the original English input
           translatedForReceiver = englishInput;
         }
-      } else if (typingMode === 'native' && englishInput !== messageToSend) {
-        // native mode with Latin input: store the Latin input as original_english for reference
-        originalEnglishToStore = englishInput;
+      } else if (typingMode === 'native') {
+        // native mode: Translate from sender's language to receiver's language
+        // This is the key fix - we MUST translate for the receiver in native mode!
+        if (englishInput !== messageToSend) {
+          // Latin input was transliterated to native - store Latin as reference
+          originalEnglishToStore = englishInput;
+        }
+        
+        // Translate message to receiver's mother tongue if different language
+        if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
+          try {
+            console.log('[DraggableMiniChatWindow] native mode: Translating from', currentUserLanguage, 'to', partnerLanguage);
+            const result = await translateUniversal(messageToSend, currentUserLanguage, partnerLanguage);
+            translatedForReceiver = result?.text || null;
+            console.log('[DraggableMiniChatWindow] native mode translated for receiver:', translatedForReceiver?.substring(0, 50));
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] native mode translation failed:', error);
+          }
+        }
       }
       
       const { error } = await supabase
