@@ -472,11 +472,8 @@ const WomenDashboardScreen = () => {
         };
       });
 
-      // PHOTO VALIDATION: Only show users with photos
-      const menWithPhotos = onlineMen.filter(m => m.photoUrl);
-
       // Sort by load: lowest chat count first, then same language, then wallet balance
-      const sortedMen = menWithPhotos.sort((a, b) => {
+      const sortedMen = onlineMen.sort((a, b) => {
         // First: by active chat count (load balancing - lower is better)
         if (a.activeChatCount !== b.activeChatCount) {
           return (a.activeChatCount || 0) - (b.activeChatCount || 0);
