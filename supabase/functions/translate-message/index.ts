@@ -1083,12 +1083,16 @@ serve(async (req) => {
       const inputDetected = detectScriptFromText(inputText);
       const inputIsLatinText = inputDetected.isLatin;
       
+      // Check if sender/receiver use Latin script (based on profile languages)
+      const senderIsNonLatin = isNonLatinLanguage(langA);
+      const receiverIsNonLatin = isNonLatinLanguage(langB);
+      
       // STEP 1: Get English version (semantic core)
       let englishCore = inputText;
       let senderNativeText = inputText;
       
       // If sender typed in Latin but speaks non-Latin language, transliterate for sender view
-      if (inputIsLatinText && isNonLatinLanguage(langA)) {
+      if (inputIsLatinText && senderIsNonLatin) {
         const senderNative = await transliterateToNative(inputText, langA);
         if (senderNative.success) {
           senderNativeText = senderNative.text;
@@ -1097,6 +1101,7 @@ serve(async (req) => {
       }
       
       // Get English semantic meaning from sender's input
+      // This applies to ALL non-English languages (Latin and non-Latin)
       if (!isSameLanguage(langA, 'english')) {
         // Use the native text (or original if no transliteration) for translation
         const sourceText = senderNativeText !== inputText ? senderNativeText : inputText;
@@ -1108,18 +1113,25 @@ serve(async (req) => {
       }
       
       // STEP 2: Translate to receiver's language from English (for meaning accuracy)
+      // This applies to ALL different language pairs, including Latin-to-Latin (e.g., Spanish→French)
       let receiverText = inputText;
-      if (!isSameLanguage(langB, 'english') && !isSameLanguage(langA, langB)) {
+      
+      if (isSameLanguage(langA, langB)) {
+        // Same language - receiver sees sender's native text
+        receiverText = senderNativeText;
+        console.log(`[dl-translate] Same language, no translation needed`);
+      } else if (isSameLanguage(langB, 'english')) {
+        // Receiver speaks English - they see the English core
+        receiverText = englishCore;
+        console.log(`[dl-translate] Receiver is English speaker, using English core`);
+      } else {
+        // Different languages - translate from English to receiver's language
+        // This handles BOTH Latin→Latin (Spanish→French) AND Latin→NonLatin (Spanish→Hindi)
         const toReceiver = await translateText(englishCore, 'english', langB);
         if (toReceiver.success) {
           receiverText = toReceiver.translatedText;
-          console.log(`[dl-translate] Receiver translation: "${receiverText.substring(0, 50)}..."`);
+          console.log(`[dl-translate] Receiver translation (${langB}): "${receiverText.substring(0, 50)}..."`);
         }
-      } else if (isSameLanguage(langB, 'english')) {
-        receiverText = englishCore;
-      } else if (isSameLanguage(langA, langB)) {
-        // Same language - receiver sees sender's native text
-        receiverText = senderNativeText;
       }
       
       return new Response(
@@ -1136,7 +1148,7 @@ serve(async (req) => {
           senderLanguage: langA,
           receiverLanguage: langB,
           wasTransliterated: senderNativeText !== inputText,
-          wasTranslated: receiverText !== inputText && receiverText !== senderNativeText,
+          wasTranslated: !isSameLanguage(langA, langB) && receiverText !== inputText,
           inputWasLatin: inputIsLatinText,
           mode: "bidirectional",
         }),

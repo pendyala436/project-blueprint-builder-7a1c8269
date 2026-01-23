@@ -255,9 +255,12 @@ function browserTranslate(
   let englishRef: string | undefined;
   
   try {
-    // CASE 1: Both Latin script languages - passthrough
+// CASE 1: Both Latin script languages - passthrough (browser can't do meaning translation)
+    // NOTE: For meaning-based Latin→Latin translation, use Edge Function instead
     if (sourceIsLatin && targetIsLatin) {
       translatedText = trimmed;
+      // Flag that this needs Edge Function for actual meaning translation
+      console.log('[BrowserTranslate] Latin→Latin: passthrough (use Edge for meaning)');
     }
     // CASE 2: Latin input → Non-Latin target (transliterate to native)
     else if (inputIsLatin && !targetIsLatin) {
