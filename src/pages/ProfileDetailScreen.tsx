@@ -14,7 +14,8 @@ import {
   Calendar,
   Shield,
   Loader2,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -29,6 +30,7 @@ interface ProfileData {
   state: string;
   motherTongue: string;
   optionalLanguages: string[];
+  interests: string[];
   isOnline: boolean;
   lastSeen: string;
   isVerified: boolean;
@@ -173,6 +175,7 @@ const ProfileDetailScreen = () => {
           state: translatedState,
           motherTongue,
           optionalLanguages: translatedOptionalLangs,
+          interests: profileData.interests || [],
           isOnline: statusData?.is_online || false,
           lastSeen: statusData?.last_seen || "",
           isVerified: profileData.verification_status || false,
@@ -188,6 +191,7 @@ const ProfileDetailScreen = () => {
           state: profileData.state || "",
           motherTongue,
           optionalLanguages,
+          interests: profileData.interests || [],
           isOnline: statusData?.is_online || false,
           lastSeen: statusData?.last_seen || "",
           isVerified: profileData.verification_status || false,
@@ -450,7 +454,25 @@ const ProfileDetailScreen = () => {
               )}
             </div>
 
-            {/* Age Info */}
+            {/* Interests Section */}
+            {profile.interests && profile.interests.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <p className="font-medium text-foreground">{t('interests', 'Interests')}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.interests.map((interest, idx) => (
+                    <span 
+                      key={idx}
+                      className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm border border-primary/20"
+                    >
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {profile.age && (
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Calendar className="w-5 h-5" />
