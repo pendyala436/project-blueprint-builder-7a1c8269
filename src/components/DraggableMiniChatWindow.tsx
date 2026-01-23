@@ -1730,108 +1730,66 @@ const DraggableMiniChatWindow = ({
                           <span>View Document</span>
                         </a>
                       ) : msg.senderId === currentUserId ? (
-                        // OWN MESSAGE: Display based on typing mode preference
-                        // Show loading state while translating
+                        // ===========================================
+                        // OWN MESSAGE (SENDER VIEW)
+                        // ALWAYS show English meaning for ALL 9 combinations
+                        // ===========================================
                         msg.isTranslating ? (
                           <div className="flex items-center gap-1">
                             <Loader2 className="h-3 w-3 animate-spin" />
                             <span className="opacity-70 italic unicode-text" dir="auto">{msg.message}</span>
                           </div>
                         ) : (
-                          // Only show Latin transliteration if current user's language is non-Latin script
                           <div className="space-y-1">
-                            {typingMode === 'english-core' ? (
-                              // English Core mode: sender sees English
-                              <>
-                                <p>{msg.message}</p>
-                                {/* Always show English meaning label for clarity */}
-                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                  🌐 English
-                                </p>
-                              </>
-                            ) : (
-                              // Native or English Meaning mode: sender sees their language
-                              <>
-                                <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
-                                {/* Show Latin only if user's mother tongue uses non-Latin script */}
-                                {!userUsesLatinScript && msg.latinMessage && (
-                                  <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                    🔤 {msg.latinMessage}
-                                  </p>
-                                )}
-                                {/* ALWAYS show English meaning for ALL modes */}
-                                {msg.englishMessage && (
-                                  <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                    🌐 {msg.englishMessage}
-                                  </p>
-                                )}
-                              </>
+                            {/* Primary message display */}
+                            <p className="unicode-text" dir="auto">
+                              {msg.translatedMessage || msg.message}
+                            </p>
+                            
+                            {/* Latin transliteration - show if non-Latin script */}
+                            {!userUsesLatinScript && msg.latinMessage && (
+                              <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                🔤 {msg.latinMessage}
+                              </p>
+                            )}
+                            
+                            {/* ALWAYS show English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                            {msg.englishMessage && (
+                              <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                                🌐 {msg.englishMessage}
+                              </p>
                             )}
                           </div>
                         )
                       ) : msg.isTranslating ? (
-                        // PARTNER MESSAGE: Translation in progress - show loading indicator
+                        // PARTNER MESSAGE: Translation in progress
                         <div className="flex items-center gap-1">
                           <Loader2 className="h-3 w-3 animate-spin" />
                           <span className="opacity-70 italic">{msg.message}</span>
                         </div>
                       ) : (
-                        // PARTNER MESSAGE: Display based on typing mode preference
-                        // Receiver sees message in THEIR language - show Latin only if their language is non-Latin
+                        // ===========================================
+                        // PARTNER MESSAGE (RECEIVER VIEW)
+                        // ALWAYS show English meaning for ALL 9 combinations
+                        // ===========================================
                         <div className="space-y-1">
-                          {/* Check if this is an english-core message from partner (original_english = message) */}
-                          {msg.englishMessage && msg.englishMessage === msg.message ? (
-                            // Partner sent in English Core mode - receiver sees translated + original English
-                            <>
-                              <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
-                              {/* Show Latin transliteration if non-Latin script */}
-                              {!userUsesLatinScript && msg.latinMessage && (
-                                <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                  🔤 {msg.latinMessage}
-                                </p>
-                              )}
-                              {/* Always show original English for english-core messages */}
-                              <div className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                <span className="text-blue-500 dark:text-blue-400">Original English:</span>
-                                <span className="ml-1">{msg.englishMessage}</span>
-                              </div>
-                            </>
-                          ) : typingMode === 'english-core' ? (
-                            // Receiver's mode is English Core: receiver sees English first
-                            <>
-                              <p>{msg.englishMessage || msg.message}</p>
-                              {/* Show native translation only if different and user's language is non-Latin */}
-                              {!userUsesLatinScript && msg.translatedMessage && msg.translatedMessage !== (msg.englishMessage || msg.message) && (
-                                <div className="border-t border-current/10 pt-0.5 mt-0.5">
-                                  <p className="text-[9px] opacity-60 italic unicode-text" dir="auto">
-                                    🌐 {msg.translatedMessage}
-                                  </p>
-                                  {msg.latinMessage && (
-                                    <p className="text-[9px] opacity-50 italic">
-                                      🔤 {msg.latinMessage}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            // Native or English Meaning mode: receiver sees their native language
-                            // ALWAYS show English meaning for ALL messages
-                            <>
-                              <p className="unicode-text" dir="auto">{msg.translatedMessage || msg.message}</p>
-                              {/* Show Latin only if receiver's mother tongue uses non-Latin script */}
-                              {!userUsesLatinScript && msg.latinMessage && (
-                                <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                  🔤 {msg.latinMessage}
-                                </p>
-                              )}
-                              {/* ALWAYS show English meaning for ALL 9 combinations */}
-                              {msg.englishMessage && (
-                                <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                  🌐 {msg.englishMessage}
-                                </p>
-                              )}
-                            </>
+                          {/* Primary message display - always show translated/native view */}
+                          <p className="unicode-text" dir="auto">
+                            {msg.translatedMessage || msg.message}
+                          </p>
+                          
+                          {/* Latin transliteration - show if non-Latin script */}
+                          {!userUsesLatinScript && msg.latinMessage && (
+                            <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🔤 {msg.latinMessage}
+                            </p>
+                          )}
+                          
+                          {/* ALWAYS show English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
+                          {msg.englishMessage && (
+                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🌐 {msg.englishMessage}
+                            </p>
                           )}
                         </div>
                       )}
