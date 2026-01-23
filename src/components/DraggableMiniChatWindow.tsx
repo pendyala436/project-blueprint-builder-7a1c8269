@@ -1244,19 +1244,8 @@ const DraggableMiniChatWindow = ({
     // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Determine Latin/English for display based on mode
-    let latinForDisplay: string | undefined;
-    let englishForDisplay: string | undefined;
-    
-    if (typingMode === 'native' && englishInput && englishInput !== messageToSend && needsTransliteration) {
-      // User typed Latin phonetically, got native - show Latin
-      latinForDisplay = englishInput;
-      // For native mode, generate English IMMEDIATELY using universal offline
-      // This runs in parallel - optimistic update shows loading state
-    } else if (typingMode === 'english-meaning') {
-      // User typed English, got native translation - store English
-      englishForDisplay = englishInput;
-    }
+    // Determine Latin/English for display - always english-meaning mode
+    let englishForDisplay: string | undefined = englishInput;
     
     // Add optimistic message first (English will be updated after background translation)
     setMessages(prev => [...prev, {
@@ -1264,10 +1253,10 @@ const DraggableMiniChatWindow = ({
       senderId: currentUserId,
       message: messageToSend,
       translatedMessage: messageToSend,
-      latinMessage: latinForDisplay,
-      englishMessage: englishForDisplay, // Will be updated after translation
+      latinMessage: undefined,
+      englishMessage: englishForDisplay,
       isTranslated: false,
-      isTranslating: typingMode === 'native' && !englishForDisplay, // Show loading for English generation
+      isTranslating: false,
       createdAt: new Date().toISOString()
     }]);
 
@@ -1964,24 +1953,8 @@ const DraggableMiniChatWindow = ({
 
               {/* Input area with mode-specific previews */}
               <div className="flex-1 relative">
-                {/* MODE: native - Transliteration hint */}
-                {typingMode === 'native' && needsTransliteration && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
-                    <span>✨</span>
-                    <span>Type phonetically → shows in {currentUserLanguage}</span>
-                  </div>
-                )}
-                
-                {/* MODE: native - Native script preview (transliteration) */}
-                {typingMode === 'native' && needsTransliteration && newMessage && newMessage !== rawInput && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
-                    {newMessage}
-                    {isSpellChecking && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
-                  </div>
-                )}
-                
                 {/* MODE: english-meaning - Hint (works for ALL languages - Latin or non-Latin) */}
-                {typingMode === 'english-meaning' && !isSameLanguage(currentUserLanguage, 'english') && (
+                {!isSameLanguage(currentUserLanguage, 'english') && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-blue-500/10 rounded text-[9px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
                     <span>🌐</span>
                     <span>Type English meaning → translates to {currentUserLanguage}</span>
@@ -1989,53 +1962,19 @@ const DraggableMiniChatWindow = ({
                 )}
                 
                 {/* MODE: english-meaning - Meaning preview (translation) */}
-                {typingMode === 'english-meaning' && meaningPreview && (
+                {meaningPreview && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-sm unicode-text" dir="auto">
                     {meaningPreview}
                     {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-blue-500/50" />}
                   </div>
                 )}
-                {typingMode === 'english-meaning' && !meaningPreview && rawInput.trim() && isMeaningLoading && (
+                {!meaningPreview && rawInput.trim() && isMeaningLoading && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded text-[10px] text-muted-foreground flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     <span>Translating to {currentUserLanguage}...</span>
                   </div>
                 )}
                 
-                
-                {/* Spell check suggestion */}
-                {typingMode === 'native' && lastSuggestion?.wasChanged && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded text-[10px] flex items-center justify-between gap-2">
-                    <span className="text-yellow-700 dark:text-yellow-400">
-                      Did you mean: <strong>{lastSuggestion.corrected}</strong>?
-                    </span>
-                    <div className="flex gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-5 px-2 text-[9px]"
-                        onClick={() => {
-                          const corrected = acceptSuggestion();
-                          if (corrected) {
-                            setRawInput(corrected);
-                            const native = dynamicTransliterate(corrected, currentUserLanguage);
-                            setNewMessage(native || corrected);
-                          }
-                        }}
-                      >
-                        Yes
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-5 px-2 text-[9px]"
-                        onClick={dismissSuggestion}
-                      >
-                        No
-                      </Button>
-                    </div>
-                  </div>
-                )}
                 
                 {/* Same language indicator */}
                 {!needsTranslation && newMessage.trim() && (
@@ -2044,68 +1983,16 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder={
-                    typingMode === 'english-meaning' 
-                      ? 'Type English meaning (e.g., "How are you")...' 
-                      : typingMode === 'native' && needsTransliteration 
-                        ? `Type phonetically (e.g., "bagunnava")...`
-                        : 'Type your message...'
-                  }
-                  value={typingMode === 'native' && needsTransliteration ? rawInput : newMessage}
+                  placeholder='Type English meaning (e.g., "How are you")...'
+                  value={newMessage}
                   onChange={(e) => {
                     const newValue = e.target.value;
                     
-                    // AUTO-DETECTION: Check if user is typing in native script (Gboard, etc.)
-                    if (autoDetectEnabled && newValue.length >= 2) {
-                      handleInputForAutoDetect(newValue);
-                    }
-                    
                     // MODE: english-meaning - Type English, show translation preview
-                    if (typingMode === 'english-meaning') {
-                      setRawInput(newValue);
-                      setNewMessage(newValue);
-                      // Generate meaning-based translation preview
-                      generateMeaningPreview(newValue);
-                    }
-                    // MODE: native - Transliterate if needed (BACKGROUND, non-blocking)
-                    else if (typingMode === 'native' && needsTransliteration) {
-                      const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(newValue);
-                      
-                      // IMMEDIATE: Update raw input (user sees what they type)
-                      setRawInput(newValue);
-                      
-                      if (hasNativeChars) {
-                        // GBoard/native keyboard - use directly
-                        setNewMessage(newValue);
-                      } else if (newValue === '' || /^[a-zA-Z0-9\s.,!?'"()\-:;@#$%^&*+=]*$/.test(newValue)) {
-                        // Latin input - transliterate in BACKGROUND
-                        if (newValue.trim()) {
-                          // Clear previous timeout
-                          if (transliterationTimeoutRef.current) {
-                            clearTimeout(transliterationTimeoutRef.current);
-                          }
-                          // DEBOUNCED BACKGROUND transliteration (50ms - very fast, non-blocking)
-                          transliterationTimeoutRef.current = setTimeout(() => {
-                            try {
-                              const native = dynamicTransliterate(newValue, currentUserLanguage);
-                              setNewMessage(native || newValue);
-                            } catch {
-                              setNewMessage(newValue);
-                            }
-                          }, 50);
-                          checkSpellingDebounced(newValue);
-                        } else {
-                          setNewMessage('');
-                        }
-                      } else {
-                        setNewMessage(newValue);
-                      }
-                    }
-                    // Default: pass through
-                    else {
-                      setRawInput(newValue);
-                      setNewMessage(newValue);
-                    }
+                    setRawInput(newValue);
+                    setNewMessage(newValue);
+                    // Generate meaning-based translation preview
+                    generateMeaningPreview(newValue);
                     
                     handleTyping(newValue);
                   }}
