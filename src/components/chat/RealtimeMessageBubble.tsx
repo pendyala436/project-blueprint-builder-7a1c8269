@@ -130,36 +130,10 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
     return receiverView;
   }, [isSentByMe, showAlternateView, senderView, receiverView, originalText, messageViews]);
 
-  // Secondary text (shown smaller below primary)
-  // Shows original English to receiver when available
-  const secondaryContent = useMemo(() => {
-    if (!messageViews) return null;
-    
-    // For receivers, show English as secondary
-    if (!isSentByMe && !showAlternateView) {
-      const english = messageViews.originalEnglish;
-      const native = messageViews.receiverNative || receiverView;
-      
-      // If we have English and it's different from native display
-      if (english && native && english !== native) {
-        return { 
-          text: english, 
-          label: 'English' 
-        };
-      }
-    }
-    
-    // For sender viewing their own message - show what receiver sees
-    if (isSentByMe && !showAlternateView) {
-      const receiverNative = messageViews.receiverNative;
-      const senderNative = messageViews.senderNative || senderView;
-      if (receiverNative && senderNative && receiverNative !== senderNative) {
-        return { text: receiverNative, label: 'Partner sees' };
-      }
-    }
-    
-    return null;
-  }, [isSentByMe, showAlternateView, messageViews, receiverView, senderView]);
+  // Get English meaning for display
+  const englishMeaning = useMemo(() => {
+    return messageViews?.originalEnglish || null;
+  }, [messageViews]);
 
   // Language for display (for font rendering)
   const displayLanguage = useMemo(() => {
@@ -244,7 +218,7 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
           </p>
         )}
 
-        {/* Primary message content */}
+        {/* Primary message content - Native language (large) */}
         <p
           className="text-sm unicode-text whitespace-pre-wrap break-words leading-relaxed"
           dir="auto"
@@ -253,31 +227,23 @@ export const RealtimeMessageBubble: React.FC<RealtimeMessageBubbleProps> = memo(
           {displayContent}
         </p>
 
-        {/* Secondary content (dual display) */}
-        {secondaryContent && (
+        {/* MANDATORY English meaning (small) - shown for ALL messages */}
+        {messageViews?.originalEnglish && messageViews.originalEnglish !== displayContent && (
           <div className={cn(
-            'mt-1.5 pt-1.5 border-t flex flex-col gap-0.5',
+            'mt-1.5 pt-1.5 border-t flex items-center gap-1',
             isSentByMe 
               ? 'border-primary-foreground/20' 
               : 'border-foreground/10'
           )}>
-            <div className="flex items-center gap-1">
-              <Globe className={cn(
-                'h-3 w-3 flex-shrink-0',
-                isSentByMe ? 'text-primary-foreground/50' : 'text-blue-500'
-              )} />
-              <span className={cn(
-                'text-[9px] font-medium',
-                isSentByMe ? 'text-primary-foreground/50' : 'text-blue-500'
-              )}>
-                {secondaryContent.label}
-              </span>
-            </div>
+            <Globe className={cn(
+              'h-3 w-3 flex-shrink-0',
+              isSentByMe ? 'text-primary-foreground/50' : 'text-blue-500'
+            )} />
             <p className={cn(
-              'text-xs unicode-text whitespace-pre-wrap break-words pl-4',
+              'text-xs unicode-text whitespace-pre-wrap break-words',
               isSentByMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
             )} dir="auto">
-              {secondaryContent.text}
+              🌐 {messageViews.originalEnglish}
             </p>
           </div>
         )}
