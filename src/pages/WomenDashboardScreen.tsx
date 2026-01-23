@@ -50,7 +50,7 @@ import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import AIShiftDisplay from "@/components/AIShiftDisplay";
 import LanguageGroupShiftsPanel from "@/components/LanguageGroupShiftsPanel";
-import { AIElectionPanel } from "@/components/AIElectionPanel";
+
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
 
@@ -1105,18 +1105,6 @@ const WomenDashboardScreen = () => {
           )}
         </div>
 
-        {/* AI Election Panel */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
-          {currentWomanLanguage && currentUserId && (
-            <Card className="p-4">
-              <AIElectionPanel
-                currentUserId={currentUserId}
-                languageCode={currentWomanLanguage}
-                members={[]}
-              />
-            </Card>
-          )}
-        </div>
 
         {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
