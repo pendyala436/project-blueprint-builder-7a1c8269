@@ -154,22 +154,10 @@ export const useAutoTypingModeDetection = ({
   const analyzeInput = useCallback((input: string): DetectionResult => {
     const { script, isLatin } = detectScript(input);
     
-    let suggestedMode: TypingMode = currentMode;
-    let confidence = 0;
+    let suggestedMode: TypingMode = 'english-meaning';
+    let confidence = 1;
 
-    if (input.length >= minCharsToDetect) {
-      if (!isLatin) {
-        // Native script detected (Gboard native keyboard, etc.)
-        suggestedMode = 'native';
-        confidence = Math.min(1, input.length / 5);
-      } else if (isLatin && currentMode === 'native') {
-        // Latin detected while in native mode - could be intentional English
-        // Don't auto-switch away from native, user might be typing English words
-        suggestedMode = 'native';
-        confidence = 0.5;
-      }
-    }
-
+    // Always use english-meaning mode
     return {
       detectedScript: script,
       isNativeScript: !isLatin,
@@ -177,7 +165,7 @@ export const useAutoTypingModeDetection = ({
       suggestedMode,
       confidence,
     };
-  }, [currentMode, minCharsToDetect]);
+  }, []);
 
   /**
    * Handle input change and detect script
@@ -196,18 +184,8 @@ export const useAutoTypingModeDetection = ({
     const detection = analyzeInput(input);
     setLastDetection(detection);
 
-    // Auto-switch to native mode if native script detected with high confidence
-    if (detection.isNativeScript && detection.confidence >= 0.6) {
-      if (currentMode !== 'native') {
-        console.log('[AutoTypingMode] Native script detected, switching to native mode', {
-          script: detection.detectedScript,
-          confidence: detection.confidence,
-        });
-        setIsAutoMode(true);
-        onModeChange('native');
-      }
-    }
-  }, [enabled, autoSwitchEnabled, minCharsToDetect, analyzeInput, currentMode, onModeChange]);
+    // Auto-switch disabled - single mode only
+  }, [enabled, autoSwitchEnabled, analyzeInput]);
 
   /**
    * Lock mode to prevent auto-switching (user manually selected)

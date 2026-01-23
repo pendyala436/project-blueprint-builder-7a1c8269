@@ -254,70 +254,25 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     const isEnglishNative = isEnglish(senderLanguage);
     const isTypingLatin = isLatinText(value);
 
-    // Mode 1: Native Mode - works for ALL languages (Latin and non-Latin)
-    // Latin languages (Spanish, French): type in Latin, display in Latin
-    // Non-Latin languages (Hindi, Telugu): type Latin → transliterate to native script
-    if (typingMode === 'native') {
-      let finalNative = value;
-      
-      if (needsTransliteration) {
-        // NON-LATIN script language (Hindi, Telugu, Kannada, etc.)
-        const hasNativeChars = /[^\x00-\x7F\u00C0-\u024F]/.test(value);
-        
-        if (hasNativeChars) {
-          // User typed in native script (Gboard), use as-is
-          setNativeText(value);
-          finalNative = value;
-          setPreviewText(''); // No preview needed, already in native
-        } else if (isLatinText(value)) {
-          // User typed Latin → transliterate to native for display
-          const native = value.trim() ? transliterateNow(value) : '';
-          setNativeText(native);
-          finalNative = native;
-          setPreviewText(''); // Preview shows in nativeText already
-        } else {
-          setNativeText(value);
-          finalNative = value;
-        }
-      } else {
-        // LATIN script language (Spanish, French, Mizo, Khasi, Tulu, etc.)
-        // No transliteration needed - display as-is in Latin script
-        setNativeText(value);
-        finalNative = value;
-        setPreviewText('');
-      }
-      
-      // Generate receiver preview (translation to receiver's language)
-      // Works for ALL combinations: Latin→Latin, Latin→Native, Native→Native
-      if (value.trim() && !isSameLanguage(senderLanguage, receiverLanguage)) {
-        receiverPreviewTimeoutRef.current = setTimeout(() => {
-          generateReceiverPreview(finalNative || value, senderLanguage);
-        }, 600);
-      } else {
-        setReceiverPreview('');
-      }
+    // English (Meaning-Based) Mode - Type English, preview in SENDER'S mother tongue
+    setNativeText(value);
+    
+    // Generate SENDER'S native preview (English → sender's mother tongue)
+    if (value.trim() && !isEnglishNative) {
+      previewTimeoutRef.current = setTimeout(() => {
+        generateSenderNativePreview(value);
+      }, 500);
+    } else {
+      setPreviewText('');
     }
-    // Mode 2: English (Meaning-Based) - Type English, preview in SENDER'S mother tongue
-    else if (typingMode === 'english-meaning') {
-      setNativeText(value);
-      
-      // Generate SENDER'S native preview (English → sender's mother tongue)
-      if (value.trim() && !isEnglishNative) {
-        previewTimeoutRef.current = setTimeout(() => {
-          generateSenderNativePreview(value);
-        }, 500);
-      } else {
-        setPreviewText('');
-      }
-      
-      // Also generate receiver preview (English → receiver's mother tongue)
-      if (value.trim() && !isEnglish(receiverLanguage)) {
-        receiverPreviewTimeoutRef.current = setTimeout(() => {
-          generateReceiverPreview(value, 'english');
-        }, 600);
-      } else {
-        setReceiverPreview('');
-      }
+    
+    // Also generate receiver preview (English → receiver's mother tongue)
+    if (value.trim() && !isEnglish(receiverLanguage)) {
+      receiverPreviewTimeoutRef.current = setTimeout(() => {
+        generateReceiverPreview(value, 'english');
+      }, 600);
+    } else {
+      setReceiverPreview('');
     }
 
     // Typing indicator
@@ -366,106 +321,45 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
 
         // ================================================
-        // MODE 1: Native Mode - ALL 1000+ LANGUAGES SUPPORTED
-        // Works for EVERY language in profile database:
-        // 
-        // LATIN-SCRIPT languages (Spanish, French, Mizo, Khasi, etc.):
-        //   → Type in Latin, display in Latin, translate meaning to receiver
-        // 
-        // NON-LATIN-SCRIPT languages (Hindi, Telugu, Kannada, etc.):
-        //   → Type Latin → transliterate to native script
-        //   → Or type directly in native script (Gboard)
-        //   → Translate meaning to receiver's language
-        // 
-        // REGIONAL LANGUAGES (Tulu, Bhojpuri, Marwari, etc.):
-        //   → Fallback to nearest major language for translation
-        //   → Tulu → Kannada, Bhojpuri → Hindi, Warli → Marathi
-        // ================================================
-        if (savedMode === 'native') {
-          // savedNative contains:
-          // - For Latin languages: original Latin text
-          // - For non-Latin languages: transliterated native script
-          messageToStore = savedNative;
-          senderView = savedNative;
-          senderNative = savedNative;
-          
-          // Get English version (for English Core receivers)
-          // Using Universal Offline Engine for meaning-based translation
-          if (!isEnglishSender) {
-            const toEnglish = await translateUniversal(savedNative, senderLanguage, 'english');
-            originalEnglish = toEnglish?.text || savedNative;
-          } else {
-            originalEnglish = savedNative;
-          }
-          
-          // Get receiver's native version
-          // Handles ALL combinations: Latin→Latin, Latin→Native, Native→Native
-          if (sameLanguage) {
-            receiverView = savedNative;
-            receiverNative = savedNative;
-          } else if (isEnglishReceiver) {
-            receiverView = originalEnglish;
-            receiverNative = originalEnglish;
-          } else {
-            // Translate to receiver's language using Universal Offline Engine
-            const toReceiver = await translateUniversal(savedNative, senderLanguage, receiverLanguage);
-            receiverView = toReceiver?.text || savedNative;
-            receiverNative = receiverView;
-          }
-        }
-        
-        // ================================================
-        // MODE 2: English (Meaning-Based)
+        // English (Meaning-Based) Mode Only
         // Sender types English → Sender sees THEIR mother tongue
         // Receiver sees THEIR mother tongue (translated)
         // ================================================
-        else if (savedMode === 'english-meaning') {
-          originalEnglish = savedRaw;
-          
-          // SENDER sees their MOTHER TONGUE after sending
-          if (isEnglishSender) {
-            // Sender's native IS English - show English
-            senderView = savedRaw;
-            senderNative = savedRaw;
-            messageToStore = savedRaw;
-          } else if (savedPreview) {
-            // Use the preview we already generated (sender's native translation)
-            senderView = savedPreview;
-            senderNative = savedPreview;
-            messageToStore = savedPreview;
-          } else {
-            // Translate English input to sender's mother tongue using Universal Offline Engine
-            const toSenderNative = await translateUniversal(savedRaw, 'english', senderLanguage);
-            senderView = toSenderNative?.text || savedRaw;
-            senderNative = senderView;
-            messageToStore = senderView;
-          }
-          
-          // RECEIVER sees their MOTHER TONGUE (translated from English)
-          if (isEnglishReceiver) {
-            receiverView = savedRaw; // Receiver's native is English
-            receiverNative = savedRaw;
-          } else if (sameLanguage && senderNative) {
-            // Same language - receiver sees same as sender
-            receiverView = senderNative;
-            receiverNative = senderNative;
-          } else {
-            // Different languages - translate English to receiver's mother tongue
-            const toReceiver = await translateUniversal(savedRaw, 'english', receiverLanguage);
-            receiverView = toReceiver?.text || savedRaw;
-            receiverNative = receiverView;
-          }
+        originalEnglish = savedRaw;
+        
+        // SENDER sees their MOTHER TONGUE after sending
+        if (isEnglishSender) {
+          // Sender's native IS English - show English
+          senderView = savedRaw;
+          senderNative = savedRaw;
+          messageToStore = savedRaw;
+        } else if (savedPreview) {
+          // Use the preview we already generated (sender's native translation)
+          senderView = savedPreview;
+          senderNative = savedPreview;
+          messageToStore = savedPreview;
+        } else {
+          // Translate English input to sender's mother tongue using Universal Offline Engine
+          const toSenderNative = await translateUniversal(savedRaw, 'english', senderLanguage);
+          senderView = toSenderNative?.text || savedRaw;
+          senderNative = senderView;
+          messageToStore = senderView;
         }
-
-        // Log all views for debugging
-        console.log('[RealtimeChatInput] Message views generated:', {
-          mode: savedMode,
-          originalEnglish,
-          senderNative,
-          receiverNative,
-          senderView,
-          receiverView
-        });
+        
+        // RECEIVER sees their MOTHER TONGUE (translated from English)
+        if (isEnglishReceiver) {
+          receiverView = savedRaw; // Receiver's native is English
+          receiverNative = savedRaw;
+        } else if (sameLanguage && senderNative) {
+          // Same language - receiver sees same as sender
+          receiverView = senderNative;
+          receiverNative = senderNative;
+        } else {
+          // Different languages - translate English to receiver's mother tongue
+          const toReceiver = await translateUniversal(savedRaw, 'english', receiverLanguage);
+          receiverView = toReceiver?.text || savedRaw;
+          receiverNative = receiverView;
+        }
 
       } catch (err) {
         console.error('[RealtimeChatInput] Translation error:', err);
@@ -527,64 +421,31 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
   // Display text based on mode
   const getDisplayText = () => {
-    if (typingMode === 'native' && needsTransliteration) {
-      return rawInput; // Show Latin, preview shows native
-    }
     return rawInput;
   };
 
   // Get placeholder based on mode
   const getPlaceholder = () => {
-    switch (typingMode) {
-      case 'native':
-        return needsTransliteration 
-          ? t('chat.typeInLatin', 'Type in English letters → converts to your language')
-          : t('chat.typeMessage', 'Type a message...');
-      case 'english-meaning':
-        return t('chat.typeEnglishMeaning', 'Type in English → shows as your language');
-      default:
-        return t('chat.typeMessage', 'Type a message...');
-    }
+    return t('chat.typeEnglishMeaning', 'Type in English → shows as your language');
   };
 
-  // Show mode selector only for non-English users
-  const showModeSelector = !isEnglishLanguage;
+  // Show mode indicator only for non-English users (mode selector removed - single mode)
+  const showModeIndicator = !isEnglishLanguage;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Typing mode selector */}
-      {showModeSelector && (
-        <div className="px-4 py-2 border-b border-border/50 flex items-center justify-between">
-          <TypingModeSelector
-            currentMode={typingMode}
-            onModeChange={setTypingMode}
-            userLanguage={senderLanguage}
-            receiverLanguage={receiverLanguage}
-            compact
-          />
-          <span className="text-xs text-muted-foreground max-w-[200px] truncate">
-            {typingMode === 'native' && t('chat.typingInNative', `You & partner see native scripts`)}
-            {typingMode === 'english-meaning' && t('chat.typingEnglishMeaning', `Type English → Both see native`)}
+      {/* Mode indicator - single mode, no selector needed */}
+      {showModeIndicator && (
+        <div className="px-4 py-2 border-b border-border/50 flex items-center justify-center">
+          <span className="text-xs text-muted-foreground">
+            {t('chat.typingEnglishMeaning', `Type English → Both see native`)}
           </span>
-        </div>
-      )}
-
-      {/* Native preview (Mode 1 with transliteration) */}
-      {typingMode === 'native' && needsTransliteration && nativeText && nativeText !== rawInput && (
-        <div className="px-4 py-2 border-b border-border/30">
-          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-            <span>👁️</span>
-            <span>{t('chat.yourView', 'You see')} ({senderLanguage})</span>
-          </div>
-          <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-base unicode-text" dir="auto">
-            {nativeText}
-          </div>
         </div>
       )}
 
       {/* English Meaning preview - shows SENDER'S MOTHER TONGUE */}
       {/* Works for BOTH Latin (Spanish, French) and non-Latin (Hindi, Telugu) languages */}
-      {typingMode === 'english-meaning' && rawInput.trim() && !isEnglish(senderLanguage) && (
+      {rawInput.trim() && !isEnglish(senderLanguage) && (
         <div className="px-4 py-2 border-b border-border/30">
           <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
             <span>👁️</span>
@@ -622,14 +483,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         </div>
       )}
 
-      {/* Hint for transliteration */}
-      {typingMode === 'native' && needsTransliteration && (
-        <div className="px-4 py-1.5 text-xs text-muted-foreground/70 flex items-center gap-1.5 border-b border-border/30">
-          <span>✨</span>
-          <span>{t('chat.transliterationHint', 'Type in English letters → auto-converts to')} {senderLanguage}</span>
-        </div>
-      )}
-
       {/* Input area */}
       <div className="p-3 flex items-end gap-2">
         <div className="flex-1 relative">
@@ -642,7 +495,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
             onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder || getPlaceholder()}
             disabled={disabled}
-            lang={typingMode === 'native' && !needsTransliteration ? senderLanguage : 'en'}
+            lang="en"
             dir="auto"
             spellCheck={true}
             autoComplete="off"

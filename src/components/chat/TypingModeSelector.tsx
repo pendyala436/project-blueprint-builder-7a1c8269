@@ -37,8 +37,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 
-// The 2 typing modes (english-core removed)
-export type TypingMode = 'native' | 'english-meaning';
+// Single typing mode - English to Native only
+export type TypingMode = 'english-meaning';
 
 export interface TypingModeInfo {
   id: TypingMode;
@@ -197,33 +197,8 @@ export const useTypingMode = () => {
    */
   const handleInputForAutoDetect = useCallback((input: string) => {
     if (!autoDetectEnabled) return;
-    if (Date.now() < modeLockedUntilRef.current) return;
-    if (input.trim().length < 2) return;
-
-    const { isNative, script } = detectNativeScript(input);
-    
-    // Detect script change and switch mode accordingly
-    if (isNative) {
-      // Native script detected (Gboard native keyboard, etc.)
-      if (mode !== 'native') {
-        console.log('[TypingMode] Auto-detected native script:', script, '→ switching to native mode');
-        setModeState('native');
-        saveTypingMode('native');
-        setIsAutoMode(true);
-      }
-      lastDetectedScriptRef.current = 'native';
-    } else {
-      // Latin/English detected
-      if (lastDetectedScriptRef.current === 'native' && mode === 'native') {
-        // User switched from native keyboard to Latin - switch to default English mode
-        console.log('[TypingMode] Auto-detected Latin input after native → switching to english-meaning');
-        setModeState('english-meaning');
-        saveTypingMode('english-meaning');
-        setIsAutoMode(true);
-      }
-      lastDetectedScriptRef.current = 'latin';
-    }
-  }, [autoDetectEnabled, mode]);
+    // Auto-detection disabled - single mode only
+  }, []);
 
   /**
    * Reset to last manual mode
@@ -269,17 +244,8 @@ export const TypingModeSelector: React.FC<TypingModeSelectorProps> = memo(({
   const [isOpen, setIsOpen] = useState(false);
   const [autoDetect, setAutoDetect] = useState(() => getAutoDetectEnabled());
 
-  // Define the 2 modes with meaningful names and clear behaviors
+  // Single mode - English to Native only
   const modes: TypingModeInfo[] = [
-    {
-      id: 'native',
-      name: t('chat.mode.native', 'Mother Tongue & Latin'),
-      description: t('chat.mode.nativeDesc', 'Type in native script or Latin transliteration'),
-      icon: <Languages className="h-4 w-4" />,
-      preview: `Your ${userLanguage} text`,
-      afterSend: `You see: ${userLanguage}`,
-      receiverSees: `Partner sees: ${receiverLanguage}`,
-    },
     {
       id: 'english-meaning',
       name: t('chat.mode.englishMeaning', 'English to Native'),

@@ -43,8 +43,8 @@ export interface TranslationResult {
   mode: TranslationMode;
 }
 
-// Typing modes for chat (2 modes: native script + English meaning-based)
-export type TypingMode = 'native' | 'english-meaning';
+// Single typing mode: English to Native (meaning-based translation)
+export type TypingMode = 'english-meaning';
 
 // Translation mode indicates how translation was performed
 export type TranslationMode = 

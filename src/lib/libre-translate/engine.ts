@@ -421,81 +421,41 @@ export async function processChatMessage(
   let wasTransliterated = false;
   let wasTranslated = false;
 
-  // Handle based on typing mode
-  switch (typingMode) {
-    case 'native':
-      // Mode 1: Mother Tongue & Latin
-      // User types in native script or Latin transliteration
-      // Both sides see native script
-      // ALWAYS generate English meaning for all 9 combinations
-      
-      // Convert Latin to sender's native script if needed
-      if (inputIsLatin && !isLatinScriptLanguage(senderLanguage)) {
-        senderView = transliterateToNative(trimmed, senderLanguage);
-        wasTransliterated = senderView !== trimmed;
-      }
-      senderNative = senderView;
-      
-      // ALWAYS generate English meaning (for all 9 combinations)
-      if (!isEnglish(senderLanguage)) {
-        const englishResult = await translate(senderView, senderLanguage, 'english');
-        englishPivot = englishResult.text;
-      } else {
-        englishPivot = senderView;
-      }
-      
-      // Translate for receiver if different language
-      if (!isSameLanguage(senderLanguage, receiverLanguage)) {
-        const result = await translate(senderView, senderLanguage, receiverLanguage);
-        receiverView = result.text;
-        receiverNative = receiverView;
-        wasTranslated = result.isTranslated;
-      } else {
-        receiverView = senderView;
-        receiverNative = senderView;
-      }
-      break;
-
-    // english-core mode removed - only 'native' and 'english-meaning' supported
-
-    case 'english-meaning':
-      // Mode 3: English to Native (Meaning-based)
-      // Sender types in English, sees their mother tongue after send
-      // Receiver sees their mother tongue
-      // ALL translations are DIRECT from English (no double translation)
-      
-      // Store original English as the pivot
-      englishPivot = trimmed;
-      
-      // Translate English → Sender's mother tongue (for sender's view)
-      if (!isEnglish(senderLanguage)) {
-        const senderResult = await translate(trimmed, 'english', senderLanguage);
-        senderView = senderResult.text;
-        senderNative = senderView;
-        wasTranslated = senderResult.isTranslated;
-      } else {
-        // Sender's language IS English - they see their English input
-        senderView = trimmed;
-        senderNative = trimmed;
-      }
-      
-      // Translate English → Receiver's mother tongue (DIRECTLY from English, not from sender's native)
-      if (isEnglish(receiverLanguage)) {
-        // Receiver's language IS English - they see English
-        receiverView = trimmed;
-        receiverNative = trimmed;
-      } else if (isSameLanguage(senderLanguage, receiverLanguage)) {
-        // Same language - receiver sees same as sender
-        receiverView = senderView;
-        receiverNative = senderNative;
-      } else {
-        // DIRECT translation from English → Receiver's language (no intermediate step)
-        const receiverResult = await translate(trimmed, 'english', receiverLanguage);
-        receiverView = receiverResult.text;
-        receiverNative = receiverView;
-        wasTranslated = wasTranslated || receiverResult.isTranslated;
-      }
-      break;
+  // Handle based on typing mode - only english-meaning supported
+  // English to Native (Meaning-based)
+  // Sender types in English, sees their mother tongue after send
+  // Receiver sees their mother tongue
+  // ALL translations are DIRECT from English (no double translation)
+  
+  // Store original English as the pivot
+  englishPivot = trimmed;
+  
+  // Translate English → Sender's mother tongue (for sender's view)
+  if (!isEnglish(senderLanguage)) {
+    const senderResult = await translate(trimmed, 'english', senderLanguage);
+    senderView = senderResult.text;
+    senderNative = senderView;
+    wasTranslated = senderResult.isTranslated;
+  } else {
+    // Sender's language IS English - they see their English input
+    senderView = trimmed;
+    senderNative = trimmed;
+  }
+  // Translate English → Receiver's mother tongue (DIRECTLY from English, not from sender's native)
+  if (isEnglish(receiverLanguage)) {
+    // Receiver's language IS English - they see English
+    receiverView = trimmed;
+    receiverNative = trimmed;
+  } else if (isSameLanguage(senderLanguage, receiverLanguage)) {
+    // Same language - receiver sees same as sender
+    receiverView = senderView;
+    receiverNative = senderNative;
+  } else {
+    // DIRECT translation from English → Receiver's language (no intermediate step)
+    const receiverResult = await translate(trimmed, 'english', receiverLanguage);
+    receiverView = receiverResult.text;
+    receiverNative = receiverView;
+    wasTranslated = wasTranslated || receiverResult.isTranslated;
   }
 
   return {
