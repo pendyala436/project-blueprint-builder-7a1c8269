@@ -1,19 +1,16 @@
 /**
- * Real-Time Chat Input with Extended Universal Translation
- * =========================================================
+ * Extended Chat Input with Multi-Language Support
+ * ================================================
  * 
- * SUPPORTS INPUT IN ANY LANGUAGE (typed or voice)
+ * Allows typing in ANY language (not just English)
  * 
  * FLOW:
- * 1. User Input (any language: typed or Gboard/voice)
+ * 1. User types in any language (typed or via Gboard/voice)
  * 2. Auto-detect input language (shown as badge)
- * 3. Live Preview: Message in sender's mother tongue + English meaning
- * 4. On Send:
- *    - Sender sees: Native message (large) + English meaning (small)
- *    - Receiver sees: Native message (large) + English meaning (small)
- * 
- * TRANSLATION PIPELINE:
- * Input (any language) → Detect → English pivot → Sender native + Receiver native
+ * 3. Live preview shows message in sender's mother tongue
+ * 4. On send:
+ *    - Sender sees: Native message + English meaning (small)
+ *    - Receiver sees: Native message + English meaning (small)
  */
 
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
@@ -26,7 +23,7 @@ import { Send, Globe, Languages } from 'lucide-react';
 import {
   translateExtended,
   generateLivePreview,
-  generateReceiverPreview as generateReceiverPreviewFn,
+  generateReceiverPreview,
   detectInputLanguage,
   isEnglish,
   isSameLanguage,
@@ -34,33 +31,34 @@ import {
 } from '@/lib/translation/extended-universal-engine';
 
 /**
- * Message views for all mode combinations
- * These views are sent to the parent for storage
+ * Message views for storage and display
  */
-export interface MessageViews {
-  messageToStore: string;   // What gets stored in database (sender's view)
-  senderView: string;       // What sender sees after sending
-  receiverView: string;     // What receiver sees (translated to their language)
-  originalEnglish: string;  // English meaning
-  senderNative: string;     // Sender's native language view
-  receiverNative: string;   // Receiver's native language view
-  senderMode: string;       // Always 'english-meaning'
-  // Extended fields for dual display
-  detectedLanguage?: string;
-  englishMeaning?: string;
+export interface ExtendedMessageData {
+  originalInput: string;
+  detectedLanguage: string;
+  englishMeaning: string;
+  senderNativeText: string;
+  senderEnglishHint: string;
+  receiverNativeText: string;
+  receiverEnglishHint: string;
 }
 
-interface RealtimeChatInputProps {
-  onSendMessage: (message: string, senderView: string, receiverView: string, messageViews?: MessageViews) => void;
+interface ExtendedChatInputProps {
+  onSendMessage: (
+    messageToStore: string,
+    senderView: string,
+    receiverView: string,
+    messageData: ExtendedMessageData
+  ) => void;
   onTyping?: (isTyping: boolean) => void;
-  senderLanguage: string; // User's mother tongue from profile
-  receiverLanguage: string; // Partner's mother tongue from profile
+  senderLanguage: string;
+  receiverLanguage: string;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
 }
 
-export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
+export const ExtendedChatInput: React.FC<ExtendedChatInputProps> = memo(({
   onSendMessage,
   onTyping,
   senderLanguage,
@@ -73,7 +71,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
   // State
   const [rawInput, setRawInput] = useState('');
-  const [detectedLanguage, setDetectedLanguage] = useState('');
+  const [detectedLanguage, setDetectedLanguage] = useState<string>('');
   const [nativePreview, setNativePreview] = useState('');
   const [englishPreview, setEnglishPreview] = useState('');
   const [receiverNativePreview, setReceiverNativePreview] = useState('');
@@ -85,10 +83,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-  // Check language properties
-  const isEnglishSender = isEnglish(senderLanguage);
-  const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
 
   /**
    * Handle input change - detect language and generate previews
@@ -125,8 +119,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
         setNativePreview(senderPreview.nativePreview);
         
         // Generate receiver's preview
-        if (!sameLanguage) {
-          const { preview, englishMeaning } = await generateReceiverPreviewFn(
+        if (!isSameLanguage(senderLanguage, receiverLanguage)) {
+          const { preview, englishMeaning } = await generateReceiverPreview(
             value,
             senderLanguage,
             receiverLanguage
@@ -138,7 +132,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
           setEnglishPreview('');
         }
       } catch (err) {
-        console.error('[RealtimeChatInput] Preview error:', err);
+        console.error('[ExtendedChatInput] Preview error:', err);
       } finally {
         setIsGeneratingPreview(false);
       }
@@ -150,7 +144,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [senderLanguage, receiverLanguage, sameLanguage, onTyping]);
+  }, [senderLanguage, receiverLanguage, onTyping]);
 
   /**
    * Handle send - generate all views and send message
@@ -161,11 +155,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
 
     // Save input and clear immediately for responsiveness
     const savedInput = trimmedInput;
-    const savedNativePreview = nativePreview;
-    const savedEnglish = englishPreview;
-    const savedReceiverPreview = receiverNativePreview;
-    const savedDetectedLang = detectedLanguage;
-    
     setRawInput('');
     setNativePreview('');
     setEnglishPreview('');
@@ -178,53 +167,40 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       // Generate full translation with all views
       const views = await translateExtended(savedInput, senderLanguage, receiverLanguage);
 
-      const messageViews: MessageViews = {
-        messageToStore: views.senderNativeText,
-        senderView: views.senderNativeText,
-        receiverView: views.receiverNativeText,
-        originalEnglish: views.englishMeaning,
-        senderNative: views.senderNativeText,
-        receiverNative: views.receiverNativeText,
-        senderMode: 'extended-universal',
+      const messageData: ExtendedMessageData = {
+        originalInput: views.originalInput,
         detectedLanguage: views.detectedLanguage,
         englishMeaning: views.englishMeaning,
+        senderNativeText: views.senderNativeText,
+        senderEnglishHint: views.senderEnglishHint,
+        receiverNativeText: views.receiverNativeText,
+        receiverEnglishHint: views.receiverEnglishHint,
       };
 
-      console.log('[RealtimeChatInput] Sending message:', {
-        input: savedInput,
-        detected: views.detectedLanguage,
-        english: views.englishMeaning,
-        senderView: views.senderNativeText,
-        receiverView: views.receiverNativeText,
-      });
+      console.log('[ExtendedChatInput] Sending message:', messageData);
 
       onSendMessage(
         views.senderNativeText,  // What gets stored (sender's native)
         views.senderNativeText,  // What sender sees
         views.receiverNativeText, // What receiver sees
-        messageViews
+        messageData
       );
     } catch (err) {
-      console.error('[RealtimeChatInput] Send error:', err);
-      // Fallback: send with previews if available
-      const fallbackSender = savedNativePreview || savedInput;
-      const fallbackReceiver = savedReceiverPreview || savedInput;
-      
-      onSendMessage(fallbackSender, fallbackSender, fallbackReceiver, {
-        messageToStore: fallbackSender,
-        senderView: fallbackSender,
-        receiverView: fallbackReceiver,
-        originalEnglish: savedEnglish || savedInput,
-        senderNative: fallbackSender,
-        receiverNative: fallbackReceiver,
-        senderMode: 'extended-universal',
-        detectedLanguage: savedDetectedLang,
-        englishMeaning: savedEnglish || savedInput,
+      console.error('[ExtendedChatInput] Send error:', err);
+      // Fallback: send raw input
+      onSendMessage(savedInput, savedInput, savedInput, {
+        originalInput: savedInput,
+        detectedLanguage: 'unknown',
+        englishMeaning: savedInput,
+        senderNativeText: savedInput,
+        senderEnglishHint: savedInput,
+        receiverNativeText: savedInput,
+        receiverEnglishHint: savedInput,
       });
     }
 
     textareaRef.current?.focus();
-  }, [rawInput, nativePreview, englishPreview, receiverNativePreview, detectedLanguage, disabled, isComposing, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
+  }, [rawInput, disabled, isComposing, senderLanguage, receiverLanguage, onSendMessage, onTyping]);
 
   /**
    * Handle key press
@@ -258,8 +234,9 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     };
   }, []);
 
+  const isEnglishSender = isEnglish(senderLanguage);
   const showSenderPreview = rawInput.trim() && !isEnglishSender && nativePreview;
-  const showReceiverPreview = rawInput.trim() && !sameLanguage;
+  const showReceiverPreview = rawInput.trim() && !isSameLanguage(senderLanguage, receiverLanguage);
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
@@ -378,6 +355,6 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   );
 });
 
-RealtimeChatInput.displayName = 'RealtimeChatInput';
+ExtendedChatInput.displayName = 'ExtendedChatInput';
 
-export default RealtimeChatInput;
+export default ExtendedChatInput;

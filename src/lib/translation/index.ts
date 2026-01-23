@@ -341,6 +341,18 @@ export {
   type SemanticDictionaryEntry,
 } from './universal-offline-engine';
 
+// Extended Universal Translation (Multi-language input with auto-detection)
+export {
+  translateExtended,
+  generateLivePreview as generateExtendedPreview,
+  generateReceiverPreview as generateExtendedReceiverPreview,
+  detectInputLanguage,
+  getEnglishMeaning,
+  type ExtendedMessageViews,
+  type DetectedLanguageInfo,
+  type LivePreviewResult as ExtendedLivePreviewResult,
+} from './extended-universal-engine';
+
 export {
   useUniversalTranslation,
   useTranslateUniversal,

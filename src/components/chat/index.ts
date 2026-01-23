@@ -4,11 +4,15 @@ export { ChatMessageInput } from './ChatMessageInput';
 export { MultilingualChatRoom } from './MultilingualChatRoom';
 
 // Real-time translation components (production-ready, < 3ms UI response)
-// Supports all 9 sender×receiver mode combinations
 export { RealtimeChatInput, type MessageViews } from './RealtimeChatInput';
 export { RealtimeMessageBubble, type MessageViewData } from './RealtimeMessageBubble';
 
-// Typing mode selector (3 modes: Native, English Core, English Meaning-Based)
+// Extended Universal Translation (multi-language input with auto-detection)
+// Supports input in ANY language with dual display (native + English meaning)
+export { ExtendedChatInput, type ExtendedMessageData } from './ExtendedChatInput';
+export { ExtendedMessageBubble } from './ExtendedMessageBubble';
+
+// Typing mode selector (simplified - single mode)
 export { 
   TypingModeSelector, 
   type TypingMode, 
@@ -16,3 +20,4 @@ export {
   getSavedTypingMode, 
   saveTypingMode 
 } from './TypingModeSelector';
+
