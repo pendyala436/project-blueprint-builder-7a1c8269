@@ -1266,10 +1266,25 @@ const DraggableMiniChatWindow = ({
         }
       } else if (typingMode === 'native') {
         // native mode: Translate from sender's language to receiver's language
-        // This is the key fix - we MUST translate for the receiver in native mode!
-        if (englishInput !== messageToSend) {
-          // Latin input was transliterated to native - store Latin as reference
-          originalEnglishToStore = englishInput;
+        // AND generate English meaning for receiver to see
+        
+        // First, generate English meaning from sender's native message
+        if (!checkIsEnglish(currentUserLanguage)) {
+          try {
+            console.log('[DraggableMiniChatWindow] native mode: Generating English meaning from', currentUserLanguage);
+            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
+            originalEnglishToStore = englishResult?.text || null;
+            console.log('[DraggableMiniChatWindow] native mode English meaning:', originalEnglishToStore?.substring(0, 50));
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] native mode English translation failed:', error);
+            // Fallback: if Latin input was provided, use it as reference
+            if (englishInput !== messageToSend) {
+              originalEnglishToStore = englishInput;
+            }
+          }
+        } else {
+          // Sender typed in English natively
+          originalEnglishToStore = messageToSend;
         }
         
         // Translate message to receiver's mother tongue if different language
