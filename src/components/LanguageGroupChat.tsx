@@ -246,6 +246,20 @@ export const LanguageGroupChat = ({
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && !selectedFile) || isSending) return;
 
+    // Content moderation - block phone numbers, emails, social media
+    if (newMessage.trim()) {
+      const { moderateMessage } = await import('@/lib/content-moderation');
+      const moderationResult = moderateMessage(newMessage.trim());
+      if (moderationResult.isBlocked) {
+        toast({
+          title: t("error", "Error"),
+          description: moderationResult.reason || t("blockedContent", "This message contains prohibited content."),
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setIsSending(true);
     try {
       let fileUrl = null;

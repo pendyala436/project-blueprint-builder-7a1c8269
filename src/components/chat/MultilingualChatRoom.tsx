@@ -157,6 +157,18 @@ export const MultilingualChatRoom: React.FC<MultilingualChatRoomProps> = memo(({
   // Send message with translation
   const handleSendMessage = useCallback(async (content: string) => {
     try {
+      // Content moderation - block phone numbers, emails, social media
+      const { moderateMessage } = await import('@/lib/content-moderation');
+      const moderationResult = moderateMessage(content);
+      if (moderationResult.isBlocked) {
+        toast({
+          title: t('errors.blocked', 'Message Blocked'),
+          description: moderationResult.reason || t('errors.prohibitedContent', 'This message contains prohibited content.'),
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Translate message for storage
       let translatedContent: string | undefined;
       try {

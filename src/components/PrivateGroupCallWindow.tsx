@@ -321,6 +321,14 @@ export function PrivateGroupCallWindow({
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
 
+    // Content moderation - block phone numbers, emails, social media
+    const { moderateMessage } = await import('@/lib/content-moderation');
+    const moderationResult = moderateMessage(newMessage.trim());
+    if (moderationResult.isBlocked) {
+      toast.error(moderationResult.reason || 'This message contains prohibited content.');
+      return;
+    }
+
     setIsSending(true);
     try {
       await supabase

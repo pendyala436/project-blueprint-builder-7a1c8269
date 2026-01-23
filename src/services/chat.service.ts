@@ -99,6 +99,13 @@ export async function sendMessage(
   receiverId: string,
   message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  // Content moderation - block phone numbers, emails, social media
+  const { moderateMessage } = await import('@/lib/content-moderation');
+  const moderationResult = moderateMessage(message);
+  if (moderationResult.isBlocked) {
+    return { success: false, error: moderationResult.reason || 'This message contains prohibited content.' };
+  }
+
   const { data, error } = await supabase
     .from('chat_messages')
     .insert({
