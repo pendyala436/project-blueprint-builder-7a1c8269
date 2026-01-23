@@ -7,6 +7,23 @@
  * - Social media accounts (WhatsApp, Instagram, Facebook, Telegram, etc.)
  */
 
+// Number words for detection (supports multiple languages)
+const NUMBER_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+  'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred',
+  // Hindi number words
+  'ek', 'do', 'teen', 'char', 'paanch', 'panch', 'chhe', 'saat', 'aath', 'nau', 'das',
+  // Common variations
+  'nol', 'nil', 'first', 'second', 'third'
+];
+
+// Build regex pattern for 4+ consecutive number words
+const numberWordsPattern = new RegExp(
+  `\\b(${NUMBER_WORDS.join('|')})(\\s*[-,./]?\\s*(${NUMBER_WORDS.join('|')})){3,}\\b`,
+  'gi'
+);
+
 // Patterns for detecting prohibited content
 const PHONE_PATTERNS = [
   // International formats
@@ -15,8 +32,8 @@ const PHONE_PATTERNS = [
   /\b\d{7,15}\b/g,
   // Spaced out numbers to evade detection
   /\b\d[\s.-]*\d[\s.-]*\d[\s.-]*\d[\s.-]*\d[\s.-]*\d[\s.-]*\d+/g,
-  // Written numbers
-  /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten)(\s*(zero|one|two|three|four|five|six|seven|eight|nine|ten)){5,}/gi,
+  // Written numbers - more than 3 consecutive number words
+  numberWordsPattern,
 ];
 
 const EMAIL_PATTERNS = [
