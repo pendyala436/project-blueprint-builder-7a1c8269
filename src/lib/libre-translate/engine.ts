@@ -54,8 +54,20 @@ const translationCache = new Map<string, CacheEntry>();
 const MAX_CACHE_SIZE = 2000;
 const CACHE_TTL = 60000; // 1 minute
 
+// Simple hash function for cache keys to avoid collisions with long messages
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
 function getCacheKey(text: string, source: string, target: string): string {
-  return `${source}:${target}:${text.substring(0, 100)}`;
+  // Use hash of full text + length to avoid collisions
+  return `${source}:${target}:${simpleHash(text)}:${text.length}`;
 }
 
 function getFromCache(key: string): TranslationResult | null {
