@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 export const MAX_PARTICIPANTS = 50;
 export const MAX_DURATION_MINUTES = 30;
 export const BILLING_INTERVAL_SECONDS = 60; // Bill every minute
+export const MAX_GIFT_PER_SESSION = 120; // Max ₹120 gift per 30 mins per person
 
 interface Participant {
   id: string;
@@ -126,7 +127,7 @@ export function usePrivateGroupCall({
     }
   }, []);
 
-  // Initialize participant media (audio only - no video)
+  // Initialize participant media (audio only - no video, mic disabled by default)
   const initParticipantMedia = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -137,6 +138,12 @@ export function usePrivateGroupCall({
           autoGainControl: true,
         },
       });
+      
+      // Mic is disabled by default for participants
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = false;
+      });
+      
       localStream.current = stream;
       return stream;
     } catch (error) {

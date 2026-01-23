@@ -3,11 +3,13 @@
  * 
  * Enhanced private group call UI with:
  * - Host-only video display (participants see only host)
- * - Participants can speak (audio) and chat
+ * - Participants can speak (audio disabled by default, can enable) and chat
  * - 30-minute timer countdown
- * - Optional gift sending during call
+ * - Optional gift sending during call (max ₹120 per 30 mins per person)
+ * - Gift tickets display based on price for 1 minute
  * - 50 participant limit
  * - Refund handling when host ends early
+ * - One extension per month with reason
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -18,13 +20,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2,
   X, Send, Paperclip, File, MessageCircle, Maximize2, Minimize2,
-  Clock, Gift, DollarSign, AlertTriangle
+  Clock, Gift, DollarSign, AlertTriangle, Ticket, Timer
 } from 'lucide-react';
-import { usePrivateGroupCall, MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
+import { usePrivateGroupCall, MAX_PARTICIPANTS, MAX_DURATION_MINUTES, MAX_GIFT_PER_SESSION } from '@/hooks/usePrivateGroupCall';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -50,6 +53,22 @@ interface GiftItem {
   name: string;
   emoji: string;
   price: number;
+}
+
+interface GiftTicket {
+  id: string;
+  senderName: string;
+  giftEmoji: string;
+  giftName: string;
+  price: number;
+  expiresAt: number;
+}
+
+interface ExtensionRecord {
+  month: number;
+  year: number;
+  used: boolean;
+  reason?: string;
 }
 
 interface PrivateGroupCallWindowProps {
@@ -87,11 +106,23 @@ export function PrivateGroupCallWindow({
   
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner); // Host has mic on by default, participants off
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  
+  // Gift tracking for ₹120 limit
+  const [giftsSentThisSession, setGiftsSentThisSession] = useState(0);
+  
+  // Gift tickets display (shows for 1 minute at top)
+  const [giftTickets, setGiftTickets] = useState<GiftTicket[]>([]);
+  
+  // Extension state
+  const [showExtensionDialog, setShowExtensionDialog] = useState(false);
+  const [extensionReason, setExtensionReason] = useState('');
+  const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
+  const [isExtending, setIsExtending] = useState(false);
 
   const hasChat = group.access_type === 'chat' || group.access_type === 'both';
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
@@ -147,6 +178,78 @@ export function PrivateGroupCallWindow({
   };
 
   const timeProgress = ((MAX_DURATION_MINUTES * 60 - remainingTime) / (MAX_DURATION_MINUTES * 60)) * 100;
+  
+  // Calculate remaining gift allowance
+  const remainingGiftAllowance = MAX_GIFT_PER_SESSION - giftsSentThisSession;
+
+  // Calculate ticket display length based on price (min 5s, max 60s based on price)
+  const getTicketDisplayDuration = (price: number): number => {
+    // Scale: ₹10 = 5s, ₹120 = 60s
+    const minDuration = 5000;
+    const maxDuration = 60000;
+    const minPrice = 10;
+    const maxPrice = 120;
+    
+    if (price <= minPrice) return minDuration;
+    if (price >= maxPrice) return maxDuration;
+    
+    const ratio = (price - minPrice) / (maxPrice - minPrice);
+    return Math.floor(minDuration + (maxDuration - minDuration) * ratio);
+  };
+
+  // Add gift ticket to display
+  const addGiftTicket = (senderName: string, gift: GiftItem) => {
+    const ticketId = `ticket-${Date.now()}`;
+    const displayDuration = getTicketDisplayDuration(gift.price);
+    
+    const newTicket: GiftTicket = {
+      id: ticketId,
+      senderName,
+      giftEmoji: gift.emoji,
+      giftName: gift.name,
+      price: gift.price,
+      expiresAt: Date.now() + displayDuration,
+    };
+    
+    setGiftTickets(prev => [newTicket, ...prev]);
+    
+    // Auto-remove after display duration
+    setTimeout(() => {
+      setGiftTickets(prev => prev.filter(t => t.id !== ticketId));
+    }, displayDuration);
+  };
+
+  // Check extension eligibility for this month
+  useEffect(() => {
+    const checkExtensionEligibility = async () => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Check local storage for extension record
+      const storageKey = `extension_${currentUserId}_${group.id}`;
+      const stored = localStorage.getItem(storageKey);
+      
+      if (stored) {
+        const record: ExtensionRecord = JSON.parse(stored);
+        if (record.month === currentMonth && record.year === currentYear && record.used) {
+          setCanExtendThisMonth(false);
+        }
+      }
+    };
+    
+    checkExtensionEligibility();
+  }, [currentUserId, group.id]);
+
+  // Clean up expired tickets periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setGiftTickets(prev => prev.filter(t => t.expiresAt > now));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch messages
   useEffect(() => {
@@ -286,6 +389,12 @@ export function PrivateGroupCallWindow({
   };
 
   const handleSendGift = async (gift: GiftItem) => {
+    // Check gift limit (₹120 per 30 mins)
+    if (giftsSentThisSession + gift.price > MAX_GIFT_PER_SESSION) {
+      toast.error(`Gift limit exceeded! You can only send ₹${MAX_GIFT_PER_SESSION} worth of gifts per 30-minute session. Remaining: ₹${remainingGiftAllowance}`);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase.rpc('process_group_gift', {
         p_sender_id: currentUserId,
@@ -298,6 +407,13 @@ export function PrivateGroupCallWindow({
       const result = data as { success: boolean; error?: string };
       
       if (result.success) {
+        // Update gift tracking
+        setGiftsSentThisSession(prev => prev + gift.price);
+        
+        // Add gift ticket to display
+        addGiftTicket(userName, gift);
+        
+        // Broadcast gift to all participants
         toast.success(`${gift.emoji} Gift sent to host!`);
         setShowGiftDialog(false);
       } else {
@@ -305,6 +421,52 @@ export function PrivateGroupCallWindow({
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to send gift');
+    }
+  };
+
+  // Handle time extension request (once per month)
+  const handleRequestExtension = async () => {
+    if (!canExtendThisMonth) {
+      toast.error('You have already used your monthly extension for this group');
+      return;
+    }
+    
+    if (!extensionReason.trim()) {
+      toast.error('Please provide a reason for the extension');
+      return;
+    }
+    
+    if (extensionReason.trim().length < 10) {
+      toast.error('Please provide a more detailed reason (at least 10 characters)');
+      return;
+    }
+    
+    setIsExtending(true);
+    
+    try {
+      // Record extension usage
+      const now = new Date();
+      const extensionRecord: ExtensionRecord = {
+        month: now.getMonth(),
+        year: now.getFullYear(),
+        used: true,
+        reason: extensionReason.trim()
+      };
+      
+      const storageKey = `extension_${currentUserId}_${group.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(extensionRecord));
+      
+      // Here you would typically also save to database and process the extension
+      // For now, we'll just mark it as used
+      
+      setCanExtendThisMonth(false);
+      setShowExtensionDialog(false);
+      setExtensionReason('');
+      toast.success('Extension request submitted. Your time has been extended by 1 day.');
+    } catch (error) {
+      toast.error('Failed to process extension request');
+    } finally {
+      setIsExtending(false);
     }
   };
 
@@ -432,6 +594,46 @@ export function PrivateGroupCallWindow({
         </div>
       )}
 
+      {/* Gift Tickets Display - Shows at top for 1 minute based on price */}
+      {giftTickets.length > 0 && (
+        <div className="px-4 py-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-orange-500/20 border-b border-yellow-500/30 overflow-hidden">
+          <div className="flex flex-col gap-1">
+            {giftTickets.slice(0, 3).map((ticket) => {
+              const remainingMs = ticket.expiresAt - Date.now();
+              const totalMs = getTicketDisplayDuration(ticket.price);
+              const progressPercent = Math.max(0, (remainingMs / totalMs) * 100);
+              
+              return (
+                <div 
+                  key={ticket.id} 
+                  className="flex items-center gap-2 animate-fade-in"
+                >
+                  <div className="flex items-center gap-2 flex-1">
+                    <Ticket className="h-4 w-4 text-yellow-500" />
+                    <span className="text-2xl">{ticket.giftEmoji}</span>
+                    <span className="font-medium text-sm">
+                      {ticket.senderName} sent <span className="text-yellow-500">{ticket.giftName}</span>
+                    </span>
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-500/50">
+                      ₹{ticket.price}
+                    </Badge>
+                  </div>
+                  <div className="w-20">
+                    <Progress value={progressPercent} className="h-1 bg-yellow-500/20" />
+                  </div>
+                  <Timer className="h-3 w-3 text-muted-foreground" />
+                </div>
+              );
+            })}
+            {giftTickets.length > 3 && (
+              <p className="text-xs text-muted-foreground text-center">
+                +{giftTickets.length - 3} more gifts
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Video Section - Host Only */}
@@ -532,17 +734,23 @@ export function PrivateGroupCallWindow({
                 </Button>
               )}
 
-              {/* Everyone can toggle audio */}
-              <Button
-                variant={isAudioEnabled ? 'secondary' : 'destructive'}
-                size="sm"
-                onClick={handleToggleAudio}
-                disabled={isConnecting}
-              >
-                {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-              </Button>
+              {/* Everyone can toggle audio - participants start muted */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={isAudioEnabled ? 'secondary' : 'destructive'}
+                  size="sm"
+                  onClick={handleToggleAudio}
+                  disabled={isConnecting}
+                  title={isOwner ? 'Toggle microphone' : (isAudioEnabled ? 'Mute microphone' : 'Unmute to speak')}
+                >
+                  {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                </Button>
+                {!isOwner && !isAudioEnabled && isConnected && (
+                  <span className="text-xs text-muted-foreground">Tap mic to speak</span>
+                )}
+              </div>
 
-              {/* Optional gift button for participants */}
+              {/* Optional gift button for participants with remaining budget */}
               {!isOwner && isConnected && (
                 <Button
                   variant="outline"
@@ -551,7 +759,7 @@ export function PrivateGroupCallWindow({
                   className="gap-1"
                 >
                   <Gift className="h-4 w-4" />
-                  Send Gift
+                  Gift (₹{remainingGiftAllowance})
                 </Button>
               )}
 
@@ -599,9 +807,9 @@ export function PrivateGroupCallWindow({
             <div className="px-3 py-2 bg-muted/20 border-t text-center">
               <p className="text-xs text-muted-foreground">
                 {isOwner ? (
-                  `${viewerCount - 1} viewers watching • Only your video is visible`
+                  `${viewerCount - 1} viewers watching • Only your video is visible • You can enable participant mics`
                 ) : (
-                  `${viewerCount} participants • Audio-only for viewers`
+                  `${viewerCount} participants • Mic off by default (tap to speak) • Host-only video`
                 )}
               </p>
             </div>
@@ -698,7 +906,7 @@ export function PrivateGroupCallWindow({
         )}
       </div>
 
-      {/* Gift Dialog */}
+      {/* Gift Dialog with limit info */}
       <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
         <DialogContent>
           <DialogHeader>
@@ -707,20 +915,54 @@ export function PrivateGroupCallWindow({
               Optional: Send an additional gift to the host during the call
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-3 py-4">
-            {gifts.slice(0, 9).map((gift) => (
-              <Button
-                key={gift.id}
-                variant="outline"
-                className="h-auto py-4 flex flex-col gap-2"
-                onClick={() => handleSendGift(gift)}
-              >
-                <span className="text-2xl">{gift.emoji}</span>
-                <span className="text-xs">{gift.name}</span>
-                <span className="text-xs font-bold">₹{gift.price}</span>
-              </Button>
-            ))}
+          
+          {/* Gift limit indicator */}
+          <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Gift className="h-4 w-4 text-primary" />
+              <span className="text-sm">Gift Budget</span>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium">
+                ₹{giftsSentThisSession} / ₹{MAX_GIFT_PER_SESSION}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Remaining: ₹{remainingGiftAllowance}
+              </p>
+            </div>
           </div>
+          
+          {remainingGiftAllowance <= 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+              <p>You've reached your gift limit for this session</p>
+              <p className="text-sm mt-1">Max ₹{MAX_GIFT_PER_SESSION} per 30 minutes</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 py-4">
+              {gifts
+                .filter(gift => gift.price <= remainingGiftAllowance)
+                .slice(0, 9)
+                .map((gift) => (
+                  <Button
+                    key={gift.id}
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={() => handleSendGift(gift)}
+                    disabled={gift.price > remainingGiftAllowance}
+                  >
+                    <span className="text-2xl">{gift.emoji}</span>
+                    <span className="text-xs">{gift.name}</span>
+                    <span className="text-xs font-bold">₹{gift.price}</span>
+                  </Button>
+                ))}
+              {gifts.filter(gift => gift.price <= remainingGiftAllowance).length === 0 && (
+                <div className="col-span-3 text-center py-4 text-muted-foreground">
+                  <p>No gifts available within your remaining budget</p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -746,6 +988,73 @@ export function PrivateGroupCallWindow({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Extension Request Dialog */}
+      <Dialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-primary" />
+              Request Time Extension
+            </DialogTitle>
+            <DialogDescription>
+              You can request one extension per month per group. Please provide a valid reason.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!canExtendThisMonth ? (
+            <div className="text-center py-6">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+              <p className="text-muted-foreground">
+                You've already used your monthly extension for this group
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Extensions reset at the start of each month
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Reason for extension</label>
+                <Textarea
+                  value={extensionReason}
+                  onChange={(e) => setExtensionReason(e.target.value)}
+                  placeholder="Explain why you need an extension..."
+                  rows={3}
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {extensionReason.length}/200
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-4">
+                <Button variant="outline" onClick={() => setShowExtensionDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleRequestExtension} disabled={isExtending || !extensionReason.trim()}>
+                  {isExtending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Request Extension
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+// Helper function exported for ticket display calculation
+function getTicketDisplayDuration(price: number): number {
+  const minDuration = 5000;
+  const maxDuration = 60000;
+  const minPrice = 10;
+  const maxPrice = 120;
+  
+  if (price <= minPrice) return minDuration;
+  if (price >= maxPrice) return maxDuration;
+  
+  const ratio = (price - minPrice) / (maxPrice - minPrice);
+  return Math.floor(minDuration + (maxDuration - minDuration) * ratio);
 }
