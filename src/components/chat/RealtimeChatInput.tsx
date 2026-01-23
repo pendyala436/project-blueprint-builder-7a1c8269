@@ -41,12 +41,7 @@ import {
   dynamicTransliterate,
   reverseTransliterate,
 } from '@/lib/translation/universal-offline-engine';
-import { 
-  TypingModeSelector, 
-  type TypingMode, 
-  useTypingMode,
-  getSavedTypingMode 
-} from './TypingModeSelector';
+import { getSavedTypingMode } from './TypingModeSelector';
 
 /**
  * Message views for all 9 mode combinations
@@ -56,10 +51,10 @@ export interface MessageViews {
   messageToStore: string;   // What gets stored in database (sender's view)
   senderView: string;       // What sender sees after sending
   receiverView: string;     // What receiver sees (translated to their language)
-  originalEnglish: string;  // English text for English Core mode
+  originalEnglish: string;  // English text
   senderNative: string;     // Sender's native language view
   receiverNative: string;   // Receiver's native language view
-  senderMode: TypingMode;   // Sender's typing mode
+  senderMode: string;       // Always 'english-meaning'
 }
 
 interface RealtimeChatInputProps {
@@ -95,14 +90,8 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
   const [isTranslatingPreview, setIsTranslatingPreview] = useState(false);
   const [isTranslatingReceiverPreview, setIsTranslatingReceiverPreview] = useState(false);
   
-  // Use persistent typing mode hook with auto-detection
-  const { 
-    mode: typingMode, 
-    setMode: setTypingMode, 
-    isAutoMode,
-    handleInputForAutoDetect,
-    autoDetectEnabled 
-  } = useTypingMode();
+  // Single typing mode - always english-meaning
+  const typingMode = 'english-meaning' as const;
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -242,10 +231,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     const value = e.target.value;
     setRawInput(value);
 
-    // AUTO-DETECTION: Check if user is typing in native script (Gboard, etc.)
-    if (autoDetectEnabled && value.length >= 2) {
-      handleInputForAutoDetect(value);
-    }
+    // No auto-detection needed - single mode
 
     // Clear timeouts
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
@@ -281,7 +267,7 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [typingMode, needsTransliteration, transliterateNow, generateSenderNativePreview, generateReceiverPreview, onTyping, senderLanguage, receiverLanguage, autoDetectEnabled, handleInputForAutoDetect]);
+  }, [typingMode, needsTransliteration, transliterateNow, generateSenderNativePreview, generateReceiverPreview, onTyping, senderLanguage, receiverLanguage]);
 
   /**
    * Handle send - generates ALL views for 9 mode combinations
@@ -429,19 +415,10 @@ export const RealtimeChatInput: React.FC<RealtimeChatInputProps> = memo(({
     return t('chat.typeEnglishMeaning', 'Type in English → shows as your language');
   };
 
-  // Show mode indicator only for non-English users (mode selector removed - single mode)
-  const showModeIndicator = !isEnglishLanguage;
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Mode indicator - single mode, no selector needed */}
-      {showModeIndicator && (
-        <div className="px-4 py-2 border-b border-border/50 flex items-center justify-center">
-          <span className="text-xs text-muted-foreground">
-            {t('chat.typingEnglishMeaning', `Type English → Both see native`)}
-          </span>
-        </div>
-      )}
+      {/* Simple translation indicator */}
 
       {/* English Meaning preview - shows SENDER'S MOTHER TONGUE */}
       {/* Works for BOTH Latin (Spanish, French) and non-Latin (Hindi, Telugu) languages */}

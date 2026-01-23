@@ -91,7 +91,6 @@ import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
 import { RealtimeChatInput, type MessageViews } from "@/components/chat/RealtimeChatInput";
-import { TypingModeSelector, useTypingMode } from "@/components/chat/TypingModeSelector";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -181,8 +180,8 @@ const ChatScreen = () => {
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
   
-  // Typing mode for 9-combination display (persisted in localStorage)
-  const { mode: typingMode, setMode: setTypingMode } = useTypingMode();
+  // Single typing mode - always english-meaning
+  const typingMode = 'english-meaning' as const;
   
   // Attachment states
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -1426,15 +1425,6 @@ const ChatScreen = () => {
               </div>
             </div>
           )}
-
-          {/* Typing Mode Selector - Let user choose their typing mode */}
-          <TypingModeSelector
-            currentMode={typingMode}
-            onModeChange={setTypingMode}
-            userLanguage={currentUserLanguage || "your language"}
-            receiverLanguage={chatPartner?.preferredLanguage || "their language"}
-            compact={true}
-          />
 
           {/* Toggle translation visibility button */}
           <button
