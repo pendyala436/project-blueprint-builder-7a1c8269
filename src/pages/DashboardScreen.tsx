@@ -113,6 +113,7 @@ const DashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
@@ -402,9 +403,12 @@ const DashboardScreen = () => {
       // First check gender from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
         .eq("user_id", user.id)
         .maybeSingle();
+      
+      // Store user's photo for chat validation
+      setUserPhoto(mainProfile?.photo_url || null);
 
       // Redirect women to their dashboard (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female") {
@@ -513,6 +517,18 @@ const DashboardScreen = () => {
       // Super users (matching email pattern) bypass balance check entirely
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
       
+      // PHOTO VALIDATION: Users must have at least one photo to chat
+      if (!userPhoto) {
+        toast({
+          title: t('photoRequired', 'Photo Required'),
+          description: t('uploadPhotoToChat', 'Please upload at least one photo to start chatting'),
+          variant: "destructive",
+        });
+        setProfileEditOpen(true);
+        setIsConnecting(false);
+        return;
+      }
+
       // Check wallet balance using admin-configured pricing (skip for super users)
       if (!isSuperUser) {
         const minBalance = pricing.ratePerMinute * 2; // Need at least 2 minutes worth
@@ -741,7 +757,10 @@ const DashboardScreen = () => {
 
       const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-      const womenWithChatCount = onlineWomenList.map(w => {
+      // PHOTO VALIDATION: Only show users with photos
+      const womenWithPhotos = onlineWomenList.filter(w => w.photo_url);
+
+      const womenWithChatCount = womenWithPhotos.map(w => {
         const avail = availabilityMap.get(w.user_id);
         const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
         const womanLanguage = languageMap.get(w.user_id) || w.primary_language || "Unknown";
@@ -797,6 +816,17 @@ const DashboardScreen = () => {
   const handleQuickConnect = async () => {
     if (isConnecting || isReconnecting) return;
     
+    // PHOTO VALIDATION: Users must have at least one photo to chat
+    if (!userPhoto) {
+      toast({
+        title: t('photoRequired', 'Photo Required'),
+        description: t('uploadPhotoToChat', 'Please upload at least one photo to start chatting'),
+        variant: "destructive",
+      });
+      setProfileEditOpen(true);
+      return;
+    }
+
     // Check balance first
     if (!hasSufficientBalance(walletBalance, 2)) {
       toast({
