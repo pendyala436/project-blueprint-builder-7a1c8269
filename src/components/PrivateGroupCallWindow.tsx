@@ -5,7 +5,7 @@
  * - Host-only video display (participants see only host)
  * - Participants can speak (audio disabled by default, can enable) and chat
  * - 30-minute timer countdown
- * - Optional gift sending during call (max ₹120 per 30 mins per person)
+ * - Optional gift sending during call (no restrictions after joining)
  * - Gift tickets display based on price for 1 minute
  * - 50 participant limit
  * - Refund handling when host ends early
@@ -27,7 +27,7 @@ import {
   X, Send, Paperclip, File, MessageCircle, Maximize2, Minimize2,
   Clock, Gift, DollarSign, AlertTriangle, Ticket, Timer
 } from 'lucide-react';
-import { usePrivateGroupCall, MAX_PARTICIPANTS, MAX_DURATION_MINUTES, MAX_GIFT_PER_SESSION } from '@/hooks/usePrivateGroupCall';
+import { usePrivateGroupCall, MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -112,9 +112,6 @@ export function PrivateGroupCallWindow({
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   
-  // Gift tracking for ₹120 limit
-  const [giftsSentThisSession, setGiftsSentThisSession] = useState(0);
-  
   // Gift tickets display (shows for 1 minute at top)
   const [giftTickets, setGiftTickets] = useState<GiftTicket[]>([]);
   
@@ -179,8 +176,6 @@ export function PrivateGroupCallWindow({
 
   const timeProgress = ((MAX_DURATION_MINUTES * 60 - remainingTime) / (MAX_DURATION_MINUTES * 60)) * 100;
   
-  // Calculate remaining gift allowance
-  const remainingGiftAllowance = MAX_GIFT_PER_SESSION - giftsSentThisSession;
 
   // Calculate ticket display length based on price (min 5s, max 60s based on price)
   const getTicketDisplayDuration = (price: number): number => {
@@ -389,12 +384,7 @@ export function PrivateGroupCallWindow({
   };
 
   const handleSendGift = async (gift: GiftItem) => {
-    // Check gift limit (₹120 per 30 mins)
-    if (giftsSentThisSession + gift.price > MAX_GIFT_PER_SESSION) {
-      toast.error(`Gift limit exceeded! You can only send ₹${MAX_GIFT_PER_SESSION} worth of gifts per 30-minute session. Remaining: ₹${remainingGiftAllowance}`);
-      return;
-    }
-    
+    // No restrictions on optional gifts after joining - user can send any gift
     try {
       const { data, error } = await supabase.rpc('process_group_gift', {
         p_sender_id: currentUserId,
@@ -407,9 +397,6 @@ export function PrivateGroupCallWindow({
       const result = data as { success: boolean; error?: string };
       
       if (result.success) {
-        // Update gift tracking
-        setGiftsSentThisSession(prev => prev + gift.price);
-        
         // Add gift ticket to display
         addGiftTicket(userName, gift);
         
@@ -793,7 +780,7 @@ export function PrivateGroupCallWindow({
                   className="gap-1"
                 >
                   <Gift className="h-4 w-4" />
-                  Gift (₹{remainingGiftAllowance})
+                  Send Gift
                 </Button>
               )}
 
@@ -950,53 +937,25 @@ export function PrivateGroupCallWindow({
             </DialogDescription>
           </DialogHeader>
           
-          {/* Gift limit indicator */}
-          <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4 text-primary" />
-              <span className="text-sm">Gift Budget</span>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium">
-                ₹{giftsSentThisSession} / ₹{MAX_GIFT_PER_SESSION}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Remaining: ₹{remainingGiftAllowance}
-              </p>
-            </div>
+          <div className="grid grid-cols-3 gap-3 py-4">
+            {gifts.slice(0, 12).map((gift) => (
+              <Button
+                key={gift.id}
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2"
+                onClick={() => handleSendGift(gift)}
+              >
+                <span className="text-2xl">{gift.emoji}</span>
+                <span className="text-xs">{gift.name}</span>
+                <span className="text-xs font-bold">₹{gift.price}</span>
+              </Button>
+            ))}
+            {gifts.length === 0 && (
+              <div className="col-span-3 text-center py-4 text-muted-foreground">
+                <p>No gifts available</p>
+              </div>
+            )}
           </div>
-          
-          {remainingGiftAllowance <= 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-              <p>You've reached your gift limit for this session</p>
-              <p className="text-sm mt-1">Max ₹{MAX_GIFT_PER_SESSION} per 30 minutes</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 py-4">
-              {gifts
-                .filter(gift => gift.price <= remainingGiftAllowance)
-                .slice(0, 9)
-                .map((gift) => (
-                  <Button
-                    key={gift.id}
-                    variant="outline"
-                    className="h-auto py-4 flex flex-col gap-2"
-                    onClick={() => handleSendGift(gift)}
-                    disabled={gift.price > remainingGiftAllowance}
-                  >
-                    <span className="text-2xl">{gift.emoji}</span>
-                    <span className="text-xs">{gift.name}</span>
-                    <span className="text-xs font-bold">₹{gift.price}</span>
-                  </Button>
-                ))}
-              {gifts.filter(gift => gift.price <= remainingGiftAllowance).length === 0 && (
-                <div className="col-span-3 text-center py-4 text-muted-foreground">
-                  <p>No gifts available within your remaining budget</p>
-                </div>
-              )}
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 

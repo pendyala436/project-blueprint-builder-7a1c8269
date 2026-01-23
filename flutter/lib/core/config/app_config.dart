@@ -31,7 +31,6 @@ class AppConfig {
   /// Private Group Call Configuration
   static const int maxGroupCallParticipants = 50;
   static const int maxGroupCallDurationMinutes = 30;
-  static const double maxGiftPerSession = 120.0; // Max ₹120 per 30 mins per person
   static const int extensionsPerMonthPerGroup = 1; // Only one extension per month
 
   /// Media Configuration
