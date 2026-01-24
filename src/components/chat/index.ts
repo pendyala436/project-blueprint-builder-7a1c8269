@@ -21,3 +21,24 @@ export {
   saveTypingMode 
 } from './TypingModeSelector';
 
+// ============================================================
+// BIDIRECTIONAL CHAT - Meaning-Based Universal Translation
+// ============================================================
+// 
+// Accepts ANY input method:
+// - Physical/on-screen keyboard
+// - Voice-to-text
+// - Phonetic typing (Latin letters for non-Latin languages)
+// - Native script keyboards
+// - Mixed native + Latin input
+// 
+// Features:
+// - Meaning extraction from any input
+// - Live preview in sender's mother tongue
+// - Dual display: Native + English meaning
+// - Automatic translation to receiver's language
+// - OFFLINE ONLY - No external APIs
+
+export { BidirectionalChatInput } from './BidirectionalChatInput';
+export { BidirectionalMessageBubble } from './BidirectionalMessageBubble';
+export { BidirectionalChatContainer } from './BidirectionalChatContainer';
