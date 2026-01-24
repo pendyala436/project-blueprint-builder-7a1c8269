@@ -2,28 +2,19 @@
  * LibreTranslate Browser-Based Translation Engine
  * =================================================
  * 
- * Complete browser-based translation system with NO external API calls.
- * NO NLLB-200 - NO HARDCODING - NO EXTERNAL APIs
- * Inspired by: https://github.com/LibreTranslate/LibreTranslate
+ * WRAPPER for Universal Translation System
  * 
- * Features:
- * - Supports all languages from languages.ts
- * - Uses English as pivot for cross-language translation
- * - 3 typing modes: native, english-core, english-meaning
- * - 9 translation combinations
- * - All processing happens in browser using dynamic database lookups
+ * This file provides backward compatibility with the existing LibreTranslate
+ * interface while using the new Universal Translation engine underneath.
  * 
- * Translation Paths:
- * 1. Same Language: passthrough (no translation)
- * 2. English → Any: direct translation via common_phrases table
- * 3. Any → English: direct translation via common_phrases table
- * 4. Latin → Latin: direct translation
- * 5. Native → Native: English pivot
- * 6. Latin → Native: transliterate + translate if needed
- * 7. Native → Latin: translate + reverse transliterate
+ * @see src/lib/universal-translation for the new implementation
+ * @see https://github.com/LibreTranslate/LibreTranslate
  */
 
+// Re-export everything from the new Universal Translation system
 import {
+  translate as universalTranslate,
+  translateForChat as universalTranslateForChat,
   normalizeLanguage,
   isLatinScriptLanguage,
   isLatinText,
@@ -31,11 +22,18 @@ import {
   isEnglish,
   getLanguageCode,
   detectScript,
-} from './language-data';
-import { transliterateToNative, reverseTransliterate, getLivePreview } from './transliterator';
-import {
-  translateUniversal as offlineTranslate,
-} from '../translation/universal-offline-engine';
+  transliterateToNative,
+  reverseTransliterate,
+  getLivePreview,
+  clearCache as clearUniversalCache,
+  getCacheStats as getUniversalCacheStats,
+} from '../universal-translation';
+
+import type {
+  TranslationResult as UniversalTranslationResult,
+  BidirectionalChatResult,
+} from '../universal-translation';
+
 import type {
   TranslationResult,
   ChatMessageViews,
@@ -44,88 +42,54 @@ import type {
   TranslationMode,
   TypingMode,
   CacheEntry,
-  TranslatorConfig,
-  DEFAULT_CONFIG,
   BidirectionalResult,
 } from './types';
 
 // ============================================================
-// TRANSLATION CACHE
+// CACHE FUNCTIONS (Delegated to Universal Translation)
 // ============================================================
 
-const translationCache = new Map<string, CacheEntry>();
-const MAX_CACHE_SIZE = 2000;
-const CACHE_TTL = 60000; // 1 minute
-
-// Simple hash function for cache keys to avoid collisions with long messages
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(36);
-}
-
-function getCacheKey(text: string, source: string, target: string): string {
-  // Use hash of full text + length to avoid collisions
-  return `${source}:${target}:${simpleHash(text)}:${text.length}`;
-}
-
-function getFromCache(key: string): TranslationResult | null {
-  const entry = translationCache.get(key);
-  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
-    return entry.result;
-  }
-  if (entry) {
-    translationCache.delete(key);
-  }
-  return null;
-}
-
-function setInCache(key: string, result: TranslationResult): void {
-  if (translationCache.size >= MAX_CACHE_SIZE) {
-    const firstKey = translationCache.keys().next().value;
-    if (firstKey) translationCache.delete(firstKey);
-  }
-  translationCache.set(key, { result, timestamp: Date.now() });
-}
-
 export function clearCache(): void {
-  translationCache.clear();
+  clearUniversalCache();
 }
 
 export function getCacheStats(): { size: number; hitRate: number } {
-  return { size: translationCache.size, hitRate: 0 };
+  const stats = getUniversalCacheStats();
+  return { size: stats.results, hitRate: 0 };
 }
 
 // ============================================================
-// CORE TRANSLATION API (Uses Universal Offline Engine)
-// NO EXTERNAL API CALLS - ALL PROCESSING IS LOCAL/DATABASE-BASED
+// HELPER: Convert Universal Result to LibreTranslate Format
 // ============================================================
 
-/**
- * Translate using the universal offline engine
- * NO external API calls - uses common_phrases table and dynamic transliteration
- */
-async function translateOffline(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string
-): Promise<{ translatedText: string; success: boolean; wasTransliterated: boolean }> {
-  try {
-    const result = await offlineTranslate(text, sourceLanguage, targetLanguage);
-    
-    return {
-      translatedText: result.text,
-      success: result.isTranslated || result.isTransliterated,
-      wasTransliterated: result.isTransliterated,
-    };
-  } catch (err: any) {
-    console.error('[LibreTranslate] Offline translation error:', err);
-    return { translatedText: text, success: false, wasTransliterated: false };
+function convertToLibreResult(
+  result: UniversalTranslationResult,
+  source: string,
+  target: string
+): TranslationResult {
+  // Map direction to mode
+  let mode: TranslationMode = 'passthrough';
+  switch (result.direction) {
+    case 'passthrough': mode = 'passthrough'; break;
+    case 'english-source':
+    case 'english-target':
+    case 'latin-to-latin': mode = 'direct'; break;
+    case 'latin-to-native':
+    case 'native-to-latin':
+    case 'native-to-native': mode = 'pivot'; break;
   }
+  
+  return {
+    text: result.text,
+    originalText: result.originalText,
+    sourceLanguage: result.sourceLanguage,
+    targetLanguage: result.targetLanguage,
+    isTranslated: result.isTranslated,
+    wasTransliterated: result.isTransliterated,
+    englishPivot: result.englishPivot,
+    confidence: result.confidence,
+    mode,
+  };
 }
 
 // ============================================================
@@ -134,7 +98,7 @@ async function translateOffline(
 
 /**
  * Translate text between any two languages
- * Uses English as pivot for non-English pairs
+ * Uses the Universal Translation engine
  * ALL PROCESSING IS OFFLINE - NO EXTERNAL API CALLS
  */
 export async function translate(
@@ -158,116 +122,23 @@ export async function translate(
     };
   }
 
-  const normSource = normalizeLanguage(sourceLanguage);
-  const normTarget = normalizeLanguage(targetLanguage);
-
-  // CASE 1: Same language - passthrough
-  if (isSameLanguage(normSource, normTarget)) {
-    // Handle script conversion if needed
-    const sourceIsLatin = isLatinScriptLanguage(normSource);
-    const inputIsLatin = isLatinText(trimmed);
-    
-    let resultText = trimmed;
-    let wasTransliterated = false;
-    
-    if (inputIsLatin && !sourceIsLatin) {
-      // Latin input for non-Latin language - transliterate
-      resultText = transliterateToNative(trimmed, normTarget) || trimmed;
-      wasTransliterated = resultText !== trimmed;
-    }
-    
+  try {
+    // Use the Universal Translation engine
+    const result = await universalTranslate(trimmed, sourceLanguage, targetLanguage);
+    return convertToLibreResult(result, sourceLanguage, targetLanguage);
+  } catch (err: any) {
+    console.error('[LibreTranslate] Translation error:', err);
     return {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
-      sourceLanguage: normSource,
-      targetLanguage: normTarget,
+      sourceLanguage: normalizeLanguage(sourceLanguage),
+      targetLanguage: normalizeLanguage(targetLanguage),
       isTranslated: false,
-      wasTransliterated,
-      confidence: 1.0,
+      wasTransliterated: false,
+      confidence: 0,
       mode: 'passthrough',
     };
   }
-
-  // Check cache
-  const cacheKey = getCacheKey(trimmed, normSource, normTarget);
-  const cached = getFromCache(cacheKey);
-  if (cached) return cached;
-
-  const sourceIsEnglish = isEnglish(normSource);
-  const targetIsEnglish = isEnglish(normTarget);
-  const sourceIsLatin = isLatinScriptLanguage(normSource);
-  const targetIsLatin = isLatinScriptLanguage(normTarget);
-
-  let translatedText = trimmed;
-  let englishPivot: string | undefined;
-  let wasTranslated = false;
-  let wasTransliterated = false;
-  let mode: TranslationMode = 'direct';
-
-  try {
-    // CASE 2: English → Any (direct offline translation)
-    if (sourceIsEnglish) {
-      const result = await translateOffline(trimmed, normSource, normTarget);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      wasTransliterated = result.wasTransliterated;
-      mode = 'direct';
-    }
-    // CASE 3: Any → English (direct offline translation)
-    else if (targetIsEnglish) {
-      const result = await translateOffline(trimmed, normSource, normTarget);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      wasTransliterated = result.wasTransliterated;
-      mode = 'direct';
-    }
-    // CASE 4: Latin → Latin (direct offline translation)
-    else if (sourceIsLatin && targetIsLatin) {
-      const result = await translateOffline(trimmed, normSource, normTarget);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      wasTransliterated = result.wasTransliterated;
-      mode = 'direct';
-    }
-    // CASE 5: Native → Native (English pivot via offline engine)
-    else if (!sourceIsLatin && !targetIsLatin) {
-      // The offline engine handles English pivot internally
-      const result = await translateOffline(trimmed, normSource, normTarget);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      wasTransliterated = result.wasTransliterated;
-      mode = 'pivot';
-    }
-    // CASE 6: Latin source → Native target OR Native source → Latin target
-    else {
-      const result = await translateOffline(trimmed, normSource, normTarget);
-      translatedText = result.translatedText;
-      wasTranslated = result.success;
-      wasTransliterated = result.wasTransliterated;
-      mode = 'direct';
-    }
-  } catch (err: any) {
-    console.error('[LibreTranslate] Translation error:', err);
-    translatedText = trimmed;
-  }
-
-  const result: TranslationResult = {
-    text: translatedText,
-    originalText: trimmed,
-    sourceLanguage: normSource,
-    targetLanguage: normTarget,
-    isTranslated: wasTranslated,
-    wasTransliterated,
-    englishPivot,
-    confidence: wasTranslated ? 0.9 : wasTransliterated ? 0.7 : 0.3,
-    mode,
-  };
-
-  if (wasTranslated || wasTransliterated) {
-    setInCache(cacheKey, result);
-  }
-
-  return result;
 }
 
 // ============================================================
