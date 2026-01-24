@@ -55,6 +55,7 @@ import {
 import { 
   translateUniversal,
   isEnglish as checkIsEnglish,
+  isLatinScriptLanguage as checkLatinScript,
 } from "@/lib/translation/universal-offline-engine";
 import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
@@ -242,7 +243,7 @@ const DraggableMiniChatWindow = ({
 
   // Generate meaning-based preview for "English to Native" mode
   // FULLY ASYNC: Runs in background, never blocks typing
-  // Debounced translation: English → user's native language
+  // Debounced translation: English → user's mother tongue (native script)
   const generateMeaningPreview = useCallback((englishText: string) => {
     if (!englishText.trim() || typingMode !== 'english-meaning') {
       setMeaningPreview('');
@@ -254,30 +255,45 @@ const DraggableMiniChatWindow = ({
       clearTimeout(meaningPreviewTimeoutRef.current);
     }
     
-    // Debounce: wait 600ms before translating (non-blocking)
-    meaningPreviewTimeoutRef.current = setTimeout(() => {
-      // BACKGROUND ASYNC: Fire and forget - never awaited
-      const capturedText = englishText; // Capture value to avoid closure issues
+    // Debounce: wait 400ms before translating (non-blocking)
+    meaningPreviewTimeoutRef.current = setTimeout(async () => {
+      const capturedText = englishText.trim();
       setIsMeaningLoading(true);
       
-      // Run translation in background without blocking using OFFLINE engine
-      translateUniversal(capturedText, 'english', currentUserLanguage)
-        .then((result) => {
-          const translatedText = result?.text || '';
-          if (translatedText && translatedText !== capturedText) {
-            setMeaningPreview(translatedText);
-          } else {
-            setMeaningPreview('');
-          }
-        })
-        .catch((error) => {
-          console.error('[MeaningPreview] Background error:', error);
+      try {
+        // Skip translation if user's language is English
+        if (checkIsEnglish(currentUserLanguage)) {
           setMeaningPreview('');
-        })
-        .finally(() => {
-          setIsMeaningLoading(false);
-        });
-    }, 600);
+          return;
+        }
+        
+        // Translate English → user's mother tongue using OFFLINE engine
+        const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
+        let translatedText = result?.text || '';
+        
+        // Ensure native script if user's language is non-Latin
+        if (translatedText && !checkLatinScript(currentUserLanguage)) {
+          // Check if result is still Latin and needs transliteration
+          if (/^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(translatedText)) {
+            const nativeScript = dynamicTransliterate(translatedText, currentUserLanguage);
+            if (nativeScript && nativeScript !== translatedText) {
+              translatedText = nativeScript;
+            }
+          }
+        }
+        
+        if (translatedText && translatedText !== capturedText) {
+          setMeaningPreview(translatedText);
+        } else {
+          setMeaningPreview('');
+        }
+      } catch (error) {
+        console.error('[MeaningPreview] Background error:', error);
+        setMeaningPreview('');
+      } finally {
+        setIsMeaningLoading(false);
+      }
+    }, 400);
   }, [typingMode, currentUserLanguage]);
 
   // Auto-close if blocked
