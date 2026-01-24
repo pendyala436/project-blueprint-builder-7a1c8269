@@ -466,27 +466,93 @@ function createEmptyMessage(
 // ============================================================
 
 /**
- * Process incoming message for display to receiver
- * Handles translation from sender's language to receiver's language
+ * Process incoming message for display to any viewer
+ * Handles translation based on viewer's language profile
+ * 
+ * This function supports bidirectional chat where:
+ * - Either party can be sender or receiver
+ * - Each viewer sees the message in their mother tongue
+ * - English meaning is always available for clarity
  */
 export async function processIncomingMessage(
   message: MeaningBasedMessage,
   viewerLanguage: string
-): Promise<{ displayText: string; englishMeaning: string }> {
+): Promise<{ displayText: string; englishMeaning: string; textDirection: 'ltr' | 'rtl' }> {
   const normViewer = normalizeLanguage(viewerLanguage);
   const isSender = isSameLanguage(normViewer, message.senderLanguage);
+  const isReceiver = isSameLanguage(normViewer, message.receiverLanguage);
+  
+  // If viewer is the original sender, show sender view
+  if (isSender) {
+    return {
+      displayText: message.senderView,
+      englishMeaning: message.extractedMeaning,
+      textDirection: getTextDirection(message.senderLanguage),
+    };
+  }
+  
+  // If viewer is the original receiver, show receiver view
+  if (isReceiver) {
+    return {
+      displayText: message.receiverView,
+      englishMeaning: message.extractedMeaning,
+      textDirection: getTextDirection(message.receiverLanguage),
+    };
+  }
+  
+  // Viewer is a third party (e.g., admin viewing chat)
+  // Translate meaning to viewer's language
+  if (isEnglish(normViewer)) {
+    return {
+      displayText: message.extractedMeaning,
+      englishMeaning: message.extractedMeaning,
+      textDirection: 'ltr',
+    };
+  }
+  
+  // Translate to viewer's language
+  const result = await offlineTranslate(message.extractedMeaning, 'english', normViewer);
+  const translatedText = isLatinText(result.text) && !isLatinScriptLanguage(normViewer)
+    ? dynamicTransliterate(result.text, normViewer) || result.text
+    : result.text;
+    
+  return {
+    displayText: translatedText,
+    englishMeaning: message.extractedMeaning,
+    textDirection: getTextDirection(normViewer),
+  };
+}
+
+/**
+ * Get the appropriate view of a message for a specific user
+ * Symmetric function - works the same whether user was original sender or receiver
+ */
+export function getMessageViewForUser(
+  message: MeaningBasedMessage,
+  userLanguage: string
+): {
+  displayText: string;
+  englishMeaning: string;
+  textDirection: 'ltr' | 'rtl';
+  isOriginalSender: boolean;
+} {
+  const normUser = normalizeLanguage(userLanguage);
+  const isSender = isSameLanguage(normUser, message.senderLanguage);
   
   if (isSender) {
     return {
       displayText: message.senderView,
       englishMeaning: message.extractedMeaning,
+      textDirection: getTextDirection(message.senderLanguage),
+      isOriginalSender: true,
     };
   }
   
-  // Viewer is receiver
   return {
     displayText: message.receiverView,
     englishMeaning: message.extractedMeaning,
+    textDirection: getTextDirection(message.receiverLanguage),
+    isOriginalSender: false,
   };
 }
 

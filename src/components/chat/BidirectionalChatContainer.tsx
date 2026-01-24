@@ -31,8 +31,10 @@ import {
 // ============================================================
 
 export interface BidirectionalChatContainerProps {
-  senderProfile: UserLanguageProfile;
-  receiverProfile: UserLanguageProfile;
+  /** Current user's profile (the one typing) */
+  myProfile: UserLanguageProfile;
+  /** Partner's profile (the other chat participant) */
+  partnerProfile: UserLanguageProfile;
   messages: MeaningBasedMessage[];
   onSendMessage: (message: MeaningBasedMessage) => void;
   onTyping?: (isTyping: boolean) => void;
@@ -173,8 +175,8 @@ function groupMessagesByDate(messages: MeaningBasedMessage[]): Map<string, Meani
 // ============================================================
 
 export const BidirectionalChatContainer: React.FC<BidirectionalChatContainerProps> = memo(({
-  senderProfile,
-  receiverProfile,
+  myProfile,
+  partnerProfile,
   messages,
   onSendMessage,
   onTyping,
@@ -193,10 +195,10 @@ export const BidirectionalChatContainer: React.FC<BidirectionalChatContainerProp
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   
-  // Derived
-  const senderLanguage = normalizeLanguage(senderProfile.motherTongue);
-  const receiverLanguage = normalizeLanguage(receiverProfile.motherTongue);
-  const sameLanguage = isSameLanguage(senderLanguage, receiverLanguage);
+  // Derived - MY language vs PARTNER's language
+  const myLanguage = normalizeLanguage(myProfile.motherTongue);
+  const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
+  const sameLanguage = isSameLanguage(myLanguage, partnerLanguage);
   const groupedMessages = groupMessagesByDate(messages);
   
   // Scroll to bottom
@@ -230,8 +232,8 @@ export const BidirectionalChatContainer: React.FC<BidirectionalChatContainerProp
     <div className={cn('flex flex-col h-full', className)}>
       {/* Language Indicator */}
       <LanguageIndicator
-        senderLanguage={senderProfile.motherTongue}
-        receiverLanguage={receiverProfile.motherTongue}
+        senderLanguage={myProfile.motherTongue}
+        receiverLanguage={partnerProfile.motherTongue}
         sameLanguage={sameLanguage}
       />
       
@@ -261,35 +263,26 @@ export const BidirectionalChatContainer: React.FC<BidirectionalChatContainerProp
                   <div key={date}>
                     <DateSeparator date={date} />
                     <div className="space-y-2">
-                      {dateMessages.map((message) => (
-                        <BidirectionalMessageBubble
-                          key={message.id}
-                          message={message}
-                          viewerLanguage={senderProfile.motherTongue}
-                          isMe={isSameLanguage(
-                            normalizeLanguage(message.senderLanguage),
-                            senderLanguage
-                          )}
-                          senderName={
-                            isSameLanguage(
-                              normalizeLanguage(message.senderLanguage),
-                              senderLanguage
-                            )
-                              ? undefined
-                              : partnerName
-                          }
-                          senderAvatar={
-                            isSameLanguage(
-                              normalizeLanguage(message.senderLanguage),
-                              senderLanguage
-                            )
-                              ? undefined
-                              : partnerAvatar
-                          }
-                          showEnglishMeaning={showEnglishMeaning}
-                          showOriginalToggle={true}
-                        />
-                      ))}
+                      {dateMessages.map((message) => {
+                        // Determine if this message was sent by ME (current user)
+                        const isMyMessage = isSameLanguage(
+                          normalizeLanguage(message.senderLanguage),
+                          myLanguage
+                        );
+                        
+                        return (
+                          <BidirectionalMessageBubble
+                            key={message.id}
+                            message={message}
+                            viewerLanguage={myProfile.motherTongue}
+                            isMe={isMyMessage}
+                            senderName={isMyMessage ? undefined : partnerName}
+                            senderAvatar={isMyMessage ? undefined : partnerAvatar}
+                            showEnglishMeaning={showEnglishMeaning}
+                            showOriginalToggle={true}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -316,8 +309,8 @@ export const BidirectionalChatContainer: React.FC<BidirectionalChatContainerProp
       {/* Input Area */}
       <div className="border-t bg-background">
         <BidirectionalChatInput
-          senderProfile={senderProfile}
-          receiverProfile={receiverProfile}
+          myProfile={myProfile}
+          partnerProfile={partnerProfile}
           onSendMessage={handleSendMessage}
           onTyping={onTyping}
           disabled={disabled}

@@ -31,16 +31,20 @@ import { type UserLanguageProfile } from '@/lib/offline-translation/types';
 // ============================================================
 
 export interface UseBidirectionalChatOptions {
-  senderProfile: UserLanguageProfile;
-  receiverProfile: UserLanguageProfile;
+  /** Current user's profile (they are the sender when typing) */
+  myProfile: UserLanguageProfile;
+  /** Partner's profile (they receive messages from current user) */
+  partnerProfile: UserLanguageProfile;
   enableLivePreview?: boolean;
   previewDebounceMs?: number;
 }
 
 export interface UseBidirectionalChatReturn {
   // Message processing
+  /** Send a message as the current user */
   sendMessage: (text: string) => Promise<MeaningBasedMessage>;
-  processIncoming: (text: string, fromLanguage: string) => Promise<MeaningBasedMessage>;
+  /** Process a message received from partner */
+  processIncoming: (text: string) => Promise<MeaningBasedMessage>;
   
   // Live preview
   preview: LivePreviewResult | null;
@@ -57,8 +61,8 @@ export interface UseBidirectionalChatReturn {
   
   // Configuration
   sameLanguage: boolean;
-  senderLanguage: string;
-  receiverLanguage: string;
+  myLanguage: string;
+  partnerLanguage: string;
 }
 
 // ============================================================
@@ -69,8 +73,8 @@ export function useBidirectionalChat(
   options: UseBidirectionalChatOptions
 ): UseBidirectionalChatReturn {
   const {
-    senderProfile,
-    receiverProfile,
+    myProfile,
+    partnerProfile,
     enableLivePreview = true,
     previewDebounceMs = 150,
   } = options;
@@ -85,18 +89,18 @@ export function useBidirectionalChat(
   // Refs
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
   
-  // Derived values
-  const senderLanguage = useMemo(
-    () => normalizeLanguage(senderProfile.motherTongue),
-    [senderProfile.motherTongue]
+  // Derived values - symmetric naming
+  const myLanguage = useMemo(
+    () => normalizeLanguage(myProfile.motherTongue),
+    [myProfile.motherTongue]
   );
-  const receiverLanguage = useMemo(
-    () => normalizeLanguage(receiverProfile.motherTongue),
-    [receiverProfile.motherTongue]
+  const partnerLanguage = useMemo(
+    () => normalizeLanguage(partnerProfile.motherTongue),
+    [partnerProfile.motherTongue]
   );
   const sameLanguage = useMemo(
-    () => isSameLanguage(senderLanguage, receiverLanguage),
-    [senderLanguage, receiverLanguage]
+    () => isSameLanguage(myLanguage, partnerLanguage),
+    [myLanguage, partnerLanguage]
   );
   
   // Initialize engine
@@ -117,13 +121,17 @@ export function useBidirectionalChat(
     };
   }, []);
   
-  // Send message
+  /**
+   * Send a message as the current user (I am sender, partner is receiver)
+   * Message will be processed for display in both my language and partner's language
+   */
   const sendMessage = useCallback(async (text: string): Promise<MeaningBasedMessage> => {
     setIsProcessing(true);
     setError(null);
     
     try {
-      const message = await processMessage(text, senderProfile, receiverProfile);
+      // I am the sender, partner is the receiver
+      const message = await processMessage(text, myProfile, partnerProfile);
       return message;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to process message';
@@ -132,26 +140,20 @@ export function useBidirectionalChat(
     } finally {
       setIsProcessing(false);
     }
-  }, [senderProfile, receiverProfile]);
+  }, [myProfile, partnerProfile]);
   
-  // Process incoming message
-  const processIncoming = useCallback(async (
-    text: string,
-    fromLanguage: string
-  ): Promise<MeaningBasedMessage> => {
+  /**
+   * Process an incoming message from the partner
+   * Partner is the sender, I am the receiver
+   * This is the REVERSE direction of sendMessage - fully symmetric
+   */
+  const processIncoming = useCallback(async (text: string): Promise<MeaningBasedMessage> => {
     setIsProcessing(true);
     setError(null);
     
     try {
-      // Create a temporary profile for the incoming sender
-      const incomingProfile: UserLanguageProfile = {
-        userId: 'incoming',
-        gender: 'male',
-        motherTongue: fromLanguage,
-        scriptType: 'native',
-      };
-      
-      const message = await processMessage(text, incomingProfile, senderProfile);
+      // Partner is the sender, I am the receiver - REVERSED roles
+      const message = await processMessage(text, partnerProfile, myProfile);
       return message;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to process message';
@@ -160,15 +162,18 @@ export function useBidirectionalChat(
     } finally {
       setIsProcessing(false);
     }
-  }, [senderProfile]);
+  }, [partnerProfile, myProfile]);
   
-  // Update preview
+  /**
+   * Update live preview as user types
+   * Preview shown in MY mother tongue (sender's perspective)
+   */
   const updatePreview = useCallback((text: string) => {
     if (!enableLivePreview) return;
     
-    // Instant native preview (synchronous)
+    // Instant native preview (synchronous) - in my language
     if (text.trim()) {
-      setInstantPreview(getInstantNativePreview(text, senderLanguage));
+      setInstantPreview(getInstantNativePreview(text, myLanguage));
     } else {
       setInstantPreview('');
       setPreview(null);
@@ -182,18 +187,18 @@ export function useBidirectionalChat(
     
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        const result = await generateLivePreview(text, senderLanguage, receiverLanguage);
+        const result = await generateLivePreview(text, myLanguage, partnerLanguage);
         setPreview(result);
       } catch (err) {
         console.error('[useBidirectionalChat] Preview error:', err);
       }
     }, previewDebounceMs);
-  }, [enableLivePreview, senderLanguage, receiverLanguage, previewDebounceMs]);
+  }, [enableLivePreview, myLanguage, partnerLanguage, previewDebounceMs]);
   
-  // Detect input type wrapper
+  // Detect input type wrapper - uses my language for detection
   const detectType = useCallback((text: string): InputType => {
-    return detectInputType(text, senderLanguage);
-  }, [senderLanguage]);
+    return detectInputType(text, myLanguage);
+  }, [myLanguage]);
   
   return {
     sendMessage,
@@ -206,8 +211,8 @@ export function useBidirectionalChat(
     isProcessing,
     error,
     sameLanguage,
-    senderLanguage,
-    receiverLanguage,
+    myLanguage,
+    partnerLanguage,
   };
 }
 
@@ -221,14 +226,14 @@ export interface UseQuickTranslateOptions {
 }
 
 export function useQuickTranslate(options: UseQuickTranslateOptions) {
-  const senderProfile: UserLanguageProfile = useMemo(() => ({
+  const myProfile: UserLanguageProfile = useMemo(() => ({
     userId: 'me',
     gender: 'male',
     motherTongue: options.myLanguage,
     scriptType: 'native',
   }), [options.myLanguage]);
   
-  const receiverProfile: UserLanguageProfile = useMemo(() => ({
+  const partnerProfile: UserLanguageProfile = useMemo(() => ({
     userId: 'partner',
     gender: 'female',
     motherTongue: options.partnerLanguage,
@@ -236,8 +241,8 @@ export function useQuickTranslate(options: UseQuickTranslateOptions) {
   }), [options.partnerLanguage]);
   
   return useBidirectionalChat({
-    senderProfile,
-    receiverProfile,
+    myProfile,
+    partnerProfile,
   });
 }
 

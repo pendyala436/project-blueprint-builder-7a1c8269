@@ -45,8 +45,10 @@ import {
 // ============================================================
 
 export interface BidirectionalChatInputProps {
-  senderProfile: UserLanguageProfile;
-  receiverProfile: UserLanguageProfile;
+  /** Current user's profile (typing user) */
+  myProfile: UserLanguageProfile;
+  /** Partner's profile (message receiver) */
+  partnerProfile: UserLanguageProfile;
   onSendMessage: (message: MeaningBasedMessage) => void;
   onTyping?: (isTyping: boolean) => void;
   disabled?: boolean;
@@ -85,8 +87,8 @@ InputTypeBadge.displayName = 'InputTypeBadge';
 // ============================================================
 
 export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = memo(({
-  senderProfile,
-  receiverProfile,
+  myProfile,
+  partnerProfile,
   onSendMessage,
   onTyping,
   disabled = false,
@@ -105,11 +107,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
   
-  // Derived values
-  const normSender = normalizeLanguage(senderProfile.motherTongue);
-  const normReceiver = normalizeLanguage(receiverProfile.motherTongue);
-  const sameLanguage = isSameLanguage(normSender, normReceiver);
-  const senderIsLatin = isLatinScriptLanguage(normSender);
+  // Derived values - MY language as sender, PARTNER's language as receiver
+  const myLanguage = normalizeLanguage(myProfile.motherTongue);
+  const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
+  const sameLanguage = isSameLanguage(myLanguage, partnerLanguage);
+  const myLangIsLatin = isLatinScriptLanguage(myLanguage);
   
   // Initialize engine
   useEffect(() => {
@@ -123,9 +125,9 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     const value = e.target.value;
     setInput(value);
     
-    // Instant native preview (synchronous)
-    if (value.trim() && !senderIsLatin) {
-      setInstantPreview(getInstantNativePreview(value, normSender));
+    // Instant native preview (synchronous) - shows in MY language
+    if (value.trim() && !myLangIsLatin) {
+      setInstantPreview(getInstantNativePreview(value, myLanguage));
     } else {
       setInstantPreview('');
     }
@@ -137,19 +139,19 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced full preview
+    // Debounced full preview - my language as sender, partner as receiver
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(async () => {
-        const result = await generateLivePreview(value, normSender, normReceiver);
+        const result = await generateLivePreview(value, myLanguage, partnerLanguage);
         setPreview(result);
       }, 150);
     } else {
       setPreview(null);
     }
-  }, [normSender, normReceiver, senderIsLatin, onTyping]);
+  }, [myLanguage, partnerLanguage, myLangIsLatin, onTyping]);
   
-  // Handle send
+  // Handle send - I am sender, partner is receiver
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || disabled || isSending || !isReady) return;
@@ -158,7 +160,8 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      const message = await processMessage(trimmed, senderProfile, receiverProfile);
+      // Process message: myProfile as sender, partnerProfile as receiver
+      const message = await processMessage(trimmed, myProfile, partnerProfile);
       onSendMessage(message);
       setInput('');
       setPreview(null);
@@ -168,7 +171,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     } finally {
       setIsSending(false);
     }
-  }, [input, disabled, isSending, isReady, senderProfile, receiverProfile, onSendMessage, onTyping]);
+  }, [input, disabled, isSending, isReady, myProfile, partnerProfile, onSendMessage, onTyping]);
   
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -196,7 +199,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   }, [input]);
   
   const showPreview = input.trim().length > 0;
-  const currentInputType = input.trim() ? detectInputType(input, normSender) : 'unknown';
+  const currentInputType = input.trim() ? detectInputType(input, myLanguage) : 'unknown';
   
   return (
     <div className={cn('space-y-2', className)}>
@@ -211,11 +214,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             <InputTypeBadge inputType={currentInputType} />
           </div>
           
-          {/* Native Script Preview (instant) */}
+          {/* Native Script Preview (instant) - in MY language */}
           {instantPreview && instantPreview !== input && (
             <div className="flex items-start gap-2">
               <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                {senderProfile.motherTongue}
+                {myProfile.motherTongue}
               </Badge>
               <p className="text-sm font-medium unicode-text" dir="auto">
                 {instantPreview}
@@ -236,12 +239,12 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             </div>
           )}
           
-          {/* Receiver Preview */}
+          {/* Partner's Preview - how THEY will see it */}
           {!sameLanguage && preview?.receiverPreview && (
             <div className="flex items-start gap-2">
               <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
                 <Languages className="h-2.5 w-2.5" />
-                {receiverProfile.motherTongue}
+                {partnerProfile.motherTongue}
               </Badge>
               <p className="text-xs text-muted-foreground unicode-text" dir="auto">
                 {preview.receiverPreview}
