@@ -1800,22 +1800,10 @@ const DraggableMiniChatWindow = ({
                             <span className="opacity-70 italic unicode-text" dir="auto">{msg.message}</span>
                           </div>
                         ) : (
-                          <div className="space-y-1">
-                            {/* Primary message display */}
+                          <div>
+                            {/* Primary message display - ONLY mother tongue in native script */}
                             <p className="unicode-text" dir="auto">
                               {msg.translatedMessage || msg.message}
-                            </p>
-                            
-                            {/* Latin transliteration - show if non-Latin script */}
-                            {!userUsesLatinScript && msg.latinMessage && (
-                              <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
-                                🔤 {msg.latinMessage}
-                              </p>
-                            )}
-                            
-                            {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
-                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              🌐 {msg.englishMessage || msg.message}
                             </p>
                           </div>
                         )
@@ -1830,22 +1818,10 @@ const DraggableMiniChatWindow = ({
                         // PARTNER MESSAGE (RECEIVER VIEW)
                         // ALWAYS show English meaning for ALL 9 combinations
                         // ===========================================
-                        <div className="space-y-1">
-                          {/* Primary message display - always show translated/native view */}
+                        <div>
+                          {/* Primary message display - ONLY mother tongue in native script */}
                           <p className="unicode-text" dir="auto">
                             {msg.translatedMessage || msg.message}
-                          </p>
-                          
-                          {/* Latin transliteration - show if non-Latin script */}
-                          {!userUsesLatinScript && msg.latinMessage && (
-                            <p className="text-[9px] opacity-70 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              🔤 {msg.latinMessage}
-                            </p>
-                          )}
-                          
-                          {/* MANDATORY English meaning - ALL 3 MODES, ALL 9 COMBINATIONS */}
-                          <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                            🌐 {msg.englishMessage || msg.message}
                           </p>
                         </div>
                       )}
