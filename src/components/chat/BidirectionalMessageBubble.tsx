@@ -181,7 +181,26 @@ export const BidirectionalMessageBubble: React.FC<BidirectionalMessageBubbleProp
             {displayText}
           </p>
           
-          {/* English meaning - REMOVED: English is internal only, never shown to users */}
+          {/* English meaning - ALWAYS shown below in small letters */}
+          {englishText && !showOriginal && (
+            <div className={cn(
+              'mt-1.5 pt-1 border-t flex items-start gap-1',
+              isMe 
+                ? 'border-primary-foreground/20' 
+                : 'border-foreground/10'
+            )}>
+              <Globe className={cn(
+                'h-2.5 w-2.5 flex-shrink-0 mt-0.5',
+                isMe ? 'text-primary-foreground/50' : 'text-muted-foreground'
+              )} />
+              <p className={cn(
+                'text-[10px] whitespace-pre-wrap break-words leading-relaxed',
+                isMe ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
+              )}>
+                {englishText}
+              </p>
+            </div>
+          )}
           
           {/* Toggle original button */}
           {canToggleOriginal && (
