@@ -119,9 +119,8 @@ export function detectInputType(text: string, expectedLanguage: string): InputTy
   const trimmed = text.trim();
   const inputIsLatin = isLatinText(trimmed);
   const expectedIsLatin = isLatinScriptLanguage(expectedLanguage);
-  const detected = autoDetectLanguage(trimmed);
   
-  // Check for pure English
+  // Check for pure English - if expected language is English
   if (inputIsLatin && isEnglish(expectedLanguage)) {
     return 'pure-english';
   }
@@ -139,30 +138,69 @@ export function detectInputType(text: string, expectedLanguage: string): InputTy
     return 'pure-native';
   }
   
-  // Latin input for non-Latin language = phonetic typing
+  // Latin input for non-Latin language - need to distinguish English from phonetic
   if (inputIsLatin && !expectedIsLatin) {
-    // Common patterns for phonetic typing
+    // Common phonetic patterns for Indian languages
     const phoneticPatterns = [
-      /\b(kya|kaise|kaisa|ho|hai|tum|main|mein|aap|ye|wo|yeh|woh)\b/i,  // Hindi
-      /\b(eppadi|nalla|irukken|irukka|enna|ethu|ithu|athu|vanakkam)\b/i, // Tamil
-      /\b(ela|unnavu|nenu|meeru|emi|idi|adi|ela|baaga)\b/i,              // Telugu
-      /\b(kem|cho|su|che|shu|avu|tame|mari|kai)\b/i,                      // Gujarati
-      /\b(kemon|achen|ami|tumi|apni|eta|ota|ki|na)\b/i,                   // Bengali
-      /\b(hega|idhya|nanu|neenu|yenu|idu|adu|hege|chennaagi)\b/i,        // Kannada
-      /\b(enthanu|ningal|njan|ivan|aval|oru|onnu)\b/i,                    // Malayalam
-      /\b(kasa|aahe|mi|tu|tumhi|ha|ti|te|kay|kas)\b/i,                    // Marathi
-      /\b(ki|haal|hai|tusi|main|sanu|kyon|kithe)\b/i,                     // Punjabi
-      /\b(kemiti|achha|mu|tume|kana|eta|seta)\b/i,                        // Odia
+      /\b(kya|kaise|kaisa|tum|mein|aap|yeh|woh|nahi|haan|theek|accha|bahut|aur)\b/i,  // Hindi
+      /\b(eppadi|nalla|irukken|irukka|enna|ethu|ithu|athu|vanakkam|romba|illa)\b/i, // Tamil
+      /\b(ela|unnavu|nenu|meeru|emi|idi|adi|baaga|chala|ledu|avunu|manchidi)\b/i,   // Telugu
+      /\b(kem|cho|su|che|shu|avu|tame|mari|saru|nathi)\b/i,                          // Gujarati
+      /\b(kemon|achen|ami|tumi|apni|eta|ota|bhalo|kharap|hobe)\b/i,                  // Bengali
+      /\b(hega|idhya|nanu|neenu|yenu|idu|adu|hege|chennaagi|illa|houdu)\b/i,        // Kannada
+      /\b(enthanu|ningal|njan|ivan|aval|oru|onnu|nalla|illa|aanu)\b/i,              // Malayalam
+      /\b(kasa|aahe|mi|tu|tumhi|ha|ti|te|kay|kas|bara|nahi)\b/i,                    // Marathi
+      /\b(ki|haal|tusi|sanu|kyon|kithe|theek|vadiya|nahi)\b/i,                      // Punjabi
+      /\b(kemiti|achha|mu|tume|kana|eta|seta|bhala)\b/i,                            // Odia
     ];
     
+    // Check if input matches phonetic patterns
     for (const pattern of phoneticPatterns) {
       if (pattern.test(trimmed)) {
         return 'phonetic-latin';
       }
     }
     
-    // If expected language is non-Latin but input is Latin, assume phonetic
-    return 'phonetic-latin';
+    // Common English words/patterns - if these are present, it's likely English
+    const commonEnglishPatterns = [
+      /\b(the|is|are|was|were|have|has|had|will|would|could|should|can|may|might)\b/i,
+      /\b(what|how|why|when|where|who|which|that|this|these|those)\b/i,
+      /\b(you|your|i|me|my|we|our|they|their|he|she|it|him|her)\b/i,
+      /\b(good|great|nice|fine|okay|yes|no|please|thank|thanks|sorry|hello|hi|bye)\b/i,
+      /\b(do|does|did|done|doing|go|going|went|come|coming|came|get|got)\b/i,
+      /\b(want|need|like|love|think|know|see|look|feel|make|take|give)\b/i,
+      /\b(day|time|today|tomorrow|yesterday|morning|evening|night|week|month|year)\b/i,
+      /\b(very|really|just|only|also|too|more|less|much|many|some|any|all)\b/i,
+    ];
+    
+    // Count English word matches
+    let englishWordCount = 0;
+    for (const pattern of commonEnglishPatterns) {
+      const matches = trimmed.match(pattern);
+      if (matches) {
+        englishWordCount += matches.length;
+      }
+    }
+    
+    // If we found multiple common English words, treat as English
+    const words = trimmed.split(/\s+/).filter(w => w.length > 1);
+    const englishRatio = words.length > 0 ? englishWordCount / words.length : 0;
+    
+    if (englishWordCount >= 2 || englishRatio >= 0.4) {
+      return 'pure-english';
+    }
+    
+    // Single word that looks English (common greetings, words)
+    if (words.length <= 2 && /^[a-zA-Z]+$/.test(trimmed)) {
+      const singleEnglishWords = /^(hi|hello|hey|bye|yes|no|ok|okay|thanks|thank|please|sorry|good|great|nice|fine|what|how|why|when|where|who)$/i;
+      if (singleEnglishWords.test(trimmed.toLowerCase())) {
+        return 'pure-english';
+      }
+    }
+    
+    // Default: if no phonetic patterns matched but it's Latin text for non-Latin language,
+    // assume it's English (user typing in English to a non-English speaker)
+    return 'pure-english';
   }
   
   // Latin input for Latin language
