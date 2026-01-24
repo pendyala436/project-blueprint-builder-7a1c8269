@@ -1800,10 +1800,15 @@ const DraggableMiniChatWindow = ({
                             <span className="opacity-70 italic unicode-text" dir="auto">{msg.message}</span>
                           </div>
                         ) : (
-                          <div>
-                            {/* Primary message display - ONLY mother tongue in native script */}
+                          <div className="space-y-1">
+                            {/* Primary message - mother tongue (native OR Latin based on profile) */}
                             <p className="unicode-text" dir="auto">
                               {msg.translatedMessage || msg.message}
+                            </p>
+                            
+                            {/* English meaning - ALWAYS shown below in small letters */}
+                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                              🌐 {msg.englishMessage || msg.message}
                             </p>
                           </div>
                         )
@@ -1818,10 +1823,15 @@ const DraggableMiniChatWindow = ({
                         // PARTNER MESSAGE (RECEIVER VIEW)
                         // ALWAYS show English meaning for ALL 9 combinations
                         // ===========================================
-                        <div>
-                          {/* Primary message display - ONLY mother tongue in native script */}
+                        <div className="space-y-1">
+                          {/* Primary message - mother tongue (native OR Latin based on profile) */}
                           <p className="unicode-text" dir="auto">
                             {msg.translatedMessage || msg.message}
+                          </p>
+                          
+                          {/* English meaning - ALWAYS shown below in small letters */}
+                          <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
+                            🌐 {msg.englishMessage || msg.message}
                           </p>
                         </div>
                       )}
