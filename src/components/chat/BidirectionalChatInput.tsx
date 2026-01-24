@@ -30,7 +30,7 @@ import {
   isLatinScriptLanguage,
   getLiveNativePreview,
 } from '@/lib/translation/universal-offline-engine';
-import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
+// REMOVED: dynamicTransliterate - system is MEANING-BASED only, not phonetic
 
 // ============================================================
 // TYPES
@@ -114,13 +114,8 @@ async function generateLivePreview(
       nativePreview = result.text;
       confidence = result.confidence || 0.85;
 
-      // Ensure native script if sender uses non-Latin script
-      if (!isLatinScriptLanguage(normSender) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(nativePreview)) {
-        const transliterated = dynamicTransliterate(nativePreview, normSender);
-        if (transliterated && transliterated !== nativePreview) {
-          nativePreview = transliterated;
-        }
-      }
+      // MEANING-BASED ONLY: No phonetic transliteration
+      // The offline engine returns semantic translation directly
     } catch (err) {
       console.error('[generateLivePreview] Translation error:', err);
       nativePreview = trimmed;
@@ -137,13 +132,7 @@ async function generateLivePreview(
         const result = await translateUniversal(trimmed, 'english', normReceiver);
         receiverPreview = result.text;
 
-        // Ensure native script
-        if (!isLatinScriptLanguage(normReceiver) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(receiverPreview)) {
-          const transliterated = dynamicTransliterate(receiverPreview, normReceiver);
-          if (transliterated && transliterated !== receiverPreview) {
-            receiverPreview = transliterated;
-          }
-        }
+        // MEANING-BASED ONLY: No phonetic transliteration
       } catch (err) {
         console.error('[generateLivePreview] Receiver translation error:', err);
         receiverPreview = trimmed;
@@ -187,14 +176,7 @@ async function processMessage(
       senderView = result.text;
       senderScript = isLatinScriptLanguage(normSender) ? 'latin' : 'native';
 
-      // Ensure native script
-      if (!isLatinScriptLanguage(normSender) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(senderView)) {
-        const transliterated = dynamicTransliterate(senderView, normSender);
-        if (transliterated && transliterated !== senderView) {
-          senderView = transliterated;
-          wasTransliterated = true;
-        }
-      }
+      // MEANING-BASED ONLY: No phonetic transliteration - wasTransliterated stays false
     } catch (err) {
       console.error('[processMessage] Sender translation error:', err);
       senderView = trimmed;
@@ -220,13 +202,7 @@ async function processMessage(
       receiverScript = isLatinScriptLanguage(normReceiver) ? 'latin' : 'native';
       wasTranslated = true;
 
-      // Ensure native script
-      if (!isLatinScriptLanguage(normReceiver) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(receiverView)) {
-        const transliterated = dynamicTransliterate(receiverView, normReceiver);
-        if (transliterated && transliterated !== receiverView) {
-          receiverView = transliterated;
-        }
-      }
+      // MEANING-BASED ONLY: No phonetic transliteration
     } catch (err) {
       console.error('[processMessage] Receiver translation error:', err);
       receiverView = trimmed;

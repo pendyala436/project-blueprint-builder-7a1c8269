@@ -57,7 +57,7 @@ import {
   isEnglish as checkIsEnglish,
   isLatinScriptLanguage as checkLatinScript,
 } from "@/lib/translation/universal-offline-engine";
-import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
+// REMOVED: dynamicTransliterate - system is MEANING-BASED only, not phonetic
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
@@ -271,16 +271,8 @@ const DraggableMiniChatWindow = ({
         const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
         let translatedText = result?.text || '';
         
-        // Ensure native script if user's language is non-Latin
-        if (translatedText && !checkLatinScript(currentUserLanguage)) {
-          // Check if result is still Latin and needs transliteration
-          if (/^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(translatedText)) {
-            const nativeScript = dynamicTransliterate(translatedText, currentUserLanguage);
-            if (nativeScript && nativeScript !== translatedText) {
-              translatedText = nativeScript;
-            }
-          }
-        }
+        // MEANING-BASED ONLY: No phonetic transliteration
+        // The offline engine returns semantic translation directly
         
         if (translatedText && translatedText !== capturedText) {
           setMeaningPreview(translatedText);
