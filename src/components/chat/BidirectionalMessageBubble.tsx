@@ -33,7 +33,7 @@ export interface BidirectionalMessageBubbleProps {
   isMe: boolean;
   senderName?: string;
   senderAvatar?: string | null;
-  showEnglishMeaning?: boolean;
+  showEnglishMeaning?: boolean; // DEPRECATED: English is never shown to users
   showOriginalToggle?: boolean;
   isDelivered?: boolean;
   isRead?: boolean;
@@ -181,26 +181,7 @@ export const BidirectionalMessageBubble: React.FC<BidirectionalMessageBubbleProp
             {displayText}
           </p>
           
-          {/* English meaning */}
-          {shouldShowEnglish && !showOriginal && (
-            <div className={cn(
-              'mt-2 pt-2 border-t flex items-start gap-1.5',
-              isMe 
-                ? 'border-primary-foreground/20' 
-                : 'border-foreground/10'
-            )}>
-              <Globe className={cn(
-                'h-3 w-3 flex-shrink-0 mt-0.5',
-                isMe ? 'text-primary-foreground/50' : 'text-muted-foreground'
-              )} />
-              <p className={cn(
-                'text-xs whitespace-pre-wrap break-words leading-relaxed',
-                isMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
-              )}>
-                {englishText}
-              </p>
-            </div>
-          )}
+          {/* English meaning - REMOVED: English is internal only, never shown to users */}
           
           {/* Toggle original button */}
           {canToggleOriginal && (
