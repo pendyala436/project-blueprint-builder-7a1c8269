@@ -1,12 +1,14 @@
 /**
- * Bidirectional Message Bubble Component
- * =======================================
+ * EN-Mode Message Bubble Component
+ * =================================
  * 
  * Displays messages with:
  * - Primary text in viewer's mother tongue (native or Latin script)
- * - English meaning below in small text
- * - Translation status indicators
- * - Support for RTL languages
+ * - English meaning ALWAYS shown below in small text
+ * 
+ * RULES:
+ * - Sender sees: Their mother tongue translation + English meaning below
+ * - Receiver sees: Their mother tongue translation + English meaning below
  */
 
 import React, { memo, useState, useCallback } from 'react';
