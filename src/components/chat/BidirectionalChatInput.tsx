@@ -1,31 +1,25 @@
 /**
- * Bidirectional Chat Input Component
- * ===================================
+ * EN-Mode Only Chat Input Component
+ * ==================================
  * 
- * Meaning-based input that accepts ANY input method:
- * - Physical/on-screen keyboard
- * - Voice-to-text
- * - Phonetic typing (Latin letters for non-Latin languages)
- * - Native script keyboards
- * - Mixed native + Latin input
+ * Simplified chat input where users ALWAYS type in English.
+ * The system translates to the user's mother tongue for preview
+ * and to the receiver's mother tongue for delivery.
  * 
- * Features:
- * - Live preview in sender's mother tongue
- * - English meaning preview
- * - Receiver preview (if different language)
- * - No input restrictions
+ * RULES:
+ * 1. Preview: Shows ONLY mother tongue translation (no English in preview)
+ * 2. After Send: Native script + English meaning in small letters below
+ * 3. Receiver: Their mother tongue + English meaning below
  */
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { Send, Globe, Languages, Loader2, Keyboard, Mic, Type } from 'lucide-react';
+import { Send, Globe, Languages, Loader2, Keyboard, Mic } from 'lucide-react';
 import {
   generateLivePreview,
-  getInstantNativePreview,
   processMessage,
   detectInputType,
   type MeaningBasedMessage,
@@ -35,7 +29,6 @@ import {
 import { type UserLanguageProfile } from '@/lib/offline-translation/types';
 import {
   normalizeLanguage,
-  isLatinScriptLanguage,
   isSameLanguage,
   isEngineReady,
   initializeEngine,
@@ -96,13 +89,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   placeholder,
   className,
 }) => {
-  // State
+  // State - ALWAYS EN MODE (users type in English only)
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isReady, setIsReady] = useState(isEngineReady());
   const [preview, setPreview] = useState<LivePreviewResult | null>(null);
-  const [instantPreview, setInstantPreview] = useState('');
-  const [isEnglishMode, setIsEnglishMode] = useState(true); // Toggle for English vs phonetic typing
   
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,7 +104,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   const myLanguage = normalizeLanguage(myProfile.motherTongue);
   const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
   const sameLanguage = isSameLanguage(myLanguage, partnerLanguage);
-  const myLangIsLatin = isLatinScriptLanguage(myLanguage);
   
   // Initialize engine
   useEffect(() => {
@@ -122,25 +112,10 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [isReady]);
   
-  // Handle input change
+  // Handle input change - ALWAYS EN MODE
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInput(value);
-    
-    const trimmedValue = value.trim();
-    
-    // Use toggle to determine input type instead of auto-detection
-    if (trimmedValue && !myLangIsLatin) {
-      if (!isEnglishMode) {
-        // Non-English mode: treat Latin input as phonetic typing
-        setInstantPreview(getInstantNativePreview(value, myLanguage));
-      } else {
-        // English mode: no instant transliteration, use meaning-based translation
-        setInstantPreview('');
-      }
-    } else {
-      setInstantPreview('');
-    }
     
     // Typing indicator
     if (onTyping) {
@@ -149,17 +124,17 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced full preview - pass isEnglishMode to override detection
+    // Debounced full preview - ALWAYS EN MODE (forceEnglishMode = true)
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(async () => {
-        const result = await generateLivePreview(value, myLanguage, partnerLanguage, isEnglishMode);
+        const result = await generateLivePreview(value, myLanguage, partnerLanguage, true);
         setPreview(result);
       }, 150);
     } else {
       setPreview(null);
     }
-  }, [myLanguage, partnerLanguage, myLangIsLatin, onTyping, isEnglishMode]);
+  }, [myLanguage, partnerLanguage, onTyping]);
   
   // Handle send - I am sender, partner is receiver
   const handleSend = useCallback(async () => {
@@ -170,18 +145,17 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      // Process message: myProfile as sender, partnerProfile as receiver, pass isEnglishMode
-      const message = await processMessage(trimmed, myProfile, partnerProfile, isEnglishMode);
+      // Process message: myProfile as sender, partnerProfile as receiver, ALWAYS EN MODE (forceEnglishMode = true)
+      const message = await processMessage(trimmed, myProfile, partnerProfile, true);
       onSendMessage(message);
       setInput('');
       setPreview(null);
-      setInstantPreview('');
     } catch (err) {
       console.error('[BidirectionalChatInput] Send error:', err);
     } finally {
       setIsSending(false);
     }
-  }, [input, disabled, isSending, isReady, myProfile, partnerProfile, onSendMessage, onTyping, isEnglishMode]);
+  }, [input, disabled, isSending, isReady, myProfile, partnerProfile, onSendMessage, onTyping]);
   
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -225,99 +199,33 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
           </div>
           
           {/* 
-           * UNIFIED PREVIEW FORMAT:
-           * - Primary: Mother tongue translation (native OR Latin based on language)
-           * - Secondary: English meaning in small letters below
-           * 
-           * For EN mode: Shows meaning-based translation
-           * For Native/Phonetic mode: Shows instant transliteration
+           * EN-MODE PREVIEW:
+           * - Shows ONLY mother tongue translation (native script)
+           * - NO English shown in preview (English appears only after send)
            */}
           
-          {/* Mother Tongue Preview with English meaning below */}
-          {(() => {
-            // Determine which preview to show
-            const motherTongueText = (instantPreview && instantPreview !== input) 
-              ? instantPreview 
-              : (preview?.nativePreview && preview.nativePreview !== input) 
-                ? preview.nativePreview 
-                : null;
-            
-            // Get English meaning (for EN mode, this is the input itself normalized)
-            const englishMeaning = isEnglishMode 
-              ? input.trim() // In EN mode, the input IS the English meaning
-              : preview?.englishMeaning;
-            
-            if (!motherTongueText && !isEnglishMode) return null;
-            
-            // For EN mode, always show the translation preview with English below
-            if (isEnglishMode && preview?.nativePreview) {
-              return (
-                <div className="space-y-1">
-                  {/* Primary: Mother tongue translation */}
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                      {myProfile.motherTongue}
-                    </Badge>
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-sm font-medium unicode-text" dir="auto">
-                        {preview.nativePreview}
-                      </p>
-                      {/* English meaning below in small letters */}
-                      <p className="text-[10px] text-muted-foreground/70 italic border-t border-current/10 pt-0.5">
-                        🌐 {input.trim()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            
-            // For Native/Phonetic mode with instant preview
-            if (motherTongueText) {
-              return (
-                <div className="space-y-1">
-                  {/* Primary: Mother tongue (transliteration) */}
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                      {myProfile.motherTongue}
-                    </Badge>
-                    <div className="flex-1 space-y-0.5">
-                      <p className="text-sm font-medium unicode-text" dir="auto">
-                        {motherTongueText}
-                      </p>
-                      {/* English meaning below in small letters (if available) */}
-                      {englishMeaning && englishMeaning !== motherTongueText && (
-                        <p className="text-[10px] text-muted-foreground/70 italic border-t border-current/10 pt-0.5">
-                          🌐 {englishMeaning}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            
-            return null;
-          })()}
+          {/* Mother Tongue Preview ONLY - No English in preview */}
+          {preview?.nativePreview && preview.nativePreview !== input && (
+            <div className="flex items-start gap-2">
+              <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
+                {myProfile.motherTongue}
+              </Badge>
+              <p className="text-sm font-medium unicode-text flex-1" dir="auto">
+                {preview.nativePreview}
+              </p>
+            </div>
+          )}
           
-          {/* Partner's Preview - how THEY will see it */}
+          {/* Partner's Preview - how THEY will see it (NO English in preview) */}
           {!sameLanguage && preview?.receiverPreview && (
             <div className="flex items-start gap-2 pt-1 border-t border-muted/50">
               <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
                 <Languages className="h-2.5 w-2.5" />
                 {partnerProfile.motherTongue}
               </Badge>
-              <div className="flex-1 space-y-0.5">
-                <p className="text-xs text-muted-foreground unicode-text" dir="auto">
-                  {preview.receiverPreview}
-                </p>
-                {/* English meaning for receiver too */}
-                {preview.englishMeaning && (
-                  <p className="text-[9px] text-muted-foreground/60 italic">
-                    🌐 {preview.englishMeaning}
-                  </p>
-                )}
-              </div>
+              <p className="text-xs text-muted-foreground unicode-text flex-1" dir="auto">
+                {preview.receiverPreview}
+              </p>
             </div>
           )}
           
@@ -332,35 +240,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         </div>
       )}
       
-      {/* English/Non-English Toggle */}
-      {!myLangIsLatin && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/20 border-b">
-          <div className="flex items-center gap-2">
-            <Type className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Typing Mode:</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              "text-xs font-medium transition-colors",
-              !isEnglishMode ? "text-primary" : "text-muted-foreground"
-            )}>
-              {myProfile.motherTongue}
-            </span>
-            <Switch
-              checked={isEnglishMode}
-              onCheckedChange={setIsEnglishMode}
-              className="h-4 w-8 data-[state=checked]:bg-blue-500"
-            />
-            <span className={cn(
-              "text-xs font-medium transition-colors",
-              isEnglishMode ? "text-blue-500" : "text-muted-foreground"
-            )}>
-              English
-            </span>
-          </div>
-        </div>
-      )}
-      
       {/* Input Area */}
       <div className="flex gap-2 items-end px-2 pb-2">
         <div className="flex-1 relative">
@@ -369,10 +248,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             value={input}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={isEnglishMode 
-              ? "Type in English (meaning-based)..." 
-              : `Type in ${myProfile.motherTongue} using Latin letters...`
-            }
+            placeholder="Type in English..."
             disabled={disabled || !isReady}
             className={cn(
               'min-h-[44px] max-h-32 resize-none unicode-text pr-10',
