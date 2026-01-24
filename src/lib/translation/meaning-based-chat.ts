@@ -225,14 +225,15 @@ export function detectInputType(text: string, expectedLanguage: string): InputTy
  */
 export async function extractMeaning(
   text: string,
-  sourceLanguage: string
+  sourceLanguage: string,
+  forcedInputType?: InputType // Optional: override input detection
 ): Promise<{ meaning: string; confidence: number; inputType: InputType }> {
   if (!text || !text.trim()) {
     return { meaning: '', confidence: 0, inputType: 'unknown' };
   }
   
   const trimmed = text.trim();
-  const inputType = detectInputType(trimmed, sourceLanguage);
+  const inputType = forcedInputType || detectInputType(trimmed, sourceLanguage);
   const normSource = normalizeLanguage(sourceLanguage);
   
   // Ensure engine is ready
@@ -299,7 +300,8 @@ export async function extractMeaning(
 export async function generateLivePreview(
   input: string,
   senderLanguage: string,
-  receiverLanguage: string
+  receiverLanguage: string,
+  forceEnglishMode?: boolean // Optional: override input detection
 ): Promise<LivePreviewResult> {
   if (!input || !input.trim()) {
     return {
@@ -315,7 +317,11 @@ export async function generateLivePreview(
   const normSender = normalizeLanguage(senderLanguage);
   const normReceiver = normalizeLanguage(receiverLanguage);
   const sameLanguage = isSameLanguage(normSender, normReceiver);
-  const inputType = detectInputType(trimmed, normSender);
+  
+  // Use forced mode or detect automatically
+  const inputType = forceEnglishMode !== undefined
+    ? (forceEnglishMode ? 'pure-english' : 'phonetic-latin')
+    : detectInputType(trimmed, normSender);
   
   // Generate native preview for sender - ALWAYS meaning-based
   let nativePreview: string;
@@ -326,8 +332,8 @@ export async function generateLivePreview(
   const senderIsLatin = isLatinScriptLanguage(normSender);
   const senderIsEnglish = isEnglish(normSender);
   
-  // First, extract the English meaning from the input
-  const extracted = await extractMeaning(trimmed, normSender);
+  // First, extract the English meaning from the input using the forced input type
+  const extracted = await extractMeaning(trimmed, normSender, inputType);
   englishMeaning = extracted.meaning;
   confidence = extracted.confidence;
   
@@ -408,7 +414,8 @@ export function getInstantNativePreview(
 export async function processMessage(
   input: string,
   senderProfile: UserLanguageProfile,
-  receiverProfile: UserLanguageProfile
+  receiverProfile: UserLanguageProfile,
+  forceEnglishMode?: boolean // Optional: override input detection
 ): Promise<MeaningBasedMessage> {
   const trimmed = input.trim();
   const timestamp = new Date().toISOString();
@@ -422,11 +429,13 @@ export async function processMessage(
   const normReceiver = normalizeLanguage(receiverProfile.motherTongue);
   const sameLanguage = isSameLanguage(normSender, normReceiver);
   
-  // Detect input type
-  const inputType = detectInputType(trimmed, normSender);
+  // Use forced mode or detect automatically
+  const inputType = forceEnglishMode !== undefined
+    ? (forceEnglishMode ? 'pure-english' : 'phonetic-latin')
+    : detectInputType(trimmed, normSender);
   
-  // Extract meaning
-  const { meaning, confidence } = await extractMeaning(trimmed, normSender);
+  // Extract meaning using the forced input type
+  const { meaning, confidence } = await extractMeaning(trimmed, normSender, inputType);
   
   // Determine script types
   const inputIsLatin = isLatinText(trimmed);
@@ -441,8 +450,15 @@ export async function processMessage(
   if (senderIsLatin) {
     senderView = trimmed;
     senderScript = 'latin';
-  } else if (inputIsLatin) {
-    // Phonetic input - convert to native script
+  } else if (inputType === 'pure-english') {
+    // English input for non-English speaker - translate meaning to native language
+    const result = await offlineTranslate(meaning, 'english', normSender);
+    senderView = isLatinText(result.text)
+      ? dynamicTransliterate(result.text, normSender) || result.text
+      : result.text;
+    senderScript = 'native';
+  } else if (inputIsLatin && inputType === 'phonetic-latin') {
+    // Phonetic input - convert to native script via transliteration
     senderView = dynamicTransliterate(trimmed, normSender) || trimmed;
     senderScript = 'native';
     wasTransliterated = senderView !== trimmed;

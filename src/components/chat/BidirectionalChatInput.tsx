@@ -20,8 +20,9 @@ import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { Send, Globe, Languages, Loader2, Keyboard, Mic } from 'lucide-react';
+import { Send, Globe, Languages, Loader2, Keyboard, Mic, Type } from 'lucide-react';
 import {
   generateLivePreview,
   getInstantNativePreview,
@@ -101,6 +102,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   const [isReady, setIsReady] = useState(isEngineReady());
   const [preview, setPreview] = useState<LivePreviewResult | null>(null);
   const [instantPreview, setInstantPreview] = useState('');
+  const [isEnglishMode, setIsEnglishMode] = useState(true); // Toggle for English vs phonetic typing
   
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -125,20 +127,15 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     const value = e.target.value;
     setInput(value);
     
-    // Instant native preview (synchronous) - ONLY for phonetic typing
-    // For English input, we skip instant preview and rely on async generateLivePreview
-    // because English needs meaning-based translation, not phonetic transliteration
     const trimmedValue = value.trim();
+    
+    // Use toggle to determine input type instead of auto-detection
     if (trimmedValue && !myLangIsLatin) {
-      // Check if this looks like phonetic input (native words in Latin letters)
-      // vs pure English input which needs translation
-      const inputType = detectInputType(trimmedValue, myLanguage);
-      
-      if (inputType === 'phonetic-latin') {
-        // Phonetic typing (e.g., "kaise ho" for Hindi) - show instant transliteration
+      if (!isEnglishMode) {
+        // Non-English mode: treat Latin input as phonetic typing
         setInstantPreview(getInstantNativePreview(value, myLanguage));
       } else {
-        // Pure English or other - clear instant preview, rely on async preview
+        // English mode: no instant transliteration, use meaning-based translation
         setInstantPreview('');
       }
     } else {
@@ -152,18 +149,17 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced full preview - my language as sender, partner as receiver
-    // This handles meaning-based translation for all input types
+    // Debounced full preview - pass isEnglishMode to override detection
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(async () => {
-        const result = await generateLivePreview(value, myLanguage, partnerLanguage);
+        const result = await generateLivePreview(value, myLanguage, partnerLanguage, isEnglishMode);
         setPreview(result);
       }, 150);
     } else {
       setPreview(null);
     }
-  }, [myLanguage, partnerLanguage, myLangIsLatin, onTyping]);
+  }, [myLanguage, partnerLanguage, myLangIsLatin, onTyping, isEnglishMode]);
   
   // Handle send - I am sender, partner is receiver
   const handleSend = useCallback(async () => {
@@ -174,8 +170,8 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      // Process message: myProfile as sender, partnerProfile as receiver
-      const message = await processMessage(trimmed, myProfile, partnerProfile);
+      // Process message: myProfile as sender, partnerProfile as receiver, pass isEnglishMode
+      const message = await processMessage(trimmed, myProfile, partnerProfile, isEnglishMode);
       onSendMessage(message);
       setInput('');
       setPreview(null);
@@ -185,7 +181,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     } finally {
       setIsSending(false);
     }
-  }, [input, disabled, isSending, isReady, myProfile, partnerProfile, onSendMessage, onTyping]);
+  }, [input, disabled, isSending, isReady, myProfile, partnerProfile, onSendMessage, onTyping, isEnglishMode]);
   
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -287,6 +283,35 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         </div>
       )}
       
+      {/* English/Non-English Toggle */}
+      {!myLangIsLatin && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/20 border-b">
+          <div className="flex items-center gap-2">
+            <Type className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Typing Mode:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-xs font-medium transition-colors",
+              !isEnglishMode ? "text-primary" : "text-muted-foreground"
+            )}>
+              {myProfile.motherTongue}
+            </span>
+            <Switch
+              checked={isEnglishMode}
+              onCheckedChange={setIsEnglishMode}
+              className="h-4 w-8 data-[state=checked]:bg-blue-500"
+            />
+            <span className={cn(
+              "text-xs font-medium transition-colors",
+              isEnglishMode ? "text-blue-500" : "text-muted-foreground"
+            )}>
+              English
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Input Area */}
       <div className="flex gap-2 items-end px-2 pb-2">
         <div className="flex-1 relative">
@@ -295,7 +320,10 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             value={input}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || `Type in any way you like...`}
+            placeholder={isEnglishMode 
+              ? "Type in English (meaning-based)..." 
+              : `Type in ${myProfile.motherTongue} using Latin letters...`
+            }
             disabled={disabled || !isReady}
             className={cn(
               'min-h-[44px] max-h-32 resize-none unicode-text pr-10',
