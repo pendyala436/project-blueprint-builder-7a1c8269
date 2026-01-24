@@ -18,21 +18,48 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Send, Globe, Languages, Loader2, Keyboard, Mic } from 'lucide-react';
-import {
-  generateLivePreview,
-  processMessage,
-  detectInputType,
-  type MeaningBasedMessage,
-  type LivePreviewResult,
-  type InputType,
-} from '@/lib/translation/meaning-based-chat';
 import { type UserLanguageProfile } from '@/lib/offline-translation/types';
+// OFFLINE UNIVERSAL TRANSLATION SYSTEM - No external APIs
 import {
+  translateUniversal,
   normalizeLanguage,
   isSameLanguage,
   isEngineReady,
   initializeEngine,
+  isEnglish,
+  isLatinScriptLanguage,
+  getLiveNativePreview,
 } from '@/lib/translation/universal-offline-engine';
+import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
+
+// ============================================================
+// TYPES
+// ============================================================
+
+export type InputType = 'pure-english' | 'unknown';
+
+export interface LivePreviewResult {
+  nativePreview: string;           // Preview in sender's native script
+  receiverPreview: string;         // Preview for receiver (if different language)
+  confidence: number;
+}
+
+export interface MeaningBasedMessage {
+  id: string;
+  originalInput: string;           // Raw English input from user
+  extractedMeaning: string;        // English semantic meaning (same as input in EN-mode)
+  confidence: number;
+  senderView: string;              // Message in sender's mother tongue
+  senderScript: 'native' | 'latin';
+  receiverView: string;            // Message in receiver's mother tongue
+  receiverScript: 'native' | 'latin';
+  senderLanguage: string;
+  receiverLanguage: string;
+  timestamp: string;
+  wasTranslated: boolean;
+  wasTransliterated: boolean;
+  sameLanguage: boolean;
+}
 
 // ============================================================
 // TYPES
@@ -51,30 +78,178 @@ export interface BidirectionalChatInputProps {
 }
 
 // ============================================================
-// INPUT TYPE BADGE
+// OFFLINE TRANSLATION HELPERS
 // ============================================================
 
-const InputTypeBadge = memo<{ inputType: InputType }>(({ inputType }) => {
-  const labels: Record<InputType, { label: string; icon: React.ReactNode }> = {
-    'pure-english': { label: 'English', icon: <Globe className="h-2.5 w-2.5" /> },
-    'pure-native': { label: 'Native', icon: <Keyboard className="h-2.5 w-2.5" /> },
-    'phonetic-latin': { label: 'Phonetic', icon: <Keyboard className="h-2.5 w-2.5" /> },
-    'mixed-script': { label: 'Mixed', icon: <Languages className="h-2.5 w-2.5" /> },
-    'mixed-language': { label: 'Multi', icon: <Languages className="h-2.5 w-2.5" /> },
-    'unknown': { label: '', icon: null },
+/**
+ * Generate live preview using OFFLINE universal translation engine
+ * EN-MODE: English input → Mother tongue translation
+ */
+async function generateLivePreview(
+  input: string,
+  senderLanguage: string,
+  receiverLanguage: string
+): Promise<LivePreviewResult> {
+  if (!input || !input.trim()) {
+    return { nativePreview: '', receiverPreview: '', confidence: 0 };
+  }
+
+  const trimmed = input.trim();
+  const normSender = normalizeLanguage(senderLanguage);
+  const normReceiver = normalizeLanguage(receiverLanguage);
+  const sameLanguage = isSameLanguage(normSender, normReceiver);
+
+  let nativePreview = '';
+  let receiverPreview = '';
+  let confidence = 0.9;
+
+  // EN-MODE: Translate English → Sender's mother tongue
+  if (isEnglish(normSender)) {
+    // Sender speaks English - no translation needed for preview
+    nativePreview = trimmed;
+  } else {
+    // Translate English to sender's mother tongue using offline engine
+    try {
+      const result = await translateUniversal(trimmed, 'english', normSender);
+      nativePreview = result.text;
+      confidence = result.confidence || 0.85;
+
+      // Ensure native script if sender uses non-Latin script
+      if (!isLatinScriptLanguage(normSender) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(nativePreview)) {
+        const transliterated = dynamicTransliterate(nativePreview, normSender);
+        if (transliterated && transliterated !== nativePreview) {
+          nativePreview = transliterated;
+        }
+      }
+    } catch (err) {
+      console.error('[generateLivePreview] Translation error:', err);
+      nativePreview = trimmed;
+      confidence = 0.5;
+    }
+  }
+
+  // Generate receiver preview if different language
+  if (!sameLanguage) {
+    if (isEnglish(normReceiver)) {
+      receiverPreview = trimmed; // Receiver speaks English
+    } else {
+      try {
+        const result = await translateUniversal(trimmed, 'english', normReceiver);
+        receiverPreview = result.text;
+
+        // Ensure native script
+        if (!isLatinScriptLanguage(normReceiver) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(receiverPreview)) {
+          const transliterated = dynamicTransliterate(receiverPreview, normReceiver);
+          if (transliterated && transliterated !== receiverPreview) {
+            receiverPreview = transliterated;
+          }
+        }
+      } catch (err) {
+        console.error('[generateLivePreview] Receiver translation error:', err);
+        receiverPreview = trimmed;
+      }
+    }
+  }
+
+  return { nativePreview, receiverPreview, confidence };
+}
+
+/**
+ * Process message for sending using OFFLINE universal translation engine
+ */
+async function processMessage(
+  input: string,
+  senderProfile: UserLanguageProfile,
+  receiverProfile: UserLanguageProfile
+): Promise<MeaningBasedMessage> {
+  const trimmed = input.trim();
+  const timestamp = new Date().toISOString();
+  const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const normSender = normalizeLanguage(senderProfile.motherTongue);
+  const normReceiver = normalizeLanguage(receiverProfile.motherTongue);
+  const sameLanguage = isSameLanguage(normSender, normReceiver);
+
+  // EN-MODE: Input is always English
+  const extractedMeaning = trimmed;
+
+  // Generate sender view (in sender's mother tongue)
+  let senderView = '';
+  let senderScript: 'native' | 'latin' = 'latin';
+  let wasTransliterated = false;
+
+  if (isEnglish(normSender)) {
+    senderView = trimmed;
+    senderScript = 'latin';
+  } else {
+    try {
+      const result = await translateUniversal(trimmed, 'english', normSender);
+      senderView = result.text;
+      senderScript = isLatinScriptLanguage(normSender) ? 'latin' : 'native';
+
+      // Ensure native script
+      if (!isLatinScriptLanguage(normSender) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(senderView)) {
+        const transliterated = dynamicTransliterate(senderView, normSender);
+        if (transliterated && transliterated !== senderView) {
+          senderView = transliterated;
+          wasTransliterated = true;
+        }
+      }
+    } catch (err) {
+      console.error('[processMessage] Sender translation error:', err);
+      senderView = trimmed;
+    }
+  }
+
+  // Generate receiver view
+  let receiverView = '';
+  let receiverScript: 'native' | 'latin' = 'latin';
+  let wasTranslated = false;
+
+  if (sameLanguage) {
+    receiverView = senderView;
+    receiverScript = senderScript;
+  } else if (isEnglish(normReceiver)) {
+    receiverView = trimmed;
+    receiverScript = 'latin';
+    wasTranslated = !isEnglish(normSender);
+  } else {
+    try {
+      const result = await translateUniversal(trimmed, 'english', normReceiver);
+      receiverView = result.text;
+      receiverScript = isLatinScriptLanguage(normReceiver) ? 'latin' : 'native';
+      wasTranslated = true;
+
+      // Ensure native script
+      if (!isLatinScriptLanguage(normReceiver) && /^[a-zA-Z\s\d.,!?'"()[\]{}:;@#$%^&*+=\-_/\\|<>~`]+$/.test(receiverView)) {
+        const transliterated = dynamicTransliterate(receiverView, normReceiver);
+        if (transliterated && transliterated !== receiverView) {
+          receiverView = transliterated;
+        }
+      }
+    } catch (err) {
+      console.error('[processMessage] Receiver translation error:', err);
+      receiverView = trimmed;
+    }
+  }
+
+  return {
+    id,
+    originalInput: trimmed,
+    extractedMeaning,
+    confidence: 0.9,
+    senderView,
+    senderScript,
+    receiverView,
+    receiverScript,
+    senderLanguage: normSender,
+    receiverLanguage: normReceiver,
+    timestamp,
+    wasTranslated,
+    wasTransliterated,
+    sameLanguage,
   };
-  
-  const info = labels[inputType];
-  if (!info.label) return null;
-  
-  return (
-    <Badge variant="outline" className="text-[9px] gap-0.5 h-4 px-1.5">
-      {info.icon}
-      {info.label}
-    </Badge>
-  );
-});
-InputTypeBadge.displayName = 'InputTypeBadge';
+}
 
 // ============================================================
 // MAIN COMPONENT
@@ -124,11 +299,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced full preview - ALWAYS EN MODE (forceEnglishMode = true)
+    // Debounced full preview - ALWAYS EN MODE
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(async () => {
-        const result = await generateLivePreview(value, myLanguage, partnerLanguage, true);
+        const result = await generateLivePreview(value, myLanguage, partnerLanguage);
         setPreview(result);
       }, 150);
     } else {
@@ -145,8 +320,8 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      // Process message: myProfile as sender, partnerProfile as receiver, ALWAYS EN MODE (forceEnglishMode = true)
-      const message = await processMessage(trimmed, myProfile, partnerProfile, true);
+      // Process message: myProfile as sender, partnerProfile as receiver, ALWAYS EN MODE
+      const message = await processMessage(trimmed, myProfile, partnerProfile);
       onSendMessage(message);
       setInput('');
       setPreview(null);
@@ -183,19 +358,21 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   }, [input]);
   
   const showPreview = input.trim().length > 0;
-  const currentInputType = input.trim() ? detectInputType(input, myLanguage) : 'unknown';
   
   return (
     <div className={cn('space-y-2', className)}>
       {/* Live Previews */}
       {showPreview && (
         <div className="space-y-1.5 px-2 py-2 bg-muted/30 rounded-lg mx-2">
-          {/* Input Type Indicator */}
+          {/* Preview Header */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
               Preview
             </span>
-            <InputTypeBadge inputType={currentInputType} />
+            <Badge variant="outline" className="text-[9px] gap-0.5 h-4 px-1.5">
+              <Globe className="h-2.5 w-2.5" />
+              English
+            </Badge>
           </div>
           
           {/* 
