@@ -32,8 +32,9 @@ if (typeof window !== 'undefined') {
   // Use requestIdleCallback for non-blocking preload
   const preload = () => {
     startTransition(() => {
-      import("./pages/DashboardScreen");
-      import("./pages/WomenDashboardScreen");
+      // Prevent unhandled promise rejections if a module fetch fails (e.g. SW/cache hiccups)
+      import("./pages/DashboardScreen").catch(() => undefined);
+      import("./pages/WomenDashboardScreen").catch(() => undefined);
     });
   };
   
