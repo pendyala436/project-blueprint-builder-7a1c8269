@@ -224,51 +224,100 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             <InputTypeBadge inputType={currentInputType} />
           </div>
           
-          {/* Native Script Preview - meaning-based in MY language */}
-          {/* Show instant preview for phonetic typing, or nativePreview from async for English input */}
-          {(instantPreview && instantPreview !== input) ? (
-            <div className="flex items-start gap-2">
-              <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                {myProfile.motherTongue}
-              </Badge>
-              <p className="text-sm font-medium unicode-text" dir="auto">
-                {instantPreview}
-              </p>
-            </div>
-          ) : (preview?.nativePreview && preview.nativePreview !== input) ? (
-            <div className="flex items-start gap-2">
-              <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                {myProfile.motherTongue}
-              </Badge>
-              <p className="text-sm font-medium unicode-text" dir="auto">
-                {preview.nativePreview}
-              </p>
-            </div>
-          ) : null}
+          {/* 
+           * UNIFIED PREVIEW FORMAT:
+           * - Primary: Mother tongue translation (native OR Latin based on language)
+           * - Secondary: English meaning in small letters below
+           * 
+           * For EN mode: Shows meaning-based translation
+           * For Native/Phonetic mode: Shows instant transliteration
+           */}
           
-          {/* English Meaning */}
-          {preview?.englishMeaning && preview.englishMeaning !== input && (
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5">
-                <Globe className="h-2.5 w-2.5" />
-                EN
-              </Badge>
-              <p className="text-xs text-muted-foreground">
-                {preview.englishMeaning}
-              </p>
-            </div>
-          )}
+          {/* Mother Tongue Preview with English meaning below */}
+          {(() => {
+            // Determine which preview to show
+            const motherTongueText = (instantPreview && instantPreview !== input) 
+              ? instantPreview 
+              : (preview?.nativePreview && preview.nativePreview !== input) 
+                ? preview.nativePreview 
+                : null;
+            
+            // Get English meaning (for EN mode, this is the input itself normalized)
+            const englishMeaning = isEnglishMode 
+              ? input.trim() // In EN mode, the input IS the English meaning
+              : preview?.englishMeaning;
+            
+            if (!motherTongueText && !isEnglishMode) return null;
+            
+            // For EN mode, always show the translation preview with English below
+            if (isEnglishMode && preview?.nativePreview) {
+              return (
+                <div className="space-y-1">
+                  {/* Primary: Mother tongue translation */}
+                  <div className="flex items-start gap-2">
+                    <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
+                      {myProfile.motherTongue}
+                    </Badge>
+                    <div className="flex-1 space-y-0.5">
+                      <p className="text-sm font-medium unicode-text" dir="auto">
+                        {preview.nativePreview}
+                      </p>
+                      {/* English meaning below in small letters */}
+                      <p className="text-[10px] text-muted-foreground/70 italic border-t border-current/10 pt-0.5">
+                        🌐 {input.trim()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            // For Native/Phonetic mode with instant preview
+            if (motherTongueText) {
+              return (
+                <div className="space-y-1">
+                  {/* Primary: Mother tongue (transliteration) */}
+                  <div className="flex items-start gap-2">
+                    <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
+                      {myProfile.motherTongue}
+                    </Badge>
+                    <div className="flex-1 space-y-0.5">
+                      <p className="text-sm font-medium unicode-text" dir="auto">
+                        {motherTongueText}
+                      </p>
+                      {/* English meaning below in small letters (if available) */}
+                      {englishMeaning && englishMeaning !== motherTongueText && (
+                        <p className="text-[10px] text-muted-foreground/70 italic border-t border-current/10 pt-0.5">
+                          🌐 {englishMeaning}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            return null;
+          })()}
           
           {/* Partner's Preview - how THEY will see it */}
           {!sameLanguage && preview?.receiverPreview && (
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 pt-1 border-t border-muted/50">
               <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
                 <Languages className="h-2.5 w-2.5" />
                 {partnerProfile.motherTongue}
               </Badge>
-              <p className="text-xs text-muted-foreground unicode-text" dir="auto">
-                {preview.receiverPreview}
-              </p>
+              <div className="flex-1 space-y-0.5">
+                <p className="text-xs text-muted-foreground unicode-text" dir="auto">
+                  {preview.receiverPreview}
+                </p>
+                {/* English meaning for receiver too */}
+                {preview.englishMeaning && (
+                  <p className="text-[9px] text-muted-foreground/60 italic">
+                    🌐 {preview.englishMeaning}
+                  </p>
+                )}
+              </div>
             </div>
           )}
           
