@@ -1,0 +1,569 @@
+/**
+ * Meaning-Based Bidirectional Chat Engine
+ * ========================================
+ * 
+ * OFFLINE ONLY - NO EXTERNAL APIs - NO NLLB-200 - NO DICTIONARY-BASED
+ * 
+ * Core Principles:
+ * 1. Accept ANY input method (keyboard, voice, phonetic, native, mixed)
+ * 2. Detect MEANING and INTENT, not script or spelling
+ * 3. Never restrict input method or script
+ * 4. All input normalized to meaning before processing
+ * 5. English is used ONLY as semantic bridge when needed
+ * 
+ * Message Flow:
+ * - Sender types → Meaning extracted → Live preview in sender's mother tongue
+ * - On send → Message displayed in sender's mother tongue + English meaning below
+ * - Receiver sees → Message in receiver's mother tongue + English meaning below
+ * 
+ * Same language handling:
+ * - If sender and receiver share the same mother tongue, no translation pipeline
+ * - Message rendered directly with script conversion if needed
+ */
+
+import {
+  translateBidirectionalChat,
+  getLiveNativePreview,
+  getLiveLatinPreview,
+  autoDetectLanguage,
+  initializeEngine,
+  isEngineReady,
+  normalizeLanguage,
+  isLatinScriptLanguage,
+  isLatinText,
+  isSameLanguage,
+  isEnglish,
+  isRTL,
+} from './universal-offline-engine';
+import {
+  translate as offlineTranslate,
+  getNativePreview,
+  getEnglishPreview,
+} from '../offline-translation/engine';
+import {
+  type ChatMessageViews,
+  type UserLanguageProfile,
+} from '../offline-translation/types';
+import {
+  dynamicTransliterate,
+  reverseTransliterate,
+} from './dynamic-transliterator';
+
+// ============================================================
+// TYPES
+// ============================================================
+
+export interface MeaningBasedMessage {
+  // Core message data
+  id: string;
+  originalInput: string;           // Raw input from user (any method)
+  detectedInputType: InputType;    // What kind of input was detected
+  
+  // Semantic content
+  extractedMeaning: string;        // English semantic meaning
+  confidence: number;              // Confidence in meaning extraction
+  
+  // Sender display
+  senderView: string;              // Message in sender's mother tongue
+  senderScript: 'native' | 'latin';
+  
+  // Receiver display
+  receiverView: string;            // Message in receiver's mother tongue
+  receiverScript: 'native' | 'latin';
+  
+  // Metadata
+  senderLanguage: string;
+  receiverLanguage: string;
+  timestamp: string;
+  
+  // Flags
+  wasTranslated: boolean;
+  wasTransliterated: boolean;
+  sameLanguage: boolean;
+}
+
+export type InputType = 
+  | 'pure-english'           // Pure English text
+  | 'pure-native'            // Native script (e.g., हिंदी)
+  | 'phonetic-latin'         // Native words in Latin letters (e.g., "kaisaho")
+  | 'mixed-script'           // Mix of native and Latin
+  | 'mixed-language'         // Mix of languages
+  | 'unknown';               // Could not determine
+
+export interface LivePreviewResult {
+  nativePreview: string;           // Preview in sender's native script
+  englishMeaning: string;          // English meaning preview
+  receiverPreview: string;         // Preview for receiver (if different language)
+  inputType: InputType;
+  confidence: number;
+}
+
+export interface BidirectionalChatConfig {
+  senderProfile: UserLanguageProfile;
+  receiverProfile: UserLanguageProfile;
+  showEnglishMeaning: boolean;
+  enableLivePreview: boolean;
+}
+
+// ============================================================
+// INPUT TYPE DETECTION
+// ============================================================
+
+/**
+ * Detect input type based on content analysis
+ * Handles: phonetic typing, native script, mixed input, etc.
+ */
+export function detectInputType(text: string, expectedLanguage: string): InputType {
+  if (!text || !text.trim()) return 'unknown';
+  
+  const trimmed = text.trim();
+  const inputIsLatin = isLatinText(trimmed);
+  const expectedIsLatin = isLatinScriptLanguage(expectedLanguage);
+  const detected = autoDetectLanguage(trimmed);
+  
+  // Check for pure English
+  if (inputIsLatin && isEnglish(expectedLanguage)) {
+    return 'pure-english';
+  }
+  
+  // Check for native script input
+  if (!inputIsLatin) {
+    // Could still have some Latin mixed in
+    const hasLatin = /[a-zA-Z]/.test(trimmed);
+    const hasNative = /[^\u0000-\u007F]/.test(trimmed);
+    
+    if (hasLatin && hasNative) {
+      return 'mixed-script';
+    }
+    
+    return 'pure-native';
+  }
+  
+  // Latin input for non-Latin language = phonetic typing
+  if (inputIsLatin && !expectedIsLatin) {
+    // Common patterns for phonetic typing
+    const phoneticPatterns = [
+      /\b(kya|kaise|kaisa|ho|hai|tum|main|mein|aap|ye|wo|yeh|woh)\b/i,  // Hindi
+      /\b(eppadi|nalla|irukken|irukka|enna|ethu|ithu|athu|vanakkam)\b/i, // Tamil
+      /\b(ela|unnavu|nenu|meeru|emi|idi|adi|ela|baaga)\b/i,              // Telugu
+      /\b(kem|cho|su|che|shu|avu|tame|mari|kai)\b/i,                      // Gujarati
+      /\b(kemon|achen|ami|tumi|apni|eta|ota|ki|na)\b/i,                   // Bengali
+      /\b(hega|idhya|nanu|neenu|yenu|idu|adu|hege|chennaagi)\b/i,        // Kannada
+      /\b(enthanu|ningal|njan|ivan|aval|oru|onnu)\b/i,                    // Malayalam
+      /\b(kasa|aahe|mi|tu|tumhi|ha|ti|te|kay|kas)\b/i,                    // Marathi
+      /\b(ki|haal|hai|tusi|main|sanu|kyon|kithe)\b/i,                     // Punjabi
+      /\b(kemiti|achha|mu|tume|kana|eta|seta)\b/i,                        // Odia
+    ];
+    
+    for (const pattern of phoneticPatterns) {
+      if (pattern.test(trimmed)) {
+        return 'phonetic-latin';
+      }
+    }
+    
+    // If expected language is non-Latin but input is Latin, assume phonetic
+    return 'phonetic-latin';
+  }
+  
+  // Latin input for Latin language
+  if (inputIsLatin && expectedIsLatin) {
+    // Check if it might be a different language
+    if (!isEnglish(expectedLanguage)) {
+      return 'pure-native'; // It's native for a Latin-script language
+    }
+    return 'pure-english';
+  }
+  
+  return 'unknown';
+}
+
+// ============================================================
+// MEANING EXTRACTION
+// ============================================================
+
+/**
+ * Extract semantic meaning from any input
+ * Normalizes all input types to a consistent English representation
+ */
+export async function extractMeaning(
+  text: string,
+  sourceLanguage: string
+): Promise<{ meaning: string; confidence: number; inputType: InputType }> {
+  if (!text || !text.trim()) {
+    return { meaning: '', confidence: 0, inputType: 'unknown' };
+  }
+  
+  const trimmed = text.trim();
+  const inputType = detectInputType(trimmed, sourceLanguage);
+  const normSource = normalizeLanguage(sourceLanguage);
+  
+  // Ensure engine is ready
+  if (!isEngineReady()) {
+    await initializeEngine();
+  }
+  
+  let meaning: string;
+  let confidence: number;
+  
+  switch (inputType) {
+    case 'pure-english':
+      // Input is already in English
+      meaning = trimmed;
+      confidence = 1.0;
+      break;
+      
+    case 'pure-native':
+      // Native script - extract English meaning
+      meaning = await getEnglishPreview(trimmed, normSource);
+      confidence = 0.85;
+      break;
+      
+    case 'phonetic-latin':
+      // Phonetic input - treat as English representation
+      // The words typed phonetically represent the meaning
+      meaning = trimmed;
+      confidence = 0.9;
+      break;
+      
+    case 'mixed-script':
+    case 'mixed-language':
+      // Mixed input - try to normalize
+      const latinParts = trimmed.replace(/[^\u0000-\u007F]/g, ' ').trim();
+      const nativeParts = trimmed.replace(/[\u0000-\u007F]/g, ' ').trim();
+      
+      // Get English meaning from native parts
+      const nativeMeaning = nativeParts 
+        ? await getEnglishPreview(nativeParts, normSource)
+        : '';
+      
+      // Combine with Latin parts
+      meaning = `${latinParts} ${nativeMeaning}`.trim();
+      confidence = 0.7;
+      break;
+      
+    default:
+      // Unknown - pass through with low confidence
+      meaning = trimmed;
+      confidence = 0.5;
+  }
+  
+  return { meaning, confidence, inputType };
+}
+
+// ============================================================
+// LIVE PREVIEW GENERATION
+// ============================================================
+
+/**
+ * Generate live preview as user types
+ * Shows meaning-based preview in sender's mother tongue
+ */
+export async function generateLivePreview(
+  input: string,
+  senderLanguage: string,
+  receiverLanguage: string
+): Promise<LivePreviewResult> {
+  if (!input || !input.trim()) {
+    return {
+      nativePreview: '',
+      englishMeaning: '',
+      receiverPreview: '',
+      inputType: 'unknown',
+      confidence: 0,
+    };
+  }
+  
+  const trimmed = input.trim();
+  const normSender = normalizeLanguage(senderLanguage);
+  const normReceiver = normalizeLanguage(receiverLanguage);
+  const sameLanguage = isSameLanguage(normSender, normReceiver);
+  const inputType = detectInputType(trimmed, normSender);
+  
+  // Generate native preview for sender
+  let nativePreview: string;
+  const inputIsLatin = isLatinText(trimmed);
+  const senderIsLatin = isLatinScriptLanguage(normSender);
+  
+  if (inputIsLatin && !senderIsLatin) {
+    // Phonetic input - transliterate to native script
+    nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
+  } else if (!inputIsLatin && senderIsLatin) {
+    // Native input for Latin language - reverse transliterate
+    nativePreview = reverseTransliterate(trimmed, normSender) || trimmed;
+  } else {
+    // Input matches expected script
+    nativePreview = trimmed;
+  }
+  
+  // Extract English meaning
+  const { meaning, confidence } = await extractMeaning(trimmed, normSender);
+  
+  // Generate receiver preview if different language
+  let receiverPreview = '';
+  if (!sameLanguage) {
+    if (isEnglish(normReceiver)) {
+      receiverPreview = meaning;
+    } else {
+      // Translate meaning to receiver's language
+      const result = await offlineTranslate(meaning, 'english', normReceiver);
+      receiverPreview = result.text;
+    }
+  }
+  
+  return {
+    nativePreview,
+    englishMeaning: meaning,
+    receiverPreview,
+    inputType,
+    confidence,
+  };
+}
+
+/**
+ * Synchronous native preview for instant feedback
+ */
+export function getInstantNativePreview(
+  input: string,
+  targetLanguage: string
+): string {
+  if (!input) return input;
+  return getLiveNativePreview(input, normalizeLanguage(targetLanguage));
+}
+
+// ============================================================
+// MESSAGE PROCESSING
+// ============================================================
+
+/**
+ * Process message for bidirectional chat
+ * Returns views for both sender and receiver
+ */
+export async function processMessage(
+  input: string,
+  senderProfile: UserLanguageProfile,
+  receiverProfile: UserLanguageProfile
+): Promise<MeaningBasedMessage> {
+  const trimmed = input.trim();
+  const timestamp = new Date().toISOString();
+  const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  
+  if (!trimmed) {
+    return createEmptyMessage(id, senderProfile, receiverProfile, timestamp);
+  }
+  
+  const normSender = normalizeLanguage(senderProfile.motherTongue);
+  const normReceiver = normalizeLanguage(receiverProfile.motherTongue);
+  const sameLanguage = isSameLanguage(normSender, normReceiver);
+  
+  // Detect input type
+  const inputType = detectInputType(trimmed, normSender);
+  
+  // Extract meaning
+  const { meaning, confidence } = await extractMeaning(trimmed, normSender);
+  
+  // Determine script types
+  const inputIsLatin = isLatinText(trimmed);
+  const senderIsLatin = isLatinScriptLanguage(normSender);
+  const receiverIsLatin = isLatinScriptLanguage(normReceiver);
+  
+  // Generate sender view (in sender's mother tongue with appropriate script)
+  let senderView: string;
+  let senderScript: 'native' | 'latin';
+  let wasTransliterated = false;
+  
+  if (senderIsLatin) {
+    senderView = trimmed;
+    senderScript = 'latin';
+  } else if (inputIsLatin) {
+    // Phonetic input - convert to native script
+    senderView = dynamicTransliterate(trimmed, normSender) || trimmed;
+    senderScript = 'native';
+    wasTransliterated = senderView !== trimmed;
+  } else {
+    // Already in native script
+    senderView = trimmed;
+    senderScript = 'native';
+  }
+  
+  // Generate receiver view
+  let receiverView: string;
+  let receiverScript: 'native' | 'latin';
+  let wasTranslated = false;
+  
+  if (sameLanguage) {
+    // Same language - no translation needed
+    receiverView = senderView;
+    receiverScript = senderScript;
+  } else if (isEnglish(normReceiver)) {
+    // Receiver speaks English - use extracted meaning
+    receiverView = meaning;
+    receiverScript = 'latin';
+    wasTranslated = !isEnglish(normSender);
+  } else {
+    // Different language - translate via meaning
+    const result = await offlineTranslate(meaning, 'english', normReceiver);
+    
+    if (receiverIsLatin) {
+      receiverView = result.text;
+      receiverScript = 'latin';
+    } else {
+      // Ensure native script
+      receiverView = isLatinText(result.text)
+        ? dynamicTransliterate(result.text, normReceiver) || result.text
+        : result.text;
+      receiverScript = 'native';
+    }
+    
+    wasTranslated = result.isTranslated;
+  }
+  
+  return {
+    id,
+    originalInput: trimmed,
+    detectedInputType: inputType,
+    extractedMeaning: meaning,
+    confidence,
+    senderView,
+    senderScript,
+    receiverView,
+    receiverScript,
+    senderLanguage: normSender,
+    receiverLanguage: normReceiver,
+    timestamp,
+    wasTranslated,
+    wasTransliterated,
+    sameLanguage,
+  };
+}
+
+function createEmptyMessage(
+  id: string,
+  senderProfile: UserLanguageProfile,
+  receiverProfile: UserLanguageProfile,
+  timestamp: string
+): MeaningBasedMessage {
+  return {
+    id,
+    originalInput: '',
+    detectedInputType: 'unknown',
+    extractedMeaning: '',
+    confidence: 0,
+    senderView: '',
+    senderScript: 'latin',
+    receiverView: '',
+    receiverScript: 'latin',
+    senderLanguage: senderProfile.motherTongue,
+    receiverLanguage: receiverProfile.motherTongue,
+    timestamp,
+    wasTranslated: false,
+    wasTransliterated: false,
+    sameLanguage: false,
+  };
+}
+
+// ============================================================
+// INCOMING MESSAGE PROCESSING
+// ============================================================
+
+/**
+ * Process incoming message for display to receiver
+ * Handles translation from sender's language to receiver's language
+ */
+export async function processIncomingMessage(
+  message: MeaningBasedMessage,
+  viewerLanguage: string
+): Promise<{ displayText: string; englishMeaning: string }> {
+  const normViewer = normalizeLanguage(viewerLanguage);
+  const isSender = isSameLanguage(normViewer, message.senderLanguage);
+  
+  if (isSender) {
+    return {
+      displayText: message.senderView,
+      englishMeaning: message.extractedMeaning,
+    };
+  }
+  
+  // Viewer is receiver
+  return {
+    displayText: message.receiverView,
+    englishMeaning: message.extractedMeaning,
+  };
+}
+
+// ============================================================
+// BATCH MESSAGE PROCESSING
+// ============================================================
+
+/**
+ * Process multiple messages for a chat conversation
+ */
+export async function processMessageBatch(
+  messages: Array<{ text: string; senderId: string }>,
+  participants: Map<string, UserLanguageProfile>
+): Promise<MeaningBasedMessage[]> {
+  const results: MeaningBasedMessage[] = [];
+  
+  for (const msg of messages) {
+    const senderProfile = participants.get(msg.senderId);
+    if (!senderProfile) continue;
+    
+    // Find receiver (first participant that isn't sender)
+    let receiverProfile: UserLanguageProfile | undefined;
+    for (const [id, profile] of participants) {
+      if (id !== msg.senderId) {
+        receiverProfile = profile;
+        break;
+      }
+    }
+    
+    if (!receiverProfile) continue;
+    
+    const processed = await processMessage(msg.text, senderProfile, receiverProfile);
+    results.push(processed);
+  }
+  
+  return results;
+}
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+/**
+ * Check if translation is needed between two languages
+ */
+export function needsTranslation(lang1: string, lang2: string): boolean {
+  return !isSameLanguage(normalizeLanguage(lang1), normalizeLanguage(lang2));
+}
+
+/**
+ * Get appropriate text direction for display
+ */
+export function getTextDirection(language: string): 'ltr' | 'rtl' {
+  return isRTL(normalizeLanguage(language)) ? 'rtl' : 'ltr';
+}
+
+/**
+ * Format timestamp for display
+ */
+export function formatMessageTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
+export {
+  normalizeLanguage,
+  isLatinScriptLanguage,
+  isLatinText,
+  isSameLanguage,
+  isEnglish,
+  isRTL,
+  initializeEngine,
+  isEngineReady,
+} from './universal-offline-engine';
+
+export type { UserLanguageProfile } from '../offline-translation/types';

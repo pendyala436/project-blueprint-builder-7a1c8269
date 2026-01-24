@@ -111,5 +111,28 @@ export type {
   TranslationStatusBadgeProps,
 } from './components';
 
+// ============================================================
+// MEANING-BASED BIDIRECTIONAL CHAT
+// ============================================================
+
+// Core engine
+export {
+  processMessage,
+  generateLivePreview,
+  getInstantNativePreview,
+  extractMeaning,
+  detectInputType,
+  needsTranslation,
+  getTextDirection,
+  formatMessageTime,
+} from '../translation/meaning-based-chat';
+
+export type {
+  MeaningBasedMessage,
+  LivePreviewResult,
+  InputType,
+  BidirectionalChatConfig,
+} from '../translation/meaning-based-chat';
+
 // Default export
 export { useOfflineTranslation as default } from './hooks';
