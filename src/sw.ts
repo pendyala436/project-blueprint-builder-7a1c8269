@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { NetworkFirst, CacheFirst, StaleWhileRevalidate, NetworkOnly } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -25,6 +25,17 @@ precacheAndRoute(self.__WB_MANIFEST);
 // ========================================
 // CACHING STRATEGIES
 // ========================================
+
+// IMPORTANT (Dev/HMR safety): never cache Vite module URLs.
+// If these get cached, dynamic imports can fail after updates and cause blank screens.
+registerRoute(
+  ({ url, request }) =>
+    (request.destination === 'script' || request.destination === 'style') &&
+    (url.pathname.startsWith('/src/') ||
+      url.pathname.startsWith('/@') ||
+      url.pathname.startsWith('/node_modules/')),
+  new NetworkOnly()
+);
 
 // Cache API responses with NetworkFirst strategy
 // Works across all browsers that support Service Workers
@@ -87,9 +98,10 @@ registerRoute(
 
 // Cache static assets with StaleWhileRevalidate
 registerRoute(
-  ({ request }) =>
-    request.destination === 'script' ||
-    request.destination === 'style',
+  ({ url, request }) =>
+    (request.destination === 'script' || request.destination === 'style') &&
+    // Limit to built assets only (prevents caching dev /src modules)
+    url.pathname.startsWith('/assets/'),
   new StaleWhileRevalidate({
     cacheName: `${CACHE_PREFIX}-static-${APP_VERSION}`,
     plugins: [

@@ -39,7 +39,23 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  handleReload = (): void => {
+  handleReload = async (): Promise<void> => {
+    // When a lazy-loaded route fails to fetch (often due to a stale SW/cache),
+    // a normal reload can loop forever. Clear SW + caches first, then reload.
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch {
+      // Best-effort only
+    }
+
     window.location.reload();
   };
 
