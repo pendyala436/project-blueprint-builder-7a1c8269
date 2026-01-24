@@ -125,9 +125,22 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     const value = e.target.value;
     setInput(value);
     
-    // Instant native preview (synchronous) - shows in MY language
-    if (value.trim() && !myLangIsLatin) {
-      setInstantPreview(getInstantNativePreview(value, myLanguage));
+    // Instant native preview (synchronous) - ONLY for phonetic typing
+    // For English input, we skip instant preview and rely on async generateLivePreview
+    // because English needs meaning-based translation, not phonetic transliteration
+    const trimmedValue = value.trim();
+    if (trimmedValue && !myLangIsLatin) {
+      // Check if this looks like phonetic input (native words in Latin letters)
+      // vs pure English input which needs translation
+      const inputType = detectInputType(trimmedValue, myLanguage);
+      
+      if (inputType === 'phonetic-latin') {
+        // Phonetic typing (e.g., "kaise ho" for Hindi) - show instant transliteration
+        setInstantPreview(getInstantNativePreview(value, myLanguage));
+      } else {
+        // Pure English or other - clear instant preview, rely on async preview
+        setInstantPreview('');
+      }
     } else {
       setInstantPreview('');
     }
@@ -140,6 +153,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
     
     // Debounced full preview - my language as sender, partner as receiver
+    // This handles meaning-based translation for all input types
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(async () => {
@@ -214,8 +228,9 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             <InputTypeBadge inputType={currentInputType} />
           </div>
           
-          {/* Native Script Preview (instant) - in MY language */}
-          {instantPreview && instantPreview !== input && (
+          {/* Native Script Preview - meaning-based in MY language */}
+          {/* Show instant preview for phonetic typing, or nativePreview from async for English input */}
+          {(instantPreview && instantPreview !== input) ? (
             <div className="flex items-start gap-2">
               <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
                 {myProfile.motherTongue}
@@ -224,7 +239,16 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
                 {instantPreview}
               </p>
             </div>
-          )}
+          ) : (preview?.nativePreview && preview.nativePreview !== input) ? (
+            <div className="flex items-start gap-2">
+              <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
+                {myProfile.motherTongue}
+              </Badge>
+              <p className="text-sm font-medium unicode-text" dir="auto">
+                {preview.nativePreview}
+              </p>
+            </div>
+          ) : null}
           
           {/* English Meaning */}
           {preview?.englishMeaning && preview.englishMeaning !== input && (

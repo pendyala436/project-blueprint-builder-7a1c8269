@@ -279,40 +279,69 @@ export async function generateLivePreview(
   const sameLanguage = isSameLanguage(normSender, normReceiver);
   const inputType = detectInputType(trimmed, normSender);
   
-  // Generate native preview for sender
+  // Generate native preview for sender - ALWAYS meaning-based
   let nativePreview: string;
+  let englishMeaning: string;
+  let confidence: number;
+  
   const inputIsLatin = isLatinText(trimmed);
   const senderIsLatin = isLatinScriptLanguage(normSender);
+  const senderIsEnglish = isEnglish(normSender);
   
-  if (inputIsLatin && !senderIsLatin) {
-    // Phonetic input - transliterate to native script
+  // First, extract the English meaning from the input
+  const extracted = await extractMeaning(trimmed, normSender);
+  englishMeaning = extracted.meaning;
+  confidence = extracted.confidence;
+  
+  // Now generate meaning-based preview in sender's mother tongue
+  if (senderIsEnglish) {
+    // Sender's mother tongue is English - show as-is
+    nativePreview = trimmed;
+  } else if (inputType === 'pure-english') {
+    // Input is English but sender's mother tongue is NOT English
+    // Translate English meaning to sender's mother tongue
+    const result = await offlineTranslate(englishMeaning, 'english', normSender);
+    nativePreview = result.text;
+    
+    // If result is still Latin and sender uses non-Latin script, transliterate
+    if (isLatinText(nativePreview) && !senderIsLatin) {
+      nativePreview = dynamicTransliterate(nativePreview, normSender) || nativePreview;
+    }
+  } else if (inputType === 'phonetic-latin' && !senderIsLatin) {
+    // Phonetic input (like "kaise ho") for non-Latin language
+    // Transliterate to native script
     nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
   } else if (!inputIsLatin && senderIsLatin) {
     // Native input for Latin language - reverse transliterate
     nativePreview = reverseTransliterate(trimmed, normSender) || trimmed;
+  } else if (inputType === 'pure-native') {
+    // Already in sender's native script
+    nativePreview = trimmed;
   } else {
-    // Input matches expected script
+    // Mixed or unknown - pass through
     nativePreview = trimmed;
   }
-  
-  // Extract English meaning
-  const { meaning, confidence } = await extractMeaning(trimmed, normSender);
   
   // Generate receiver preview if different language
   let receiverPreview = '';
   if (!sameLanguage) {
     if (isEnglish(normReceiver)) {
-      receiverPreview = meaning;
+      receiverPreview = englishMeaning;
     } else {
       // Translate meaning to receiver's language
-      const result = await offlineTranslate(meaning, 'english', normReceiver);
+      const result = await offlineTranslate(englishMeaning, 'english', normReceiver);
       receiverPreview = result.text;
+      
+      // If result is Latin but receiver uses non-Latin script, transliterate
+      if (isLatinText(receiverPreview) && !isLatinScriptLanguage(normReceiver)) {
+        receiverPreview = dynamicTransliterate(receiverPreview, normReceiver) || receiverPreview;
+      }
     }
   }
   
   return {
     nativePreview,
-    englishMeaning: meaning,
+    englishMeaning,
     receiverPreview,
     inputType,
     confidence,
