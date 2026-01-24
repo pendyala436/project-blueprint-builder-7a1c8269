@@ -57,7 +57,7 @@ import {
   isEnglish as checkIsEnglish,
   isLatinScriptLanguage as checkLatinScript,
 } from "@/lib/translation/universal-offline-engine";
-// REMOVED: dynamicTransliterate - system is MEANING-BASED only, not phonetic
+import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
@@ -146,8 +146,8 @@ const DraggableMiniChatWindow = ({
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // EN-MODE ONLY - Users always type in English
-  const typingMode = 'english-meaning' as const;
+  // Typing mode toggle - EN (English meaning) or NL (Native/Latin phonetic)
+  const [typingMode, setTypingMode] = useState<'english-meaning' | 'native-latin'>('english-meaning');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -241,11 +241,10 @@ const DraggableMiniChatWindow = ({
     clearTypingBroadcast();
   }, [clearTypingBroadcast]);
 
-  // Generate meaning-based preview for "English to Native" mode
+  // Generate preview based on typing mode
   // FULLY ASYNC: Runs in background, never blocks typing
-  // Debounced translation: English → user's mother tongue (native script)
-  const generateMeaningPreview = useCallback((englishText: string) => {
-    if (!englishText.trim() || typingMode !== 'english-meaning') {
+  const generateMeaningPreview = useCallback((inputText: string) => {
+    if (!inputText.trim()) {
       setMeaningPreview('');
       return;
     }
@@ -257,22 +256,30 @@ const DraggableMiniChatWindow = ({
     
     // Debounce: wait 400ms before translating (non-blocking)
     meaningPreviewTimeoutRef.current = setTimeout(async () => {
-      const capturedText = englishText.trim();
+      const capturedText = inputText.trim();
       setIsMeaningLoading(true);
       
       try {
-        // Skip translation if user's language is English
+        // Skip if user's language is English
         if (checkIsEnglish(currentUserLanguage)) {
           setMeaningPreview('');
           return;
         }
         
-        // Translate English → user's mother tongue using OFFLINE engine
-        const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
-        let translatedText = result?.text || '';
+        let translatedText = '';
         
-        // MEANING-BASED ONLY: No phonetic transliteration
-        // The offline engine returns semantic translation directly
+        if (typingMode === 'english-meaning') {
+          // EN MODE: Translate English → user's mother tongue
+          const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
+          translatedText = result?.text || '';
+        } else {
+          // NL MODE: Transliterate Latin input → native script
+          if (!checkLatinScript(currentUserLanguage)) {
+            translatedText = dynamicTransliterate(capturedText, currentUserLanguage) || capturedText;
+          } else {
+            translatedText = capturedText;
+          }
+        }
         
         if (translatedText && translatedText !== capturedText) {
           setMeaningPreview(translatedText);
@@ -1873,6 +1880,31 @@ const DraggableMiniChatWindow = ({
             />
             
             <div className="flex items-center gap-1">
+              {/* NL/EN Toggle Button */}
+              <Button
+                type="button"
+                variant={typingMode === 'english-meaning' ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => {
+                  setTypingMode(prev => prev === 'english-meaning' ? 'native-latin' : 'english-meaning');
+                  setMeaningPreview('');
+                  if (newMessage.trim()) {
+                    setTimeout(() => generateMeaningPreview(newMessage), 50);
+                  }
+                }}
+                className={cn(
+                  'shrink-0 h-8 w-8 font-bold text-[10px] p-0',
+                  typingMode === 'english-meaning' 
+                    ? 'bg-primary hover:bg-primary/90' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                )}
+                title={typingMode === 'english-meaning' 
+                  ? 'EN: Type in English (meaning-based)' 
+                  : 'NL: Type in Native/Latin (phonetic)'}
+              >
+                {typingMode === 'english-meaning' ? 'EN' : 'NL'}
+              </Button>
+              
               {/* Attach button */}
               <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
                 <PopoverTrigger asChild>
@@ -1946,7 +1978,7 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder='Type in English...'
+                  placeholder={typingMode === 'english-meaning' ? 'Type in English...' : `Type in ${currentUserLanguage}...`}
                   value={newMessage}
                   onChange={(e) => {
                     const newValue = e.target.value;
