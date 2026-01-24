@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -146,6 +147,8 @@ const DraggableMiniChatWindow = ({
   
   // Single typing mode - always english-meaning
   const typingMode = 'english-meaning' as const;
+  // Toggle for English vs Non-English (phonetic) typing
+  const [isEnglishMode, setIsEnglishMode] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -1869,7 +1872,36 @@ const DraggableMiniChatWindow = ({
           </ScrollArea>
 
           {/* Input area */}
-          <div className="p-1.5 border-t">
+          <div className="p-1.5 border-t space-y-1">
+            {/* English/Non-English Toggle - only show for non-Latin language users */}
+            {!userUsesLatinScript && (
+              <div className="flex items-center justify-between px-1 py-0.5 bg-muted/30 rounded text-[10px]">
+                <div className="flex items-center gap-1">
+                  <Type className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Mode:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn(
+                    "font-medium transition-colors",
+                    !isEnglishMode ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {currentUserLanguage}
+                  </span>
+                  <Switch
+                    checked={isEnglishMode}
+                    onCheckedChange={setIsEnglishMode}
+                    className="h-3.5 w-7 data-[state=checked]:bg-blue-500"
+                  />
+                  <span className={cn(
+                    "font-medium transition-colors",
+                    isEnglishMode ? "text-blue-500" : "text-muted-foreground"
+                  )}>
+                    EN
+                  </span>
+                </div>
+              </div>
+            )}
+            
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
@@ -1935,10 +1967,18 @@ const DraggableMiniChatWindow = ({
               {/* Input area with mode-specific previews */}
               <div className="flex-1 relative">
                 {/* MODE: english-meaning - Hint (works for ALL languages - Latin or non-Latin) */}
-                {!isSameLanguage(currentUserLanguage, 'english') && (
+                {isEnglishMode && !isSameLanguage(currentUserLanguage, 'english') && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-blue-500/10 rounded text-[9px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
                     <span>🌐</span>
-                    <span>Type English meaning → translates to {currentUserLanguage}</span>
+                    <span>Type English → translates to {currentUserLanguage}</span>
+                  </div>
+                )}
+                
+                {/* Non-English mode hint */}
+                {!isEnglishMode && !userUsesLatinScript && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-primary/10 rounded text-[9px] text-primary flex items-center gap-1">
+                    <span>🔤</span>
+                    <span>Type "{currentUserLanguage}" phonetically (e.g., bagunnava)</span>
                   </div>
                 )}
                 
@@ -1964,21 +2004,36 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder='Type English meaning (e.g., "How are you")...'
+                  placeholder={isEnglishMode 
+                    ? 'Type English (e.g., "How are you")...'
+                    : `Type ${currentUserLanguage} phonetically...`
+                  }
                   value={newMessage}
                   onChange={(e) => {
                     const newValue = e.target.value;
                     
-                    // MODE: english-meaning - Type English, show translation preview
-                    setRawInput(newValue);
-                    setNewMessage(newValue);
-                    // Generate meaning-based translation preview
-                    generateMeaningPreview(newValue);
+                    if (isEnglishMode) {
+                      // English mode - translate to native
+                      setRawInput(newValue);
+                      setNewMessage(newValue);
+                      generateMeaningPreview(newValue);
+                    } else {
+                      // Non-English mode - phonetic transliteration
+                      setRawInput(newValue);
+                      if (needsTransliteration && newValue.trim()) {
+                        const transliterated = dynamicTransliterate(newValue, currentUserLanguage);
+                        setNewMessage(transliterated || newValue);
+                        setMeaningPreview(transliterated || '');
+                      } else {
+                        setNewMessage(newValue);
+                        setMeaningPreview('');
+                      }
+                    }
                     
                     handleTyping(newValue);
                   }}
                   onKeyDown={handleKeyPress}
-                  lang={typingMode === 'english-meaning' ? 'en' : needsTransliteration ? 'en' : currentUserLanguage}
+                  lang={isEnglishMode ? 'en' : needsTransliteration ? 'en' : currentUserLanguage}
                   dir="auto"
                   spellCheck={true}
                   autoComplete="off"
