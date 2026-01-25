@@ -57,7 +57,7 @@ import {
   isEnglish as checkIsEnglish,
   isLatinScriptLanguage as checkLatinScript,
 } from "@/lib/translation/universal-offline-engine";
-import { dynamicTransliterate } from "@/lib/translation/dynamic-transliterator";
+// Phonetic transliteration removed - meaning-based only
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
@@ -268,17 +268,14 @@ const DraggableMiniChatWindow = ({
         
         let translatedText = '';
         
+        // MEANING-BASED ONLY - NO phonetic transliteration
         if (typingMode === 'english-meaning') {
-          // EN MODE: Translate English → user's mother tongue
+          // EN MODE: Translate English → user's mother tongue (NO transliteration)
           const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
           translatedText = result?.text || '';
         } else {
-          // NL MODE: Transliterate Latin input → native script
-          if (!checkLatinScript(currentUserLanguage)) {
-            translatedText = dynamicTransliterate(capturedText, currentUserLanguage) || capturedText;
-          } else {
-            translatedText = capturedText;
-          }
+          // NL MODE: Show as-is (NO transliteration)
+          translatedText = capturedText;
         }
         
         if (translatedText && translatedText !== capturedText) {

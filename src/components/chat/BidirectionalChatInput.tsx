@@ -30,7 +30,7 @@ import {
   isLatinScriptLanguage,
   getLiveNativePreview,
 } from '@/lib/translation/universal-offline-engine';
-import { dynamicTransliterate } from '@/lib/translation/dynamic-transliterator';
+// Phonetic transliteration removed - meaning-based only
 
 // ============================================================
 // TYPES
@@ -307,20 +307,12 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         }
       }
     } else {
-      // NL MODE: Native/Latin phonetic → Native script
-      if (isMyLangEnglish || isLatinScriptLanguage(myLanguage)) {
-        nativePreview = trimmed;
-      } else {
-        // Transliterate Latin input to native script
-        const transliterated = dynamicTransliterate(trimmed, myLanguage);
-        nativePreview = transliterated || trimmed;
-      }
+      // NL MODE: Show as-is (NO phonetic transliteration)
+      nativePreview = trimmed;
       
-      // For receiver, we need to extract English meaning first, then translate
-      // In NL mode, we reverse-translate to English, then to receiver's language
+      // For receiver, extract English meaning then translate (NO transliteration)
       if (!sameLanguage) {
         try {
-          // First get English meaning from native input
           const englishResult = await translateUniversal(nativePreview, myLanguage, 'english');
           const englishMeaning = englishResult.text;
           
@@ -386,18 +378,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
           senderScript = isLatinScriptLanguage(myLanguage) ? 'latin' : 'native';
         }
       } else {
-        // NL MODE: Input is phonetic/native
-        if (isMyLangEnglish || isLatinScriptLanguage(myLanguage)) {
-          senderView = trimmed;
-        } else {
-          // Transliterate to native script
-          const transliterated = dynamicTransliterate(trimmed, myLanguage);
-          senderView = transliterated || trimmed;
-          senderScript = 'native';
-          wasTransliterated = true;
-        }
+        // NL MODE: Show as-is (NO transliteration)
+        senderView = trimmed;
+        senderScript = isLatinScriptLanguage(myLanguage) ? 'latin' : 'native';
         
-        // Extract English meaning from native input
+        // Extract English meaning from input
         const englishResult = await translateUniversal(senderView, myLanguage, 'english');
         extractedMeaning = englishResult.text;
       }
