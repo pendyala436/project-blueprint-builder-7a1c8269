@@ -45,24 +45,26 @@ import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Real-time typing with broadcast to partner
 import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-// OFFLINE SEMANTIC TRANSLATION: Use translateUniversal from universal-offline-engine
-// NO external APIs - NO NLLB-200 - NO hardcoding
+// SEMANTIC TRANSLATION via Edge Function APIs (LibreTranslate, MyMemory, Google)
+// NO NLLB-200 - NO hardcoding - Uses real translation APIs
 import {
   isSameLanguage,
   isLatinScriptLanguage,
   normalizeUnicode,
 } from "@/lib/translation";
 import { 
-  translateUniversal,
-  isEnglish as checkIsEnglish,
-  isLatinScriptLanguage as checkLatinScript,
-} from "@/lib/translation/universal-offline-engine";
+  translateSemantic,
+  translateBidirectional,
+  getEnglishMeaning,
+  isSameLanguageCheck,
+  isEnglishLanguage as checkIsEnglish,
+} from "@/lib/translation/semantic-translate-api";
 // Phonetic transliteration removed - meaning-based only
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via OFFLINE universal translation (NO APIs)');
+console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via SEMANTIC translation (Edge Function APIs)');
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
@@ -271,8 +273,8 @@ const DraggableMiniChatWindow = ({
         // MEANING-BASED ONLY - NO phonetic transliteration
         if (typingMode === 'english-meaning') {
           // EN MODE: Translate English → user's mother tongue (NO transliteration)
-          const result = await translateUniversal(capturedText, 'english', currentUserLanguage);
-          translatedText = result?.text || '';
+          const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+          translatedText = result?.translatedText || '';
         } else {
           // NL MODE: Show as-is (NO transliteration)
           translatedText = capturedText;
@@ -843,8 +845,8 @@ const DraggableMiniChatWindow = ({
           } else {
             try {
               console.log('[translateMessage] Sender: Generating English from', currentUserLanguage);
-              const englishResult = await translateUniversal(text, currentUserLanguage, 'english');
-              englishText = englishResult?.text || text;
+              const englishResult = await translateSemantic(text, currentUserLanguage, 'english');
+              englishText = englishResult?.translatedText || text;
               console.log('[translateMessage] Sender English result:', englishText?.substring(0, 50));
             } catch (e) {
               console.error('[translateMessage] Sender English generation failed:', e);
@@ -876,9 +878,9 @@ const DraggableMiniChatWindow = ({
           } else {
             // Translate English → Receiver's mother tongue using Universal Offline
             try {
-              const result = await translateUniversal(originalEnglish, 'english', currentUserLanguage);
-              displayText = result?.text || text;
-              wasTranslated = result?.isTranslated || (result?.text !== originalEnglish);
+              const result = await translateSemantic(originalEnglish, 'english', currentUserLanguage);
+              displayText = result?.translatedText || text;
+              wasTranslated = result?.isTranslated || (result?.translatedText !== originalEnglish);
               console.log('[translateMessage] Receiver native result:', displayText.substring(0, 50));
             } catch (e) {
               console.error('[translateMessage] Translation to receiver failed:', e);
@@ -893,9 +895,9 @@ const DraggableMiniChatWindow = ({
           if (!isSameLanguage(partnerLanguage, currentUserLanguage)) {
             // Different languages - need translation
             try {
-              const result = await translateUniversal(text, partnerLanguage, currentUserLanguage);
-              displayText = result?.text || text;
-              wasTranslated = result?.isTranslated || (result?.text !== text);
+              const result = await translateSemantic(text, partnerLanguage, currentUserLanguage);
+              displayText = result?.translatedText || text;
+              wasTranslated = result?.isTranslated || (result?.translatedText !== text);
               console.log('[translateMessage] Receiver cross-lang result:', displayText.substring(0, 50));
             } catch (e) {
               console.error('[translateMessage] Cross-language translation failed:', e);
@@ -910,12 +912,12 @@ const DraggableMiniChatWindow = ({
           // This is needed when original_english contains phonetic text
           try {
             console.log('[translateMessage] Generating actual English meaning from:', partnerLanguage);
-            const englishResult = await translateUniversal(text, partnerLanguage, 'english');
-            if (englishResult?.text && englishResult.isTranslated) {
-              englishText = englishResult.text;
+            const englishResult = await translateSemantic(text, partnerLanguage, 'english');
+            if (englishResult?.translatedText && englishResult.isTranslated) {
+              englishText = englishResult.translatedText;
               console.log('[translateMessage] English MEANING result:', englishText?.substring(0, 50));
-            } else if (englishResult?.text && englishResult.text !== text) {
-              englishText = englishResult.text;
+            } else if (englishResult?.translatedText && englishResult.translatedText !== text) {
+              englishText = englishResult.translatedText;
             } else {
               // Fallback to showing "Translation pending" rather than phonetic
               englishText = originalEnglish || '(English pending...)';
@@ -944,9 +946,9 @@ const DraggableMiniChatWindow = ({
         // If English still equals the original text and it's not English, try one more time
         if (!checkIsEnglish(senderLanguage)) {
           try {
-            const finalEnglishResult = await translateUniversal(text, senderLanguage, 'english');
-            if (finalEnglishResult?.text && finalEnglishResult.text !== text) {
-              englishText = finalEnglishResult.text;
+            const finalEnglishResult = await translateSemantic(text, senderLanguage, 'english');
+            if (finalEnglishResult?.translatedText && finalEnglishResult.translatedText !== text) {
+              englishText = finalEnglishResult.translatedText;
             }
           } catch {
             // Keep existing englishText
@@ -1293,11 +1295,11 @@ const DraggableMiniChatWindow = ({
         if (!checkIsEnglish(currentUserLanguage)) {
           try {
             console.log('[DraggableMiniChatWindow] native mode: Generating MEANING English from', currentUserLanguage, ':', messageToSend.substring(0, 50));
-            const englishResult = await translateUniversal(messageToSend, currentUserLanguage, 'english');
+            const englishResult = await translateSemantic(messageToSend, currentUserLanguage, 'english');
             
             // Only use result if it's actually different from the input (meaning translation happened)
-            if (englishResult?.text && englishResult.isTranslated) {
-              originalEnglishToStore = englishResult.text;
+            if (englishResult?.translatedText && englishResult.isTranslated) {
+              originalEnglishToStore = englishResult.translatedText;
               console.log('[DraggableMiniChatWindow] native mode English MEANING result:', originalEnglishToStore?.substring(0, 50));
               
               // Update optimistic message with English immediately
@@ -1306,9 +1308,9 @@ const DraggableMiniChatWindow = ({
                   ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
                   : m
               ));
-            } else if (englishResult?.text) {
+            } else if (englishResult?.translatedText) {
               // Even if not marked as translated, use it if it's different
-              originalEnglishToStore = englishResult.text;
+              originalEnglishToStore = englishResult.translatedText;
               setMessages(prev => prev.map(m => 
                 m.id === tempId 
                   ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
@@ -1347,8 +1349,8 @@ const DraggableMiniChatWindow = ({
       if (!isSameLanguage(sourceLanguage, partnerLanguage)) {
         try {
           console.log('[DraggableMiniChatWindow] Translating from', sourceLanguage, 'to receiver:', partnerLanguage);
-          const result = await translateUniversal(textForReceiverTranslation, sourceLanguage, partnerLanguage);
-          translatedForReceiver = result?.text || null;
+          const result = await translateSemantic(textForReceiverTranslation, sourceLanguage, partnerLanguage);
+          translatedForReceiver = result?.translatedText || null;
           console.log('[DraggableMiniChatWindow] Translated for receiver:', translatedForReceiver?.substring(0, 50));
         } catch (error) {
           console.error('[DraggableMiniChatWindow] Translation to receiver failed:', error);
@@ -1362,8 +1364,8 @@ const DraggableMiniChatWindow = ({
       if (!originalEnglishToStore && messageToSend) {
         try {
           if (!checkIsEnglish(sourceLanguage)) {
-            const englishResult = await translateUniversal(messageToSend, sourceLanguage, 'english');
-            originalEnglishToStore = englishResult?.text || messageToSend;
+            const englishResult = await translateSemantic(messageToSend, sourceLanguage, 'english');
+            originalEnglishToStore = englishResult?.translatedText || messageToSend;
             console.log('[DraggableMiniChatWindow] Fallback English:', originalEnglishToStore?.substring(0, 50));
           } else {
             originalEnglishToStore = messageToSend;
