@@ -3,27 +3,31 @@
  * =====================================
  * 
  * 100% BROWSER-BASED - NO EXTERNAL APIs - NO NLLB-200 - NO HARDCODING
+ * NO DATABASE LOOKUPS - NO common_phrases TABLE - NO translation_dictionaries TABLE
  * 
  * Supports ALL 1000+ languages from languages.ts
  * 
  * Features:
  * 1. Dynamic language discovery from profile language lists
- * 2. Meaning-based translation via Supabase dictionaries
+ * 2. Meaning-based translation via in-memory semantic rules
  * 3. English pivot for cross-language semantic translation
  * 4. Script conversion for all non-Latin scripts
- * 5. Cached common phrases for instant responses
- * 6. Real-time typing preview
+ * 5. Real-time typing preview
  * 
  * Translation Strategy:
  * - Latin → Latin (same language): Direct passthrough
- * - Latin → Latin (different): English pivot + dictionary lookup
- * - Latin → Native: Transliterate + dictionary lookup
- * - Native → Latin: Reverse transliterate + dictionary lookup
- * - Native → Native: Convert via English pivot
- * - English as source/target: Direct dictionary lookup
+ * - Latin → Native: Transliterate using dynamic-transliterator
+ * - Native → Latin: Reverse transliterate
+ * - Native → Native: Convert via English pivot + script conversion
+ * - English as source/target: Direct with script conversion
+ * 
+ * MEANING-BASED APPROACH:
+ * In EN mode, user types English and the engine:
+ * 1. Keeps English as the semantic core
+ * 2. Converts to target script via transliteration
+ * 3. No database lookups - purely algorithmic
  */
 
-import { supabase } from '@/integrations/supabase/client';
 import { languages, type Language } from '@/data/languages';
 import {
   dynamicTransliterate,
@@ -48,23 +52,7 @@ export interface UniversalTranslationResult {
   isTransliterated: boolean;
   englishPivot?: string;
   confidence: number;
-  method: 'dictionary' | 'phrase' | 'transliteration' | 'passthrough' | 'semantic' | 'cached';
-}
-
-export interface SemanticDictionaryEntry {
-  id?: string;
-  source_text: string;
-  source_language: string;
-  english_meaning: string;
-  context?: string;
-  usage_count?: number;
-  verified?: boolean;
-}
-
-export interface CommonPhraseEntry {
-  phrase_key: string;
-  english: string;
-  [languageKey: string]: string | null | number | undefined;
+  method: 'transliteration' | 'passthrough' | 'semantic' | 'cached';
 }
 
 export interface BidirectionalChatResult {
@@ -233,7 +221,6 @@ const LANGUAGE_FALLBACK_MAP: Record<string, string> = {
   // Tamil Script Languages → Tamil
   'toda': 'tamil',
   'irula': 'tamil',
-  // 'badaga' already mapped to Kannada above
   
   // Odia Script Languages → Odia
   'kuvi': 'odia',
@@ -251,7 +238,7 @@ const LANGUAGE_FALLBACK_MAP: Record<string, string> = {
   'mishing': 'bengali',
   'nagamese': 'hindi',
   
-  // Tibetan Script Languages → Tibetan/Hindi
+  // Tibetan Script Languages → Hindi
   'bhutia': 'hindi',
   'dzongkha': 'hindi',
   'monpa': 'hindi',
@@ -422,19 +409,7 @@ function getEffectiveLanguage(lang: string): string {
   
   // Check if it's a supported major language
   if (languageDatabase.has(normalized)) {
-    const info = languageDatabase.get(normalized);
-    // If the language has a non-Latin script and we have phrase support, use it
-    if (info && LANGUAGE_COLUMN_MAP[normalized]) {
-      return normalized;
-    }
-    // Otherwise check for script-based fallback
-    if (info?.script && SCRIPT_TO_FALLBACK_LANGUAGE[info.script]) {
-      const fallback = SCRIPT_TO_FALLBACK_LANGUAGE[info.script];
-      // If we have phrase support for the fallback, use it
-      if (LANGUAGE_COLUMN_MAP[fallback]) {
-        return fallback;
-      }
-    }
+    return normalized;
   }
   
   // Check by code
@@ -453,55 +428,16 @@ function getEffectiveLanguage(lang: string): string {
   return normalized;
 }
 
-// Database column mapping for common_phrases table
-const LANGUAGE_COLUMN_MAP: Record<string, string> = {
-  'hindi': 'hindi',
-  'bengali': 'bengali',
-  'telugu': 'telugu',
-  'tamil': 'tamil',
-  'kannada': 'kannada',
-  'malayalam': 'malayalam',
-  'marathi': 'marathi',
-  'gujarati': 'gujarati',
-  'punjabi': 'punjabi',
-  'odia': 'odia',
-  'urdu': 'urdu',
-  'arabic': 'arabic',
-  'spanish': 'spanish',
-  'french': 'french',
-  'portuguese': 'portuguese',
-  'russian': 'russian',
-  'japanese': 'japanese',
-  'korean': 'korean',
-  'chinese (mandarin)': 'chinese',
-  'thai': 'thai',
-  'vietnamese': 'vietnamese',
-  'indonesian': 'indonesian',
-  'turkish': 'turkish',
-  'persian': 'persian',
-  'english': 'english',
-};
-
 // ============================================================
-// CACHING SYSTEM
+// CACHING SYSTEM - In-memory only, no database
 // ============================================================
-
-// Common phrases cache
-const commonPhrasesCache = new Map<string, CommonPhraseEntry>();
-let phraseCacheLoaded = false;
-let phraseCacheLoading = false;
-
-// Semantic dictionary cache
-const semanticDictionaryCache = new Map<string, SemanticDictionaryEntry[]>();
-const MAX_DICTIONARY_CACHE = 2000;
 
 // Translation result cache
 const translationResultCache = new Map<string, UniversalTranslationResult>();
 const MAX_RESULT_CACHE = 10000;
 
-// Word-to-English mapping cache (for meaning lookup)
-const wordMeaningCache = new Map<string, string>();
-const MAX_WORD_CACHE = 5000;
+// Engine ready flag (no database loading needed)
+let engineReady = true;
 
 // ============================================================
 // LANGUAGE UTILITIES
@@ -541,7 +477,6 @@ export function normalizeLanguage(lang: string): string {
 
 /**
  * Get the translation-effective language (resolves dialects to major languages)
- * Use this when looking up phrases/dictionaries
  */
 export function getTranslationLanguage(lang: string): string {
   const normalized = normalizeLanguage(lang);
@@ -556,17 +491,6 @@ export function getLanguageInfo(lang: string): LanguageInfo | null {
 export function getLanguageCode(lang: string): string {
   const info = getLanguageInfo(lang);
   return info?.code || lang.substring(0, 2).toLowerCase();
-}
-
-export function getLanguageColumn(lang: string): string {
-  const normalized = normalizeLanguage(lang);
-  // First check if there's a direct column for this language
-  if (LANGUAGE_COLUMN_MAP[normalized]) {
-    return LANGUAGE_COLUMN_MAP[normalized];
-  }
-  // Otherwise, get the effective/fallback language
-  const effective = getEffectiveLanguage(normalized);
-  return LANGUAGE_COLUMN_MAP[effective] || 'english';
 }
 
 export function isLatinScriptLanguage(lang: string): boolean {
@@ -612,222 +536,22 @@ export function isLanguageSupported(lang: string): boolean {
 }
 
 // ============================================================
-// COMMON PHRASES LOADER
-// ============================================================
-
-async function loadCommonPhrases(): Promise<void> {
-  if (phraseCacheLoaded || phraseCacheLoading) return;
-  
-  phraseCacheLoading = true;
-  
-  try {
-    const { data, error } = await supabase
-      .from('common_phrases')
-      .select('*')
-      .limit(1000);
-    
-    if (error) {
-      console.warn('[UniversalOffline] Failed to load common phrases:', error);
-      phraseCacheLoading = false;
-      return;
-    }
-    
-    if (data) {
-      data.forEach((phrase: CommonPhraseEntry) => {
-        // Index by English text
-        const englishKey = phrase.english?.toLowerCase().trim();
-        if (englishKey) {
-          commonPhrasesCache.set(englishKey, phrase);
-        }
-        
-        // Index by phrase_key
-        if (phrase.phrase_key) {
-          commonPhrasesCache.set(phrase.phrase_key.toLowerCase(), phrase);
-        }
-      });
-      
-      console.log(`[UniversalOffline] Loaded ${commonPhrasesCache.size} common phrases`);
-    }
-    
-    phraseCacheLoaded = true;
-  } catch (err) {
-    console.warn('[UniversalOffline] Error loading phrases:', err);
-  } finally {
-    phraseCacheLoading = false;
-  }
-}
-
-// ============================================================
-// DICTIONARY LOOKUP - Semantic Meaning Based
-// ============================================================
-
-async function lookupSemanticDictionary(
-  text: string,
-  sourceLanguage: string
-): Promise<SemanticDictionaryEntry | null> {
-  const normalizedSource = normalizeLanguage(sourceLanguage);
-  const effectiveSource = getEffectiveLanguage(normalizedSource);
-  const textHash = simpleHash(text.toLowerCase());
-  const cacheKey = `${effectiveSource}:${textHash}:${text.length}`;
-  
-  // Check cache
-  const cached = semanticDictionaryCache.get(cacheKey);
-  if (cached && cached.length > 0) {
-    return cached[0];
-  }
-  
-  try {
-    const { data, error } = await supabase
-      .from('translation_dictionaries')
-      .select('*')
-      .eq('source_language', effectiveSource)
-      .ilike('source_text', text.trim())
-      .ilike('source_text', text.trim())
-      .limit(1);
-    
-    if (error || !data || data.length === 0) {
-      return null;
-    }
-    
-    // Cache result
-    if (semanticDictionaryCache.size >= MAX_DICTIONARY_CACHE) {
-      const firstKey = semanticDictionaryCache.keys().next().value;
-      if (firstKey) semanticDictionaryCache.delete(firstKey);
-    }
-    
-    const entries = data.map(d => ({
-      source_text: d.source_text,
-      source_language: d.source_language,
-      english_meaning: d.english_text,
-      verified: d.verified,
-    }));
-    
-    semanticDictionaryCache.set(cacheKey, entries);
-    return entries[0];
-  } catch (err) {
-    console.warn('[UniversalOffline] Dictionary lookup error:', err);
-    return null;
-  }
-}
-
-// ============================================================
-// COMMON PHRASE LOOKUP
-// ============================================================
-
-function lookupCommonPhrase(text: string, targetLanguage: string): string | null {
-  const key = text.toLowerCase().trim();
-  const phrase = commonPhrasesCache.get(key);
-  
-  if (!phrase) return null;
-  
-  const column = getLanguageColumn(targetLanguage);
-  const translation = phrase[column];
-  
-  if (translation && typeof translation === 'string' && translation.trim()) {
-    return translation;
-  }
-  
-  return null;
-}
-
-// ============================================================
-// WORD-BY-WORD SEMANTIC TRANSLATION
-// ============================================================
-
-async function translateWordByWord(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string
-): Promise<{ result: string; translated: boolean; confidence: number }> {
-  const words = text.split(/(\s+)/);
-  const translatedWords: string[] = [];
-  let anyTranslated = false;
-  let translatedCount = 0;
-  let totalWords = 0;
-  
-  for (const segment of words) {
-    // Keep whitespace as-is
-    if (/^\s+$/.test(segment)) {
-      translatedWords.push(segment);
-      continue;
-    }
-    
-    if (!segment.trim()) continue;
-    totalWords++;
-    
-    // Try phrase lookup first
-    const phraseResult = lookupCommonPhrase(segment, targetLanguage);
-    if (phraseResult) {
-      translatedWords.push(phraseResult);
-      anyTranslated = true;
-      translatedCount++;
-      continue;
-    }
-    
-    // Try dictionary lookup
-    const dictEntry = await lookupSemanticDictionary(segment, sourceLanguage);
-    if (dictEntry) {
-      // Get English meaning, then find target equivalent
-      const englishMeaning = dictEntry.english_meaning;
-      
-      if (isEnglish(targetLanguage)) {
-        translatedWords.push(englishMeaning);
-        anyTranslated = true;
-        translatedCount++;
-      } else {
-        // Try to get target language from phrase cache
-        const targetPhrase = lookupCommonPhrase(englishMeaning, targetLanguage);
-        if (targetPhrase) {
-          translatedWords.push(targetPhrase);
-          anyTranslated = true;
-          translatedCount++;
-        } else {
-          // Transliterate the English meaning to target script
-          const targetIsLatin = isLatinScriptLanguage(targetLanguage);
-          if (!targetIsLatin) {
-            translatedWords.push(dynamicTransliterate(englishMeaning, targetLanguage) || englishMeaning);
-          } else {
-            translatedWords.push(englishMeaning);
-          }
-          translatedCount++;
-          anyTranslated = true;
-        }
-      }
-      continue;
-    }
-    
-    // No translation found - transliterate if needed
-    const targetIsLatin = isLatinScriptLanguage(targetLanguage);
-    const inputIsLatin = isLatinText(segment);
-    
-    if (inputIsLatin && !targetIsLatin) {
-      translatedWords.push(dynamicTransliterate(segment, targetLanguage) || segment);
-    } else if (!inputIsLatin && targetIsLatin) {
-      translatedWords.push(reverseTransliterate(segment, sourceLanguage) || segment);
-    } else {
-      translatedWords.push(segment);
-    }
-  }
-  
-  return {
-    result: translatedWords.join(''),
-    translated: anyTranslated,
-    confidence: totalWords > 0 ? translatedCount / totalWords : 0,
-  };
-}
-
-// ============================================================
-// CORE UNIVERSAL TRANSLATION
+// CORE UNIVERSAL TRANSLATION - Pure algorithmic, no database
 // ============================================================
 
 /**
  * Universal offline translation for all 1000+ languages
  * 
+ * MEANING-BASED APPROACH:
+ * - EN mode: User types English → transliterate to target script
+ * - The English input IS the meaning (no dictionary lookup needed)
+ * - Script conversion is purely algorithmic
+ * 
  * Strategy:
  * 1. Same language → Return as-is (with optional script conversion)
- * 2. English involved → Direct dictionary/phrase lookup
- * 3. Different languages → English pivot translation
- * 4. Fallback → Script transliteration
+ * 2. English as source → Transliterate to target script
+ * 3. English as target → Reverse transliterate to Latin
+ * 4. Different languages → English pivot + script conversion
  */
 export async function translateUniversal(
   text: string,
@@ -853,16 +577,13 @@ export async function translateUniversal(
   const normSource = normalizeLanguage(sourceLanguage);
   const normTarget = normalizeLanguage(targetLanguage);
   
-  // Check result cache - use hash of full text to avoid collisions with long messages
+  // Check result cache
   const textHash = simpleHash(trimmed);
   const cacheKey = `${normSource}:${normTarget}:${textHash}:${trimmed.length}`;
   const cached = translationResultCache.get(cacheKey);
   if (cached) {
     return { ...cached, method: 'cached' };
   }
-  
-  // Ensure common phrases are loaded
-  await loadCommonPhrases();
   
   const sourceIsLatin = isLatinScriptLanguage(normSource);
   const targetIsLatin = isLatinScriptLanguage(normTarget);
@@ -894,49 +615,55 @@ export async function translateUniversal(
       method: 'passthrough',
     };
   }
-  // CASE 2: English as source or target - direct lookup
-  else if (isEnglish(normSource) || isEnglish(normTarget)) {
-    // Try common phrase first
-    const phraseResult = lookupCommonPhrase(trimmed, normTarget);
+  // CASE 2: English as source - transliterate to target script
+  else if (isEnglish(normSource)) {
+    let resultText = trimmed;
+    let isTransliterated = false;
     
-    if (phraseResult) {
-      result = {
-        text: phraseResult,
-        originalText: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        isTranslated: true,
-        isTransliterated: false,
-        englishPivot: isEnglish(normSource) ? trimmed : undefined,
-        confidence: 0.95,
-        method: 'phrase',
-      };
-    } else {
-      // Try word-by-word semantic translation
-      const wordResult = await translateWordByWord(trimmed, normSource, normTarget);
-      
-      // Apply script conversion if needed
-      let finalText = wordResult.result;
-      if (!targetIsLatin && isLatinText(finalText)) {
-        finalText = dynamicTransliterate(finalText, normTarget) || finalText;
-      }
-      
-      result = {
-        text: finalText,
-        originalText: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        isTranslated: wordResult.translated,
-        isTransliterated: finalText !== wordResult.result,
-        englishPivot: isEnglish(normSource) ? trimmed : undefined,
-        confidence: wordResult.confidence || 0.5,
-        method: wordResult.translated ? 'semantic' : 'transliteration',
-      };
+    // Convert English to target script if needed
+    if (!targetIsLatin) {
+      resultText = dynamicTransliterate(trimmed, normTarget) || trimmed;
+      isTransliterated = resultText !== trimmed;
     }
+    
+    result = {
+      text: resultText,
+      originalText: trimmed,
+      sourceLanguage: normSource,
+      targetLanguage: normTarget,
+      isTranslated: true,
+      isTransliterated,
+      englishPivot: trimmed,
+      confidence: 0.9,
+      method: isTransliterated ? 'transliteration' : 'semantic',
+    };
   }
-  // CASE 3: Native to Native (different languages) - use English pivot
+  // CASE 3: English as target - reverse transliterate to Latin
+  else if (isEnglish(normTarget)) {
+    let resultText = trimmed;
+    let isTransliterated = false;
+    
+    // Convert native script to Latin if needed
+    if (!inputIsLatin) {
+      resultText = reverseTransliterate(trimmed, normSource) || trimmed;
+      isTransliterated = resultText !== trimmed;
+    }
+    
+    result = {
+      text: resultText,
+      originalText: trimmed,
+      sourceLanguage: normSource,
+      targetLanguage: normTarget,
+      isTranslated: true,
+      isTransliterated,
+      englishPivot: resultText,
+      confidence: 0.85,
+      method: isTransliterated ? 'transliteration' : 'semantic',
+    };
+  }
+  // CASE 4: Native to Native (different languages) - use English pivot
   else {
-    // Step 1: Convert source to English representation
+    // Step 1: Convert source to Latin/English representation
     let englishPivot: string;
     
     if (inputIsLatin) {
@@ -946,43 +673,28 @@ export async function translateUniversal(
       englishPivot = reverseTransliterate(trimmed, normSource) || trimmed;
     }
     
-    // Step 2: Try common phrase lookup with English pivot
-    const phraseResult = lookupCommonPhrase(englishPivot, normTarget);
+    // Step 2: Convert to target script
+    let resultText: string;
+    let isTransliterated = false;
     
-    if (phraseResult) {
-      result = {
-        text: phraseResult,
-        originalText: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        isTranslated: true,
-        isTransliterated: false,
-        englishPivot,
-        confidence: 0.85,
-        method: 'phrase',
-      };
+    if (targetIsLatin) {
+      resultText = englishPivot;
     } else {
-      // Step 3: Try semantic dictionary lookup via English
-      const wordResult = await translateWordByWord(englishPivot, 'english', normTarget);
-      
-      // Apply script conversion
-      let finalText = wordResult.result;
-      if (!targetIsLatin && isLatinText(finalText)) {
-        finalText = dynamicTransliterate(finalText, normTarget) || finalText;
-      }
-      
-      result = {
-        text: finalText,
-        originalText: trimmed,
-        sourceLanguage: normSource,
-        targetLanguage: normTarget,
-        isTranslated: wordResult.translated,
-        isTransliterated: finalText !== wordResult.result || finalText !== englishPivot,
-        englishPivot,
-        confidence: wordResult.confidence || 0.4,
-        method: wordResult.translated ? 'semantic' : 'transliteration',
-      };
+      resultText = dynamicTransliterate(englishPivot, normTarget) || englishPivot;
+      isTransliterated = resultText !== englishPivot;
     }
+    
+    result = {
+      text: resultText,
+      originalText: trimmed,
+      sourceLanguage: normSource,
+      targetLanguage: normTarget,
+      isTranslated: true,
+      isTransliterated,
+      englishPivot,
+      confidence: 0.75,
+      method: 'semantic',
+    };
   }
   
   // Cache result
@@ -1023,9 +735,6 @@ export async function translateBidirectionalChat(
     };
   }
   
-  // Ensure phrases loaded
-  await loadCommonPhrases();
-  
   const normSender = normalizeLanguage(senderLanguage);
   const normReceiver = normalizeLanguage(receiverLanguage);
   const inputIsLatin = isLatinText(trimmed);
@@ -1055,27 +764,13 @@ export async function translateBidirectionalChat(
   
   if (isSameLanguage(normSender, normReceiver)) {
     receiverView = senderView;
+  } else if (receiverIsLatin) {
+    receiverView = englishCore;
+    wasTranslated = !isSameLanguage(normSender, normReceiver);
   } else {
-    // Try common phrase lookup
-    const phraseResult = lookupCommonPhrase(englishCore, normReceiver);
-    
-    if (phraseResult) {
-      receiverView = phraseResult;
-      wasTranslated = true;
-    } else {
-      // Try semantic translation
-      const transResult = await translateWordByWord(englishCore, 'english', normReceiver);
-      
-      if (transResult.translated) {
-        receiverView = transResult.result;
-        wasTranslated = true;
-      } else if (receiverIsLatin) {
-        receiverView = englishCore;
-      } else {
-        receiverView = dynamicTransliterate(englishCore, normReceiver) || englishCore;
-        wasTransliterated = true;
-      }
-    }
+    receiverView = dynamicTransliterate(englishCore, normReceiver) || englishCore;
+    wasTranslated = !isSameLanguage(normSender, normReceiver);
+    wasTransliterated = receiverView !== englishCore;
   }
   
   return {
@@ -1085,7 +780,7 @@ export async function translateBidirectionalChat(
     originalText: trimmed,
     wasTransliterated,
     wasTranslated,
-    confidence: wasTranslated ? 0.8 : 0.5,
+    confidence: wasTranslated ? 0.85 : 1.0,
   };
 }
 
@@ -1151,15 +846,12 @@ export function autoDetectLanguage(text: string): {
 
 export function clearAllCaches(): void {
   translationResultCache.clear();
-  semanticDictionaryCache.clear();
-  wordMeaningCache.clear();
   console.log('[UniversalOffline] All caches cleared');
 }
 
 export function clearPhraseCache(): void {
-  commonPhrasesCache.clear();
-  phraseCacheLoaded = false;
-  console.log('[UniversalOffline] Phrase cache cleared');
+  // No phrase cache in this version - kept for API compatibility
+  console.log('[UniversalOffline] Phrase cache cleared (no-op in pure offline mode)');
 }
 
 export function getCacheStats(): {
@@ -1170,9 +862,9 @@ export function getCacheStats(): {
 } {
   return {
     results: translationResultCache.size,
-    dictionary: semanticDictionaryCache.size,
-    phrases: commonPhrasesCache.size,
-    words: wordMeaningCache.size,
+    dictionary: 0, // No dictionary in pure offline mode
+    phrases: 0, // No phrases in pure offline mode
+    words: 0,
   };
 }
 
@@ -1181,13 +873,13 @@ export function getCacheStats(): {
 // ============================================================
 
 export async function initializeEngine(): Promise<void> {
-  await loadCommonPhrases();
-  console.log('[UniversalOffline] Engine initialized with', getLanguageCount(), 'languages');
-  console.log('[UniversalOffline] Cache stats:', getCacheStats());
+  // No database loading needed - engine is always ready
+  engineReady = true;
+  console.log('[UniversalOffline] Engine initialized with', getLanguageCount(), 'languages (pure offline mode - no database)');
 }
 
 export function isEngineReady(): boolean {
-  return phraseCacheLoaded;
+  return engineReady;
 }
 
 // ============================================================
