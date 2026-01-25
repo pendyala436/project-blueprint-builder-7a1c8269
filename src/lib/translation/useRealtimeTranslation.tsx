@@ -2,30 +2,29 @@
  * Real-Time Translation Hook - FULLY ASYNC & NON-BLOCKING
  * 
  * 100% Background Processing - Typing is NEVER affected:
- * - All translation/transliteration runs in background via requestIdleCallback
- * - Sender sees live native script preview (based on their mother tongue from profile)
- * - Recipient sees partner's typing translated to their mother tongue in native script
- * - Same language: No translation, but native script conversion still applies
- * - Supports 300+ languages using embedded translator (no external APIs)
+ * - All translation runs in background via requestIdleCallback
+ * - Sender sees live native script preview (MEANING-based, mother tongue)
+ * - Recipient sees partner's typing translated to their mother tongue (MEANING-based)
+ * - Same language: No translation needed
+ * - Uses Edge Function APIs (LibreTranslate/MyMemory/Google) for semantic translation
  * 
- * NO START/STOP BUTTONS NEEDED - Everything is automatic:
- * - Typing indicator starts automatically when user types
- * - Auto-stops after 3 seconds of inactivity
- * - Preview clears automatically when message is sent
+ * NO NLLB-200 - NO HARDCODING - REAL SEMANTIC TRANSLATION
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// Use Gboard (dynamic transliteration) for typing preview
-import { dynamicTransliterate, isLatinScriptLanguage } from './dynamic-transliterator';
-// Use Universal Translation for actual message translation
-import { translateText as universalTranslate, isSameLanguage as checkSameLanguage, isLatinText } from './translate';
+// SEMANTIC TRANSLATION via Edge Function APIs - replaces old phonetic system
+import { 
+  translateSemantic,
+  isSameLanguageCheck,
+  isEnglishLanguage 
+} from './semantic-translate-api';
 
 export interface TypingIndicator {
   userId: string;
   originalText: string;
   translatedText: string;
-  nativePreview: string; // Native script preview for receiver
+  nativePreview: string; // Semantic translation in receiver's mother tongue
   isTranslating: boolean;
   senderLanguage: string;
   recipientLanguage: string;
@@ -44,7 +43,7 @@ interface UseRealtimeTranslationReturn {
   sendTypingIndicator: (text: string, partnerLanguage: string) => void;
   clearPreview: () => void; // Called after message sent - no UI button needed
   
-  // Sender's native preview (what sender sees as they type)
+  // Sender's native preview (what sender sees as they type - SEMANTIC translation)
   senderNativePreview: string;
   
   // Incoming (partner's typing)
@@ -80,9 +79,9 @@ export function useRealtimeTranslation({
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.userId === currentUserId) return;
 
-        const { text, senderLanguage, senderNativeText } = payload;
+        const { text, senderLanguage, senderNativeText, englishText } = payload;
         
-        // Show sender's native text immediately with loading state
+        // Show sender's text immediately with loading state
         setPartnerTyping({
           userId: payload.userId,
           originalText: text,
@@ -94,27 +93,33 @@ export function useRealtimeTranslation({
           timestamp: Date.now()
         });
 
-        // BACKGROUND: Generate native preview for receiver using requestIdleCallback
+        // BACKGROUND: Generate SEMANTIC translation for receiver using Edge Function
         const processReceiverPreview = async () => {
           try {
             let receiverNativeText = text;
             
-            // If same language, just convert to receiver's native script using Gboard
-            if (checkSameLanguage(senderLanguage, currentUserLanguage)) {
-              // Both same language - show in native script using dynamicTransliterate (Gboard)
-              if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-                receiverNativeText = dynamicTransliterate(text, currentUserLanguage);
-              } else {
-                receiverNativeText = senderNativeText || text;
-              }
+            // If same language, no translation needed
+            if (isSameLanguageCheck(senderLanguage, currentUserLanguage)) {
+              // Same language - show as-is
+              receiverNativeText = senderNativeText || text;
             } else {
-              // Different languages - translate using Universal Translation (Edge Function)
-              const translated = await universalTranslate(text, senderLanguage, currentUserLanguage);
-              receiverNativeText = translated.text;
-              
-              // If receiver's language needs native script conversion, use Gboard
-              if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(receiverNativeText)) {
-                receiverNativeText = dynamicTransliterate(receiverNativeText, currentUserLanguage);
+              // Different languages - SEMANTIC translation via Edge Function API
+              // Use English as bridge if available, else translate from sender's language
+              if (englishText && englishText.trim()) {
+                // Have English - translate to receiver's mother tongue
+                console.log('[RealtimeTranslation] Translating English to receiver:', currentUserLanguage);
+                const result = await translateSemantic(englishText, 'english', currentUserLanguage);
+                receiverNativeText = result?.translatedText || text;
+              } else if (isEnglishLanguage(senderLanguage)) {
+                // Sender typed in English - translate to receiver
+                console.log('[RealtimeTranslation] Sender is English, translating to receiver:', currentUserLanguage);
+                const result = await translateSemantic(text, 'english', currentUserLanguage);
+                receiverNativeText = result?.translatedText || text;
+              } else {
+                // Non-English sender - translate via Edge Function
+                console.log('[RealtimeTranslation] Translating from', senderLanguage, 'to', currentUserLanguage);
+                const result = await translateSemantic(text, senderLanguage, currentUserLanguage);
+                receiverNativeText = result?.translatedText || text;
               }
             }
 
@@ -158,6 +163,7 @@ export function useRealtimeTranslation({
   }, [enabled, channelId, currentUserId, currentUserLanguage]);
 
   // FULLY ASYNC: Send typing indicator - NEVER blocks typing
+  // Generates SEMANTIC translation preview for sender (mother tongue)
   const sendTypingIndicator = useCallback((text: string, partnerLanguage: string) => {
     if (!enabled || !text.trim()) {
       // Empty text - clear preview immediately
@@ -170,63 +176,57 @@ export function useRealtimeTranslation({
     
     setIsTyping(true);
 
-    // IMMEDIATE: Generate sender's native preview in background
-    // This runs completely async - typing is NEVER blocked
+    // IMMEDIATE: Generate sender's native preview in background (SEMANTIC translation)
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
     }
 
-    // Debounce preview generation (50ms) - very fast for responsiveness
-    previewDebounceRef.current = setTimeout(() => {
-      const generatePreview = () => {
+    // Debounce preview generation (300ms) for semantic translation
+    previewDebounceRef.current = setTimeout(async () => {
+      setIsTranslating(true);
+      
+      try {
         let senderNative = text;
-        // Use Gboard (dynamicTransliterate) for typing preview
-        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-          senderNative = dynamicTransliterate(text, currentUserLanguage);
+        let englishMeaning = '';
+        
+        // If sender's language is English, no need to translate preview
+        if (isEnglishLanguage(currentUserLanguage)) {
+          senderNative = text;
+          englishMeaning = text;
+        } else {
+          // SEMANTIC translation: English → sender's mother tongue
+          console.log('[RealtimeTranslation] Generating sender preview:', currentUserLanguage);
+          const result = await translateSemantic(text, 'english', currentUserLanguage);
+          senderNative = result?.translatedText || text;
+          englishMeaning = text; // Original English input
         }
+        
         setSenderNativePreview(senderNative);
         setIsTranslating(false);
-      };
-
-      // Use requestIdleCallback for true non-blocking
-      if ('requestIdleCallback' in window) {
-        setIsTranslating(true);
-        (window as any).requestIdleCallback(generatePreview, { timeout: 100 });
-      } else {
-        generatePreview();
-      }
-    }, 50);
-
-    // BACKGROUND: Broadcast to partner - debounced separately (150ms)
-    if (text !== lastSentTextRef.current) {
-      lastSentTextRef.current = text;
-      
-      if (broadcastDebounceRef.current) {
-        clearTimeout(broadcastDebounceRef.current);
-      }
-
-      broadcastDebounceRef.current = setTimeout(() => {
-        if (!channelRef.current) return;
         
-        // Generate native text for broadcast using Gboard
-        let senderNative = text;
-        if (!isLatinScriptLanguage(currentUserLanguage) && isLatinText(text)) {
-          senderNative = dynamicTransliterate(text, currentUserLanguage);
+        // Also broadcast with the English meaning for receiver
+        if (channelRef.current && text !== lastSentTextRef.current) {
+          lastSentTextRef.current = text;
+          
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: {
+              userId: currentUserId,
+              text, // Original English text
+              senderNativeText: senderNative, // Sender's mother tongue translation
+              englishText: englishMeaning, // English meaning for receiver to use
+              senderLanguage: currentUserLanguage,
+              timestamp: Date.now()
+            }
+          });
         }
-        
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: {
-            userId: currentUserId,
-            text, // Original Latin text
-            senderNativeText: senderNative, // Sender's native script version
-            senderLanguage: currentUserLanguage,
-            timestamp: Date.now()
-          }
-        });
-      }, 150);
-    }
+      } catch (err) {
+        console.error('[RealtimeTranslation] Preview generation failed:', err);
+        setSenderNativePreview(text);
+        setIsTranslating(false);
+      }
+    }, 300);
 
     // AUTO-STOP: Clear typing after 3 seconds of inactivity - NO BUTTON NEEDED
     if (typingTimeoutRef.current) {
