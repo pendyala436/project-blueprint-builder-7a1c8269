@@ -375,3 +375,58 @@ export {
   type ChatMessageViews,
   type ChatProcessingOptions,
 } from '@/lib/libre-translate';
+
+// ============================================================
+// PROFILE-AWARE TRANSLATION (User Profile Integration)
+// ============================================================
+
+export {
+  getUserMotherTongue,
+  getChatParticipantLanguages,
+  createUserProfile,
+  createChatParticipants,
+  translateWithProfile,
+  translateBetweenUsers,
+  processChatMessage as processProfileChatMessage,
+  generateProfileLivePreview,
+  getProfileInstantPreview,
+  initializeProfileTranslation,
+  invalidateLanguageCache,
+  clearLanguageCache,
+  getAllSupportedLanguages,
+  getSupportedLanguageCount,
+  isLanguageSupported as isProfileLanguageSupported,
+  getLanguageScript,
+  isLanguageRTL,
+  type UserLanguageProfile as ProfileUserLanguageProfile,
+  type ChatParticipants,
+  type ProfileChatMessage,
+  type ProfileTranslationResult,
+} from './profile-translation-service';
+
+export {
+  useProfileTranslation,
+  useSimpleTranslation,
+  useUserLanguage,
+  useChatLanguages,
+} from '@/hooks/useProfileTranslation';
+
+// ============================================================
+// MEANING-BASED CHAT (Bidirectional Chat Engine)
+// ============================================================
+
+export {
+  processMessage as processMeaningBasedMessage,
+  generateLivePreview as generateMeaningBasedPreview,
+  getInstantNativePreview,
+  extractMeaning,
+  detectInputType,
+  needsTranslation,
+  getTextDirection,
+  initializeEngine as initMeaningBasedEngine,
+  isEngineReady as isMeaningBasedEngineReady,
+  getSupportedLanguageCount as getMeaningBasedLanguageCount,
+  type MeaningBasedMessage,
+  type LivePreviewResult as MeaningBasedLivePreview,
+  type InputType,
+} from './meaning-based-chat';

@@ -19,6 +19,11 @@
  * Same language handling:
  * - If sender and receiver share the same mother tongue, no translation pipeline
  * - Message rendered directly with script conversion if needed
+ * 
+ * PROFILE INTEGRATION:
+ * - Uses user profiles to determine mother tongue
+ * - Supports ALL 1000+ languages from languages.ts
+ * - Fetches primary_language from profiles table
  */
 
 import {
@@ -26,8 +31,8 @@ import {
   getLiveNativePreview,
   getLiveLatinPreview,
   autoDetectLanguage,
-  initializeEngine,
-  isEngineReady,
+  initializeEngine as initUniversalEngine,
+  isEngineReady as isUniversalEngineReady,
   normalizeLanguage,
   isLatinScriptLanguage,
   isLatinText,
@@ -44,7 +49,11 @@ import {
   type ChatMessageViews,
   type UserLanguageProfile,
 } from '../offline-translation/types';
+import { languages } from '@/data/languages';
 // Phonetic transliteration removed - meaning-based only
+
+// Track engine state
+let engineInitialized = false;
 
 // ============================================================
 // TYPES
@@ -234,8 +243,8 @@ export async function extractMeaning(
   const normSource = normalizeLanguage(sourceLanguage);
   
   // Ensure engine is ready
-  if (!isEngineReady()) {
-    await initializeEngine();
+  if (!isUniversalEngineReady()) {
+    await initUniversalEngine();
   }
   
   let meaning: string;
@@ -678,6 +687,36 @@ export function formatMessageTime(timestamp: string): string {
 }
 
 // ============================================================
+// ENGINE INITIALIZATION - With profile language support
+// ============================================================
+
+/**
+ * Initialize the meaning-based chat engine
+ * Loads the universal offline engine with all 1000+ languages
+ */
+export async function initializeEngine(): Promise<void> {
+  if (engineInitialized) return;
+  
+  await initUniversalEngine();
+  engineInitialized = true;
+  console.log(`[MeaningBasedChat] Engine ready with ${languages.length} languages`);
+}
+
+/**
+ * Check if engine is ready
+ */
+export function isEngineReady(): boolean {
+  return engineInitialized && isUniversalEngineReady();
+}
+
+/**
+ * Get supported language count
+ */
+export function getSupportedLanguageCount(): number {
+  return languages.length;
+}
+
+// ============================================================
 // EXPORTS
 // ============================================================
 
@@ -688,8 +727,6 @@ export {
   isSameLanguage,
   isEnglish,
   isRTL,
-  initializeEngine,
-  isEngineReady,
 } from './universal-offline-engine';
 
 export type { UserLanguageProfile } from '../offline-translation/types';
