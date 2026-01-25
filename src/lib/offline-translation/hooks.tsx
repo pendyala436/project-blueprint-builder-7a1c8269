@@ -165,7 +165,7 @@ export function useOfflineTranslation(
     translateChat: translateChatFn,
     translateForProfiles: translateForProfilesFn,
     getNativePreview,
-    getEnglishPreview,
+    getEnglishPreview: async (text: string, lang: string) => getEnglishPreview(text, lang),
     detectLanguage,
     normalizeLanguage,
     isLatinScriptLanguage,
