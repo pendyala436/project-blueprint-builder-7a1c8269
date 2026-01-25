@@ -166,29 +166,36 @@ export function useBidirectionalChat(
   
   /**
    * Update live preview as user types
-   * Preview shown in MY mother tongue (sender's perspective)
+   * MEANING-BASED PREVIEW - No phonetic transliteration
+   * Preview shown in sender's mother tongue (meaning-based translation)
    */
   const updatePreview = useCallback((text: string) => {
     if (!enableLivePreview) return;
     
-    // Instant native preview (synchronous) - in my language
+    // Instant preview shows input as-is (no phonetic conversion)
     if (text.trim()) {
-      setInstantPreview(getInstantNativePreview(text, myLanguage));
+      // Show input as-is for instant feedback - real translation comes async
+      setInstantPreview(text);
     } else {
       setInstantPreview('');
       setPreview(null);
       return;
     }
     
-    // Debounced full preview
+    // Debounced full preview - meaning-based translation
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
     }
     
     previewTimeoutRef.current = setTimeout(async () => {
       try {
+        // generateLivePreview does meaning-based translation, not phonetic
         const result = await generateLivePreview(text, myLanguage, partnerLanguage);
         setPreview(result);
+        // Update instant preview with the meaning-based result
+        if (result.nativePreview) {
+          setInstantPreview(result.nativePreview);
+        }
       } catch (err) {
         console.error('[useBidirectionalChat] Preview error:', err);
       }

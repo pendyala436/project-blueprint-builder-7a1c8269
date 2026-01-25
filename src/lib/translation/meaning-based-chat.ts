@@ -290,12 +290,17 @@ export async function extractMeaning(
 }
 
 // ============================================================
-// LIVE PREVIEW GENERATION
+// LIVE PREVIEW GENERATION - MEANING-BASED ONLY
 // ============================================================
 
 /**
  * Generate live preview as user types
- * Shows meaning-based preview in sender's mother tongue
+ * MEANING-BASED ONLY - NO PHONETIC TRANSLITERATION
+ * 
+ * In EN mode: English input → Meaning-based translation to native script
+ * In NL mode: Native input displayed as-is (no phonetic conversion)
+ * 
+ * Preview shows translated MEANING in sender's mother tongue, not phonetic sounds
  */
 export async function generateLivePreview(
   input: string,
@@ -320,50 +325,57 @@ export async function generateLivePreview(
   
   // Use forced mode or detect automatically
   const inputType = forceEnglishMode !== undefined
-    ? (forceEnglishMode ? 'pure-english' : 'phonetic-latin')
+    ? (forceEnglishMode ? 'pure-english' : 'pure-native')
     : detectInputType(trimmed, normSender);
   
-  // Generate native preview for sender - ALWAYS meaning-based
+  const senderIsEnglish = isEnglish(normSender);
+  const senderIsLatin = isLatinScriptLanguage(normSender);
+  
   let nativePreview: string;
   let englishMeaning: string;
   let confidence: number;
   
-  const inputIsLatin = isLatinText(trimmed);
-  const senderIsLatin = isLatinScriptLanguage(normSender);
-  const senderIsEnglish = isEnglish(normSender);
+  // MEANING-BASED PREVIEW ONLY
+  // No phonetic transliteration - only semantic translation
   
-  // First, extract the English meaning from the input using the forced input type
-  const extracted = await extractMeaning(trimmed, normSender, inputType);
-  englishMeaning = extracted.meaning;
-  confidence = extracted.confidence;
-  
-  // Now generate meaning-based preview in sender's mother tongue
   if (senderIsEnglish) {
     // Sender's mother tongue is English - show as-is
     nativePreview = trimmed;
-  } else if (inputType === 'pure-english') {
-    // Input is English but sender's mother tongue is NOT English
-    // Translate English meaning to sender's mother tongue
-    const result = await offlineTranslate(englishMeaning, 'english', normSender);
+    englishMeaning = trimmed;
+    confidence = 1.0;
+  } else if (inputType === 'pure-english' || forceEnglishMode === true) {
+    // EN MODE: English input for non-English speaker
+    // Translate English MEANING to sender's mother tongue
+    englishMeaning = trimmed;
+    
+    // Get meaning-based translation (not phonetic)
+    const result = await offlineTranslate(trimmed, 'english', normSender);
     nativePreview = result.text;
     
-    // If result is still Latin and sender uses non-Latin script, transliterate
+    // If result is Latin and sender uses non-Latin script, transliterate the MEANING
     if (isLatinText(nativePreview) && !senderIsLatin) {
-      nativePreview = dynamicTransliterate(nativePreview, normSender) || nativePreview;
+      // Only transliterate if it looks like the same English text (not translated)
+      // Otherwise keep the translated result
+      if (nativePreview.toLowerCase() !== trimmed.toLowerCase()) {
+        // It's actually translated - use dynamic transliteration for display
+        nativePreview = dynamicTransliterate(nativePreview, normSender) || nativePreview;
+      } else {
+        // Not translated yet - transliterate the meaning
+        nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
+      }
     }
-  } else if (inputType === 'phonetic-latin' && !senderIsLatin) {
-    // Phonetic input (like "kaise ho") for non-Latin language
-    // Transliterate to native script
-    nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
-  } else if (!inputIsLatin && senderIsLatin) {
-    // Native input for Latin language - reverse transliterate
-    nativePreview = reverseTransliterate(trimmed, normSender) || trimmed;
+    
+    confidence = result.confidence || 0.85;
   } else if (inputType === 'pure-native') {
-    // Already in sender's native script
+    // NL MODE: Native script input - show as-is (user is typing in native)
     nativePreview = trimmed;
+    englishMeaning = await getEnglishPreview(trimmed, normSender);
+    confidence = 0.9;
   } else {
-    // Mixed or unknown - pass through
+    // Mixed or other input - show as-is
     nativePreview = trimmed;
+    englishMeaning = trimmed;
+    confidence = 0.7;
   }
   
   // Generate receiver preview if different language
@@ -394,13 +406,16 @@ export async function generateLivePreview(
 
 /**
  * Synchronous native preview for instant feedback
+ * MEANING-BASED: Returns input as-is (no phonetic conversion)
+ * Real translation happens in async generateLivePreview
  */
 export function getInstantNativePreview(
   input: string,
   targetLanguage: string
 ): string {
-  if (!input) return input;
-  return getLiveNativePreview(input, normalizeLanguage(targetLanguage));
+  // Return input as-is - no phonetic transliteration
+  // The async generateLivePreview will provide meaning-based translation
+  return input || '';
 }
 
 // ============================================================
