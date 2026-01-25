@@ -1248,18 +1248,25 @@ const DraggableMiniChatWindow = ({
     // OPTIMISTIC: Add message to UI immediately with proper typing mode display
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Determine Latin/English for display - always english-meaning mode
+    // For EN mode: englishInput is the original English, meaningPreview is the native translation
+    // For NL mode: messageToSend is the native text, need to generate English
     let englishForDisplay: string | undefined = englishInput;
+    let nativeForDisplay: string = messageToSend;
     
-    // Add optimistic message first (English will be updated after background translation)
+    // For english-meaning mode, use the meaningPreview as the sender's native view
+    if (typingMode === 'english-meaning' && meaningPreview) {
+      nativeForDisplay = meaningPreview; // Show Telugu translation to Telugu sender
+    }
+    
+    // Add optimistic message first with NATIVE translation for sender
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
       message: messageToSend,
-      translatedMessage: messageToSend,
+      translatedMessage: nativeForDisplay, // Sender sees their mother tongue translation
       latinMessage: undefined,
-      englishMessage: englishForDisplay,
-      isTranslated: false,
+      englishMessage: englishForDisplay, // English meaning always shown below
+      isTranslated: nativeForDisplay !== messageToSend,
       isTranslating: false,
       createdAt: new Date().toISOString()
     }]);
@@ -1285,6 +1292,25 @@ const DraggableMiniChatWindow = ({
         sourceLanguage = 'english';
         textForReceiverTranslation = englishInput;
         originalEnglishToStore = englishInput;
+        
+        // ALSO: If meaningPreview wasn't available, translate to sender's native now
+        if (!meaningPreview && !checkIsEnglish(currentUserLanguage)) {
+          try {
+            console.log('[DraggableMiniChatWindow] EN mode: Generating native translation for sender from English:', englishInput.substring(0, 50));
+            const senderNativeResult = await translateSemantic(englishInput, 'english', currentUserLanguage);
+            if (senderNativeResult?.translatedText && senderNativeResult.isTranslated) {
+              console.log('[DraggableMiniChatWindow] Sender native result:', senderNativeResult.translatedText.substring(0, 50));
+              // Update optimistic message with sender's native translation
+              setMessages(prev => prev.map(m => 
+                m.id === tempId 
+                  ? { ...m, translatedMessage: senderNativeResult.translatedText, isTranslated: true }
+                  : m
+              ));
+            }
+          } catch (error) {
+            console.error('[DraggableMiniChatWindow] EN mode sender native translation failed:', error);
+          }
+        }
       } else {
         // native mode: message is in sender's native language
         sourceLanguage = currentUserLanguage;
