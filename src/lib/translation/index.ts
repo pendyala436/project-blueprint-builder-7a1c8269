@@ -338,7 +338,7 @@ export {
   isRTL as isUniversalRTL,
   type UniversalTranslationResult,
   type BidirectionalChatResult,
-  type SemanticDictionaryEntry,
+  
 } from './universal-offline-engine';
 
 // Extended Universal Translation (Multi-language input with auto-detection)
