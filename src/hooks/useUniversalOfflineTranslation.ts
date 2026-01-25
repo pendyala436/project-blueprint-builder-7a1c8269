@@ -278,12 +278,28 @@ export function useChatTranslationUniversal(options: UseChatTranslationOptions) 
     return result;
   }, [translateChat, senderLanguage, receiverLanguage]);
 
-  // Update live preview
-  const updatePreview = useCallback((text: string) => {
-    if (enableLivePreview) {
-      setLivePreview(getNativePreview(text, senderLanguage));
+  // Update live preview - MEANING-BASED (async translation, not phonetic)
+  const updatePreview = useCallback(async (text: string) => {
+    if (!enableLivePreview) return;
+    
+    if (!text.trim()) {
+      setLivePreview('');
+      return;
     }
-  }, [getNativePreview, senderLanguage, enableLivePreview]);
+    
+    // Show input as-is initially for instant feedback
+    setLivePreview(text);
+    
+    // Then do meaning-based translation
+    try {
+      const result = await translateChat(text, senderLanguage, receiverLanguage);
+      if (result.senderView) {
+        setLivePreview(result.senderView);
+      }
+    } catch {
+      // Keep original text on error
+    }
+  }, [translateChat, senderLanguage, receiverLanguage, enableLivePreview]);
 
   // Process incoming message
   const processIncoming = useCallback(async (text: string, incomingFromLanguage: string) => {
@@ -305,7 +321,7 @@ export function useChatTranslationUniversal(options: UseChatTranslationOptions) 
 }
 
 // ============================================================
-// LIVE PREVIEW HOOK (Debounced)
+// LIVE PREVIEW HOOK (MEANING-BASED - NO PHONETIC)
 // ============================================================
 
 export interface UseLivePreviewOptions {
@@ -313,16 +329,21 @@ export interface UseLivePreviewOptions {
   debounceMs?: number;
 }
 
+/**
+ * Live preview hook - MEANING-BASED ONLY
+ * No phonetic transliteration - uses async meaning-based translation
+ */
 export function useLiveTransliterationPreview(options: UseLivePreviewOptions) {
-  const { targetLanguage, debounceMs = 50 } = options;
+  const { targetLanguage, debounceMs = 150 } = options;
   
   const [inputText, setInputText] = useState('');
   const [preview, setPreview] = useState('');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { translate, isReady } = useUniversalTranslation();
   
   const isNonLatin = useMemo(() => !isLatinScriptLanguage(targetLanguage), [targetLanguage]);
   
-  // Update preview with debounce
+  // Update preview with debounce - MEANING-BASED translation
   const updateInput = useCallback((text: string) => {
     setInputText(text);
     
@@ -330,16 +351,28 @@ export function useLiveTransliterationPreview(options: UseLivePreviewOptions) {
       clearTimeout(timeoutRef.current);
     }
     
-    if (!isNonLatin) {
-      setPreview(text);
+    if (!text.trim()) {
+      setPreview('');
       return;
     }
     
-    timeoutRef.current = setTimeout(() => {
-      const nativePreview = getLiveNativePreview(text, targetLanguage);
-      setPreview(nativePreview);
-    }, debounceMs);
-  }, [targetLanguage, isNonLatin, debounceMs]);
+    // Show input as-is initially for instant feedback
+    setPreview(text);
+    
+    // Then do meaning-based translation (async)
+    if (isReady && isNonLatin) {
+      timeoutRef.current = setTimeout(async () => {
+        try {
+          const result = await translate(text, 'english', targetLanguage);
+          if (result.text) {
+            setPreview(result.text);
+          }
+        } catch {
+          // Keep original on error
+        }
+      }, debounceMs);
+    }
+  }, [targetLanguage, isNonLatin, debounceMs, translate, isReady]);
 
   // Cleanup
   useEffect(() => {

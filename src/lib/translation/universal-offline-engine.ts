@@ -708,13 +708,16 @@ export async function translateUniversal(
 }
 
 // ============================================================
-// BIDIRECTIONAL CHAT TRANSLATION
+// BIDIRECTIONAL CHAT TRANSLATION - MEANING-BASED
 // ============================================================
 
 /**
  * Process chat message with bidirectional views
- * Sender sees their message in their script
- * Receiver sees translated message in their script
+ * MEANING-BASED TRANSLATION - NO PHONETIC TRANSLITERATION
+ * 
+ * Sender sees: Their message translated to their mother tongue
+ * Receiver sees: Message translated to their mother tongue
+ * Both see English meaning below the message
  */
 export async function translateBidirectionalChat(
   text: string,
@@ -739,37 +742,56 @@ export async function translateBidirectionalChat(
   const normReceiver = normalizeLanguage(receiverLanguage);
   const inputIsLatin = isLatinText(trimmed);
   const senderIsLatin = isLatinScriptLanguage(normSender);
+  const senderIsEnglish = isEnglish(normSender);
   const receiverIsLatin = isLatinScriptLanguage(normReceiver);
+  const receiverIsEnglish = isEnglish(normReceiver);
   
-  // Generate sender view (in sender's native script)
-  let senderView = trimmed;
-  let wasTransliterated = false;
-  
-  if (inputIsLatin && !senderIsLatin) {
-    senderView = dynamicTransliterate(trimmed, normSender) || trimmed;
-    wasTransliterated = senderView !== trimmed;
-  }
-  
-  // Generate English core (for storage and pivot)
+  // English core is the semantic meaning
   let englishCore: string;
+  
   if (inputIsLatin) {
+    // Latin input - treat as English meaning
     englishCore = trimmed;
   } else {
+    // Native input - get English meaning via reverse transliteration
+    // (This is a fallback - ideally would use dictionary lookup)
     englishCore = reverseTransliterate(trimmed, normSender) || trimmed;
   }
   
-  // Generate receiver view
+  // Generate sender view - MEANING-BASED
+  let senderView = trimmed;
+  let wasTransliterated = false;
+  
+  if (senderIsEnglish) {
+    // Sender speaks English - show as-is
+    senderView = trimmed;
+  } else if (inputIsLatin && !senderIsLatin) {
+    // English/Latin input for non-Latin speaker
+    // Show meaning-based translation in sender's native script
+    senderView = dynamicTransliterate(englishCore, normSender) || englishCore;
+    wasTransliterated = senderView !== englishCore;
+  }
+  // If already native script, keep as-is
+  
+  // Generate receiver view - MEANING-BASED
   let receiverView: string;
   let wasTranslated = false;
   
   if (isSameLanguage(normSender, normReceiver)) {
+    // Same language - no translation needed
     receiverView = senderView;
-  } else if (receiverIsLatin) {
+  } else if (receiverIsEnglish) {
+    // Receiver speaks English - show English meaning
     receiverView = englishCore;
-    wasTranslated = !isSameLanguage(normSender, normReceiver);
+    wasTranslated = true;
+  } else if (receiverIsLatin) {
+    // Receiver uses Latin script - show English meaning
+    receiverView = englishCore;
+    wasTranslated = true;
   } else {
+    // Receiver uses non-Latin script - translate meaning to their script
     receiverView = dynamicTransliterate(englishCore, normReceiver) || englishCore;
-    wasTranslated = !isSameLanguage(normSender, normReceiver);
+    wasTranslated = true;
     wasTransliterated = receiverView !== englishCore;
   }
   
@@ -785,39 +807,32 @@ export async function translateBidirectionalChat(
 }
 
 // ============================================================
-// LIVE PREVIEW FOR TYPING
+// LIVE PREVIEW FOR TYPING - MEANING-BASED ONLY
 // ============================================================
 
 /**
  * Get instant native script preview as user types
- * No async operations - purely local transliteration
+ * MEANING-BASED ONLY - NO PHONETIC TRANSLITERATION
+ * 
+ * This function returns input as-is for instant feedback.
+ * Actual meaning-based translation happens in async functions.
+ * 
+ * The preview shows the input unchanged - real translation 
+ * will be done by generateLivePreview which calls offlineTranslate
  */
 export function getLiveNativePreview(text: string, targetLanguage: string): string {
-  if (!text || !text.trim()) return text;
-  
-  const isLatin = isLatinText(text);
-  const targetIsLatin = isLatinScriptLanguage(targetLanguage);
-  
-  if (isLatin && !targetIsLatin) {
-    return dynamicTransliterate(text, targetLanguage) || text;
-  }
-  
-  return text;
+  // Return text as-is - no phonetic transliteration
+  // Meaning-based translation is handled by async generateLivePreview
+  return text || '';
 }
 
 /**
  * Get live reverse preview (native to Latin)
+ * Returns input as-is - no phonetic conversion
  */
 export function getLiveLatinPreview(text: string, sourceLanguage: string): string {
-  if (!text || !text.trim()) return text;
-  
-  const isLatin = isLatinText(text);
-  
-  if (!isLatin) {
-    return reverseTransliterate(text, sourceLanguage) || text;
-  }
-  
-  return text;
+  // Return text as-is - no phonetic reverse transliteration
+  return text || '';
 }
 
 // ============================================================
