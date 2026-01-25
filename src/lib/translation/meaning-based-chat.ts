@@ -44,10 +44,7 @@ import {
   type ChatMessageViews,
   type UserLanguageProfile,
 } from '../offline-translation/types';
-import {
-  dynamicTransliterate,
-  reverseTransliterate,
-} from './dynamic-transliterator';
+// Phonetic transliteration removed - meaning-based only
 
 // ============================================================
 // TYPES
@@ -348,26 +345,14 @@ export async function generateLivePreview(
     // Translate English MEANING to sender's mother tongue
     englishMeaning = trimmed;
     
-    // Get meaning-based translation (not phonetic)
+    // Get meaning-based translation (NO phonetic transliteration)
     const result = await offlineTranslate(trimmed, 'english', normSender);
     nativePreview = result.text;
-    
-    // If result is Latin and sender uses non-Latin script, transliterate the MEANING
-    if (isLatinText(nativePreview) && !senderIsLatin) {
-      // Only transliterate if it looks like the same English text (not translated)
-      // Otherwise keep the translated result
-      if (nativePreview.toLowerCase() !== trimmed.toLowerCase()) {
-        // It's actually translated - use dynamic transliteration for display
-        nativePreview = dynamicTransliterate(nativePreview, normSender) || nativePreview;
-      } else {
-        // Not translated yet - transliterate the meaning
-        nativePreview = dynamicTransliterate(trimmed, normSender) || trimmed;
-      }
-    }
+    // NO transliteration - keep result as-is (meaning-based only)
     
     confidence = result.confidence || 0.85;
   } else if (inputType === 'pure-native') {
-    // NL MODE: Native script input - show as-is (user is typing in native)
+    // Native script input - show as-is
     nativePreview = trimmed;
     englishMeaning = await getEnglishPreview(trimmed, normSender);
     confidence = 0.9;
@@ -384,14 +369,10 @@ export async function generateLivePreview(
     if (isEnglish(normReceiver)) {
       receiverPreview = englishMeaning;
     } else {
-      // Translate meaning to receiver's language
+      // Translate meaning to receiver's language (NO transliteration)
       const result = await offlineTranslate(englishMeaning, 'english', normReceiver);
       receiverPreview = result.text;
-      
-      // If result is Latin but receiver uses non-Latin script, transliterate
-      if (isLatinText(receiverPreview) && !isLatinScriptLanguage(normReceiver)) {
-        receiverPreview = dynamicTransliterate(receiverPreview, normReceiver) || receiverPreview;
-      }
+      // NO transliteration - keep result as-is
     }
   }
   
@@ -466,21 +447,14 @@ export async function processMessage(
     senderView = trimmed;
     senderScript = 'latin';
   } else if (inputType === 'pure-english') {
-    // English input for non-English speaker - translate meaning to native language
+    // English input for non-English speaker - translate meaning (NO transliteration)
     const result = await offlineTranslate(meaning, 'english', normSender);
-    senderView = isLatinText(result.text)
-      ? dynamicTransliterate(result.text, normSender) || result.text
-      : result.text;
-    senderScript = 'native';
-  } else if (inputIsLatin && inputType === 'phonetic-latin') {
-    // Phonetic input - convert to native script via transliteration
-    senderView = dynamicTransliterate(trimmed, normSender) || trimmed;
-    senderScript = 'native';
-    wasTransliterated = senderView !== trimmed;
+    senderView = result.text;
+    senderScript = isLatinScriptLanguage(normSender) ? 'latin' : 'native';
   } else {
-    // Already in native script
+    // Other input types - show as-is (NO transliteration)
     senderView = trimmed;
-    senderScript = 'native';
+    senderScript = isLatinScriptLanguage(normSender) ? 'latin' : 'native';
   }
   
   // Generate receiver view
@@ -498,20 +472,10 @@ export async function processMessage(
     receiverScript = 'latin';
     wasTranslated = !isEnglish(normSender);
   } else {
-    // Different language - translate via meaning
+    // Different language - translate via meaning (NO transliteration)
     const result = await offlineTranslate(meaning, 'english', normReceiver);
-    
-    if (receiverIsLatin) {
-      receiverView = result.text;
-      receiverScript = 'latin';
-    } else {
-      // Ensure native script
-      receiverView = isLatinText(result.text)
-        ? dynamicTransliterate(result.text, normReceiver) || result.text
-        : result.text;
-      receiverScript = 'native';
-    }
-    
+    receiverView = result.text;
+    receiverScript = isLatinScriptLanguage(normReceiver) ? 'latin' : 'native';
     wasTranslated = result.isTranslated;
   }
   
@@ -608,11 +572,9 @@ export async function processIncomingMessage(
     };
   }
   
-  // Translate to viewer's language
+  // Translate to viewer's language (NO transliteration)
   const result = await offlineTranslate(message.extractedMeaning, 'english', normViewer);
-  const translatedText = isLatinText(result.text) && !isLatinScriptLanguage(normViewer)
-    ? dynamicTransliterate(result.text, normViewer) || result.text
-    : result.text;
+  const translatedText = result.text;
     
   return {
     displayText: translatedText,

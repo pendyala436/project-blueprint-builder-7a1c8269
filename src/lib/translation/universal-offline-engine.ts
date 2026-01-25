@@ -591,107 +591,62 @@ export async function translateUniversal(
   
   let result: UniversalTranslationResult;
   
-  // CASE 1: Same language - script conversion only
+  // CASE 1: Same language - passthrough (NO transliteration)
   if (isSameLanguage(normSource, normTarget)) {
-    let resultText = trimmed;
-    let isTransliterated = false;
-    
-    if (inputIsLatin && !targetIsLatin) {
-      resultText = dynamicTransliterate(trimmed, normTarget) || trimmed;
-      isTransliterated = resultText !== trimmed;
-    } else if (!inputIsLatin && targetIsLatin) {
-      resultText = reverseTransliterate(trimmed, normSource) || trimmed;
-      isTransliterated = resultText !== trimmed;
-    }
-    
     result = {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
       isTranslated: false,
-      isTransliterated,
+      isTransliterated: false,
       confidence: 1.0,
       method: 'passthrough',
     };
   }
-  // CASE 2: English as source - transliterate to target script
+  // CASE 2: English as source - return as-is (NO phonetic transliteration)
   else if (isEnglish(normSource)) {
-    let resultText = trimmed;
-    let isTransliterated = false;
-    
-    // Convert English to target script if needed
-    if (!targetIsLatin) {
-      resultText = dynamicTransliterate(trimmed, normTarget) || trimmed;
-      isTransliterated = resultText !== trimmed;
-    }
-    
+    // NO transliteration - just return English text
+    // Meaning-based translation would require actual translation data
     result = {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
-      isTranslated: true,
-      isTransliterated,
+      isTranslated: false,
+      isTransliterated: false,
       englishPivot: trimmed,
       confidence: 0.9,
-      method: isTransliterated ? 'transliteration' : 'semantic',
+      method: 'semantic',
     };
   }
-  // CASE 3: English as target - reverse transliterate to Latin
+  // CASE 3: English as target - return as-is (NO phonetic transliteration)
   else if (isEnglish(normTarget)) {
-    let resultText = trimmed;
-    let isTransliterated = false;
-    
-    // Convert native script to Latin if needed
-    if (!inputIsLatin) {
-      resultText = reverseTransliterate(trimmed, normSource) || trimmed;
-      isTransliterated = resultText !== trimmed;
-    }
-    
+    // NO transliteration - return text as-is
     result = {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
-      isTranslated: true,
-      isTransliterated,
-      englishPivot: resultText,
+      isTranslated: false,
+      isTransliterated: false,
+      englishPivot: trimmed,
       confidence: 0.85,
-      method: isTransliterated ? 'transliteration' : 'semantic',
+      method: 'semantic',
     };
   }
-  // CASE 4: Native to Native (different languages) - use English pivot
+  // CASE 4: Native to Native (different languages) - return as-is (NO transliteration)
   else {
-    // Step 1: Convert source to Latin/English representation
-    let englishPivot: string;
-    
-    if (inputIsLatin) {
-      englishPivot = trimmed;
-    } else {
-      // Reverse transliterate to get Latin representation
-      englishPivot = reverseTransliterate(trimmed, normSource) || trimmed;
-    }
-    
-    // Step 2: Convert to target script
-    let resultText: string;
-    let isTransliterated = false;
-    
-    if (targetIsLatin) {
-      resultText = englishPivot;
-    } else {
-      resultText = dynamicTransliterate(englishPivot, normTarget) || englishPivot;
-      isTransliterated = resultText !== englishPivot;
-    }
-    
+    // NO transliteration - return text as-is
+    // Without actual translation data, we cannot convert between languages
     result = {
-      text: resultText,
+      text: trimmed,
       originalText: trimmed,
       sourceLanguage: normSource,
       targetLanguage: normTarget,
-      isTranslated: true,
-      isTransliterated,
-      englishPivot,
+      isTranslated: false,
+      isTransliterated: false,
+      englishPivot: trimmed,
       confidence: 0.75,
       method: 'semantic',
     };
