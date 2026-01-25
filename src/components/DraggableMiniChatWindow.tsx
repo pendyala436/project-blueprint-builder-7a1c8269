@@ -1082,6 +1082,44 @@ const DraggableMiniChatWindow = ({
           // STEP 1: IMMEDIATE - Add message to UI
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
+
+            // Reconcile our own realtime echo with the optimistic temp message
+            // (prevents "message disappears after send" and avoids duplicates)
+            if (!isPartnerMessage) {
+              const serverEnglish = (newMsg.original_english || '').trim();
+              const serverPrimary = (displayMessage || newMsg.message || '').trim();
+
+              const tempIndex = prev.findIndex(m => {
+                if (!m.id.startsWith('temp-')) return false;
+                if (m.senderId !== currentUserId) return false;
+
+                const localEnglish = (m.englishMessage || '').trim();
+                const localPrimary = ((m.translatedMessage || m.message) || '').trim();
+
+                if (serverEnglish && localEnglish && localEnglish === serverEnglish) return true;
+                if (serverPrimary && localPrimary && localPrimary === serverPrimary) return true;
+                return false;
+              });
+
+              if (tempIndex !== -1) {
+                return prev.map((m, idx) =>
+                  idx === tempIndex
+                    ? {
+                        ...m,
+                        id: newMsg.id,
+                        message: newMsg.message,
+                        translatedMessage: displayMessage,
+                        englishMessage: newMsg.original_english || m.englishMessage,
+                        latinMessage: undefined,
+                        isTranslated: false,
+                        isTranslating: true,
+                        createdAt: newMsg.created_at,
+                      }
+                    : m
+                );
+              }
+            }
+
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
@@ -1282,7 +1320,7 @@ const DraggableMiniChatWindow = ({
       // Determine what to store based on typing mode
       // EN mode: Store English as message, translate for receiver
       // NL mode: Store native as message, generate English
-      const messageToStore = englishInput; // Always store what user typed
+      let messageToStore = englishInput; // EN-mode will overwrite to sender's mother tongue
       
       console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToStore.substring(0, 30));
       
@@ -1302,19 +1340,39 @@ const DraggableMiniChatWindow = ({
         sourceLanguage = 'english';
         textForReceiverTranslation = englishInput;
         originalEnglishToStore = englishInput;
+
+        // IMPORTANT: Persist the sender view in the sender's mother tongue so after Send
+        // the sender continues to see native script (not raw English).
+        if (!checkIsEnglish(currentUserLanguage)) {
+          if (nativePreviewSnapshot && nativePreviewSnapshot.trim()) {
+            messageToStore = nativePreviewSnapshot;
+          } else {
+            // Will be translated below if needed
+            messageToStore = englishInput;
+          }
+        }
         
         // ALSO: If preview wasn't available, translate to sender's native now (background)
         if (needsBackgroundTranslation && !checkIsEnglish(currentUserLanguage)) {
           try {
             console.log('[DraggableMiniChatWindow] EN mode: Generating native translation for sender from English:', englishInput.substring(0, 50));
             const senderNativeResult = await translateSemantic(englishInput, 'english', currentUserLanguage);
-            if (senderNativeResult?.translatedText && senderNativeResult.isTranslated) {
-              console.log('[DraggableMiniChatWindow] Sender native result:', senderNativeResult.translatedText.substring(0, 50));
+            const senderNativeText = senderNativeResult?.translatedText || englishInput;
+
+            // Use sender-native as the DB-stored message so realtime echo shows mother tongue
+            messageToStore = senderNativeText;
+
+            if (senderNativeText && senderNativeText.trim() && senderNativeText !== englishInput) {
+              console.log('[DraggableMiniChatWindow] Sender native result:', senderNativeText.substring(0, 50));
               // Update optimistic message with sender's native translation
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, translatedMessage: senderNativeResult.translatedText, isTranslated: true, isTranslating: false }
+              setMessages(prev => prev.map(m =>
+                m.id === tempId
+                  ? { ...m, translatedMessage: senderNativeText, isTranslated: true, isTranslating: false }
                   : m
+              ));
+            } else {
+              setMessages(prev => prev.map(m =>
+                m.id === tempId ? { ...m, isTranslating: false } : m
               ));
             }
           } catch (error) {
@@ -1422,8 +1480,7 @@ const DraggableMiniChatWindow = ({
         });
 
       if (error) throw error;
-      
-      setMessages(prev => prev.filter(m => m.id !== tempId));
+      // Keep optimistic message; reconcile it when realtime INSERT arrives.
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages(prev => prev.filter(m => m.id !== tempId));
