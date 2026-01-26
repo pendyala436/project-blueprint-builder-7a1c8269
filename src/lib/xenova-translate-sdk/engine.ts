@@ -143,8 +143,11 @@ export async function translateText(
   const src = normalizeLanguageCode(sourceLang);
   const tgt = normalizeLanguageCode(targetLang);
   
+  console.log(`[XenovaEngine] translateText called: "${text.substring(0, 50)}" | src=${sourceLang} → ${src} | tgt=${targetLang} → ${tgt}`);
+  
   // Empty text
   if (!text.trim()) {
+    console.log('[XenovaEngine] Empty text, returning early');
     return {
       text: '',
       originalText: '',
@@ -159,12 +162,13 @@ export async function translateText(
   const cacheKey = getCacheKey(text, src, tgt);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    console.log('[XenovaEngine] Cache hit');
+    console.log(`[XenovaEngine] Cache hit for: ${src} → ${tgt}`);
     return cached;
   }
   
   // Determine translation path
   const path = route(src, tgt);
+  console.log(`[XenovaEngine] Translation path: ${path}`);
   
   let translatedText = text;
   

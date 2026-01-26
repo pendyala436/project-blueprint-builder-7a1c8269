@@ -19,8 +19,11 @@ export function route(sourceLang: string, targetLang: string): TranslationPath {
   const src = normalizeLanguageCode(sourceLang);
   const tgt = normalizeLanguageCode(targetLang);
   
+  console.log(`[XenovaRouter] Routing: ${sourceLang} (${src}) → ${targetLang} (${tgt})`);
+  
   // Same language - no translation needed
   if (isSameLanguage(src, tgt)) {
+    console.log(`[XenovaRouter] Same language detected: ${src} = ${tgt}`);
     return 'SAME';
   }
   
@@ -28,14 +31,18 @@ export function route(sourceLang: string, targetLang: string): TranslationPath {
   const srcSupported = isLanguageSupported(src);
   const tgtSupported = isLanguageSupported(tgt);
   
+  console.log(`[XenovaRouter] Support check: src(${src})=${srcSupported}, tgt(${tgt})=${tgtSupported}`);
+  
   if (!srcSupported || !tgtSupported) {
-    console.warn(`[XenovaRouter] Unsupported language pair: ${src} → ${tgt}`);
+    console.warn(`[XenovaRouter] Unsupported language pair: ${src} (supported=${srcSupported}) → ${tgt} (supported=${tgtSupported})`);
     return 'FALLBACK';
   }
   
   // Check script types
   const srcLatin = isLatinLanguage(src);
   const tgtLatin = isLatinLanguage(tgt);
+  
+  console.log(`[XenovaRouter] Script check: src(${src}) latin=${srcLatin}, tgt(${tgt}) latin=${tgtLatin}`);
   
   // Latin ↔ Latin: Use M2M-100 (faster for Latin scripts)
   if (srcLatin && tgtLatin) {
