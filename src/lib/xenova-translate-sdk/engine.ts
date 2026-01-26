@@ -91,29 +91,44 @@ async function translateWithM2M(text: string, src: string, tgt: string): Promise
   const srcCode = getM2MCode(src) || src;
   const tgtCode = getM2MCode(tgt) || tgt;
   
+  console.log(`[XenovaEngine] M2M: ${srcCode} → ${tgtCode}`);
+  
   const result = await translator(text, {
     src_lang: srcCode,
     tgt_lang: tgtCode,
   });
   
-  return result[0]?.translation_text || text;
+  const output = result[0]?.translation_text || text;
+  console.log(`[XenovaEngine] M2M result: "${text}" → "${output}"`);
+  return output;
 }
 
 /**
- * Translate text using NLLB-200 (non-Latin scripts)
+ * Translate text using NLLB-200 (non-Latin scripts) - SEMANTIC TRANSLATION
  */
 async function translateWithNLLB(text: string, src: string, tgt: string): Promise<string> {
   const translator = await loadNLLB();
   
-  const srcCode = getNLLBCode(src) || `${src}_Latn`;
-  const tgtCode = getNLLBCode(tgt) || `${tgt}_Latn`;
+  // Get proper NLLB codes (e.g., "hi" → "hin_Deva", "te" → "tel_Telu")
+  const srcCode = getNLLBCode(src);
+  const tgtCode = getNLLBCode(tgt);
   
+  if (!srcCode || !tgtCode) {
+    console.warn(`[XenovaEngine] Missing NLLB code: src=${src}→${srcCode}, tgt=${tgt}→${tgtCode}`);
+    return text;
+  }
+  
+  console.log(`[XenovaEngine] NLLB semantic: ${srcCode} → ${tgtCode}`);
+  
+  // NLLB requires specific parameter format for proper semantic translation
   const result = await translator(text, {
     src_lang: srcCode,
     tgt_lang: tgtCode,
   });
   
-  return result[0]?.translation_text || text;
+  const output = result[0]?.translation_text || text;
+  console.log(`[XenovaEngine] NLLB result: "${text}" → "${output}"`);
+  return output;
 }
 
 /**
@@ -168,10 +183,12 @@ export async function translateText(
         break;
         
       case 'PIVOT_EN':
-        // Step 1: Source → English
-        const english = await translateWithNLLB(text, src, 'en');
-        // Step 2: English → Target
-        translatedText = await translateWithNLLB(english, 'en', tgt);
+        // SEMANTIC PIVOT: Source → English (meaning) → Target (meaning)
+        console.log(`[XenovaEngine] Semantic pivot: ${src} → en → ${tgt}`);
+        const englishMeaning = await translateWithNLLB(text, src, 'en');
+        console.log(`[XenovaEngine] Step 1 (${src}→en): "${text}" → "${englishMeaning}"`);
+        translatedText = await translateWithNLLB(englishMeaning, 'en', tgt);
+        console.log(`[XenovaEngine] Step 2 (en→${tgt}): "${englishMeaning}" → "${translatedText}"`);
         break;
         
       case 'FALLBACK':
