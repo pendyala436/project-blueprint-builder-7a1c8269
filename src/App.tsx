@@ -1,6 +1,8 @@
 /**
  * ULTRA-OPTIMIZED App Component
  * Target: Sub-second initial render
+ * 
+ * TRANSLATION: Models are preloaded on app startup for reliable browser-based translation
  */
 
 import { lazy, Suspense, memo, startTransition, useEffect } from "react";
@@ -9,6 +11,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { preloadBaseFonts } from "@/lib/fonts";
+import { startModelPreload } from "@/hooks/useTranslationPreload";
 
 // Critical components - no lazy for stability
 import AuthScreen from "./pages/AuthScreen";
@@ -28,7 +31,7 @@ const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndi
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
 const TranslationLoadingIndicator = lazy(() => import("@/components/TranslationLoadingIndicator").then(m => ({ default: m.TranslationLoadingIndicator })));
 
-// Preload dashboard routes immediately after first paint
+// Preload dashboard routes AND translation models immediately after first paint
 if (typeof window !== 'undefined') {
   // Use requestIdleCallback for non-blocking preload
   const preload = () => {
@@ -36,6 +39,13 @@ if (typeof window !== 'undefined') {
       // Prevent unhandled promise rejections if a module fetch fails (e.g. SW/cache hiccups)
       import("./pages/DashboardScreen").catch(() => undefined);
       import("./pages/WomenDashboardScreen").catch(() => undefined);
+    });
+    
+    // 🔥 CRITICAL: Start loading translation models on app startup
+    // This ensures browser-based translation is ready before user opens a chat
+    console.log('[App] 🚀 Starting translation model preload on app startup');
+    startModelPreload().catch((err) => {
+      console.warn('[App] Translation model preload failed:', err);
     });
   };
   

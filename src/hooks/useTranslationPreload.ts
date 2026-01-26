@@ -3,7 +3,8 @@
  * ==================================
  * 
  * Preloads Xenova translation models in background on app startup.
- * Shows loading state until models are ready for translation.
+ * Implements message queuing to ensure browser-based translation
+ * always works, even during initial model loading.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -45,6 +46,7 @@ let globalState = {
   currentModel: null as string | null,
   error: null as string | null,
   preloadStarted: false,
+  preloadPromise: null as Promise<void> | null,
 };
 
 // Subscribers for state updates
@@ -61,44 +63,129 @@ function updateGlobalState(updates: Partial<typeof globalState>) {
 
 /**
  * Start preloading models (can be called from anywhere)
+ * Returns a promise that resolves when models are ready
  */
 export async function startModelPreload(): Promise<void> {
-  if (globalState.preloadStarted || globalState.isReady) {
-    console.log('[TranslationPreload] Already started or ready, skipping');
+  // If already ready, return immediately
+  if (globalState.isReady) {
+    console.log('[TranslationPreload] Models already ready');
     return;
   }
 
-  updateGlobalState({ preloadStarted: true, isLoading: true, error: null });
-  console.log('[TranslationPreload] Starting model preload...');
-
-  // Configure for device type
-  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  configureThreads(isMobile);
-  console.log(`[TranslationPreload] Configured for ${isMobile ? 'mobile' : 'desktop'}`);
-
-  try {
-    await preloadAll();
-    
-    const status = getModelStatus();
-    const allReady = status.m2m && status.nllb && status.detector;
-    
-    updateGlobalState({
-      isReady: allReady,
-      isLoading: false,
-      progress: 100,
-      currentModel: null,
-    });
-    
-    console.log('[TranslationPreload] Models loaded successfully:', status);
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Failed to load translation models';
-    console.error('[TranslationPreload] Failed to load models:', error);
-    
-    updateGlobalState({
-      isLoading: false,
-      error: errorMsg,
-    });
+  // If already loading, wait for the existing promise
+  if (globalState.preloadStarted && globalState.preloadPromise) {
+    console.log('[TranslationPreload] Already loading, waiting...');
+    return globalState.preloadPromise;
   }
+
+  // Start new preload
+  const preloadPromise = (async () => {
+    updateGlobalState({ preloadStarted: true, isLoading: true, error: null });
+    console.log('[TranslationPreload] 🚀 Starting model preload...');
+
+    // Configure for device type
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    configureThreads(isMobile);
+    console.log(`[TranslationPreload] Configured for ${isMobile ? 'mobile' : 'desktop'}`);
+
+    try {
+      await preloadAll();
+      
+      const status = getModelStatus();
+      const allReady = status.m2m && status.nllb && status.detector;
+      
+      updateGlobalState({
+        isReady: allReady,
+        isLoading: false,
+        progress: 100,
+        currentModel: null,
+      });
+      
+      console.log('[TranslationPreload] ✅ Models loaded successfully:', status);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to load translation models';
+      console.error('[TranslationPreload] ❌ Failed to load models:', error);
+      
+      updateGlobalState({
+        isLoading: false,
+        error: errorMsg,
+        preloadStarted: false, // Allow retry
+      });
+      throw error;
+    }
+  })();
+
+  updateGlobalState({ preloadPromise });
+  return preloadPromise;
+}
+
+/**
+ * Wait for translation to be ready with timeout
+ * Returns true if ready, false if timed out
+ */
+export async function waitForTranslationReady(timeoutMs: number = 60000): Promise<boolean> {
+  // Already ready
+  if (globalState.isReady) {
+    return true;
+  }
+
+  // Start preload if not started
+  if (!globalState.preloadStarted) {
+    startModelPreload().catch(() => {});
+  }
+
+  // Wait with timeout
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    if (globalState.isReady) {
+      return true;
+    }
+    
+    // If loading failed, try to restart once
+    if (globalState.error && !globalState.isLoading && !globalState.preloadStarted) {
+      console.log('[TranslationPreload] Retrying after error...');
+      startModelPreload().catch(() => {});
+    }
+    
+    // Check every 100ms
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  console.warn(`[TranslationPreload] ⏱️ Timeout after ${timeoutMs}ms`);
+  return false;
+}
+
+/**
+ * Get a promise that resolves when models are ready
+ * Use this to queue operations that need translation
+ */
+export function getReadyPromise(): Promise<void> {
+  if (globalState.isReady) {
+    return Promise.resolve();
+  }
+  
+  return new Promise((resolve, reject) => {
+    // Start preload if needed
+    if (!globalState.preloadStarted) {
+      startModelPreload().catch(() => {});
+    }
+    
+    const checkReady = () => {
+      if (globalState.isReady) {
+        subscribers.delete(checkReady);
+        resolve();
+      } else if (globalState.error && !globalState.isLoading) {
+        subscribers.delete(checkReady);
+        reject(new Error(globalState.error));
+      }
+    };
+    
+    subscribers.add(checkReady);
+    
+    // Also check immediately
+    checkReady();
+  });
 }
 
 /**
@@ -176,6 +263,13 @@ export function isTranslationReady(): boolean {
  */
 export function getTranslationProgress(): number {
   return globalState.progress;
+}
+
+/**
+ * Check if preload has started
+ */
+export function isPreloadStarted(): boolean {
+  return globalState.preloadStarted;
 }
 
 export default useTranslationPreload;
