@@ -1,12 +1,22 @@
 /**
- * Translation Engine
- * Core translation logic using Xenova/HuggingFace models
+ * Translation Engine - Browser-Based Semantic Translation
+ * =========================================================
+ * 
+ * Core translation using Xenova/HuggingFace NLLB-200 and M2M-100 models
+ * Runs entirely in-browser via WebAssembly - zero server dependency
+ * 
+ * FEATURES:
+ * - Semantic translation (meaning-based, not phonetic)
+ * - Bidirectional sender/receiver chat translation
+ * - English pivot for cross-language pairs
+ * - Lazy model loading with caching
+ * - All input types: English, native script, voice, Gboard, font tools
  */
 
 import { loadM2M, loadNLLB, loadDetector } from './modelLoader';
 import { route } from './router';
 import { getNLLBCode, getM2MCode } from './iso639';
-import { normalizeLanguageCode, isEnglish } from './languages';
+import { normalizeLanguageCode, isEnglish, isSameLanguage } from './languages';
 import type { TranslationResult, ChatTranslationResult, TranslationPath } from './types';
 
 // Translation cache for performance
@@ -91,7 +101,7 @@ async function translateWithM2M(text: string, src: string, tgt: string): Promise
   const srcCode = getM2MCode(src) || src;
   const tgtCode = getM2MCode(tgt) || tgt;
   
-  console.log(`[XenovaEngine] M2M: ${srcCode} → ${tgtCode}`);
+  console.log(`[XenovaEngine] M2M semantic: ${srcCode} → ${tgtCode}`);
   
   const result = await translator(text, {
     src_lang: srcCode,
@@ -99,22 +109,28 @@ async function translateWithM2M(text: string, src: string, tgt: string): Promise
   });
   
   const output = result[0]?.translation_text || text;
-  console.log(`[XenovaEngine] M2M result: "${text}" → "${output}"`);
+  console.log(`[XenovaEngine] M2M result: "${text.substring(0, 30)}" → "${output.substring(0, 30)}"`);
   return output;
 }
 
 /**
  * Translate text using NLLB-200 (non-Latin scripts) - SEMANTIC TRANSLATION
+ * This is the PRIMARY method for semantic meaning-based translation
  */
 async function translateWithNLLB(text: string, src: string, tgt: string): Promise<string> {
   const translator = await loadNLLB();
   
-  // Get proper NLLB codes (e.g., "hi" → "hin_Deva", "te" → "tel_Telu")
+  // Get proper NLLB codes with script tags (e.g., "hi" → "hin_Deva", "te" → "tel_Telu")
   const srcCode = getNLLBCode(src);
   const tgtCode = getNLLBCode(tgt);
   
   if (!srcCode || !tgtCode) {
     console.warn(`[XenovaEngine] Missing NLLB code: src=${src}→${srcCode}, tgt=${tgt}→${tgtCode}`);
+    // Fallback to M2M if available
+    if (getM2MCode(src) && getM2MCode(tgt)) {
+      console.log('[XenovaEngine] Falling back to M2M for:', src, '→', tgt);
+      return translateWithM2M(text, src, tgt);
+    }
     return text;
   }
   
@@ -127,12 +143,13 @@ async function translateWithNLLB(text: string, src: string, tgt: string): Promis
   });
   
   const output = result[0]?.translation_text || text;
-  console.log(`[XenovaEngine] NLLB result: "${text}" → "${output}"`);
+  console.log(`[XenovaEngine] NLLB result: "${text.substring(0, 30)}" → "${output.substring(0, 30)}"`);
   return output;
 }
 
 /**
- * Main translation function
+ * Main translation function - SEMANTIC MEANING-BASED
+ * Works for ANY input type: typed English, native script, voice, Gboard, font tools
  */
 export async function translateText(
   text: string,
@@ -143,14 +160,26 @@ export async function translateText(
   const src = normalizeLanguageCode(sourceLang);
   const tgt = normalizeLanguageCode(targetLang);
   
-  console.log(`[XenovaEngine] translateText called: "${text.substring(0, 50)}" | src=${sourceLang} → ${src} | tgt=${targetLang} → ${tgt}`);
+  console.log(`[XenovaEngine] translateText: "${text.substring(0, 40)}" | ${sourceLang}→${src} | ${targetLang}→${tgt}`);
   
   // Empty text
   if (!text.trim()) {
-    console.log('[XenovaEngine] Empty text, returning early');
     return {
       text: '',
       originalText: '',
+      sourceLang: src,
+      targetLang: tgt,
+      path: 'SAME',
+      isTranslated: false,
+    };
+  }
+  
+  // Same language check
+  if (isSameLanguage(src, tgt)) {
+    console.log('[XenovaEngine] Same language, no translation needed');
+    return {
+      text: originalText,
+      originalText,
       sourceLang: src,
       targetLang: tgt,
       path: 'SAME',
@@ -162,7 +191,7 @@ export async function translateText(
   const cacheKey = getCacheKey(text, src, tgt);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    console.log(`[XenovaEngine] Cache hit for: ${src} → ${tgt}`);
+    console.log(`[XenovaEngine] Cache hit: ${src} → ${tgt}`);
     return cached;
   }
   
@@ -187,12 +216,12 @@ export async function translateText(
         break;
         
       case 'PIVOT_EN':
-        // SEMANTIC PIVOT: Source → English (meaning) → Target (meaning)
-        console.log(`[XenovaEngine] Semantic pivot: ${src} → en → ${tgt}`);
+        // SEMANTIC PIVOT: Source → English (get meaning) → Target (express meaning)
+        console.log(`[XenovaEngine] Pivot translation: ${src} → en → ${tgt}`);
         const englishMeaning = await translateWithNLLB(text, src, 'en');
-        console.log(`[XenovaEngine] Step 1 (${src}→en): "${text}" → "${englishMeaning}"`);
+        console.log(`[XenovaEngine] Step 1 (${src}→en): "${text.substring(0, 20)}" → "${englishMeaning.substring(0, 20)}"`);
         translatedText = await translateWithNLLB(englishMeaning, 'en', tgt);
-        console.log(`[XenovaEngine] Step 2 (en→${tgt}): "${englishMeaning}" → "${translatedText}"`);
+        console.log(`[XenovaEngine] Step 2 (en→${tgt}): "${englishMeaning.substring(0, 20)}" → "${translatedText.substring(0, 20)}"`);
         break;
         
       case 'FALLBACK':
@@ -212,27 +241,36 @@ export async function translateText(
     };
   }
   
+  const isActuallyTranslated = path !== 'SAME' && path !== 'FALLBACK' && translatedText !== originalText;
+  
   const result: TranslationResult = {
     text: translatedText,
     originalText,
     sourceLang: src,
     targetLang: tgt,
     path,
-    isTranslated: path !== 'SAME' && path !== 'FALLBACK' && translatedText !== originalText,
+    isTranslated: isActuallyTranslated,
   };
   
   // Cache successful translations
-  if (result.isTranslated) {
+  if (isActuallyTranslated) {
     addToCache(cacheKey, result);
   }
   
-  console.log(`[XenovaEngine] ${src} → ${tgt}: "${originalText.substring(0, 30)}" → "${translatedText.substring(0, 30)}"`);
+  console.log(`[XenovaEngine] RESULT: ${src}→${tgt}: "${originalText.substring(0, 25)}" → "${translatedText.substring(0, 25)}" (translated=${isActuallyTranslated})`);
   
   return result;
 }
 
 /**
- * Translate for chat - generates views for both sender and receiver
+ * Translate for bidirectional chat - generates views for both sender and receiver
+ * 
+ * This is the MAIN function for chat translation:
+ * - Sender sees their message in THEIR mother tongue
+ * - Receiver sees the message in THEIR mother tongue  
+ * - English meaning is always extracted for display
+ * 
+ * Works with ALL input types: English typing, native script, voice, Gboard, font tools
  */
 export async function translateForChat(
   text: string,
@@ -242,6 +280,8 @@ export async function translateForChat(
   const originalText = text;
   const sender = normalizeLanguageCode(senderLang);
   const receiver = normalizeLanguageCode(receiverLang);
+  
+  console.log(`[XenovaEngine] translateForChat: "${text.substring(0, 40)}" | sender=${senderLang}→${sender} | receiver=${receiverLang}→${receiver}`);
   
   // Empty text
   if (!text.trim()) {
@@ -261,13 +301,23 @@ export async function translateForChat(
   let path: TranslationPath = 'SAME';
   
   try {
-    // Same language - no translation
-    if (sender === receiver) {
-      // Still get English for reference if not English
+    // ============================================
+    // CASE 1: Same language - no translation needed
+    // ============================================
+    if (isSameLanguage(sender, receiver)) {
+      console.log('[XenovaEngine] Same language pair - passthrough');
+      
+      // Still get English meaning for display (if not English)
       if (!isEnglish(sender)) {
-        const enResult = await translateText(text, sender, 'en');
-        englishCore = enResult.text;
+        try {
+          const enResult = await translateText(text, sender, 'en');
+          englishCore = enResult.text;
+          console.log('[XenovaEngine] English meaning:', englishCore.substring(0, 40));
+        } catch (e) {
+          console.warn('[XenovaEngine] English extraction failed:', e);
+        }
       }
+      
       return {
         senderView: text,
         receiverView: text,
@@ -278,36 +328,55 @@ export async function translateForChat(
       };
     }
     
-    // Sender typed in English
+    // ============================================
+    // CASE 2: Sender typed in English
+    // ============================================
     if (isEnglish(sender)) {
+      console.log('[XenovaEngine] Sender is English speaker');
       englishCore = text;
+      senderView = text;
       
-      // Translate English → receiver's language
+      // Translate English → receiver's mother tongue
       const receiverResult = await translateText(text, 'en', receiver);
       receiverView = receiverResult.text;
       path = receiverResult.path;
       
-    } else if (isEnglish(receiver)) {
-      // Receiver speaks English - translate sender's native to English
+      console.log(`[XenovaEngine] Receiver view (${receiver}):`, receiverView.substring(0, 40));
+    }
+    // ============================================
+    // CASE 3: Receiver speaks English
+    // ============================================
+    else if (isEnglish(receiver)) {
+      console.log('[XenovaEngine] Receiver is English speaker');
+      
+      // Translate sender's native to English
       const enResult = await translateText(text, sender, 'en');
       englishCore = enResult.text;
       receiverView = enResult.text;
+      senderView = text;
       path = enResult.path;
       
-    } else {
-      // Both non-English - pivot through English
-      // Step 1: sender → English
+      console.log('[XenovaEngine] English translation:', englishCore.substring(0, 40));
+    }
+    // ============================================
+    // CASE 4: Both non-English - pivot through English
+    // ============================================
+    else {
+      console.log(`[XenovaEngine] Cross-language: ${sender} → ${receiver} via English`);
+      
+      // Step 1: sender's language → English (extract meaning)
       const enResult = await translateText(text, sender, 'en');
       englishCore = enResult.text;
+      console.log('[XenovaEngine] English core:', englishCore.substring(0, 40));
       
-      // Step 2: English → receiver
+      // Step 2: English → receiver's mother tongue (express meaning)
       const receiverResult = await translateText(englishCore, 'en', receiver);
       receiverView = receiverResult.text;
+      console.log(`[XenovaEngine] Receiver view (${receiver}):`, receiverView.substring(0, 40));
+      
+      senderView = text;
       path = 'PIVOT_EN';
     }
-    
-    // Sender view is the original text (in their language)
-    senderView = text;
     
   } catch (error) {
     console.error('[XenovaEngine] Chat translation error:', error);
@@ -321,10 +390,13 @@ export async function translateForChat(
     };
   }
   
-  console.log(`[XenovaEngine] Chat: ${sender} → ${receiver}`);
-  console.log(`  Sender sees: "${senderView.substring(0, 30)}"`);
-  console.log(`  Receiver sees: "${receiverView.substring(0, 30)}"`);
-  console.log(`  English core: "${englishCore.substring(0, 30)}"`);
+  const isActuallyTranslated = path !== 'SAME' && path !== 'FALLBACK' && (senderView !== receiverView || englishCore !== text);
+  
+  console.log(`[XenovaEngine] CHAT RESULT:
+    Sender (${sender}) sees: "${senderView.substring(0, 30)}"
+    Receiver (${receiver}) sees: "${receiverView.substring(0, 30)}"
+    English meaning: "${englishCore.substring(0, 30)}"
+    Translated: ${isActuallyTranslated}`);
   
   return {
     senderView,
@@ -332,12 +404,13 @@ export async function translateForChat(
     englishCore,
     originalText,
     path,
-    isTranslated: path !== 'SAME' && path !== 'FALLBACK',
+    isTranslated: isActuallyTranslated,
   };
 }
 
 /**
- * Get English meaning of any text
+ * Get English semantic meaning of any text
+ * Used for displaying English translation below messages
  */
 export async function getEnglishMeaning(text: string, sourceLang: string): Promise<string> {
   if (!text.trim()) return '';
@@ -348,7 +421,10 @@ export async function getEnglishMeaning(text: string, sourceLang: string): Promi
     return text;
   }
   
+  console.log(`[XenovaEngine] Getting English meaning from ${src}:`, text.substring(0, 40));
+  
   const result = await translateText(text, src, 'en');
+  console.log('[XenovaEngine] English meaning result:', result.text.substring(0, 40));
   return result.text;
 }
 
