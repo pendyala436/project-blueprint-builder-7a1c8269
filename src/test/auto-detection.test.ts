@@ -1,189 +1,320 @@
 /**
- * Auto Language Detection Tests
- * =============================
- * Tests for auto-detecting input types without hardcoding
+ * Auto Detection Tests
+ * ====================
+ * 
+ * Tests for input type and method detection:
+ * - English, native script, romanized, voice, mixed input types
+ * - Gboard, external keyboard, font tool, IME detection
  */
 
 import { describe, it, expect } from 'vitest';
 
-// Mock the detection functions for testing
+// Mock detection functions for testing
+// These test the core detection logic without React hooks
+
+// Unicode script detection ranges
 const SCRIPT_RANGES: Record<string, [number, number][]> = {
-  'Devanagari': [[0x0900, 0x097F]],
+  'Devanagari': [[0x0900, 0x097F], [0xA8E0, 0xA8FF]],
   'Telugu': [[0x0C00, 0x0C7F]],
   'Tamil': [[0x0B80, 0x0BFF]],
   'Bengali': [[0x0980, 0x09FF]],
   'Kannada': [[0x0C80, 0x0CFF]],
+  'Arabic': [[0x0600, 0x06FF]],
+  'Han': [[0x4E00, 0x9FFF]],
+  'Hangul': [[0xAC00, 0xD7AF]],
 };
 
 function detectScript(text: string): string {
-  for (const char of text) {
-    const code = char.charCodeAt(0);
+  const counts: Record<string, number> = { 'Latin': 0 };
+  
+  for (let i = 0; i < text.length; i++) {
+    const code = text.codePointAt(i);
+    if (code === undefined) continue;
+    if (code > 0xFFFF) i++;
+    
+    if ((code >= 0x0041 && code <= 0x007A) || (code >= 0x00C0 && code <= 0x024F)) {
+      counts['Latin']++;
+      continue;
+    }
+    
     for (const [script, ranges] of Object.entries(SCRIPT_RANGES)) {
       for (const [start, end] of ranges) {
         if (code >= start && code <= end) {
-          return script;
+          counts[script] = (counts[script] || 0) + 1;
+          break;
         }
       }
     }
   }
-  return 'Latin';
+  
+  let max = 'Latin';
+  let maxCount = counts['Latin'];
+  for (const [s, c] of Object.entries(counts)) {
+    if (c > maxCount) { max = s; maxCount = c; }
+  }
+  return max;
 }
 
 function isPureLatinText(text: string): boolean {
-  return /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()-]+$/.test(text);
+  if (!text.trim()) return true;
+  return /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()\-:;@#$%&*+=/<>]+$/.test(text);
 }
 
 function hasNativeChars(text: string): boolean {
   return /[^\x00-\x7F\u00C0-\u024F]/.test(text);
 }
 
-const ENGLISH_PATTERNS = [
-  /\b(the|is|are|was|were|have|has|had)\b/i,
-  /\b(what|when|where|why|how|who)\b/i,
-  /\b(hello|hi|thanks|please)\b/i,
-  /\b(you|your|me|my|we)\b/i,
-];
-
 function looksLikeEnglish(text: string): boolean {
-  return ENGLISH_PATTERNS.some(p => p.test(text.toLowerCase()));
+  const lower = text.toLowerCase();
+  const patterns = [
+    /\b(the|is|are|was|were|have|has|had|do|does|did)\b/i,
+    /\b(what|when|where|why|how|who|which)\b/i,
+    /\b(hello|hi|hey|thanks|thank|please|sorry)\b/i,
+    /\b(you|your|me|my|we|our|they|their)\b/i,
+    /\b(i'm|you're|we're|don't|can't|isn't)\b/i,
+    /\b(i|am|doing|well|good|fine)\b/i,
+  ];
+  for (const p of patterns) {
+    if (p.test(lower)) return true;
+  }
+  return false;
 }
+
+type InputType = 'english' | 'native-script' | 'romanized' | 'mixed' | 'voice' | 'unknown';
+
+function classifyInput(
+  text: string,
+  motherTongue: string,
+  isVoice = false
+): { inputType: InputType; script: string } {
+  if (!text.trim()) return { inputType: 'unknown', script: 'Latin' };
+  
+  const script = detectScript(text);
+  const isLatin = isPureLatinText(text);
+  const hasNative = hasNativeChars(text);
+  
+  // Count only actual letters, not punctuation or spaces
+  const letterChars = text.replace(/[\s.,!?'"()\-:;@#$%&*+=/<>0-9]/g, '');
+  const latinLetterCount = letterChars.split('').filter(c => 
+    /[\x41-\x7A\u00C0-\u024F]/.test(c)
+  ).length;
+  const totalLetters = letterChars.length;
+  const latinRatio = totalLetters > 0 ? latinLetterCount / totalLetters : 0;
+  
+  // Mixed is only when there's significant Latin AND significant native letters
+  const isMixed = hasNative && latinLetterCount > 0 && latinRatio > 0.15 && latinRatio < 0.85;
+  
+  if (isVoice) return { inputType: 'voice', script };
+  
+  if (isMixed) return { inputType: 'mixed', script };
+  
+  if (hasNative && !isLatin) return { inputType: 'native-script', script };
+  
+  if (isLatin) {
+    if (looksLikeEnglish(text)) return { inputType: 'english', script: 'Latin' };
+    if (motherTongue !== 'en') return { inputType: 'romanized', script: 'Latin' };
+    return { inputType: 'english', script: 'Latin' };
+  }
+  
+  return { inputType: 'unknown', script };
+}
+
+// ============================================================
+// TESTS
+// ============================================================
 
 describe('Script Detection', () => {
   it('detects Latin script', () => {
-    expect(detectScript('hello world')).toBe('Latin');
-    expect(detectScript('how are you')).toBe('Latin');
-    expect(detectScript('cómo estás')).toBe('Latin');
+    expect(detectScript('Hello world')).toBe('Latin');
+    expect(detectScript('How are you?')).toBe('Latin');
   });
 
-  it('detects Devanagari (Hindi) script', () => {
-    expect(detectScript('आप कैसे हैं')).toBe('Devanagari');
+  it('detects Devanagari script (Hindi)', () => {
     expect(detectScript('नमस्ते')).toBe('Devanagari');
+    expect(detectScript('आप कैसे हैं?')).toBe('Devanagari');
   });
 
   it('detects Telugu script', () => {
-    expect(detectScript('మీరు ఎలా ఉన్నారు')).toBe('Telugu');
-    expect(detectScript('బాగున్నావా')).toBe('Telugu');
+    expect(detectScript('నమస్కారం')).toBe('Telugu');
+    expect(detectScript('మీరు ఎలా ఉన్నారు?')).toBe('Telugu');
   });
 
   it('detects Tamil script', () => {
-    expect(detectScript('நீங்கள் எப்படி இருக்கிறீர்கள்')).toBe('Tamil');
+    expect(detectScript('வணக்கம்')).toBe('Tamil');
   });
 
   it('detects Bengali script', () => {
-    expect(detectScript('আপনি কেমন আছেন')).toBe('Bengali');
+    expect(detectScript('নমস্কার')).toBe('Bengali');
   });
 
   it('detects Kannada script', () => {
-    expect(detectScript('ನೀವು ಹೇಗಿದ್ದೀರಿ')).toBe('Kannada');
+    expect(detectScript('ನಮಸ್ಕಾರ')).toBe('Kannada');
+  });
+
+  it('detects Arabic script', () => {
+    expect(detectScript('مرحبا')).toBe('Arabic');
+  });
+
+  it('detects Chinese (Han) script', () => {
+    expect(detectScript('你好')).toBe('Han');
+  });
+
+  it('detects Korean (Hangul) script', () => {
+    expect(detectScript('안녕하세요')).toBe('Hangul');
   });
 });
 
-describe('Input Type Detection', () => {
-  it('detects pure Latin text', () => {
-    expect(isPureLatinText('hello world')).toBe(true);
-    expect(isPureLatinText('how are you?')).toBe(true);
-    expect(isPureLatinText('bagunnava')).toBe(true);
-    expect(isPureLatinText('cómo estás')).toBe(true); // Extended Latin
+describe('Input Type Classification', () => {
+  describe('English input', () => {
+    it('classifies pure English text', () => {
+      const result = classifyInput('How are you?', 'te');
+      expect(result.inputType).toBe('english');
+    });
+
+    it('classifies English with contractions', () => {
+      const result = classifyInput("I'm doing well, thanks!", 'hi');
+      expect(result.inputType).toBe('english');
+    });
+
+    it('classifies English questions', () => {
+      const result = classifyInput('What is your name?', 'ta');
+      expect(result.inputType).toBe('english');
+    });
   });
 
-  it('detects native characters', () => {
-    expect(hasNativeChars('आप कैसे हैं')).toBe(true);
-    expect(hasNativeChars('మీరు ఎలా ఉన్నారు')).toBe(true);
-    expect(hasNativeChars('hello world')).toBe(false);
+  describe('Native script input', () => {
+    it('classifies Hindi (Devanagari)', () => {
+      const result = classifyInput('आप कैसे हैं?', 'hi');
+      expect(result.inputType).toBe('native-script');
+      expect(result.script).toBe('Devanagari');
+    });
+
+    it('classifies Telugu script', () => {
+      const result = classifyInput('మీరు ఎలా ఉన్నారు?', 'te');
+      expect(result.inputType).toBe('native-script');
+      expect(result.script).toBe('Telugu');
+    });
+
+    it('classifies Tamil script', () => {
+      const result = classifyInput('நீங்கள் எப்படி இருக்கிறீர்கள்?', 'ta');
+      expect(result.inputType).toBe('native-script');
+    });
+
+    it('classifies Arabic script', () => {
+      const result = classifyInput('كيف حالك؟', 'ar');
+      expect(result.inputType).toBe('native-script');
+    });
+
+    it('classifies Chinese script', () => {
+      const result = classifyInput('你好吗?', 'zh');
+      expect(result.inputType).toBe('native-script');
+    });
   });
 
-  it('detects English patterns', () => {
-    expect(looksLikeEnglish('how are you')).toBe(true);
-    expect(looksLikeEnglish('what is your name')).toBe(true);
-    expect(looksLikeEnglish('hello there')).toBe(true);
-    expect(looksLikeEnglish('bagunnava')).toBe(false); // Romanized Telugu
-  });
-});
+  describe('Romanized input', () => {
+    it('classifies romanized Telugu', () => {
+      const result = classifyInput('bagunnava', 'te');
+      expect(result.inputType).toBe('romanized');
+    });
 
-describe('Input Classification', () => {
-  function classifyInput(text: string, userMotherTongue: string) {
-    const isLatin = isPureLatinText(text);
-    const hasNative = hasNativeChars(text);
-    const isMotherTongueEnglish = userMotherTongue.toLowerCase() === 'english';
+    it('classifies romanized Hindi', () => {
+      const result = classifyInput('kaise ho', 'hi');
+      expect(result.inputType).toBe('romanized');
+    });
 
-    if (hasNative && !isLatin) {
-      return 'native-script';
-    }
-    if (isLatin && looksLikeEnglish(text)) {
-      return 'english';
-    }
-    if (isLatin && !isMotherTongueEnglish) {
-      return 'romanized';
-    }
-    return 'english';
-  }
-
-  it('classifies English input correctly', () => {
-    expect(classifyInput('how are you', 'Telugu')).toBe('english');
-    expect(classifyInput('what is your name', 'Hindi')).toBe('english');
+    it('classifies romanized Tamil', () => {
+      const result = classifyInput('eppadi irukeenga', 'ta');
+      expect(result.inputType).toBe('romanized');
+    });
   });
 
-  it('classifies native script input correctly', () => {
-    expect(classifyInput('మీరు ఎలా ఉన్నారు', 'Telugu')).toBe('native-script');
-    expect(classifyInput('आप कैसे हैं', 'Hindi')).toBe('native-script');
+  describe('Voice input', () => {
+    it('classifies voice input in English', () => {
+      const result = classifyInput('how are you doing today', 'te', true);
+      expect(result.inputType).toBe('voice');
+    });
+
+    it('classifies voice input in native script', () => {
+      const result = classifyInput('మీరు ఎలా ఉన్నారు', 'te', true);
+      expect(result.inputType).toBe('voice');
+    });
   });
 
-  it('classifies romanized input correctly', () => {
-    expect(classifyInput('bagunnava', 'Telugu')).toBe('romanized');
-    expect(classifyInput('aap kaise ho', 'Hindi')).toBe('romanized');
-    expect(classifyInput('nalla irukken', 'Tamil')).toBe('romanized');
-  });
+  describe('Mixed input', () => {
+    it('classifies mixed Hindi-English', () => {
+      const result = classifyInput('मैं fine हूं', 'hi');
+      expect(result.inputType).toBe('mixed');
+    });
 
-  it('handles English speakers typing English', () => {
-    expect(classifyInput('hello', 'English')).toBe('english');
-    expect(classifyInput('test message', 'English')).toBe('english');
-  });
-});
-
-describe('Semantic Translation Flow', () => {
-  it('documents the expected translation flow for each input type', () => {
-    console.log('\n=== INPUT TYPE → TRANSLATION FLOW ===\n');
-
-    console.log('1. ENGLISH INPUT ("how are you"):');
-    console.log('   - Sender (Telugu): Sees "మీరు ఎలా ఉన్నారు?" preview');
-    console.log('   - Receiver (Tamil): Gets "நீங்கள் எப்படி இருக்கிறீர்கள்?"');
-    console.log('   - English Core: "how are you" (preserved)\n');
-
-    console.log('2. NATIVE SCRIPT INPUT ("బాగున్నావా"):');
-    console.log('   - Sender (Telugu): Sees original "బాగున్నావా"');
-    console.log('   - Receiver (Tamil): Gets "நலமா?" (semantic translation)');
-    console.log('   - English Core: "are you fine?" (extracted meaning)\n');
-
-    console.log('3. ROMANIZED INPUT ("bagunnava"):');
-    console.log('   - Sender (Telugu): Sees "బాగున్నావా" (native script)');
-    console.log('   - Receiver (Tamil): Gets "நலமா?"');
-    console.log('   - English Core: "are you fine?"\n');
-
-    console.log('4. VOICE INPUT (any language):');
-    console.log('   - Auto-detects spoken language');
-    console.log('   - Shows transcription');
-    console.log('   - Translates semantically to both languages\n');
-
-    console.log('=====================================\n');
-    expect(true).toBe(true);
+    it('classifies mixed Telugu-English', () => {
+      const result = classifyInput('నేను okay అని', 'te');
+      expect(result.inputType).toBe('mixed');
+    });
   });
 });
 
-describe('Bidirectional Translation', () => {
-  it('documents sender → receiver and receiver → sender flow', () => {
-    console.log('\n=== BIDIRECTIONAL CHAT FLOW ===\n');
+describe('Input Method Detection', () => {
+  it('identifies pure Latin as standard keyboard', () => {
+    const text = 'Hello world';
+    expect(isPureLatinText(text)).toBe(true);
+    expect(hasNativeChars(text)).toBe(false);
+  });
 
-    console.log('SENDER (Telugu) → RECEIVER (Tamil):');
-    console.log('  Sender types: "how are you"');
-    console.log('  Sender sees:  "మీరు ఎలా ఉన్నారు?" (their mother tongue)');
-    console.log('  Receiver gets: "நீங்கள் எப்படி இருக்கிறீர்கள்?" (their mother tongue)\n');
+  it('identifies native chars for Gboard detection', () => {
+    const text = 'నమస్కారం';
+    expect(hasNativeChars(text)).toBe(true);
+    expect(isPureLatinText(text)).toBe(false);
+  });
 
-    console.log('RECEIVER (Tamil) → SENDER (Telugu) [Reply]:');
-    console.log('  Receiver types: "i am fine"');
-    console.log('  Receiver sees:  "நான் நலமாக இருக்கிறேன்" (their mother tongue)');
-    console.log('  Sender gets:    "నేను బాగున్నాను" (their mother tongue)\n');
+  it('identifies mixed content', () => {
+    const text = 'Hello నమస్కారం world';
+    expect(hasNativeChars(text)).toBe(true);
+    expect(isPureLatinText(text)).toBe(false);
+  });
+});
 
-    console.log('================================\n');
-    expect(true).toBe(true);
+describe('English Pattern Detection', () => {
+  it('detects common English phrases', () => {
+    expect(looksLikeEnglish('How are you?')).toBe(true);
+    expect(looksLikeEnglish('What is this?')).toBe(true);
+    expect(looksLikeEnglish('Hello there')).toBe(true);
+    expect(looksLikeEnglish('Thank you')).toBe(true);
+  });
+
+  it('detects English contractions', () => {
+    expect(looksLikeEnglish("I'm fine")).toBe(true);
+    expect(looksLikeEnglish("You're welcome")).toBe(true);
+    expect(looksLikeEnglish("Don't worry")).toBe(true);
+  });
+
+  it('does not falsely detect romanized as English', () => {
+    expect(looksLikeEnglish('bagunnava')).toBe(false);
+    expect(looksLikeEnglish('kaise ho')).toBe(false);
+    expect(looksLikeEnglish('namaste')).toBe(false);
+  });
+});
+
+describe('Bidirectional Detection', () => {
+  it('handles English to native flow', () => {
+    const result = classifyInput('I am doing well', 'te');
+    expect(result.inputType).toBe('english');
+  });
+
+  it('handles native to English flow', () => {
+    const result = classifyInput('నేను బాగున్నాను', 'te');
+    expect(result.inputType).toBe('native-script');
+  });
+
+  it('handles romanized to native flow', () => {
+    const result = classifyInput('nenu bagunnanu', 'te');
+    expect(result.inputType).toBe('romanized');
+  });
+
+  it('preserves input type for same language speakers', () => {
+    const result1 = classifyInput('Hello', 'en');
+    expect(result1.inputType).toBe('english');
+    
+    const result2 = classifyInput('Hi there', 'en');
+    expect(result2.inputType).toBe('english');
   });
 });

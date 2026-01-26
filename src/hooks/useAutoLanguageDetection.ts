@@ -2,13 +2,17 @@
  * Auto Language Detection Hook
  * =============================
  * 
- * Automatically detects input type and source language:
+ * Automatically detects input type, source language, and input method:
  * 1. English typing: "how are you"
  * 2. Native script: "బాగున్నావా" (direct native keyboard/Gboard)
  * 3. Romanized: "bagunnava" (English letters, native meaning)
- * 4. Voice-to-text: Any language
+ * 4. Voice-to-text: Any language via Web Speech API
+ * 5. Gboard: Android/iOS virtual keyboard with native script
+ * 6. External keyboards: Hardware/Bluetooth keyboards
+ * 7. Font-based: Google Input Tools, transliteration services
+ * 8. Mixed: Combination of scripts in single input
  * 
- * NO HARDCODING - uses Unicode detection and ML models
+ * NO HARDCODING - uses Unicode detection, input events, and ML models
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -27,20 +31,175 @@ export type InputType =
   | 'voice'             // Voice-to-text input
   | 'unknown';
 
+export type InputMethod = 
+  | 'gboard'            // Google Keyboard (Android/iOS)
+  | 'swiftkey'          // Microsoft SwiftKey
+  | 'samsung'           // Samsung Keyboard
+  | 'ios-native'        // iOS native keyboard
+  | 'external'          // Hardware/Bluetooth keyboard
+  | 'virtual'           // Generic virtual keyboard
+  | 'font-tool'         // Google Input Tools, transliteration
+  | 'voice'             // Voice-to-text
+  | 'ime'               // Input Method Editor (CJK, etc.)
+  | 'standard';         // Standard keyboard
+
 export interface DetectionResult {
   inputType: InputType;
+  inputMethod: InputMethod;
   detectedLanguage: string;      // ISO code
   detectedLanguageName: string;  // Human readable
   isLatinInput: boolean;
   isNativeInput: boolean;
   confidence: number;
   script: string;
+  metadata: InputMetadata;
+}
+
+export interface InputMetadata {
+  isGboard: boolean;
+  isExternalKeyboard: boolean;
+  isVoiceInput: boolean;
+  isFontTool: boolean;
+  isMixedInput: boolean;
+  isIME: boolean;
+  inputEventType: string;
+  compositionActive: boolean;
+  characterBurstDetected: boolean;
 }
 
 export interface UseAutoLanguageDetectionOptions {
   userMotherTongue: string;       // User's configured mother tongue
   fallbackLanguage?: string;      // Fallback if detection fails (default: 'en')
   debounceMs?: number;            // Detection debounce (default: 150ms)
+}
+
+// ============================================================
+// INPUT METHOD DETECTION
+// ============================================================
+
+// Track input events for method detection
+interface InputEventTracker {
+  lastInputTime: number;
+  lastInputType: string;
+  compositionActive: boolean;
+  characterBurstCount: number;
+  lastCharacterTime: number;
+  inputPattern: string[];
+}
+
+const inputTracker: InputEventTracker = {
+  lastInputTime: 0,
+  lastInputType: '',
+  compositionActive: false,
+  characterBurstCount: 0,
+  lastCharacterTime: 0,
+  inputPattern: [],
+};
+
+/**
+ * Detect if running on mobile device (likely using Gboard/virtual keyboard)
+ */
+function detectMobileDevice(): { isMobile: boolean; isAndroid: boolean; isIOS: boolean } {
+  if (typeof navigator === 'undefined') {
+    return { isMobile: false, isAndroid: false, isIOS: false };
+  }
+  
+  const ua = navigator.userAgent.toLowerCase();
+  const isAndroid = /android/.test(ua);
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isMobile = isAndroid || isIOS || /mobile|tablet/.test(ua);
+  
+  return { isMobile, isAndroid, isIOS };
+}
+
+/**
+ * Detect input method from input event characteristics
+ */
+function detectInputMethod(
+  inputEvent: InputEvent | null,
+  text: string,
+  isVoice: boolean
+): InputMethod {
+  // Voice input override
+  if (isVoice) return 'voice';
+  
+  const device = detectMobileDevice();
+  
+  // Check for IME/composition (CJK, Korean, etc.)
+  if (inputTracker.compositionActive) {
+    return 'ime';
+  }
+  
+  // Analyze input event type
+  if (inputEvent) {
+    const inputType = inputEvent.inputType || '';
+    
+    // Font-based tools often insert via insertFromPaste or insertText with long strings
+    if (inputType === 'insertFromPaste' || inputType === 'insertFromDrop') {
+      // Check if pasted text looks like it came from a transliteration tool
+      if (hasNativeChars(text) && inputTracker.inputPattern.includes('latin')) {
+        return 'font-tool';
+      }
+    }
+    
+    // Detect character burst (fast sequential native chars = likely virtual keyboard prediction)
+    const now = Date.now();
+    if (now - inputTracker.lastCharacterTime < 50) {
+      inputTracker.characterBurstCount++;
+    } else {
+      inputTracker.characterBurstCount = 0;
+    }
+    inputTracker.lastCharacterTime = now;
+    
+    // High burst rate suggests auto-complete/prediction from virtual keyboard
+    if (inputTracker.characterBurstCount > 3) {
+      if (device.isAndroid) return 'gboard';
+      if (device.isIOS) return 'ios-native';
+      return 'virtual';
+    }
+  }
+  
+  // Device-based detection
+  if (device.isAndroid) {
+    return 'gboard'; // Most common on Android
+  }
+  
+  if (device.isIOS) {
+    return 'ios-native';
+  }
+  
+  // Check for external keyboard indicators
+  // External keyboards typically have more consistent timing and no prediction bursts
+  if (!device.isMobile && inputTracker.characterBurstCount === 0) {
+    return 'external';
+  }
+  
+  return 'standard';
+}
+
+/**
+ * Track input event for pattern analysis
+ */
+export function trackInputEvent(event: InputEvent): void {
+  inputTracker.lastInputTime = Date.now();
+  inputTracker.lastInputType = event.inputType || 'unknown';
+  
+  // Track script pattern (last 5 inputs)
+  const data = event.data || '';
+  if (data) {
+    const isNative = hasNativeChars(data);
+    inputTracker.inputPattern.push(isNative ? 'native' : 'latin');
+    if (inputTracker.inputPattern.length > 5) {
+      inputTracker.inputPattern.shift();
+    }
+  }
+}
+
+/**
+ * Track composition events (for IME detection)
+ */
+export function trackComposition(isStarting: boolean): void {
+  inputTracker.compositionActive = isStarting;
 }
 
 // ============================================================
@@ -57,22 +216,25 @@ const SCRIPT_RANGES: Record<string, [number, number][]> = {
   'Gujarati': [[0x0A80, 0x0AFF]],
   'Gurmukhi': [[0x0A00, 0x0A7F]],
   'Odia': [[0x0B00, 0x0B7F]],
-  'Arabic': [[0x0600, 0x06FF], [0x0750, 0x077F]],
+  'Arabic': [[0x0600, 0x06FF], [0x0750, 0x077F], [0x08A0, 0x08FF]],
   'Cyrillic': [[0x0400, 0x04FF], [0x0500, 0x052F]],
-  'Greek': [[0x0370, 0x03FF]],
+  'Greek': [[0x0370, 0x03FF], [0x1F00, 0x1FFF]],
   'Hebrew': [[0x0590, 0x05FF]],
   'Thai': [[0x0E00, 0x0E7F]],
-  'Han': [[0x4E00, 0x9FFF], [0x3400, 0x4DBF]],
-  'Hangul': [[0xAC00, 0xD7AF], [0x1100, 0x11FF]],
-  'Japanese': [[0x3040, 0x309F], [0x30A0, 0x30FF]],
-  'Georgian': [[0x10A0, 0x10FF]],
+  'Han': [[0x4E00, 0x9FFF], [0x3400, 0x4DBF], [0x20000, 0x2A6DF]],
+  'Hangul': [[0xAC00, 0xD7AF], [0x1100, 0x11FF], [0x3130, 0x318F]],
+  'Hiragana': [[0x3040, 0x309F]],
+  'Katakana': [[0x30A0, 0x30FF], [0x31F0, 0x31FF]],
+  'Georgian': [[0x10A0, 0x10FF], [0x2D00, 0x2D2F]],
   'Armenian': [[0x0530, 0x058F]],
-  'Ethiopic': [[0x1200, 0x137F]],
+  'Ethiopic': [[0x1200, 0x137F], [0x1380, 0x139F]],
   'Myanmar': [[0x1000, 0x109F]],
   'Khmer': [[0x1780, 0x17FF]],
   'Lao': [[0x0E80, 0x0EFF]],
   'Sinhala': [[0x0D80, 0x0DFF]],
   'Tibetan': [[0x0F00, 0x0FFF]],
+  'Thaana': [[0x0780, 0x07BF]],
+  'Mongolian': [[0x1800, 0x18AF]],
 };
 
 // Script to language mapping (dynamic)
@@ -93,7 +255,8 @@ const SCRIPT_TO_LANG: Record<string, string> = {
   'Thai': 'th',
   'Han': 'zh',
   'Hangul': 'ko',
-  'Japanese': 'ja',
+  'Hiragana': 'ja',
+  'Katakana': 'ja',
   'Georgian': 'ka',
   'Armenian': 'hy',
   'Ethiopic': 'am',
@@ -102,6 +265,8 @@ const SCRIPT_TO_LANG: Record<string, string> = {
   'Lao': 'lo',
   'Sinhala': 'si',
   'Tibetan': 'bo',
+  'Thaana': 'dv',
+  'Mongolian': 'mn',
 };
 
 /**
@@ -110,8 +275,12 @@ const SCRIPT_TO_LANG: Record<string, string> = {
 function detectScript(text: string): { script: string; counts: Record<string, number> } {
   const scriptCounts: Record<string, number> = { 'Latin': 0 };
   
-  for (const char of text) {
-    const code = char.charCodeAt(0);
+  for (let i = 0; i < text.length; i++) {
+    const code = text.codePointAt(i);
+    if (code === undefined) continue;
+    
+    // Handle surrogate pairs
+    if (code > 0xFFFF) i++;
     
     // Latin check (extended)
     if ((code >= 0x0041 && code <= 0x007A) || (code >= 0x00C0 && code <= 0x024F)) {
@@ -150,7 +319,7 @@ function detectScript(text: string): { script: string; counts: Record<string, nu
 function isPureLatinText(text: string): boolean {
   if (!text.trim()) return true;
   // Allow only Latin letters, numbers, and common punctuation
-  return /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()-]+$/.test(text);
+  return /^[\x00-\x7F\u00C0-\u024F\s\d.,!?'"()\-:;@#$%&*+=/<>]+$/.test(text);
 }
 
 /**
@@ -159,6 +328,30 @@ function isPureLatinText(text: string): boolean {
 function hasNativeChars(text: string): boolean {
   // Any character outside basic Latin and extended Latin
   return /[^\x00-\x7F\u00C0-\u024F]/.test(text);
+}
+
+/**
+ * Check if input looks like it came from a font-based tool
+ * (Google Input Tools, online transliterators, etc.)
+ */
+function detectFontTool(text: string, prevText: string): boolean {
+  if (!text || !prevText) return false;
+  
+  // Font tools often replace entire words at once
+  // Check if a Latin word was suddenly replaced with native script
+  const prevLatin = isPureLatinText(prevText);
+  const currNative = hasNativeChars(text);
+  
+  // If previous was Latin and current has native, with significant change
+  if (prevLatin && currNative) {
+    const lengthRatio = text.length / Math.max(prevText.length, 1);
+    // Font tools typically maintain similar length or expand slightly
+    if (lengthRatio > 0.5 && lengthRatio < 3) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -172,6 +365,7 @@ const COMMON_ENGLISH_PATTERNS = [
   /\b(hello|hi|hey|thanks|thank|please|sorry)\b/i,
   /\b(good|nice|great|fine|okay|ok)\b/i,
   /\b(you|your|me|my|we|our|they|their)\b/i,
+  /\b(i|am|be|been|being|a|an|and|or|but|not)\b/i,
 ];
 
 /**
@@ -186,8 +380,13 @@ function looksLikeEnglish(text: string): boolean {
   }
   
   // Check for common English word endings
-  const englishEndings = /\b\w+(ing|tion|ness|ment|ful|less|able|ible|ly|ed|er|est)\b/i;
+  const englishEndings = /\b\w+(ing|tion|ness|ment|ful|less|able|ible|ly|ed|er|est|ous|ive)\b/i;
   if (englishEndings.test(lower)) return true;
+  
+  // Check for English contractions
+  if (/\b(i'm|you're|we're|they're|it's|don't|won't|can't|isn't|aren't|wasn't|weren't)\b/i.test(lower)) {
+    return true;
+  }
   
   return false;
 }
@@ -207,6 +406,7 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
   const [isDetecting, setIsDetecting] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastTextRef = useRef<string>('');
+  const lastInputEventRef = useRef<InputEvent | null>(null);
   
   // Normalize user's mother tongue
   const motherTongueCode = normalizeLanguageCode(userMotherTongue);
@@ -214,18 +414,45 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
   const isMotherTongueLatin = isLatinLanguage(motherTongueCode);
 
   /**
+   * Create metadata object
+   */
+  const createMetadata = useCallback((
+    inputMethod: InputMethod,
+    isMixed: boolean,
+    inputType: string
+  ): InputMetadata => {
+    return {
+      isGboard: inputMethod === 'gboard',
+      isExternalKeyboard: inputMethod === 'external',
+      isVoiceInput: inputMethod === 'voice',
+      isFontTool: inputMethod === 'font-tool',
+      isMixedInput: isMixed,
+      isIME: inputMethod === 'ime',
+      inputEventType: inputType,
+      compositionActive: inputTracker.compositionActive,
+      characterBurstDetected: inputTracker.characterBurstCount > 3,
+    };
+  }, []);
+
+  /**
    * Instant detection (synchronous, for immediate feedback)
    */
-  const detectInstant = useCallback((text: string): DetectionResult => {
+  const detectInstant = useCallback((
+    text: string,
+    isVoiceInput = false,
+    inputEvent: InputEvent | null = null
+  ): DetectionResult => {
     if (!text.trim()) {
       return {
         inputType: 'unknown',
+        inputMethod: 'standard',
         detectedLanguage: fallbackLanguage,
         detectedLanguageName: 'Unknown',
         isLatinInput: true,
         isNativeInput: false,
         confidence: 0,
         script: 'Latin',
+        metadata: createMetadata('standard', false, ''),
       };
     }
     
@@ -236,13 +463,45 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
     
     const isLatin = isPureLatinText(text);
     const hasNative = hasNativeChars(text);
+    const isMixed = hasNative && latinCount > 0 && latinRatio > 0.1 && latinRatio < 0.9;
+    
+    // Detect font tool usage
+    const isFontToolInput = detectFontTool(text, lastTextRef.current);
+    
+    // Detect input method
+    let inputMethod = detectInputMethod(inputEvent, text, isVoiceInput);
+    if (isFontToolInput) inputMethod = 'font-tool';
     
     let inputType: InputType = 'unknown';
     let detectedLang = fallbackLanguage;
     let confidence = 0.5;
     
-    if (hasNative && !isLatin) {
-      // NATIVE SCRIPT INPUT (Gboard, native keyboard)
+    if (isVoiceInput) {
+      // VOICE INPUT
+      inputType = 'voice';
+      inputMethod = 'voice';
+      if (hasNative) {
+        detectedLang = SCRIPT_TO_LANG[script] || motherTongueCode;
+        confidence = 0.9;
+      } else if (looksLikeEnglish(text)) {
+        detectedLang = 'en';
+        confidence = 0.85;
+      } else {
+        detectedLang = motherTongueCode;
+        confidence = 0.7;
+      }
+    } else if (isMixed) {
+      // MIXED INPUT (combination of scripts)
+      inputType = 'mixed';
+      // Determine primary language based on dominant script
+      if (latinRatio > 0.5) {
+        detectedLang = looksLikeEnglish(text) ? 'en' : motherTongueCode;
+      } else {
+        detectedLang = SCRIPT_TO_LANG[script] || motherTongueCode;
+      }
+      confidence = 0.65;
+    } else if (hasNative && !isLatin) {
+      // NATIVE SCRIPT INPUT (Gboard, native keyboard, font tool, IME)
       inputType = 'native-script';
       detectedLang = SCRIPT_TO_LANG[script] || motherTongueCode;
       confidence = 0.95;
@@ -258,34 +517,35 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
         detectedLang = motherTongueCode;
         confidence = 0.7;
       } else {
-        // Latin mother tongue user typing Latin = likely their language
+        // Latin mother tongue user typing Latin = likely their language or English
         inputType = 'english';
         detectedLang = 'en';
         confidence = 0.6;
       }
-    } else if (hasNative && latinCount > 0) {
-      // MIXED INPUT
-      inputType = 'mixed';
-      detectedLang = latinRatio > 0.5 ? 'en' : (SCRIPT_TO_LANG[script] || motherTongueCode);
-      confidence = 0.6;
     }
     
     return {
       inputType,
+      inputMethod,
       detectedLanguage: detectedLang,
       detectedLanguageName: getLanguageName(detectedLang),
       isLatinInput: isLatin,
       isNativeInput: hasNative && !isLatin,
       confidence,
       script,
+      metadata: createMetadata(inputMethod, isMixed, lastInputEventRef.current?.inputType || ''),
     };
-  }, [motherTongueCode, isMotherTongueEnglish, isMotherTongueLatin, fallbackLanguage]);
+  }, [motherTongueCode, isMotherTongueEnglish, isMotherTongueLatin, fallbackLanguage, createMetadata]);
 
   /**
    * ML-based detection (async, for higher accuracy)
    */
-  const detectWithML = useCallback(async (text: string): Promise<DetectionResult> => {
-    const instant = detectInstant(text);
+  const detectWithML = useCallback(async (
+    text: string,
+    isVoiceInput = false,
+    inputEvent: InputEvent | null = null
+  ): Promise<DetectionResult> => {
+    const instant = detectInstant(text, isVoiceInput, inputEvent);
     
     // Only use ML for ambiguous cases
     if (instant.confidence > 0.8) {
@@ -311,11 +571,36 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
   }, [detectInstant]);
 
   /**
+   * Handle input event tracking
+   */
+  const handleInputEvent = useCallback((event: InputEvent) => {
+    trackInputEvent(event);
+    lastInputEventRef.current = event;
+  }, []);
+
+  /**
+   * Handle composition events
+   */
+  const handleCompositionStart = useCallback(() => {
+    trackComposition(true);
+  }, []);
+
+  const handleCompositionEnd = useCallback(() => {
+    trackComposition(false);
+  }, []);
+
+  /**
    * Main detection function with debouncing
    */
-  const detect = useCallback((text: string, isVoiceInput = false) => {
-    if (text === lastTextRef.current) return;
+  const detect = useCallback((text: string, isVoiceInput = false, inputEvent?: InputEvent) => {
+    if (text === lastTextRef.current && !isVoiceInput) return;
+    
+    const prevText = lastTextRef.current;
     lastTextRef.current = text;
+    
+    if (inputEvent) {
+      handleInputEvent(inputEvent);
+    }
     
     // Clear pending detection
     if (debounceRef.current) {
@@ -323,26 +608,19 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
     }
     
     // Instant detection for immediate feedback
-    const instant = detectInstant(text);
-    
-    // Override for voice input
-    if (isVoiceInput) {
-      instant.inputType = 'voice';
-    }
-    
+    const instant = detectInstant(text, isVoiceInput, inputEvent || null);
     setDetection(instant);
     
     // Debounced ML detection for higher accuracy
     if (instant.confidence < 0.8 && text.length > 5) {
       setIsDetecting(true);
       debounceRef.current = setTimeout(async () => {
-        const mlResult = await detectWithML(text);
-        if (isVoiceInput) mlResult.inputType = 'voice';
+        const mlResult = await detectWithML(text, isVoiceInput, inputEvent || null);
         setDetection(mlResult);
         setIsDetecting(false);
       }, debounceMs);
     }
-  }, [detectInstant, detectWithML, debounceMs]);
+  }, [detectInstant, detectWithML, debounceMs, handleInputEvent]);
 
   /**
    * Detect for voice input specifically
@@ -368,40 +646,34 @@ export function useAutoLanguageDetection(options: UseAutoLanguageDetectionOption
     isDetecting,
     motherTongueCode,
     isMotherTongueEnglish,
+    // Event handlers for input tracking
+    handleInputEvent,
+    handleCompositionStart,
+    handleCompositionEnd,
   };
 }
 
 /**
- * Get language name from code
+ * Get language name from code (uses dynamic lookup)
  */
 function getLanguageName(code: string): string {
-  const names: Record<string, string> = {
-    en: 'English',
-    hi: 'Hindi',
-    te: 'Telugu',
-    ta: 'Tamil',
-    kn: 'Kannada',
-    ml: 'Malayalam',
-    mr: 'Marathi',
-    gu: 'Gujarati',
-    bn: 'Bengali',
-    pa: 'Punjabi',
-    ur: 'Urdu',
-    or: 'Odia',
-    as: 'Assamese',
-    ne: 'Nepali',
-    fr: 'French',
-    es: 'Spanish',
-    de: 'German',
-    it: 'Italian',
-    pt: 'Portuguese',
-    ru: 'Russian',
-    zh: 'Chinese',
-    ja: 'Japanese',
-    ko: 'Korean',
-    ar: 'Arabic',
+  // Dynamic language name lookup - no hardcoded list
+  try {
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+    const name = displayNames.of(code);
+    if (name && name !== code) return name;
+  } catch {
+    // Fallback for unsupported codes
+  }
+  
+  // Minimal fallback for common codes
+  const fallbackNames: Record<string, string> = {
+    en: 'English', hi: 'Hindi', te: 'Telugu', ta: 'Tamil',
+    kn: 'Kannada', ml: 'Malayalam', mr: 'Marathi', gu: 'Gujarati',
+    bn: 'Bengali', pa: 'Punjabi', ur: 'Urdu', or: 'Odia',
   };
-  return names[code.toLowerCase()] || `Language (${code})`;
+  
+  return fallbackNames[code.toLowerCase()] || `Language (${code})`;
 }
 
 export default useAutoLanguageDetection;
