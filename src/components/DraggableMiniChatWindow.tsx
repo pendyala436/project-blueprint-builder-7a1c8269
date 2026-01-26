@@ -282,6 +282,7 @@ const DraggableMiniChatWindow = ({
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
   const [meaningPreview, setMeaningPreview] = useState<string>(''); // Mother tongue preview
   const [isMeaningLoading, setIsMeaningLoading] = useState(false);
+  const [detectedInputSource, setDetectedInputSource] = useState<'gboard' | 'voice' | 'keyboard' | 'mixed'>('keyboard');
   const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -381,9 +382,51 @@ const DraggableMiniChatWindow = ({
     clearTypingBroadcast();
   }, [clearTypingBroadcast]);
 
+  // Detect input source type for better handling
+  const detectInputSource = useCallback((text: string, prevText: string): 'gboard' | 'voice' | 'keyboard' | 'mixed' => {
+    if (!text) return 'keyboard';
+    
+    const newChars = text.slice(prevText.length);
+    const hasNonLatin = /[^\x00-\x7F]/.test(newChars);
+    const burstSize = newChars.length;
+    
+    // Voice-to-text typically adds many characters at once (phrases/sentences)
+    if (burstSize > 15 && text.includes(' ')) {
+      console.log('[InputDetect] Voice-to-text detected (burst:', burstSize, ')');
+      return 'voice';
+    }
+    
+    // Gboard/IME: Native script input with moderate burst
+    if (hasNonLatin && burstSize >= 1) {
+      console.log('[InputDetect] Gboard/IME detected (native script)');
+      return 'gboard';
+    }
+    
+    // Mixed mode: Text contains both Latin and non-Latin
+    const hasLatin = /[a-zA-Z]/.test(text);
+    const hasNonLatinTotal = /[^\x00-\x7F]/.test(text);
+    if (hasLatin && hasNonLatinTotal) {
+      console.log('[InputDetect] Mixed mode detected');
+      return 'mixed';
+    }
+    
+    return 'keyboard';
+  }, []);
+
+  // Detect script type from text
+  const detectScript = useCallback((text: string): 'latin' | 'native' | 'mixed' => {
+    const hasLatin = /[a-zA-Z]/.test(text);
+    const hasNonLatin = /[^\x00-\x7F]/.test(text);
+    
+    if (hasLatin && hasNonLatin) return 'mixed';
+    if (hasNonLatin) return 'native';
+    return 'latin';
+  }, []);
+
   // AUTO-DETECT input type and generate preview in sender's MOTHER TONGUE
+  // Handles: English typing, native script (Gboard/IME), romanized, voice-to-text, mixed
   // FULLY ASYNC: Runs in background, NEVER blocks typing
-  const generateMeaningPreview = useCallback((inputText: string) => {
+  const generateMeaningPreview = useCallback((inputText: string, inputSource?: string) => {
     if (!inputText.trim()) {
       setMeaningPreview('');
       setIsMeaningLoading(false);
@@ -398,11 +441,20 @@ const DraggableMiniChatWindow = ({
     // Show loading immediately (doesn't block)
     setIsMeaningLoading(true);
     
-    // Debounce: wait 300ms of no typing before starting translation
+    // Shorter debounce for voice input (already complete phrases)
+    const debounceTime = inputSource === 'voice' ? 100 : 300;
+    
+    // Debounce: wait for pause in typing before starting translation
     meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
+      const scriptType = detectScript(capturedText);
       
-      console.log('[MeaningPreview] AUTO-DETECT preview for:', capturedText.substring(0, 30), 'userLang:', currentUserLanguage);
+      console.log('[MeaningPreview] Processing:', { 
+        text: capturedText.substring(0, 30), 
+        userLang: currentUserLanguage,
+        inputSource: inputSource || 'auto',
+        scriptType
+      });
       
       // Use setTimeout(0) to ensure it doesn't block
       setTimeout(async () => {
@@ -415,28 +467,41 @@ const DraggableMiniChatWindow = ({
             return;
           }
           
-          // AUTO-DETECT: Check if input is English, native script, or romanized
-          const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
-          const detection = await detectInWorker(capturedText);
-          const detectedLang = detection.language;
-          const isEnglishInput = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
-          
-          // Check if input contains non-Latin characters (native script)
-          const hasNonLatin = /[^\x00-\x7F]/.test(capturedText);
-          const isNativeScript = hasNonLatin && !isEnglishInput;
-          
-          console.log('[MeaningPreview] Detected:', { detectedLang, isEnglishInput, isNativeScript, hasNonLatin });
-          
           let translatedText = '';
           
-          if (isNativeScript) {
-            // NATIVE SCRIPT: Input is already in sender's mother tongue
-            // Just show as-is (no translation needed for preview)
+          // NATIVE SCRIPT (Gboard/IME/Virtual keyboard): Already in mother tongue
+          if (scriptType === 'native') {
+            // Input is already in sender's native script - show as preview confirmation
             translatedText = capturedText;
-            console.log('[MeaningPreview] Native script detected - showing as-is');
-          } else if (isEnglishInput) {
-            // ENGLISH INPUT: Translate to sender's mother tongue
-            console.log('[MeaningPreview] English detected - translating to', currentUserLanguage);
+            console.log('[MeaningPreview] Native script (Gboard/IME) - showing as-is:', translatedText.substring(0, 30));
+          }
+          // MIXED MODE: Contains both Latin and native script
+          else if (scriptType === 'mixed') {
+            // For mixed, try to translate the Latin portions to native
+            console.log('[MeaningPreview] Mixed mode - translating Latin portions to', currentUserLanguage);
+            try {
+              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+              if (result?.translatedText && result.translatedText !== capturedText) {
+                translatedText = result.translatedText;
+              } else {
+                // If translation didn't change much, show original (native parts preserved)
+                translatedText = capturedText;
+              }
+            } catch {
+              translatedText = capturedText; // Fallback to original
+            }
+          }
+          // LATIN SCRIPT: English, romanized, or voice-to-text in English
+          else {
+            // Detect if it's English or romanized representation of native language
+            const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
+            const detection = await detectInWorker(capturedText);
+            const detectedLang = detection.language;
+            const isEnglishInput = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
+            
+            console.log('[MeaningPreview] Latin script detected:', { detectedLang, isEnglishInput });
+            
+            // Always translate Latin text to mother tongue for preview
             try {
               const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
               if (result?.translatedText && result.translatedText !== capturedText) {
@@ -446,26 +511,11 @@ const DraggableMiniChatWindow = ({
             } catch (translateError) {
               console.warn('[MeaningPreview] Translation error (non-blocking):', translateError);
             }
-          } else {
-            // ROMANIZED INPUT (Latin letters with non-English meaning)
-            // Treat as English-style input for now, translate to mother tongue
-            console.log('[MeaningPreview] Romanized/Latin detected - translating to', currentUserLanguage);
-            try {
-              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-              if (result?.translatedText && result.translatedText !== capturedText) {
-                translatedText = result.translatedText;
-              }
-            } catch {
-              translatedText = '';
-            }
           }
           
-          if (translatedText && translatedText !== capturedText) {
+          if (translatedText) {
             console.log('[MeaningPreview] Setting mother tongue preview:', translatedText.substring(0, 30));
             setMeaningPreview(translatedText);
-          } else if (isNativeScript) {
-            // For native script, show as preview to confirm input
-            setMeaningPreview(capturedText);
           } else {
             setMeaningPreview('');
           }
@@ -476,8 +526,8 @@ const DraggableMiniChatWindow = ({
           setIsMeaningLoading(false);
         }
       }, 0);
-    }, 300);
-  }, [currentUserLanguage]);
+    }, debounceTime);
+  }, [currentUserLanguage, detectScript]);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -2190,10 +2240,14 @@ const DraggableMiniChatWindow = ({
 
               {/* Auto-detect preview - shows mother tongue translation */}
               <div className="flex-1 relative">
-                {/* Mother tongue preview - shown for any input type */}
+                {/* Mother tongue preview - shown for any input type (Gboard, voice, keyboard, mixed) */}
                 {meaningPreview && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
-                    <span className="text-[8px] opacity-50 mr-1">({currentUserLanguage})</span>
+                    <span className="text-[8px] opacity-50 mr-1 flex items-center gap-0.5 inline-flex">
+                      {detectedInputSource === 'voice' && <Mic className="h-2 w-2" />}
+                      {detectedInputSource === 'gboard' && <Type className="h-2 w-2" />}
+                      ({currentUserLanguage})
+                    </span>
                     {meaningPreview}
                     {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
                   </div>
@@ -2201,30 +2255,39 @@ const DraggableMiniChatWindow = ({
                 {!meaningPreview && rawInput.trim() && isMeaningLoading && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-muted/50 border border-muted rounded text-[10px] text-muted-foreground flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Translating to {currentUserLanguage}...</span>
+                    <span>
+                      {detectedInputSource === 'voice' ? 'Processing voice...' : 
+                       detectedInputSource === 'gboard' ? 'Processing...' :
+                       `Translating to ${currentUserLanguage}...`}
+                    </span>
                   </div>
                 )}
                 
                 {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && (
+                {!needsTranslation && newMessage.trim() && !meaningPreview && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
                     Same language - direct chat
                   </div>
                 )}
                 <Input
-                  placeholder="Type in any language..."
+                  placeholder="Type, speak, or use any keyboard..."
                   value={newMessage}
                   onChange={(e) => {
                     const newValue = e.target.value;
+                    const prevValue = newMessage;
+                    
+                    // Detect input source (Gboard, voice, keyboard, mixed)
+                    const inputSource = detectInputSource(newValue, prevValue);
+                    setDetectedInputSource(inputSource);
                     
                     // SYNC ONLY: Update input values immediately (never blocks)
                     setRawInput(newValue);
                     setNewMessage(newValue);
                     
                     // ASYNC: Schedule preview generation in next frame (never blocks typing)
-                    // Using setTimeout(0) ensures the input update completes first
+                    // Pass input source for optimized handling
                     setTimeout(() => {
-                      generateMeaningPreview(newValue);
+                      generateMeaningPreview(newValue, inputSource);
                       handleTyping(newValue);
                     }, 0);
                   }}
@@ -2234,6 +2297,8 @@ const DraggableMiniChatWindow = ({
                   spellCheck={true}
                   autoComplete="off"
                   autoCorrect="on"
+                  inputMode="text"
+                  enterKeyHint="send"
                   className="h-8 text-xs w-full unicode-text"
                   disabled={isSending || isUploading}
                 />
