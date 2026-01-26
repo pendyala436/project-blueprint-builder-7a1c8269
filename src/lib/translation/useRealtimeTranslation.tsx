@@ -185,6 +185,7 @@ export function useRealtimeTranslation({
 
   // FULLY ASYNC: Send typing indicator - NEVER blocks typing
   // Generates SEMANTIC translation preview for sender (mother tongue)
+  // Uses requestIdleCallback/setTimeout(0) to ensure input is never blocked
   const sendTypingIndicator = useCallback((text: string, partnerLanguage: string) => {
     if (!enabled || !text.trim()) {
       // Empty text - clear preview immediately
@@ -197,57 +198,77 @@ export function useRealtimeTranslation({
     
     setIsTyping(true);
 
-    // IMMEDIATE: Generate sender's native preview in background (SEMANTIC translation)
+    // IMMEDIATE: Clear previous debounce
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
     }
 
-    // Debounce preview generation (300ms) for semantic translation
-    previewDebounceRef.current = setTimeout(async () => {
-      setIsTranslating(true);
-      
-      try {
-        let senderNative = text;
-        let englishMeaning = '';
+    // Debounce preview generation (400ms) - increased for smoother typing
+    previewDebounceRef.current = setTimeout(() => {
+      // Schedule translation in background using requestIdleCallback
+      const processPreview = async () => {
+        setIsTranslating(true);
         
-        // If sender's language is English, no need to translate preview
-        if (isEnglishLanguage(currentUserLanguage)) {
-          senderNative = text;
-          englishMeaning = text;
-        } else {
-          // SEMANTIC translation: English → sender's mother tongue
-          console.log('[RealtimeTranslation] Generating sender preview:', currentUserLanguage);
-          const result = await translateSemantic(text, 'english', currentUserLanguage);
-          senderNative = result?.translatedText || text;
-          englishMeaning = text; // Original English input
-        }
-        
-        setSenderNativePreview(senderNative);
-        setIsTranslating(false);
-        
-        // Also broadcast with the English meaning for receiver
-        if (channelRef.current && text !== lastSentTextRef.current) {
-          lastSentTextRef.current = text;
+        try {
+          let senderNative = text;
+          let englishMeaning = '';
           
-          channelRef.current.send({
-            type: 'broadcast',
-            event: 'typing',
-            payload: {
-              userId: currentUserId,
-              text, // Original English text
-              senderNativeText: senderNative, // Sender's mother tongue translation
-              englishText: englishMeaning, // English meaning for receiver to use
-              senderLanguage: currentUserLanguage,
-              timestamp: Date.now()
+          // If sender's language is English, no need to translate preview
+          if (isEnglishLanguage(currentUserLanguage)) {
+            senderNative = text;
+            englishMeaning = text;
+          } else {
+            // SEMANTIC translation: English → sender's mother tongue
+            // Wrapped in try-catch to ensure errors don't block
+            try {
+              console.log('[RealtimeTranslation] Generating sender preview:', currentUserLanguage);
+              const result = await translateSemantic(text, 'english', currentUserLanguage);
+              senderNative = result?.translatedText || text;
+              englishMeaning = text; // Original English input
+            } catch (translateError) {
+              console.warn('[RealtimeTranslation] Preview translation error (non-blocking):', translateError);
+              senderNative = text;
+              englishMeaning = text;
             }
-          });
+          }
+          
+          setSenderNativePreview(senderNative);
+          setIsTranslating(false);
+          
+          // Also broadcast with the English meaning for receiver
+          if (channelRef.current && text !== lastSentTextRef.current) {
+            lastSentTextRef.current = text;
+            
+            // Broadcast in next tick to not block
+            setTimeout(() => {
+              channelRef.current?.send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: {
+                  userId: currentUserId,
+                  text, // Original English text
+                  senderNativeText: senderNative, // Sender's mother tongue translation
+                  englishText: englishMeaning, // English meaning for receiver to use
+                  senderLanguage: currentUserLanguage,
+                  timestamp: Date.now()
+                }
+              });
+            }, 0);
+          }
+        } catch (err) {
+          console.warn('[RealtimeTranslation] Preview generation failed (non-blocking):', err);
+          setSenderNativePreview(text);
+          setIsTranslating(false);
         }
-      } catch (err) {
-        console.error('[RealtimeTranslation] Preview generation failed:', err);
-        setSenderNativePreview(text);
-        setIsTranslating(false);
+      };
+
+      // Use requestIdleCallback if available for true non-blocking
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => processPreview(), { timeout: 2000 });
+      } else {
+        setTimeout(processPreview, 0);
       }
-    }, 300);
+    }, 400);
 
     // AUTO-STOP: Clear typing after 3 seconds of inactivity - NO BUTTON NEEDED
     if (typingTimeoutRef.current) {

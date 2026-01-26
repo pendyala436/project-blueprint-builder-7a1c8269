@@ -380,10 +380,11 @@ const DraggableMiniChatWindow = ({
   }, [clearTypingBroadcast]);
 
   // Generate preview based on typing mode
-  // FULLY ASYNC: Runs in background, never blocks typing
+  // FULLY ASYNC: Runs in background using requestIdleCallback, NEVER blocks typing
   const generateMeaningPreview = useCallback((inputText: string) => {
     if (!inputText.trim()) {
       setMeaningPreview('');
+      setIsMeaningLoading(false);
       return;
     }
     
@@ -392,42 +393,62 @@ const DraggableMiniChatWindow = ({
       clearTimeout(meaningPreviewTimeoutRef.current);
     }
     
-    // Debounce: wait 400ms before translating (non-blocking)
-    meaningPreviewTimeoutRef.current = setTimeout(async () => {
+    // Show loading immediately (doesn't block)
+    setIsMeaningLoading(true);
+    
+    // Debounce: wait 500ms of no typing before starting translation
+    meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
-      setIsMeaningLoading(true);
       
-      try {
-        // Skip if user's language is English
-        if (checkIsEnglish(currentUserLanguage)) {
-          setMeaningPreview('');
-          return;
-        }
-        
-        let translatedText = '';
-        
-        // MEANING-BASED ONLY - NO phonetic transliteration
-        if (typingMode === 'english-meaning') {
-          // EN MODE: Translate English → user's mother tongue (NO transliteration)
-          const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-          translatedText = result?.translatedText || '';
+      // Use requestIdleCallback if available, else setTimeout(0) - ensures main thread isn't blocked
+      const scheduleBackground = (callback: () => void) => {
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(callback, { timeout: 2000 });
         } else {
-          // NL MODE: Show as-is (NO transliteration)
-          translatedText = capturedText;
+          setTimeout(callback, 0);
         }
-        
-        if (translatedText && translatedText !== capturedText) {
-          setMeaningPreview(translatedText);
-        } else {
+      };
+      
+      scheduleBackground(async () => {
+        try {
+          // Skip if user's language is English - no preview needed
+          if (checkIsEnglish(currentUserLanguage)) {
+            setMeaningPreview('');
+            setIsMeaningLoading(false);
+            return;
+          }
+          
+          let translatedText = '';
+          
+          // MEANING-BASED ONLY - NO phonetic transliteration
+          if (typingMode === 'english-meaning') {
+            // EN MODE: Translate English → user's mother tongue (NO transliteration)
+            // Wrap in try-catch to prevent any errors from blocking
+            try {
+              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+              translatedText = result?.translatedText || '';
+            } catch (translateError) {
+              console.warn('[MeaningPreview] Translation error (non-blocking):', translateError);
+              translatedText = '';
+            }
+          } else {
+            // NL MODE: Show as-is (NO transliteration)
+            translatedText = capturedText;
+          }
+          
+          if (translatedText && translatedText !== capturedText) {
+            setMeaningPreview(translatedText);
+          } else {
+            setMeaningPreview('');
+          }
+        } catch (error) {
+          console.warn('[MeaningPreview] Background error (non-blocking):', error);
           setMeaningPreview('');
+        } finally {
+          setIsMeaningLoading(false);
         }
-      } catch (error) {
-        console.error('[MeaningPreview] Background error:', error);
-        setMeaningPreview('');
-      } finally {
-        setIsMeaningLoading(false);
-      }
-    }, 400);
+      });
+    }, 500); // Increased debounce to 500ms for smoother typing
   }, [typingMode, currentUserLanguage]);
 
   // Auto-close if blocked
@@ -1350,8 +1371,11 @@ const DraggableMiniChatWindow = ({
   const handleTyping = useCallback((text: string) => {
     setLastActivityTime(Date.now());
     // Send typing indicator with native script preview - broadcasts to partner
+    // Uses setTimeout(0) to ensure it never blocks the input
     if (text.trim()) {
-      broadcastTyping(text.trim(), partnerLanguage);
+      setTimeout(() => {
+        broadcastTyping(text.trim(), partnerLanguage);
+      }, 0);
     }
   }, [broadcastTyping, partnerLanguage]);
 
@@ -2183,12 +2207,16 @@ const DraggableMiniChatWindow = ({
                   onChange={(e) => {
                     const newValue = e.target.value;
                     
-                    // EN MODE ONLY - translate to native
+                    // SYNC ONLY: Update input values immediately (never blocks)
                     setRawInput(newValue);
                     setNewMessage(newValue);
-                    generateMeaningPreview(newValue);
                     
-                    handleTyping(newValue);
+                    // ASYNC: Schedule preview generation in next frame (never blocks typing)
+                    // Using setTimeout(0) ensures the input update completes first
+                    setTimeout(() => {
+                      generateMeaningPreview(newValue);
+                      handleTyping(newValue);
+                    }, 0);
                   }}
                   onKeyDown={handleKeyPress}
                   lang="en"
