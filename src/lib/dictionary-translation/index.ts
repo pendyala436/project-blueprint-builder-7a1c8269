@@ -1,15 +1,9 @@
 /**
- * Dictionary-Based Translation System - Public API
- * =================================================
+ * Dictionary-Based Translation System
+ * =====================================
  * 
- * Comprehensive browser-based translation with:
- * - Dictionary lookup for 100+ languages
- * - Idiom/phrase handling
- * - Morphology (stemming, lemmatization, conjugation)
- * - Word order reordering (SVO ↔ SOV)
- * - Word sense disambiguation
- * - Post-processing for grammar/fluency
- * - LibreTranslate edge function as fallback
+ * Fully database-driven translation with no hardcoded data.
+ * No external APIs - pure browser-based translation.
  * 
  * @example
  * ```tsx
@@ -17,15 +11,11 @@
  * 
  * // Basic translation
  * const result = await translateWithDictionary('Hello, how are you?', 'english', 'hindi');
- * console.log(result.text); // "नमस्ते, आप कैसे हैं?"
- * console.log(result.corrections); // Applied corrections
- * console.log(result.idiomsFound); // Replaced idioms
+ * console.log(result.text); // Translation result
  * 
  * // Chat translation (bidirectional)
  * const chat = await translateForChat('I love you', 'english', 'telugu');
- * console.log(chat.senderView); // "I love you"
- * console.log(chat.receiverView); // "నేను నిన్ను ప్రేమిస్తున్నాను"
- * console.log(chat.englishCore); // "I love you"
+ * console.log(chat.receiverView); // Translated for receiver
  * ```
  */
 
@@ -34,39 +24,26 @@
 // ============================================================
 
 export type {
-  // Core types
   WordOrder,
   GrammaticalGender,
   GrammaticalNumber,
   GrammaticalTense,
   PartOfSpeech,
-  
-  // Token types
   Token,
   MorphologicalFeatures,
   SentenceChunk,
-  
-  // Dictionary types
   DictionaryEntry,
   WordSense,
   MorphologyInfo,
   VerbConjugation,
   NounDeclension,
-  
-  // Idiom types
   IdiomEntry,
-  
-  // Grammar types
   LanguageGrammar,
-  
-  // Result types
   DictionaryTranslationResult,
   DictionaryChatResult,
   CorrectionApplied,
   TranslationMethod,
   CorrectionType,
-  
-  // Config types
   DictionaryEngineConfig,
   DisambiguationContext,
   CacheEntry,
@@ -79,34 +56,44 @@ export { DEFAULT_ENGINE_CONFIG } from './types';
 // ============================================================
 
 export {
-  // Core translation
   translateWithDictionary,
   translateForChat,
-  
-  // Engine management
   configureEngine,
   getEngineConfig,
-  initializeEngine,
-  isEngineReady,
-  clearCache,
-  getCacheStats,
+  initializeDictionaryEngine,
+  isDataLoaded,
 } from './engine';
+
+// ============================================================
+// DATABASE LOADER EXPORTS
+// ============================================================
+
+export {
+  initializeDatabaseTranslation,
+  loadIdioms,
+  loadGrammarRules,
+  loadWordSenses,
+  refreshAllData,
+  getLoadStatus,
+} from './database-loader';
 
 // ============================================================
 // GRAMMAR RULES EXPORTS
 // ============================================================
 
 export {
-  LANGUAGE_GRAMMARS,
   getLanguageGrammar,
   getWordOrder,
   usesPostpositions,
+  adjectiveFollowsNoun,
   adjectivesAfterNouns,
   hasGrammaticalGender,
   allowsSubjectDropping,
   needsReordering,
-  getSOVLanguages,
-  getVSOLanguages,
+  isSOVLanguage,
+  isVSOLanguage,
+  hasCaseSystem,
+  initializeGrammarRules,
 } from './grammar-rules';
 
 // ============================================================
@@ -114,21 +101,13 @@ export {
 // ============================================================
 
 export {
-  // Stemming & Lemmatization
   stemWord,
   getLemma,
-  
-  // Pluralization
   pluralize,
   singularize,
-  
-  // Verb conjugation
   conjugateVerb,
-  
-  // POS detection
   detectPOS,
   extractFeatures,
-  applyMorphology,
 } from './morphology';
 
 // ============================================================
@@ -136,13 +115,12 @@ export {
 // ============================================================
 
 export {
-  IDIOM_DATABASE,
   lookupIdiom,
   getIdiomTranslation,
   findIdiomsInText,
   replaceIdiomsInText,
-  getIdiomsForLanguage,
-  getIdiomCount,
+  initializeIdioms,
+  isIdiomsLoaded,
 } from './idiom-dictionary';
 
 // ============================================================
@@ -151,11 +129,12 @@ export {
 
 export {
   isAmbiguousWord,
-  getWordSenses,
+  getWordSenseData,
   disambiguateWord,
   getTranslationForSense,
   disambiguateAndTranslate,
   getAllAmbiguousWords,
+  initializeWordSenses,
 } from './disambiguation';
 
 // ============================================================

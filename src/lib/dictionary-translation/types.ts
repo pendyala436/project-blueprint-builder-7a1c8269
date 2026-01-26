@@ -2,8 +2,8 @@
  * Dictionary-Based Translation System Types
  * ==========================================
  * 
- * Comprehensive type definitions for the enhanced dictionary translation engine
- * with NLP corrections for word-for-word translation issues.
+ * Type definitions for the database-driven dictionary translation engine.
+ * No hardcoded data - all data comes from Supabase.
  */
 
 // ============================================================
@@ -55,7 +55,7 @@ export interface SentenceChunk {
 
 export interface DictionaryEntry {
   word: string;
-  translations: Record<string, string[]>; // language -> possible translations
+  translations: Record<string, string[]>;
   pos: PartOfSpeech;
   senses: WordSense[];
   morphology: MorphologyInfo;
@@ -65,13 +65,13 @@ export interface WordSense {
   id: string;
   definition: string;
   examples: string[];
-  contextClues: string[]; // words that indicate this sense
+  contextClues: string[];
   translations: Record<string, string>;
 }
 
 export interface MorphologyInfo {
   lemma: string;
-  irregularForms?: Record<string, string>; // form type -> form
+  irregularForms?: Record<string, string>;
   conjugations?: VerbConjugation;
   declensions?: NounDeclension;
 }
@@ -91,7 +91,7 @@ export interface NounDeclension {
 }
 
 // ============================================================
-// IDIOM TYPES
+// IDIOM TYPES (Database-driven)
 // ============================================================
 
 export interface IdiomEntry {
@@ -104,7 +104,7 @@ export interface IdiomEntry {
 }
 
 // ============================================================
-// LANGUAGE GRAMMAR RULES
+// LANGUAGE GRAMMAR RULES (Database-driven)
 // ============================================================
 
 export interface LanguageGrammar {
@@ -151,7 +151,6 @@ export type TranslationMethod =
   | 'reordered'
   | 'context-disambiguated'
   | 'post-processed'
-  | 'libre-translate-fallback'
   | 'passthrough';
 
 export interface CorrectionApplied {
@@ -193,7 +192,7 @@ export interface DictionaryEngineConfig {
   enableReordering: boolean;
   enableDisambiguation: boolean;
   enablePostProcessing: boolean;
-  enableLibreTranslateFallback: boolean;
+  enableLibreTranslateFallback: boolean; // Always false - no external APIs
   fallbackConfidenceThreshold: number;
   maxSentenceLength: number;
   cacheTTL: number;
@@ -206,8 +205,8 @@ export const DEFAULT_ENGINE_CONFIG: DictionaryEngineConfig = {
   enableReordering: true,
   enableDisambiguation: true,
   enablePostProcessing: true,
-  enableLibreTranslateFallback: true,
-  fallbackConfidenceThreshold: 0.4, // Below this, use fallback
+  enableLibreTranslateFallback: false, // Disabled - no external APIs
+  fallbackConfidenceThreshold: 0.4,
   maxSentenceLength: 500,
   cacheTTL: 300000, // 5 minutes
   maxCacheSize: 10000,
@@ -221,7 +220,7 @@ export interface DisambiguationContext {
   surroundingWords: string[];
   sentence: string;
   previousSentence?: string;
-  domain?: string; // 'sports', 'finance', 'casual', etc.
+  domain?: string;
 }
 
 // ============================================================
