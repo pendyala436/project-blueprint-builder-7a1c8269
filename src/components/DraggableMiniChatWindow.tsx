@@ -77,6 +77,7 @@ console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support vi
 
 /**
  * Browser-based semantic translation wrapper using Xenova SDK
+ * With fallback to edge function for reliability
  * Supports ALL input types: English, native script, voice, Gboard, font tools
  * Provides meaning-based translation (not phonetic transliteration)
  */
@@ -106,11 +107,11 @@ async function translateSemantic(
   const normalizedSource = normalizeLanguageCode(sourceLanguage);
   const normalizedTarget = normalizeLanguageCode(targetLanguage);
   
-  console.log(`[translateSemantic] "${text.substring(0, 40)}" | ${sourceLanguage}→${normalizedSource} → ${targetLanguage}→${normalizedTarget}`);
+  console.log(`[translateSemantic] 🔄 "${text.substring(0, 40)}" | ${sourceLanguage}→${normalizedSource} → ${targetLanguage}→${normalizedTarget}`);
   
   // Same language check - no translation needed
   if (xenovaSameLanguage(normalizedSource, normalizedTarget)) {
-    console.log('[translateSemantic] Same language, passthrough');
+    console.log('[translateSemantic] ✅ Same language, passthrough');
     return {
       translatedText: text,
       originalText: text,
@@ -121,37 +122,84 @@ async function translateSemantic(
     };
   }
   
+  // Try 1: Browser-based Xenova translation
   try {
-    // Use Xenova browser-based translation
+    console.log('[translateSemantic] Attempting browser-based translation...');
     const result = await translateInWorker(text, normalizedSource, normalizedTarget);
     
     const wasActuallyTranslated = result.isTranslated && result.text !== text && result.text.trim() !== '';
     
-    console.log(`[translateSemantic] Result: "${result.text?.substring(0, 40)}" | translated=${wasActuallyTranslated} | path=${result.path}`);
+    if (wasActuallyTranslated) {
+      console.log(`[translateSemantic] ✅ Browser translation success: "${result.text?.substring(0, 40)}" | path=${result.path}`);
+      return {
+        translatedText: result.text || text,
+        originalText: result.originalText || text,
+        isTranslated: true,
+        sourceLanguage: result.sourceLang || normalizedSource,
+        targetLanguage: result.targetLang || normalizedTarget,
+        confidence: 0.9,
+      };
+    }
     
-    return {
-      translatedText: result.text || text,
-      originalText: result.originalText || text,
-      isTranslated: wasActuallyTranslated,
-      sourceLanguage: result.sourceLang || normalizedSource,
-      targetLanguage: result.targetLang || normalizedTarget,
-      confidence: wasActuallyTranslated ? 0.9 : 0.5,
-    };
-  } catch (error) {
-    console.error('[translateSemantic] Translation error:', error);
-    return {
-      translatedText: text,
-      originalText: text,
-      isTranslated: false,
-      sourceLanguage: normalizedSource,
-      targetLanguage: normalizedTarget,
-      confidence: 0,
-    };
+    console.log('[translateSemantic] ⚠️ Browser translation returned unchanged text, trying edge function...');
+  } catch (browserError) {
+    console.warn('[translateSemantic] ⚠️ Browser translation failed:', browserError);
   }
+  
+  // Try 2: Fallback to edge function
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    console.log('[translateSemantic] Calling edge function fallback...');
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        source: normalizedSource,
+        target: normalizedTarget,
+        mode: 'translate',
+      },
+    });
+    
+    if (error) {
+      console.warn('[translateSemantic] Edge function error:', error);
+      throw error;
+    }
+    
+    const translatedText = data?.translatedText || data?.translatedMessage;
+    const wasTranslated = translatedText && translatedText !== text && translatedText.trim() !== '';
+    
+    if (wasTranslated) {
+      console.log(`[translateSemantic] ✅ Edge function success: "${translatedText?.substring(0, 40)}"`);
+      return {
+        translatedText,
+        originalText: text,
+        isTranslated: true,
+        sourceLanguage: normalizedSource,
+        targetLanguage: normalizedTarget,
+        confidence: 0.85,
+      };
+    }
+    
+    console.log('[translateSemantic] ⚠️ Edge function returned unchanged text');
+  } catch (edgeError) {
+    console.warn('[translateSemantic] Edge function fallback failed:', edgeError);
+  }
+  
+  // Final fallback: return original text
+  console.log('[translateSemantic] ❌ All translation methods failed, returning original');
+  return {
+    translatedText: text,
+    originalText: text,
+    isTranslated: false,
+    sourceLanguage: normalizedSource,
+    targetLanguage: normalizedTarget,
+    confidence: 0,
+  };
 }
 
 /**
  * Browser-based bidirectional chat translation using Xenova SDK
+ * With fallback to edge function for reliability
  * Provides proper sender/receiver views based on their mother tongues
  * 
  * @param text - The message text (can be in any language/script)
@@ -177,32 +225,83 @@ async function translateForChatSemantic(
     };
   }
   
-  console.log(`[translateForChatSemantic] "${text.substring(0, 40)}" | sender=${senderLang} | receiver=${receiverLang}`);
+  const normSender = normalizeLanguageCode(senderLang);
+  const normReceiver = normalizeLanguageCode(receiverLang);
   
+  console.log(`[translateForChatSemantic] 🔄 "${text.substring(0, 40)}" | sender=${senderLang}→${normSender} | receiver=${receiverLang}→${normReceiver}`);
+  
+  // Try 1: Browser-based translation
   try {
-    const result = await translateChatInWorker(text, senderLang, receiverLang);
+    const result = await translateChatInWorker(text, normSender, normReceiver);
     
-    console.log(`[translateForChatSemantic] Results:
-      Sender sees: "${result.senderView?.substring(0, 30)}"
-      Receiver sees: "${result.receiverView?.substring(0, 30)}"
-      English: "${result.englishCore?.substring(0, 30)}"
-      Translated: ${result.isTranslated}`);
+    // Check if translation actually happened
+    const actuallyTranslated = result.isTranslated && 
+      (result.receiverView !== text || result.englishCore !== text);
     
-    return {
-      senderView: result.senderView || text,
-      receiverView: result.receiverView || text,
-      englishMeaning: result.englishCore || text,
-      isTranslated: result.isTranslated,
-    };
-  } catch (error) {
-    console.error('[translateForChatSemantic] Error:', error);
-    return {
-      senderView: text,
-      receiverView: text,
-      englishMeaning: text,
-      isTranslated: false,
-    };
+    if (actuallyTranslated) {
+      console.log(`[translateForChatSemantic] ✅ Browser success:
+        Sender: "${result.senderView?.substring(0, 30)}"
+        Receiver: "${result.receiverView?.substring(0, 30)}"
+        English: "${result.englishCore?.substring(0, 30)}"`);
+      
+      return {
+        senderView: result.senderView || text,
+        receiverView: result.receiverView || text,
+        englishMeaning: result.englishCore || text,
+        isTranslated: true,
+      };
+    }
+    
+    console.log('[translateForChatSemantic] ⚠️ Browser translation unchanged, trying edge function...');
+  } catch (browserError) {
+    console.warn('[translateForChatSemantic] ⚠️ Browser translation failed:', browserError);
   }
+  
+  // Try 2: Edge function fallback with bidirectional mode
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    console.log('[translateForChatSemantic] Calling edge function fallback...');
+    
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        senderLanguage: normSender,
+        receiverLanguage: normReceiver,
+        mode: 'bidirectional',
+      },
+    });
+    
+    if (error) throw error;
+    
+    const senderView = data?.senderView || text;
+    const receiverView = data?.receiverView || text;
+    const englishCore = data?.englishCore || data?.englishText || text;
+    const wasTranslated = receiverView !== text || englishCore !== text;
+    
+    if (wasTranslated) {
+      console.log(`[translateForChatSemantic] ✅ Edge function success:
+        Sender: "${senderView?.substring(0, 30)}"
+        Receiver: "${receiverView?.substring(0, 30)}"
+        English: "${englishCore?.substring(0, 30)}"`);
+      
+      return {
+        senderView,
+        receiverView,
+        englishMeaning: englishCore,
+        isTranslated: true,
+      };
+    }
+  } catch (edgeError) {
+    console.warn('[translateForChatSemantic] Edge function fallback failed:', edgeError);
+  }
+  
+  console.log('[translateForChatSemantic] ❌ All methods failed, returning original');
+  return {
+    senderView: text,
+    receiverView: text,
+    englishMeaning: text,
+    isTranslated: false,
+  };
 }
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
