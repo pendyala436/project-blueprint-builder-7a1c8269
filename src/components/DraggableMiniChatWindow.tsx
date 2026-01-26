@@ -525,6 +525,7 @@ const DraggableMiniChatWindow = ({
   // AUTO-DETECT input type and generate preview in sender's MOTHER TONGUE
   // Handles: English typing, native script (Gboard/IME), romanized, voice-to-text, mixed
   // FULLY ASYNC: Runs in background, NEVER blocks typing
+  // Uses BIDIRECTIONAL edge function for reliable preview for all 1000+ languages
   const generateMeaningPreview = useCallback((inputText: string, inputSource?: string) => {
     if (!inputText.trim()) {
       setMeaningPreview('');
@@ -551,6 +552,7 @@ const DraggableMiniChatWindow = ({
       console.log('[MeaningPreview] Processing:', { 
         text: capturedText.substring(0, 30), 
         userLang: currentUserLanguage,
+        partnerLang: partnerLanguage,
         inputSource: inputSource || 'auto',
         scriptType
       });
@@ -574,41 +576,45 @@ const DraggableMiniChatWindow = ({
             translatedText = capturedText;
             console.log('[MeaningPreview] Native script (Gboard/IME) - showing as-is:', translatedText.substring(0, 30));
           }
-          // MIXED MODE: Contains both Latin and native script
-          else if (scriptType === 'mixed') {
-            // For mixed, try to translate the Latin portions to native
-            console.log('[MeaningPreview] Mixed mode - translating Latin portions to', currentUserLanguage);
-            try {
-              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-              if (result?.translatedText && result.translatedText !== capturedText) {
-                translatedText = result.translatedText;
-              } else {
-                // If translation didn't change much, show original (native parts preserved)
-                translatedText = capturedText;
-              }
-            } catch {
-              translatedText = capturedText; // Fallback to original
-            }
-          }
-          // LATIN SCRIPT: English, romanized, or voice-to-text in English
+          // LATIN SCRIPT or MIXED: Use bidirectional edge function for proper handling
           else {
-            // Detect if it's English or romanized representation of native language
-            const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
-            const detection = await detectInWorker(capturedText);
-            const detectedLang = detection.language;
-            const isEnglishInput = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
-            
-            console.log('[MeaningPreview] Latin script detected:', { detectedLang, isEnglishInput });
-            
-            // Always translate Latin text to mother tongue for preview
+            // Use bidirectional edge function - handles romanized input + translation
+            console.log('[MeaningPreview] Using bidirectional edge function for Latin/Mixed input');
             try {
-              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-              if (result?.translatedText && result.translatedText !== capturedText) {
-                translatedText = result.translatedText;
-                console.log('[MeaningPreview] Translated to mother tongue:', translatedText.substring(0, 30));
+              const { data, error } = await supabase.functions.invoke('translate-message', {
+                body: {
+                  text: capturedText,
+                  senderLanguage: currentUserLanguage,
+                  receiverLanguage: partnerLanguage,
+                  mode: 'bidirectional',
+                },
+              });
+              
+              if (!error && data?.senderView) {
+                translatedText = data.senderView;
+                console.log('[MeaningPreview] Edge function success:', {
+                  senderView: translatedText.substring(0, 30),
+                  receiverView: data.receiverView?.substring(0, 30),
+                  englishCore: data.englishCore?.substring(0, 30)
+                });
+              } else {
+                // Fallback to browser-based translation
+                const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+                if (result?.translatedText && result.translatedText !== capturedText) {
+                  translatedText = result.translatedText;
+                }
               }
-            } catch (translateError) {
-              console.warn('[MeaningPreview] Translation error (non-blocking):', translateError);
+            } catch (edgeError) {
+              console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
+              // Fallback to browser-based translation
+              try {
+                const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+                if (result?.translatedText && result.translatedText !== capturedText) {
+                  translatedText = result.translatedText;
+                }
+              } catch (fallbackError) {
+                console.warn('[MeaningPreview] Fallback translation error:', fallbackError);
+              }
             }
           }
           
@@ -626,7 +632,7 @@ const DraggableMiniChatWindow = ({
         }
       }, 0);
     }, debounceTime);
-  }, [currentUserLanguage, detectScript]);
+  }, [currentUserLanguage, partnerLanguage, detectScript]);
 
   // Auto-close if blocked
   useEffect(() => {

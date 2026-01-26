@@ -6,9 +6,13 @@
  * - Sender sees live native script preview (MEANING-based, mother tongue)
  * - Recipient sees partner's typing translated to their mother tongue (MEANING-based)
  * - Same language: No translation needed
- * - Uses XENOVA BROWSER-BASED SDK for semantic translation (Zero server load)
+ * - Uses SUPABASE EDGE FUNCTION for semantic translation (reliable for all 1000+ languages)
  * 
- * FULLY CLIENT-SIDE - NO EDGE FUNCTIONS - REAL SEMANTIC TRANSLATION
+ * FULLY BIDIRECTIONAL - Works for ALL input types:
+ * - English typing → native preview + native receiver
+ * - Native script (Gboard) → show as-is + translate for receiver
+ * - Romanized input → transliterate + translate for receiver
+ * - Voice-to-text → detect language + translate
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -33,12 +37,97 @@ async function translateSemantic(text: string, source: string, target: string) {
   }
 }
 
+/**
+ * Full bidirectional translation using edge function
+ * Handles ALL input types: English, native script, romanized, voice
+ */
+async function translateBidirectional(
+  text: string,
+  senderLanguage: string,
+  receiverLanguage: string
+): Promise<{
+  senderView: string;
+  receiverView: string;
+  englishCore: string;
+  isTranslated: boolean;
+}> {
+  if (!text.trim()) {
+    return { senderView: '', receiverView: '', englishCore: '', isTranslated: false };
+  }
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        senderLanguage: normalizeLanguageCode(senderLanguage),
+        receiverLanguage: normalizeLanguageCode(receiverLanguage),
+        mode: 'bidirectional',
+      },
+    });
+    
+    if (error) throw error;
+    
+    return {
+      senderView: data?.senderView || text,
+      receiverView: data?.receiverView || text,
+      englishCore: data?.englishCore || text,
+      isTranslated: data?.wasTranslated || false,
+    };
+  } catch (e) {
+    console.error('[translateBidirectional] Edge function error:', e);
+    
+    // Fallback to browser-based translation
+    try {
+      const normSender = normalizeLanguageCode(senderLanguage);
+      const normReceiver = normalizeLanguageCode(receiverLanguage);
+      
+      let senderView = text;
+      let receiverView = text;
+      let englishCore = text;
+      
+      // Get English meaning first
+      if (!xenovaIsEnglish(senderLanguage)) {
+        const toEnglish = await translateSemantic(text, normSender, 'en');
+        if (toEnglish.isTranslated) {
+          englishCore = toEnglish.translatedText;
+        }
+      }
+      
+      // Translate to receiver
+      if (!xenovaSameLanguage(senderLanguage, receiverLanguage)) {
+        const toReceiver = await translateSemantic(englishCore, 'en', normReceiver);
+        if (toReceiver.isTranslated) {
+          receiverView = toReceiver.translatedText;
+        }
+      }
+      
+      return { senderView, receiverView, englishCore, isTranslated: receiverView !== text };
+    } catch (fallbackError) {
+      console.error('[translateBidirectional] Fallback failed:', fallbackError);
+      return { senderView: text, receiverView: text, englishCore: text, isTranslated: false };
+    }
+  }
+}
+
 function isSameLanguageCheck(lang1: string, lang2: string): boolean {
   return xenovaSameLanguage(lang1, lang2);
 }
 
 function isEnglishLanguage(lang: string): boolean {
   return xenovaIsEnglish(lang);
+}
+
+/**
+ * Detect script type from text
+ */
+function detectScript(text: string): 'latin' | 'native' | 'mixed' {
+  if (!text.trim()) return 'latin';
+  const hasLatin = /[a-zA-Z]/.test(text);
+  const hasNonLatin = /[^\x00-\x7F]/.test(text);
+  
+  if (hasLatin && hasNonLatin) return 'mixed';
+  if (hasNonLatin) return 'native';
+  return 'latin';
 }
 
 export interface TypingIndicator {
@@ -100,47 +189,63 @@ export function useRealtimeTranslation({
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.userId === currentUserId) return;
 
-        const { text, senderLanguage, senderNativeText, englishText } = payload;
+        const { text, senderLanguage, senderNativeText, englishText, receiverView } = payload;
         
         // Show sender's text immediately with loading state
         setPartnerTyping({
           userId: payload.userId,
           originalText: text,
-          translatedText: '',
-          nativePreview: senderNativeText || text,
-          isTranslating: true,
+          translatedText: receiverView || '',
+          nativePreview: receiverView || senderNativeText || text,
+          isTranslating: !receiverView,
           senderLanguage,
           recipientLanguage: currentUserLanguage,
           timestamp: Date.now()
         });
 
-        // BACKGROUND: Generate SEMANTIC translation for receiver using Edge Function
+        // If receiver view is already provided, we're done
+        if (receiverView && receiverView.trim()) {
+          console.log('[RealtimeTranslation] Receiver view pre-computed:', receiverView.substring(0, 30));
+          setPartnerTyping(prev => prev ? {
+            ...prev,
+            translatedText: receiverView,
+            nativePreview: receiverView,
+            isTranslating: false
+          } : null);
+          return;
+        }
+
+        // BACKGROUND: Generate SEMANTIC translation for receiver
         const processReceiverPreview = async () => {
           try {
             let receiverNativeText = text;
             
             // If same language, no translation needed
             if (isSameLanguageCheck(senderLanguage, currentUserLanguage)) {
-              // Same language - show as-is
               receiverNativeText = senderNativeText || text;
+              console.log('[RealtimeTranslation] Same language, using sender view');
             } else {
-              // Different languages - SEMANTIC translation via Edge Function API
-              // Use English as bridge if available, else translate from sender's language
-              if (englishText && englishText.trim()) {
-                // Have English - translate to receiver's mother tongue
-                console.log('[RealtimeTranslation] Translating English to receiver:', currentUserLanguage);
-                const result = await translateSemantic(englishText, 'english', currentUserLanguage);
-                receiverNativeText = result?.translatedText || text;
-              } else if (isEnglishLanguage(senderLanguage)) {
-                // Sender typed in English - translate to receiver
-                console.log('[RealtimeTranslation] Sender is English, translating to receiver:', currentUserLanguage);
-                const result = await translateSemantic(text, 'english', currentUserLanguage);
-                receiverNativeText = result?.translatedText || text;
+              // Different languages - use bidirectional translation
+              console.log('[RealtimeTranslation] Translating from', senderLanguage, 'to', currentUserLanguage);
+              
+              // Use the edge function for reliable translation
+              const result = await translateBidirectional(
+                senderNativeText || text,
+                senderLanguage,
+                currentUserLanguage
+              );
+              
+              if (result.isTranslated && result.receiverView) {
+                receiverNativeText = result.receiverView;
+                console.log('[RealtimeTranslation] Receiver translation success:', receiverNativeText.substring(0, 30));
               } else {
-                // Non-English sender - translate via Edge Function
-                console.log('[RealtimeTranslation] Translating from', senderLanguage, 'to', currentUserLanguage);
-                const result = await translateSemantic(text, senderLanguage, currentUserLanguage);
-                receiverNativeText = result?.translatedText || text;
+                // Fallback: try English as bridge
+                if (englishText && englishText.trim() && !isEnglishLanguage(currentUserLanguage)) {
+                  const toReceiver = await translateSemantic(englishText, 'english', currentUserLanguage);
+                  if (toReceiver.isTranslated) {
+                    receiverNativeText = toReceiver.translatedText;
+                  }
+                }
               }
             }
 
@@ -203,39 +308,71 @@ export function useRealtimeTranslation({
       clearTimeout(previewDebounceRef.current);
     }
 
-    // Debounce preview generation (400ms) - increased for smoother typing
+    // Debounce preview generation (300ms) - short for responsive feel
     previewDebounceRef.current = setTimeout(() => {
       // Schedule translation in background using requestIdleCallback
       const processPreview = async () => {
         setIsTranslating(true);
         
         try {
+          const scriptType = detectScript(text);
           let senderNative = text;
+          let receiverView = '';
           let englishMeaning = '';
           
-          // If sender's language is English, no need to translate preview
+          // Determine handling based on script type
           if (isEnglishLanguage(currentUserLanguage)) {
+            // Sender's language is English - input IS English
             senderNative = text;
             englishMeaning = text;
-          } else {
-            // SEMANTIC translation: English → sender's mother tongue
-            // Wrapped in try-catch to ensure errors don't block
-            try {
-              console.log('[RealtimeTranslation] Generating sender preview:', currentUserLanguage);
-              const result = await translateSemantic(text, 'english', currentUserLanguage);
-              senderNative = result?.translatedText || text;
-              englishMeaning = text; // Original English input
-            } catch (translateError) {
-              console.warn('[RealtimeTranslation] Preview translation error (non-blocking):', translateError);
-              senderNative = text;
-              englishMeaning = text;
+            
+            // Translate to partner's language
+            if (!isEnglishLanguage(partnerLanguage)) {
+              const toPartner = await translateSemantic(text, 'english', partnerLanguage);
+              receiverView = toPartner.translatedText || text;
+            } else {
+              receiverView = text;
             }
+          } else if (scriptType === 'native') {
+            // Sender typed in native script (Gboard/IME)
+            // No transliteration needed - show as-is
+            senderNative = text;
+            
+            // Use bidirectional translation for accurate receiver view
+            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
+            receiverView = result.receiverView || text;
+            englishMeaning = result.englishCore || text;
+            
+            console.log('[RealtimeTranslation] Native input processed:', {
+              senderNative: senderNative.substring(0, 20),
+              receiverView: receiverView.substring(0, 20),
+              englishMeaning: englishMeaning.substring(0, 20)
+            });
+          } else if (scriptType === 'latin') {
+            // Latin script input - could be English or romanized native language
+            // Use bidirectional edge function to handle properly
+            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
+            senderNative = result.senderView || text;
+            receiverView = result.receiverView || text;
+            englishMeaning = result.englishCore || text;
+            
+            console.log('[RealtimeTranslation] Latin input processed:', {
+              senderNative: senderNative.substring(0, 20),
+              receiverView: receiverView.substring(0, 20),
+              englishMeaning: englishMeaning.substring(0, 20)
+            });
+          } else {
+            // Mixed script - use bidirectional
+            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
+            senderNative = result.senderView || text;
+            receiverView = result.receiverView || text;
+            englishMeaning = result.englishCore || text;
           }
           
           setSenderNativePreview(senderNative);
           setIsTranslating(false);
           
-          // Also broadcast with the English meaning for receiver
+          // Broadcast with all translations for receiver
           if (channelRef.current && text !== lastSentTextRef.current) {
             lastSentTextRef.current = text;
             
@@ -246,9 +383,10 @@ export function useRealtimeTranslation({
                 event: 'typing',
                 payload: {
                   userId: currentUserId,
-                  text, // Original English text
-                  senderNativeText: senderNative, // Sender's mother tongue translation
+                  text, // Original input text
+                  senderNativeText: senderNative, // Sender's mother tongue view
                   englishText: englishMeaning, // English meaning for receiver to use
+                  receiverView: receiverView, // Pre-computed receiver view
                   senderLanguage: currentUserLanguage,
                   timestamp: Date.now()
                 }
@@ -268,7 +406,7 @@ export function useRealtimeTranslation({
       } else {
         setTimeout(processPreview, 0);
       }
-    }, 400);
+    }, 300);
 
     // AUTO-STOP: Clear typing after 3 seconds of inactivity - NO BUTTON NEEDED
     if (typingTimeoutRef.current) {
