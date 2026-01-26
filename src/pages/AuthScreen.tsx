@@ -161,8 +161,6 @@ const AuthScreen = () => {
         supabase.auth.signInWithPassword({ email, password }),
         import("./DashboardScreen").catch(() => {}),
         import("./WomenDashboardScreen").catch(() => {}),
-        // Start translation model preloading in background (non-blocking)
-        import("@/hooks/useTranslationPreload").then(m => m.startModelPreload()).catch(() => {}),
       ]);
 
       const { data: authData, error } = authResult;
