@@ -156,11 +156,13 @@ const AuthScreen = () => {
         import("@/hooks/useOptimizedAuth"),
       ]);
       
-      // Start auth and preload routes in parallel
+      // Start auth, preload routes, and start translation model loading in parallel
       const [authResult] = await Promise.all([
         supabase.auth.signInWithPassword({ email, password }),
         import("./DashboardScreen").catch(() => {}),
         import("./WomenDashboardScreen").catch(() => {}),
+        // Start translation model preloading in background (non-blocking)
+        import("@/hooks/useTranslationPreload").then(m => m.startModelPreload()).catch(() => {}),
       ]);
 
       const { data: authData, error } = authResult;

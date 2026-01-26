@@ -6,6 +6,9 @@
 import { pipeline, env } from '@huggingface/transformers';
 import type { ModelLoadProgress } from './types';
 
+// Re-export for external use
+export type { ModelLoadProgress } from './types';
+
 // Configure transformers.js for browser
 env.allowLocalModels = false;
 env.useBrowserCache = true;

@@ -26,6 +26,7 @@ const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
+const TranslationLoadingIndicator = lazy(() => import("@/components/TranslationLoadingIndicator").then(m => ({ default: m.TranslationLoadingIndicator })));
 
 // Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
@@ -151,6 +152,7 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
                     <Sonner />
                     <PWAInstallPrompt />
                     <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
+                    <TranslationLoadingIndicator showOnReady={true} />
                   </Suspense>
                   {children}
                 </SecurityProvider>

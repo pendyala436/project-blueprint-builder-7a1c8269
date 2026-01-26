@@ -230,6 +230,9 @@ const DashboardScreen = () => {
     loadDashboardData();
     updateUserOnlineStatus(true);
     loadActiveChatCount();
+    
+    // Start translation model preloading in background (in case user refreshed page)
+    import("@/hooks/useTranslationPreload").then(m => m.startModelPreload()).catch(() => {});
 
     // Cleanup: set offline when leaving
     return () => {
