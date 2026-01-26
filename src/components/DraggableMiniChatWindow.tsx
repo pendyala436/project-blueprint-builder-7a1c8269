@@ -89,6 +89,7 @@ async function translateSemantic(
   confidence: number;
 }> {
   if (!text.trim()) {
+    console.log('[translateSemantic] Empty text, skipping');
     return {
       translatedText: '',
       originalText: '',
@@ -99,18 +100,34 @@ async function translateSemantic(
     };
   }
   
+  console.log(`[translateSemantic] Translating: "${text.substring(0, 50)}" from ${sourceLanguage} to ${targetLanguage}`);
+  
   try {
     const result = await xenovaTranslate(text, sourceLanguage, targetLanguage);
+    
+    console.log(`[translateSemantic] Result: "${result.text?.substring(0, 50)}" isTranslated=${result.isTranslated} path=${result.path}`);
+    
+    // Check if translation actually occurred
+    if (!result.text || result.text === text) {
+      console.warn(`[translateSemantic] Translation returned same text or empty. Source: ${sourceLanguage}, Target: ${targetLanguage}`);
+    }
+    
     return {
-      translatedText: result.text,
-      originalText: result.originalText,
-      isTranslated: result.isTranslated,
-      sourceLanguage: result.sourceLang,
-      targetLanguage: result.targetLang,
-      confidence: result.isTranslated ? 0.9 : 0.5,
+      translatedText: result.text || text,
+      originalText: result.originalText || text,
+      isTranslated: result.isTranslated && result.text !== text,
+      sourceLanguage: result.sourceLang || sourceLanguage,
+      targetLanguage: result.targetLang || targetLanguage,
+      confidence: result.isTranslated && result.text !== text ? 0.9 : 0.5,
     };
   } catch (error) {
     console.error('[translateSemantic] Xenova translation error:', error);
+    console.error('[translateSemantic] Error details:', {
+      text: text.substring(0, 50),
+      sourceLanguage,
+      targetLanguage,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
     return {
       translatedText: text,
       originalText: text,
