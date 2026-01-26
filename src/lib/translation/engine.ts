@@ -903,22 +903,6 @@ class SemanticTranslationEngine implements TranslationEngine {
         base.set('ꨤ', 'sa'); base.set('ꨥ', 'ha');
         break;
 
-      // ============= JAPANESE KATAKANA =============
-      case 'Katakana':
-        base.set('ア', 'a'); base.set('イ', 'i'); base.set('ウ', 'u'); base.set('エ', 'e');
-        base.set('オ', 'o'); base.set('カ', 'ka'); base.set('キ', 'ki'); base.set('ク', 'ku');
-        base.set('ケ', 'ke'); base.set('コ', 'ko'); base.set('サ', 'sa'); base.set('シ', 'shi');
-        base.set('ス', 'su'); base.set('セ', 'se'); base.set('ソ', 'so'); base.set('タ', 'ta');
-        base.set('チ', 'chi'); base.set('ツ', 'tsu'); base.set('テ', 'te'); base.set('ト', 'to');
-        base.set('ナ', 'na'); base.set('ニ', 'ni'); base.set('ヌ', 'nu'); base.set('ネ', 'ne');
-        base.set('ノ', 'no'); base.set('ハ', 'ha'); base.set('ヒ', 'hi'); base.set('フ', 'fu');
-        base.set('ヘ', 'he'); base.set('ホ', 'ho'); base.set('マ', 'ma'); base.set('ミ', 'mi');
-        base.set('ム', 'mu'); base.set('メ', 'me'); base.set('モ', 'mo'); base.set('ヤ', 'ya');
-        base.set('ユ', 'yu'); base.set('ヨ', 'yo'); base.set('ラ', 'ra'); base.set('リ', 'ri');
-        base.set('ル', 'ru'); base.set('レ', 're'); base.set('ロ', 'ro'); base.set('ワ', 'wa');
-        base.set('ヲ', 'wo'); base.set('ン', 'n');
-        break;
-
       // ============= MONGOLIAN SCRIPT =============
       case 'Mongolian':
         base.set('ᠠ', 'a'); base.set('ᠡ', 'e'); base.set('ᠢ', 'i'); base.set('ᠣ', 'o');
