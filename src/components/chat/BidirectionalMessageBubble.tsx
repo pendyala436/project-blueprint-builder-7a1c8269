@@ -1,33 +1,43 @@
 /**
- * EN-Mode Message Bubble Component
- * =================================
+ * Bidirectional Message Bubble Component - Mother Tongue First
+ * =============================================================
  * 
  * Displays messages with:
- * - Primary text in viewer's mother tongue (native or Latin script)
- * - English meaning ALWAYS shown below in small text
+ * - PRIMARY: Viewer's mother tongue (native script) - LARGE
+ * - SECONDARY: English meaning below in small text
  * 
  * RULES:
- * - Sender sees: Their mother tongue translation + English meaning below
- * - Receiver sees: Their mother tongue translation + English meaning below
+ * - Sender sees: Their mother tongue (senderView) + English meaning below
+ * - Receiver sees: Their mother tongue (receiverView) + English meaning below
+ * - NO English as primary display - only as meaning reference
  */
 
 import React, { memo, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Globe, Languages, Eye, EyeOff, Check, CheckCheck } from 'lucide-react';
-import {
-  type MeaningBasedMessage,
-  formatMessageTime,
-  getTextDirection,
-  isSameLanguage,
-  normalizeLanguage,
-} from '@/lib/translation/meaning-based-chat';
+import { Globe, Eye, EyeOff, Check, CheckCheck, Languages } from 'lucide-react';
 
 // ============================================================
 // TYPES
 // ============================================================
+
+export interface MeaningBasedMessage {
+  id: string;
+  originalInput: string;
+  extractedMeaning: string;
+  confidence: number;
+  senderView: string;
+  senderScript: 'native' | 'latin';
+  receiverView: string;
+  receiverScript: 'native' | 'latin';
+  senderLanguage: string;
+  receiverLanguage: string;
+  timestamp: string;
+  wasTranslated: boolean;
+  wasTransliterated: boolean;
+  sameLanguage: boolean;
+}
 
 export interface BidirectionalMessageBubbleProps {
   message: MeaningBasedMessage;
@@ -35,11 +45,42 @@ export interface BidirectionalMessageBubbleProps {
   isMe: boolean;
   senderName?: string;
   senderAvatar?: string | null;
-  showEnglishMeaning?: boolean; // DEPRECATED: English is never shown to users
+  showEnglishMeaning?: boolean;
   showOriginalToggle?: boolean;
   isDelivered?: boolean;
   isRead?: boolean;
   className?: string;
+}
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
+function normalizeLanguage(lang: string): string {
+  if (!lang || typeof lang !== 'string') return 'english';
+  return lang.toLowerCase().trim() || 'english';
+}
+
+function isSameLanguage(lang1: string, lang2: string): boolean {
+  const n1 = normalizeLanguage(lang1);
+  const n2 = normalizeLanguage(lang2);
+  if (n1 === n2) return true;
+  const aliases: Record<string, string> = { 'bangla': 'bengali', 'oriya': 'odia' };
+  return (aliases[n1] || n1) === (aliases[n2] || n2);
+}
+
+function formatMessageTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+function getTextDirection(lang: string): 'ltr' | 'rtl' {
+  const rtlLanguages = new Set(['arabic', 'hebrew', 'persian', 'urdu', 'farsi', 'pashto', 'sindhi', 'kashmiri']);
+  return rtlLanguages.has(normalizeLanguage(lang)) ? 'rtl' : 'ltr';
 }
 
 // ============================================================
@@ -109,34 +150,35 @@ export const BidirectionalMessageBubble: React.FC<BidirectionalMessageBubbleProp
   
   // Determine which view to show based on viewer's role
   const normViewer = normalizeLanguage(viewerLanguage);
-  const isSenderView = isSameLanguage(normViewer, message.senderLanguage);
+  const normSender = normalizeLanguage(message.senderLanguage);
+  const isSenderViewer = isSameLanguage(normViewer, normSender);
   
-  // Get display text
-  const primaryText = isSenderView ? message.senderView : message.receiverView;
+  // PRIMARY TEXT: Viewer's mother tongue (senderView if viewer is sender, receiverView if viewer is receiver)
+  const primaryText = isSenderViewer ? message.senderView : message.receiverView;
   const originalText = message.originalInput;
   const englishText = message.extractedMeaning;
   
   // Get text direction
-  const textDir = isSenderView 
+  const textDir = isSenderViewer 
     ? getTextDirection(message.senderLanguage)
     : getTextDirection(message.receiverLanguage);
   
-  // Should show English meaning?
+  // Show English meaning only if different from primary text
   const shouldShowEnglish = showEnglishMeaning && 
     englishText && 
-    englishText.toLowerCase() !== primaryText.toLowerCase();
+    englishText.toLowerCase().trim() !== primaryText.toLowerCase().trim();
   
-  // Can toggle original?
+  // Can toggle original (only if original is different from display)
   const canToggleOriginal = showOriginalToggle && 
     originalText !== primaryText &&
-    originalText.toLowerCase() !== primaryText.toLowerCase();
+    originalText.toLowerCase().trim() !== primaryText.toLowerCase().trim();
   
   // Toggle handler
   const handleToggleOriginal = useCallback(() => {
     setShowOriginal(prev => !prev);
   }, []);
   
-  // Display text
+  // What to display
   const displayText = showOriginal ? originalText : primaryText;
   const displayDir = showOriginal ? 'auto' : textDir;
   
