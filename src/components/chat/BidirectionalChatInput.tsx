@@ -1,15 +1,16 @@
 /**
- * Bidirectional Chat Input Component with NL/EN Toggle
- * =====================================================
+ * Bidirectional Chat Input Component - Mother Tongue First
+ * =========================================================
  * 
- * Supports two typing modes:
- * - EN (English): Type in English → translates to mother tongue
- * - NL (Native/Latin): Type phonetically in native language
+ * CORE PRINCIPLE: Both sender and receiver see messages in their MOTHER TONGUE
  * 
- * RULES:
- * 1. Preview: Shows mother tongue translation (native script)
- * 2. After Send: Native script + English meaning in small letters below
- * 3. Receiver: Their mother tongue + English meaning below
+ * Flow:
+ * 1. User types (any method: English, native script, romanized, voice)
+ * 2. Preview shows message in SENDER'S mother tongue (native script)
+ * 3. After send: Sender sees in their mother tongue, receiver sees in their mother tongue
+ * 4. English meaning shown below in small text for reference only
+ * 
+ * Uses edge function for proper semantic translation via free APIs.
  */
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
@@ -17,30 +18,18 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Send, Globe, Languages, Loader2, Mic } from 'lucide-react';
+import { Send, Globe, Languages, Loader2 } from 'lucide-react';
 import { type UserLanguageProfile } from '@/lib/offline-translation/types';
-// OFFLINE UNIVERSAL TRANSLATION SYSTEM - No external APIs
-import {
-  translateUniversal,
-  normalizeLanguage,
-  isSameLanguage,
-  isEngineReady,
-  initializeEngine,
-  isEnglish,
-  isLatinScriptLanguage,
-  getLiveNativePreview,
-} from '@/lib/translation/universal-offline-engine';
-// Phonetic transliteration removed - meaning-based only
+import { supabase } from '@/integrations/supabase/client';
 
 // ============================================================
 // TYPES
 // ============================================================
 
-export type TypingMode = 'english-meaning' | 'native-latin';
-
 export interface LivePreviewResult {
-  nativePreview: string;           // Preview in sender's native script
+  senderPreview: string;           // Preview in sender's native script
   receiverPreview: string;         // Preview for receiver (if different language)
+  englishMeaning: string;          // English semantic meaning
   confidence: number;
 }
 
@@ -78,153 +67,117 @@ export interface BidirectionalChatInputProps {
 }
 
 // ============================================================
-// OFFLINE TRANSLATION HELPERS
+// LANGUAGE UTILITIES
+// ============================================================
+
+function normalizeLanguage(lang: string): string {
+  if (!lang || typeof lang !== 'string') return 'english';
+  return lang.toLowerCase().trim() || 'english';
+}
+
+function isSameLanguage(lang1: string, lang2: string): boolean {
+  const n1 = normalizeLanguage(lang1);
+  const n2 = normalizeLanguage(lang2);
+  if (n1 === n2) return true;
+  
+  // Common aliases
+  const aliases: Record<string, string> = {
+    'bangla': 'bengali',
+    'oriya': 'odia',
+    'mandarin': 'chinese',
+  };
+  return (aliases[n1] || n1) === (aliases[n2] || n2);
+}
+
+function isEnglish(lang: string): boolean {
+  const n = normalizeLanguage(lang);
+  return n === 'english' || n === 'en';
+}
+
+function isLatinScriptLanguage(lang: string): boolean {
+  const latinScriptLanguages = new Set([
+    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
+    'dutch', 'polish', 'romanian', 'czech', 'hungarian', 'swedish',
+    'danish', 'norwegian', 'finnish', 'turkish', 'vietnamese', 'indonesian',
+    'malay', 'tagalog', 'filipino', 'swahili', 'hausa', 'yoruba',
+  ]);
+  return latinScriptLanguages.has(normalizeLanguage(lang));
+}
+
+// ============================================================
+// TRANSLATION VIA EDGE FUNCTION
 // ============================================================
 
 /**
- * Generate live preview using OFFLINE universal translation engine
- * EN-MODE: English input → Mother tongue translation
+ * Call edge function for bidirectional translation
+ * Returns senderView, receiverView, and englishCore
  */
-async function generateLivePreview(
-  input: string,
+async function translateBidirectional(
+  text: string,
   senderLanguage: string,
   receiverLanguage: string
-): Promise<LivePreviewResult> {
-  if (!input || !input.trim()) {
-    return { nativePreview: '', receiverPreview: '', confidence: 0 };
+): Promise<{
+  senderView: string;
+  receiverView: string;
+  englishCore: string;
+  wasTranslated: boolean;
+  wasTransliterated: boolean;
+}> {
+  if (!text.trim()) {
+    return {
+      senderView: '',
+      receiverView: '',
+      englishCore: '',
+      wasTranslated: false,
+      wasTransliterated: false,
+    };
   }
 
-  const trimmed = input.trim();
-  const normSender = normalizeLanguage(senderLanguage);
-  const normReceiver = normalizeLanguage(receiverLanguage);
-  const sameLanguage = isSameLanguage(normSender, normReceiver);
+  try {
+    console.log('[BidirectionalChatInput] Calling edge function:', {
+      text: text.substring(0, 50),
+      senderLang: senderLanguage,
+      receiverLang: receiverLanguage,
+    });
 
-  let nativePreview = '';
-  let receiverPreview = '';
-  let confidence = 0.9;
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        senderLanguage: senderLanguage.toLowerCase(),
+        receiverLanguage: receiverLanguage.toLowerCase(),
+        mode: 'bidirectional',
+      },
+    });
 
-  // EN-MODE: Translate English → Sender's mother tongue
-  if (isEnglish(normSender)) {
-    // Sender speaks English - no translation needed for preview
-    nativePreview = trimmed;
-  } else {
-    // Translate English to sender's mother tongue using offline engine
-    try {
-      const result = await translateUniversal(trimmed, 'english', normSender);
-      nativePreview = result.text;
-      confidence = result.confidence || 0.85;
-
-      // MEANING-BASED ONLY: No phonetic transliteration
-      // The offline engine returns semantic translation directly
-    } catch (err) {
-      console.error('[generateLivePreview] Translation error:', err);
-      nativePreview = trimmed;
-      confidence = 0.5;
+    if (error) {
+      console.error('[BidirectionalChatInput] Edge function error:', error);
+      throw error;
     }
+
+    console.log('[BidirectionalChatInput] Translation result:', {
+      senderView: data?.senderView?.substring(0, 30),
+      receiverView: data?.receiverView?.substring(0, 30),
+      englishCore: data?.englishCore?.substring(0, 30),
+    });
+
+    return {
+      senderView: data?.senderView || text,
+      receiverView: data?.receiverView || text,
+      englishCore: data?.englishCore || text,
+      wasTranslated: data?.wasTranslated || false,
+      wasTransliterated: data?.wasTransliterated || false,
+    };
+  } catch (err) {
+    console.error('[BidirectionalChatInput] Translation exception:', err);
+    // Fallback to original text
+    return {
+      senderView: text,
+      receiverView: text,
+      englishCore: text,
+      wasTranslated: false,
+      wasTransliterated: false,
+    };
   }
-
-  // Generate receiver preview if different language
-  if (!sameLanguage) {
-    if (isEnglish(normReceiver)) {
-      receiverPreview = trimmed; // Receiver speaks English
-    } else {
-      try {
-        const result = await translateUniversal(trimmed, 'english', normReceiver);
-        receiverPreview = result.text;
-
-        // MEANING-BASED ONLY: No phonetic transliteration
-      } catch (err) {
-        console.error('[generateLivePreview] Receiver translation error:', err);
-        receiverPreview = trimmed;
-      }
-    }
-  }
-
-  return { nativePreview, receiverPreview, confidence };
-}
-
-/**
- * Process message for sending using OFFLINE universal translation engine
- */
-async function processMessage(
-  input: string,
-  senderProfile: UserLanguageProfile,
-  receiverProfile: UserLanguageProfile
-): Promise<MeaningBasedMessage> {
-  const trimmed = input.trim();
-  const timestamp = new Date().toISOString();
-  const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-  const normSender = normalizeLanguage(senderProfile.motherTongue);
-  const normReceiver = normalizeLanguage(receiverProfile.motherTongue);
-  const sameLanguage = isSameLanguage(normSender, normReceiver);
-
-  // EN-MODE: Input is always English
-  const extractedMeaning = trimmed;
-
-  // Generate sender view (in sender's mother tongue)
-  let senderView = '';
-  let senderScript: 'native' | 'latin' = 'latin';
-  let wasTransliterated = false;
-
-  if (isEnglish(normSender)) {
-    senderView = trimmed;
-    senderScript = 'latin';
-  } else {
-    try {
-      const result = await translateUniversal(trimmed, 'english', normSender);
-      senderView = result.text;
-      senderScript = isLatinScriptLanguage(normSender) ? 'latin' : 'native';
-
-      // MEANING-BASED ONLY: No phonetic transliteration - wasTransliterated stays false
-    } catch (err) {
-      console.error('[processMessage] Sender translation error:', err);
-      senderView = trimmed;
-    }
-  }
-
-  // Generate receiver view
-  let receiverView = '';
-  let receiverScript: 'native' | 'latin' = 'latin';
-  let wasTranslated = false;
-
-  if (sameLanguage) {
-    receiverView = senderView;
-    receiverScript = senderScript;
-  } else if (isEnglish(normReceiver)) {
-    receiverView = trimmed;
-    receiverScript = 'latin';
-    wasTranslated = !isEnglish(normSender);
-  } else {
-    try {
-      const result = await translateUniversal(trimmed, 'english', normReceiver);
-      receiverView = result.text;
-      receiverScript = isLatinScriptLanguage(normReceiver) ? 'latin' : 'native';
-      wasTranslated = true;
-
-      // MEANING-BASED ONLY: No phonetic transliteration
-    } catch (err) {
-      console.error('[processMessage] Receiver translation error:', err);
-      receiverView = trimmed;
-    }
-  }
-
-  return {
-    id,
-    originalInput: trimmed,
-    extractedMeaning,
-    confidence: 0.9,
-    senderView,
-    senderScript,
-    receiverView,
-    receiverScript,
-    senderLanguage: normSender,
-    receiverLanguage: normReceiver,
-    timestamp,
-    wasTranslated,
-    wasTransliterated,
-    sameLanguage,
-  };
 }
 
 // ============================================================
@@ -243,93 +196,50 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   // State
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isReady, setIsReady] = useState(isEngineReady());
   const [preview, setPreview] = useState<LivePreviewResult | null>(null);
-  const [typingMode, setTypingMode] = useState<TypingMode>('english-meaning');
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
   
-  // Derived values - MY language as sender, PARTNER's language as receiver
+  // Derived values
   const myLanguage = normalizeLanguage(myProfile.motherTongue);
   const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
   const sameLanguage = isSameLanguage(myLanguage, partnerLanguage);
-  const isMyLangEnglish = isEnglish(myLanguage);
   
-  // Initialize engine
-  useEffect(() => {
-    if (!isReady) {
-      initializeEngine().then(() => setIsReady(true));
-    }
-  }, [isReady]);
-  
-  // Generate preview based on typing mode
+  // Generate preview via edge function
   const generatePreview = useCallback(async (value: string) => {
     if (!value.trim()) {
       setPreview(null);
       return;
     }
     
-    const trimmed = value.trim();
-    let nativePreview = '';
-    let receiverPreview = '';
-    let confidence = 0.9;
+    setIsLoadingPreview(true);
     
-    if (typingMode === 'english-meaning') {
-      // EN MODE: English → Mother tongue translation
-      if (isMyLangEnglish) {
-        nativePreview = trimmed;
-      } else {
-        try {
-          const result = await translateUniversal(trimmed, 'english', myLanguage);
-          nativePreview = result.text;
-          confidence = result.confidence || 0.85;
-        } catch (err) {
-          console.error('[generatePreview] EN mode error:', err);
-          nativePreview = trimmed;
-          confidence = 0.5;
-        }
-      }
+    try {
+      const result = await translateBidirectional(value.trim(), myLanguage, partnerLanguage);
       
-      // Receiver preview
-      if (!sameLanguage) {
-        if (isEnglish(partnerLanguage)) {
-          receiverPreview = trimmed;
-        } else {
-          try {
-            const result = await translateUniversal(trimmed, 'english', partnerLanguage);
-            receiverPreview = result.text;
-          } catch (err) {
-            receiverPreview = trimmed;
-          }
-        }
-      }
-    } else {
-      // NL MODE: Show as-is (NO phonetic transliteration)
-      nativePreview = trimmed;
-      
-      // For receiver, extract English meaning then translate (NO transliteration)
-      if (!sameLanguage) {
-        try {
-          const englishResult = await translateUniversal(nativePreview, myLanguage, 'english');
-          const englishMeaning = englishResult.text;
-          
-          if (isEnglish(partnerLanguage)) {
-            receiverPreview = englishMeaning;
-          } else {
-            const receiverResult = await translateUniversal(englishMeaning, 'english', partnerLanguage);
-            receiverPreview = receiverResult.text;
-          }
-        } catch (err) {
-          receiverPreview = nativePreview;
-        }
-      }
+      setPreview({
+        senderPreview: result.senderView,
+        receiverPreview: result.receiverView,
+        englishMeaning: result.englishCore,
+        confidence: 0.9,
+      });
+    } catch (err) {
+      console.error('[BidirectionalChatInput] Preview error:', err);
+      // Fallback: show input as-is
+      setPreview({
+        senderPreview: value.trim(),
+        receiverPreview: value.trim(),
+        englishMeaning: value.trim(),
+        confidence: 0.5,
+      });
+    } finally {
+      setIsLoadingPreview(false);
     }
-    
-    setPreview({ nativePreview, receiverPreview, confidence });
-  }, [typingMode, myLanguage, partnerLanguage, sameLanguage, isMyLangEnglish]);
+  }, [myLanguage, partnerLanguage]);
   
   // Handle input change
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -343,83 +253,41 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced preview
+    // Debounced preview (300ms to avoid too many API calls)
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
-      previewTimeoutRef.current = setTimeout(() => generatePreview(value), 150);
+      previewTimeoutRef.current = setTimeout(() => generatePreview(value), 300);
     } else {
       setPreview(null);
     }
   }, [onTyping, generatePreview]);
   
-  // Handle send - I am sender, partner is receiver
+  // Handle send - translate via edge function
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
-    if (!trimmed || disabled || isSending || !isReady) return;
+    if (!trimmed || disabled || isSending) return;
     
     setIsSending(true);
     onTyping?.(false);
     
     try {
-      let extractedMeaning = trimmed;
-      let senderView = '';
-      let senderScript: 'native' | 'latin' = 'latin';
-      let wasTransliterated = false;
-      
-      if (typingMode === 'english-meaning') {
-        // EN MODE: Input is English
-        extractedMeaning = trimmed;
-        
-        if (isMyLangEnglish) {
-          senderView = trimmed;
-        } else {
-          const result = await translateUniversal(trimmed, 'english', myLanguage);
-          senderView = result.text;
-          senderScript = isLatinScriptLanguage(myLanguage) ? 'latin' : 'native';
-        }
-      } else {
-        // NL MODE: Show as-is (NO transliteration)
-        senderView = trimmed;
-        senderScript = isLatinScriptLanguage(myLanguage) ? 'latin' : 'native';
-        
-        // Extract English meaning from input
-        const englishResult = await translateUniversal(senderView, myLanguage, 'english');
-        extractedMeaning = englishResult.text;
-      }
-      
-      // Generate receiver view
-      let receiverView = '';
-      let receiverScript: 'native' | 'latin' = 'latin';
-      let wasTranslated = false;
-      
-      if (sameLanguage) {
-        receiverView = senderView;
-        receiverScript = senderScript;
-      } else if (isEnglish(partnerLanguage)) {
-        receiverView = extractedMeaning;
-        receiverScript = 'latin';
-        wasTranslated = !isEnglish(myLanguage);
-      } else {
-        const result = await translateUniversal(extractedMeaning, 'english', partnerLanguage);
-        receiverView = result.text;
-        receiverScript = isLatinScriptLanguage(partnerLanguage) ? 'latin' : 'native';
-        wasTranslated = true;
-      }
+      // Call edge function for bidirectional translation
+      const result = await translateBidirectional(trimmed, myLanguage, partnerLanguage);
       
       const message: MeaningBasedMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         originalInput: trimmed,
-        extractedMeaning,
+        extractedMeaning: result.englishCore,
         confidence: 0.9,
-        senderView,
-        senderScript,
-        receiverView,
-        receiverScript,
+        senderView: result.senderView,
+        senderScript: isLatinScriptLanguage(myLanguage) ? 'latin' : 'native',
+        receiverView: result.receiverView,
+        receiverScript: isLatinScriptLanguage(partnerLanguage) ? 'latin' : 'native',
         senderLanguage: myLanguage,
         receiverLanguage: partnerLanguage,
         timestamp: new Date().toISOString(),
-        wasTranslated,
-        wasTransliterated,
+        wasTranslated: result.wasTranslated,
+        wasTransliterated: result.wasTransliterated,
         sameLanguage,
       };
       
@@ -431,7 +299,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     } finally {
       setIsSending(false);
     }
-  }, [input, disabled, isSending, isReady, typingMode, myProfile, partnerProfile, myLanguage, partnerLanguage, sameLanguage, isMyLangEnglish, onSendMessage, onTyping]);
+  }, [input, disabled, isSending, myLanguage, partnerLanguage, sameLanguage, onSendMessage, onTyping]);
   
   // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -440,16 +308,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       handleSend();
     }
   }, [handleSend]);
-  
-  // Toggle typing mode
-  const toggleTypingMode = useCallback(() => {
-    setTypingMode(prev => prev === 'english-meaning' ? 'native-latin' : 'english-meaning');
-    setPreview(null);
-    // Re-generate preview with new mode
-    if (input.trim()) {
-      setTimeout(() => generatePreview(input), 50);
-    }
-  }, [input, generatePreview]);
   
   // Cleanup
   useEffect(() => {
@@ -468,41 +326,49 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [input]);
   
-  const showPreview = input.trim().length > 0;
-  const placeholderText = typingMode === 'english-meaning' 
-    ? 'Type in English...' 
-    : `Type in ${myProfile.motherTongue}...`;
+  const showPreview = input.trim().length > 0 && preview;
+  const placeholderText = placeholder || `Type your message...`;
   
   return (
     <div className={cn('space-y-2', className)}>
-      {/* Live Previews */}
+      {/* Live Preview - Shows sender's mother tongue */}
       {showPreview && (
         <div className="space-y-1.5 px-2 py-2 bg-muted/30 rounded-lg mx-2">
           {/* Preview Header */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-              Preview
+              {isLoadingPreview ? 'Translating...' : 'Preview'}
             </span>
             <Badge variant="outline" className="text-[9px] gap-0.5 h-4 px-1.5">
               <Globe className="h-2.5 w-2.5" />
-              {typingMode === 'english-meaning' ? 'English' : myProfile.motherTongue}
+              {myProfile.motherTongue}
             </Badge>
           </div>
           
-          {/* Mother Tongue Preview */}
-          {preview?.nativePreview && preview.nativePreview !== input && (
+          {/* Sender's Mother Tongue Preview - MAIN DISPLAY */}
+          {preview.senderPreview && (
             <div className="flex items-start gap-2">
               <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
                 {myProfile.motherTongue}
               </Badge>
               <p className="text-sm font-medium unicode-text flex-1" dir="auto">
-                {preview.nativePreview}
+                {preview.senderPreview}
               </p>
             </div>
           )}
           
-          {/* Partner's Preview */}
-          {!sameLanguage && preview?.receiverPreview && (
+          {/* English Meaning - Small subtext */}
+          {preview.englishMeaning && preview.englishMeaning !== preview.senderPreview && (
+            <div className="flex items-start gap-1.5 pt-1 border-t border-muted/50">
+              <Globe className="h-2.5 w-2.5 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-[10px] text-muted-foreground unicode-text flex-1">
+                {preview.englishMeaning}
+              </p>
+            </div>
+          )}
+          
+          {/* Partner's Preview (only if different language) */}
+          {!sameLanguage && preview.receiverPreview && preview.receiverPreview !== preview.senderPreview && (
             <div className="flex items-start gap-2 pt-1 border-t border-muted/50">
               <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
                 <Languages className="h-2.5 w-2.5" />
@@ -513,39 +379,11 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
               </p>
             </div>
           )}
-          
-          {/* Confidence indicator */}
-          {preview && preview.confidence > 0 && (
-            <div className="flex justify-end">
-              <span className="text-[9px] text-muted-foreground">
-                {Math.round(preview.confidence * 100)}% confidence
-              </span>
-            </div>
-          )}
         </div>
       )}
       
-      {/* Input Area with NL/EN Toggle */}
-      <div className="flex gap-2 items-end px-2 pb-2">
-        {/* NL/EN Toggle Button */}
-        <Button
-          type="button"
-          variant={typingMode === 'english-meaning' ? 'default' : 'secondary'}
-          size="sm"
-          onClick={toggleTypingMode}
-          className={cn(
-            'shrink-0 h-11 w-11 font-bold text-xs',
-            typingMode === 'english-meaning' 
-              ? 'bg-primary hover:bg-primary/90' 
-              : 'bg-secondary hover:bg-secondary/80'
-          )}
-          title={typingMode === 'english-meaning' 
-            ? 'EN: Type in English (meaning-based)' 
-            : 'NL: Type in Native/Latin (phonetic)'}
-        >
-          {typingMode === 'english-meaning' ? 'EN' : 'NL'}
-        </Button>
-        
+      {/* Input Area */}
+      <div className="flex items-end gap-2 px-2 pb-2">
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
@@ -553,48 +391,31 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholderText}
-            disabled={disabled || !isReady}
+            disabled={disabled || isSending}
             className={cn(
-              'min-h-[44px] max-h-32 resize-none unicode-text pr-10',
-              'focus-visible:ring-1 focus-visible:ring-primary'
+              'min-h-[44px] max-h-[120px] resize-none py-3 pr-4',
+              'rounded-xl border-muted-foreground/20',
+              'focus-visible:ring-1 focus-visible:ring-primary',
+              'unicode-text'
             )}
-            dir="auto"
             rows={1}
           />
-          {/* Voice input hint */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 bottom-1 h-8 w-8 opacity-50 hover:opacity-100"
-            disabled
-            title="Voice input coming soon"
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
         </div>
         
+        {/* Send Button */}
         <Button
           onClick={handleSend}
-          disabled={!input.trim() || disabled || isSending || !isReady}
+          disabled={!input.trim() || disabled || isSending}
           size="icon"
-          className="shrink-0 h-11 w-11"
+          className="h-11 w-11 rounded-xl shrink-0"
         >
           {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           )}
         </Button>
       </div>
-      
-      {/* Status bar */}
-      {!isReady && (
-        <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Initializing translation engine...</span>
-        </div>
-      )}
     </div>
   );
 });
