@@ -104,13 +104,16 @@ export const SmartChatInput: React.FC<SmartChatInputProps> = memo(({
   });
 
   /**
-   * Handle text input change
+   * Handle text input change with input event tracking
    */
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInputText(value);
     
-    // Trigger auto-detection and translation
+    // Get the native input event for method detection
+    const nativeEvent = e.nativeEvent as InputEvent;
+    
+    // Trigger auto-detection with input event
     translateInput(value);
 
     // Typing indicator
@@ -215,6 +218,19 @@ export const SmartChatInput: React.FC<SmartChatInputProps> = memo(({
     }
   };
 
+  // Get input method badge color
+  const getInputMethodBadgeColor = () => {
+    switch (detection?.inputMethod) {
+      case 'gboard': return 'bg-emerald-500';
+      case 'ios-native': return 'bg-sky-500';
+      case 'external': return 'bg-slate-500';
+      case 'font-tool': return 'bg-pink-500';
+      case 'voice': return 'bg-purple-500';
+      case 'ime': return 'bg-indigo-500';
+      default: return 'bg-muted';
+    }
+  };
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {/* Preview Section */}
@@ -240,6 +256,9 @@ export const SmartChatInput: React.FC<SmartChatInputProps> = memo(({
           <Badge variant="outline" className={cn('text-xs text-white', getInputTypeBadgeColor())}>
             {detection.inputType}
           </Badge>
+          <Badge variant="outline" className={cn('text-xs text-white', getInputMethodBadgeColor())}>
+            {detection.inputMethod}
+          </Badge>
           <Badge variant="outline" className="text-xs">
             {detection.detectedLanguageName}
           </Badge>
@@ -249,6 +268,21 @@ export const SmartChatInput: React.FC<SmartChatInputProps> = memo(({
           {!isSameLang && (
             <Badge variant="outline" className="text-xs">
               → {receiverLang}
+            </Badge>
+          )}
+          {detection.metadata?.isGboard && (
+            <Badge variant="outline" className="text-xs bg-emerald-100 text-emerald-700">
+              Gboard
+            </Badge>
+          )}
+          {detection.metadata?.isFontTool && (
+            <Badge variant="outline" className="text-xs bg-pink-100 text-pink-700">
+              Font Tool
+            </Badge>
+          )}
+          {detection.metadata?.isMixedInput && (
+            <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700">
+              Mixed
             </Badge>
           )}
         </div>

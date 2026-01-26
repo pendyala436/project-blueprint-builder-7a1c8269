@@ -264,14 +264,26 @@ export function useSmartChatTranslation(options: UseSmartChatTranslationOptions)
    * Get final translation for sending
    */
   const getFinalTranslation = useCallback(async (text: string): Promise<SmartTranslationResult> => {
-    const currentDetection = detection || {
+    const currentDetection: DetectionResult = detection || {
       inputType: 'unknown' as const,
+      inputMethod: 'standard' as const,
       detectedLanguage: 'en',
       detectedLanguageName: 'English',
       isLatinInput: true,
       isNativeInput: false,
       confidence: 0.5,
       script: 'Latin',
+      metadata: {
+        isGboard: false,
+        isExternalKeyboard: false,
+        isVoiceInput: false,
+        isFontTool: false,
+        isMixedInput: false,
+        isIME: false,
+        inputEventType: '',
+        compositionActive: false,
+        characterBurstDetected: false,
+      },
     };
 
     return processInput(text, currentDetection);
