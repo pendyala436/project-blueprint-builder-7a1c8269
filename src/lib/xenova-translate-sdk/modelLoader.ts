@@ -162,9 +162,10 @@ export async function loadDetector(): Promise<any> {
   try {
     console.log('[XenovaLoader] Loading language detector...');
     
+    // Use a publicly accessible language detection model
     detectorPipeline = await pipeline(
       'text-classification',
-      'Xenova/mbert-base-ft-language-identification',
+      'Xenova/language-detection',
       {
         progress_callback: (progress: any) => {
           const pct = Math.round((progress.loaded / progress.total) * 100) || 0;
