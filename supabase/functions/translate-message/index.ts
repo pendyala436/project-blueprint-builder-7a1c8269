@@ -1463,12 +1463,28 @@ serve(async (req) => {
       
       // ===================================
       // STEP 1: Process sender's input to get:
-      //   - senderNativeText (in sender's native script)
+      //   - senderNativeText (in sender's native script - ALWAYS mother tongue)
       //   - englishCore (semantic meaning in English)
       // ===================================
       let englishCore = inputText;
       let senderNativeText = inputText;
       let wasTransliterated = false;
+      
+      // Helper: Check if Latin text looks like actual English (vs romanized native)
+      const looksLikeEnglish = (text: string): boolean => {
+        const lowered = text.toLowerCase().trim();
+        const englishWords = ['hello', 'hi', 'how', 'are', 'you', 'what', 'where', 'when', 'why', 'who', 
+          'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with', 'good', 'morning', 'evening', 'night',
+          'yes', 'no', 'ok', 'okay', 'thank', 'thanks', 'please', 'sorry', 'bye', 'love', 'like', 'want',
+          'need', 'can', 'will', 'have', 'do', 'did', 'does', 'am', 'was', 'were', 'been', 'being',
+          'my', 'your', 'our', 'their', 'his', 'her', 'its', 'this', 'that', 'these', 'those',
+          'and', 'or', 'but', 'if', 'then', 'because', 'so', 'very', 'really', 'just', 'now', 'today',
+          'tomorrow', 'yesterday', 'always', 'never', 'sometimes', 'often', 'here', 'there', 'where'];
+        const words = lowered.split(/\s+/);
+        const englishWordCount = words.filter(w => englishWords.includes(w)).length;
+        // If more than 30% of words are common English words, it's likely English
+        return words.length > 0 && (englishWordCount / words.length) >= 0.3;
+      };
       
       if (senderIsEnglish) {
         // Sender speaks English - input IS the English core
@@ -1476,28 +1492,57 @@ serve(async (req) => {
         senderNativeText = inputText;
         console.log(`[dl-translate] Sender is English speaker, input IS English core`);
       } else if (inputIsLatinText && senderIsNonLatin) {
-        // Sender typed romanized text but speaks non-Latin language
-        // Need to: 1) Transliterate to sender's native script 2) Get English meaning
-        const senderNative = await transliterateToNative(inputText, langA);
-        if (senderNative.success && senderNative.text !== inputText) {
-          senderNativeText = senderNative.text;
-          wasTransliterated = true;
-          console.log(`[dl-translate] Sender transliteration success: "${inputText}" → "${senderNativeText}"`);
+        // Sender typed Latin text but speaks non-Latin language (e.g., Telugu, Hindi)
+        // Two cases: 1) Actual English text 2) Romanized native (e.g., "bagunnava" for Telugu)
+        
+        const isActualEnglish = looksLikeEnglish(inputText);
+        console.log(`[dl-translate] Latin input from non-Latin speaker, isActualEnglish=${isActualEnglish}`);
+        
+        if (isActualEnglish) {
+          // CASE 1: User typed actual English (e.g., "how are you")
+          // English IS the semantic core
+          // TRANSLATE to sender's mother tongue for preview (in native script)
+          englishCore = inputText;
           
-          // Get English meaning from native text (more accurate than from romanized)
-          const toEnglish = await translateText(senderNativeText, langA, 'english');
-          if (toEnglish.success && toEnglish.translatedText !== senderNativeText) {
-            englishCore = toEnglish.translatedText;
-            console.log(`[dl-translate] English core from native: "${englishCore.substring(0, 50)}..."`);
+          // Translate English → Sender's mother tongue (native script)
+          const toSenderNative = await translateText(inputText, 'english', langA);
+          if (toSenderNative.success && toSenderNative.translatedText !== inputText) {
+            senderNativeText = toSenderNative.translatedText;
+            console.log(`[dl-translate] English→${langA} for sender preview: "${senderNativeText.substring(0, 50)}"`);
+          } else {
+            // Fallback: keep English if translation fails
+            senderNativeText = inputText;
+            console.log(`[dl-translate] English→${langA} failed, keeping English for sender`);
           }
         } else {
-          // Transliteration failed - try to get English meaning from romanized input
-          // Treat romanized input as the target language and translate
-          const toEnglish = await translateText(inputText, langA, 'english');
-          if (toEnglish.success && toEnglish.translatedText !== inputText) {
-            englishCore = toEnglish.translatedText;
+          // CASE 2: User typed romanized native text (e.g., "bagunnava" for Telugu)
+          // TRANSLITERATE to sender's native script + Get English meaning
+          const senderNative = await transliterateToNative(inputText, langA);
+          if (senderNative.success && senderNative.text !== inputText) {
+            senderNativeText = senderNative.text;
+            wasTransliterated = true;
+            console.log(`[dl-translate] Sender transliteration success: "${inputText}" → "${senderNativeText}"`);
+            
+            // Get English meaning from native text (more accurate than from romanized)
+            const toEnglish = await translateText(senderNativeText, langA, 'english');
+            if (toEnglish.success && toEnglish.translatedText !== senderNativeText) {
+              englishCore = toEnglish.translatedText;
+              console.log(`[dl-translate] English core from native: "${englishCore.substring(0, 50)}..."`);
+            }
+          } else {
+            // Transliteration failed - try to get English meaning from romanized input
+            const toEnglish = await translateText(inputText, langA, 'english');
+            if (toEnglish.success && toEnglish.translatedText !== inputText) {
+              englishCore = toEnglish.translatedText;
+              // Also try to translate back to sender's native
+              const backToNative = await translateText(englishCore, 'english', langA);
+              if (backToNative.success && backToNative.translatedText !== englishCore) {
+                senderNativeText = backToNative.translatedText;
+                console.log(`[dl-translate] Via English pivot, sender native: "${senderNativeText.substring(0, 50)}"`);
+              }
+            }
+            console.log(`[dl-translate] Transliteration failed, English core: "${englishCore.substring(0, 50)}..."`);
           }
-          console.log(`[dl-translate] Transliteration failed, English core: "${englishCore.substring(0, 50)}..."`);
         }
       } else if (!inputIsLatinText) {
         // Sender typed in native script directly (Gboard, IME, etc.)
