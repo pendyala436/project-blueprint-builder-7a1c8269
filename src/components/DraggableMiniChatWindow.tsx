@@ -45,26 +45,82 @@ import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
 // Real-time typing with broadcast to partner
 import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-// SEMANTIC TRANSLATION via Edge Function APIs (LibreTranslate, MyMemory, Google)
-// NO NLLB-200 - NO hardcoding - Uses real translation APIs
+// XENOVA BROWSER-BASED TRANSLATION SDK - Zero server load
+// Supports 1000+ languages via lazy-loaded ML models
 import {
   isSameLanguage,
   isLatinScriptLanguage,
   normalizeUnicode,
 } from "@/lib/translation";
+// Browser-based translation using Xenova/HuggingFace transformers
 import { 
-  translateSemantic,
-  translateBidirectional,
-  getEnglishMeaning,
+  translateText as xenovaTranslate,
+  translateForChat as xenovaTranslateChat,
+  getEnglishMeaning as xenovaGetEnglish,
+  normalizeLanguageCode,
+  isSameLanguage as xenovaSameLanguage,
+  isEnglish as xenovaIsEnglish,
+} from "@/lib/xenova-translate-sdk";
+// Legacy imports for fallback compatibility
+import { 
   isSameLanguageCheck,
   isEnglishLanguage as checkIsEnglish,
 } from "@/lib/translation/semantic-translate-api";
-// Phonetic transliteration removed - meaning-based only
 import { useSpellCheck } from "@/hooks/useSpellCheck";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via SEMANTIC translation (Edge Function APIs)');
+console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via XENOVA BROWSER-BASED SDK (Zero server load)');
+
+/**
+ * Browser-based translation wrapper using Xenova SDK
+ * Replaces edge function calls with client-side ML models
+ */
+async function translateSemantic(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{
+  translatedText: string;
+  originalText: string;
+  isTranslated: boolean;
+  sourceLanguage: string;
+  targetLanguage: string;
+  confidence: number;
+}> {
+  if (!text.trim()) {
+    return {
+      translatedText: '',
+      originalText: '',
+      isTranslated: false,
+      sourceLanguage,
+      targetLanguage,
+      confidence: 0,
+    };
+  }
+  
+  try {
+    const result = await xenovaTranslate(text, sourceLanguage, targetLanguage);
+    return {
+      translatedText: result.text,
+      originalText: result.originalText,
+      isTranslated: result.isTranslated,
+      sourceLanguage: result.sourceLang,
+      targetLanguage: result.targetLang,
+      confidence: result.isTranslated ? 0.9 : 0.5,
+    };
+  } catch (error) {
+    console.error('[translateSemantic] Xenova translation error:', error);
+    return {
+      translatedText: text,
+      originalText: text,
+      isTranslated: false,
+      sourceLanguage,
+      targetLanguage,
+      confidence: 0,
+    };
+  }
+}
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
