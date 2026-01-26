@@ -10,7 +10,7 @@
  * 3. After send: Sender sees in their mother tongue, receiver sees in their mother tongue
  * 4. English meaning shown below in small text for reference only
  * 
- * Uses edge function for proper semantic translation via free APIs.
+ * Uses BROWSER-BASED Xenova translation (NO external APIs like LibreTranslate, MyMemory, Google)
  */
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
@@ -20,7 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Send, Globe, Languages, Loader2 } from 'lucide-react';
 import { type UserLanguageProfile } from '@/lib/offline-translation/types';
-import { supabase } from '@/integrations/supabase/client';
+import { translateForChat } from '@/lib/xenova-translate-sdk/engine';
+import { normalizeLanguageCode, isSameLanguage as checkSameLanguage, isEnglish as checkEnglish } from '@/lib/xenova-translate-sdk/languages';
 
 // ============================================================
 // TYPES
@@ -71,48 +72,30 @@ export interface BidirectionalChatInputProps {
 // ============================================================
 
 function normalizeLanguage(lang: string): string {
-  if (!lang || typeof lang !== 'string') return 'english';
-  return lang.toLowerCase().trim() || 'english';
-}
-
-function isSameLanguage(lang1: string, lang2: string): boolean {
-  const n1 = normalizeLanguage(lang1);
-  const n2 = normalizeLanguage(lang2);
-  if (n1 === n2) return true;
-  
-  // Common aliases
-  const aliases: Record<string, string> = {
-    'bangla': 'bengali',
-    'oriya': 'odia',
-    'mandarin': 'chinese',
-  };
-  return (aliases[n1] || n1) === (aliases[n2] || n2);
-}
-
-function isEnglish(lang: string): boolean {
-  const n = normalizeLanguage(lang);
-  return n === 'english' || n === 'en';
+  if (!lang || typeof lang !== 'string') return 'en';
+  return normalizeLanguageCode(lang.toLowerCase().trim()) || 'en';
 }
 
 function isLatinScriptLanguage(lang: string): boolean {
   const latinScriptLanguages = new Set([
-    'english', 'spanish', 'french', 'german', 'italian', 'portuguese',
-    'dutch', 'polish', 'romanian', 'czech', 'hungarian', 'swedish',
-    'danish', 'norwegian', 'finnish', 'turkish', 'vietnamese', 'indonesian',
-    'malay', 'tagalog', 'filipino', 'swahili', 'hausa', 'yoruba',
+    'en', 'es', 'fr', 'de', 'it', 'pt',
+    'nl', 'pl', 'ro', 'cs', 'hu', 'sv',
+    'da', 'no', 'fi', 'tr', 'vi', 'id',
+    'ms', 'tl', 'sw', 'ha', 'yo',
   ]);
   return latinScriptLanguages.has(normalizeLanguage(lang));
 }
 
 // ============================================================
-// TRANSLATION VIA EDGE FUNCTION
+// BROWSER-BASED TRANSLATION (Xenova - NO external APIs)
 // ============================================================
 
 /**
- * Call edge function for bidirectional translation
+ * Translate using browser-based Xenova ML models
  * Returns senderView, receiverView, and englishCore
+ * NO LibreTranslate, MyMemory, or Google Translate
  */
-async function translateBidirectional(
+async function translateBidirectionalBrowser(
   text: string,
   senderLanguage: string,
   receiverLanguage: string
@@ -121,7 +104,6 @@ async function translateBidirectional(
   receiverView: string;
   englishCore: string;
   wasTranslated: boolean;
-  wasTransliterated: boolean;
 }> {
   if (!text.trim()) {
     return {
@@ -129,53 +111,40 @@ async function translateBidirectional(
       receiverView: '',
       englishCore: '',
       wasTranslated: false,
-      wasTransliterated: false,
     };
   }
 
   try {
-    console.log('[BidirectionalChatInput] Calling edge function:', {
+    console.log('[BidirectionalChatInput] Browser-based Xenova translation:', {
       text: text.substring(0, 50),
       senderLang: senderLanguage,
       receiverLang: receiverLanguage,
     });
 
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        senderLanguage: senderLanguage.toLowerCase(),
-        receiverLanguage: receiverLanguage.toLowerCase(),
-        mode: 'bidirectional',
-      },
-    });
+    // Use browser-based Xenova translateForChat
+    const result = await translateForChat(text, senderLanguage, receiverLanguage);
 
-    if (error) {
-      console.error('[BidirectionalChatInput] Edge function error:', error);
-      throw error;
-    }
-
-    console.log('[BidirectionalChatInput] Translation result:', {
-      senderView: data?.senderView?.substring(0, 30),
-      receiverView: data?.receiverView?.substring(0, 30),
-      englishCore: data?.englishCore?.substring(0, 30),
+    console.log('[BidirectionalChatInput] Xenova result:', {
+      senderView: result.senderView?.substring(0, 30),
+      receiverView: result.receiverView?.substring(0, 30),
+      englishCore: result.englishCore?.substring(0, 30),
+      isTranslated: result.isTranslated,
     });
 
     return {
-      senderView: data?.senderView || text,
-      receiverView: data?.receiverView || text,
-      englishCore: data?.englishCore || text,
-      wasTranslated: data?.wasTranslated || false,
-      wasTransliterated: data?.wasTransliterated || false,
+      senderView: result.senderView || text,
+      receiverView: result.receiverView || text,
+      englishCore: result.englishCore || text,
+      wasTranslated: result.isTranslated || false,
     };
   } catch (err) {
-    console.error('[BidirectionalChatInput] Translation exception:', err);
+    console.error('[BidirectionalChatInput] Xenova translation error:', err);
     // Fallback to original text
     return {
       senderView: text,
       receiverView: text,
       englishCore: text,
       wasTranslated: false,
-      wasTransliterated: false,
     };
   }
 }
@@ -207,9 +176,9 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   // Derived values
   const myLanguage = normalizeLanguage(myProfile.motherTongue);
   const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
-  const sameLanguage = isSameLanguage(myLanguage, partnerLanguage);
+  const sameLanguage = checkSameLanguage(myLanguage, partnerLanguage);
   
-  // Generate preview via edge function
+  // Generate preview via browser-based Xenova
   const generatePreview = useCallback(async (value: string) => {
     if (!value.trim()) {
       setPreview(null);
@@ -219,7 +188,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     setIsLoadingPreview(true);
     
     try {
-      const result = await translateBidirectional(value.trim(), myLanguage, partnerLanguage);
+      const result = await translateBidirectionalBrowser(value.trim(), myLanguage, partnerLanguage);
       
       setPreview({
         senderPreview: result.senderView,
@@ -253,16 +222,16 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced preview (300ms to avoid too many API calls)
+    // Debounced preview (400ms for browser-based translation)
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
-      previewTimeoutRef.current = setTimeout(() => generatePreview(value), 300);
+      previewTimeoutRef.current = setTimeout(() => generatePreview(value), 400);
     } else {
       setPreview(null);
     }
   }, [onTyping, generatePreview]);
   
-  // Handle send - translate via edge function
+  // Handle send - translate via browser-based Xenova
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || disabled || isSending) return;
@@ -271,8 +240,8 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      // Call edge function for bidirectional translation
-      const result = await translateBidirectional(trimmed, myLanguage, partnerLanguage);
+      // Use browser-based Xenova translation
+      const result = await translateBidirectionalBrowser(trimmed, myLanguage, partnerLanguage);
       
       const message: MeaningBasedMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -287,7 +256,7 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         receiverLanguage: partnerLanguage,
         timestamp: new Date().toISOString(),
         wasTranslated: result.wasTranslated,
-        wasTransliterated: result.wasTransliterated,
+        wasTransliterated: false,
         sameLanguage,
       };
       
