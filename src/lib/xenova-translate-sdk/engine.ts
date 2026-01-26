@@ -164,6 +164,7 @@ export async function translateText(
   
   // Empty text
   if (!text.trim()) {
+    console.log('[XenovaEngine] Empty text, returning empty result');
     return {
       text: '',
       originalText: '',
