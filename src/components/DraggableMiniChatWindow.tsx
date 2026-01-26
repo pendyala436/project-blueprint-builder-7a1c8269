@@ -73,8 +73,9 @@ import { useLibreTranslate } from "@/lib/libre-translate";
 console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via XENOVA BROWSER-BASED SDK (Zero server load)');
 
 /**
- * Browser-based translation wrapper using Xenova SDK
- * Replaces edge function calls with client-side ML models
+ * Browser-based semantic translation wrapper using Xenova SDK
+ * Supports ALL input types: English, native script, voice, Gboard, font tools
+ * Provides meaning-based translation (not phonetic transliteration)
  */
 async function translateSemantic(
   text: string,
@@ -89,7 +90,6 @@ async function translateSemantic(
   confidence: number;
 }> {
   if (!text.trim()) {
-    console.log('[translateSemantic] Empty text, skipping');
     return {
       translatedText: '',
       originalText: '',
@@ -100,41 +100,104 @@ async function translateSemantic(
     };
   }
   
-  console.log(`[translateSemantic] Translating: "${text.substring(0, 50)}" from ${sourceLanguage} to ${targetLanguage}`);
+  const normalizedSource = normalizeLanguageCode(sourceLanguage);
+  const normalizedTarget = normalizeLanguageCode(targetLanguage);
   
-  try {
-    const result = await xenovaTranslate(text, sourceLanguage, targetLanguage);
-    
-    console.log(`[translateSemantic] Result: "${result.text?.substring(0, 50)}" isTranslated=${result.isTranslated} path=${result.path}`);
-    
-    // Check if translation actually occurred
-    if (!result.text || result.text === text) {
-      console.warn(`[translateSemantic] Translation returned same text or empty. Source: ${sourceLanguage}, Target: ${targetLanguage}`);
-    }
-    
-    return {
-      translatedText: result.text || text,
-      originalText: result.originalText || text,
-      isTranslated: result.isTranslated && result.text !== text,
-      sourceLanguage: result.sourceLang || sourceLanguage,
-      targetLanguage: result.targetLang || targetLanguage,
-      confidence: result.isTranslated && result.text !== text ? 0.9 : 0.5,
-    };
-  } catch (error) {
-    console.error('[translateSemantic] Xenova translation error:', error);
-    console.error('[translateSemantic] Error details:', {
-      text: text.substring(0, 50),
-      sourceLanguage,
-      targetLanguage,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error'
-    });
+  console.log(`[translateSemantic] "${text.substring(0, 40)}" | ${sourceLanguage}→${normalizedSource} → ${targetLanguage}→${normalizedTarget}`);
+  
+  // Same language check - no translation needed
+  if (xenovaSameLanguage(normalizedSource, normalizedTarget)) {
+    console.log('[translateSemantic] Same language, passthrough');
     return {
       translatedText: text,
       originalText: text,
       isTranslated: false,
-      sourceLanguage,
-      targetLanguage,
+      sourceLanguage: normalizedSource,
+      targetLanguage: normalizedTarget,
+      confidence: 1.0,
+    };
+  }
+  
+  try {
+    // Use Xenova browser-based translation
+    const result = await xenovaTranslate(text, normalizedSource, normalizedTarget);
+    
+    const wasActuallyTranslated = result.isTranslated && result.text !== text && result.text.trim() !== '';
+    
+    console.log(`[translateSemantic] Result: "${result.text?.substring(0, 40)}" | translated=${wasActuallyTranslated} | path=${result.path}`);
+    
+    return {
+      translatedText: result.text || text,
+      originalText: result.originalText || text,
+      isTranslated: wasActuallyTranslated,
+      sourceLanguage: result.sourceLang || normalizedSource,
+      targetLanguage: result.targetLang || normalizedTarget,
+      confidence: wasActuallyTranslated ? 0.9 : 0.5,
+    };
+  } catch (error) {
+    console.error('[translateSemantic] Translation error:', error);
+    return {
+      translatedText: text,
+      originalText: text,
+      isTranslated: false,
+      sourceLanguage: normalizedSource,
+      targetLanguage: normalizedTarget,
       confidence: 0,
+    };
+  }
+}
+
+/**
+ * Browser-based bidirectional chat translation using Xenova SDK
+ * Provides proper sender/receiver views based on their mother tongues
+ * 
+ * @param text - The message text (can be in any language/script)
+ * @param senderLang - Sender's mother tongue
+ * @param receiverLang - Receiver's mother tongue
+ */
+async function translateForChatSemantic(
+  text: string,
+  senderLang: string,
+  receiverLang: string
+): Promise<{
+  senderView: string;
+  receiverView: string;
+  englishMeaning: string;
+  isTranslated: boolean;
+}> {
+  if (!text.trim()) {
+    return {
+      senderView: '',
+      receiverView: '',
+      englishMeaning: '',
+      isTranslated: false,
+    };
+  }
+  
+  console.log(`[translateForChatSemantic] "${text.substring(0, 40)}" | sender=${senderLang} | receiver=${receiverLang}`);
+  
+  try {
+    const result = await xenovaTranslateChat(text, senderLang, receiverLang);
+    
+    console.log(`[translateForChatSemantic] Results:
+      Sender sees: "${result.senderView?.substring(0, 30)}"
+      Receiver sees: "${result.receiverView?.substring(0, 30)}"
+      English: "${result.englishCore?.substring(0, 30)}"
+      Translated: ${result.isTranslated}`);
+    
+    return {
+      senderView: result.senderView || text,
+      receiverView: result.receiverView || text,
+      englishMeaning: result.englishCore || text,
+      isTranslated: result.isTranslated,
+    };
+  } catch (error) {
+    console.error('[translateForChatSemantic] Error:', error);
+    return {
+      senderView: text,
+      receiverView: text,
+      englishMeaning: text,
+      isTranslated: false,
     };
   }
 }
