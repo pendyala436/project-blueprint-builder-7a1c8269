@@ -9,9 +9,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   translateWithDictionary,
   translateForChat,
-  initializeEngine,
-  isEngineReady,
-  getCacheStats,
+  initializeDictionaryEngine,
+  isDataLoaded,
   configureEngine,
 } from './engine';
 import type {
@@ -30,24 +29,14 @@ export interface UseDictionaryTranslationOptions {
 }
 
 export interface UseDictionaryTranslationReturn {
-  // State
   isReady: boolean;
   isTranslating: boolean;
   error: string | null;
-  
-  // Translation functions
   translate: (text: string, source: string, target: string) => Promise<DictionaryTranslationResult>;
   translateChat: (text: string, sender: string, receiver: string) => Promise<DictionaryChatResult>;
-  
-  // Quick translate (for live preview)
   quickTranslate: (text: string, source: string, target: string) => Promise<string>;
-  
-  // Engine management
   initialize: () => Promise<void>;
   configure: (options: Partial<DictionaryEngineConfig>) => void;
-  
-  // Stats
-  cacheStats: { results: number; phrases: number; ready: boolean };
 }
 
 // ============================================================
@@ -59,16 +48,15 @@ export function useDictionaryTranslation(
 ): UseDictionaryTranslationReturn {
   const { autoInitialize = true, config } = options;
   
-  const [isReady, setIsReady] = useState(isEngineReady());
+  const [isReady, setIsReady] = useState(isDataLoaded());
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cacheStats, setCacheStats] = useState(getCacheStats());
   
   const initializingRef = useRef(false);
   
   // Initialize engine
   const initialize = useCallback(async () => {
-    if (initializingRef.current || isEngineReady()) {
+    if (initializingRef.current || isDataLoaded()) {
       setIsReady(true);
       return;
     }
@@ -81,9 +69,8 @@ export function useDictionaryTranslation(
         configureEngine(config);
       }
       
-      await initializeEngine();
+      await initializeDictionaryEngine();
       setIsReady(true);
-      setCacheStats(getCacheStats());
     } catch (err) {
       console.error('[useDictionaryTranslation] Initialization error:', err);
       setError(err instanceof Error ? err.message : 'Failed to initialize translation engine');
@@ -119,7 +106,6 @@ export function useDictionaryTranslation(
     
     try {
       const result = await translateWithDictionary(text, source, target);
-      setCacheStats(getCacheStats());
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Translation failed';
@@ -145,7 +131,6 @@ export function useDictionaryTranslation(
     
     try {
       const result = await translateForChat(text, sender, receiver);
-      setCacheStats(getCacheStats());
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Chat translation failed';
@@ -179,7 +164,6 @@ export function useDictionaryTranslation(
     quickTranslate,
     initialize,
     configure,
-    cacheStats,
   };
 }
 

@@ -2,14 +2,9 @@
  * Dictionary-Based Translation Engine
  * =====================================
  * 
- * Comprehensive translation system implementing all corrections:
- * 1. Preprocessing - Tokenization, chunking, simplification
- * 2. Dictionary Lookup - Word/phrase translation with idiom handling
- * 3. Morphology - Stemming, lemmatization, conjugation
- * 4. Reordering - SVO/SOV/VSO adjustments
- * 5. Word Sense Disambiguation - Context-aware translation
- * 6. Post-Processing - Grammar/fluency corrections
- * 7. LibreTranslate Fallback - When dictionary fails
+ * Fully database-driven translation system.
+ * NO hardcoded data - everything from Supabase.
+ * NO external APIs - pure browser-based translation.
  * 
  * Translation Flow:
  * ┌─────────────────────────────┐
@@ -18,51 +13,52 @@
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │  1. Preprocessing           │
- * │  - Tokenization             │
- * │  - Sentence splitting       │
- * │  - Simplification           │
+ * │  1. Initialize Database     │
+ * │  - Load idioms              │
+ * │  - Load grammar rules       │
+ * │  - Load word senses         │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │ 2. Dictionary Lookup        │
- * │  - Idiom dictionary check   │
+ * │  2. Preprocessing           │
+ * │  - Tokenization             │
+ * │  - Sentence splitting       │
+ * └─────────────┬───────────────┘
+ *               │
+ *               ▼
+ * ┌─────────────────────────────┐
+ * │ 3. Dictionary Lookup        │
+ * │  - Idiom database check     │
  * │  - Phrase translation       │
  * │  - Word-by-word fallback    │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │ 3. Morphology Handling      │
+ * │ 4. Morphology Handling      │
  * │  - Lemmatization            │
  * │  - Apply target grammar     │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │ 4. Word Order Reordering    │
+ * │ 5. Word Order Reordering    │
  * │  - SVO ↔ SOV adjustments    │
  * │  - Adjective placement      │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │ 5. Word Sense Disambiguation│
+ * │ 6. Word Sense Disambiguation│
  * │  - Context-based selection  │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
  * ┌─────────────────────────────┐
- * │ 6. Post-Processing          │
+ * │ 7. Post-Processing          │
  * │  - Grammar correction       │
  * │  - Fluency enhancement      │
- * └─────────────┬───────────────┘
- *               │
- *               ▼
- * ┌─────────────────────────────┐
- * │ 7. Confidence Check         │
- * │  - If low → LibreTranslate  │
  * └─────────────┬───────────────┘
  *               │
  *               ▼
@@ -87,6 +83,7 @@ import { getLemma, stemWord, pluralize, singularize, detectPOS, extractFeatures,
 import { disambiguateAndTranslate, isAmbiguousWord } from './disambiguation';
 import { tokenize, reorderText, tokensToString, chunkSentence, reconstructFromChunks } from './reordering';
 import { getWordOrder, needsReordering, getLanguageGrammar } from './grammar-rules';
+import { initializeDatabaseTranslation, isDataLoaded } from './database-loader';
 import {
   normalizeLanguage,
   isLatinScriptLanguage,
@@ -101,7 +98,10 @@ import { transliterateToNative, reverseTransliterate } from '../universal-transl
 // CONFIGURATION & CACHING
 // ============================================================
 
-let config: DictionaryEngineConfig = { ...DEFAULT_ENGINE_CONFIG };
+let config: DictionaryEngineConfig = { 
+  ...DEFAULT_ENGINE_CONFIG,
+  enableLibreTranslateFallback: false, // Disabled - no external APIs
+};
 
 const resultCache = new Map<string, CacheEntry<DictionaryTranslationResult>>();
 const phraseCache = new Map<string, Record<string, string>>();
@@ -141,7 +141,7 @@ async function loadPhrases(): Promise<void> {
     const { data, error } = await supabase
       .from('common_phrases')
       .select('*')
-      .limit(2000);
+      .limit(5000);
     
     if (error) {
       console.warn('[DictionaryEngine] Failed to load phrases:', error);
@@ -159,7 +159,7 @@ async function loadPhrases(): Promise<void> {
           phraseCache.set(phrase.phrase_key.toLowerCase(), phrase);
         }
       });
-      console.log(`[DictionaryEngine] Loaded ${phraseCache.size} phrases`);
+      console.log(`[DictionaryEngine] Loaded ${phraseCache.size} phrases from database`);
     }
     
     phraseCacheLoaded = true;
@@ -195,12 +195,8 @@ function preprocessText(text: string): {
   chunks: string[];
   tokens: Token[];
 } {
-  // Split into manageable chunks
   const chunks = chunkSentence(text);
-  
-  // Tokenize the full text
   const tokens = tokenize(text);
-  
   return { chunks, tokens };
 }
 
@@ -277,7 +273,7 @@ function dictionaryLookup(
       }
     }
     
-    // Keep original
+    // Keep original (transliterate if needed)
     translatedWords.push(segment);
   }
   
@@ -299,7 +295,6 @@ function applyMorphologyRules(
 ): string {
   if (!config.enableMorphology) return text;
   
-  // Tokenize and process each token
   const tokens = tokenize(text);
   const processed: string[] = [];
   
@@ -309,18 +304,14 @@ function applyMorphologyRules(
       continue;
     }
     
-    // For now, basic morphology - more can be added
     const features = extractFeatures(token.text, token.pos);
     
-    // Handle plural forms - try to match target language conventions
+    // Handle plural forms
     if (features.isPlural && token.pos === 'noun') {
-      // Keep plural marker if target language uses it
       const targetGrammar = getLanguageGrammar(targetLanguage);
       if (!targetGrammar.hasCases) {
-        // Languages without cases often use explicit plural markers
         processed.push(token.text);
       } else {
-        // Languages with cases might handle plurality differently
         processed.push(token.text);
       }
     } else {
@@ -437,7 +428,6 @@ function postProcess(
   
   let result = text;
   
-  // Basic grammar corrections
   // Fix double spaces
   result = result.replace(/\s{2,}/g, ' ');
   
@@ -451,7 +441,6 @@ function postProcess(
   // Language-specific post-processing
   const grammar = getLanguageGrammar(targetLanguage);
   
-  // For languages with sentence-end particles (Japanese)
   if (grammar.sentenceEndParticle && !result.endsWith('.') && !result.endsWith('!') && !result.endsWith('?')) {
     // Could add particle here if needed
   }
@@ -469,64 +458,23 @@ function postProcess(
 }
 
 // ============================================================
-// STEP 7: LIBRETRANSLATE FALLBACK
-// ============================================================
-
-async function libreTranslateFallback(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string
-): Promise<{ text: string; success: boolean }> {
-  if (!config.enableLibreTranslateFallback) {
-    return { text, success: false };
-  }
-  
-  try {
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        sourceLanguage,
-        targetLanguage,
-        mode: 'translate',
-      },
-    });
-    
-    if (error || !data?.translatedText) {
-      console.warn('[DictionaryEngine] LibreTranslate fallback failed:', error);
-      return { text, success: false };
-    }
-    
-    console.log('[DictionaryEngine] LibreTranslate fallback successful');
-    return { text: data.translatedText, success: true };
-  } catch (err) {
-    console.warn('[DictionaryEngine] LibreTranslate fallback error:', err);
-    return { text, success: false };
-  }
-}
-
-// ============================================================
 // MAIN TRANSLATION FUNCTION
 // ============================================================
 
-/**
- * Translate text using dictionary-based approach with all corrections
- */
 export async function translateWithDictionary(
   text: string,
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<DictionaryTranslationResult> {
-  const trimmed = text.trim();
-  
-  // Handle empty text
-  if (!trimmed) {
+  // Validate input
+  if (!text || !text.trim()) {
     return {
       text: '',
-      originalText: '',
+      originalText: text,
       sourceLanguage,
       targetLanguage,
       method: 'passthrough',
-      confidence: 0,
+      confidence: 1,
       corrections: [],
       tokens: [],
       wasReordered: false,
@@ -537,36 +485,32 @@ export async function translateWithDictionary(
     };
   }
   
-  const normSource = normalizeLanguage(sourceLanguage);
-  const normTarget = normalizeLanguage(targetLanguage);
-  
   // Check cache
-  const cacheKey = getCacheKey(trimmed, normSource, normTarget);
+  const cacheKey = getCacheKey(text, sourceLanguage, targetLanguage);
   const cached = getFromCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   
-  // Load phrases if not loaded
-  await loadPhrases();
+  // Initialize database if needed
+  if (!isDataLoaded()) {
+    await initializeDatabaseTranslation();
+    await loadPhrases();
+  }
   
-  // Same language - passthrough with possible script conversion
-  if (isSameLanguage(normSource, normTarget)) {
-    const inputIsLatin = isLatinText(trimmed);
-    const targetIsLatin = isLatinScriptLanguage(normTarget);
-    
-    let resultText = trimmed;
-    if (inputIsLatin && !targetIsLatin) {
-      resultText = transliterateToNative(trimmed, normTarget);
-    } else if (!inputIsLatin && targetIsLatin) {
-      resultText = reverseTransliterate(trimmed, normSource);
-    }
-    
-    return {
-      text: resultText,
-      originalText: trimmed,
-      sourceLanguage: normSource,
-      targetLanguage: normTarget,
+  // Normalize languages
+  const normalizedSource = normalizeLanguage(sourceLanguage);
+  const normalizedTarget = normalizeLanguage(targetLanguage);
+  
+  // Same language - return as is
+  if (isSameLanguage(normalizedSource, normalizedTarget)) {
+    const result: DictionaryTranslationResult = {
+      text,
+      originalText: text,
+      sourceLanguage: normalizedSource,
+      targetLanguage: normalizedTarget,
       method: 'passthrough',
-      confidence: 1.0,
+      confidence: 1,
       corrections: [],
       tokens: [],
       wasReordered: false,
@@ -575,267 +519,162 @@ export async function translateWithDictionary(
       unknownWords: [],
       fallbackUsed: false,
     };
+    setInCache(cacheKey, result);
+    return result;
   }
   
   const corrections: CorrectionApplied[] = [];
-  let currentText = trimmed;
-  let confidence = 0;
-  let idiomsFound: string[] = [];
-  let wasReordered = false;
-  let wasDisambiguated = false;
+  let currentText = text;
   let method: TranslationMethod = 'dictionary-lookup';
+  let totalConfidence = 0;
   
-  // Get English pivot if needed
-  let englishPivot: string | undefined;
-  const sourceIsEnglish = isEnglish(normSource);
-  const targetIsEnglish = isEnglish(normTarget);
+  // Step 1: Preprocessing
+  const { chunks, tokens } = preprocessText(text);
   
-  if (!sourceIsEnglish && !targetIsEnglish) {
-    // Need English pivot
-    if (!isLatinText(currentText)) {
-      englishPivot = reverseTransliterate(currentText, normSource);
-    } else {
-      englishPivot = currentText;
-    }
-    currentText = englishPivot;
-  } else if (!sourceIsEnglish) {
-    // Source to English
-    if (!isLatinText(currentText)) {
-      currentText = reverseTransliterate(currentText, normSource);
-    }
-    englishPivot = currentText;
+  // Step 2: Dictionary lookup with idioms
+  const lookupResult = dictionaryLookup(currentText, normalizedTarget, corrections);
+  currentText = lookupResult.text;
+  totalConfidence = lookupResult.confidence;
+  
+  if (lookupResult.idiomsFound.length > 0) {
+    method = 'idiom-replacement';
   }
   
-  // STEP 1: Preprocessing
-  const { chunks, tokens } = preprocessText(currentText);
+  // Step 3: Morphology processing
+  currentText = applyMorphologyRules(currentText, normalizedSource, normalizedTarget, corrections);
   
-  // Process each chunk
-  const translatedChunks: string[] = [];
+  // Step 4: Word order reordering
+  const reorderResult = applyReordering(currentText, normalizedSource, normalizedTarget, corrections);
+  currentText = reorderResult.text;
   
-  for (const chunk of chunks) {
-    let chunkResult = chunk;
-    
-    // STEP 2: Dictionary lookup with idioms
-    const lookupResult = dictionaryLookup(chunkResult, normTarget, corrections);
-    chunkResult = lookupResult.text;
-    confidence = Math.max(confidence, lookupResult.confidence);
-    idiomsFound.push(...lookupResult.idiomsFound);
-    
-    if (lookupResult.idiomsFound.length > 0) {
-      method = 'idiom-replacement';
-    }
-    
-    // STEP 3: Morphology
-    chunkResult = applyMorphologyRules(chunkResult, normSource, normTarget, corrections);
-    
-    // STEP 4: Reordering
-    const reorderResult = applyReordering(chunkResult, 'english', normTarget, corrections);
-    chunkResult = reorderResult.text;
-    wasReordered = wasReordered || reorderResult.wasReordered;
-    
-    if (reorderResult.wasReordered) {
-      method = 'reordered';
-    }
-    
-    // STEP 5: Disambiguation
-    const disambigResult = applyDisambiguation(chunkResult, normTarget, corrections);
-    chunkResult = disambigResult.text;
-    wasDisambiguated = wasDisambiguated || disambigResult.wasDisambiguated;
-    
-    if (disambigResult.wasDisambiguated) {
-      method = 'context-disambiguated';
-    }
-    
-    // STEP 6: Post-processing
-    chunkResult = postProcess(chunkResult, normTarget, corrections);
-    
-    translatedChunks.push(chunkResult);
+  if (reorderResult.wasReordered) {
+    method = 'reordered';
   }
   
-  currentText = reconstructFromChunks(translatedChunks, ' ');
+  // Step 5: Word sense disambiguation
+  const disambiguationResult = applyDisambiguation(currentText, normalizedTarget, corrections);
+  currentText = disambiguationResult.text;
   
-  // Apply final script conversion if needed
-  if (!isLatinScriptLanguage(normTarget) && isLatinText(currentText)) {
-    currentText = transliterateToNative(currentText, normTarget);
+  if (disambiguationResult.wasDisambiguated) {
+    method = 'context-disambiguated';
   }
   
-  // STEP 7: Check confidence and use fallback if needed
-  let fallbackUsed = false;
-  if (confidence < config.fallbackConfidenceThreshold && config.enableLibreTranslateFallback) {
-    const fallback = await libreTranslateFallback(trimmed, normSource, normTarget);
-    if (fallback.success) {
-      currentText = fallback.text;
-      fallbackUsed = true;
-      method = 'libre-translate-fallback';
-      confidence = 0.85; // Assume good confidence from ML model
-    }
+  // Step 6: Post-processing
+  currentText = postProcess(currentText, normalizedTarget, corrections);
+  
+  if (corrections.some(c => c.type === 'grammar' || c.type === 'fluency')) {
+    method = 'post-processed';
   }
   
-  // Identify unknown words
+  // Find unknown words
   const unknownWords: string[] = [];
-  const resultTokens = tokenize(currentText);
-  for (const token of resultTokens) {
-    if (token.isWord && isLatinText(token.text) && !isLatinScriptLanguage(normTarget)) {
-      unknownWords.push(token.text);
+  const finalTokens = tokenize(currentText);
+  for (const token of finalTokens) {
+    if (token.isWord && !lookupPhrase(token.text, normalizedTarget)) {
+      // Word wasn't translated - might be unknown
+      if (token.text === text.split(/\s+/).find(w => w.toLowerCase() === token.text.toLowerCase())) {
+        unknownWords.push(token.text);
+      }
     }
   }
   
   const result: DictionaryTranslationResult = {
     text: currentText,
-    originalText: trimmed,
-    sourceLanguage: normSource,
-    targetLanguage: normTarget,
+    originalText: text,
+    sourceLanguage: normalizedSource,
+    targetLanguage: normalizedTarget,
     method,
-    confidence,
+    confidence: Math.min(0.95, totalConfidence),
     corrections,
-    tokens: resultTokens,
-    englishPivot,
-    wasReordered,
-    wasDisambiguated,
-    idiomsFound,
+    tokens: finalTokens,
+    wasReordered: reorderResult.wasReordered,
+    wasDisambiguated: disambiguationResult.wasDisambiguated,
+    idiomsFound: lookupResult.idiomsFound,
     unknownWords,
-    fallbackUsed,
+    fallbackUsed: false, // No fallback - pure dictionary translation
   };
   
-  // Cache result
   setInCache(cacheKey, result);
-  
   return result;
 }
 
 // ============================================================
-// CHAT TRANSLATION
+// CHAT-SPECIFIC TRANSLATION
 // ============================================================
 
-/**
- * Translate for bidirectional chat display
- */
 export async function translateForChat(
   text: string,
   senderLanguage: string,
   receiverLanguage: string
 ): Promise<DictionaryChatResult> {
-  const trimmed = text.trim();
-  
-  if (!trimmed) {
-    return {
-      originalText: '',
-      senderView: '',
-      receiverView: '',
-      englishCore: '',
-      corrections: [],
-      confidence: 0,
-      method: 'passthrough',
-    };
+  // Initialize if needed
+  if (!isDataLoaded()) {
+    await initializeDatabaseTranslation();
+    await loadPhrases();
   }
   
-  await loadPhrases();
+  const normalizedSender = normalizeLanguage(senderLanguage);
+  const normalizedReceiver = normalizeLanguage(receiverLanguage);
   
-  const normSender = normalizeLanguage(senderLanguage);
-  const normReceiver = normalizeLanguage(receiverLanguage);
-  const inputIsLatin = isLatinText(trimmed);
-  const senderIsLatin = isLatinScriptLanguage(normSender);
-  
-  // Generate sender view
-  let senderView = trimmed;
-  if (inputIsLatin && !senderIsLatin) {
-    senderView = transliterateToNative(trimmed, normSender);
+  // Step 1: Translate to English (pivot language)
+  let englishCore = text;
+  if (!isEnglish(normalizedSender)) {
+    const toEnglish = await translateWithDictionary(text, normalizedSender, 'english');
+    englishCore = toEnglish.text;
   }
   
-  // Generate English core
-  let englishCore: string;
-  if (isEnglish(normSender)) {
-    englishCore = trimmed;
-  } else if (inputIsLatin) {
-    englishCore = trimmed;
+  // Step 2: Translate to sender's language for their view
+  let senderView = text;
+  if (!isEnglish(normalizedSender)) {
+    const toSender = await translateWithDictionary(englishCore, 'english', normalizedSender);
+    senderView = toSender.text;
   } else {
-    englishCore = reverseTransliterate(trimmed, normSender);
+    senderView = englishCore;
   }
   
-  // Generate receiver view
-  let receiverView: string;
-  let corrections: CorrectionApplied[] = [];
-  let confidence = 0.5;
-  let method: TranslationMethod = 'dictionary-lookup';
-  
-  if (isSameLanguage(normSender, normReceiver)) {
-    receiverView = senderView;
-    confidence = 1.0;
-    method = 'passthrough';
-  } else {
-    const result = await translateWithDictionary(englishCore, 'english', normReceiver);
-    receiverView = result.text;
-    corrections = result.corrections;
-    confidence = result.confidence;
-    method = result.method;
+  // Step 3: Translate to receiver's language
+  let receiverView = englishCore;
+  if (!isEnglish(normalizedReceiver)) {
+    const toReceiver = await translateWithDictionary(englishCore, 'english', normalizedReceiver);
+    receiverView = toReceiver.text;
   }
   
   return {
-    originalText: trimmed,
+    originalText: text,
     senderView,
     receiverView,
     englishCore,
-    corrections,
-    confidence,
-    method,
+    corrections: [],
+    confidence: 0.8,
+    method: 'dictionary-lookup',
   };
 }
 
 // ============================================================
-// ENGINE MANAGEMENT
+// CONFIGURATION
 // ============================================================
 
-/**
- * Configure the dictionary engine
- */
-export function configureEngine(options: Partial<DictionaryEngineConfig>): void {
-  config = { ...config, ...options };
-  console.log('[DictionaryEngine] Configuration updated:', config);
+export function configureEngine(newConfig: Partial<DictionaryEngineConfig>): void {
+  config = { 
+    ...config, 
+    ...newConfig,
+    enableLibreTranslateFallback: false, // Always disabled - no external APIs
+  };
 }
 
-/**
- * Get current engine configuration
- */
 export function getEngineConfig(): DictionaryEngineConfig {
   return { ...config };
 }
 
-/**
- * Initialize the engine
- */
-export async function initializeEngine(): Promise<void> {
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+export async function initializeDictionaryEngine(): Promise<void> {
+  console.log('[DictionaryEngine] Initializing database-driven translation engine...');
+  await initializeDatabaseTranslation();
   await loadPhrases();
-  console.log('[DictionaryEngine] Engine initialized');
+  console.log('[DictionaryEngine] Engine initialized - ready for translation');
 }
 
-/**
- * Check if engine is ready
- */
-export function isEngineReady(): boolean {
-  return phraseCacheLoaded;
-}
-
-/**
- * Clear all caches
- */
-export function clearCache(): void {
-  resultCache.clear();
-  phraseCache.clear();
-  phraseCacheLoaded = false;
-  console.log('[DictionaryEngine] Caches cleared');
-}
-
-/**
- * Get cache statistics
- */
-export function getCacheStats(): {
-  results: number;
-  phrases: number;
-  ready: boolean;
-} {
-  return {
-    results: resultCache.size,
-    phrases: phraseCache.size,
-    ready: phraseCacheLoaded,
-  };
-}
+export { isDataLoaded };

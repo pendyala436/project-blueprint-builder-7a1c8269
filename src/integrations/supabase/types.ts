@@ -2719,6 +2719,156 @@ export type Database = {
         }
         Relationships: []
       }
+      translation_grammar_rules: {
+        Row: {
+          adjective_position: string
+          created_at: string
+          has_articles: boolean
+          has_cases: boolean
+          has_gender: boolean
+          has_honorific: boolean
+          id: string
+          language_code: string
+          language_name: string
+          sentence_end_particle: string | null
+          subject_dropping: boolean
+          updated_at: string
+          uses_postpositions: boolean
+          word_order: string
+        }
+        Insert: {
+          adjective_position?: string
+          created_at?: string
+          has_articles?: boolean
+          has_cases?: boolean
+          has_gender?: boolean
+          has_honorific?: boolean
+          id?: string
+          language_code: string
+          language_name: string
+          sentence_end_particle?: string | null
+          subject_dropping?: boolean
+          updated_at?: string
+          uses_postpositions?: boolean
+          word_order?: string
+        }
+        Update: {
+          adjective_position?: string
+          created_at?: string
+          has_articles?: boolean
+          has_cases?: boolean
+          has_gender?: boolean
+          has_honorific?: boolean
+          id?: string
+          language_code?: string
+          language_name?: string
+          sentence_end_particle?: string | null
+          subject_dropping?: boolean
+          updated_at?: string
+          uses_postpositions?: boolean
+          word_order?: string
+        }
+        Relationships: []
+      }
+      translation_idioms: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          meaning: string
+          normalized_phrase: string
+          phrase: string
+          register: string
+          translations: Json
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          meaning: string
+          normalized_phrase: string
+          phrase: string
+          register?: string
+          translations?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          meaning?: string
+          normalized_phrase?: string
+          phrase?: string
+          register?: string
+          translations?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      translation_morphology_rules: {
+        Row: {
+          conditions: Json | null
+          created_at: string
+          id: string
+          language_code: string
+          pattern: string
+          replacement: string
+          rule_type: string
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          language_code: string
+          pattern: string
+          replacement: string
+          rule_type: string
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string
+          id?: string
+          language_code?: string
+          pattern?: string
+          replacement?: string
+          rule_type?: string
+        }
+        Relationships: []
+      }
+      translation_word_senses: {
+        Row: {
+          context_clues: string[]
+          created_at: string
+          id: string
+          meaning: string
+          sense_id: string
+          translations: Json
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          context_clues?: string[]
+          created_at?: string
+          id?: string
+          meaning: string
+          sense_id: string
+          translations?: Json
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          context_clues?: string[]
+          created_at?: string
+          id?: string
+          meaning?: string
+          sense_id?: string
+          translations?: Json
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
       tutorial_progress: {
         Row: {
           completed: boolean
