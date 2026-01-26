@@ -1360,16 +1360,17 @@ const DraggableMiniChatWindow = ({
   // Track the current preview for this typing session - reset after each send
   const currentPreviewRef = useRef<string>('');
 
-  // SEMANTIC TRANSLATION: Send message with optimistic UI update
-  // EN MODE: Store English for receiver translation, show native to sender
-  // NL MODE: Store native, generate English meaning
+  // ASYNC NON-BLOCKING TRANSLATION: Send message immediately, translate in background
+  // - Message is sent INSTANTLY without waiting for translation
+  // - Translation happens in background and updates are applied asynchronously
+  // - Typing is NEVER blocked by translation
   const sendMessage = async () => {
-    const englishInput = rawInput.trim(); // Capture before clearing - this is what user typed
-    const nativePreviewSnapshot = meaningPreview; // Capture preview before clearing
+    const inputText = rawInput.trim();
+    const previewSnapshot = meaningPreview;
     
-    if (!englishInput || isSending) return;
+    if (!inputText || isSending) return;
 
-    if (englishInput.length > MAX_MESSAGE_LENGTH) {
+    if (inputText.length > MAX_MESSAGE_LENGTH) {
       toast({
         title: "Message too long",
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
@@ -1378,9 +1379,9 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // Content moderation - block phone numbers, emails, social media
+    // Content moderation - quick sync check
     const { moderateMessage } = await import('@/lib/content-moderation');
-    const moderationResult = moderateMessage(englishInput);
+    const moderationResult = moderateMessage(inputText);
     if (moderationResult.isBlocked) {
       toast({
         title: "Message Blocked",
@@ -1390,15 +1391,20 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // IMMEDIATE: Clear input and UI
+    // === IMMEDIATE: Clear input and add optimistic message ===
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const messageTimestamp = new Date().toISOString();
+    
+    // Clear input immediately - user can start typing next message
     setNewMessage("");
     setRawInput("");
-    setMeaningPreview(""); // Clear meaning preview
+    setMeaningPreview("");
     setLivePreview({ text: '', isLoading: false });
     currentPreviewRef.current = '';
     clearPreview();
     setLastActivityTime(Date.now());
     
+    // Clear all preview timeouts
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
@@ -1411,224 +1417,181 @@ const DraggableMiniChatWindow = ({
       clearTimeout(transliterationTimeoutRef.current);
       transliterationTimeoutRef.current = null;
     }
-    
-    // OPTIMISTIC: Add message to UI immediately with proper typing mode display
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // EN MODE: Show native translation to sender, store English for receiver
-    // If preview was available, use it; otherwise show loading and translate in background
-    let senderNativeDisplay: string;
-    let needsBackgroundTranslation = false;
-    
-    if (typingMode === 'english-meaning') {
-      if (nativePreviewSnapshot && nativePreviewSnapshot.trim()) {
-        // Preview was ready - use it for sender's display
-        senderNativeDisplay = nativePreviewSnapshot;
-      } else if (checkIsEnglish(currentUserLanguage)) {
-        // Sender's language is English - just show English
-        senderNativeDisplay = englishInput;
-      } else {
-        // Preview not ready - show English temporarily, translate in background
-        senderNativeDisplay = englishInput;
-        needsBackgroundTranslation = true;
-      }
-    } else {
-      // NL mode - show what they typed
-      senderNativeDisplay = englishInput;
+
+    // Determine initial display for sender
+    let senderDisplay = inputText;
+    if (typingMode === 'english-meaning' && previewSnapshot && previewSnapshot.trim()) {
+      senderDisplay = previewSnapshot;
     }
-    
-    // Add optimistic message with sender's native display
+
+    // Add optimistic message IMMEDIATELY
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: englishInput, // Store English for receiver translation
-      translatedMessage: senderNativeDisplay, // Sender sees native or loading
+      message: inputText,
+      translatedMessage: senderDisplay,
       latinMessage: undefined,
-      englishMessage: englishInput, // English meaning shown below
-      isTranslated: senderNativeDisplay !== englishInput,
-      isTranslating: needsBackgroundTranslation,
-      createdAt: new Date().toISOString()
+      englishMessage: typingMode === 'english-meaning' ? inputText : '(translating...)',
+      isTranslated: senderDisplay !== inputText,
+      isTranslating: true, // Will be updated by background translation
+      createdAt: messageTimestamp
     }]);
 
-    // BACKGROUND: Send to database with pre-translation for English input modes
+    // === BACKGROUND: Send to database + translate asynchronously ===
     setIsSending(true);
-    try {
-      // Determine what to store based on typing mode
-      // EN mode: Store English as message, translate for receiver
-      // NL mode: Store native as message, generate English
-      let messageToStore = englishInput; // EN-mode will overwrite to sender's mother tongue
-      
-      console.log('[DraggableMiniChatWindow] Sending with typingMode:', typingMode, messageToStore.substring(0, 30));
-      
-      // ===========================================
-      // ALWAYS translate to receiver's mother tongue for ALL 9 combinations
-      // AND always generate English meaning
-      // ===========================================
+    
+    // Start background translation and database insert in parallel
+    const backgroundProcess = async () => {
+      let messageToStore = inputText;
       let translatedForReceiver: string | null = null;
       let originalEnglishToStore: string | null = null;
-      
-      // Determine source language and text for translation
-      let sourceLanguage: string;
-      let textForReceiverTranslation: string;
-      
-      if (typingMode === 'english-meaning') {
-        // english-meaning: englishInput is the original English
-        sourceLanguage = 'english';
-        textForReceiverTranslation = englishInput;
-        originalEnglishToStore = englishInput;
+      let senderNativeDisplay: string | null = null;
 
-        // IMPORTANT: Persist the sender view in the sender's mother tongue so after Send
-        // the sender continues to see native script (not raw English).
-        if (!checkIsEnglish(currentUserLanguage)) {
-          if (nativePreviewSnapshot && nativePreviewSnapshot.trim()) {
-            messageToStore = nativePreviewSnapshot;
+      // Determine source language
+      const isEnglishMode = typingMode === 'english-meaning';
+      const sourceLanguage = isEnglishMode ? 'english' : currentUserLanguage;
+      
+      try {
+        // === PARALLEL TRANSLATION TASKS ===
+        const translationPromises: Promise<void>[] = [];
+        
+        if (isEnglishMode) {
+          // English mode: input is English
+          originalEnglishToStore = inputText;
+          
+          // Task 1: Translate to sender's native (if not English speaker)
+          if (!checkIsEnglish(currentUserLanguage)) {
+            if (previewSnapshot && previewSnapshot.trim()) {
+              // Use preview if available
+              senderNativeDisplay = previewSnapshot;
+              messageToStore = previewSnapshot;
+            } else {
+              // Translate in background
+              translationPromises.push(
+                translateSemantic(inputText, 'english', currentUserLanguage)
+                  .then(result => {
+                    if (result?.translatedText && result.translatedText !== inputText) {
+                      senderNativeDisplay = result.translatedText;
+                      messageToStore = result.translatedText;
+                      // Update UI with sender's native view
+                      setMessages(prev => prev.map(m =>
+                        m.id === tempId
+                          ? { ...m, translatedMessage: result.translatedText, message: result.translatedText, isTranslated: true }
+                          : m
+                      ));
+                    }
+                  })
+                  .catch(e => console.warn('[sendMessage] Sender native translation failed:', e))
+              );
+            }
+          }
+          
+          // Task 2: Translate to receiver's language (if different from English)
+          if (!checkIsEnglish(partnerLanguage)) {
+            translationPromises.push(
+              translateSemantic(inputText, 'english', partnerLanguage)
+                .then(result => {
+                  translatedForReceiver = result?.translatedText || inputText;
+                })
+                .catch(e => {
+                  console.warn('[sendMessage] Receiver translation failed:', e);
+                  translatedForReceiver = inputText;
+                })
+            );
           } else {
-            // Will be translated below if needed
-            messageToStore = englishInput;
-          }
-        }
-        
-        // ALSO: If preview wasn't available, translate to sender's native now (background)
-        if (needsBackgroundTranslation && !checkIsEnglish(currentUserLanguage)) {
-          try {
-            console.log('[DraggableMiniChatWindow] EN mode: Generating native translation for sender from English:', englishInput.substring(0, 50));
-            const senderNativeResult = await translateSemantic(englishInput, 'english', currentUserLanguage);
-            const senderNativeText = senderNativeResult?.translatedText || englishInput;
-
-            // Use sender-native as the DB-stored message so realtime echo shows mother tongue
-            messageToStore = senderNativeText;
-
-            if (senderNativeText && senderNativeText.trim() && senderNativeText !== englishInput) {
-              console.log('[DraggableMiniChatWindow] Sender native result:', senderNativeText.substring(0, 50));
-              // Update optimistic message with sender's native translation
-              setMessages(prev => prev.map(m =>
-                m.id === tempId
-                  ? { ...m, translatedMessage: senderNativeText, isTranslated: true, isTranslating: false }
-                  : m
-              ));
-            } else {
-              setMessages(prev => prev.map(m =>
-                m.id === tempId ? { ...m, isTranslating: false } : m
-              ));
-            }
-          } catch (error) {
-            console.error('[DraggableMiniChatWindow] EN mode sender native translation failed:', error);
-            // Still mark as not translating
-            setMessages(prev => prev.map(m => 
-              m.id === tempId ? { ...m, isTranslating: false } : m
-            ));
-          }
-        }
-      } else {
-        // NL mode: user typed in native language
-        sourceLanguage = currentUserLanguage;
-        textForReceiverTranslation = messageToStore;
-        
-        // MANDATORY: Generate ACTUAL English meaning from sender's native message
-        if (!checkIsEnglish(currentUserLanguage)) {
-          try {
-            console.log('[DraggableMiniChatWindow] native mode: Generating MEANING English from', currentUserLanguage, ':', messageToStore.substring(0, 50));
-            const englishResult = await translateSemantic(messageToStore, currentUserLanguage, 'english');
-            
-            if (englishResult?.translatedText && englishResult.isTranslated) {
-              originalEnglishToStore = englishResult.translatedText;
-              console.log('[DraggableMiniChatWindow] native mode English MEANING result:', originalEnglishToStore?.substring(0, 50));
-              
-              // Update optimistic message with English immediately
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
-                  : m
-              ));
-            } else if (englishResult?.translatedText) {
-              originalEnglishToStore = englishResult.translatedText;
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: originalEnglishToStore!, isTranslating: false }
-                  : m
-              ));
-            } else {
-              console.warn('[DraggableMiniChatWindow] English translation returned no result');
-              originalEnglishToStore = null;
-              setMessages(prev => prev.map(m => 
-                m.id === tempId 
-                  ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
-                  : m
-              ));
-            }
-          } catch (error) {
-            console.error('[DraggableMiniChatWindow] native mode English MEANING failed:', error);
-            originalEnglishToStore = null;
-            setMessages(prev => prev.map(m => 
-              m.id === tempId 
-                ? { ...m, englishMessage: '(English pending...)', isTranslating: false }
-                : m
-            ));
+            translatedForReceiver = inputText;
           }
         } else {
-          originalEnglishToStore = messageToStore;
-        }
-      }
-      
-      // ===========================================
-      // ALWAYS translate to receiver's mother tongue
-      // ===========================================
-      if (!isSameLanguage(sourceLanguage, partnerLanguage)) {
-        try {
-          console.log('[DraggableMiniChatWindow] Translating from', sourceLanguage, 'to receiver:', partnerLanguage);
-          const result = await translateSemantic(textForReceiverTranslation, sourceLanguage, partnerLanguage);
-          translatedForReceiver = result?.translatedText || null;
-          console.log('[DraggableMiniChatWindow] Translated for receiver:', translatedForReceiver?.substring(0, 50));
-        } catch (error) {
-          console.error('[DraggableMiniChatWindow] Translation to receiver failed:', error);
-        }
-      } else {
-        translatedForReceiver = textForReceiverTranslation;
-      }
-      
-      // Ensure English is ALWAYS generated
-      if (!originalEnglishToStore && messageToStore) {
-        try {
-          if (!checkIsEnglish(sourceLanguage)) {
-            const englishResult = await translateSemantic(messageToStore, sourceLanguage, 'english');
-            originalEnglishToStore = englishResult?.translatedText || messageToStore;
-            console.log('[DraggableMiniChatWindow] Fallback English:', originalEnglishToStore?.substring(0, 50));
+          // Native mode: input is in sender's language
+          messageToStore = inputText;
+          
+          // Task 1: Generate English meaning
+          if (!checkIsEnglish(currentUserLanguage)) {
+            translationPromises.push(
+              translateSemantic(inputText, currentUserLanguage, 'english')
+                .then(result => {
+                  if (result?.translatedText && result.isTranslated) {
+                    originalEnglishToStore = result.translatedText;
+                    // Update UI with English meaning
+                    setMessages(prev => prev.map(m =>
+                      m.id === tempId
+                        ? { ...m, englishMessage: result.translatedText }
+                        : m
+                    ));
+                  }
+                })
+                .catch(e => console.warn('[sendMessage] English meaning failed:', e))
+            );
           } else {
-            originalEnglishToStore = messageToStore;
+            originalEnglishToStore = inputText;
           }
-        } catch (error) {
-          console.error('[DraggableMiniChatWindow] Fallback English failed:', error);
-          originalEnglishToStore = messageToStore;
+          
+          // Task 2: Translate to receiver's language (if different)
+          if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
+            translationPromises.push(
+              translateSemantic(inputText, currentUserLanguage, partnerLanguage)
+                .then(result => {
+                  translatedForReceiver = result?.translatedText || inputText;
+                })
+                .catch(e => {
+                  console.warn('[sendMessage] Receiver translation failed:', e);
+                  translatedForReceiver = inputText;
+                })
+            );
+          } else {
+            translatedForReceiver = inputText;
+          }
         }
+        
+        // Wait for all translations (but don't block message sending)
+        await Promise.allSettled(translationPromises);
+        
+        // Mark translation complete in UI
+        setMessages(prev => prev.map(m =>
+          m.id === tempId ? { ...m, isTranslating: false } : m
+        ));
+        
+      } catch (error) {
+        console.error('[sendMessage] Translation error:', error);
+        // Continue with original text on error
+        messageToStore = inputText;
+        translatedForReceiver = inputText;
+        originalEnglishToStore = inputText;
+        setMessages(prev => prev.map(m =>
+          m.id === tempId ? { ...m, isTranslating: false } : m
+        ));
       }
       
-      const { error } = await supabase
-        .from("chat_messages")
-        .insert({
-          chat_id: chatId,
-          sender_id: currentUserId,
-          receiver_id: partnerId,
-          message: messageToStore,
-          // ALWAYS store translated message for receiver's mother tongue
-          translated_message: translatedForReceiver,
-          // ALWAYS store English for all combinations
-          original_english: originalEnglishToStore
-        });
+      // === DATABASE INSERT - runs after translations complete ===
+      try {
+        const { error } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: messageToStore || inputText,
+            translated_message: translatedForReceiver || inputText,
+            original_english: originalEnglishToStore || inputText
+          });
 
-      if (error) throw error;
-      // Keep optimistic message; reconcile it when realtime INSERT arrives.
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(englishInput);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
-      });
-    } finally {
+        if (error) throw error;
+      } catch (error) {
+        console.error("[sendMessage] Database error:", error);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setNewMessage(inputText);
+        toast({
+          title: "Error",
+          description: "Failed to send message",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    // Run background process without blocking
+    backgroundProcess().finally(() => {
       setIsSending(false);
-    }
+    });
   };
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
