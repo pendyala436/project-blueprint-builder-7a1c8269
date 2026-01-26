@@ -1566,36 +1566,73 @@ serve(async (req) => {
       
       // ===================================
       // STEP 2: Translate to receiver's language
-      // Uses English as semantic pivot for accuracy
+      // ROUTING LOGIC:
+      //   - Native→Native: English pivot (Telugu→English→Tamil)
+      //   - Latin→Native (romanized): English pivot (Bagunnava→English→Hindi)
+      //   - Native→Latin: English pivot (Telugu→English→Spanish)
+      //   - Latin→Latin: DIRECT translation (Spanish→French)
+      //   - English→Native: DIRECT translation (English→Telugu)
+      //   - Native→English: DIRECT (already have englishCore)
+      //   - Latin→English: DIRECT (already have englishCore)
+      //   - English→Latin: DIRECT translation (English→Spanish)
       // ===================================
       let receiverText = inputText;
+      
+      // Determine if we need English pivot or direct translation
+      const needsEnglishPivot = (
+        // Native → Native (both non-Latin, neither is English)
+        (senderIsNonLatin && receiverIsNonLatin && !senderIsEnglish && !receiverIsEnglish) ||
+        // Latin → Native (romanized input to non-Latin receiver, sender is non-Latin speaker)
+        (inputIsLatinText && senderIsNonLatin && receiverIsNonLatin && !receiverIsEnglish) ||
+        // Native → Latin (non-Latin sender to Latin-script receiver, neither is English)
+        (!inputIsLatinText && senderIsNonLatin && !receiverIsNonLatin && !senderIsEnglish && !receiverIsEnglish)
+      );
+      
+      console.log(`[dl-translate] Translation routing: needsEnglishPivot=${needsEnglishPivot}`);
       
       if (sameLanguage) {
         // Same language - receiver sees sender's native text
         receiverText = senderNativeText;
         console.log(`[dl-translate] Same language, no translation needed`);
       } else if (receiverIsEnglish) {
-        // Receiver speaks English - they see the English core
+        // Receiver speaks English - they see the English core (DIRECT)
         receiverText = englishCore;
-        console.log(`[dl-translate] Receiver is English speaker, using English core`);
-      } else {
-        // Different languages - translate from English to receiver's language
-        // This handles ALL combinations:
-        // - Latin→Latin (Spanish→French)
-        // - Latin→NonLatin (English→Hindi)  
-        // - NonLatin→NonLatin (Telugu→Hindi)
-        // - NonLatin→Latin (Hindi→Spanish)
+        console.log(`[dl-translate] DIRECT: Receiver is English speaker, using English core`);
+      } else if (senderIsEnglish) {
+        // Sender speaks English - DIRECT translation to receiver's language
+        const directToReceiver = await translateText(inputText, 'english', langB);
+        if (directToReceiver.success && directToReceiver.translatedText !== inputText) {
+          receiverText = directToReceiver.translatedText;
+          console.log(`[dl-translate] DIRECT: English→${langB}: "${receiverText.substring(0, 50)}..."`);
+        }
+      } else if (!senderIsNonLatin && !receiverIsNonLatin) {
+        // Latin → Latin (e.g., Spanish → French) - DIRECT translation
+        const directLatinToLatin = await translateText(senderNativeText || inputText, langA, langB);
+        if (directLatinToLatin.success && directLatinToLatin.translatedText !== senderNativeText) {
+          receiverText = directLatinToLatin.translatedText;
+          console.log(`[dl-translate] DIRECT Latin→Latin: ${langA}→${langB}: "${receiverText.substring(0, 50)}..."`);
+        }
+      } else if (needsEnglishPivot) {
+        // Use English as bidirectional pivot for Native↔Native, Latin→Native, Native→Latin
+        console.log(`[dl-translate] PIVOT: Using English as bridge (${langA}→English→${langB})`);
         const toReceiver = await translateText(englishCore, 'english', langB);
         if (toReceiver.success && toReceiver.translatedText !== englishCore) {
           receiverText = toReceiver.translatedText;
-          console.log(`[dl-translate] Receiver translation (${langB}): "${receiverText.substring(0, 50)}..."`);
+          console.log(`[dl-translate] PIVOT: English→${langB}: "${receiverText.substring(0, 50)}..."`);
         } else {
           // Fallback: Try direct translation if English pivot failed
           const directTranslate = await translateText(senderNativeText || inputText, langA, langB);
           if (directTranslate.success && directTranslate.translatedText !== senderNativeText) {
             receiverText = directTranslate.translatedText;
-            console.log(`[dl-translate] Direct translation fallback: "${receiverText.substring(0, 50)}..."`);
+            console.log(`[dl-translate] PIVOT FALLBACK: Direct ${langA}→${langB}: "${receiverText.substring(0, 50)}..."`);
           }
+        }
+      } else {
+        // Default: Direct translation for any other case
+        const directTranslate = await translateText(senderNativeText || inputText, langA, langB);
+        if (directTranslate.success && directTranslate.translatedText !== senderNativeText) {
+          receiverText = directTranslate.translatedText;
+          console.log(`[dl-translate] DIRECT: ${langA}→${langB}: "${receiverText.substring(0, 50)}..."`);
         }
       }
       
