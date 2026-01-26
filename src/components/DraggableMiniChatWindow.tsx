@@ -1417,10 +1417,14 @@ const DraggableMiniChatWindow = ({
       clearTimeout(transliterationTimeoutRef.current);
       transliterationTimeoutRef.current = null;
     }
-
+    // Quick heuristic check if input looks like English (Latin text without non-ASCII chars)
+    // This is a fast sync check - proper detection happens in background
+    const looksLikeEnglish = /^[\x00-\x7F\s.,!?'"()-]+$/.test(inputText) && inputText.length > 2;
+    const isEnglishModeOrDetected = typingMode === 'english-meaning' || looksLikeEnglish;
+    
     // Determine initial display for sender
     let senderDisplay = inputText;
-    if (typingMode === 'english-meaning' && previewSnapshot && previewSnapshot.trim()) {
+    if (isEnglishModeOrDetected && previewSnapshot && previewSnapshot.trim()) {
       senderDisplay = previewSnapshot;
     }
 
@@ -1431,7 +1435,7 @@ const DraggableMiniChatWindow = ({
       message: inputText,
       translatedMessage: senderDisplay,
       latinMessage: undefined,
-      englishMessage: typingMode === 'english-meaning' ? inputText : '(translating...)',
+      englishMessage: isEnglishModeOrDetected ? inputText : '(translating...)',
       isTranslated: senderDisplay !== inputText,
       isTranslating: true, // Will be updated by background translation
       createdAt: messageTimestamp
@@ -1447,15 +1451,24 @@ const DraggableMiniChatWindow = ({
       let originalEnglishToStore: string | null = null;
       let senderNativeDisplay: string | null = null;
 
-      // Determine source language
-      const isEnglishMode = typingMode === 'english-meaning';
-      const sourceLanguage = isEnglishMode ? 'english' : currentUserLanguage;
+      // === AUTO-DETECT if input is actually English ===
+      // Even if typingMode isn't 'english-meaning', detect if user typed English
+      const { detectLanguage } = await import('@/lib/xenova-translate-sdk/engine');
+      const detectionResult = await detectLanguage(inputText);
+      const detectedLang = detectionResult.language;
+      const isDetectedEnglish = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
+      
+      // Use detected language OR typing mode to determine source
+      const isEnglishInput = typingMode === 'english-meaning' || isDetectedEnglish;
+      const sourceLanguage = isEnglishInput ? 'english' : currentUserLanguage;
+      
+      console.log(`[sendMessage] Language detection: detected=${detectedLang}, isEnglishInput=${isEnglishInput}, sourceLanguage=${sourceLanguage}`);
       
       try {
         // === PARALLEL TRANSLATION TASKS ===
         const translationPromises: Promise<void>[] = [];
         
-        if (isEnglishMode) {
+        if (isEnglishInput) {
           // English mode: input is English
           originalEnglishToStore = inputText;
           
