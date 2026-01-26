@@ -104,7 +104,7 @@ export async function startModelPreload(): Promise<void> {
 /**
  * Hook to track translation model readiness
  */
-export function useTranslationPreload(autoStart = true): TranslationReadinessState {
+export function useTranslationPreload(autoStart = false): TranslationReadinessState {
   const [state, setState] = useState({
     isReady: globalState.isReady,
     isLoading: globalState.isLoading,

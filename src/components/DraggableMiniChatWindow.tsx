@@ -70,6 +70,8 @@ import {
   isEnglishLanguage as checkIsEnglish,
 } from "@/lib/translation/semantic-translate-api";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
+// Lazy model preload - triggers when chat window opens
+import { startModelPreload } from "@/hooks/useTranslationPreload";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
@@ -793,8 +795,11 @@ const DraggableMiniChatWindow = ({
     };
   }, [isResizing, position]);
 
-  // Load initial data
+  // Load initial data and trigger lazy model preload
   useEffect(() => {
+    // Start translation model preload when chat opens (lazy loading)
+    startModelPreload();
+    
     const loadInitialData = async () => {
       try {
         if (userGender === "male") {
