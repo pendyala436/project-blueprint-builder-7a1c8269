@@ -266,12 +266,14 @@ export async function translateText(
 /**
  * Translate for bidirectional chat - generates views for both sender and receiver
  * 
- * This is the MAIN function for chat translation:
- * - Sender sees their message in THEIR mother tongue
- * - Receiver sees the message in THEIR mother tongue  
- * - English meaning is always extracted for display
+ * FLOW (as per user requirement):
+ * 1. ANY input (English, romanized, native script, voice) → Extract English meaning
+ * 2. English meaning → Sender's mother tongue (for preview + sent view)
+ * 3. English meaning → Receiver's mother tongue (for receiver view)
  * 
- * Works with ALL input types: English typing, native script, voice, Gboard, font tools
+ * Examples:
+ * - Telugu sender types "How are you?" → senderView: "మీరు ఎలా ఉన్నారు?", receiverView: depends on receiver lang
+ * - Telugu sender types "Bagunnava?" → senderView: "బాగున్నావా?", receiverView: translated to receiver's lang
  */
 export async function translateForChat(
   text: string,
@@ -303,80 +305,62 @@ export async function translateForChat(
   
   try {
     // ============================================
-    // CASE 1: Same language - no translation needed
+    // STEP 1: ALWAYS extract English meaning first
+    // This works for any input: English, romanized, native script
     // ============================================
-    if (isSameLanguage(sender, receiver)) {
-      console.log('[XenovaEngine] Same language pair - passthrough');
-      
-      // Still get English meaning for display (if not English)
-      if (!isEnglish(sender)) {
-        try {
-          const enResult = await translateText(text, sender, 'en');
-          englishCore = enResult.text;
-          console.log('[XenovaEngine] English meaning:', englishCore.substring(0, 40));
-        } catch (e) {
-          console.warn('[XenovaEngine] English extraction failed:', e);
-        }
-      }
-      
-      return {
-        senderView: text,
-        receiverView: text,
-        englishCore,
-        originalText,
-        path: 'SAME',
-        isTranslated: false,
-      };
+    
+    // Detect input language
+    const detected = await detectLanguage(text);
+    console.log(`[XenovaEngine] Detected input language: ${detected.language} (confidence: ${detected.confidence})`);
+    
+    // Get English meaning from input
+    if (isEnglish(detected.language) || /^[a-zA-Z\s.,!?'"-]+$/.test(text.trim())) {
+      // Input is English or Latin characters - use as English meaning
+      englishCore = text;
+      console.log('[XenovaEngine] Input is English/Latin, using as englishCore');
+    } else {
+      // Input is in some other language/script - translate to English
+      const enResult = await translateText(text, detected.language || sender, 'en');
+      englishCore = enResult.text;
+      console.log(`[XenovaEngine] Extracted English meaning: "${englishCore.substring(0, 40)}"`);
     }
     
     // ============================================
-    // CASE 2: Sender typed in English
+    // STEP 2: Translate English → Sender's mother tongue
+    // Sender ALWAYS sees their message in their mother tongue
     // ============================================
+    
     if (isEnglish(sender)) {
-      console.log('[XenovaEngine] Sender is English speaker');
-      englishCore = text;
-      senderView = text;
-      
-      // Translate English → receiver's mother tongue
-      const receiverResult = await translateText(text, 'en', receiver);
-      receiverView = receiverResult.text;
-      path = receiverResult.path;
-      
-      console.log(`[XenovaEngine] Receiver view (${receiver}):`, receiverView.substring(0, 40));
+      // Sender's mother tongue IS English - show English
+      senderView = englishCore;
+      console.log('[XenovaEngine] Sender is English speaker, senderView = englishCore');
+    } else {
+      // Translate English to sender's mother tongue
+      const senderResult = await translateText(englishCore, 'en', sender);
+      senderView = senderResult.text;
+      path = senderResult.path;
+      console.log(`[XenovaEngine] SenderView (${sender}): "${senderView.substring(0, 40)}"`);
     }
+    
     // ============================================
-    // CASE 3: Receiver speaks English
+    // STEP 3: Translate English → Receiver's mother tongue
+    // Receiver ALWAYS sees message in their mother tongue
     // ============================================
-    else if (isEnglish(receiver)) {
-      console.log('[XenovaEngine] Receiver is English speaker');
-      
-      // Translate sender's native to English
-      const enResult = await translateText(text, sender, 'en');
-      englishCore = enResult.text;
-      receiverView = enResult.text;
-      senderView = text;
-      path = enResult.path;
-      
-      console.log('[XenovaEngine] English translation:', englishCore.substring(0, 40));
-    }
-    // ============================================
-    // CASE 4: Both non-English - pivot through English
-    // ============================================
-    else {
-      console.log(`[XenovaEngine] Cross-language: ${sender} → ${receiver} via English`);
-      
-      // Step 1: sender's language → English (extract meaning)
-      const enResult = await translateText(text, sender, 'en');
-      englishCore = enResult.text;
-      console.log('[XenovaEngine] English core:', englishCore.substring(0, 40));
-      
-      // Step 2: English → receiver's mother tongue (express meaning)
+    
+    if (isSameLanguage(sender, receiver)) {
+      // Same language - receiver sees same as sender
+      receiverView = senderView;
+      console.log('[XenovaEngine] Same language pair, receiverView = senderView');
+    } else if (isEnglish(receiver)) {
+      // Receiver's mother tongue IS English - show English
+      receiverView = englishCore;
+      console.log('[XenovaEngine] Receiver is English speaker, receiverView = englishCore');
+    } else {
+      // Translate English to receiver's mother tongue
       const receiverResult = await translateText(englishCore, 'en', receiver);
       receiverView = receiverResult.text;
-      console.log(`[XenovaEngine] Receiver view (${receiver}):`, receiverView.substring(0, 40));
-      
-      senderView = text;
       path = 'PIVOT_EN';
+      console.log(`[XenovaEngine] ReceiverView (${receiver}): "${receiverView.substring(0, 40)}"`);
     }
     
   } catch (error) {
@@ -391,12 +375,13 @@ export async function translateForChat(
     };
   }
   
-  const isActuallyTranslated = path !== 'SAME' && path !== 'FALLBACK' && (senderView !== receiverView || englishCore !== text);
+  const isActuallyTranslated = senderView !== originalText || receiverView !== originalText;
   
   console.log(`[XenovaEngine] CHAT RESULT:
+    Original input: "${originalText.substring(0, 30)}"
+    English meaning: "${englishCore.substring(0, 30)}"
     Sender (${sender}) sees: "${senderView.substring(0, 30)}"
     Receiver (${receiver}) sees: "${receiverView.substring(0, 30)}"
-    English meaning: "${englishCore.substring(0, 30)}"
     Translated: ${isActuallyTranslated}`);
   
   return {
