@@ -1319,6 +1319,7 @@ function cleanTextOutput(text: string): string {
 /**
  * Transliterate Latin text to native script
  * Converts romanized input like "bagunnava" to native script "బాగున్నావా"
+ * Uses Google's auto-detect + target language for proper phonetic transliteration
  */
 async function transliterateToNative(
   latinText: string,
@@ -1326,13 +1327,69 @@ async function transliterateToNative(
 ): Promise<{ text: string; success: boolean }> {
   const targetCode = getLibreCode(targetLanguage);
   
-  console.log(`[dl-translate] Transliterating to ${targetLanguage} (${targetCode})`);
+  console.log(`[dl-translate] Transliterating "${latinText}" to ${targetLanguage} (${targetCode})`);
   
-  // Use translation from English to target language for transliteration
-  let result = await translateWithLibre(latinText, 'en', targetCode);
+  // Method 1: Use Google Translate with auto-detect source (best for phonetic input)
+  // This handles romanized text better than forcing English as source
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
+    // Use auto-detect (sl=auto) to let Google figure out this is phonetic romanization
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(latinText)}`;
+    
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      let transliterated = '';
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        for (const segment of data[0]) {
+          if (segment && segment[0]) {
+            transliterated += segment[0];
+          }
+        }
+      }
+      
+      transliterated = cleanTextOutput(transliterated);
+      
+      // Check if result is in native script
+      const detected = detectScriptFromText(transliterated);
+      if (!detected.isLatin && transliterated.length > 0 && transliterated !== latinText) {
+        console.log(`[dl-translate] Google auto-detect transliteration success: "${latinText}" -> "${transliterated}"`);
+        return { text: transliterated, success: true };
+      }
+    }
+  } catch (e) {
+    console.log('[dl-translate] Google auto-detect failed, trying alternatives');
+  }
+  
+  // Method 2: Force translate from target language (for phonetic romanization)
+  // e.g., "bagunnava" is already phonetic Telugu, just needs script conversion
+  try {
+    const result = await translateWithGoogle(latinText, targetCode, targetCode);
+    if (result.success) {
+      const cleanedResult = cleanTextOutput(result.translatedText);
+      const detected = detectScriptFromText(cleanedResult);
+      if (!detected.isLatin && cleanedResult !== latinText) {
+        console.log(`[dl-translate] Same-language Google transliteration: "${latinText}" -> "${cleanedResult}"`);
+        return { text: cleanedResult, success: true };
+      }
+    }
+  } catch (e) {
+    console.log('[dl-translate] Same-language transliteration failed');
+  }
+  
+  // Method 3: Fallback to English->Target (for actual English input)
+  let result = await translateWithGoogle(latinText, 'en', targetCode);
   
   if (!result.success) {
     result = await translateWithMyMemory(latinText, 'en', targetCode);
+  }
+  
+  if (!result.success) {
+    result = await translateWithLibre(latinText, 'en', targetCode);
   }
   
   // Check if the result is in native script (not Latin)
@@ -1340,12 +1397,12 @@ async function transliterateToNative(
     const cleanedResult = cleanTextOutput(result.translatedText);
     const detected = detectScriptFromText(cleanedResult);
     if (!detected.isLatin && cleanedResult.length > 0) {
-      console.log(`[dl-translate] Transliteration success: "${latinText}" -> "${cleanedResult}"`);
+      console.log(`[dl-translate] En->Target transliteration success: "${latinText}" -> "${cleanedResult}"`);
       return { text: cleanedResult, success: true };
     }
   }
   
-  console.log(`[dl-translate] Transliteration failed, keeping original`);
+  console.log(`[dl-translate] All transliteration methods failed, keeping original`);
   return { text: latinText.trim(), success: false };
 }
 
@@ -1383,12 +1440,13 @@ serve(async (req) => {
     // ================================================================
     // MODE: bidirectional - Translate both directions in one call
     // Source → English → Target AND Target → English → Source
+    // FULL SUPPORT for 1000+ language combinations
     // ================================================================
     if (mode === "bidirectional") {
       const langA = effectiveSourceParam || "english";
       const langB = effectiveTargetParam || "english";
       
-      console.log(`[dl-translate] Bidirectional chat: sender=${langA}, receiver=${langB}`);
+      console.log(`[dl-translate] Bidirectional chat: sender=${langA}, receiver=${langB}, input="${inputText.substring(0, 50)}..."`);
       
       // Detect if input is Latin script
       const inputDetected = detectScriptFromText(inputText);
@@ -1397,69 +1455,130 @@ serve(async (req) => {
       // Check if sender/receiver use Latin script (based on profile languages)
       const senderIsNonLatin = isNonLatinLanguage(langA);
       const receiverIsNonLatin = isNonLatinLanguage(langB);
+      const senderIsEnglish = isSameLanguage(langA, 'english');
+      const receiverIsEnglish = isSameLanguage(langB, 'english');
+      const sameLanguage = isSameLanguage(langA, langB);
       
-      // STEP 1: Get English version (semantic core)
+      console.log(`[dl-translate] Analysis: inputIsLatin=${inputIsLatinText}, senderIsNonLatin=${senderIsNonLatin}, receiverIsNonLatin=${receiverIsNonLatin}, senderIsEnglish=${senderIsEnglish}, receiverIsEnglish=${receiverIsEnglish}`);
+      
+      // ===================================
+      // STEP 1: Process sender's input to get:
+      //   - senderNativeText (in sender's native script)
+      //   - englishCore (semantic meaning in English)
+      // ===================================
       let englishCore = inputText;
       let senderNativeText = inputText;
+      let wasTransliterated = false;
       
-      // If sender typed in Latin but speaks non-Latin language, transliterate for sender view
-      if (inputIsLatinText && senderIsNonLatin) {
+      if (senderIsEnglish) {
+        // Sender speaks English - input IS the English core
+        englishCore = inputText;
+        senderNativeText = inputText;
+        console.log(`[dl-translate] Sender is English speaker, input IS English core`);
+      } else if (inputIsLatinText && senderIsNonLatin) {
+        // Sender typed romanized text but speaks non-Latin language
+        // Need to: 1) Transliterate to sender's native script 2) Get English meaning
         const senderNative = await transliterateToNative(inputText, langA);
-        if (senderNative.success) {
+        if (senderNative.success && senderNative.text !== inputText) {
           senderNativeText = senderNative.text;
-          console.log(`[dl-translate] Sender transliteration: "${inputText}" → "${senderNativeText}"`);
+          wasTransliterated = true;
+          console.log(`[dl-translate] Sender transliteration success: "${inputText}" → "${senderNativeText}"`);
+          
+          // Get English meaning from native text (more accurate than from romanized)
+          const toEnglish = await translateText(senderNativeText, langA, 'english');
+          if (toEnglish.success && toEnglish.translatedText !== senderNativeText) {
+            englishCore = toEnglish.translatedText;
+            console.log(`[dl-translate] English core from native: "${englishCore.substring(0, 50)}..."`);
+          }
+        } else {
+          // Transliteration failed - try to get English meaning from romanized input
+          // Treat romanized input as the target language and translate
+          const toEnglish = await translateText(inputText, langA, 'english');
+          if (toEnglish.success && toEnglish.translatedText !== inputText) {
+            englishCore = toEnglish.translatedText;
+          }
+          console.log(`[dl-translate] Transliteration failed, English core: "${englishCore.substring(0, 50)}..."`);
         }
-      }
-      
-      // Get English semantic meaning from sender's input
-      // This applies to ALL non-English languages (Latin and non-Latin)
-      if (!isSameLanguage(langA, 'english')) {
-        // Use the native text (or original if no transliteration) for translation
-        const sourceText = senderNativeText !== inputText ? senderNativeText : inputText;
-        const toEnglish = await translateText(sourceText, langA, 'english');
-        if (toEnglish.success) {
+      } else if (!inputIsLatinText) {
+        // Sender typed in native script directly (Gboard, IME, etc.)
+        senderNativeText = inputText;
+        
+        // Get English semantic meaning
+        const toEnglish = await translateText(inputText, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== inputText) {
           englishCore = toEnglish.translatedText;
-          console.log(`[dl-translate] English core: "${englishCore.substring(0, 50)}..."`);
+          console.log(`[dl-translate] Native input, English core: "${englishCore.substring(0, 50)}..."`);
+        }
+      } else {
+        // Sender speaks Latin-script language (Spanish, French, etc.) and typed in that script
+        // Get English meaning directly
+        const toEnglish = await translateText(inputText, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== inputText) {
+          englishCore = toEnglish.translatedText;
+          console.log(`[dl-translate] Latin-script sender, English core: "${englishCore.substring(0, 50)}..."`);
         }
       }
       
-      // STEP 2: Translate to receiver's language from English (for meaning accuracy)
-      // This applies to ALL different language pairs, including Latin-to-Latin (e.g., Spanish→French)
+      // ===================================
+      // STEP 2: Translate to receiver's language
+      // Uses English as semantic pivot for accuracy
+      // ===================================
       let receiverText = inputText;
       
-      if (isSameLanguage(langA, langB)) {
+      if (sameLanguage) {
         // Same language - receiver sees sender's native text
         receiverText = senderNativeText;
         console.log(`[dl-translate] Same language, no translation needed`);
-      } else if (isSameLanguage(langB, 'english')) {
+      } else if (receiverIsEnglish) {
         // Receiver speaks English - they see the English core
         receiverText = englishCore;
         console.log(`[dl-translate] Receiver is English speaker, using English core`);
       } else {
         // Different languages - translate from English to receiver's language
-        // This handles BOTH Latin→Latin (Spanish→French) AND Latin→NonLatin (Spanish→Hindi)
+        // This handles ALL combinations:
+        // - Latin→Latin (Spanish→French)
+        // - Latin→NonLatin (English→Hindi)  
+        // - NonLatin→NonLatin (Telugu→Hindi)
+        // - NonLatin→Latin (Hindi→Spanish)
         const toReceiver = await translateText(englishCore, 'english', langB);
-        if (toReceiver.success) {
+        if (toReceiver.success && toReceiver.translatedText !== englishCore) {
           receiverText = toReceiver.translatedText;
           console.log(`[dl-translate] Receiver translation (${langB}): "${receiverText.substring(0, 50)}..."`);
+        } else {
+          // Fallback: Try direct translation if English pivot failed
+          const directTranslate = await translateText(senderNativeText || inputText, langA, langB);
+          if (directTranslate.success && directTranslate.translatedText !== senderNativeText) {
+            receiverText = directTranslate.translatedText;
+            console.log(`[dl-translate] Direct translation fallback: "${receiverText.substring(0, 50)}..."`);
+          }
         }
       }
       
+      // Clean all outputs
+      const cleanSenderView = cleanTextOutput(senderNativeText);
+      const cleanReceiverView = cleanTextOutput(receiverText);
+      const cleanEnglishCore = cleanTextOutput(englishCore);
+      
+      console.log(`[dl-translate] FINAL:
+        senderView: "${cleanSenderView.substring(0, 30)}..."
+        receiverView: "${cleanReceiverView.substring(0, 30)}..."
+        englishCore: "${cleanEnglishCore.substring(0, 30)}..."`);
+      
       return new Response(
         JSON.stringify({
-          // Sender's view (their native language)
-          senderView: cleanTextOutput(senderNativeText),
-          // Receiver's view (their native language)  
-          receiverView: cleanTextOutput(receiverText),
+          // Sender's view (their native language/script)
+          senderView: cleanSenderView,
+          // Receiver's view (their native language/script)  
+          receiverView: cleanReceiverView,
           // English semantic core for reference
-          englishCore: cleanTextOutput(englishCore),
+          englishCore: cleanEnglishCore,
           // Original input (what was typed)
           originalText: inputText,
           // Metadata
           senderLanguage: langA,
           receiverLanguage: langB,
-          wasTransliterated: senderNativeText !== inputText,
-          wasTranslated: !isSameLanguage(langA, langB) && receiverText !== inputText,
+          wasTransliterated: wasTransliterated,
+          wasTranslated: !sameLanguage && cleanReceiverView !== inputText,
           inputWasLatin: inputIsLatinText,
           mode: "bidirectional",
         }),

@@ -1666,99 +1666,137 @@ const DraggableMiniChatWindow = ({
       console.log(`[sendMessage] AUTO-DETECT: detected=${detectedLang}, isEnglishInput=${isEnglishInput}, hasNativeScript=${hasNativeScript}, sourceLanguage=${sourceLanguage}`);
       
       try {
-        // === PARALLEL TRANSLATION TASKS ===
-        const translationPromises: Promise<void>[] = [];
+        // === USE BIDIRECTIONAL EDGE FUNCTION FOR RELIABLE TRANSLATION ===
+        // This handles ALL 1000+ language combinations properly with English pivot
+        console.log(`[sendMessage] Using bidirectional translation: ${currentUserLanguage} → ${partnerLanguage}`);
         
-        if (isEnglishInput) {
-          // English mode: input is English
-          originalEnglishToStore = inputText;
+        // Use the bidirectional edge function for best reliability
+        const bidirectionalResult = await translateForChatSemantic(
+          inputText, 
+          currentUserLanguage, 
+          partnerLanguage
+        );
+        
+        if (bidirectionalResult.isTranslated) {
+          senderNativeDisplay = bidirectionalResult.senderView;
+          translatedForReceiver = bidirectionalResult.receiverView;
+          originalEnglishToStore = bidirectionalResult.englishMeaning;
           
-          // Task 1: Translate to sender's native (if not English speaker)
-          if (!checkIsEnglish(currentUserLanguage)) {
-            if (previewSnapshot && previewSnapshot.trim()) {
-              // Use preview if available
-              senderNativeDisplay = previewSnapshot;
-              messageToStore = previewSnapshot;
-            } else {
-              // Translate in background
+          // Update messageToStore to sender's native text
+          if (senderNativeDisplay && senderNativeDisplay !== inputText) {
+            messageToStore = senderNativeDisplay;
+          }
+          
+          console.log(`[sendMessage] Bidirectional success:
+            senderView: "${senderNativeDisplay?.substring(0, 30)}..."
+            receiverView: "${translatedForReceiver?.substring(0, 30)}..."
+            englishCore: "${originalEnglishToStore?.substring(0, 30)}..."`);
+          
+          // Update UI with translations
+          setMessages(prev => prev.map(m =>
+            m.id === tempId
+              ? { 
+                  ...m, 
+                  translatedMessage: senderNativeDisplay || inputText,
+                  message: senderNativeDisplay || inputText,
+                  englishMessage: originalEnglishToStore,
+                  isTranslated: true,
+                  isTranslating: false 
+                }
+              : m
+          ));
+        } else {
+          // Fallback: Use parallel individual translations
+          console.log('[sendMessage] Bidirectional failed, using fallback parallel translation');
+          
+          const translationPromises: Promise<void>[] = [];
+          
+          if (isEnglishInput) {
+            // English mode: input is English
+            originalEnglishToStore = inputText;
+            
+            // Task 1: Translate to sender's native (if not English speaker)
+            if (!checkIsEnglish(currentUserLanguage)) {
+              if (previewSnapshot && previewSnapshot.trim()) {
+                senderNativeDisplay = previewSnapshot;
+                messageToStore = previewSnapshot;
+              } else {
+                translationPromises.push(
+                  translateSemantic(inputText, 'english', currentUserLanguage)
+                    .then(result => {
+                      if (result?.translatedText && result.translatedText !== inputText) {
+                        senderNativeDisplay = result.translatedText;
+                        messageToStore = result.translatedText;
+                        setMessages(prev => prev.map(m =>
+                          m.id === tempId
+                            ? { ...m, translatedMessage: result.translatedText, message: result.translatedText, isTranslated: true }
+                            : m
+                        ));
+                      }
+                    })
+                    .catch(e => console.warn('[sendMessage] Sender native translation failed:', e))
+                );
+              }
+            }
+            
+            // Task 2: Translate to receiver's language
+            if (!checkIsEnglish(partnerLanguage)) {
               translationPromises.push(
-                translateSemantic(inputText, 'english', currentUserLanguage)
+                translateSemantic(inputText, 'english', partnerLanguage)
                   .then(result => {
-                    if (result?.translatedText && result.translatedText !== inputText) {
-                      senderNativeDisplay = result.translatedText;
-                      messageToStore = result.translatedText;
-                      // Update UI with sender's native view
+                    translatedForReceiver = result?.translatedText || inputText;
+                  })
+                  .catch(e => {
+                    console.warn('[sendMessage] Receiver translation failed:', e);
+                    translatedForReceiver = inputText;
+                  })
+              );
+            } else {
+              translatedForReceiver = inputText;
+            }
+          } else {
+            // Native mode: input is in sender's language
+            messageToStore = inputText;
+            
+            // Task 1: Generate English meaning
+            if (!checkIsEnglish(currentUserLanguage)) {
+              translationPromises.push(
+                translateSemantic(inputText, currentUserLanguage, 'english')
+                  .then(result => {
+                    if (result?.translatedText && result.isTranslated) {
+                      originalEnglishToStore = result.translatedText;
                       setMessages(prev => prev.map(m =>
                         m.id === tempId
-                          ? { ...m, translatedMessage: result.translatedText, message: result.translatedText, isTranslated: true }
+                          ? { ...m, englishMessage: result.translatedText }
                           : m
                       ));
                     }
                   })
-                  .catch(e => console.warn('[sendMessage] Sender native translation failed:', e))
+                  .catch(e => console.warn('[sendMessage] English meaning failed:', e))
               );
+            } else {
+              originalEnglishToStore = inputText;
+            }
+            
+            // Task 2: Translate to receiver's language
+            if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
+              translationPromises.push(
+                translateSemantic(inputText, currentUserLanguage, partnerLanguage)
+                  .then(result => {
+                    translatedForReceiver = result?.translatedText || inputText;
+                  })
+                  .catch(e => {
+                    console.warn('[sendMessage] Receiver translation failed:', e);
+                    translatedForReceiver = inputText;
+                  })
+              );
+            } else {
+              translatedForReceiver = inputText;
             }
           }
           
-          // Task 2: Translate to receiver's language (if different from English)
-          if (!checkIsEnglish(partnerLanguage)) {
-            translationPromises.push(
-              translateSemantic(inputText, 'english', partnerLanguage)
-                .then(result => {
-                  translatedForReceiver = result?.translatedText || inputText;
-                })
-                .catch(e => {
-                  console.warn('[sendMessage] Receiver translation failed:', e);
-                  translatedForReceiver = inputText;
-                })
-            );
-          } else {
-            translatedForReceiver = inputText;
-          }
-        } else {
-          // Native mode: input is in sender's language
-          messageToStore = inputText;
-          
-          // Task 1: Generate English meaning
-          if (!checkIsEnglish(currentUserLanguage)) {
-            translationPromises.push(
-              translateSemantic(inputText, currentUserLanguage, 'english')
-                .then(result => {
-                  if (result?.translatedText && result.isTranslated) {
-                    originalEnglishToStore = result.translatedText;
-                    // Update UI with English meaning
-                    setMessages(prev => prev.map(m =>
-                      m.id === tempId
-                        ? { ...m, englishMessage: result.translatedText }
-                        : m
-                    ));
-                  }
-                })
-                .catch(e => console.warn('[sendMessage] English meaning failed:', e))
-            );
-          } else {
-            originalEnglishToStore = inputText;
-          }
-          
-          // Task 2: Translate to receiver's language (if different)
-          if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
-            translationPromises.push(
-              translateSemantic(inputText, currentUserLanguage, partnerLanguage)
-                .then(result => {
-                  translatedForReceiver = result?.translatedText || inputText;
-                })
-                .catch(e => {
-                  console.warn('[sendMessage] Receiver translation failed:', e);
-                  translatedForReceiver = inputText;
-                })
-            );
-          } else {
-            translatedForReceiver = inputText;
-          }
+          await Promise.allSettled(translationPromises);
         }
-        
-        // Wait for all translations (but don't block message sending)
-        await Promise.allSettled(translationPromises);
         
         // Mark translation complete in UI
         setMessages(prev => prev.map(m =>
