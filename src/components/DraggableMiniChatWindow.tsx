@@ -54,13 +54,16 @@ import {
 } from "@/lib/translation";
 // Browser-based translation using Xenova/HuggingFace transformers
 import { 
-  translateText as xenovaTranslate,
-  translateForChat as xenovaTranslateChat,
-  getEnglishMeaning as xenovaGetEnglish,
   normalizeLanguageCode,
   isSameLanguage as xenovaSameLanguage,
   isEnglish as xenovaIsEnglish,
 } from "@/lib/xenova-translate-sdk";
+// Worker client for non-blocking ML translation
+import { 
+  translateInWorker,
+  translateChatInWorker,
+  toEnglishInWorker,
+} from "@/lib/xenova-translate-sdk/worker-client";
 // Legacy imports for fallback compatibility
 import { 
   isSameLanguageCheck,
@@ -120,7 +123,7 @@ async function translateSemantic(
   
   try {
     // Use Xenova browser-based translation
-    const result = await xenovaTranslate(text, normalizedSource, normalizedTarget);
+    const result = await translateInWorker(text, normalizedSource, normalizedTarget);
     
     const wasActuallyTranslated = result.isTranslated && result.text !== text && result.text.trim() !== '';
     
@@ -177,7 +180,7 @@ async function translateForChatSemantic(
   console.log(`[translateForChatSemantic] "${text.substring(0, 40)}" | sender=${senderLang} | receiver=${receiverLang}`);
   
   try {
-    const result = await xenovaTranslateChat(text, senderLang, receiverLang);
+    const result = await translateChatInWorker(text, senderLang, receiverLang);
     
     console.log(`[translateForChatSemantic] Results:
       Sender sees: "${result.senderView?.substring(0, 30)}"

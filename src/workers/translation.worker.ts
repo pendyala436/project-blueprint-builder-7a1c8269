@@ -1,15 +1,32 @@
 /**
  * Translation Web Worker
  * ======================
- * Stub implementation - translation is handled by embedded translator
- * This worker is kept for API compatibility
+ * Full Xenova ML translation running in Worker thread
+ * Keeps UI thread completely unblocked during translation
  */
 
-// Worker message types
+import { 
+  translateText, 
+  translateForChat,
+  getEnglishMeaning,
+  detectLanguage,
+} from '../lib/xenova-translate-sdk/engine';
+import { configureThreads } from '../lib/xenova-translate-sdk/modelLoader';
+import { normalizeLanguageCode } from '../lib/xenova-translate-sdk/languages';
+
+// Configure for worker environment - limit threads
+configureThreads(true); // Mobile-safe mode in worker
+
 interface WorkerMessage {
   id: string;
-  type: 'init' | 'translate' | 'transliterate' | 'process_chat' | 'detect_language' | 'batch_translate' | 'live_preview';
-  payload: any;
+  type: 'translate' | 'translate_chat' | 'to_english' | 'detect';
+  payload: {
+    text: string;
+    source?: string;
+    target?: string;
+    senderLang?: string;
+    receiverLang?: string;
+  };
 }
 
 interface WorkerResponse {
@@ -20,64 +37,85 @@ interface WorkerResponse {
   error?: string;
 }
 
-// Send response back to main thread
-function sendResponse(response: WorkerResponse): void {
-  self.postMessage(response);
-}
-
 // Handle incoming messages
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   const { id, type, payload } = event.data;
 
   try {
     switch (type) {
-      case 'init':
-        // Always ready - no model to load
-        sendResponse({
-          id,
-          type: 'init',
-          success: true,
-          result: { ready: true, progress: 100 }
-        });
-        break;
-
-      case 'translate':
-      case 'transliterate':
-      case 'process_chat':
-      case 'batch_translate':
-      case 'live_preview':
-        // Return original text - actual translation happens in main thread
-        sendResponse({
+      case 'translate': {
+        const { text, source, target } = payload;
+        if (!text || !source || !target) {
+          throw new Error('Missing required parameters');
+        }
+        const result = await translateText(
+          text,
+          normalizeLanguageCode(source),
+          normalizeLanguageCode(target)
+        );
+        self.postMessage({
           id,
           type,
           success: true,
-          result: {
-            text: payload?.text || '',
-            originalText: payload?.text || '',
-            isTranslated: false,
-            isTransliterated: false,
-            message: 'Translation handled by embedded translator'
-          }
+          result,
         });
         break;
+      }
 
-      case 'detect_language':
-        // Basic detection - return English as default
-        sendResponse({
+      case 'translate_chat': {
+        const { text, senderLang, receiverLang } = payload;
+        if (!text || !senderLang || !receiverLang) {
+          throw new Error('Missing required parameters');
+        }
+        const result = await translateForChat(
+          text,
+          normalizeLanguageCode(senderLang),
+          normalizeLanguageCode(receiverLang)
+        );
+        self.postMessage({
           id,
-          type: 'detect_language',
+          type,
           success: true,
-          result: {
-            language: 'english',
-            script: 'Latin',
-            isLatin: true,
-            confidence: 0.5
-          }
+          result,
         });
         break;
+      }
+
+      case 'to_english': {
+        const { text, source } = payload;
+        if (!text || !source) {
+          throw new Error('Missing required parameters');
+        }
+        const result = await getEnglishMeaning(
+          text,
+          normalizeLanguageCode(source)
+        );
+        self.postMessage({
+          id,
+          type,
+          success: true,
+          result,
+        });
+        break;
+      }
+
+      case 'detect': {
+        const { text } = payload;
+        if (!text) {
+          throw new Error('Missing text parameter');
+        }
+        const result = await detectLanguage(text);
+        self.postMessage({
+          id,
+          type,
+          success: true,
+          result,
+        });
+        break;
+      }
 
       default:
-        sendResponse({
+        self.postMessage({
           id,
           type,
           success: false,
@@ -85,7 +123,8 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
         });
     }
   } catch (error) {
-    sendResponse({
+    console.error('[TranslationWorker] Error:', error);
+    self.postMessage({
       id,
       type,
       success: false,
@@ -94,5 +133,4 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   }
 };
 
-// Export empty to make this a module
-export {};
+console.log('[TranslationWorker] Initialized with Xenova ML models');
