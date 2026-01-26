@@ -560,53 +560,52 @@ const DraggableMiniChatWindow = ({
       // Use setTimeout(0) to ensure it doesn't block
       setTimeout(async () => {
         try {
-          // If user's language is English, they type in English - no preview needed
-          if (checkIsEnglish(currentUserLanguage)) {
-            console.log('[MeaningPreview] User is English speaker, no preview needed');
-            setMeaningPreview('');
-            setIsMeaningLoading(false);
-            return;
-          }
-          
           let translatedText = '';
           
-          // NATIVE SCRIPT (Gboard/IME/Virtual keyboard): Already in mother tongue
-          if (scriptType === 'native') {
-            // Input is already in sender's native script - show as preview confirmation
-            translatedText = capturedText;
-            console.log('[MeaningPreview] Native script (Gboard/IME) - showing as-is:', translatedText.substring(0, 30));
-          }
-          // LATIN SCRIPT or MIXED: Use bidirectional edge function for proper handling
-          else {
-            // Use bidirectional edge function - handles romanized input + translation
-            console.log('[MeaningPreview] Using bidirectional edge function for Latin/Mixed input');
-            try {
-              const { data, error } = await supabase.functions.invoke('translate-message', {
-                body: {
-                  text: capturedText,
-                  senderLanguage: currentUserLanguage,
-                  receiverLanguage: partnerLanguage,
-                  mode: 'bidirectional',
-                },
+          // ALWAYS use bidirectional edge function for ALL input types
+          // This ensures consistent mother tongue preview for:
+          // - English typing → native script translation
+          // - Native script (Gboard) → show as-is + get English meaning
+          // - Romanized input → transliterate + translate
+          // - Voice input → detect + translate
+          console.log('[MeaningPreview] Using bidirectional edge function for:', capturedText.substring(0, 30));
+          
+          try {
+            const { data, error } = await supabase.functions.invoke('translate-message', {
+              body: {
+                text: capturedText,
+                senderLanguage: currentUserLanguage,
+                receiverLanguage: partnerLanguage,
+                mode: 'bidirectional',
+              },
+            });
+            
+            if (!error && data?.senderView) {
+              translatedText = data.senderView;
+              console.log('[MeaningPreview] Edge function success:', {
+                senderView: translatedText.substring(0, 30),
+                receiverView: data.receiverView?.substring(0, 30),
+                englishCore: data.englishCore?.substring(0, 30)
               });
-              
-              if (!error && data?.senderView) {
-                translatedText = data.senderView;
-                console.log('[MeaningPreview] Edge function success:', {
-                  senderView: translatedText.substring(0, 30),
-                  receiverView: data.receiverView?.substring(0, 30),
-                  englishCore: data.englishCore?.substring(0, 30)
-                });
+            } else {
+              // Fallback: for native script, show as-is
+              if (scriptType === 'native') {
+                translatedText = capturedText;
+                console.log('[MeaningPreview] Native script - showing as-is');
               } else {
-                // Fallback to browser-based translation
+                // Fallback to browser-based translation for Latin text
                 const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
                 if (result?.translatedText && result.translatedText !== capturedText) {
                   translatedText = result.translatedText;
                 }
               }
-            } catch (edgeError) {
-              console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
-              // Fallback to browser-based translation
+            }
+          } catch (edgeError) {
+            console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
+            // Fallback based on script type
+            if (scriptType === 'native') {
+              translatedText = capturedText;
+            } else {
               try {
                 const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
                 if (result?.translatedText && result.translatedText !== capturedText) {

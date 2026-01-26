@@ -320,54 +320,20 @@ export function useRealtimeTranslation({
           let receiverView = '';
           let englishMeaning = '';
           
-          // Determine handling based on script type
-          if (isEnglishLanguage(currentUserLanguage)) {
-            // Sender's language is English - input IS English
-            senderNative = text;
-            englishMeaning = text;
-            
-            // Translate to partner's language
-            if (!isEnglishLanguage(partnerLanguage)) {
-              const toPartner = await translateSemantic(text, 'english', partnerLanguage);
-              receiverView = toPartner.translatedText || text;
-            } else {
-              receiverView = text;
-            }
-          } else if (scriptType === 'native') {
-            // Sender typed in native script (Gboard/IME)
-            // No transliteration needed - show as-is
-            senderNative = text;
-            
-            // Use bidirectional translation for accurate receiver view
-            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
-            receiverView = result.receiverView || text;
-            englishMeaning = result.englishCore || text;
-            
-            console.log('[RealtimeTranslation] Native input processed:', {
-              senderNative: senderNative.substring(0, 20),
-              receiverView: receiverView.substring(0, 20),
-              englishMeaning: englishMeaning.substring(0, 20)
-            });
-          } else if (scriptType === 'latin') {
-            // Latin script input - could be English or romanized native language
-            // Use bidirectional edge function to handle properly
-            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
-            senderNative = result.senderView || text;
-            receiverView = result.receiverView || text;
-            englishMeaning = result.englishCore || text;
-            
-            console.log('[RealtimeTranslation] Latin input processed:', {
-              senderNative: senderNative.substring(0, 20),
-              receiverView: receiverView.substring(0, 20),
-              englishMeaning: englishMeaning.substring(0, 20)
-            });
-          } else {
-            // Mixed script - use bidirectional
-            const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
-            senderNative = result.senderView || text;
-            receiverView = result.receiverView || text;
-            englishMeaning = result.englishCore || text;
-          }
+          // ALWAYS use bidirectional edge function for consistent behavior
+          // This handles ALL input types: English, native script, romanized, voice
+          // The edge function properly translates to sender's mother tongue in native script
+          const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
+          senderNative = result.senderView || text;
+          receiverView = result.receiverView || text;
+          englishMeaning = result.englishCore || text;
+          
+          console.log('[RealtimeTranslation] Bidirectional preview:', {
+            input: text.substring(0, 20),
+            senderNative: senderNative.substring(0, 20),
+            receiverView: receiverView.substring(0, 20),
+            englishMeaning: englishMeaning.substring(0, 20)
+          });
           
           setSenderNativePreview(senderNative);
           setIsTranslating(false);
