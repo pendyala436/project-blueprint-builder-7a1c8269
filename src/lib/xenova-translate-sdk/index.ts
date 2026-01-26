@@ -103,6 +103,15 @@ export { listen, listenOnce, isSTTSupported, type STTResult, type STTOptions } f
 // React hooks
 export { useXenovaTranslate, useChatTranslate, type UseXenovaTranslateOptions, type UseXenovaTranslateReturn, type UseChatTranslateOptions } from './useXenovaTranslate';
 
+// Web Worker client for non-blocking ML
+export { 
+  translateInWorker,
+  translateChatInWorker,
+  toEnglishInWorker,
+  detectInWorker,
+  terminateWorker
+} from './worker-client';
+
 // SDK singleton for convenience
 import { translateText, translateForChat, getEnglishMeaning, detectLanguage, clearCache } from './engine';
 import { configureThreads, preloadAll, onProgress } from './modelLoader';
