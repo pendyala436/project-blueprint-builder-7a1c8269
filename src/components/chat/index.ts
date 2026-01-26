@@ -42,3 +42,23 @@ export {
 export { BidirectionalChatInput } from './BidirectionalChatInput';
 export { BidirectionalMessageBubble } from './BidirectionalMessageBubble';
 export { BidirectionalChatContainer } from './BidirectionalChatContainer';
+
+// ============================================================
+// SMART CHAT - Auto-Detection + Semantic Translation
+// ============================================================
+// 
+// Auto-detects input type:
+// - English typing: "how are you"
+// - Native script: "బాగున్నావా" (Gboard/native keyboard)
+// - Romanized: "bagunnava" (English letters, native meaning)
+// - Voice-to-text: Any language
+// 
+// Features:
+// - No hardcoded language detection
+// - Unicode-based script detection
+// - ML-enhanced language identification
+// - Real-time preview in sender's mother tongue
+// - Semantic translation to receiver's mother tongue
+// - Voice input with auto-language detection
+
+export { SmartChatInput } from './SmartChatInput';
