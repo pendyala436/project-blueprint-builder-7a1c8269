@@ -1686,15 +1686,17 @@ const DraggableMiniChatWindow = ({
           translatedForReceiver = bidirectionalResult.receiverView;
           originalEnglishToStore = bidirectionalResult.englishMeaning;
           
-          // Update messageToStore to sender's native text
-          if (senderNativeDisplay && senderNativeDisplay !== inputText) {
+          // CRITICAL: ALWAYS update messageToStore to sender's native text
+          // Even when typing in English, sender should see in their mother tongue
+          if (senderNativeDisplay && senderNativeDisplay.trim()) {
             messageToStore = senderNativeDisplay;
           }
           
           console.log(`[sendMessage] Bidirectional success:
             senderView: "${senderNativeDisplay?.substring(0, 30)}..."
             receiverView: "${translatedForReceiver?.substring(0, 30)}..."
-            englishCore: "${originalEnglishToStore?.substring(0, 30)}..."`);
+            englishCore: "${originalEnglishToStore?.substring(0, 30)}..."
+            messageToStore: "${messageToStore?.substring(0, 30)}..."`);
           
           // Update UI with translations
           setMessages(prev => prev.map(m =>
@@ -1728,7 +1730,9 @@ const DraggableMiniChatWindow = ({
                 translationPromises.push(
                   translateSemantic(inputText, 'english', currentUserLanguage)
                     .then(result => {
-                      if (result?.translatedText && result.translatedText !== inputText) {
+                      // ALWAYS use sender's native translation for messageToStore
+                      // Even if translation "looks" the same (rare edge case)
+                      if (result?.translatedText && result.translatedText.trim()) {
                         senderNativeDisplay = result.translatedText;
                         messageToStore = result.translatedText;
                         setMessages(prev => prev.map(m =>
