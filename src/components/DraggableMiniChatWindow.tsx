@@ -280,15 +280,14 @@ const DraggableMiniChatWindow = ({
   const [isUploading, setIsUploading] = useState(false);
   const [transliterationEnabled, setTransliterationEnabled] = useState(true);
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const [meaningPreview, setMeaningPreview] = useState<string>(''); // For english-meaning mode
+  const [meaningPreview, setMeaningPreview] = useState<string>(''); // Mother tongue preview
   const [isMeaningLoading, setIsMeaningLoading] = useState(false);
   const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Typing mode toggle - EN (English meaning) or NL (Native/Latin phonetic)
-  const [typingMode, setTypingMode] = useState<'english-meaning' | 'native-latin'>('english-meaning');
+  // Removed typing modes - now fully auto-detect based on input type
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if translation is needed (based on mother tongue from profiles)
@@ -382,8 +381,8 @@ const DraggableMiniChatWindow = ({
     clearTypingBroadcast();
   }, [clearTypingBroadcast]);
 
-  // Generate preview based on typing mode
-  // FULLY ASYNC: Runs in background using requestIdleCallback, NEVER blocks typing
+  // AUTO-DETECT input type and generate preview in sender's MOTHER TONGUE
+  // FULLY ASYNC: Runs in background, NEVER blocks typing
   const generateMeaningPreview = useCallback((inputText: string) => {
     if (!inputText.trim()) {
       setMeaningPreview('');
@@ -399,16 +398,16 @@ const DraggableMiniChatWindow = ({
     // Show loading immediately (doesn't block)
     setIsMeaningLoading(true);
     
-    // Debounce: wait 300ms of no typing before starting translation (reduced for faster preview)
+    // Debounce: wait 300ms of no typing before starting translation
     meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
       
-      console.log('[MeaningPreview] Starting preview for:', capturedText.substring(0, 30), 'mode:', typingMode, 'userLang:', currentUserLanguage);
+      console.log('[MeaningPreview] AUTO-DETECT preview for:', capturedText.substring(0, 30), 'userLang:', currentUserLanguage);
       
-      // Use setTimeout(0) to ensure it doesn't block - requestIdleCallback can be too slow
+      // Use setTimeout(0) to ensure it doesn't block
       setTimeout(async () => {
         try {
-          // Skip if user's language is English - no preview needed (they see their English directly)
+          // If user's language is English, they type in English - no preview needed
           if (checkIsEnglish(currentUserLanguage)) {
             console.log('[MeaningPreview] User is English speaker, no preview needed');
             setMeaningPreview('');
@@ -416,31 +415,58 @@ const DraggableMiniChatWindow = ({
             return;
           }
           
+          // AUTO-DETECT: Check if input is English, native script, or romanized
+          const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
+          const detection = await detectInWorker(capturedText);
+          const detectedLang = detection.language;
+          const isEnglishInput = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
+          
+          // Check if input contains non-Latin characters (native script)
+          const hasNonLatin = /[^\x00-\x7F]/.test(capturedText);
+          const isNativeScript = hasNonLatin && !isEnglishInput;
+          
+          console.log('[MeaningPreview] Detected:', { detectedLang, isEnglishInput, isNativeScript, hasNonLatin });
+          
           let translatedText = '';
           
-          // MEANING-BASED ONLY - NO phonetic transliteration
-          if (typingMode === 'english-meaning') {
-            // EN MODE: Translate English → user's mother tongue
-            console.log('[MeaningPreview] EN mode: translating to', currentUserLanguage);
+          if (isNativeScript) {
+            // NATIVE SCRIPT: Input is already in sender's mother tongue
+            // Just show as-is (no translation needed for preview)
+            translatedText = capturedText;
+            console.log('[MeaningPreview] Native script detected - showing as-is');
+          } else if (isEnglishInput) {
+            // ENGLISH INPUT: Translate to sender's mother tongue
+            console.log('[MeaningPreview] English detected - translating to', currentUserLanguage);
             try {
               const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-              console.log('[MeaningPreview] Translation result:', result?.translatedText?.substring(0, 30), 'isTranslated:', result?.isTranslated);
-              translatedText = result?.translatedText || '';
+              if (result?.translatedText && result.translatedText !== capturedText) {
+                translatedText = result.translatedText;
+                console.log('[MeaningPreview] Translated to mother tongue:', translatedText.substring(0, 30));
+              }
             } catch (translateError) {
               console.warn('[MeaningPreview] Translation error (non-blocking):', translateError);
-              translatedText = '';
             }
           } else {
-            // NL MODE: Show as-is (user is typing in their native language)
-            console.log('[MeaningPreview] NL mode: showing input as-is');
-            translatedText = capturedText;
+            // ROMANIZED INPUT (Latin letters with non-English meaning)
+            // Treat as English-style input for now, translate to mother tongue
+            console.log('[MeaningPreview] Romanized/Latin detected - translating to', currentUserLanguage);
+            try {
+              const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+              if (result?.translatedText && result.translatedText !== capturedText) {
+                translatedText = result.translatedText;
+              }
+            } catch {
+              translatedText = '';
+            }
           }
           
           if (translatedText && translatedText !== capturedText) {
-            console.log('[MeaningPreview] Setting preview:', translatedText.substring(0, 30));
+            console.log('[MeaningPreview] Setting mother tongue preview:', translatedText.substring(0, 30));
             setMeaningPreview(translatedText);
+          } else if (isNativeScript) {
+            // For native script, show as preview to confirm input
+            setMeaningPreview(capturedText);
           } else {
-            console.log('[MeaningPreview] No preview needed (same as input or empty)');
             setMeaningPreview('');
           }
         } catch (error) {
@@ -450,8 +476,8 @@ const DraggableMiniChatWindow = ({
           setIsMeaningLoading(false);
         }
       }, 0);
-    }, 300); // Reduced debounce for faster preview
-  }, [typingMode, currentUserLanguage]);
+    }, 300);
+  }, [currentUserLanguage]);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -1443,14 +1469,14 @@ const DraggableMiniChatWindow = ({
       clearTimeout(transliterationTimeoutRef.current);
       transliterationTimeoutRef.current = null;
     }
-    // Quick heuristic check if input looks like English (Latin text without non-ASCII chars)
+    // Quick heuristic check if input looks like English or native script
     // This is a fast sync check - proper detection happens in background
-    const looksLikeEnglish = /^[\x00-\x7F\s.,!?'"()-]+$/.test(inputText) && inputText.length > 2;
-    const isEnglishModeOrDetected = typingMode === 'english-meaning' || looksLikeEnglish;
+    const hasNonLatin = /[^\x00-\x7F]/.test(inputText);
+    const looksLikeEnglish = !hasNonLatin && /^[\x00-\x7F\s.,!?'"()-]+$/.test(inputText) && inputText.length > 2;
     
-    // Determine initial display for sender
+    // Determine initial display for sender - use preview if available
     let senderDisplay = inputText;
-    if (isEnglishModeOrDetected && previewSnapshot && previewSnapshot.trim()) {
+    if (previewSnapshot && previewSnapshot.trim()) {
       senderDisplay = previewSnapshot;
     }
 
@@ -1461,7 +1487,7 @@ const DraggableMiniChatWindow = ({
       message: inputText,
       translatedMessage: senderDisplay,
       latinMessage: undefined,
-      englishMessage: isEnglishModeOrDetected ? inputText : '(translating...)',
+      englishMessage: looksLikeEnglish ? inputText : '(translating...)',
       isTranslated: senderDisplay !== inputText,
       isTranslating: true, // Will be updated by background translation
       createdAt: messageTimestamp
@@ -1477,18 +1503,18 @@ const DraggableMiniChatWindow = ({
       let originalEnglishToStore: string | null = null;
       let senderNativeDisplay: string | null = null;
 
-      // === AUTO-DETECT if input is actually English ===
-      // Even if typingMode isn't 'english-meaning', detect if user typed English
+      // === AUTO-DETECT input type ===
       const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
       const detectionResult = await detectInWorker(inputText);
       const detectedLang = detectionResult.language;
       const isDetectedEnglish = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
+      const hasNativeScript = /[^\x00-\x7F]/.test(inputText);
       
-      // Use detected language OR typing mode to determine source
-      const isEnglishInput = typingMode === 'english-meaning' || isDetectedEnglish;
-      const sourceLanguage = isEnglishInput ? 'english' : currentUserLanguage;
+      // Determine source language based on auto-detection
+      const isEnglishInput = isDetectedEnglish && !hasNativeScript;
+      const sourceLanguage = isEnglishInput ? 'english' : (hasNativeScript ? currentUserLanguage : 'english');
       
-      console.log(`[sendMessage] Language detection: detected=${detectedLang}, isEnglishInput=${isEnglishInput}, sourceLanguage=${sourceLanguage}`);
+      console.log(`[sendMessage] AUTO-DETECT: detected=${detectedLang}, isEnglishInput=${isEnglishInput}, hasNativeScript=${hasNativeScript}, sourceLanguage=${sourceLanguage}`);
       
       try {
         // === PARALLEL TRANSLATION TASKS ===
@@ -2106,30 +2132,11 @@ const DraggableMiniChatWindow = ({
             />
             
             <div className="flex items-center gap-1">
-              {/* NL/EN Toggle Button */}
-              <Button
-                type="button"
-                variant={typingMode === 'english-meaning' ? 'default' : 'secondary'}
-                size="sm"
-                onClick={() => {
-                  setTypingMode(prev => prev === 'english-meaning' ? 'native-latin' : 'english-meaning');
-                  setMeaningPreview('');
-                  if (newMessage.trim()) {
-                    setTimeout(() => generateMeaningPreview(newMessage), 50);
-                  }
-                }}
-                className={cn(
-                  'shrink-0 h-8 w-8 font-bold text-[10px] p-0',
-                  typingMode === 'english-meaning' 
-                    ? 'bg-primary hover:bg-primary/90' 
-                    : 'bg-secondary hover:bg-secondary/80'
-                )}
-                title={typingMode === 'english-meaning' 
-                  ? 'EN: Type in English (meaning-based)' 
-                  : 'NL: Type in Native/Latin (phonetic)'}
-              >
-                {typingMode === 'english-meaning' ? 'EN' : 'NL'}
-              </Button>
+              {/* Auto-detect indicator - shows input will be auto-detected */}
+              <Badge variant="outline" className="h-6 text-[8px] px-1 shrink-0 opacity-60" title="Auto-detects English, native script, or romanized input">
+                <Languages className="h-3 w-3 mr-0.5" />
+                Auto
+              </Badge>
               
               {/* Attach button */}
               <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
@@ -2181,11 +2188,12 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Input area with mother tongue preview ONLY (no English in preview) */}
+              {/* Auto-detect preview - shows mother tongue translation */}
               <div className="flex-1 relative">
-                {/* EN-MODE: Mother tongue preview ONLY - No English shown in preview */}
+                {/* Mother tongue preview - shown for any input type */}
                 {meaningPreview && (
                   <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
+                    <span className="text-[8px] opacity-50 mr-1">({currentUserLanguage})</span>
                     {meaningPreview}
                     {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
                   </div>
@@ -2204,7 +2212,7 @@ const DraggableMiniChatWindow = ({
                   </div>
                 )}
                 <Input
-                  placeholder={typingMode === 'english-meaning' ? 'Type in English...' : `Type in ${currentUserLanguage}...`}
+                  placeholder="Type in any language..."
                   value={newMessage}
                   onChange={(e) => {
                     const newValue = e.target.value;
