@@ -13,22 +13,22 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// XENOVA BROWSER-BASED TRANSLATION SDK - replaces edge function calls
+// XENOVA BROWSER-BASED TRANSLATION SDK - use worker client for non-blocking translation
 import { 
-  translateText as xenovaTranslate,
   normalizeLanguageCode,
   isSameLanguage as xenovaSameLanguage,
   isEnglish as xenovaIsEnglish,
 } from '@/lib/xenova-translate-sdk';
+import { translateInWorker } from '@/lib/xenova-translate-sdk/worker-client';
 
-// Wrapper for legacy API compatibility
+// Wrapper for legacy API compatibility - uses worker with fallback
 async function translateSemantic(text: string, source: string, target: string) {
   if (!text.trim()) return { translatedText: '', isTranslated: false };
   try {
-    const result = await xenovaTranslate(text, source, target);
+    const result = await translateInWorker(text, source, target);
     return { translatedText: result.text, isTranslated: result.isTranslated };
   } catch (e) {
-    console.error('[translateSemantic] Xenova error:', e);
+    console.error('[translateSemantic] Translation error:', e);
     return { translatedText: text, isTranslated: false };
   }
 }

@@ -399,23 +399,18 @@ const DraggableMiniChatWindow = ({
     // Show loading immediately (doesn't block)
     setIsMeaningLoading(true);
     
-    // Debounce: wait 500ms of no typing before starting translation
+    // Debounce: wait 300ms of no typing before starting translation (reduced for faster preview)
     meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
       
-      // Use requestIdleCallback if available, else setTimeout(0) - ensures main thread isn't blocked
-      const scheduleBackground = (callback: () => void) => {
-        if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(callback, { timeout: 2000 });
-        } else {
-          setTimeout(callback, 0);
-        }
-      };
+      console.log('[MeaningPreview] Starting preview for:', capturedText.substring(0, 30), 'mode:', typingMode, 'userLang:', currentUserLanguage);
       
-      scheduleBackground(async () => {
+      // Use setTimeout(0) to ensure it doesn't block - requestIdleCallback can be too slow
+      setTimeout(async () => {
         try {
-          // Skip if user's language is English - no preview needed
+          // Skip if user's language is English - no preview needed (they see their English directly)
           if (checkIsEnglish(currentUserLanguage)) {
+            console.log('[MeaningPreview] User is English speaker, no preview needed');
             setMeaningPreview('');
             setIsMeaningLoading(false);
             return;
@@ -425,23 +420,27 @@ const DraggableMiniChatWindow = ({
           
           // MEANING-BASED ONLY - NO phonetic transliteration
           if (typingMode === 'english-meaning') {
-            // EN MODE: Translate English → user's mother tongue (NO transliteration)
-            // Wrap in try-catch to prevent any errors from blocking
+            // EN MODE: Translate English → user's mother tongue
+            console.log('[MeaningPreview] EN mode: translating to', currentUserLanguage);
             try {
               const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+              console.log('[MeaningPreview] Translation result:', result?.translatedText?.substring(0, 30), 'isTranslated:', result?.isTranslated);
               translatedText = result?.translatedText || '';
             } catch (translateError) {
               console.warn('[MeaningPreview] Translation error (non-blocking):', translateError);
               translatedText = '';
             }
           } else {
-            // NL MODE: Show as-is (NO transliteration)
+            // NL MODE: Show as-is (user is typing in their native language)
+            console.log('[MeaningPreview] NL mode: showing input as-is');
             translatedText = capturedText;
           }
           
           if (translatedText && translatedText !== capturedText) {
+            console.log('[MeaningPreview] Setting preview:', translatedText.substring(0, 30));
             setMeaningPreview(translatedText);
           } else {
+            console.log('[MeaningPreview] No preview needed (same as input or empty)');
             setMeaningPreview('');
           }
         } catch (error) {
@@ -450,8 +449,8 @@ const DraggableMiniChatWindow = ({
         } finally {
           setIsMeaningLoading(false);
         }
-      });
-    }, 500); // Increased debounce to 500ms for smoother typing
+      }, 0);
+    }, 300); // Reduced debounce for faster preview
   }, [typingMode, currentUserLanguage]);
 
   // Auto-close if blocked
