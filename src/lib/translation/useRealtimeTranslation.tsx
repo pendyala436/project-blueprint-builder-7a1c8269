@@ -6,19 +6,40 @@
  * - Sender sees live native script preview (MEANING-based, mother tongue)
  * - Recipient sees partner's typing translated to their mother tongue (MEANING-based)
  * - Same language: No translation needed
- * - Uses Edge Function APIs (LibreTranslate/MyMemory/Google) for semantic translation
+ * - Uses XENOVA BROWSER-BASED SDK for semantic translation (Zero server load)
  * 
- * NO NLLB-200 - NO HARDCODING - REAL SEMANTIC TRANSLATION
+ * FULLY CLIENT-SIDE - NO EDGE FUNCTIONS - REAL SEMANTIC TRANSLATION
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// SEMANTIC TRANSLATION via Edge Function APIs - replaces old phonetic system
+// XENOVA BROWSER-BASED TRANSLATION SDK - replaces edge function calls
 import { 
-  translateSemantic,
-  isSameLanguageCheck,
-  isEnglishLanguage 
-} from './semantic-translate-api';
+  translateText as xenovaTranslate,
+  normalizeLanguageCode,
+  isSameLanguage as xenovaSameLanguage,
+  isEnglish as xenovaIsEnglish,
+} from '@/lib/xenova-translate-sdk';
+
+// Wrapper for legacy API compatibility
+async function translateSemantic(text: string, source: string, target: string) {
+  if (!text.trim()) return { translatedText: '', isTranslated: false };
+  try {
+    const result = await xenovaTranslate(text, source, target);
+    return { translatedText: result.text, isTranslated: result.isTranslated };
+  } catch (e) {
+    console.error('[translateSemantic] Xenova error:', e);
+    return { translatedText: text, isTranslated: false };
+  }
+}
+
+function isSameLanguageCheck(lang1: string, lang2: string): boolean {
+  return xenovaSameLanguage(lang1, lang2);
+}
+
+function isEnglishLanguage(lang: string): boolean {
+  return xenovaIsEnglish(lang);
+}
 
 export interface TypingIndicator {
   userId: string;
