@@ -1681,15 +1681,30 @@ const DraggableMiniChatWindow = ({
           partnerLanguage
         );
         
-        if (bidirectionalResult.isTranslated) {
+        // CRITICAL: Use bidirectional results if senderView/receiverView exist
+        // Don't rely only on isTranslated flag (can be false for same-language or edge cases)
+        if (bidirectionalResult.senderView || bidirectionalResult.receiverView) {
           senderNativeDisplay = bidirectionalResult.senderView;
           translatedForReceiver = bidirectionalResult.receiverView;
           originalEnglishToStore = bidirectionalResult.englishMeaning;
           
           // CRITICAL: ALWAYS update messageToStore to sender's native text
-          // Even when typing in English, sender should see in their mother tongue
+          // Even when typing in English or same language, use senderView
           if (senderNativeDisplay && senderNativeDisplay.trim()) {
             messageToStore = senderNativeDisplay;
+          } else {
+            // Fallback: If senderView is empty, use input
+            messageToStore = inputText;
+          }
+          
+          // If receiverView is empty, fallback to senderView or input
+          if (!translatedForReceiver || !translatedForReceiver.trim()) {
+            translatedForReceiver = messageToStore;
+          }
+          
+          // If English meaning is empty, use input as fallback
+          if (!originalEnglishToStore || !originalEnglishToStore.trim()) {
+            originalEnglishToStore = inputText;
           }
           
           console.log(`[sendMessage] Bidirectional success:
