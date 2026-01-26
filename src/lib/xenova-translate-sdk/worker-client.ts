@@ -38,7 +38,14 @@ function getWorker(): Worker {
     
     worker.onerror = (error) => {
       console.error('[WorkerClient] Worker error:', error);
+      // Reject all pending messages on worker error
+      pendingMessages.forEach((pending, id) => {
+        pending.reject(new Error('Worker crashed'));
+        pendingMessages.delete(id);
+      });
     };
+    
+    console.log('[WorkerClient] Translation worker initialized');
   }
   
   return worker;
@@ -84,7 +91,10 @@ export async function translateInWorker(
   source: string,
   target: string
 ): Promise<any> {
-  return sendToWorker('translate', { text, source, target });
+  console.log('[WorkerClient] 🔄 Sending translation to worker:', { text: text.substring(0, 20), source, target });
+  const result = await sendToWorker('translate', { text, source, target });
+  console.log('[WorkerClient] ✅ Translation received from worker');
+  return result;
 }
 
 /**
@@ -95,7 +105,10 @@ export async function translateChatInWorker(
   senderLang: string,
   receiverLang: string
 ): Promise<any> {
-  return sendToWorker('translate_chat', { text, senderLang, receiverLang });
+  console.log('[WorkerClient] 🔄 Sending chat translation to worker');
+  const result = await sendToWorker('translate_chat', { text, senderLang, receiverLang });
+  console.log('[WorkerClient] ✅ Chat translation received from worker');
+  return result;
 }
 
 /**
@@ -105,7 +118,10 @@ export async function toEnglishInWorker(
   text: string,
   source: string
 ): Promise<string> {
-  return sendToWorker('to_english', { text, source });
+  console.log('[WorkerClient] 🔄 Sending English translation to worker');
+  const result = await sendToWorker<string>('to_english', { text, source });
+  console.log('[WorkerClient] ✅ English translation received from worker');
+  return result;
 }
 
 /**
@@ -114,7 +130,10 @@ export async function toEnglishInWorker(
 export async function detectInWorker(
   text: string
 ): Promise<{ language: string; confidence: number }> {
-  return sendToWorker('detect', { text });
+  console.log('[WorkerClient] 🔄 Sending language detection to worker');
+  const result = await sendToWorker<{ language: string; confidence: number }>('detect', { text });
+  console.log('[WorkerClient] ✅ Language detection received from worker');
+  return result;
 }
 
 /**

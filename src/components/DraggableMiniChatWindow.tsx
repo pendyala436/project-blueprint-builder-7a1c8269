@@ -1480,8 +1480,8 @@ const DraggableMiniChatWindow = ({
 
       // === AUTO-DETECT if input is actually English ===
       // Even if typingMode isn't 'english-meaning', detect if user typed English
-      const { detectLanguage } = await import('@/lib/xenova-translate-sdk/engine');
-      const detectionResult = await detectLanguage(inputText);
+      const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
+      const detectionResult = await detectInWorker(inputText);
       const detectedLang = detectionResult.language;
       const isDetectedEnglish = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
       

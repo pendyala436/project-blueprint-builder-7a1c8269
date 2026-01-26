@@ -9,6 +9,10 @@ import type { ModelLoadProgress } from './types';
 // Configure transformers.js for browser
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+env.allowRemoteModels = true;
+// Use public HuggingFace CDN - no authentication needed for public models
+env.remoteHost = 'https://huggingface.co';
+env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
 
 // Model instances (lazy loaded)
 let m2mPipeline: any = null;
