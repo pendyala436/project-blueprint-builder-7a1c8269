@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       console.log('OpenAPI spec not available');
     }
     
-    // Try /languages endpoint
+    // Try /languages endpoint (LibreTranslate)
     try {
       const languagesResponse = await fetch(`${baseUrl}/languages`, {
         method: 'GET',
@@ -62,9 +62,29 @@ Deno.serve(async (req) => {
           ? languages.map((lang: any) => ({ code: lang.code || lang, name: lang.name || lang }))
           : languages;
         results.totalLanguages = Array.isArray(languages) ? languages.length : 'unknown';
+        results.isLibreTranslate = true;
+      } else {
+        results.languagesStatus = languagesResponse.status;
       }
     } catch (e) {
-      console.log('/languages endpoint not available');
+      console.log('/languages endpoint error:', e);
+      results.languagesError = String(e);
+    }
+    
+    // Try /detect endpoint (LibreTranslate)
+    try {
+      const detectResponse = await fetch(`${baseUrl}/detect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: 'Hello world' }),
+      });
+      
+      if (detectResponse.ok) {
+        results.hasDetect = true;
+        results.detectResult = await detectResponse.json();
+      }
+    } catch (e) {
+      console.log('/detect endpoint not available');
     }
     
     // Try root to get any info
