@@ -14,17 +14,9 @@ Deno.serve(async (req) => {
     
     console.log(`Checking translation service at: ${baseUrl}`);
     
-    // Try multiple common endpoints to detect service type
-    const endpoints = [
-      '/languages',           // LibreTranslate
-      '/docs',                // FastAPI docs
-      '/openapi.json',        // FastAPI OpenAPI spec
-      '/',                    // Root
-    ];
-    
     const results: Record<string, any> = {};
     
-    // Check root/docs first to identify service type
+    // Check OpenAPI spec for TWB-MT FastAPI
     try {
       const docsResponse = await fetch(`${baseUrl}/openapi.json`, {
         method: 'GET',
@@ -35,74 +27,106 @@ Deno.serve(async (req) => {
         const openapi = await docsResponse.json();
         results.serviceType = openapi.info?.title || 'Unknown FastAPI';
         results.version = openapi.info?.version;
+        results.description = openapi.info?.description;
         results.endpoints = Object.keys(openapi.paths || {});
         
-        // Extract supported languages from paths if available
-        const paths = openapi.paths || {};
-        const translateEndpoint = paths['/translate'] || paths['/v1/translate'];
+        // Get full schemas to find language enums
+        const schemas = openapi.components?.schemas || {};
+        results.allSchemas = Object.keys(schemas);
         
-        if (translateEndpoint) {
-          results.hasTranslate = true;
+        // Look for TranslationRequest schema
+        if (schemas.TranslationRequest) {
+          results.translationRequestSchema = schemas.TranslationRequest;
+        }
+        
+        // Look for any language-related schemas
+        for (const [name, schema] of Object.entries(schemas)) {
+          if (name.toLowerCase().includes('lang') || 
+              (schema as any).enum || 
+              name === 'Language' ||
+              name === 'src' ||
+              name === 'tgt') {
+            results[`schema_${name}`] = schema;
+          }
         }
       }
     } catch (e) {
-      console.log('OpenAPI spec not available');
+      console.log('OpenAPI spec error:', e);
     }
     
-    // Try /languages endpoint (LibreTranslate)
-    try {
-      const languagesResponse = await fetch(`${baseUrl}/languages`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (languagesResponse.ok) {
-        const languages = await languagesResponse.json();
-        results.languages = Array.isArray(languages) 
-          ? languages.map((lang: any) => ({ code: lang.code || lang, name: lang.name || lang }))
-          : languages;
-        results.totalLanguages = Array.isArray(languages) ? languages.length : 'unknown';
-        results.isLibreTranslate = true;
-      } else {
-        results.languagesStatus = languagesResponse.status;
+    // Try common language endpoints for TWB-MT
+    const langEndpoints = ['/api/v1/languages', '/languages', '/api/languages', '/v1/languages'];
+    for (const endpoint of langEndpoints) {
+      try {
+        const langResponse = await fetch(`${baseUrl}${endpoint}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+        
+        if (langResponse.ok) {
+          const langData = await langResponse.json();
+          results.languagesEndpoint = endpoint;
+          results.languages = langData;
+          results.totalLanguages = Array.isArray(langData) ? langData.length : 
+                                   (typeof langData === 'object' ? Object.keys(langData).length : 'unknown');
+          break;
+        }
+      } catch (e) {
+        // Continue to next endpoint
       }
-    } catch (e) {
-      console.log('/languages endpoint error:', e);
-      results.languagesError = String(e);
     }
     
-    // Try /detect endpoint (LibreTranslate)
+    // Try a test translation with correct TWB-MT params (src/tgt instead of source/target)
     try {
-      const detectResponse = await fetch(`${baseUrl}/detect`, {
+      const testResponse = await fetch(`${baseUrl}/api/v1/translate/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: 'Hello world' }),
+        body: JSON.stringify({ 
+          text: 'Hello, how are you?',
+          src: 'eng',
+          tgt: 'hin'
+        }),
       });
       
-      if (detectResponse.ok) {
-        results.hasDetect = true;
-        results.detectResult = await detectResponse.json();
-      }
+      const testData = await testResponse.json();
+      results.testTranslation = {
+        status: testResponse.status,
+        response: testData
+      };
     } catch (e) {
-      console.log('/detect endpoint not available');
+      console.log('Test translation error:', e);
     }
     
-    // Try root to get any info
-    try {
-      const rootResponse = await fetch(baseUrl, {
-        method: 'GET',
-      });
-      
-      if (rootResponse.ok) {
-        const contentType = rootResponse.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          results.rootInfo = await rootResponse.json();
-        } else {
-          results.rootStatus = rootResponse.status;
-        }
+    // Test different language codes to find supported ones
+    const testLangPairs = [
+      { src: 'en', tgt: 'hi' },
+      { src: 'eng', tgt: 'hin' },
+      { src: 'en', tgt: 'es' },
+      { src: 'eng', tgt: 'spa' },
+      { src: 'en', tgt: 'te' },
+      { src: 'eng', tgt: 'tel' },
+      { src: 'en', tgt: 'ta' },
+      { src: 'eng', tgt: 'tam' },
+    ];
+    
+    results.languageTests = [];
+    for (const pair of testLangPairs) {
+      try {
+        const testResp = await fetch(`${baseUrl}/api/v1/translate/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: 'Hello', ...pair }),
+        });
+        const testResult = await testResp.json();
+        results.languageTests.push({
+          pair,
+          status: testResp.status,
+          success: testResp.ok,
+          translation: testResp.ok ? testResult.translation : testResult.detail?.[0]?.msg
+        });
+      } catch (e) {
+        results.languageTests.push({ pair, error: String(e) });
       }
-    } catch (e) {
-      console.log('Root endpoint not available');
     }
     
     return new Response(
