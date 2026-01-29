@@ -1658,14 +1658,36 @@ serve(async (req) => {
           englishCore = inputText;
           
           // Translate English → Sender's mother tongue (native script)
-          const toSenderNative = await translateText(inputText, 'english', langA);
+          // CRITICAL: Try ALL engines to ensure we get native text
+          let toSenderNative = await translateText(inputText, 'english', langA);
+          
+          // If first attempt fails, try direct Google translate
+          if (!toSenderNative.success || toSenderNative.translatedText === inputText) {
+            console.log(`[dl-translate] Primary English→${langA} failed, trying Google fallback`);
+            const langACode = getLibreCode(langA);
+            const googleResult = await translateWithGoogle(inputText, 'en', langACode);
+            if (googleResult.success && googleResult.translatedText !== inputText) {
+              toSenderNative = { ...googleResult, pivotUsed: false };
+            }
+          }
+          
+          // If still failing, try MyMemory
+          if (!toSenderNative.success || toSenderNative.translatedText === inputText) {
+            console.log(`[dl-translate] Google fallback failed, trying MyMemory`);
+            const langACode = getLibreCode(langA);
+            const myMemoryResult = await translateWithMyMemory(inputText, 'en', langACode);
+            if (myMemoryResult.success && myMemoryResult.translatedText !== inputText) {
+              toSenderNative = { ...myMemoryResult, pivotUsed: false };
+            }
+          }
+          
           if (toSenderNative.success && toSenderNative.translatedText !== inputText) {
             senderNativeText = toSenderNative.translatedText;
-            console.log(`[dl-translate] English→${langA} for sender preview: "${senderNativeText.substring(0, 50)}"`);
+            console.log(`[dl-translate] English→${langA} for sender native: "${senderNativeText.substring(0, 50)}"`);
           } else {
-            // Fallback: keep English if translation fails
+            // Fallback: keep English if ALL translation attempts fail
             senderNativeText = inputText;
-            console.log(`[dl-translate] English→${langA} failed, keeping English for sender`);
+            console.log(`[dl-translate] ALL English→${langA} attempts failed, keeping English for sender`);
           }
         } else {
           // CASE 2: User typed romanized native text (e.g., "bagunnava" for Telugu)
