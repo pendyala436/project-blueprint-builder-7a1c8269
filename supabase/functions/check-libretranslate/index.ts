@@ -14,127 +14,39 @@ Deno.serve(async (req) => {
     
     console.log(`Checking translation service at: ${baseUrl}`);
     
-    const results: Record<string, any> = {};
+    // Get OpenAPI spec
+    const openapiResponse = await fetch(`${baseUrl}/openapi.json`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
     
-    // Check OpenAPI spec for TWB-MT FastAPI
-    try {
-      const docsResponse = await fetch(`${baseUrl}/openapi.json`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-      });
-      
-      if (docsResponse.ok) {
-        const openapi = await docsResponse.json();
-        results.serviceType = openapi.info?.title || 'Unknown FastAPI';
-        results.version = openapi.info?.version;
-        results.description = openapi.info?.description;
-        results.endpoints = Object.keys(openapi.paths || {});
-        
-        // Get full schemas to find language enums
-        const schemas = openapi.components?.schemas || {};
-        results.allSchemas = Object.keys(schemas);
-        
-        // Look for TranslationRequest schema
-        if (schemas.TranslationRequest) {
-          results.translationRequestSchema = schemas.TranslationRequest;
-        }
-        
-        // Look for any language-related schemas
-        for (const [name, schema] of Object.entries(schemas)) {
-          if (name.toLowerCase().includes('lang') || 
-              (schema as any).enum || 
-              name === 'Language' ||
-              name === 'src' ||
-              name === 'tgt') {
-            results[`schema_${name}`] = schema;
-          }
-        }
-      }
-    } catch (e) {
-      console.log('OpenAPI spec error:', e);
-    }
-    
-    // Try common language endpoints for TWB-MT
-    const langEndpoints = ['/api/v1/languages', '/languages', '/api/languages', '/v1/languages'];
-    for (const endpoint of langEndpoints) {
-      try {
-        const langResponse = await fetch(`${baseUrl}${endpoint}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-        });
-        
-        if (langResponse.ok) {
-          const langData = await langResponse.json();
-          results.languagesEndpoint = endpoint;
-          results.languages = langData;
-          results.totalLanguages = Array.isArray(langData) ? langData.length : 
-                                   (typeof langData === 'object' ? Object.keys(langData).length : 'unknown');
-          break;
-        }
-      } catch (e) {
-        // Continue to next endpoint
-      }
-    }
-    
-    // Try a test translation with correct TWB-MT params (src/tgt instead of source/target)
-    try {
-      const testResponse = await fetch(`${baseUrl}/api/v1/translate/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: 'Hello, how are you?',
-          src: 'eng',
-          tgt: 'hin'
+    if (!openapiResponse.ok) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to fetch OpenAPI spec: ${openapiResponse.status}`,
         }),
-      });
-      
-      const testData = await testResponse.json();
-      results.testTranslation = {
-        status: testResponse.status,
-        response: testData
-      };
-    } catch (e) {
-      console.log('Test translation error:', e);
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Test different language codes to find supported ones
-    const testLangPairs = [
-      { src: 'en', tgt: 'hi' },
-      { src: 'eng', tgt: 'hin' },
-      { src: 'en', tgt: 'es' },
-      { src: 'eng', tgt: 'spa' },
-      { src: 'en', tgt: 'te' },
-      { src: 'eng', tgt: 'tel' },
-      { src: 'en', tgt: 'ta' },
-      { src: 'eng', tgt: 'tam' },
-    ];
+    const openapi = await openapiResponse.json();
     
-    results.languageTests = [];
-    for (const pair of testLangPairs) {
-      try {
-        const testResp = await fetch(`${baseUrl}/api/v1/translate/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: 'Hello', ...pair }),
-        });
-        const testResult = await testResp.json();
-        results.languageTests.push({
-          pair,
-          status: testResp.status,
-          success: testResp.ok,
-          translation: testResp.ok ? testResult.translation : testResult.detail?.[0]?.msg
-        });
-      } catch (e) {
-        results.languageTests.push({ pair, error: String(e) });
-      }
-    }
+    // Extract all relevant info
+    const result = {
+      success: true,
+      serviceInfo: {
+        title: openapi.info?.title,
+        version: openapi.info?.version,
+        description: openapi.info?.description,
+      },
+      endpoints: Object.keys(openapi.paths || {}),
+      schemas: openapi.components?.schemas || {},
+      fullSpec: openapi, // Return full spec for inspection
+    };
     
     return new Response(
-      JSON.stringify({
-        success: true,
-        baseUrl,
-        ...results,
-      }),
+      JSON.stringify(result, null, 2),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
