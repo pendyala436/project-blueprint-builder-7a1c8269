@@ -52,34 +52,40 @@ import {
   isLatinScriptLanguage,
   normalizeUnicode,
 } from "@/lib/translation";
-// Browser-based translation using Xenova/HuggingFace transformers
-import { 
-  normalizeLanguageCode,
-  isSameLanguage as xenovaSameLanguage,
-  isEnglish as xenovaIsEnglish,
-} from "@/lib/xenova-translate-sdk";
-// Worker client for non-blocking ML translation
-import { 
-  translateInWorker,
-  translateChatInWorker,
-  toEnglishInWorker,
-} from "@/lib/xenova-translate-sdk/worker-client";
 // Legacy imports for fallback compatibility
 import { 
   isSameLanguageCheck,
   isEnglishLanguage as checkIsEnglish,
 } from "@/lib/translation/semantic-translate-api";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
-// Lazy model preload - triggers when chat window opens
-import { startModelPreload } from "@/hooks/useTranslationPreload";
 // Browser-based translation with typing mode support
 import { useLibreTranslate } from "@/lib/libre-translate";
 
-console.log('[DraggableMiniChatWindow] Module loaded - 1000+ language support via XENOVA BROWSER-BASED SDK (Zero server load)');
+// Local utility functions (browser-based models removed)
+function normalizeLanguageCode(lang: string): string {
+  if (!lang) return 'en';
+  const code = lang.toLowerCase().trim();
+  const codeMap: Record<string, string> = {
+    'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
+    'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
+    'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
+  };
+  return codeMap[code] || code.slice(0, 2);
+}
+
+function xenovaSameLanguage(lang1: string, lang2: string): boolean {
+  return normalizeLanguageCode(lang1) === normalizeLanguageCode(lang2);
+}
+
+function xenovaIsEnglish(lang: string): boolean {
+  const code = normalizeLanguageCode(lang);
+  return code === 'en' || code === 'english';
+}
+
+console.log('[DraggableMiniChatWindow] Module loaded - Translation via Edge Function');
 
 /**
- * Browser-based semantic translation wrapper using Xenova SDK
- * With fallback to edge function for reliability
+ * Edge function semantic translation
  * Supports ALL input types: English, native script, voice, Gboard, font tools
  * Provides meaning-based translation (not phonetic transliteration)
  */
@@ -124,34 +130,10 @@ async function translateSemantic(
     };
   }
   
-  // Try 1: Browser-based Xenova translation
-  try {
-    console.log('[translateSemantic] Attempting browser-based translation...');
-    const result = await translateInWorker(text, normalizedSource, normalizedTarget);
-    
-    const wasActuallyTranslated = result.isTranslated && result.text !== text && result.text.trim() !== '';
-    
-    if (wasActuallyTranslated) {
-      console.log(`[translateSemantic] ✅ Browser translation success: "${result.text?.substring(0, 40)}" | path=${result.path}`);
-      return {
-        translatedText: result.text || text,
-        originalText: result.originalText || text,
-        isTranslated: true,
-        sourceLanguage: result.sourceLang || normalizedSource,
-        targetLanguage: result.targetLang || normalizedTarget,
-        confidence: 0.9,
-      };
-    }
-    
-    console.log('[translateSemantic] ⚠️ Browser translation returned unchanged text, trying edge function...');
-  } catch (browserError) {
-    console.warn('[translateSemantic] ⚠️ Browser translation failed:', browserError);
-  }
-  
-  // Try 2: Fallback to edge function
+  // Use edge function for translation
   try {
     const { supabase } = await import('@/integrations/supabase/client');
-    console.log('[translateSemantic] Calling edge function fallback...');
+    console.log('[translateSemantic] Calling edge function...');
     
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
@@ -184,11 +166,11 @@ async function translateSemantic(
     
     console.log('[translateSemantic] ⚠️ Edge function returned unchanged text');
   } catch (edgeError) {
-    console.warn('[translateSemantic] Edge function fallback failed:', edgeError);
+    console.warn('[translateSemantic] Edge function failed:', edgeError);
   }
   
-  // Final fallback: return original text
-  console.log('[translateSemantic] ❌ All translation methods failed, returning original');
+  // Fallback: return original text
+  console.log('[translateSemantic] ❌ Translation failed, returning original');
   return {
     translatedText: text,
     originalText: text,
@@ -200,8 +182,7 @@ async function translateSemantic(
 }
 
 /**
- * Browser-based bidirectional chat translation using Xenova SDK
- * With fallback to edge function for reliability
+ * Edge function bidirectional chat translation
  * Provides proper sender/receiver views based on their mother tongues
  * 
  * @param text - The message text (can be in any language/script)
@@ -232,37 +213,10 @@ async function translateForChatSemantic(
   
   console.log(`[translateForChatSemantic] 🔄 "${text.substring(0, 40)}" | sender=${senderLang}→${normSender} | receiver=${receiverLang}→${normReceiver}`);
   
-  // Try 1: Browser-based translation
-  try {
-    const result = await translateChatInWorker(text, normSender, normReceiver);
-    
-    // Check if translation actually happened
-    const actuallyTranslated = result.isTranslated && 
-      (result.receiverView !== text || result.englishCore !== text);
-    
-    if (actuallyTranslated) {
-      console.log(`[translateForChatSemantic] ✅ Browser success:
-        Sender: "${result.senderView?.substring(0, 30)}"
-        Receiver: "${result.receiverView?.substring(0, 30)}"
-        English: "${result.englishCore?.substring(0, 30)}"`);
-      
-      return {
-        senderView: result.senderView || text,
-        receiverView: result.receiverView || text,
-        englishMeaning: result.englishCore || text,
-        isTranslated: true,
-      };
-    }
-    
-    console.log('[translateForChatSemantic] ⚠️ Browser translation unchanged, trying edge function...');
-  } catch (browserError) {
-    console.warn('[translateForChatSemantic] ⚠️ Browser translation failed:', browserError);
-  }
-  
-  // Try 2: Edge function fallback with bidirectional mode
+  // Use edge function with bidirectional mode
   try {
     const { supabase } = await import('@/integrations/supabase/client');
-    console.log('[translateForChatSemantic] Calling edge function fallback...');
+    console.log('[translateForChatSemantic] Calling edge function...');
     
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: {
@@ -294,10 +248,10 @@ async function translateForChatSemantic(
       };
     }
   } catch (edgeError) {
-    console.warn('[translateForChatSemantic] Edge function fallback failed:', edgeError);
+    console.warn('[translateForChatSemantic] Edge function failed:', edgeError);
   }
   
-  console.log('[translateForChatSemantic] ❌ All methods failed, returning original');
+  console.log('[translateForChatSemantic] ❌ Translation failed, returning original');
   return {
     senderView: text,
     receiverView: text,
@@ -795,11 +749,8 @@ const DraggableMiniChatWindow = ({
     };
   }, [isResizing, position]);
 
-  // Load initial data and trigger lazy model preload
+  // Load initial data
   useEffect(() => {
-    // Start translation model preload when chat opens (lazy loading)
-    startModelPreload();
-    
     const loadInitialData = async () => {
       try {
         if (userGender === "male") {
@@ -1661,18 +1612,16 @@ const DraggableMiniChatWindow = ({
       let originalEnglishToStore: string | null = null;
       let senderNativeDisplay: string | null = null;
 
-      // === AUTO-DETECT input type ===
-      const { detectInWorker } = await import('@/lib/xenova-translate-sdk/worker-client');
-      const detectionResult = await detectInWorker(inputText);
-      const detectedLang = detectionResult.language;
-      const isDetectedEnglish = detectedLang === 'en' || detectedLang === 'eng' || detectedLang === 'english';
+      // === AUTO-DETECT input type using simple script detection ===
       const hasNativeScript = /[^\x00-\x7F]/.test(inputText);
+      const looksLikeEnglish = /\b(the|is|are|was|were|have|has|had|do|does|did|what|when|where|why|how|who|hello|hi|hey|thanks|you|your|me|my|we|i|am|be|and|or|but|not)\b/i.test(inputText.toLowerCase());
+      const isDetectedEnglish = looksLikeEnglish && !hasNativeScript;
       
       // Determine source language based on auto-detection
       const isEnglishInput = isDetectedEnglish && !hasNativeScript;
       const sourceLanguage = isEnglishInput ? 'english' : (hasNativeScript ? currentUserLanguage : 'english');
       
-      console.log(`[sendMessage] AUTO-DETECT: detected=${detectedLang}, isEnglishInput=${isEnglishInput}, hasNativeScript=${hasNativeScript}, sourceLanguage=${sourceLanguage}`);
+      console.log(`[sendMessage] AUTO-DETECT: isEnglishInput=${isEnglishInput}, hasNativeScript=${hasNativeScript}, sourceLanguage=${sourceLanguage}`);
       
       try {
         // === USE BIDIRECTIONAL EDGE FUNCTION FOR RELIABLE TRANSLATION ===
