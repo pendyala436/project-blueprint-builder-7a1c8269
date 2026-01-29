@@ -3,11 +3,9 @@
  * =======================================
  * 
  * Uses Web Speech API for voice input with automatic language detection.
- * Works with both browser's native STT and Xenova's language detection.
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { normalizeLanguageCode } from '@/lib/xenova-translate-sdk/languages';
 
 // ============================================================
 // TYPES
@@ -35,6 +33,20 @@ const isSpeechRecognitionSupported = () => {
   return typeof window !== 'undefined' && 
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 };
+
+// Simple language code normalization
+function normalizeLanguageCode(lang: string): string {
+  if (!lang) return 'en';
+  const code = lang.toLowerCase().trim();
+  const codeMap: Record<string, string> = {
+    'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
+    'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
+    'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
+    'spanish': 'es', 'french': 'fr', 'german': 'de', 'chinese': 'zh',
+    'japanese': 'ja', 'korean': 'ko', 'arabic': 'ar', 'russian': 'ru',
+  };
+  return codeMap[code] || code.slice(0, 2);
+}
 
 // ============================================================
 // HOOK IMPLEMENTATION

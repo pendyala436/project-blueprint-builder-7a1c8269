@@ -11,7 +11,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { preloadBaseFonts } from "@/lib/fonts";
-import { startModelPreload } from "@/hooks/useTranslationPreload";
+// Browser-based translation removed - using edge function
 
 // Critical components - no lazy for stability
 import AuthScreen from "./pages/AuthScreen";
@@ -29,23 +29,14 @@ const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
-const TranslationLoadingIndicator = lazy(() => import("@/components/TranslationLoadingIndicator").then(m => ({ default: m.TranslationLoadingIndicator })));
+// TranslationLoadingIndicator removed - browser-based models no longer used
 
-// Preload dashboard routes AND translation models immediately after first paint
+// Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
-  // Use requestIdleCallback for non-blocking preload
   const preload = () => {
     startTransition(() => {
-      // Prevent unhandled promise rejections if a module fetch fails (e.g. SW/cache hiccups)
       import("./pages/DashboardScreen").catch(() => undefined);
       import("./pages/WomenDashboardScreen").catch(() => undefined);
-    });
-    
-    // 🔥 CRITICAL: Start loading translation models on app startup
-    // This ensures browser-based translation is ready before user opens a chat
-    console.log('[App] 🚀 Starting translation model preload on app startup');
-    startModelPreload().catch((err) => {
-      console.warn('[App] Translation model preload failed:', err);
     });
   };
   
@@ -162,7 +153,7 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
                     <Sonner />
                     <PWAInstallPrompt />
                     <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
-                    <TranslationLoadingIndicator showOnReady={true} />
+                    
                   </Suspense>
                   {children}
                 </SecurityProvider>

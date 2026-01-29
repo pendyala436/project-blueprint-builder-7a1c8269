@@ -1,45 +1,39 @@
 /**
  * Real-Time Translation Hook - FULLY ASYNC & NON-BLOCKING
  * 
- * 100% Background Processing - Typing is NEVER affected:
- * - All translation runs in background via requestIdleCallback
- * - Sender sees live native script preview (MEANING-based, mother tongue)
- * - Recipient sees partner's typing translated to their mother tongue (MEANING-based)
- * - Same language: No translation needed
- * - Uses SUPABASE EDGE FUNCTION for semantic translation (reliable for all 1000+ languages)
- * 
- * FULLY BIDIRECTIONAL - Works for ALL input types:
- * - English typing → native preview + native receiver
- * - Native script (Gboard) → show as-is + translate for receiver
- * - Romanized input → transliterate + translate for receiver
- * - Voice-to-text → detect language + translate
+ * Uses SUPABASE EDGE FUNCTION for semantic translation.
+ * Browser-based models removed.
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// XENOVA BROWSER-BASED TRANSLATION SDK - use worker client for non-blocking translation
-import { 
-  normalizeLanguageCode,
-  isSameLanguage as xenovaSameLanguage,
-  isEnglish as xenovaIsEnglish,
-} from '@/lib/xenova-translate-sdk';
-import { translateInWorker } from '@/lib/xenova-translate-sdk/worker-client';
 
-// Wrapper for legacy API compatibility - uses worker with fallback
-async function translateSemantic(text: string, source: string, target: string) {
-  if (!text.trim()) return { translatedText: '', isTranslated: false };
-  try {
-    const result = await translateInWorker(text, source, target);
-    return { translatedText: result.text, isTranslated: result.isTranslated };
-  } catch (e) {
-    console.error('[translateSemantic] Translation error:', e);
-    return { translatedText: text, isTranslated: false };
-  }
+// ============================================================
+// UTILITIES
+// ============================================================
+
+function normalizeLanguageCode(lang: string): string {
+  if (!lang) return 'en';
+  const code = lang.toLowerCase().trim();
+  const codeMap: Record<string, string> = {
+    'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
+    'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
+    'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
+  };
+  return codeMap[code] || code.slice(0, 2);
+}
+
+function isSameLanguageCheck(lang1: string, lang2: string): boolean {
+  return normalizeLanguageCode(lang1) === normalizeLanguageCode(lang2);
+}
+
+function isEnglishLanguage(lang: string): boolean {
+  const code = normalizeLanguageCode(lang);
+  return code === 'en' || code === 'english';
 }
 
 /**
  * Full bidirectional translation using edge function
- * Handles ALL input types: English, native script, romanized, voice
  */
 async function translateBidirectional(
   text: string,
@@ -75,66 +69,19 @@ async function translateBidirectional(
     };
   } catch (e) {
     console.error('[translateBidirectional] Edge function error:', e);
-    
-    // Fallback to browser-based translation
-    try {
-      const normSender = normalizeLanguageCode(senderLanguage);
-      const normReceiver = normalizeLanguageCode(receiverLanguage);
-      
-      let senderView = text;
-      let receiverView = text;
-      let englishCore = text;
-      
-      // Get English meaning first
-      if (!xenovaIsEnglish(senderLanguage)) {
-        const toEnglish = await translateSemantic(text, normSender, 'en');
-        if (toEnglish.isTranslated) {
-          englishCore = toEnglish.translatedText;
-        }
-      }
-      
-      // Translate to receiver
-      if (!xenovaSameLanguage(senderLanguage, receiverLanguage)) {
-        const toReceiver = await translateSemantic(englishCore, 'en', normReceiver);
-        if (toReceiver.isTranslated) {
-          receiverView = toReceiver.translatedText;
-        }
-      }
-      
-      return { senderView, receiverView, englishCore, isTranslated: receiverView !== text };
-    } catch (fallbackError) {
-      console.error('[translateBidirectional] Fallback failed:', fallbackError);
-      return { senderView: text, receiverView: text, englishCore: text, isTranslated: false };
-    }
+    return { senderView: text, receiverView: text, englishCore: text, isTranslated: false };
   }
 }
 
-function isSameLanguageCheck(lang1: string, lang2: string): boolean {
-  return xenovaSameLanguage(lang1, lang2);
-}
-
-function isEnglishLanguage(lang: string): boolean {
-  return xenovaIsEnglish(lang);
-}
-
-/**
- * Detect script type from text
- */
-function detectScript(text: string): 'latin' | 'native' | 'mixed' {
-  if (!text.trim()) return 'latin';
-  const hasLatin = /[a-zA-Z]/.test(text);
-  const hasNonLatin = /[^\x00-\x7F]/.test(text);
-  
-  if (hasLatin && hasNonLatin) return 'mixed';
-  if (hasNonLatin) return 'native';
-  return 'latin';
-}
+// ============================================================
+// TYPES
+// ============================================================
 
 export interface TypingIndicator {
   userId: string;
   originalText: string;
   translatedText: string;
-  nativePreview: string; // Semantic translation in receiver's mother tongue
+  nativePreview: string;
   isTranslating: boolean;
   senderLanguage: string;
   recipientLanguage: string;
@@ -149,20 +96,17 @@ interface UseRealtimeTranslationOptions {
 }
 
 interface UseRealtimeTranslationReturn {
-  // Outgoing (sender's typing) - FULLY AUTOMATIC
   sendTypingIndicator: (text: string, partnerLanguage: string) => void;
-  clearPreview: () => void; // Called after message sent - no UI button needed
-  
-  // Sender's native preview (what sender sees as they type - SEMANTIC translation)
+  clearPreview: () => void;
   senderNativePreview: string;
-  
-  // Incoming (partner's typing)
   partnerTyping: TypingIndicator | null;
-  
-  // State
   isTyping: boolean;
   isTranslating: boolean;
 }
+
+// ============================================================
+// HOOK IMPLEMENTATION
+// ============================================================
 
 export function useRealtimeTranslation({
   currentUserId,
@@ -178,10 +122,9 @@ export function useRealtimeTranslation({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const broadcastDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentTextRef = useRef<string>('');
 
-  // Subscribe to typing channel - FULLY ASYNC
+  // Subscribe to typing channel
   useEffect(() => {
     if (!enabled || !channelId) return;
 
@@ -189,9 +132,8 @@ export function useRealtimeTranslation({
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.userId === currentUserId) return;
 
-        const { text, senderLanguage, senderNativeText, englishText, receiverView } = payload;
+        const { text, senderLanguage, senderNativeText, receiverView } = payload;
         
-        // Show sender's text immediately with loading state
         setPartnerTyping({
           userId: payload.userId,
           originalText: text,
@@ -203,9 +145,7 @@ export function useRealtimeTranslation({
           timestamp: Date.now()
         });
 
-        // If receiver view is already provided, we're done
         if (receiverView && receiverView.trim()) {
-          console.log('[RealtimeTranslation] Receiver view pre-computed:', receiverView.substring(0, 30));
           setPartnerTyping(prev => prev ? {
             ...prev,
             translatedText: receiverView,
@@ -215,20 +155,14 @@ export function useRealtimeTranslation({
           return;
         }
 
-        // BACKGROUND: Generate SEMANTIC translation for receiver
+        // Background translation if needed
         const processReceiverPreview = async () => {
           try {
             let receiverNativeText = text;
             
-            // If same language, no translation needed
             if (isSameLanguageCheck(senderLanguage, currentUserLanguage)) {
               receiverNativeText = senderNativeText || text;
-              console.log('[RealtimeTranslation] Same language, using sender view');
             } else {
-              // Different languages - use bidirectional translation
-              console.log('[RealtimeTranslation] Translating from', senderLanguage, 'to', currentUserLanguage);
-              
-              // Use the edge function for reliable translation
               const result = await translateBidirectional(
                 senderNativeText || text,
                 senderLanguage,
@@ -237,15 +171,6 @@ export function useRealtimeTranslation({
               
               if (result.isTranslated && result.receiverView) {
                 receiverNativeText = result.receiverView;
-                console.log('[RealtimeTranslation] Receiver translation success:', receiverNativeText.substring(0, 30));
-              } else {
-                // Fallback: try English as bridge
-                if (englishText && englishText.trim() && !isEnglishLanguage(currentUserLanguage)) {
-                  const toReceiver = await translateSemantic(englishText, 'english', currentUserLanguage);
-                  if (toReceiver.isTranslated) {
-                    receiverNativeText = toReceiver.translatedText;
-                  }
-                }
               }
             }
 
@@ -266,7 +191,6 @@ export function useRealtimeTranslation({
           }
         };
 
-        // Use requestIdleCallback for true non-blocking background work
         if ('requestIdleCallback' in window) {
           (window as any).requestIdleCallback(() => processReceiverPreview(), { timeout: 500 });
         } else {
@@ -288,12 +212,8 @@ export function useRealtimeTranslation({
     };
   }, [enabled, channelId, currentUserId, currentUserLanguage]);
 
-  // FULLY ASYNC: Send typing indicator - NEVER blocks typing
-  // Generates SEMANTIC translation preview for sender (mother tongue)
-  // Uses requestIdleCallback/setTimeout(0) to ensure input is never blocked
   const sendTypingIndicator = useCallback((text: string, partnerLanguage: string) => {
     if (!enabled || !text.trim()) {
-      // Empty text - clear preview immediately
       if (!text.trim()) {
         setSenderNativePreview('');
         setIsTyping(false);
@@ -303,56 +223,36 @@ export function useRealtimeTranslation({
     
     setIsTyping(true);
 
-    // IMMEDIATE: Clear previous debounce
     if (previewDebounceRef.current) {
       clearTimeout(previewDebounceRef.current);
     }
 
-    // Debounce preview generation (300ms) - short for responsive feel
     previewDebounceRef.current = setTimeout(() => {
-      // Schedule translation in background using requestIdleCallback
       const processPreview = async () => {
         setIsTranslating(true);
         
         try {
-          const scriptType = detectScript(text);
-          let senderNative = text;
-          let receiverView = '';
-          let englishMeaning = '';
-          
-          // ALWAYS use bidirectional edge function for consistent behavior
-          // This handles ALL input types: English, native script, romanized, voice
-          // The edge function properly translates to sender's mother tongue in native script
           const result = await translateBidirectional(text, currentUserLanguage, partnerLanguage);
-          senderNative = result.senderView || text;
-          receiverView = result.receiverView || text;
-          englishMeaning = result.englishCore || text;
-          
-          console.log('[RealtimeTranslation] Bidirectional preview:', {
-            input: text.substring(0, 20),
-            senderNative: senderNative.substring(0, 20),
-            receiverView: receiverView.substring(0, 20),
-            englishMeaning: englishMeaning.substring(0, 20)
-          });
+          const senderNative = result.senderView || text;
+          const receiverView = result.receiverView || text;
+          const englishMeaning = result.englishCore || text;
           
           setSenderNativePreview(senderNative);
           setIsTranslating(false);
           
-          // Broadcast with all translations for receiver
           if (channelRef.current && text !== lastSentTextRef.current) {
             lastSentTextRef.current = text;
             
-            // Broadcast in next tick to not block
             setTimeout(() => {
               channelRef.current?.send({
                 type: 'broadcast',
                 event: 'typing',
                 payload: {
                   userId: currentUserId,
-                  text, // Original input text
-                  senderNativeText: senderNative, // Sender's mother tongue view
-                  englishText: englishMeaning, // English meaning for receiver to use
-                  receiverView: receiverView, // Pre-computed receiver view
+                  text,
+                  senderNativeText: senderNative,
+                  englishText: englishMeaning,
+                  receiverView: receiverView,
                   senderLanguage: currentUserLanguage,
                   timestamp: Date.now()
                 }
@@ -360,13 +260,12 @@ export function useRealtimeTranslation({
             }, 0);
           }
         } catch (err) {
-          console.warn('[RealtimeTranslation] Preview generation failed (non-blocking):', err);
+          console.warn('[RealtimeTranslation] Preview generation failed:', err);
           setSenderNativePreview(text);
           setIsTranslating(false);
         }
       };
 
-      // Use requestIdleCallback if available for true non-blocking
       if ('requestIdleCallback' in window) {
         (window as any).requestIdleCallback(() => processPreview(), { timeout: 2000 });
       } else {
@@ -374,7 +273,6 @@ export function useRealtimeTranslation({
       }
     }, 300);
 
-    // AUTO-STOP: Clear typing after 3 seconds of inactivity - NO BUTTON NEEDED
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
@@ -392,13 +290,11 @@ export function useRealtimeTranslation({
     }, 3000);
   }, [enabled, currentUserId, currentUserLanguage]);
 
-  // Clear preview after message sent - called programmatically, no button
   const clearPreview = useCallback(() => {
     setSenderNativePreview('');
     setIsTyping(false);
     lastSentTextRef.current = '';
     
-    // Clear any pending timeouts
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
@@ -407,12 +303,7 @@ export function useRealtimeTranslation({
       clearTimeout(previewDebounceRef.current);
       previewDebounceRef.current = null;
     }
-    if (broadcastDebounceRef.current) {
-      clearTimeout(broadcastDebounceRef.current);
-      broadcastDebounceRef.current = null;
-    }
     
-    // Send stop typing broadcast
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
@@ -422,12 +313,10 @@ export function useRealtimeTranslation({
     }
   }, [currentUserId]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
-      if (broadcastDebounceRef.current) clearTimeout(broadcastDebounceRef.current);
     };
   }, []);
 

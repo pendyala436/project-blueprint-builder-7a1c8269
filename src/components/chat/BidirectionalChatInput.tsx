@@ -2,15 +2,7 @@
  * Bidirectional Chat Input Component - Mother Tongue First
  * =========================================================
  * 
- * CORE PRINCIPLE: Both sender and receiver see messages in their MOTHER TONGUE
- * 
- * Flow:
- * 1. User types (any method: English, native script, romanized, voice)
- * 2. Preview shows message in SENDER'S mother tongue (native script)
- * 3. After send: Sender sees in their mother tongue, receiver sees in their mother tongue
- * 4. English meaning shown below in small text for reference only
- * 
- * Uses BROWSER-BASED Xenova translation (NO external APIs like LibreTranslate, MyMemory, Google)
+ * Uses Edge Function for translation (browser-based models removed).
  */
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
@@ -20,28 +12,27 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Send, Globe, Languages, Loader2 } from 'lucide-react';
 import { type UserLanguageProfile } from '@/lib/offline-translation/types';
-import { translateForChat } from '@/lib/xenova-translate-sdk/engine';
-import { normalizeLanguageCode, isSameLanguage as checkSameLanguage, isEnglish as checkEnglish } from '@/lib/xenova-translate-sdk/languages';
+import { supabase } from '@/integrations/supabase/client';
 
 // ============================================================
 // TYPES
 // ============================================================
 
 export interface LivePreviewResult {
-  senderPreview: string;           // Preview in sender's native script
-  receiverPreview: string;         // Preview for receiver (if different language)
-  englishMeaning: string;          // English semantic meaning
+  senderPreview: string;
+  receiverPreview: string;
+  englishMeaning: string;
   confidence: number;
 }
 
 export interface MeaningBasedMessage {
   id: string;
-  originalInput: string;           // Raw input from user
-  extractedMeaning: string;        // English semantic meaning
+  originalInput: string;
+  extractedMeaning: string;
   confidence: number;
-  senderView: string;              // Message in sender's mother tongue
+  senderView: string;
   senderScript: 'native' | 'latin';
-  receiverView: string;            // Message in receiver's mother tongue
+  receiverView: string;
   receiverScript: 'native' | 'latin';
   senderLanguage: string;
   receiverLanguage: string;
@@ -56,9 +47,7 @@ export interface MeaningBasedMessage {
 // ============================================================
 
 export interface BidirectionalChatInputProps {
-  /** Current user's profile (typing user) */
   myProfile: UserLanguageProfile;
-  /** Partner's profile (message receiver) */
   partnerProfile: UserLanguageProfile;
   onSendMessage: (message: MeaningBasedMessage) => void;
   onTyping?: (isTyping: boolean) => void;
@@ -68,33 +57,35 @@ export interface BidirectionalChatInputProps {
 }
 
 // ============================================================
-// LANGUAGE UTILITIES
+// UTILITIES
 // ============================================================
 
 function normalizeLanguage(lang: string): string {
   if (!lang || typeof lang !== 'string') return 'en';
-  return normalizeLanguageCode(lang.toLowerCase().trim()) || 'en';
+  const code = lang.toLowerCase().trim();
+  const codeMap: Record<string, string> = {
+    'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
+    'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
+    'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
+  };
+  return codeMap[code] || code.slice(0, 2);
+}
+
+function checkSameLanguage(lang1: string, lang2: string): boolean {
+  return normalizeLanguage(lang1) === normalizeLanguage(lang2);
 }
 
 function isLatinScriptLanguage(lang: string): boolean {
   const latinScriptLanguages = new Set([
-    'en', 'es', 'fr', 'de', 'it', 'pt',
-    'nl', 'pl', 'ro', 'cs', 'hu', 'sv',
-    'da', 'no', 'fi', 'tr', 'vi', 'id',
-    'ms', 'tl', 'sw', 'ha', 'yo',
+    'en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'pl', 'ro', 'cs', 'hu', 'sv',
   ]);
   return latinScriptLanguages.has(normalizeLanguage(lang));
 }
 
 // ============================================================
-// BROWSER-BASED TRANSLATION (Xenova - NO external APIs)
+// EDGE FUNCTION TRANSLATION
 // ============================================================
 
-/**
- * Translate using browser-based Xenova ML models
- * Returns senderView, receiverView, and englishCore
- * NO LibreTranslate, MyMemory, or Google Translate
- */
 async function translateBidirectionalBrowser(
   text: string,
   senderLanguage: string,
@@ -106,46 +97,30 @@ async function translateBidirectionalBrowser(
   wasTranslated: boolean;
 }> {
   if (!text.trim()) {
-    return {
-      senderView: '',
-      receiverView: '',
-      englishCore: '',
-      wasTranslated: false,
-    };
+    return { senderView: '', receiverView: '', englishCore: '', wasTranslated: false };
   }
 
   try {
-    console.log('[BidirectionalChatInput] Browser-based Xenova translation:', {
-      text: text.substring(0, 50),
-      senderLang: senderLanguage,
-      receiverLang: receiverLanguage,
+    const { data, error } = await supabase.functions.invoke('translate-message', {
+      body: {
+        text,
+        senderLanguage: normalizeLanguage(senderLanguage),
+        receiverLanguage: normalizeLanguage(receiverLanguage),
+        mode: 'bidirectional',
+      },
     });
 
-    // Use browser-based Xenova translateForChat
-    const result = await translateForChat(text, senderLanguage, receiverLanguage);
-
-    console.log('[BidirectionalChatInput] Xenova result:', {
-      senderView: result.senderView?.substring(0, 30),
-      receiverView: result.receiverView?.substring(0, 30),
-      englishCore: result.englishCore?.substring(0, 30),
-      isTranslated: result.isTranslated,
-    });
+    if (error) throw error;
 
     return {
-      senderView: result.senderView || text,
-      receiverView: result.receiverView || text,
-      englishCore: result.englishCore || text,
-      wasTranslated: result.isTranslated || false,
+      senderView: data?.senderView || text,
+      receiverView: data?.receiverView || text,
+      englishCore: data?.englishCore || text,
+      wasTranslated: data?.wasTranslated || false,
     };
   } catch (err) {
-    console.error('[BidirectionalChatInput] Xenova translation error:', err);
-    // Fallback to original text
-    return {
-      senderView: text,
-      receiverView: text,
-      englishCore: text,
-      wasTranslated: false,
-    };
+    console.error('[BidirectionalChatInput] Translation error:', err);
+    return { senderView: text, receiverView: text, englishCore: text, wasTranslated: false };
   }
 }
 
@@ -162,23 +137,19 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   placeholder,
   className,
 }) => {
-  // State
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [preview, setPreview] = useState<LivePreviewResult | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   
-  // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
   
-  // Derived values
   const myLanguage = normalizeLanguage(myProfile.motherTongue);
   const partnerLanguage = normalizeLanguage(partnerProfile.motherTongue);
   const sameLanguage = checkSameLanguage(myLanguage, partnerLanguage);
   
-  // Generate preview via browser-based Xenova
   const generatePreview = useCallback(async (value: string) => {
     if (!value.trim()) {
       setPreview(null);
@@ -197,8 +168,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         confidence: 0.9,
       });
     } catch (err) {
-      console.error('[BidirectionalChatInput] Preview error:', err);
-      // Fallback: show input as-is
       setPreview({
         senderPreview: value.trim(),
         receiverPreview: value.trim(),
@@ -210,19 +179,16 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [myLanguage, partnerLanguage]);
   
-  // Handle input change
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setInput(value);
     
-    // Typing indicator
     if (onTyping) {
       onTyping(true);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
     
-    // Debounced preview (400ms for browser-based translation)
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     if (value.trim()) {
       previewTimeoutRef.current = setTimeout(() => generatePreview(value), 400);
@@ -231,7 +197,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [onTyping, generatePreview]);
   
-  // Handle send - translate via browser-based Xenova
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || disabled || isSending) return;
@@ -240,7 +205,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     onTyping?.(false);
     
     try {
-      // Use browser-based Xenova translation
       const result = await translateBidirectionalBrowser(trimmed, myLanguage, partnerLanguage);
       
       const message: MeaningBasedMessage = {
@@ -270,7 +234,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [input, disabled, isSending, myLanguage, partnerLanguage, sameLanguage, onSendMessage, onTyping]);
   
-  // Handle key press
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -278,7 +241,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     }
   }, [handleSend]);
   
-  // Cleanup
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -286,7 +248,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
     };
   }, []);
   
-  // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -300,10 +261,8 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
   
   return (
     <div className={cn('space-y-2', className)}>
-      {/* Live Preview - Shows sender's mother tongue */}
       {showPreview && (
         <div className="space-y-1.5 px-2 py-2 bg-muted/30 rounded-lg mx-2">
-          {/* Preview Header */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
               {isLoadingPreview ? 'Translating...' : 'Preview'}
@@ -314,7 +273,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             </Badge>
           </div>
           
-          {/* Sender's Mother Tongue Preview - MAIN DISPLAY */}
           {preview.senderPreview && (
             <div className="flex items-start gap-2">
               <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
@@ -326,7 +284,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             </div>
           )}
           
-          {/* English Meaning - Small subtext */}
           {preview.englishMeaning && preview.englishMeaning !== preview.senderPreview && (
             <div className="flex items-start gap-1.5 pt-1 border-t border-muted/50">
               <Globe className="h-2.5 w-2.5 text-muted-foreground mt-0.5 shrink-0" />
@@ -336,7 +293,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
             </div>
           )}
           
-          {/* Partner's Preview (only if different language) */}
           {!sameLanguage && preview.receiverPreview && preview.receiverPreview !== preview.senderPreview && (
             <div className="flex items-start gap-2 pt-1 border-t border-muted/50">
               <Badge variant="outline" className="text-[10px] shrink-0 h-5 gap-0.5 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
@@ -351,7 +307,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
         </div>
       )}
       
-      {/* Input Area */}
       <div className="flex items-end gap-2 px-2 pb-2">
         <div className="flex-1 relative">
           <Textarea
@@ -371,7 +326,6 @@ export const BidirectionalChatInput: React.FC<BidirectionalChatInputProps> = mem
           />
         </div>
         
-        {/* Send Button */}
         <Button
           onClick={handleSend}
           disabled={!input.trim() || disabled || isSending}
