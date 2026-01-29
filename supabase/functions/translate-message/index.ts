@@ -980,11 +980,15 @@ function isNonLatinLanguage(language: string): boolean {
 // TRANSLATION API IMPLEMENTATIONS
 // ============================================================
 
-// LibreTranslate mirrors (free, open-source)
+// Self-hosted translation services (PRIMARY)
+const SELF_HOSTED_LIBRETRANSLATE = "http://194.163.175.245:80";  // For English ↔ Any (DIRECT)
+const SELF_HOSTED_INDICTRANS = "http://194.163.175.245:8000";     // For Native ↔ Native (PIVOT)
+
+// LibreTranslate mirrors (fallback only)
 const LIBRE_TRANSLATE_MIRRORS = [
+  SELF_HOSTED_LIBRETRANSLATE,  // Primary self-hosted
   "https://libretranslate.com",
   "https://translate.argosopentech.com",
-  "https://translate.terraprint.co",
 ];
 
 // Translate using LibreTranslate
@@ -1228,8 +1232,107 @@ async function translateChunkWithGoogle(
 }
 
 /**
- * Main translation function using English pivot for all language pairs
- * This ensures we can translate between ANY two languages even if direct translation isn't available
+ * Translate using IndicTrans2 (self-hosted at 194.163.175.245:8000)
+ * PRIMARY engine for Indian languages and pivot-based translations
+ * Supports 22 Indian languages + English
+ */
+async function translateWithIndicTrans(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
+    console.log(`[translate] Trying IndicTrans2: ${sourceLanguage} -> ${targetLanguage}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    
+    // IndicTrans2 uses language codes like 'eng_Latn', 'tel_Telu', 'hin_Deva'
+    const srcCode = getNllbCode(sourceLanguage);
+    const tgtCode = getNllbCode(targetLanguage);
+    
+    const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: text,
+        src_lang: srcCode,
+        tgt_lang: tgtCode,
+        engine: "indictrans",  // Use IndicTrans2 engine
+      }),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const translated = data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
+      if (translated && translated !== text) {
+        console.log(`[translate] IndicTrans2 success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
+        return { translatedText: translated, success: true };
+      }
+    }
+  } catch (error) {
+    console.log(`[translate] IndicTrans2 failed: ${error}`);
+  }
+  
+  return { translatedText: text, success: false };
+}
+
+/**
+ * Translate using self-hosted LibreTranslate (194.163.175.245:80)
+ * PRIMARY engine for English ↔ Any direct translations
+ */
+async function translateWithSelfHostedLibre(
+  text: string,
+  sourceCode: string,
+  targetCode: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
+    console.log(`[translate] Trying self-hosted LibreTranslate: ${sourceCode} -> ${targetCode}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
+    const response = await fetch(`${SELF_HOSTED_LIBRETRANSLATE}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        q: text,
+        source: sourceCode === "auto" ? "auto" : sourceCode,
+        target: targetCode,
+        format: "text",
+      }),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const translated = data.translatedText?.trim();
+      if (translated && translated !== text) {
+        console.log(`[translate] Self-hosted LibreTranslate success`);
+        return { translatedText: translated, success: true };
+      }
+    }
+  } catch (error) {
+    console.log(`[translate] Self-hosted LibreTranslate failed: ${error}`);
+  }
+  
+  return { translatedText: text, success: false };
+}
+
+/**
+ * Main translation function with proper engine routing:
+ * 
+ * ROUTING RULES (per user specification):
+ * 1. English ↔ Any language: DIRECT translation via LibreTranslate (194.163.175.245:80)
+ * 2. Latin ↔ Latin (non-English): DIRECT translation via LibreTranslate
+ * 3. Native ↔ Native: English PIVOT via IndicTrans2 (194.163.175.245:8000)
+ * 4. Native ↔ Latin (phonetic): English PIVOT via IndicTrans2
+ * 5. Latin ↔ Native: English PIVOT via IndicTrans2
  */
 async function translateText(
   text: string,
@@ -1238,70 +1341,120 @@ async function translateText(
 ): Promise<{ translatedText: string; success: boolean; pivotUsed: boolean }> {
   const sourceCode = getLibreCode(sourceLanguage);
   const targetCode = getLibreCode(targetLanguage);
+  const sourceIsEnglish = sourceCode === 'en';
+  const targetIsEnglish = targetCode === 'en';
+  const sourceIsNonLatin = isNonLatinLanguage(sourceLanguage);
+  const targetIsNonLatin = isNonLatinLanguage(targetLanguage);
 
-  console.log(`[dl-translate] Translating: ${sourceCode} -> ${targetCode}`);
+  console.log(`[translate] Routing: ${sourceLanguage}(${sourceCode}) -> ${targetLanguage}(${targetCode})`);
+  console.log(`[translate] Flags: srcEnglish=${sourceIsEnglish}, tgtEnglish=${targetIsEnglish}, srcNonLatin=${sourceIsNonLatin}, tgtNonLatin=${targetIsNonLatin}`);
 
-  // For non-English to non-English pairs, ALWAYS use English pivot for reliability
-  // Direct translation between rare pairs often returns English instead of target language
-  if (sourceCode !== 'en' && targetCode !== 'en') {
-    console.log('[dl-translate] Non-English pair, using English pivot for reliability');
+  // ================================================================
+  // CASE 1: English ↔ Any - DIRECT translation via LibreTranslate
+  // ================================================================
+  if (sourceIsEnglish || targetIsEnglish) {
+    console.log('[translate] DIRECT: English involved, using LibreTranslate');
     
-    // Step 1: Translate source -> English
-    let pivotResult = await translateWithGoogle(text, sourceCode, 'en');
-    if (!pivotResult.success) {
-      pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
-    }
-    if (!pivotResult.success) {
-      pivotResult = await translateWithLibre(text, sourceCode, 'en');
-    }
-
-    if (pivotResult.success && pivotResult.translatedText.trim() !== text.trim()) {
-      const englishText = pivotResult.translatedText.trim();
-      console.log(`[dl-translate] Pivot step 1 (${sourceCode}->en): "${englishText.substring(0, 50)}..."`);
-      
-      // Step 2: Translate English -> target
-      let finalResult = await translateWithGoogle(englishText, 'en', targetCode);
-      if (!finalResult.success) {
-        finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
-      }
-      if (!finalResult.success) {
-        finalResult = await translateWithLibre(englishText, 'en', targetCode);
-      }
-
-      if (finalResult.success) {
-        console.log(`[dl-translate] Pivot step 2 (en->${targetCode}): "${finalResult.translatedText.substring(0, 50)}..."`);
-        console.log('[dl-translate] English pivot translation success');
-        return { translatedText: finalResult.translatedText.trim(), success: true, pivotUsed: true };
-      } else {
-        // Step 2 failed, return English text as fallback (better than original)
-        console.log('[dl-translate] Pivot step 2 failed, returning English');
-        return { translatedText: englishText, success: true, pivotUsed: true };
-      }
+    // Try self-hosted LibreTranslate first
+    let result = await translateWithSelfHostedLibre(text, sourceCode, targetCode);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
     }
     
-    // If pivot step 1 failed, fall through to direct translation attempts
-    console.log('[dl-translate] Pivot step 1 failed, trying direct translation');
+    // Fallback to IndicTrans2 for Indian languages
+    result = await translateWithIndicTrans(text, sourceLanguage, targetLanguage);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
+    }
+    
+    // Fallback to Google/MyMemory
+    result = await translateWithGoogle(text, sourceCode, targetCode);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
+    }
+    
+    result = await translateWithMyMemory(text, sourceCode, targetCode);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
+    }
+    
+    return { translatedText: text, success: false, pivotUsed: false };
   }
 
-  // Try direct translation (for English<->X pairs, or as fallback)
-  let result = await translateWithGoogle(text, sourceCode, targetCode);
-  if (result.success) {
-    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
+  // ================================================================
+  // CASE 2: Latin ↔ Latin (non-English) - DIRECT translation
+  // ================================================================
+  if (!sourceIsNonLatin && !targetIsNonLatin) {
+    console.log('[translate] DIRECT: Latin-to-Latin, using LibreTranslate');
+    
+    let result = await translateWithSelfHostedLibre(text, sourceCode, targetCode);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
+    }
+    
+    result = await translateWithGoogle(text, sourceCode, targetCode);
+    if (result.success) {
+      return { translatedText: result.translatedText, success: true, pivotUsed: false };
+    }
+    
+    return { translatedText: text, success: false, pivotUsed: false };
   }
 
-  result = await translateWithMyMemory(text, sourceCode, targetCode);
-  if (result.success) {
-    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
+  // ================================================================
+  // CASE 3: Native ↔ Native, Native ↔ Latin, Latin ↔ Native
+  // PIVOT-based translation via IndicTrans2 (English as bridge)
+  // ================================================================
+  console.log('[translate] PIVOT: Using English bridge via IndicTrans2');
+  
+  // Step 1: Source → English
+  let pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
+  
+  if (!pivotResult.success) {
+    // Fallback to other engines for step 1
+    pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
+  }
+  if (!pivotResult.success) {
+    pivotResult = await translateWithGoogle(text, sourceCode, 'en');
+  }
+  if (!pivotResult.success) {
+    pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
   }
 
-  result = await translateWithLibre(text, sourceCode, targetCode);
-  if (result.success) {
-    return { translatedText: result.translatedText.trim(), success: true, pivotUsed: false };
+  if (!pivotResult.success || pivotResult.translatedText === text) {
+    console.log('[translate] PIVOT step 1 failed, trying direct translation');
+    // Last resort: try direct translation
+    const directResult = await translateWithGoogle(text, sourceCode, targetCode);
+    return { 
+      translatedText: directResult.success ? directResult.translatedText : text, 
+      success: directResult.success, 
+      pivotUsed: false 
+    };
   }
 
-  // All translation attempts failed
-  console.log('[dl-translate] All translation attempts failed, returning original text');
-  return { translatedText: text.trim(), success: false, pivotUsed: false };
+  const englishText = pivotResult.translatedText.trim();
+  console.log(`[translate] PIVOT step 1 success: "${text.substring(0, 30)}..." -> English: "${englishText.substring(0, 30)}..."`);
+
+  // Step 2: English → Target
+  let finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
+  
+  if (!finalResult.success) {
+    finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
+  }
+  if (!finalResult.success) {
+    finalResult = await translateWithGoogle(englishText, 'en', targetCode);
+  }
+  if (!finalResult.success) {
+    finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
+  }
+
+  if (finalResult.success) {
+    console.log(`[translate] PIVOT step 2 success: English -> "${finalResult.translatedText.substring(0, 30)}..."`);
+    return { translatedText: finalResult.translatedText, success: true, pivotUsed: true };
+  }
+
+  // If step 2 fails, return English as better-than-nothing fallback
+  console.log('[translate] PIVOT step 2 failed, returning English');
+  return { translatedText: englishText, success: true, pivotUsed: true };
 }
 
 /**
