@@ -1018,8 +1018,11 @@ const DLTRANSLATE_SUPPORTED_LANGUAGES = new Set([
   'russian', 'japanese', 'german', 'korean', 'italian', 'turkish', 'vietnamese',
   'polish', 'dutch', 'thai', 'indonesian', 'czech', 'romanian', 'greek',
   'hungarian', 'swedish', 'danish', 'finnish', 'ukrainian', 'hebrew', 'persian',
-  'hindi', 'bengali', 'telugu', 'marathi', 'tamil', 'gujarati', 'kannada',
-  'malayalam', 'urdu', 'nepali', 'burmese', 'khmer', 'swahili', 'afrikaans',
+  // NOTE: We intentionally EXCLUDE Indian languages here.
+  // Reason: Indian languages are routed through IndicTrans2 (NLLB codes).
+  // Our self-hosted dltranslate backend validates against mt.available_languages()
+  // and may reject e.g. "Telugu" even when the name looks correct.
+  'burmese', 'khmer', 'swahili', 'afrikaans',
   'lithuanian', 'latvian', 'estonian', 'slovenian', 'croatian', 'kazakh',
   'mongolian', 'galician', 'catalan'
 ]);
@@ -1041,8 +1044,9 @@ const LIBRETRANSLATE_SUPPORTED_LANGUAGES = new Set([
   'croatian', 'serbian', 'slovenian', 'estonian', 'latvian', 'lithuanian',
   'norwegian', 'icelandic', 'welsh', 'irish', 'albanian', 'macedonian',
   'azerbaijani', 'kazakh', 'uzbek', 'urdu', 'swahili', 'afrikaans', 'esperanto',
-  // Additional Indian languages that self-hosted LibreTranslate may support
-  'telugu', 'tamil', 'kannada', 'malayalam', 'gujarati', 'marathi', 'punjabi', 'odia'
+  // NOTE: We intentionally DO NOT claim support for non-Latin Indian languages here.
+  // They are handled by IndicTrans2; incorrectly listing them here can cause
+  // engine-select to pick LibreTranslate and waste time before falling back.
 ]);
 
 /**
@@ -1436,6 +1440,16 @@ async function translateWithDLTranslate(
   useFullNames = false
 ): Promise<{ translatedText: string; success: boolean }> {
   const maxRetries = 1;
+
+  // Hard guard: ONLY call dltranslate for languages we explicitly know the backend supports.
+  // This prevents 400 validation errors like: "Your target=Telugu is not valid".
+  const srcInfo = getLanguageInfo(sourceLanguage);
+  const tgtInfo = getLanguageInfo(targetLanguage);
+  const srcName = srcInfo?.name || normalizeLanguage(sourceLanguage);
+  const tgtName = tgtInfo?.name || normalizeLanguage(targetLanguage);
+  if (!DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcName) || !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtName)) {
+    return { translatedText: text, success: false };
+  }
   
   try {
     // First try with m2m100 ISO codes, if fails try mBART50 full names
@@ -1680,6 +1694,14 @@ async function translateText(
   const sourceIsNonLatin = isNonLatinLanguage(sourceLanguage);
   const targetIsNonLatin = isNonLatinLanguage(targetLanguage);
 
+  // Normalized language flags (used to prevent invalid engine fallbacks)
+  const srcNorm = normalizeLanguage(sourceLanguage);
+  const tgtNorm = normalizeLanguage(targetLanguage);
+  const srcIsIndic = INDICTRANS2_SUPPORTED_LANGUAGES.has(srcNorm);
+  const tgtIsIndic = INDICTRANS2_SUPPORTED_LANGUAGES.has(tgtNorm);
+  const srcIsDL = DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcNorm);
+  const tgtIsDL = DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm);
+
   // Smart engine selection based on language support
   const selectedEngine = selectBestEngine(sourceLanguage, targetLanguage);
   const canDirect = canTranslateDirectly(sourceLanguage, targetLanguage);
@@ -1708,10 +1730,13 @@ async function translateText(
         if (result.success) {
           return { translatedText: result.translatedText, success: true, pivotUsed: false };
         }
-        // Fallback to DL-Translate
-        result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
+        // Fallback to DL-Translate (ONLY for non-Indic pairs that we explicitly support)
+        // Prevents invalid requests like tgt_lang="Telugu" on the dltranslate backend.
+        if (!srcIsIndic && !tgtIsIndic && srcIsDL && tgtIsDL) {
+          result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
+          if (result.success) {
+            return { translatedText: result.translatedText, success: true, pivotUsed: false };
+          }
         }
         break;
         
@@ -1725,10 +1750,12 @@ async function translateText(
         if (result.success) {
           return { translatedText: result.translatedText, success: true, pivotUsed: false };
         }
-        // Fallback to DL-Translate
-        result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
+        // Fallback to DL-Translate (ONLY for non-Indic pairs that we explicitly support)
+        if (!srcIsIndic && !tgtIsIndic && srcIsDL && tgtIsDL) {
+          result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
+          if (result.success) {
+            return { translatedText: result.translatedText, success: true, pivotUsed: false };
+          }
         }
         break;
         
@@ -1778,7 +1805,8 @@ async function translateText(
       if (!pivotResult.success) {
         pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
       }
-      if (!pivotResult.success) {
+      // Only try DL-Translate if the SOURCE language is explicitly supported by DL-Translate
+      if (!pivotResult.success && srcIsDL) {
         pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
       }
       break;
@@ -1787,12 +1815,15 @@ async function translateText(
       if (!pivotResult.success) {
         pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
       }
-      if (!pivotResult.success) {
+      if (!pivotResult.success && srcIsDL) {
         pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
       }
       break;
     default:
-      pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
+      pivotResult = { translatedText: text, success: false };
+      if (srcIsDL) {
+        pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
+      }
       if (!pivotResult.success) {
         pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
       }
@@ -1823,7 +1854,8 @@ async function translateText(
       if (!finalResult.success) {
         finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
       }
-      if (!finalResult.success) {
+      // Only try DL-Translate if the TARGET language is explicitly supported by DL-Translate
+      if (!finalResult.success && tgtIsDL) {
         finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
       }
       break;
@@ -1832,12 +1864,15 @@ async function translateText(
       if (!finalResult.success) {
         finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
       }
-      if (!finalResult.success) {
+      if (!finalResult.success && tgtIsDL) {
         finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
       }
       break;
     default:
-      finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
+      finalResult = { translatedText: englishText, success: false };
+      if (tgtIsDL) {
+        finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
+      }
       if (!finalResult.success) {
         finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
       }
@@ -1900,6 +1935,11 @@ async function transliterateToNative(
     ['dltranslate', 'indictrans', 'libretranslate'];
   
   for (const engine of engineOrder) {
+    // Avoid invalid dltranslate requests for languages that backend doesn't advertise
+    // (e.g., Telugu causing: "Your target=Telugu is not valid")
+    if (engine === 'dltranslate' && !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm)) {
+      continue;
+    }
     try {
       let result: { translatedText: string; success: boolean };
       
