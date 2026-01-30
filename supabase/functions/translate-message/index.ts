@@ -1042,17 +1042,100 @@ async function translateWithLibre(
 
 
 /**
+ * DL-Translate Language Mapping
+ * The DL-Translate API (dl-translate library) expects specific case-sensitive language names.
+ * Based on: https://github.com/xhluca/dl-translate - uses mBART50 model
+ * 
+ * These are the EXACT names expected by the API (from mt.available_languages())
+ */
+const DL_TRANSLATE_LANGUAGE_MAP: Record<string, string> = {
+  // Major world languages
+  'english': 'English',
+  'chinese': 'Chinese',
+  'mandarin': 'Chinese',
+  'spanish': 'Spanish',
+  'arabic': 'Arabic',
+  'french': 'French',
+  'portuguese': 'Portuguese',
+  'russian': 'Russian',
+  'japanese': 'Japanese',
+  'german': 'German',
+  'korean': 'Korean',
+  'italian': 'Italian',
+  'turkish': 'Turkish',
+  'vietnamese': 'Vietnamese',
+  'polish': 'Polish',
+  'dutch': 'Dutch',
+  'thai': 'Thai',
+  'indonesian': 'Indonesian',
+  'czech': 'Czech',
+  'romanian': 'Romanian',
+  'greek': 'Greek',
+  'hungarian': 'Hungarian',
+  'swedish': 'Swedish',
+  'danish': 'Danish',
+  'finnish': 'Finnish',
+  'ukrainian': 'Ukrainian',
+  'hebrew': 'Hebrew',
+  'persian': 'Persian',
+  
+  // Indian languages - mBART50 format
+  'hindi': 'Hindi',
+  'bengali': 'Bengali',
+  'telugu': 'Telugu',
+  'marathi': 'Marathi',
+  'tamil': 'Tamil',
+  'gujarati': 'Gujarati',
+  'kannada': 'Kannada',
+  'malayalam': 'Malayalam',
+  'urdu': 'Urdu',
+  'nepali': 'Nepali',
+  
+  // Southeast Asian
+  'burmese': 'Burmese',
+  'khmer': 'Khmer',
+  
+  // African
+  'swahili': 'Swahili',
+  'afrikaans': 'Afrikaans',
+  
+  // Others
+  'lithuanian': 'Lithuanian',
+  'latvian': 'Latvian',
+  'estonian': 'Estonian',
+  'slovenian': 'Slovenian',
+  'croatian': 'Croatian',
+  'kazakh': 'Kazakh',
+  'mongolian': 'Mongolian',
+  'galician': 'Galician',
+  'catalan': 'Catalan',
+};
+
+/**
  * Get display name for DL-Translate engine (uses full language names)
+ * Uses the exact case-sensitive names expected by the DL-Translate API
  * e.g., 'hindi' -> 'Hindi', 'telugu' -> 'Telugu', 'english' -> 'English'
  */
 function getDLTranslateLanguageName(language: string): string {
+  const normalized = normalizeLanguage(language);
+  
+  // Check our explicit mapping first
+  if (DL_TRANSLATE_LANGUAGE_MAP[normalized]) {
+    return DL_TRANSLATE_LANGUAGE_MAP[normalized];
+  }
+  
+  // Try from language info
   const info = getLanguageInfo(language);
   if (info) {
+    // Check if the name is in our map
+    if (DL_TRANSLATE_LANGUAGE_MAP[info.name]) {
+      return DL_TRANSLATE_LANGUAGE_MAP[info.name];
+    }
     // Capitalize first letter of the language name
     return info.name.charAt(0).toUpperCase() + info.name.slice(1);
   }
+  
   // Fallback: capitalize first letter
-  const normalized = normalizeLanguage(language);
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
