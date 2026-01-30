@@ -1348,6 +1348,332 @@ const MBART50_LANGUAGE_NAMES: Record<string, string> = {
 };
 
 /**
+ * NLLB-200 Language Codes (Official Reference)
+ * Source: https://github.com/facebookresearch/fairseq/tree/nllb
+ * 
+ * These are the EXACT codes used by NLLB-200 model.
+ * Format: language_script (e.g., eng_Latn, hin_Deva)
+ * All 200+ languages supported by NLLB-200.
+ * 
+ * NOTE: IndicTrans2 uses a subset of these codes for Indian languages.
+ * This mapping enables broader NLLB-200 model usage if needed.
+ */
+const NLLB200_LANGUAGE_CODES: Record<string, string> = {
+  // ================================================================
+  // MAJOR WORLD LANGUAGES
+  // ================================================================
+  'english': 'eng_Latn',
+  'chinese': 'zho_Hans',
+  'chinese_simplified': 'zho_Hans',
+  'chinese_traditional': 'zho_Hant',
+  'mandarin': 'zho_Hans',
+  'cantonese': 'yue_Hant',
+  'spanish': 'spa_Latn',
+  'french': 'fra_Latn',
+  'german': 'deu_Latn',
+  'portuguese': 'por_Latn',
+  'russian': 'rus_Cyrl',
+  'japanese': 'jpn_Jpan',
+  'korean': 'kor_Hang',
+  'italian': 'ita_Latn',
+  'dutch': 'nld_Latn',
+  'flemish': 'nld_Latn',
+  'polish': 'pol_Latn',
+  'turkish': 'tur_Latn',
+  'vietnamese': 'vie_Latn',
+  'thai': 'tha_Thai',
+  'indonesian': 'ind_Latn',
+  'greek': 'ell_Grek',
+  'czech': 'ces_Latn',
+  'romanian': 'ron_Latn',
+  'moldavian': 'ron_Latn',
+  'hungarian': 'hun_Latn',
+  'swedish': 'swe_Latn',
+  'danish': 'dan_Latn',
+  'finnish': 'fin_Latn',
+  'norwegian': 'nob_Latn',
+  'norwegian_bokmal': 'nob_Latn',
+  'norwegian_nynorsk': 'nno_Latn',
+  'ukrainian': 'ukr_Cyrl',
+  'hebrew': 'heb_Hebr',
+  
+  // ================================================================
+  // ARABIC VARIETIES
+  // ================================================================
+  'arabic': 'arb_Arab',
+  'modern_standard_arabic': 'arb_Arab',
+  'arabic_romanized': 'arb_Latn',
+  'egyptian_arabic': 'arz_Arab',
+  'moroccan_arabic': 'ary_Arab',
+  'north_levantine_arabic': 'apc_Arab',
+  'south_levantine_arabic': 'ajp_Arab',
+  'najdi_arabic': 'ars_Arab',
+  'tunisian_arabic': 'aeb_Arab',
+  'mesopotamian_arabic': 'acm_Arab',
+  'taizzi_adeni_arabic': 'acq_Arab',
+  
+  // ================================================================
+  // PERSIAN / IRANIAN
+  // ================================================================
+  'persian': 'pes_Arab',
+  'farsi': 'pes_Arab',
+  'western_persian': 'pes_Arab',
+  'dari': 'prs_Arab',
+  'pashto': 'pbt_Arab',
+  'southern_pashto': 'pbt_Arab',
+  'pushto': 'pbt_Arab',
+  
+  // ================================================================
+  // SOUTH ASIAN - INDIAN OFFICIAL LANGUAGES
+  // ================================================================
+  'hindi': 'hin_Deva',
+  'bengali': 'ben_Beng',
+  'bangla': 'ben_Beng',
+  'telugu': 'tel_Telu',
+  'marathi': 'mar_Deva',
+  'tamil': 'tam_Taml',
+  'gujarati': 'guj_Gujr',
+  'kannada': 'kan_Knda',
+  'malayalam': 'mal_Mlym',
+  'punjabi': 'pan_Guru',
+  'eastern_punjabi': 'pan_Guru',
+  'odia': 'ory_Orya',
+  'oriya': 'ory_Orya',
+  'assamese': 'asm_Beng',
+  'urdu': 'urd_Arab',
+  'nepali': 'npi_Deva',
+  'maithili': 'mai_Deva',
+  'santali': 'sat_Olck',
+  'kashmiri': 'kas_Arab',
+  'kashmiri_devanagari': 'kas_Deva',
+  'konkani': 'kok_Deva',
+  'sindhi': 'snd_Arab',
+  'dogri': 'doi_Deva',
+  'manipuri': 'mni_Beng',
+  'meitei': 'mni_Beng',
+  'bodo': 'brx_Deva',
+  'sanskrit': 'san_Deva',
+  
+  // ================================================================
+  // SOUTH ASIAN - REGIONAL INDIAN LANGUAGES
+  // ================================================================
+  'bhojpuri': 'bho_Deva',
+  'awadhi': 'awa_Deva',
+  'magahi': 'mag_Deva',
+  'chhattisgarhi': 'hne_Deva',
+  'sinhala': 'sin_Sinh',
+  'sinhalese': 'sin_Sinh',
+  
+  // ================================================================
+  // SOUTHEAST ASIAN
+  // ================================================================
+  'burmese': 'mya_Mymr',
+  'khmer': 'khm_Khmr',
+  'central_khmer': 'khm_Khmr',
+  'lao': 'lao_Laoo',
+  'tagalog': 'tgl_Latn',
+  'filipino': 'tgl_Latn',
+  'javanese': 'jav_Latn',
+  'sundanese': 'sun_Latn',
+  'cebuano': 'ceb_Latn',
+  'ilocano': 'ilo_Latn',
+  'malay': 'zsm_Latn',
+  'standard_malay': 'zsm_Latn',
+  'minangkabau': 'min_Latn',
+  'minangkabau_arabic': 'min_Arab',
+  'acehnese': 'ace_Latn',
+  'acehnese_arabic': 'ace_Arab',
+  'balinese': 'ban_Latn',
+  'banjar': 'bjn_Latn',
+  'banjar_arabic': 'bjn_Arab',
+  'buginese': 'bug_Latn',
+  'shan': 'shn_Mymr',
+  'waray': 'war_Latn',
+  'pangasinan': 'pag_Latn',
+  
+  // ================================================================
+  // EAST ASIAN
+  // ================================================================
+  'tibetan': 'bod_Tibt',
+  'standard_tibetan': 'bod_Tibt',
+  
+  // ================================================================
+  // EUROPEAN LANGUAGES
+  // ================================================================
+  'lithuanian': 'lit_Latn',
+  'latvian': 'lvs_Latn',
+  'standard_latvian': 'lvs_Latn',
+  'estonian': 'est_Latn',
+  'slovenian': 'slv_Latn',
+  'croatian': 'hrv_Latn',
+  'serbian': 'srp_Cyrl',
+  'slovak': 'slk_Latn',
+  'bulgarian': 'bul_Cyrl',
+  'macedonian': 'mkd_Cyrl',
+  'albanian': 'als_Latn',
+  'tosk_albanian': 'als_Latn',
+  'bosnian': 'bos_Latn',
+  'icelandic': 'isl_Latn',
+  'faroese': 'fao_Latn',
+  'catalan': 'cat_Latn',
+  'valencian': 'cat_Latn',
+  'galician': 'glg_Latn',
+  'basque': 'eus_Latn',
+  'welsh': 'cym_Latn',
+  'irish': 'gle_Latn',
+  'scottish_gaelic': 'gla_Latn',
+  'breton': 'bre_Latn',
+  'occitan': 'oci_Latn',
+  'asturian': 'ast_Latn',
+  'maltese': 'mlt_Latn',
+  'belarusian': 'bel_Cyrl',
+  'luxembourgish': 'ltz_Latn',
+  'letzeburgesch': 'ltz_Latn',
+  'friulian': 'fur_Latn',
+  'sardinian': 'srd_Latn',
+  'sicilian': 'scn_Latn',
+  'ligurian': 'lij_Latn',
+  'lombard': 'lmo_Latn',
+  'venetian': 'vec_Latn',
+  'latgalian': 'ltg_Latn',
+  'limburgish': 'lim_Latn',
+  'silesian': 'szl_Latn',
+  'esperanto': 'epo_Latn',
+  'crimean_tatar': 'crh_Latn',
+  
+  // ================================================================
+  // CENTRAL ASIAN / TURKIC
+  // ================================================================
+  'kazakh': 'kaz_Cyrl',
+  'uzbek': 'uzn_Latn',
+  'northern_uzbek': 'uzn_Latn',
+  'azerbaijani': 'azj_Latn',
+  'north_azerbaijani': 'azj_Latn',
+  'south_azerbaijani': 'azb_Arab',
+  'turkmen': 'tuk_Latn',
+  'tajik': 'tgk_Cyrl',
+  'kyrgyz': 'kir_Cyrl',
+  'bashkir': 'bak_Cyrl',
+  'tatar': 'tat_Cyrl',
+  'uighur': 'uig_Arab',
+  'uyghur': 'uig_Arab',
+  
+  // ================================================================
+  // CAUCASIAN
+  // ================================================================
+  'georgian': 'kat_Geor',
+  'armenian': 'hye_Armn',
+  
+  // ================================================================
+  // MONGOLIAN
+  // ================================================================
+  'mongolian': 'khk_Cyrl',
+  'halh_mongolian': 'khk_Cyrl',
+  
+  // ================================================================
+  // AFRICAN LANGUAGES
+  // ================================================================
+  'swahili': 'swh_Latn',
+  'afrikaans': 'afr_Latn',
+  'amharic': 'amh_Ethi',
+  'tigrinya': 'tir_Ethi',
+  'hausa': 'hau_Latn',
+  'yoruba': 'yor_Latn',
+  'igbo': 'ibo_Latn',
+  'zulu': 'zul_Latn',
+  'xhosa': 'xho_Latn',
+  'somali': 'som_Latn',
+  'oromo': 'gaz_Latn',
+  'west_central_oromo': 'gaz_Latn',
+  'wolof': 'wol_Latn',
+  'fulah': 'fuv_Latn',
+  'nigerian_fulfulde': 'fuv_Latn',
+  'fula': 'fuv_Latn',
+  'bambara': 'bam_Latn',
+  'lingala': 'lin_Latn',
+  'kongo': 'kon_Latn',
+  'kikongo': 'kon_Latn',
+  'luganda': 'lug_Latn',
+  'ganda': 'lug_Latn',
+  'kinyarwanda': 'kin_Latn',
+  'kirundi': 'run_Latn',
+  'rundi': 'run_Latn',
+  'shona': 'sna_Latn',
+  'nyanja': 'nya_Latn',
+  'chichewa': 'nya_Latn',
+  'tswana': 'tsn_Latn',
+  'tsonga': 'tso_Latn',
+  'swati': 'ssw_Latn',
+  'southern_sotho': 'sot_Latn',
+  'sesotho': 'sot_Latn',
+  'northern_sotho': 'nso_Latn',
+  'akan': 'aka_Latn',
+  'twi': 'twi_Latn',
+  'ewe': 'ewe_Latn',
+  'fon': 'fon_Latn',
+  'mossi': 'mos_Latn',
+  'dyula': 'dyu_Latn',
+  'bemba': 'bem_Latn',
+  'luo': 'luo_Latn',
+  'kikuyu': 'kik_Latn',
+  'kamba': 'kam_Latn',
+  'tumbuka': 'tum_Latn',
+  'umbundu': 'umb_Latn',
+  'kimbundu': 'kmb_Latn',
+  'sango': 'sag_Latn',
+  'chokwe': 'cjk_Latn',
+  'southwestern_dinka': 'dik_Latn',
+  'dinka': 'dik_Latn',
+  'nuer': 'nus_Latn',
+  'luba_kasai': 'lua_Latn',
+  'plateau_malagasy': 'plt_Latn',
+  'malagasy': 'plt_Latn',
+  'fijian': 'fij_Latn',
+  'samoan': 'smo_Latn',
+  'tok_pisin': 'tpi_Latn',
+  
+  // ================================================================
+  // BERBER / TAMAZIGHT
+  // ================================================================
+  'central_atlas_tamazight': 'tzm_Tfng',
+  'tamazight': 'tzm_Tfng',
+  'tamasheq': 'taq_Latn',
+  'tamasheq_tifinagh': 'taq_Tfng',
+  'kabyle': 'kab_Latn',
+  
+  // ================================================================
+  // KURDISH VARIETIES
+  // ================================================================
+  'northern_kurdish': 'kmr_Latn',
+  'kurmanji': 'kmr_Latn',
+  'central_kurdish': 'ckb_Arab',
+  'sorani': 'ckb_Arab',
+  'kurdish': 'kmr_Latn',
+  
+  // ================================================================
+  // OTHER LANGUAGES
+  // ================================================================
+  'haitian': 'hat_Latn',
+  'haitian_creole': 'hat_Latn',
+  'eastern_yiddish': 'ydd_Hebr',
+  'yiddish': 'ydd_Hebr',
+  'guarani': 'grn_Latn',
+  'quechua': 'quy_Latn',
+  'ayacucho_quechua': 'quy_Latn',
+  'papiamento': 'pap_Latn',
+  'dzongkha': 'dzo_Tibt',
+  'jingpho': 'kac_Latn',
+  'kachin': 'kac_Latn',
+  'mizo': 'lus_Latn',
+  'lushai': 'lus_Latn',
+  'kanuri': 'knc_Latn',
+  'central_kanuri': 'knc_Latn',
+  'central_kanuri_arabic': 'knc_Arab',
+  'kabiye': 'kbp_Latn',
+  'kabuverdianu': 'kea_Latn',
+};
+
+/**
  * Get DL-Translate language code/name based on model type
  * Tries m2m100 codes first (ISO), falls back to mBART50 names
  */
