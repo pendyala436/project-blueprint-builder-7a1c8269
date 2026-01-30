@@ -1042,9 +1042,73 @@ async function translateWithLibre(
 
 
 /**
+ * Get display name for DL-Translate engine (uses full language names)
+ * e.g., 'hindi' -> 'Hindi', 'telugu' -> 'Telugu', 'english' -> 'English'
+ */
+function getDLTranslateLanguageName(language: string): string {
+  const info = getLanguageInfo(language);
+  if (info) {
+    // Capitalize first letter of the language name
+    return info.name.charAt(0).toUpperCase() + info.name.slice(1);
+  }
+  // Fallback: capitalize first letter
+  const normalized = normalizeLanguage(language);
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+/**
+ * Translate using DL-Translate engine (self-hosted at 194.163.175.245:8000)
+ * Uses full language names like "English", "Hindi", "Telugu"
+ * Good for broader language support beyond Indian languages
+ */
+async function translateWithDLTranslate(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<{ translatedText: string; success: boolean }> {
+  try {
+    const srcName = getDLTranslateLanguageName(sourceLanguage);
+    const tgtName = getDLTranslateLanguageName(targetLanguage);
+    
+    console.log(`[translate] Trying DL-Translate: ${srcName} -> ${tgtName}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    
+    const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: text,
+        src_lang: srcName,
+        tgt_lang: tgtName,
+        engine: "dltranslate",  // Use DL-Translate engine
+      }),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      const translated = data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
+      if (translated && translated !== text) {
+        console.log(`[translate] DL-Translate success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
+        return { translatedText: translated, success: true };
+      }
+    }
+  } catch (error) {
+    console.log(`[translate] DL-Translate failed: ${error}`);
+  }
+  
+  return { translatedText: text, success: false };
+}
+
+/**
  * Translate using IndicTrans2 (self-hosted at 194.163.175.245:8000)
  * PRIMARY engine for Indian languages and pivot-based translations
  * Supports 22 Indian languages + English
+ * Uses NLLB codes like 'eng_Latn', 'hin_Deva', 'tel_Telu'
  */
 async function translateWithIndicTrans(
   text: string,
@@ -1083,11 +1147,16 @@ async function translateWithIndicTrans(
         return { translatedText: translated, success: true };
       }
     }
+    
+    // If IndicTrans2 fails, try DL-Translate as fallback
+    console.log(`[translate] IndicTrans2 returned unchanged, trying DL-Translate fallback`);
+    return await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
+    
   } catch (error) {
-    console.log(`[translate] IndicTrans2 failed: ${error}`);
+    console.log(`[translate] IndicTrans2 failed: ${error}, trying DL-Translate fallback`);
+    // Try DL-Translate as fallback on error
+    return await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
   }
-  
-  return { translatedText: text, success: false };
 }
 
 /**
