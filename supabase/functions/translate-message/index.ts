@@ -1674,15 +1674,41 @@ const NLLB200_LANGUAGE_CODES: Record<string, string> = {
 };
 
 /**
- * Get DL-Translate language code/name based on model type
- * Tries m2m100 codes first (ISO), falls back to mBART50 names
+ * Get NLLB-200 language code for DL-Translate nllb200 model
+ * Returns codes like 'eng_Latn', 'hin_Deva', 'zho_Hans'
  */
-function getDLTranslateLanguageCode(language: string): string {
+function getNllb200LanguageCode(language: string): string | null {
+  const normalized = normalizeLanguage(language);
+  return NLLB200_LANGUAGE_CODES[normalized] || null;
+}
+
+/**
+ * Get DL-Translate language code/name based on model type
+ * 
+ * Model priority for DL-Translate:
+ * 1. NLLB-200 codes (best quality, 200+ languages)
+ * 2. M2M-100 ISO codes (fallback, 100 languages)
+ * 3. mBART50 full names (legacy fallback)
+ */
+function getDLTranslateLanguageCode(language: string, model: 'nllb200' | 'm2m100' | 'mbart50' = 'm2m100'): string {
   const normalized = normalizeLanguage(language);
   
-  // First try m2m100 ISO codes (most common for dl-translate)
-  if (M2M100_LANGUAGE_CODES[normalized]) {
-    return M2M100_LANGUAGE_CODES[normalized];
+  // For NLLB-200 model, use NLLB codes
+  if (model === 'nllb200') {
+    const nllbCode = NLLB200_LANGUAGE_CODES[normalized];
+    if (nllbCode) return nllbCode;
+  }
+  
+  // For M2M-100 model, use ISO codes
+  if (model === 'm2m100' || model === 'nllb200') {
+    const m2mCode = M2M100_LANGUAGE_CODES[normalized];
+    if (m2mCode) return m2mCode;
+  }
+  
+  // For mBART50 model, use full names
+  if (model === 'mbart50') {
+    const mbartName = MBART50_LANGUAGE_NAMES[normalized];
+    if (mbartName) return mbartName;
   }
   
   // Try from language info code
@@ -1691,8 +1717,16 @@ function getDLTranslateLanguageCode(language: string): string {
     return info.code;
   }
   
-  // Fallback to 'en'
-  return 'en';
+  // Fallback to 'en' for m2m100, 'eng_Latn' for nllb200
+  return model === 'nllb200' ? 'eng_Latn' : 'en';
+}
+
+/**
+ * Check if a language is supported by NLLB-200
+ */
+function isNllb200Supported(language: string): boolean {
+  const normalized = normalizeLanguage(language);
+  return NLLB200_LANGUAGE_CODES[normalized] !== undefined;
 }
 
 /**
@@ -1712,20 +1746,23 @@ function getMbart50LanguageName(language: string): string {
 /**
  * Translate using DL-Translate engine (self-hosted at 194.163.175.245:8000)
  * 
- * The server may support different model backends:
- * - m2m100: Uses ISO 639-1 codes (en, hi, te) - DEFAULT
- * - mbart50: Uses full language names (English, Hindi, Telugu)
+ * The server supports different model backends:
+ * - nllb200: Uses NLLB codes (eng_Latn, hin_Deva) - BEST QUALITY, 200+ languages
+ * - m2m100: Uses ISO 639-1 codes (en, hi, te) - 100 languages
+ * - mbart50: Uses full language names (English, Hindi, Telugu) - 50 languages
  * 
- * We try m2m100 ISO codes first, then fall back to mBART50 names if needed
+ * Priority: NLLB-200 → M2M-100 → mBART50
  * 
  * NOTE: Reduced timeout and retries for faster fallback
  */
+type DLTranslateModel = 'nllb200' | 'm2m100' | 'mbart50';
+
 async function translateWithDLTranslate(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
   retryCount = 0,
-  useFullNames = false
+  model: DLTranslateModel = 'nllb200'
 ): Promise<{ translatedText: string; success: boolean }> {
   const maxRetries = 1;
 
@@ -1735,20 +1772,44 @@ async function translateWithDLTranslate(
   const tgtInfo = getLanguageInfo(targetLanguage);
   const srcName = srcInfo?.name || normalizeLanguage(sourceLanguage);
   const tgtName = tgtInfo?.name || normalizeLanguage(targetLanguage);
-  if (!DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcName) || !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtName)) {
-    return { translatedText: text, success: false };
+  
+  // For NLLB-200, check if both languages have NLLB codes
+  if (model === 'nllb200') {
+    if (!isNllb200Supported(srcName) || !isNllb200Supported(tgtName)) {
+      // Fall back to m2m100
+      console.log(`[translate] Language not in NLLB-200, falling back to m2m100`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
+    }
+  }
+  
+  // For m2m100/mbart50, check supported languages set
+  if (model !== 'nllb200') {
+    if (!DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcName) || !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtName)) {
+      return { translatedText: text, success: false };
+    }
   }
   
   try {
-    // First try with m2m100 ISO codes, if fails try mBART50 full names
-    const srcLang = useFullNames 
-      ? getMbart50LanguageName(sourceLanguage)
-      : getDLTranslateLanguageCode(sourceLanguage);
-    const tgtLang = useFullNames
-      ? getMbart50LanguageName(targetLanguage)
-      : getDLTranslateLanguageCode(targetLanguage);
+    // Get language codes based on model
+    let srcLang: string;
+    let tgtLang: string;
     
-    console.log(`[translate] Trying DL-Translate: ${srcLang} -> ${tgtLang} (attempt ${retryCount + 1}, fullNames=${useFullNames})`);
+    switch (model) {
+      case 'nllb200':
+        srcLang = getDLTranslateLanguageCode(sourceLanguage, 'nllb200');
+        tgtLang = getDLTranslateLanguageCode(targetLanguage, 'nllb200');
+        break;
+      case 'm2m100':
+        srcLang = getDLTranslateLanguageCode(sourceLanguage, 'm2m100');
+        tgtLang = getDLTranslateLanguageCode(targetLanguage, 'm2m100');
+        break;
+      case 'mbart50':
+        srcLang = getMbart50LanguageName(sourceLanguage);
+        tgtLang = getMbart50LanguageName(targetLanguage);
+        break;
+    }
+    
+    console.log(`[translate] Trying DL-Translate (${model}): ${srcLang} -> ${tgtLang} (attempt ${retryCount + 1})`);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -1761,6 +1822,7 @@ async function translateWithDLTranslate(
         src_lang: srcLang,
         tgt_lang: tgtLang,
         engine: "dltranslate",
+        model: model, // Specify which model backend to use
       }),
       signal: controller.signal,
     });
@@ -1771,14 +1833,19 @@ async function translateWithDLTranslate(
       const data = await response.json();
       const translated = data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
       if (translated && translated !== text && translated.length > 0) {
-        console.log(`[translate] DL-Translate success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
+        console.log(`[translate] DL-Translate (${model}) success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
         return { translatedText: translated, success: true };
       }
     } else {
-      // If using ISO codes failed with 400, try with full language names
-      if (response.status === 400 && !useFullNames) {
-        console.log(`[translate] DL-Translate 400 with ISO codes, trying full names...`);
-        return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
+      // If model failed with 400, try next model in priority
+      if (response.status === 400) {
+        if (model === 'nllb200') {
+          console.log(`[translate] DL-Translate NLLB-200 failed, trying m2m100...`);
+          return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
+        } else if (model === 'm2m100') {
+          console.log(`[translate] DL-Translate m2m100 failed, trying mbart50...`);
+          return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'mbart50');
+        }
       }
     }
     
@@ -1786,27 +1853,33 @@ async function translateWithDLTranslate(
     if (retryCount < maxRetries) {
       console.log(`[translate] DL-Translate returned unchanged, retrying...`);
       await new Promise(r => setTimeout(r, 200));
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, useFullNames);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, model);
     }
     
-    // If ISO codes exhausted retries and haven't tried full names yet
-    if (!useFullNames) {
-      console.log(`[translate] DL-Translate ISO codes failed, trying full names...`);
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
+    // If current model exhausted retries, try next model
+    if (model === 'nllb200') {
+      console.log(`[translate] DL-Translate NLLB-200 exhausted, trying m2m100...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
+    } else if (model === 'm2m100') {
+      console.log(`[translate] DL-Translate m2m100 exhausted, trying mbart50...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'mbart50');
     }
   } catch (error) {
-    console.log(`[translate] DL-Translate failed: ${error}`);
+    console.log(`[translate] DL-Translate (${model}) failed: ${error}`);
     
     // Retry on timeout/error
     if (retryCount < maxRetries) {
       await new Promise(r => setTimeout(r, 200));
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, useFullNames);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, model);
     }
     
-    // If ISO codes exhausted and haven't tried full names yet
-    if (!useFullNames) {
-      console.log(`[translate] DL-Translate ISO codes errored, trying full names...`);
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
+    // If current model exhausted, try next model in priority
+    if (model === 'nllb200') {
+      console.log(`[translate] DL-Translate NLLB-200 errored, trying m2m100...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
+    } else if (model === 'm2m100') {
+      console.log(`[translate] DL-Translate m2m100 errored, trying mbart50...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'mbart50');
     }
   }
   
