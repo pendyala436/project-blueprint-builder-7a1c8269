@@ -1073,7 +1073,7 @@ async function translateWithDLTranslate(
     console.log(`[translate] Trying DL-Translate: ${srcName} -> ${tgtName}`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for DL-Translate
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
@@ -1119,7 +1119,7 @@ async function translateWithIndicTrans(
     console.log(`[translate] Trying IndicTrans2: ${sourceLanguage} -> ${targetLanguage}`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for IndicTrans2
     
     // IndicTrans2 uses language codes like 'eng_Latn', 'tel_Telu', 'hin_Deva'
     const srcCode = getNllbCode(sourceLanguage);
