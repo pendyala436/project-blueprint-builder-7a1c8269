@@ -1147,6 +1147,7 @@ function canTranslateDirectly(sourceLanguage: string, targetLanguage: string): b
 /**
  * M2M-100 Language Codes (Official Reference)
  * Source: https://huggingface.co/facebook/m2m100_1.2B
+ * Documentation: https://github.com/xhluca/dl-translate
  * 
  * These are the EXACT codes accepted by the M2M-100 model.
  * All 100 languages supported by M2M-100.
@@ -1175,6 +1176,7 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'czech': 'cs',
   'romanian': 'ro',
   'moldavian': 'ro',
+  'moldovan': 'ro',
   'greek': 'el',
   'hungarian': 'hu',
   'swedish': 'sv',
@@ -1196,6 +1198,7 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'kannada': 'kn',
   'malayalam': 'ml',
   'punjabi': 'pa',
+  'panjabi': 'pa',
   'urdu': 'ur',
   'nepali': 'ne',
   'odia': 'or',
@@ -1217,6 +1220,7 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'sundanese': 'su',
   'cebuano': 'ceb',
   'ilocano': 'ilo',
+  'iloko': 'ilo',
   
   // African
   'swahili': 'sw',
@@ -1229,6 +1233,7 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'somali': 'so',
   'igbo': 'ig',
   'fulah': 'ff',
+  'fula': 'ff',
   'ganda': 'lg',
   'lingala': 'ln',
   'wolof': 'wo',
@@ -1239,6 +1244,7 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'latvian': 'lv',
   'estonian': 'et',
   'slovenian': 'sl',
+  'slovene': 'sl',
   'croatian': 'hr',
   'serbian': 'sr',
   'slovak': 'sk',
@@ -1257,8 +1263,10 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'scottish_gaelic': 'gd',
   'breton': 'br',
   'western_frisian': 'fy',
+  'frisian': 'fy',
   'occitan': 'oc',
   'asturian': 'ast',
+  'belarusian': 'be',
   
   // Central Asian
   'kazakh': 'kk',
@@ -1275,7 +1283,6 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   // Caucasus & Eastern Europe
   'georgian': 'ka',
   'armenian': 'hy',
-  'belarusian': 'be',
   'maltese': 'mt',
   'luxembourgish': 'lb',
   'letzeburgesch': 'lb',
@@ -1288,7 +1295,77 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'latin': 'la',
 };
 
-// mBART50 uses full language names (for fallback if server uses mbart50)
+/**
+ * mBART50 Language Codes (Official Reference)
+ * Source: https://huggingface.co/facebook/mbart-large-50
+ * Documentation: https://github.com/xhluca/dl-translate
+ * 
+ * mBART50 uses LANGUAGE_CODE format (e.g., ar_AR, cs_CZ)
+ * These are the EXACT codes from the official documentation.
+ */
+const MBART50_LANGUAGE_CODES: Record<string, string> = {
+  'arabic': 'ar_AR',
+  'czech': 'cs_CZ',
+  'german': 'de_DE',
+  'english': 'en_XX',
+  'spanish': 'es_XX',
+  'estonian': 'et_EE',
+  'finnish': 'fi_FI',
+  'french': 'fr_XX',
+  'gujarati': 'gu_IN',
+  'hindi': 'hi_IN',
+  'italian': 'it_IT',
+  'japanese': 'ja_XX',
+  'kazakh': 'kk_KZ',
+  'korean': 'ko_KR',
+  'lithuanian': 'lt_LT',
+  'latvian': 'lv_LV',
+  'burmese': 'my_MM',
+  'nepali': 'ne_NP',
+  'dutch': 'nl_XX',
+  'romanian': 'ro_RO',
+  'russian': 'ru_RU',
+  'sinhala': 'si_LK',
+  'sinhalese': 'si_LK',
+  'turkish': 'tr_TR',
+  'vietnamese': 'vi_VN',
+  'chinese': 'zh_CN',
+  'mandarin': 'zh_CN',
+  'afrikaans': 'af_ZA',
+  'azerbaijani': 'az_AZ',
+  'bengali': 'bn_IN',
+  'persian': 'fa_IR',
+  'farsi': 'fa_IR',
+  'hebrew': 'he_IL',
+  'croatian': 'hr_HR',
+  'indonesian': 'id_ID',
+  'georgian': 'ka_GE',
+  'khmer': 'km_KH',
+  'central_khmer': 'km_KH',
+  'macedonian': 'mk_MK',
+  'malayalam': 'ml_IN',
+  'mongolian': 'mn_MN',
+  'marathi': 'mr_IN',
+  'polish': 'pl_PL',
+  'pashto': 'ps_AF',
+  'pushto': 'ps_AF',
+  'portuguese': 'pt_XX',
+  'swedish': 'sv_SE',
+  'swahili': 'sw_KE',
+  'tamil': 'ta_IN',
+  'telugu': 'te_IN',
+  'thai': 'th_TH',
+  'tagalog': 'tl_XX',
+  'filipino': 'tl_XX',
+  'ukrainian': 'uk_UA',
+  'urdu': 'ur_PK',
+  'xhosa': 'xh_ZA',
+  'galician': 'gl_ES',
+  'slovenian': 'sl_SI',
+  'slovene': 'sl_SI',
+};
+
+// Legacy mBART50 names (for backward compatibility with servers using full names)
 const MBART50_LANGUAGE_NAMES: Record<string, string> = {
   'english': 'English',
   'chinese': 'Chinese',
@@ -1686,27 +1763,30 @@ function getNllb200LanguageCode(language: string): string | null {
  * Get DL-Translate language code/name based on model type
  * 
  * Model priority for DL-Translate:
- * 1. NLLB-200 codes (best quality, 200+ languages)
- * 2. M2M-100 ISO codes (fallback, 100 languages)
- * 3. mBART50 full names (legacy fallback)
+ * 1. NLLB-200 codes (best quality, 200+ languages) - format: eng_Latn, hin_Deva
+ * 2. M2M-100 ISO codes (fallback, 100 languages) - format: en, hi, te
+ * 3. mBART50 codes (legacy fallback, 50 languages) - format: en_XX, hi_IN
  */
 function getDLTranslateLanguageCode(language: string, model: 'nllb200' | 'm2m100' | 'mbart50' = 'm2m100'): string {
   const normalized = normalizeLanguage(language);
   
-  // For NLLB-200 model, use NLLB codes
+  // For NLLB-200 model, use NLLB codes (eng_Latn format)
   if (model === 'nllb200') {
     const nllbCode = NLLB200_LANGUAGE_CODES[normalized];
     if (nllbCode) return nllbCode;
   }
   
-  // For M2M-100 model, use ISO codes
-  if (model === 'm2m100' || model === 'nllb200') {
+  // For M2M-100 model, use ISO 639-1 codes (en, hi, te format)
+  if (model === 'm2m100') {
     const m2mCode = M2M100_LANGUAGE_CODES[normalized];
     if (m2mCode) return m2mCode;
   }
   
-  // For mBART50 model, use full names
+  // For mBART50 model, use locale codes first (en_XX, hi_IN format)
   if (model === 'mbart50') {
+    const mbartCode = MBART50_LANGUAGE_CODES[normalized];
+    if (mbartCode) return mbartCode;
+    // Fallback to full names if server expects them
     const mbartName = MBART50_LANGUAGE_NAMES[normalized];
     if (mbartName) return mbartName;
   }
@@ -1717,8 +1797,28 @@ function getDLTranslateLanguageCode(language: string, model: 'nllb200' | 'm2m100
     return info.code;
   }
   
-  // Fallback to 'en' for m2m100, 'eng_Latn' for nllb200
-  return model === 'nllb200' ? 'eng_Latn' : 'en';
+  // Fallback based on model type
+  switch (model) {
+    case 'nllb200': return 'eng_Latn';
+    case 'm2m100': return 'en';
+    case 'mbart50': return 'en_XX';
+  }
+}
+
+/**
+ * Check if a language is supported by M2M-100
+ */
+function isM2m100Supported(language: string): boolean {
+  const normalized = normalizeLanguage(language);
+  return M2M100_LANGUAGE_CODES[normalized] !== undefined;
+}
+
+/**
+ * Check if a language is supported by mBART50
+ */
+function isMbart50Supported(language: string): boolean {
+  const normalized = normalizeLanguage(language);
+  return MBART50_LANGUAGE_CODES[normalized] !== undefined || MBART50_LANGUAGE_NAMES[normalized] !== undefined;
 }
 
 /**
@@ -1730,11 +1830,17 @@ function isNllb200Supported(language: string): boolean {
 }
 
 /**
- * Get mBART50-style full language name
+ * Get mBART50-style full language name (legacy fallback)
  */
 function getMbart50LanguageName(language: string): string {
   const normalized = normalizeLanguage(language);
   
+  // First try the proper code format
+  if (MBART50_LANGUAGE_CODES[normalized]) {
+    return MBART50_LANGUAGE_CODES[normalized];
+  }
+  
+  // Then try full names
   if (MBART50_LANGUAGE_NAMES[normalized]) {
     return MBART50_LANGUAGE_NAMES[normalized];
   }
@@ -1773,20 +1879,26 @@ async function translateWithDLTranslate(
   const srcName = srcInfo?.name || normalizeLanguage(sourceLanguage);
   const tgtName = tgtInfo?.name || normalizeLanguage(targetLanguage);
   
-  // For NLLB-200, check if both languages have NLLB codes
-  if (model === 'nllb200') {
-    if (!isNllb200Supported(srcName) || !isNllb200Supported(tgtName)) {
-      // Fall back to m2m100
-      console.log(`[translate] Language not in NLLB-200, falling back to m2m100`);
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
-    }
-  }
-  
-  // For m2m100/mbart50, check supported languages set
-  if (model !== 'nllb200') {
-    if (!DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcName) || !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtName)) {
-      return { translatedText: text, success: false };
-    }
+  // Check model-specific support and fallback accordingly
+  switch (model) {
+    case 'nllb200':
+      if (!isNllb200Supported(srcName) || !isNllb200Supported(tgtName)) {
+        console.log(`[translate] Language not in NLLB-200 (src=${srcName}, tgt=${tgtName}), falling back to m2m100`);
+        return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'm2m100');
+      }
+      break;
+    case 'm2m100':
+      if (!isM2m100Supported(srcName) || !isM2m100Supported(tgtName)) {
+        console.log(`[translate] Language not in M2M-100 (src=${srcName}, tgt=${tgtName}), falling back to mbart50`);
+        return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, 'mbart50');
+      }
+      break;
+    case 'mbart50':
+      if (!isMbart50Supported(srcName) || !isMbart50Supported(tgtName)) {
+        console.log(`[translate] Language not in mBART50 (src=${srcName}, tgt=${tgtName}), giving up on DL-Translate`);
+        return { translatedText: text, success: false };
+      }
+      break;
   }
   
   try {
@@ -2020,8 +2132,11 @@ async function translateText(
         if (result.success) {
           return { translatedText: result.translatedText, success: true, pivotUsed: false };
         }
-        // Fallback to DL-Translate (ONLY for non-Indic pairs that we explicitly support)
-        if (!srcIsIndic && !tgtIsIndic && srcIsDL && tgtIsDL) {
+        // Fallback to DL-Translate when IndicTrans fails
+        // Allow fallback if target is NOT Indic (non-English) OR if both are in DL-Translate
+        const shouldTryDLFallback = (!tgtIsIndic || targetIsEnglish) && (srcIsDL || sourceIsEnglish) && (tgtIsDL || targetIsEnglish);
+        if (shouldTryDLFallback) {
+          console.log(`[translate] IndicTrans failed, trying DL-Translate fallback`);
           result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
           if (result.success) {
             return { translatedText: result.translatedText, success: true, pivotUsed: false };

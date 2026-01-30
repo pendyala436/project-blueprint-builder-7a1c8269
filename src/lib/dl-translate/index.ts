@@ -6,12 +6,17 @@
  * 
  * Inspired by: https://github.com/xhluca/dl-translate
  * 
+ * Supports 3 model backends:
+ * - NLLB-200: 200+ languages (best quality) - codes: eng_Latn, hin_Deva
+ * - M2M-100: 100 languages (fallback) - codes: en, hi, te
+ * - mBART50: 50 languages (legacy) - codes: ar_AR, en_XX
+ * 
  * Key Features:
  * 1. Auto-detect source language from text script
  * 2. Convert Latin typing to user's native script (real-time preview)
  * 3. Bidirectional chat translation (sender → receiver, receiver → sender)
  * 4. Same language optimization (native script works, no translation)
- * 5. Support for 1000+ languages
+ * 5. Support for 200+ languages
  * 
  * @example
  * ```tsx
@@ -64,6 +69,16 @@ export {
   normalizeLanguage,
   getCode,
 } from './translator';
+
+// Model-specific language codes
+export {
+  M2M100_CODES,
+  MBART50_CODES,
+  NLLB200_CODES,
+  getModelCode,
+  isModelSupported,
+  getModelLanguages,
+} from './model-codes';
 
 // Language utilities from translate.ts
 export {
