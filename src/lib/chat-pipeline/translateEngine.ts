@@ -4,7 +4,12 @@
  * 
  * Handles all translation via self-hosted servers:
  * - LibreTranslate (194.163.175.245:80) - Latin/Global languages
- * - IndicTrans2 (194.163.175.245:8000) - Indian languages
+ * - IndicTrans2 (194.163.175.245:8000) - Indian languages (uses NLLB codes: eng_Latn, hin_Deva)
+ * - DL-Translate (194.163.175.245:8000) - Broader language support (uses full names: English, Hindi)
+ * 
+ * Engine Selection:
+ * - indictrans: Uses NLLB codes like 'eng_Latn', 'hin_Deva', 'tel_Telu'
+ * - dltranslate: Uses full language names like 'English', 'Hindi', 'Telugu'
  * 
  * English is the BIDIRECTIONAL MIDDLEWARE for cross-language translation.
  */
