@@ -1924,7 +1924,7 @@ async function translateWithDLTranslate(
     console.log(`[translate] Trying DL-Translate (${model}): ${srcLang} -> ${tgtLang} (attempt ${retryCount + 1})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for DL-Translate
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
@@ -2021,7 +2021,7 @@ async function translateWithIndicTrans(
     console.log(`[translate] Trying IndicTrans2: ${sourceLanguage}(${srcCode}) -> ${targetLanguage}(${tgtCode}) (attempt ${retryCount + 1})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for IndicTrans2
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
