@@ -1064,16 +1064,19 @@ function getDLTranslateLanguageName(language: string): string {
 async function translateWithDLTranslate(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  retryCount = 0
 ): Promise<{ translatedText: string; success: boolean }> {
+  const maxRetries = 2;
+  
   try {
     const srcName = getDLTranslateLanguageName(sourceLanguage);
     const tgtName = getDLTranslateLanguageName(targetLanguage);
     
-    console.log(`[translate] Trying DL-Translate: ${srcName} -> ${tgtName}`);
+    console.log(`[translate] Trying DL-Translate: ${srcName} -> ${tgtName} (attempt ${retryCount + 1})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for DL-Translate
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
@@ -1082,7 +1085,7 @@ async function translateWithDLTranslate(
         text: text,
         src_lang: srcName,
         tgt_lang: tgtName,
-        engine: "dltranslate",  // Use DL-Translate engine
+        engine: "dltranslate",
       }),
       signal: controller.signal,
     });
@@ -1092,13 +1095,26 @@ async function translateWithDLTranslate(
     if (response.ok) {
       const data = await response.json();
       const translated = data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
-      if (translated && translated !== text) {
+      if (translated && translated !== text && translated.length > 0) {
         console.log(`[translate] DL-Translate success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
         return { translatedText: translated, success: true };
       }
     }
+    
+    // Retry if we haven't exhausted retries
+    if (retryCount < maxRetries) {
+      console.log(`[translate] DL-Translate returned unchanged, retrying...`);
+      await new Promise(r => setTimeout(r, 500)); // Small delay before retry
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1);
+    }
   } catch (error) {
     console.log(`[translate] DL-Translate failed: ${error}`);
+    
+    // Retry on timeout/error if we haven't exhausted retries
+    if (retryCount < maxRetries) {
+      await new Promise(r => setTimeout(r, 500));
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1);
+    }
   }
   
   return { translatedText: text, success: false };
@@ -1113,17 +1129,19 @@ async function translateWithDLTranslate(
 async function translateWithIndicTrans(
   text: string,
   sourceLanguage: string,
-  targetLanguage: string
+  targetLanguage: string,
+  retryCount = 0
 ): Promise<{ translatedText: string; success: boolean }> {
+  const maxRetries = 2;
+  
   try {
-    console.log(`[translate] Trying IndicTrans2: ${sourceLanguage} -> ${targetLanguage}`);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for IndicTrans2
-    
-    // IndicTrans2 uses language codes like 'eng_Latn', 'tel_Telu', 'hin_Deva'
     const srcCode = getNllbCode(sourceLanguage);
     const tgtCode = getNllbCode(targetLanguage);
+    
+    console.log(`[translate] Trying IndicTrans2: ${sourceLanguage}(${srcCode}) -> ${targetLanguage}(${tgtCode}) (attempt ${retryCount + 1})`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
@@ -1132,7 +1150,7 @@ async function translateWithIndicTrans(
         text: text,
         src_lang: srcCode,
         tgt_lang: tgtCode,
-        engine: "indictrans",  // Use IndicTrans2 engine
+        engine: "indictrans",
       }),
       signal: controller.signal,
     });
@@ -1142,18 +1160,32 @@ async function translateWithIndicTrans(
     if (response.ok) {
       const data = await response.json();
       const translated = data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
-      if (translated && translated !== text) {
+      if (translated && translated !== text && translated.length > 0) {
         console.log(`[translate] IndicTrans2 success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
         return { translatedText: translated, success: true };
       }
+      
+      // Try retry if unchanged
+      if (retryCount < maxRetries) {
+        console.log(`[translate] IndicTrans2 returned unchanged, retrying...`);
+        await new Promise(r => setTimeout(r, 500));
+        return translateWithIndicTrans(text, sourceLanguage, targetLanguage, retryCount + 1);
+      }
     }
     
-    // If IndicTrans2 fails, try DL-Translate as fallback
-    console.log(`[translate] IndicTrans2 returned unchanged, trying DL-Translate fallback`);
+    // If IndicTrans2 fails after retries, try DL-Translate as fallback
+    console.log(`[translate] IndicTrans2 exhausted, trying DL-Translate fallback`);
     return await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
     
   } catch (error) {
-    console.log(`[translate] IndicTrans2 failed: ${error}, trying DL-Translate fallback`);
+    console.log(`[translate] IndicTrans2 failed: ${error}`);
+    
+    // Retry on timeout/error if we haven't exhausted retries
+    if (retryCount < maxRetries) {
+      await new Promise(r => setTimeout(r, 500));
+      return translateWithIndicTrans(text, sourceLanguage, targetLanguage, retryCount + 1);
+    }
+    
     // Try DL-Translate as fallback on error
     return await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
   }
@@ -1162,17 +1194,21 @@ async function translateWithIndicTrans(
 /**
  * Translate using self-hosted LibreTranslate (194.163.175.245:80)
  * PRIMARY engine for English ↔ Any direct translations
+ * Includes retry logic for reliability
  */
 async function translateWithSelfHostedLibre(
   text: string,
   sourceCode: string,
-  targetCode: string
+  targetCode: string,
+  retryCount = 0
 ): Promise<{ translatedText: string; success: boolean }> {
+  const maxRetries = 2;
+  
   try {
-    console.log(`[translate] Trying self-hosted LibreTranslate: ${sourceCode} -> ${targetCode}`);
+    console.log(`[translate] Trying self-hosted LibreTranslate: ${sourceCode} -> ${targetCode} (attempt ${retryCount + 1})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
     
     const response = await fetch(`${SELF_HOSTED_LIBRETRANSLATE}/translate`, {
       method: "POST",
@@ -1191,13 +1227,26 @@ async function translateWithSelfHostedLibre(
     if (response.ok) {
       const data = await response.json();
       const translated = data.translatedText?.trim();
-      if (translated && translated !== text) {
-        console.log(`[translate] Self-hosted LibreTranslate success`);
+      if (translated && translated !== text && translated.length > 0) {
+        console.log(`[translate] Self-hosted LibreTranslate success: "${translated.substring(0, 40)}..."`);
         return { translatedText: translated, success: true };
+      }
+      
+      // Retry if returned unchanged
+      if (retryCount < maxRetries) {
+        console.log(`[translate] LibreTranslate returned unchanged, retrying...`);
+        await new Promise(r => setTimeout(r, 300));
+        return translateWithSelfHostedLibre(text, sourceCode, targetCode, retryCount + 1);
       }
     }
   } catch (error) {
     console.log(`[translate] Self-hosted LibreTranslate failed: ${error}`);
+    
+    // Retry on error
+    if (retryCount < maxRetries) {
+      await new Promise(r => setTimeout(r, 300));
+      return translateWithSelfHostedLibre(text, sourceCode, targetCode, retryCount + 1);
+    }
   }
   
   return { translatedText: text, success: false };
