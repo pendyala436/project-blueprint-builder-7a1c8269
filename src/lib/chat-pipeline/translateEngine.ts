@@ -2,14 +2,30 @@
  * Translation Engine
  * ===================
  * 
- * Handles all translation via self-hosted servers:
- * - LibreTranslate (194.163.175.245:80) - Latin/Global languages
- * - IndicTrans2 (194.163.175.245:8000) - Indian languages (uses NLLB codes: eng_Latn, hin_Deva)
- * - DL-Translate (194.163.175.245:8000) - Broader language support (uses full names: English, Hindi)
+ * Self-Hosted Translation Infrastructure:
  * 
- * Engine Selection:
- * - indictrans: Uses NLLB codes like 'eng_Latn', 'hin_Deva', 'tel_Telu'
- * - dltranslate: Uses full language names like 'English', 'Hindi', 'Telugu'
+ * PORT 80 - LibreTranslate:
+ *   - URL: http://194.163.175.245:80/translate
+ *   - Use: Latin/Global languages, English ↔ Any direct translations
+ *   - Format: { q: text, source: "en", target: "hi", format: "text" }
+ * 
+ * PORT 8000 - IndicTrans2 + DL-Translate (same port, different engines):
+ *   - URL: http://194.163.175.245:8000/translate
+ *   
+ *   IndicTrans2 (engine: "indictrans"):
+ *     - Best for: 22 Indian languages + English
+ *     - Format: { text, src_lang: "eng_Latn", tgt_lang: "hin_Deva", engine: "indictrans" }
+ *     - Uses NLLB codes: eng_Latn, hin_Deva, tel_Telu, tam_Taml, etc.
+ *   
+ *   DL-Translate (engine: "dltranslate"):
+ *     - Best for: 200+ world languages, fallback for IndicTrans2
+ *     - Format: { text, src_lang: "English", tgt_lang: "Hindi", engine: "dltranslate" }
+ *     - Uses full language names: English, Hindi, Telugu, Tamil, etc.
+ * 
+ * Translation Priority Chain:
+ *   1. IndicTrans2 (for Indian languages)
+ *   2. DL-Translate (fallback if IndicTrans2 fails)
+ *   3. LibreTranslate (for Latin/global languages)
  * 
  * English is the BIDIRECTIONAL MIDDLEWARE for cross-language translation.
  */
