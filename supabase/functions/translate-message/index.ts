@@ -1201,16 +1201,131 @@ async function translateWithLibre(
 
 /**
  * DL-Translate Language Mapping
- * The DL-Translate API (dl-translate library) expects specific case-sensitive language names.
- * Based on: https://github.com/xhluca/dl-translate - uses mBART50 model
  * 
- * These are the EXACT names expected by the API (from mt.available_languages())
+ * IMPORTANT: The dl-translate library supports multiple model backends:
+ * - m2m100 (default): Uses ISO 639-1 codes (en, hi, te, ta, etc.)
+ * - mbart50: Uses full language names (English, Hindi, Telugu, etc.)
+ * - nllb200: Uses NLLB codes (eng_Latn, hin_Deva, etc.)
+ * 
+ * Based on the server error "Your target='Telugu' is not valid", 
+ * the server appears to be using m2m100 which requires ISO codes.
+ * 
+ * M2M100 supported languages (100 languages):
+ * https://huggingface.co/facebook/m2m100_1.2B
  */
-const DL_TRANSLATE_LANGUAGE_MAP: Record<string, string> = {
+
+// M2M100 uses ISO 639-1/639-2 language codes (2-3 letter codes)
+const M2M100_LANGUAGE_CODES: Record<string, string> = {
   // Major world languages
+  'english': 'en',
+  'chinese': 'zh',
+  'mandarin': 'zh',
+  'spanish': 'es',
+  'arabic': 'ar',
+  'french': 'fr',
+  'portuguese': 'pt',
+  'russian': 'ru',
+  'japanese': 'ja',
+  'german': 'de',
+  'korean': 'ko',
+  'italian': 'it',
+  'turkish': 'tr',
+  'vietnamese': 'vi',
+  'polish': 'pl',
+  'dutch': 'nl',
+  'thai': 'th',
+  'indonesian': 'id',
+  'czech': 'cs',
+  'romanian': 'ro',
+  'greek': 'el',
+  'hungarian': 'hu',
+  'swedish': 'sv',
+  'danish': 'da',
+  'finnish': 'fi',
+  'ukrainian': 'uk',
+  'hebrew': 'he',
+  'persian': 'fa',
+  'farsi': 'fa',
+  
+  // Indian languages
+  'hindi': 'hi',
+  'bengali': 'bn',
+  'telugu': 'te',
+  'marathi': 'mr',
+  'tamil': 'ta',
+  'gujarati': 'gu',
+  'kannada': 'kn',
+  'malayalam': 'ml',
+  'punjabi': 'pa',
+  'urdu': 'ur',
+  'nepali': 'ne',
+  'odia': 'or',
+  'oriya': 'or',
+  'assamese': 'as',
+  'sinhala': 'si',
+  
+  // Southeast Asian
+  'burmese': 'my',
+  'khmer': 'km',
+  'lao': 'lo',
+  'tagalog': 'tl',
+  'filipino': 'tl',
+  'malay': 'ms',
+  'javanese': 'jv',
+  'sundanese': 'su',
+  
+  // African
+  'swahili': 'sw',
+  'afrikaans': 'af',
+  'amharic': 'am',
+  'hausa': 'ha',
+  'yoruba': 'yo',
+  'zulu': 'zu',
+  'xhosa': 'xh',
+  'somali': 'so',
+  
+  // European
+  'lithuanian': 'lt',
+  'latvian': 'lv',
+  'estonian': 'et',
+  'slovenian': 'sl',
+  'croatian': 'hr',
+  'serbian': 'sr',
+  'slovak': 'sk',
+  'bulgarian': 'bg',
+  'macedonian': 'mk',
+  'albanian': 'sq',
+  'bosnian': 'bs',
+  'icelandic': 'is',
+  'norwegian': 'no',
+  'catalan': 'ca',
+  'galician': 'gl',
+  'basque': 'eu',
+  'welsh': 'cy',
+  'irish': 'ga',
+  
+  // Central Asian
+  'kazakh': 'kk',
+  'uzbek': 'uz',
+  'azerbaijani': 'az',
+  'turkmen': 'tk',
+  'tajik': 'tg',
+  'kyrgyz': 'ky',
+  'mongolian': 'mn',
+  'pashto': 'ps',
+  
+  // Others
+  'georgian': 'ka',
+  'armenian': 'hy',
+  'belarusian': 'be',
+  'maltese': 'mt',
+  'luxembourgish': 'lb',
+};
+
+// mBART50 uses full language names (for fallback if server uses mbart50)
+const MBART50_LANGUAGE_NAMES: Record<string, string> = {
   'english': 'English',
   'chinese': 'Chinese',
-  'mandarin': 'Chinese',
   'spanish': 'Spanish',
   'arabic': 'Arabic',
   'french': 'French',
@@ -1236,8 +1351,6 @@ const DL_TRANSLATE_LANGUAGE_MAP: Record<string, string> = {
   'ukrainian': 'Ukrainian',
   'hebrew': 'Hebrew',
   'persian': 'Persian',
-  
-  // Indian languages - mBART50 format
   'hindi': 'Hindi',
   'bengali': 'Bengali',
   'telugu': 'Telugu',
@@ -1248,16 +1361,10 @@ const DL_TRANSLATE_LANGUAGE_MAP: Record<string, string> = {
   'malayalam': 'Malayalam',
   'urdu': 'Urdu',
   'nepali': 'Nepali',
-  
-  // Southeast Asian
   'burmese': 'Burmese',
   'khmer': 'Khmer',
-  
-  // African
   'swahili': 'Swahili',
   'afrikaans': 'Afrikaans',
-  
-  // Others
   'lithuanian': 'Lithuanian',
   'latvian': 'Latvian',
   'estonian': 'Estonian',
@@ -1267,30 +1374,43 @@ const DL_TRANSLATE_LANGUAGE_MAP: Record<string, string> = {
   'mongolian': 'Mongolian',
   'galician': 'Galician',
   'catalan': 'Catalan',
+  'sinhala': 'Sinhala',
+  'pashto': 'Pashto',
+  'tagalog': 'Tagalog',
+  'georgian': 'Georgian',
+  'macedonian': 'Macedonian',
 };
 
 /**
- * Get display name for DL-Translate engine (uses full language names)
- * Uses the exact case-sensitive names expected by the DL-Translate API
- * e.g., 'hindi' -> 'Hindi', 'telugu' -> 'Telugu', 'english' -> 'English'
+ * Get DL-Translate language code/name based on model type
+ * Tries m2m100 codes first (ISO), falls back to mBART50 names
  */
-function getDLTranslateLanguageName(language: string): string {
+function getDLTranslateLanguageCode(language: string): string {
   const normalized = normalizeLanguage(language);
   
-  // Check our explicit mapping first
-  if (DL_TRANSLATE_LANGUAGE_MAP[normalized]) {
-    return DL_TRANSLATE_LANGUAGE_MAP[normalized];
+  // First try m2m100 ISO codes (most common for dl-translate)
+  if (M2M100_LANGUAGE_CODES[normalized]) {
+    return M2M100_LANGUAGE_CODES[normalized];
   }
   
-  // Try from language info
+  // Try from language info code
   const info = getLanguageInfo(language);
-  if (info) {
-    // Check if the name is in our map
-    if (DL_TRANSLATE_LANGUAGE_MAP[info.name]) {
-      return DL_TRANSLATE_LANGUAGE_MAP[info.name];
-    }
-    // Capitalize first letter of the language name
-    return info.name.charAt(0).toUpperCase() + info.name.slice(1);
+  if (info?.code) {
+    return info.code;
+  }
+  
+  // Fallback to 'en'
+  return 'en';
+}
+
+/**
+ * Get mBART50-style full language name
+ */
+function getMbart50LanguageName(language: string): string {
+  const normalized = normalizeLanguage(language);
+  
+  if (MBART50_LANGUAGE_NAMES[normalized]) {
+    return MBART50_LANGUAGE_NAMES[normalized];
   }
   
   // Fallback: capitalize first letter
@@ -1299,35 +1419,45 @@ function getDLTranslateLanguageName(language: string): string {
 
 /**
  * Translate using DL-Translate engine (self-hosted at 194.163.175.245:8000)
- * Uses full language names like "English", "Hindi", "Telugu"
- * Good for broader language support beyond Indian languages
  * 
- * NOTE: Reduced timeout (8s) and retries (1) for faster fallback
+ * The server may support different model backends:
+ * - m2m100: Uses ISO 639-1 codes (en, hi, te) - DEFAULT
+ * - mbart50: Uses full language names (English, Hindi, Telugu)
+ * 
+ * We try m2m100 ISO codes first, then fall back to mBART50 names if needed
+ * 
+ * NOTE: Reduced timeout and retries for faster fallback
  */
 async function translateWithDLTranslate(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
-  retryCount = 0
+  retryCount = 0,
+  useFullNames = false
 ): Promise<{ translatedText: string; success: boolean }> {
-  const maxRetries = 1; // Reduced from 2 for faster fallback
+  const maxRetries = 1;
   
   try {
-    const srcName = getDLTranslateLanguageName(sourceLanguage);
-    const tgtName = getDLTranslateLanguageName(targetLanguage);
+    // First try with m2m100 ISO codes, if fails try mBART50 full names
+    const srcLang = useFullNames 
+      ? getMbart50LanguageName(sourceLanguage)
+      : getDLTranslateLanguageCode(sourceLanguage);
+    const tgtLang = useFullNames
+      ? getMbart50LanguageName(targetLanguage)
+      : getDLTranslateLanguageCode(targetLanguage);
     
-    console.log(`[translate] Trying DL-Translate: ${srcName} -> ${tgtName} (attempt ${retryCount + 1})`);
+    console.log(`[translate] Trying DL-Translate: ${srcLang} -> ${tgtLang} (attempt ${retryCount + 1}, fullNames=${useFullNames})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     
     const response = await fetch(`${SELF_HOSTED_INDICTRANS}/translate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         text: text,
-        src_lang: srcName,
-        tgt_lang: tgtName,
+        src_lang: srcLang,
+        tgt_lang: tgtLang,
         engine: "dltranslate",
       }),
       signal: controller.signal,
@@ -1342,21 +1472,39 @@ async function translateWithDLTranslate(
         console.log(`[translate] DL-Translate success: "${text.substring(0, 30)}..." -> "${translated.substring(0, 30)}..."`);
         return { translatedText: translated, success: true };
       }
+    } else {
+      // If using ISO codes failed with 400, try with full language names
+      if (response.status === 400 && !useFullNames) {
+        console.log(`[translate] DL-Translate 400 with ISO codes, trying full names...`);
+        return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
+      }
     }
     
     // Retry if we haven't exhausted retries
     if (retryCount < maxRetries) {
       console.log(`[translate] DL-Translate returned unchanged, retrying...`);
-      await new Promise(r => setTimeout(r, 200)); // Reduced delay
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1);
+      await new Promise(r => setTimeout(r, 200));
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, useFullNames);
+    }
+    
+    // If ISO codes exhausted retries and haven't tried full names yet
+    if (!useFullNames) {
+      console.log(`[translate] DL-Translate ISO codes failed, trying full names...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
     }
   } catch (error) {
     console.log(`[translate] DL-Translate failed: ${error}`);
     
-    // Retry on timeout/error if we haven't exhausted retries
+    // Retry on timeout/error
     if (retryCount < maxRetries) {
       await new Promise(r => setTimeout(r, 200));
-      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, retryCount + 1, useFullNames);
+    }
+    
+    // If ISO codes exhausted and haven't tried full names yet
+    if (!useFullNames) {
+      console.log(`[translate] DL-Translate ISO codes errored, trying full names...`);
+      return translateWithDLTranslate(text, sourceLanguage, targetLanguage, 0, true);
     }
   }
   
