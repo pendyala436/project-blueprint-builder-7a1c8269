@@ -343,6 +343,11 @@ const DraggableMiniChatWindow = ({
   
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // ASYNC TRANSLATION: AbortController to cancel pending translation requests
+  // Ensures new typing cancels old translations without blocking
+  const translationAbortRef = useRef<AbortController | null>(null);
+  const lastTranslatedInputRef = useRef<string>(''); // Track what was last translated
+  
   // Removed typing modes - now fully auto-detect based on input type
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -434,6 +439,12 @@ const DraggableMiniChatWindow = ({
   
   const clearPreview = useCallback(() => {
     setMeaningPreview('');
+    lastTranslatedInputRef.current = '';
+    // Cancel any in-flight translation
+    if (translationAbortRef.current) {
+      translationAbortRef.current.abort();
+      translationAbortRef.current = null;
+    }
     clearTypingBroadcast();
   }, [clearTypingBroadcast]);
 
@@ -481,11 +492,17 @@ const DraggableMiniChatWindow = ({
   // AUTO-DETECT input type and generate preview in sender's MOTHER TONGUE
   // Handles: English typing, native script (Gboard/IME), romanized, voice-to-text, mixed
   // FULLY ASYNC: Runs in background, NEVER blocks typing
-  // Uses BIDIRECTIONAL edge function for reliable preview for all 1000+ languages
+  // Uses AbortController to cancel previous requests when new input arrives
   const generateMeaningPreview = useCallback((inputText: string, inputSource?: string) => {
     if (!inputText.trim()) {
       setMeaningPreview('');
       setIsMeaningLoading(false);
+      lastTranslatedInputRef.current = '';
+      return;
+    }
+    
+    // Skip if same text was already translated (avoid redundant calls)
+    if (inputText.trim() === lastTranslatedInputRef.current) {
       return;
     }
     
@@ -494,16 +511,28 @@ const DraggableMiniChatWindow = ({
       clearTimeout(meaningPreviewTimeoutRef.current);
     }
     
+    // Cancel any in-flight translation request
+    if (translationAbortRef.current) {
+      translationAbortRef.current.abort();
+    }
+    
     // Show loading immediately (doesn't block)
     setIsMeaningLoading(true);
     
-    // Shorter debounce for voice input (already complete phrases)
-    const debounceTime = inputSource === 'voice' ? 100 : 300;
+    // Longer debounce to avoid interrupting fast typing
+    // Voice input already has complete phrases, so shorter debounce
+    const debounceTime = inputSource === 'voice' ? 150 : 400;
     
     // Debounce: wait for pause in typing before starting translation
     meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
       const scriptType = detectScript(capturedText);
+      
+      // Skip if text changed during debounce (user still typing)
+      if (capturedText !== inputText.trim()) {
+        setIsMeaningLoading(false);
+        return;
+      }
       
       console.log('[MeaningPreview] Processing:', { 
         text: capturedText.substring(0, 30), 
@@ -513,17 +542,21 @@ const DraggableMiniChatWindow = ({
         scriptType
       });
       
-      // Use setTimeout(0) to ensure it doesn't block
-      setTimeout(async () => {
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      translationAbortRef.current = abortController;
+      
+      // Run translation in background - NEVER blocks typing
+      (async () => {
+        // Check if already aborted before starting
+        if (abortController.signal.aborted) {
+          return;
+        }
+        
         try {
           let translatedText = '';
           
           // ALWAYS use bidirectional edge function for ALL input types
-          // This ensures consistent mother tongue preview for:
-          // - English typing → native script translation
-          // - Native script (Gboard) → show as-is + get English meaning
-          // - Romanized input → transliterate + translate
-          // - Voice input → detect + translate
           console.log('[MeaningPreview] Using bidirectional edge function for:', capturedText.substring(0, 30));
           
           try {
@@ -535,6 +568,12 @@ const DraggableMiniChatWindow = ({
                 mode: 'bidirectional',
               },
             });
+            
+            // Check if aborted during request
+            if (abortController.signal.aborted) {
+              console.log('[MeaningPreview] Request aborted, discarding result');
+              return;
+            }
             
             if (!error && data?.senderView) {
               translatedText = data.senderView;
@@ -551,19 +590,26 @@ const DraggableMiniChatWindow = ({
               } else {
                 // Fallback to browser-based translation for Latin text
                 const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+                
+                // Check abort again after fallback
+                if (abortController.signal.aborted) return;
+                
                 if (result?.translatedText && result.translatedText !== capturedText) {
                   translatedText = result.translatedText;
                 }
               }
             }
           } catch (edgeError) {
+            // Check if aborted
+            if (abortController.signal.aborted) return;
+            
             console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
-            // Fallback based on script type
             if (scriptType === 'native') {
               translatedText = capturedText;
             } else {
               try {
                 const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
+                if (abortController.signal.aborted) return;
                 if (result?.translatedText && result.translatedText !== capturedText) {
                   translatedText = result.translatedText;
                 }
@@ -573,19 +619,26 @@ const DraggableMiniChatWindow = ({
             }
           }
           
+          // Final abort check before updating state
+          if (abortController.signal.aborted) return;
+          
           if (translatedText) {
             console.log('[MeaningPreview] Setting mother tongue preview:', translatedText.substring(0, 30));
             setMeaningPreview(translatedText);
+            lastTranslatedInputRef.current = capturedText;
           } else {
             setMeaningPreview('');
           }
         } catch (error) {
+          if (abortController.signal.aborted) return;
           console.warn('[MeaningPreview] Background error (non-blocking):', error);
           setMeaningPreview('');
         } finally {
-          setIsMeaningLoading(false);
+          if (!abortController.signal.aborted) {
+            setIsMeaningLoading(false);
+          }
         }
-      }, 0);
+      })();
     }, debounceTime);
   }, [currentUserLanguage, partnerLanguage, detectScript]);
 
