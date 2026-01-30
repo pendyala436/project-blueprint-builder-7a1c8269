@@ -981,15 +981,8 @@ function isNonLatinLanguage(language: string): boolean {
 // ============================================================
 
 // Self-hosted translation services (PRIMARY)
-const SELF_HOSTED_LIBRETRANSLATE = "http://194.163.175.245:80";  // For English ↔ Any (DIRECT)
-const SELF_HOSTED_INDICTRANS = "http://194.163.175.245:8000";     // For Native ↔ Native (PIVOT)
-
-// LibreTranslate mirrors (fallback only)
-const LIBRE_TRANSLATE_MIRRORS = [
-  SELF_HOSTED_LIBRETRANSLATE,  // Primary self-hosted
-  "https://libretranslate.com",
-  "https://translate.argosopentech.com",
-];
+// Only IndicTrans2 and DL-Translate are used (both on port 8000)
+const SELF_HOSTED_INDICTRANS = "http://194.163.175.245:8000";     // IndicTrans2 + DL-Translate
 
 // ============================================================
 // ENGINE LANGUAGE SUPPORT DEFINITIONS
@@ -1027,109 +1020,63 @@ const DLTRANSLATE_SUPPORTED_LANGUAGES = new Set([
   'mongolian', 'galician', 'catalan'
 ]);
 
-/**
- * LibreTranslate Supported Languages
- * Uses ISO 639-1 codes like 'en', 'hi', 'te'
- * Best for Latin-script languages and English ↔ Any
- * 
- * NOTE: Self-hosted LibreTranslate may support more languages than public instances
- * Added Indian languages that may be supported by self-hosted instance
- */
-const LIBRETRANSLATE_SUPPORTED_LANGUAGES = new Set([
-  'english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'russian',
-  'japanese', 'korean', 'chinese', 'arabic', 'hindi', 'bengali', 'turkish',
-  'vietnamese', 'polish', 'dutch', 'thai', 'indonesian', 'czech', 'romanian',
-  'greek', 'hungarian', 'swedish', 'danish', 'finnish', 'ukrainian', 'hebrew',
-  'persian', 'tagalog', 'filipino', 'malay', 'catalan', 'slovak', 'bulgarian',
-  'croatian', 'serbian', 'slovenian', 'estonian', 'latvian', 'lithuanian',
-  'norwegian', 'icelandic', 'welsh', 'irish', 'albanian', 'macedonian',
-  'azerbaijani', 'kazakh', 'uzbek', 'urdu', 'swahili', 'afrikaans', 'esperanto',
-  // NOTE: We intentionally DO NOT claim support for non-Latin Indian languages here.
-  // They are handled by IndicTrans2; incorrectly listing them here can cause
-  // engine-select to pick LibreTranslate and waste time before falling back.
-]);
+// LibreTranslate REMOVED - only using IndicTrans2 and DL-Translate
 
 /**
  * Determine which engine to use based on source and target languages
  * 
- * ENGINE PRIORITY (optimized for speed and reliability):
+ * ENGINE PRIORITY (only IndicTrans2 and DL-Translate):
  * 
- * 1. LibreTranslate (Port 80): FASTEST, good for English ↔ Any, Latin ↔ Latin
- * 2. IndicTrans2 (Port 8000): BEST QUALITY for Indian languages (slower)
- * 3. DL-Translate (Port 8000): BROAD coverage for world languages
+ * 1. IndicTrans2 (Port 8000): BEST QUALITY for Indian languages + English
+ * 2. DL-Translate (Port 8000): BROAD coverage for world languages
  * 
- * SPEED OPTIMIZATION: LibreTranslate first when supported, IndicTrans2 for quality
- * 
- * @returns 'indictrans' | 'libretranslate' | 'dltranslate'
+ * @returns 'indictrans' | 'dltranslate'
  */
-function selectBestEngine(sourceLanguage: string, targetLanguage: string): 'indictrans' | 'libretranslate' | 'dltranslate' {
+function selectBestEngine(sourceLanguage: string, targetLanguage: string): 'indictrans' | 'dltranslate' {
   const srcNorm = normalizeLanguage(sourceLanguage);
   const tgtNorm = normalizeLanguage(targetLanguage);
   
   const srcIsIndic = INDICTRANS2_SUPPORTED_LANGUAGES.has(srcNorm);
   const tgtIsIndic = INDICTRANS2_SUPPORTED_LANGUAGES.has(tgtNorm);
-  const srcIsLibre = LIBRETRANSLATE_SUPPORTED_LANGUAGES.has(srcNorm);
-  const tgtIsLibre = LIBRETRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm);
   const srcIsDL = DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcNorm);
   const tgtIsDL = DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm);
   const srcIsEnglish = srcNorm === 'english';
   const tgtIsEnglish = tgtNorm === 'english';
-  const srcIsNonLatin = isNonLatinLanguage(srcNorm);
-  const tgtIsNonLatin = isNonLatinLanguage(tgtNorm);
   
-  console.log(`[engine-select] ${srcNorm}→${tgtNorm}: srcIndic=${srcIsIndic}, tgtIndic=${tgtIsIndic}, srcLibre=${srcIsLibre}, tgtLibre=${tgtIsLibre}`);
+  console.log(`[engine-select] ${srcNorm}→${tgtNorm}: srcIndic=${srcIsIndic}, tgtIndic=${tgtIsIndic}, srcDL=${srcIsDL}, tgtDL=${tgtIsDL}`);
   
-  // RULE 1: LibreTranslate is FASTEST - use it when both languages are supported
-  // This includes English ↔ Hindi, English ↔ most common languages
-  if (srcIsLibre && tgtIsLibre) {
-    console.log(`[engine-select] SELECTED: libretranslate (both supported, fastest)`);
-    return 'libretranslate';
-  }
-  
-  // RULE 2: Latin ↔ Latin (non-English) - DIRECT translation via LibreTranslate
-  if (!srcIsNonLatin && !tgtIsNonLatin && (srcIsLibre || tgtIsLibre)) {
-    console.log(`[engine-select] SELECTED: libretranslate (Latin ↔ Latin)`);
-    return 'libretranslate';
-  }
-  
-  // RULE 3: Indian ↔ Indian (both non-English Indian languages)
-  // Use IndicTrans2 for best quality
-  if (srcIsIndic && tgtIsIndic && !srcIsEnglish && !tgtIsEnglish) {
+  // RULE 1: Indian ↔ Indian or English ↔ Indian - use IndicTrans2
+  if (srcIsIndic && tgtIsIndic) {
     console.log(`[engine-select] SELECTED: indictrans (Indian ↔ Indian)`);
     return 'indictrans';
   }
   
-  // RULE 4: English ↔ Indian (when LibreTranslate doesn't support target)
-  // Use IndicTrans2 for languages like Telugu that LibreTranslate might not have
-  if ((srcIsEnglish || tgtIsEnglish) && (srcIsIndic || tgtIsIndic)) {
-    // Check if LibreTranslate supports both - if not, use IndicTrans2
-    if (!srcIsLibre || !tgtIsLibre) {
-      console.log(`[engine-select] SELECTED: indictrans (English ↔ Indic, LibreTranslate missing support)`);
-      return 'indictrans';
-    }
+  // RULE 2: English ↔ Indian - use IndicTrans2
+  if ((srcIsEnglish && tgtIsIndic) || (srcIsIndic && tgtIsEnglish)) {
+    console.log(`[engine-select] SELECTED: indictrans (English ↔ Indic)`);
+    return 'indictrans';
   }
   
-  // RULE 5: One language is Indian, other is world language
-  // Use IndicTrans2 with English pivot
+  // RULE 3: One language is Indian (needs pivot) - use IndicTrans2
   if (srcIsIndic || tgtIsIndic) {
     console.log(`[engine-select] SELECTED: indictrans (one is Indic, will use pivot)`);
     return 'indictrans';
   }
   
-  // RULE 6: Both supported by DL-Translate
+  // RULE 4: Both supported by DL-Translate - use DL-Translate
   if (srcIsDL && tgtIsDL) {
     console.log(`[engine-select] SELECTED: dltranslate (both in DL-Translate)`);
     return 'dltranslate';
   }
   
-  // RULE 7: Fallback to LibreTranslate if at least one language is supported
-  if (srcIsLibre || tgtIsLibre) {
-    console.log(`[engine-select] SELECTED: libretranslate (fallback)`);
-    return 'libretranslate';
+  // RULE 5: One is English and other is DL-Translate supported
+  if ((srcIsEnglish && tgtIsDL) || (srcIsDL && tgtIsEnglish)) {
+    console.log(`[engine-select] SELECTED: dltranslate (English ↔ DL-supported)`);
+    return 'dltranslate';
   }
   
-  // RULE 8: Ultimate fallback to DL-Translate
-  console.log(`[engine-select] SELECTED: dltranslate (ultimate fallback)`);
+  // RULE 6: Default fallback to DL-Translate
+  console.log(`[engine-select] SELECTED: dltranslate (fallback)`);
   return 'dltranslate';
 }
 
@@ -1144,8 +1091,6 @@ function canTranslateDirectly(sourceLanguage: string, targetLanguage: string): b
   switch (engine) {
     case 'indictrans':
       return INDICTRANS2_SUPPORTED_LANGUAGES.has(srcNorm) && INDICTRANS2_SUPPORTED_LANGUAGES.has(tgtNorm);
-    case 'libretranslate':
-      return LIBRETRANSLATE_SUPPORTED_LANGUAGES.has(srcNorm) && LIBRETRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm);
     case 'dltranslate':
       return DLTRANSLATE_SUPPORTED_LANGUAGES.has(srcNorm) && DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm);
     default:
@@ -1153,51 +1098,7 @@ function canTranslateDirectly(sourceLanguage: string, targetLanguage: string): b
   }
 }
 
-// Translate using LibreTranslate
-async function translateWithLibre(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  for (const mirror of LIBRE_TRANSLATE_MIRRORS) {
-    try {
-      console.log(`[dl-translate] Trying LibreTranslate: ${mirror}`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-      
-      const response = await fetch(`${mirror}/translate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          q: text,
-          source: sourceCode === "auto" ? "auto" : sourceCode,
-          target: targetCode,
-          format: "text",
-        }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const translated = data.translatedText?.trim();
-        if (translated && translated !== text) {
-          console.log(`[dl-translate] LibreTranslate success via ${mirror}`);
-          return { translatedText: translated, success: true };
-        }
-      }
-    } catch (error) {
-      console.log(`[dl-translate] Mirror ${mirror} failed`);
-    }
-  }
-
-  return { translatedText: text, success: false };
-}
-
-// Google Translate and MyMemory REMOVED per user request
-// Only self-hosted LibreTranslate and IndicTrans2 are used
+// LibreTranslate REMOVED - only using IndicTrans2 and DL-Translate
 
 
 
@@ -1597,84 +1498,20 @@ async function translateWithIndicTrans(
   }
 }
 
-/**
- * Translate using self-hosted LibreTranslate (194.163.175.245:80)
- * PRIMARY engine for English ↔ Any direct translations
- * Includes retry logic for reliability
- */
-async function translateWithSelfHostedLibre(
-  text: string,
-  sourceCode: string,
-  targetCode: string,
-  retryCount = 0
-): Promise<{ translatedText: string; success: boolean }> {
-  const maxRetries = 2;
-  
-  try {
-    console.log(`[translate] Trying self-hosted LibreTranslate: ${sourceCode} -> ${targetCode} (attempt ${retryCount + 1})`);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-    
-    const response = await fetch(`${SELF_HOSTED_LIBRETRANSLATE}/translate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        q: text,
-        source: sourceCode === "auto" ? "auto" : sourceCode,
-        target: targetCode,
-        format: "text",
-      }),
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data = await response.json();
-      const translated = data.translatedText?.trim();
-      if (translated && translated !== text && translated.length > 0) {
-        console.log(`[translate] Self-hosted LibreTranslate success: "${translated.substring(0, 40)}..."`);
-        return { translatedText: translated, success: true };
-      }
-      
-      // Retry if returned unchanged
-      if (retryCount < maxRetries) {
-        console.log(`[translate] LibreTranslate returned unchanged, retrying...`);
-        await new Promise(r => setTimeout(r, 300));
-        return translateWithSelfHostedLibre(text, sourceCode, targetCode, retryCount + 1);
-      }
-    }
-  } catch (error) {
-    console.log(`[translate] Self-hosted LibreTranslate failed: ${error}`);
-    
-    // Retry on error
-    if (retryCount < maxRetries) {
-      await new Promise(r => setTimeout(r, 300));
-      return translateWithSelfHostedLibre(text, sourceCode, targetCode, retryCount + 1);
-    }
-  }
-  
-  return { translatedText: text, success: false };
-}
+// LibreTranslate REMOVED - only using IndicTrans2 and DL-Translate
 
 /**
  * Main translation function with SMART ENGINE AUTO-SELECTION
  * 
- * ENGINE ROUTING (auto-detected based on language support):
+ * ENGINE ROUTING (only IndicTrans2 and DL-Translate):
  * 
  * IndicTrans2 (Port 8000):
  *   - Best for: 22+ Indian languages + English
  *   - Priority: Indian ↔ Indian, English ↔ Indian
  *   - Codes: NLLB format (eng_Latn, hin_Deva, tel_Telu)
  * 
- * LibreTranslate (Port 80):
- *   - Best for: English ↔ Any, Latin ↔ Latin
- *   - Priority: European/Latin-script languages
- *   - Codes: ISO 639-1 (en, es, fr, de)
- * 
  * DL-Translate (Port 8000, engine: dltranslate):
- *   - Best for: ~50 world languages not covered by above
+ *   - Best for: ~50 world languages
  *   - Fallback for broader coverage
  *   - Names: Full names (English, Hindi, Telugu)
  * 
@@ -1691,8 +1528,6 @@ async function translateText(
   const targetCode = getLibreCode(targetLanguage);
   const sourceIsEnglish = sourceCode === 'en';
   const targetIsEnglish = targetCode === 'en';
-  const sourceIsNonLatin = isNonLatinLanguage(sourceLanguage);
-  const targetIsNonLatin = isNonLatinLanguage(targetLanguage);
 
   // Normalized language flags (used to prevent invalid engine fallbacks)
   const srcNorm = normalizeLanguage(sourceLanguage);
@@ -1707,7 +1542,7 @@ async function translateText(
   const canDirect = canTranslateDirectly(sourceLanguage, targetLanguage);
   
   console.log(`[translate] Routing: ${sourceLanguage}(${sourceCode}) -> ${targetLanguage}(${targetCode})`);
-  console.log(`[translate] Engine: ${selectedEngine}, Direct: ${canDirect}, srcNonLatin=${sourceIsNonLatin}, tgtNonLatin=${targetIsNonLatin}`);
+  console.log(`[translate] Engine: ${selectedEngine}, Direct: ${canDirect}`);
 
   // ================================================================
   // DIRECT TRANSLATION PATH
@@ -1721,31 +1556,6 @@ async function translateText(
     // Try selected engine first
     switch (selectedEngine) {
       case 'indictrans':
-        result = await translateWithIndicTrans(text, sourceLanguage, targetLanguage);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
-        }
-        // Fallback to LibreTranslate
-        result = await translateWithSelfHostedLibre(text, sourceCode, targetCode);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
-        }
-        // Fallback to DL-Translate (ONLY for non-Indic pairs that we explicitly support)
-        // Prevents invalid requests like tgt_lang="Telugu" on the dltranslate backend.
-        if (!srcIsIndic && !tgtIsIndic && srcIsDL && tgtIsDL) {
-          result = await translateWithDLTranslate(text, sourceLanguage, targetLanguage);
-          if (result.success) {
-            return { translatedText: result.translatedText, success: true, pivotUsed: false };
-          }
-        }
-        break;
-        
-      case 'libretranslate':
-        result = await translateWithSelfHostedLibre(text, sourceCode, targetCode);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
-        }
-        // Fallback to IndicTrans2 for Indian languages
         result = await translateWithIndicTrans(text, sourceLanguage, targetLanguage);
         if (result.success) {
           return { translatedText: result.translatedText, success: true, pivotUsed: false };
@@ -1766,11 +1576,6 @@ async function translateText(
         }
         // Fallback to IndicTrans2
         result = await translateWithIndicTrans(text, sourceLanguage, targetLanguage);
-        if (result.success) {
-          return { translatedText: result.translatedText, success: true, pivotUsed: false };
-        }
-        // Fallback to LibreTranslate
-        result = await translateWithSelfHostedLibre(text, sourceCode, targetCode);
         if (result.success) {
           return { translatedText: result.translatedText, success: true, pivotUsed: false };
         }
@@ -1802,21 +1607,18 @@ async function translateText(
   switch (srcToEngEngine) {
     case 'indictrans':
       pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
-      if (!pivotResult.success) {
-        pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
-      }
       // Only try DL-Translate if the SOURCE language is explicitly supported by DL-Translate
       if (!pivotResult.success && srcIsDL) {
         pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
       }
       break;
-    case 'libretranslate':
-      pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
+    case 'dltranslate':
+      pivotResult = { translatedText: text, success: false };
+      if (srcIsDL) {
+        pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
+      }
       if (!pivotResult.success) {
         pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
-      }
-      if (!pivotResult.success && srcIsDL) {
-        pivotResult = await translateWithDLTranslate(text, sourceLanguage, 'english');
       }
       break;
     default:
@@ -1826,9 +1628,6 @@ async function translateText(
       }
       if (!pivotResult.success) {
         pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
-      }
-      if (!pivotResult.success) {
-        pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
       }
       break;
   }
@@ -1851,21 +1650,18 @@ async function translateText(
   switch (engToTgtEngine) {
     case 'indictrans':
       finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
-      if (!finalResult.success) {
-        finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
-      }
       // Only try DL-Translate if the TARGET language is explicitly supported by DL-Translate
       if (!finalResult.success && tgtIsDL) {
         finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
       }
       break;
-    case 'libretranslate':
-      finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
+    case 'dltranslate':
+      finalResult = { translatedText: englishText, success: false };
+      if (tgtIsDL) {
+        finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
+      }
       if (!finalResult.success) {
         finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
-      }
-      if (!finalResult.success && tgtIsDL) {
-        finalResult = await translateWithDLTranslate(englishText, 'english', targetLanguage);
       }
       break;
     default:
@@ -1875,9 +1671,6 @@ async function translateText(
       }
       if (!finalResult.success) {
         finalResult = await translateWithIndicTrans(englishText, 'english', targetLanguage);
-      }
-      if (!finalResult.success) {
-        finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
       }
       break;
   }
@@ -1908,6 +1701,7 @@ function cleanTextOutput(text: string): string {
  * Transliterate Latin text to native script
  * Converts romanized input like "bagunnava" to native script "బాగున్నావా"
  * Uses SMART ENGINE SELECTION based on target language
+ * Only uses IndicTrans2 and DL-Translate
  */
 async function transliterateToNative(
   latinText: string,
@@ -1928,15 +1722,12 @@ async function transliterateToNative(
     return !detected.isLatin && cleanedResult.length > 0 && cleanedResult !== latinText;
   };
   
-  // Try engines in priority order based on selection
-  const engineOrder: ('indictrans' | 'libretranslate' | 'dltranslate')[] = 
-    bestEngine === 'indictrans' ? ['indictrans', 'libretranslate', 'dltranslate'] :
-    bestEngine === 'libretranslate' ? ['libretranslate', 'indictrans', 'dltranslate'] :
-    ['dltranslate', 'indictrans', 'libretranslate'];
+  // Try engines in priority order based on selection (only IndicTrans2 and DL-Translate)
+  const engineOrder: ('indictrans' | 'dltranslate')[] = 
+    bestEngine === 'indictrans' ? ['indictrans', 'dltranslate'] : ['dltranslate', 'indictrans'];
   
   for (const engine of engineOrder) {
     // Avoid invalid dltranslate requests for languages that backend doesn't advertise
-    // (e.g., Telugu causing: "Your target=Telugu is not valid")
     if (engine === 'dltranslate' && !DLTRANSLATE_SUPPORTED_LANGUAGES.has(tgtNorm)) {
       continue;
     }
@@ -1946,9 +1737,6 @@ async function transliterateToNative(
       switch (engine) {
         case 'indictrans':
           result = await translateWithIndicTrans(latinText, 'english', targetLanguage);
-          break;
-        case 'libretranslate':
-          result = await translateWithSelfHostedLibre(latinText, 'en', targetCode);
           break;
         case 'dltranslate':
           result = await translateWithDLTranslate(latinText, 'english', targetLanguage);
@@ -1963,18 +1751,6 @@ async function transliterateToNative(
     } catch (e) {
       console.log(`[transliterate] ${engine} failed: ${e}`);
     }
-  }
-  
-  // Method 4: Try mirror LibreTranslate instances as last resort
-  try {
-    const result = await translateWithLibre(latinText, 'en', targetCode);
-    if (result.success && isValidNativeResult(result.translatedText)) {
-      const cleanedResult = cleanTextOutput(result.translatedText);
-      console.log(`[transliterate] Mirror LibreTranslate success: "${latinText}" -> "${cleanedResult}"`);
-      return { text: cleanedResult, success: true };
-    }
-  } catch (e) {
-    console.log('[transliterate] Mirror LibreTranslate failed');
   }
   
   console.log(`[transliterate] All methods failed, keeping original`);
@@ -2083,13 +1859,12 @@ serve(async (req) => {
           // CRITICAL: Try ALL engines to ensure we get native text
           let toSenderNative = await translateText(inputText, 'english', langA);
           
-          // If primary translation fails, try LibreTranslate directly
+          // If primary translation fails, try IndicTrans2 as fallback
           if (!toSenderNative.success || toSenderNative.translatedText === inputText) {
-            console.log(`[dl-translate] Primary English→${langA} failed, trying LibreTranslate fallback`);
-            const langACode = getLibreCode(langA);
-            const libreResult = await translateWithSelfHostedLibre(inputText, 'en', langACode);
-            if (libreResult.success && libreResult.translatedText !== inputText) {
-              toSenderNative = { ...libreResult, pivotUsed: false };
+            console.log(`[dl-translate] Primary English→${langA} failed, trying IndicTrans2 fallback`);
+            const indicResult = await translateWithIndicTrans(inputText, 'english', langA);
+            if (indicResult.success && indicResult.translatedText !== inputText) {
+              toSenderNative = { ...indicResult, pivotUsed: false };
             }
           }
           
