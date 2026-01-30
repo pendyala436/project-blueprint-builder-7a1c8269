@@ -1006,18 +1006,43 @@ const INDICTRANS2_SUPPORTED_LANGUAGES = new Set([
  * Uses full language names like 'English', 'Hindi', 'Telugu'
  * Good for broader language support including world languages
  */
+/**
+ * DL-Translate Supported Languages (M2M-100 model)
+ * Based on official M2M-100 language list from user reference
+ * Uses ISO 639-1/639-2 codes (af, am, ar, ast, az, ba, be, bg, bn, etc.)
+ * 
+ * IMPORTANT: Indian languages ARE supported by M2M-100 (hi, bn, te, ta, gu, kn, ml, pa, ur, ne, or, as, si)
+ * but we route them to IndicTrans2 for better quality. 
+ * Only non-Indic languages are listed here.
+ */
 const DLTRANSLATE_SUPPORTED_LANGUAGES = new Set([
+  // Major world languages
   'english', 'chinese', 'mandarin', 'spanish', 'arabic', 'french', 'portuguese',
   'russian', 'japanese', 'german', 'korean', 'italian', 'turkish', 'vietnamese',
-  'polish', 'dutch', 'thai', 'indonesian', 'czech', 'romanian', 'greek',
-  'hungarian', 'swedish', 'danish', 'finnish', 'ukrainian', 'hebrew', 'persian',
-  // NOTE: We intentionally EXCLUDE Indian languages here.
-  // Reason: Indian languages are routed through IndicTrans2 (NLLB codes).
-  // Our self-hosted dltranslate backend validates against mt.available_languages()
-  // and may reject e.g. "Telugu" even when the name looks correct.
-  'burmese', 'khmer', 'swahili', 'afrikaans',
-  'lithuanian', 'latvian', 'estonian', 'slovenian', 'croatian', 'kazakh',
-  'mongolian', 'galician', 'catalan'
+  'polish', 'dutch', 'thai', 'indonesian', 'malay',
+  
+  // European languages
+  'czech', 'romanian', 'greek', 'hungarian', 'swedish', 'danish', 'finnish', 'norwegian',
+  'ukrainian', 'hebrew', 'persian', 'farsi',
+  'lithuanian', 'latvian', 'estonian', 'slovenian', 'croatian', 'serbian', 'slovak',
+  'bulgarian', 'macedonian', 'albanian', 'bosnian', 'icelandic',
+  'catalan', 'galician', 'basque', 'welsh', 'irish', 'scottish_gaelic',
+  'belarusian', 'luxembourgish', 'maltese',
+  
+  // African languages
+  'swahili', 'afrikaans', 'amharic', 'hausa', 'yoruba', 'zulu', 'xhosa', 'somali',
+  
+  // Central Asian languages
+  'kazakh', 'uzbek', 'azerbaijani', 'turkmen', 'tajik', 'kyrgyz', 'mongolian', 'pashto',
+  
+  // Southeast Asian (non-Indic)
+  'burmese', 'khmer', 'lao', 'tagalog', 'filipino', 'javanese', 'sundanese', 'cebuano',
+  
+  // Caucasus
+  'georgian', 'armenian'
+  
+  // NOTE: Indian languages (hindi, bengali, telugu, tamil, etc.) are EXCLUDED
+  // They are routed through IndicTrans2 for better quality
 ]);
 
 // LibreTranslate REMOVED - only using IndicTrans2 and DL-Translate
@@ -1119,7 +1144,13 @@ function canTranslateDirectly(sourceLanguage: string, targetLanguage: string): b
  * https://huggingface.co/facebook/m2m100_1.2B
  */
 
-// M2M100 uses ISO 639-1/639-2 language codes (2-3 letter codes)
+/**
+ * M2M-100 Language Codes (Official Reference)
+ * Source: https://huggingface.co/facebook/m2m100_1.2B
+ * 
+ * These are the EXACT codes accepted by the M2M-100 model.
+ * All 100 languages supported by M2M-100.
+ */
 const M2M100_LANGUAGE_CODES: Record<string, string> = {
   // Major world languages
   'english': 'en',
@@ -1138,21 +1169,24 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'vietnamese': 'vi',
   'polish': 'pl',
   'dutch': 'nl',
+  'flemish': 'nl',
   'thai': 'th',
   'indonesian': 'id',
   'czech': 'cs',
   'romanian': 'ro',
+  'moldavian': 'ro',
   'greek': 'el',
   'hungarian': 'hu',
   'swedish': 'sv',
   'danish': 'da',
   'finnish': 'fi',
+  'norwegian': 'no',
   'ukrainian': 'uk',
   'hebrew': 'he',
   'persian': 'fa',
   'farsi': 'fa',
   
-  // Indian languages
+  // Indian languages (M2M-100 supported)
   'hindi': 'hi',
   'bengali': 'bn',
   'telugu': 'te',
@@ -1168,16 +1202,21 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'oriya': 'or',
   'assamese': 'as',
   'sinhala': 'si',
+  'sinhalese': 'si',
+  'sindhi': 'sd',
   
   // Southeast Asian
   'burmese': 'my',
   'khmer': 'km',
+  'central_khmer': 'km',
   'lao': 'lo',
   'tagalog': 'tl',
   'filipino': 'tl',
   'malay': 'ms',
   'javanese': 'jv',
   'sundanese': 'su',
+  'cebuano': 'ceb',
+  'ilocano': 'ilo',
   
   // African
   'swahili': 'sw',
@@ -1188,6 +1227,12 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'zulu': 'zu',
   'xhosa': 'xh',
   'somali': 'so',
+  'igbo': 'ig',
+  'fulah': 'ff',
+  'ganda': 'lg',
+  'lingala': 'ln',
+  'wolof': 'wo',
+  'tswana': 'tn',
   
   // European
   'lithuanian': 'lt',
@@ -1202,12 +1247,18 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'albanian': 'sq',
   'bosnian': 'bs',
   'icelandic': 'is',
-  'norwegian': 'no',
   'catalan': 'ca',
+  'valencian': 'ca',
   'galician': 'gl',
   'basque': 'eu',
   'welsh': 'cy',
   'irish': 'ga',
+  'gaelic': 'gd',
+  'scottish_gaelic': 'gd',
+  'breton': 'br',
+  'western_frisian': 'fy',
+  'occitan': 'oc',
+  'asturian': 'ast',
   
   // Central Asian
   'kazakh': 'kk',
@@ -1218,13 +1269,23 @@ const M2M100_LANGUAGE_CODES: Record<string, string> = {
   'kyrgyz': 'ky',
   'mongolian': 'mn',
   'pashto': 'ps',
+  'pushto': 'ps',
+  'bashkir': 'ba',
   
-  // Others
+  // Caucasus & Eastern Europe
   'georgian': 'ka',
   'armenian': 'hy',
   'belarusian': 'be',
   'maltese': 'mt',
   'luxembourgish': 'lb',
+  'letzeburgesch': 'lb',
+  
+  // Other
+  'haitian': 'ht',
+  'haitian_creole': 'ht',
+  'yiddish': 'yi',
+  'esperanto': 'eo',
+  'latin': 'la',
 };
 
 // mBART50 uses full language names (for fallback if server uses mbart50)
