@@ -1034,202 +1034,12 @@ async function translateWithLibre(
   return { translatedText: text, success: false };
 }
 
-// Translate using MyMemory (fallback)
-// FIXED: Split long messages into chunks to avoid URL length limits
-async function translateWithMyMemory(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  try {
-    console.log('[dl-translate] Trying MyMemory fallback...');
-    
-    // MyMemory has a 500 character limit per request
-    const MAX_CHUNK_SIZE = 450;
-    
-    if (text.length > MAX_CHUNK_SIZE) {
-      console.log(`[dl-translate] Long message for MyMemory (${text.length} chars), splitting into chunks`);
-      const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
-      const translatedChunks: string[] = [];
-      
-      for (const chunk of chunks) {
-        const result = await translateChunkWithMyMemory(chunk, sourceCode, targetCode);
-        if (result.success) {
-          translatedChunks.push(result.translatedText);
-        } else {
-          return { translatedText: text, success: false };
-        }
-      }
-      
-      const fullTranslation = translatedChunks.join(' ').trim();
-      console.log(`[dl-translate] MyMemory chunked success: ${chunks.length} chunks`);
-      return { translatedText: fullTranslation, success: true };
-    }
-    
-    return await translateChunkWithMyMemory(text, sourceCode, targetCode);
-  } catch (error) {
-    console.log('[dl-translate] MyMemory failed');
-  }
+// Google Translate and MyMemory REMOVED per user request
+// Only self-hosted LibreTranslate and IndicTrans2 are used
 
-  return { translatedText: text, success: false };
-}
 
-// Helper: Translate a single chunk with MyMemory
-async function translateChunkWithMyMemory(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  try {
-    const langPair = `${sourceCode}|${targetCode}`;
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-    
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`,
-      { signal: controller.signal }
-    );
-    
-    clearTimeout(timeoutId);
 
-    if (response.ok) {
-      const data = await response.json();
-      const translated = data.responseData?.translatedText?.trim();
-      if (translated && 
-          translated !== text &&
-          !translated.includes('MYMEMORY WARNING') &&
-          translated.toLowerCase() !== text.toLowerCase()) {
-        return { translatedText: translated, success: true };
-      }
-    }
-  } catch (error) {
-    console.log('[dl-translate] MyMemory chunk failed');
-  }
 
-  return { translatedText: text, success: false };
-}
-
-// Translate using Google Translate (unofficial free API)
-// FIXED: Split long messages into chunks to avoid URL length limits
-async function translateWithGoogle(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  try {
-    console.log('[dl-translate] Trying Google Translate fallback...');
-    
-    // URL length limit is ~2000 chars, but encoded text can be 3x longer
-    // Split messages longer than 500 chars into chunks
-    const MAX_CHUNK_SIZE = 500;
-    
-    if (text.length > MAX_CHUNK_SIZE) {
-      console.log(`[dl-translate] Long message (${text.length} chars), splitting into chunks`);
-      const chunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
-      const translatedChunks: string[] = [];
-      
-      for (const chunk of chunks) {
-        const result = await translateChunkWithGoogle(chunk, sourceCode, targetCode);
-        if (result.success) {
-          translatedChunks.push(result.translatedText);
-        } else {
-          // If any chunk fails, return failure
-          return { translatedText: text, success: false };
-        }
-      }
-      
-      const fullTranslation = translatedChunks.join(' ').trim();
-      console.log(`[dl-translate] Google Translate chunked success: ${chunks.length} chunks`);
-      return { translatedText: fullTranslation, success: true };
-    }
-    
-    return await translateChunkWithGoogle(text, sourceCode, targetCode);
-  } catch (error) {
-    console.log('[dl-translate] Google Translate failed:', error);
-  }
-
-  return { translatedText: text, success: false };
-}
-
-// Helper: Split text into chunks at sentence/word boundaries
-function splitTextIntoChunks(text: string, maxSize: number): string[] {
-  const chunks: string[] = [];
-  let remaining = text;
-  
-  while (remaining.length > 0) {
-    if (remaining.length <= maxSize) {
-      chunks.push(remaining);
-      break;
-    }
-    
-    // Try to split at sentence boundary
-    let splitPoint = remaining.lastIndexOf('. ', maxSize);
-    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
-      splitPoint = remaining.lastIndexOf('। ', maxSize); // Hindi/Devanagari sentence end
-    }
-    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
-      splitPoint = remaining.lastIndexOf('? ', maxSize);
-    }
-    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
-      splitPoint = remaining.lastIndexOf('! ', maxSize);
-    }
-    if (splitPoint === -1 || splitPoint < maxSize * 0.5) {
-      // Fall back to word boundary
-      splitPoint = remaining.lastIndexOf(' ', maxSize);
-    }
-    if (splitPoint === -1 || splitPoint < maxSize * 0.3) {
-      // Last resort: hard split
-      splitPoint = maxSize;
-    }
-    
-    chunks.push(remaining.substring(0, splitPoint + 1).trim());
-    remaining = remaining.substring(splitPoint + 1).trim();
-  }
-  
-  return chunks;
-}
-
-// Helper: Translate a single chunk with Google
-async function translateChunkWithGoogle(
-  text: string,
-  sourceCode: string,
-  targetCode: string
-): Promise<{ translatedText: string; success: boolean }> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for reliability
-    
-    // Using the free Google Translate API endpoint
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceCode}&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
-    
-    const response = await fetch(url, { signal: controller.signal });
-    
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const data = await response.json();
-      // Google returns array format: [[["translated text","original text",null,null,10]],null,"en",null,null,null,null,[]]
-      if (data && Array.isArray(data) && data[0]) {
-        const translations = data[0];
-        let translated = '';
-        for (const t of translations) {
-          if (t && t[0]) {
-            translated += t[0];
-          }
-        }
-        translated = translated.trim();
-        if (translated && translated !== text && translated.toLowerCase() !== text.toLowerCase()) {
-          return { translatedText: translated, success: true };
-        }
-      }
-    }
-  } catch (error) {
-    console.log('[dl-translate] Google chunk translation failed:', error);
-  }
-
-  return { translatedText: text, success: false };
-}
 
 /**
  * Translate using IndicTrans2 (self-hosted at 194.163.175.245:8000)
@@ -1367,17 +1177,7 @@ async function translateText(
       return { translatedText: result.translatedText, success: true, pivotUsed: false };
     }
     
-    // Fallback to Google/MyMemory
-    result = await translateWithGoogle(text, sourceCode, targetCode);
-    if (result.success) {
-      return { translatedText: result.translatedText, success: true, pivotUsed: false };
-    }
-    
-    result = await translateWithMyMemory(text, sourceCode, targetCode);
-    if (result.success) {
-      return { translatedText: result.translatedText, success: true, pivotUsed: false };
-    }
-    
+    // Only self-hosted services used - no Google/MyMemory
     return { translatedText: text, success: false, pivotUsed: false };
   }
 
@@ -1392,11 +1192,7 @@ async function translateText(
       return { translatedText: result.translatedText, success: true, pivotUsed: false };
     }
     
-    result = await translateWithGoogle(text, sourceCode, targetCode);
-    if (result.success) {
-      return { translatedText: result.translatedText, success: true, pivotUsed: false };
-    }
-    
+    // Only self-hosted services used - no Google/MyMemory
     return { translatedText: text, success: false, pivotUsed: false };
   }
 
@@ -1410,23 +1206,15 @@ async function translateText(
   let pivotResult = await translateWithIndicTrans(text, sourceLanguage, 'english');
   
   if (!pivotResult.success) {
-    // Fallback to other engines for step 1
+    // Fallback to self-hosted LibreTranslate
     pivotResult = await translateWithSelfHostedLibre(text, sourceCode, 'en');
-  }
-  if (!pivotResult.success) {
-    pivotResult = await translateWithGoogle(text, sourceCode, 'en');
-  }
-  if (!pivotResult.success) {
-    pivotResult = await translateWithMyMemory(text, sourceCode, 'en');
   }
 
   if (!pivotResult.success || pivotResult.translatedText === text) {
-    console.log('[translate] PIVOT step 1 failed, trying direct translation');
-    // Last resort: try direct translation
-    const directResult = await translateWithGoogle(text, sourceCode, targetCode);
+    console.log('[translate] PIVOT step 1 failed, returning original');
     return { 
-      translatedText: directResult.success ? directResult.translatedText : text, 
-      success: directResult.success, 
+      translatedText: text, 
+      success: false, 
       pivotUsed: false 
     };
   }
@@ -1439,12 +1227,6 @@ async function translateText(
   
   if (!finalResult.success) {
     finalResult = await translateWithSelfHostedLibre(englishText, 'en', targetCode);
-  }
-  if (!finalResult.success) {
-    finalResult = await translateWithGoogle(englishText, 'en', targetCode);
-  }
-  if (!finalResult.success) {
-    finalResult = await translateWithMyMemory(englishText, 'en', targetCode);
   }
 
   if (finalResult.success) {
@@ -1472,7 +1254,7 @@ function cleanTextOutput(text: string): string {
 /**
  * Transliterate Latin text to native script
  * Converts romanized input like "bagunnava" to native script "బాగున్నావా"
- * Uses Google's auto-detect + target language for proper phonetic transliteration
+ * Uses self-hosted LibreTranslate and IndicTrans2 for transliteration
  */
 async function transliterateToNative(
   latinText: string,
@@ -1482,77 +1264,49 @@ async function transliterateToNative(
   
   console.log(`[dl-translate] Transliterating "${latinText}" to ${targetLanguage} (${targetCode})`);
   
-  // Method 1: Use Google Translate with auto-detect source (best for phonetic input)
-  // This handles romanized text better than forcing English as source
+  // Method 1: Try IndicTrans2 (best for Indian languages)
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    
-    // Use auto-detect (sl=auto) to let Google figure out this is phonetic romanization
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(latinText)}`;
-    
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data = await response.json();
-      let transliterated = '';
-      if (Array.isArray(data) && Array.isArray(data[0])) {
-        for (const segment of data[0]) {
-          if (segment && segment[0]) {
-            transliterated += segment[0];
-          }
-        }
-      }
-      
-      transliterated = cleanTextOutput(transliterated);
-      
-      // Check if result is in native script
-      const detected = detectScriptFromText(transliterated);
-      if (!detected.isLatin && transliterated.length > 0 && transliterated !== latinText) {
-        console.log(`[dl-translate] Google auto-detect transliteration success: "${latinText}" -> "${transliterated}"`);
-        return { text: transliterated, success: true };
-      }
-    }
-  } catch (e) {
-    console.log('[dl-translate] Google auto-detect failed, trying alternatives');
-  }
-  
-  // Method 2: Force translate from target language (for phonetic romanization)
-  // e.g., "bagunnava" is already phonetic Telugu, just needs script conversion
-  try {
-    const result = await translateWithGoogle(latinText, targetCode, targetCode);
+    const result = await translateWithIndicTrans(latinText, 'english', targetLanguage);
     if (result.success) {
       const cleanedResult = cleanTextOutput(result.translatedText);
       const detected = detectScriptFromText(cleanedResult);
-      if (!detected.isLatin && cleanedResult !== latinText) {
-        console.log(`[dl-translate] Same-language Google transliteration: "${latinText}" -> "${cleanedResult}"`);
+      if (!detected.isLatin && cleanedResult.length > 0 && cleanedResult !== latinText) {
+        console.log(`[dl-translate] IndicTrans2 transliteration success: "${latinText}" -> "${cleanedResult}"`);
         return { text: cleanedResult, success: true };
       }
     }
   } catch (e) {
-    console.log('[dl-translate] Same-language transliteration failed');
+    console.log('[dl-translate] IndicTrans2 transliteration failed');
   }
   
-  // Method 3: Fallback to English->Target (for actual English input)
-  let result = await translateWithGoogle(latinText, 'en', targetCode);
-  
-  if (!result.success) {
-    result = await translateWithMyMemory(latinText, 'en', targetCode);
-  }
-  
-  if (!result.success) {
-    result = await translateWithLibre(latinText, 'en', targetCode);
-  }
-  
-  // Check if the result is in native script (not Latin)
-  if (result.success) {
-    const cleanedResult = cleanTextOutput(result.translatedText);
-    const detected = detectScriptFromText(cleanedResult);
-    if (!detected.isLatin && cleanedResult.length > 0) {
-      console.log(`[dl-translate] En->Target transliteration success: "${latinText}" -> "${cleanedResult}"`);
-      return { text: cleanedResult, success: true };
+  // Method 2: Try self-hosted LibreTranslate
+  try {
+    const result = await translateWithSelfHostedLibre(latinText, 'en', targetCode);
+    if (result.success) {
+      const cleanedResult = cleanTextOutput(result.translatedText);
+      const detected = detectScriptFromText(cleanedResult);
+      if (!detected.isLatin && cleanedResult.length > 0 && cleanedResult !== latinText) {
+        console.log(`[dl-translate] LibreTranslate transliteration success: "${latinText}" -> "${cleanedResult}"`);
+        return { text: cleanedResult, success: true };
+      }
     }
+  } catch (e) {
+    console.log('[dl-translate] LibreTranslate transliteration failed');
+  }
+  
+  // Method 3: Try mirror LibreTranslate instances
+  try {
+    const result = await translateWithLibre(latinText, 'en', targetCode);
+    if (result.success) {
+      const cleanedResult = cleanTextOutput(result.translatedText);
+      const detected = detectScriptFromText(cleanedResult);
+      if (!detected.isLatin && cleanedResult.length > 0) {
+        console.log(`[dl-translate] Mirror LibreTranslate transliteration success: "${latinText}" -> "${cleanedResult}"`);
+        return { text: cleanedResult, success: true };
+      }
+    }
+  } catch (e) {
+    console.log('[dl-translate] Mirror LibreTranslate failed');
   }
   
   console.log(`[dl-translate] All transliteration methods failed, keeping original`);
@@ -1661,23 +1415,13 @@ serve(async (req) => {
           // CRITICAL: Try ALL engines to ensure we get native text
           let toSenderNative = await translateText(inputText, 'english', langA);
           
-          // If first attempt fails, try direct Google translate
+          // If primary translation fails, try LibreTranslate directly
           if (!toSenderNative.success || toSenderNative.translatedText === inputText) {
-            console.log(`[dl-translate] Primary English→${langA} failed, trying Google fallback`);
+            console.log(`[dl-translate] Primary English→${langA} failed, trying LibreTranslate fallback`);
             const langACode = getLibreCode(langA);
-            const googleResult = await translateWithGoogle(inputText, 'en', langACode);
-            if (googleResult.success && googleResult.translatedText !== inputText) {
-              toSenderNative = { ...googleResult, pivotUsed: false };
-            }
-          }
-          
-          // If still failing, try MyMemory
-          if (!toSenderNative.success || toSenderNative.translatedText === inputText) {
-            console.log(`[dl-translate] Google fallback failed, trying MyMemory`);
-            const langACode = getLibreCode(langA);
-            const myMemoryResult = await translateWithMyMemory(inputText, 'en', langACode);
-            if (myMemoryResult.success && myMemoryResult.translatedText !== inputText) {
-              toSenderNative = { ...myMemoryResult, pivotUsed: false };
+            const libreResult = await translateWithSelfHostedLibre(inputText, 'en', langACode);
+            if (libreResult.success && libreResult.translatedText !== inputText) {
+              toSenderNative = { ...libreResult, pivotUsed: false };
             }
           }
           
