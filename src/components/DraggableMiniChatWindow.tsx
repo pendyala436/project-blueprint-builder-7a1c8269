@@ -316,7 +316,7 @@ const DraggableMiniChatWindow = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [rawInput, setRawInput] = useState(""); // What user types (Latin for non-Latin languages)
   const [newMessage, setNewMessage] = useState(""); // Native script after transliteration
-  const [isSending, setIsSending] = useState(false);
+  // isSending state removed - using sendingRef for non-blocking double-send prevention
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [areButtonsExpanded, setAreButtonsExpanded] = useState(false); // Action buttons minimized by default
@@ -1600,17 +1600,21 @@ const DraggableMiniChatWindow = ({
   // Track the current preview for this typing session - reset after each send
   const currentPreviewRef = useRef<string>('');
 
-  // ASYNC NON-BLOCKING TRANSLATION: Send message immediately, translate in background
-  // - Message is sent INSTANTLY without waiting for translation
-  // - Translation happens in background and updates are applied asynchronously
-  // - Typing is NEVER blocked by translation
-  // - isSending only blocks the SEND BUTTON, not the input field
+  // FULLY ASYNC FIRE-AND-FORGET: Send message immediately, translate in complete background
+  // - Message added to UI INSTANTLY
+  // - Database insert happens immediately with original text
+  // - Translation runs COMPLETELY in background and updates DB asynchronously
+  // - Typing is NEVER blocked - send button re-enables immediately
+  // - Both sender and receiver can continue typing without ANY delay
+  const sendingRef = useRef(false); // Track sending state without causing re-renders
+  
   const sendMessage = async () => {
     const inputText = rawInput.trim();
     const previewSnapshot = meaningPreview;
     
-    // Only check isSending to prevent double-send, not to block typing
-    if (!inputText || isSending) return;
+    // Prevent double-send using ref (not state) to avoid blocking
+    if (!inputText || sendingRef.current) return;
+    sendingRef.current = true;
 
     if (inputText.length > MAX_MESSAGE_LENGTH) {
       toast({
@@ -1618,6 +1622,7 @@ const DraggableMiniChatWindow = ({
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
         variant: "destructive"
       });
+      sendingRef.current = false;
       return;
     }
 
@@ -1630,6 +1635,7 @@ const DraggableMiniChatWindow = ({
         description: moderationResult.reason,
         variant: "destructive"
       });
+      sendingRef.current = false;
       return;
     }
 
@@ -1637,7 +1643,7 @@ const DraggableMiniChatWindow = ({
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const messageTimestamp = new Date().toISOString();
     
-    // Clear input immediately - user can start typing next message
+    // Clear input immediately - user can start typing next message RIGHT AWAY
     setNewMessage("");
     setRawInput("");
     setMeaningPreview("");
@@ -1659,8 +1665,8 @@ const DraggableMiniChatWindow = ({
       clearTimeout(transliterationTimeoutRef.current);
       transliterationTimeoutRef.current = null;
     }
+    
     // Quick heuristic check if input looks like English or native script
-    // This is a fast sync check - proper detection happens in background
     const hasNonLatin = /[^\x00-\x7F]/.test(inputText);
     const looksLikeEnglish = !hasNonLatin && /^[\x00-\x7F\s.,!?'"()-]+$/.test(inputText) && inputText.length > 2;
     
@@ -1679,78 +1685,101 @@ const DraggableMiniChatWindow = ({
       latinMessage: undefined,
       englishMessage: looksLikeEnglish ? inputText : '(translating...)',
       isTranslated: senderDisplay !== inputText,
-      isTranslating: true, // Will be updated by background translation
+      isTranslating: true,
       createdAt: messageTimestamp
     }]);
 
-    // === BACKGROUND: Send to database + translate asynchronously ===
-    setIsSending(true);
-    
-    // Start background translation and database insert in parallel
-    const backgroundProcess = async () => {
+    // RE-ENABLE SEND IMMEDIATELY - user can send next message right away
+    sendingRef.current = false;
+
+    // === FIRE-AND-FORGET BACKGROUND PROCESS ===
+    // This runs completely independently - doesn't block anything
+    (async () => {
       let messageToStore = inputText;
       let translatedForReceiver: string | null = null;
       let originalEnglishToStore: string | null = null;
       let senderNativeDisplay: string | null = null;
+      let dbMessageId: string | null = null;
 
-      // === AUTO-DETECT input type using simple script detection ===
+      // === STEP 1: INSERT TO DATABASE IMMEDIATELY with original text ===
+      // Don't wait for translation - insert right away
+      try {
+        const { data: insertedMessage, error: insertError } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: inputText,
+            translated_message: inputText, // Will be updated after translation
+            original_english: looksLikeEnglish ? inputText : null
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+        dbMessageId = insertedMessage?.id;
+        
+        // Update temp ID to real ID in local state
+        if (dbMessageId) {
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, id: dbMessageId! } : m
+          ));
+        }
+      } catch (dbError) {
+        console.error("[sendMessage] Initial DB insert error:", dbError);
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        toast({
+          title: "Error",
+          description: "Failed to send message",
+          variant: "destructive"
+        });
+        return; // Stop background process if initial insert fails
+      }
+
+      // === STEP 2: TRANSLATE IN BACKGROUND (completely async) ===
       const hasNativeScript = /[^\x00-\x7F]/.test(inputText);
-      const looksLikeEnglish = /\b(the|is|are|was|were|have|has|had|do|does|did|what|when|where|why|how|who|hello|hi|hey|thanks|you|your|me|my|we|i|am|be|and|or|but|not)\b/i.test(inputText.toLowerCase());
-      const isDetectedEnglish = looksLikeEnglish && !hasNativeScript;
+      const looksLikeEnglishWords = /\b(the|is|are|was|were|have|has|had|do|does|did|what|when|where|why|how|who|hello|hi|hey|thanks|you|your|me|my|we|i|am|be|and|or|but|not)\b/i.test(inputText.toLowerCase());
+      const isEnglishInput = looksLikeEnglishWords && !hasNativeScript;
       
-      // Determine source language based on auto-detection
-      const isEnglishInput = isDetectedEnglish && !hasNativeScript;
-      const sourceLanguage = isEnglishInput ? 'english' : (hasNativeScript ? currentUserLanguage : 'english');
-      
-      console.log(`[sendMessage] AUTO-DETECT: isEnglishInput=${isEnglishInput}, hasNativeScript=${hasNativeScript}, sourceLanguage=${sourceLanguage}`);
+      console.log(`[sendMessage] Background translation: isEnglish=${isEnglishInput}, hasNative=${hasNativeScript}`);
       
       try {
-        // === USE BIDIRECTIONAL EDGE FUNCTION FOR RELIABLE TRANSLATION ===
-        // This handles ALL 1000+ language combinations properly with English pivot
-        console.log(`[sendMessage] Using bidirectional translation: ${currentUserLanguage} → ${partnerLanguage}`);
+        // Use bidirectional edge function for translation
+        console.log(`[sendMessage] Bidirectional: ${currentUserLanguage} → ${partnerLanguage}`);
         
-        // Use the bidirectional edge function for best reliability
         const bidirectionalResult = await translateForChatSemantic(
           inputText, 
           currentUserLanguage, 
           partnerLanguage
         );
         
-        // CRITICAL: Use bidirectional results if senderView/receiverView exist
-        // Don't rely only on isTranslated flag (can be false for same-language or edge cases)
         if (bidirectionalResult.senderView || bidirectionalResult.receiverView) {
           senderNativeDisplay = bidirectionalResult.senderView;
           translatedForReceiver = bidirectionalResult.receiverView;
           originalEnglishToStore = bidirectionalResult.englishMeaning;
           
-          // CRITICAL: ALWAYS update messageToStore to sender's native text
-          // Even when typing in English or same language, use senderView
           if (senderNativeDisplay && senderNativeDisplay.trim()) {
             messageToStore = senderNativeDisplay;
-          } else {
-            // Fallback: If senderView is empty, use input
-            messageToStore = inputText;
           }
           
-          // If receiverView is empty, fallback to senderView or input
           if (!translatedForReceiver || !translatedForReceiver.trim()) {
             translatedForReceiver = messageToStore;
           }
           
-          // If English meaning is empty, use input as fallback
           if (!originalEnglishToStore || !originalEnglishToStore.trim()) {
             originalEnglishToStore = inputText;
           }
           
-          console.log(`[sendMessage] Bidirectional success:
-            senderView: "${senderNativeDisplay?.substring(0, 30)}..."
-            receiverView: "${translatedForReceiver?.substring(0, 30)}..."
-            englishCore: "${originalEnglishToStore?.substring(0, 30)}..."
-            messageToStore: "${messageToStore?.substring(0, 30)}..."`);
+          console.log(`[sendMessage] Translation complete:
+            sender: "${senderNativeDisplay?.substring(0, 30)}..."
+            receiver: "${translatedForReceiver?.substring(0, 30)}..."
+            english: "${originalEnglishToStore?.substring(0, 30)}..."`);
           
-          // Update UI with translations
+          // Update local UI with translations
+          const displayId = dbMessageId || tempId;
           setMessages(prev => prev.map(m =>
-            m.id === tempId
+            m.id === displayId
               ? { 
                   ...m, 
                   translatedMessage: senderNativeDisplay || inputText,
@@ -1761,17 +1790,27 @@ const DraggableMiniChatWindow = ({
                 }
               : m
           ));
+          
+          // === STEP 3: UPDATE DATABASE with translations ===
+          if (dbMessageId) {
+            await supabase
+              .from("chat_messages")
+              .update({
+                message: messageToStore || inputText,
+                translated_message: translatedForReceiver || inputText,
+                original_english: originalEnglishToStore || inputText
+              })
+              .eq('id', dbMessageId);
+          }
         } else {
-          // Fallback: Use parallel individual translations
-          console.log('[sendMessage] Bidirectional failed, using fallback parallel translation');
+          // Fallback translations
+          console.log('[sendMessage] Using fallback parallel translation');
           
           const translationPromises: Promise<void>[] = [];
           
           if (isEnglishInput) {
-            // English mode: input is English
             originalEnglishToStore = inputText;
             
-            // Task 1: Translate to sender's native (if not English speaker)
             if (!checkIsEnglish(currentUserLanguage)) {
               if (previewSnapshot && previewSnapshot.trim()) {
                 senderNativeDisplay = previewSnapshot;
@@ -1780,24 +1819,22 @@ const DraggableMiniChatWindow = ({
                 translationPromises.push(
                   translateSemantic(inputText, 'english', currentUserLanguage)
                     .then(result => {
-                      // ALWAYS use sender's native translation for messageToStore
-                      // Even if translation "looks" the same (rare edge case)
                       if (result?.translatedText && result.translatedText.trim()) {
                         senderNativeDisplay = result.translatedText;
                         messageToStore = result.translatedText;
+                        const displayId = dbMessageId || tempId;
                         setMessages(prev => prev.map(m =>
-                          m.id === tempId
+                          m.id === displayId
                             ? { ...m, translatedMessage: result.translatedText, message: result.translatedText, isTranslated: true }
                             : m
                         ));
                       }
                     })
-                    .catch(e => console.warn('[sendMessage] Sender native translation failed:', e))
+                    .catch(e => console.warn('[sendMessage] Sender translation failed:', e))
                 );
               }
             }
             
-            // Task 2: Translate to receiver's language
             if (!checkIsEnglish(partnerLanguage)) {
               translationPromises.push(
                 translateSemantic(inputText, 'english', partnerLanguage)
@@ -1813,30 +1850,28 @@ const DraggableMiniChatWindow = ({
               translatedForReceiver = inputText;
             }
           } else {
-            // Native mode: input is in sender's language
             messageToStore = inputText;
             
-            // Task 1: Generate English meaning
             if (!checkIsEnglish(currentUserLanguage)) {
               translationPromises.push(
                 translateSemantic(inputText, currentUserLanguage, 'english')
                   .then(result => {
                     if (result?.translatedText && result.isTranslated) {
                       originalEnglishToStore = result.translatedText;
+                      const displayId = dbMessageId || tempId;
                       setMessages(prev => prev.map(m =>
-                        m.id === tempId
+                        m.id === displayId
                           ? { ...m, englishMessage: result.translatedText }
                           : m
                       ));
                     }
                   })
-                  .catch(e => console.warn('[sendMessage] English meaning failed:', e))
+                  .catch(e => console.warn('[sendMessage] English failed:', e))
               );
             } else {
               originalEnglishToStore = inputText;
             }
             
-            // Task 2: Translate to receiver's language
             if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
               translationPromises.push(
                 translateSemantic(inputText, currentUserLanguage, partnerLanguage)
@@ -1854,54 +1889,34 @@ const DraggableMiniChatWindow = ({
           }
           
           await Promise.allSettled(translationPromises);
+          
+          // Update DB after fallback translations
+          if (dbMessageId) {
+            await supabase
+              .from("chat_messages")
+              .update({
+                message: messageToStore || inputText,
+                translated_message: translatedForReceiver || inputText,
+                original_english: originalEnglishToStore || inputText
+              })
+              .eq('id', dbMessageId);
+          }
         }
         
-        // Mark translation complete in UI
+        // Mark translation complete
+        const displayId = dbMessageId || tempId;
         setMessages(prev => prev.map(m =>
-          m.id === tempId ? { ...m, isTranslating: false } : m
+          m.id === displayId ? { ...m, isTranslating: false } : m
         ));
         
-      } catch (error) {
-        console.error('[sendMessage] Translation error:', error);
-        // Continue with original text on error
-        messageToStore = inputText;
-        translatedForReceiver = inputText;
-        originalEnglishToStore = inputText;
+      } catch (translationError) {
+        console.error('[sendMessage] Translation error:', translationError);
+        const displayId = dbMessageId || tempId;
         setMessages(prev => prev.map(m =>
-          m.id === tempId ? { ...m, isTranslating: false } : m
+          m.id === displayId ? { ...m, isTranslating: false } : m
         ));
       }
-      
-      // === DATABASE INSERT - runs after translations complete ===
-      try {
-        const { error } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: messageToStore || inputText,
-            translated_message: translatedForReceiver || inputText,
-            original_english: originalEnglishToStore || inputText
-          });
-
-        if (error) throw error;
-      } catch (error) {
-        console.error("[sendMessage] Database error:", error);
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        setNewMessage(inputText);
-        toast({
-          title: "Error",
-          description: "Failed to send message",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    // Run background process without blocking
-    backgroundProcess().finally(() => {
-      setIsSending(false);
-    });
+    })(); // Fire-and-forget IIFE
   };
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -2499,20 +2514,14 @@ const DraggableMiniChatWindow = ({
                 />
               </div>
 
-              {/* Send button */}
-
-              {/* Send button */}
+              {/* Send button - never blocks, fires instantly */}
               <Button
                 size="icon"
                 className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
                 onClick={sendMessage}
-                disabled={!newMessage.trim() || isSending}
+                disabled={!newMessage.trim()}
               >
-                {isSending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
+                <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
