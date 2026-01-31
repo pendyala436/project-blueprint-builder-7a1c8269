@@ -486,6 +486,8 @@ const DraggableMiniChatWindow = ({
   // FULLY ASYNC: Runs in background, NEVER blocks typing
   // Uses AbortController to cancel previous requests when new input arrives
   const generateMeaningPreview = useCallback((inputText: string, inputSource?: string) => {
+    // CRITICAL: This function NEVER blocks - all state updates are synchronous, 
+    // translation happens in background
     if (!inputText.trim()) {
       setMeaningPreview('');
       setIsMeaningLoading(false);
@@ -495,25 +497,28 @@ const DraggableMiniChatWindow = ({
     
     // Skip if same text was already translated (avoid redundant calls)
     if (inputText.trim() === lastTranslatedInputRef.current) {
+      setIsMeaningLoading(false);
       return;
     }
     
-    // Clear previous timeout
+    // Clear previous timeout IMMEDIATELY
     if (meaningPreviewTimeoutRef.current) {
       clearTimeout(meaningPreviewTimeoutRef.current);
+      meaningPreviewTimeoutRef.current = null;
     }
     
-    // Cancel any in-flight translation request
+    // Cancel any in-flight translation request IMMEDIATELY
     if (translationAbortRef.current) {
       translationAbortRef.current.abort();
+      translationAbortRef.current = null;
     }
     
-    // Show loading immediately (doesn't block)
+    // Show loading state (non-blocking visual feedback)
     setIsMeaningLoading(true);
     
-    // Longer debounce to avoid interrupting fast typing
-    // Voice input already has complete phrases, so shorter debounce
-    const debounceTime = inputSource === 'voice' ? 150 : 400;
+    // DEBOUNCE: Wait for typing pause before starting translation
+    // Voice input has complete phrases, so shorter debounce
+    const debounceTime = inputSource === 'voice' ? 100 : 300;
     
     // Debounce: wait for pause in typing before starting translation
     meaningPreviewTimeoutRef.current = setTimeout(() => {
@@ -1531,10 +1536,12 @@ const DraggableMiniChatWindow = ({
   // - Message is sent INSTANTLY without waiting for translation
   // - Translation happens in background and updates are applied asynchronously
   // - Typing is NEVER blocked by translation
+  // - isSending only blocks the SEND BUTTON, not the input field
   const sendMessage = async () => {
     const inputText = rawInput.trim();
     const previewSnapshot = meaningPreview;
     
+    // Only check isSending to prevent double-send, not to block typing
     if (!inputText || isSending) return;
 
     if (inputText.length > MAX_MESSAGE_LENGTH) {
@@ -2400,16 +2407,16 @@ const DraggableMiniChatWindow = ({
                     const inputSource = detectInputSource(newValue, prevValue);
                     setDetectedInputSource(inputSource);
                     
-                    // SYNC ONLY: Update input values immediately (never blocks)
+                    // SYNC ONLY: Update input values immediately (NEVER blocks)
                     setRawInput(newValue);
                     setNewMessage(newValue);
                     
-                    // ASYNC: Schedule preview generation in next frame (never blocks typing)
-                    // Pass input source for optimized handling
-                    setTimeout(() => {
+                    // ASYNC: Schedule preview generation in next microtask (NEVER blocks typing)
+                    // Using requestAnimationFrame for smoother typing experience
+                    requestAnimationFrame(() => {
                       generateMeaningPreview(newValue, inputSource);
                       handleTyping(newValue);
-                    }, 0);
+                    });
                   }}
                   onKeyDown={handleKeyPress}
                   lang="en"
@@ -2420,7 +2427,7 @@ const DraggableMiniChatWindow = ({
                   inputMode="text"
                   enterKeyHint="send"
                   className="h-8 text-xs w-full unicode-text"
-                  disabled={isSending || isUploading}
+                  disabled={isUploading}
                 />
               </div>
 
