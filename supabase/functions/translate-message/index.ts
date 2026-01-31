@@ -410,6 +410,87 @@ async function callDLTranslate(
 }
 
 // ============================================================
+// COMMON PHRASE DICTIONARY - For reliable translations
+// ============================================================
+
+// Cross-language phrase mappings for reliable common expressions
+const PHRASE_TRANSLATIONS: Record<string, Record<string, string>> = {
+  // Telugu phrases
+  'బాగున్నావా': { en: 'How are you?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?', ml: 'സുഖമാണോ?', bn: 'কেমন আছো?' },
+  'బాగున్నాను': { en: "I'm fine", hi: 'मैं ठीक हूं', ta: 'நான் நலமாக இருக்கிறேன்', kn: 'ನಾನು ಚೆನ్ನಾಗಿದ್ದೇನೆ', ml: 'ഞാൻ സുഖമാണ്' },
+  'నమస్తే': { en: 'Hello', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
+  'నమస్కారం': { en: 'Greetings', hi: 'नमस्कार', ta: 'வணக்கம்', kn: 'ನಮಸ్ಕಾರ', ml: 'നമസ്കാരം' },
+  'ధన్యవాదాలు': { en: 'Thank you', hi: 'धन्यवाद', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
+  'సరే': { en: 'Okay', hi: 'ठीक है', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
+  'హలో': { en: 'Hello', hi: 'हैलो', ta: 'ஹலோ', kn: 'ಹಲೋ', ml: 'ഹലോ' },
+  
+  // Hindi phrases  
+  'नमस्ते': { en: 'Hello', te: 'నమస్తే', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
+  'नमस्कार': { en: 'Greetings', te: 'నమస్కారం', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
+  'कैसे हो': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?', ml: 'സുഖമാണോ?' },
+  'क्या हाल है': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', ta: 'எப்படி இருக்கிறாய்?', ur: 'کیا حال ہے' },
+  'मैं ठीक हूं': { en: "I'm fine", te: 'బాగున్నాను', ta: 'நான் நலமாக இருக்கிறேன்', kn: 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ' },
+  'धन्यवाद': { en: 'Thank you', te: 'ధన్యవాదాలు', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
+  'ठीक है': { en: 'Okay', te: 'సరే', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
+  'हैलो': { en: 'Hello', te: 'హలో', ta: 'ஹலோ', kn: 'ಹಲೋ', ml: 'ഹലോ' },
+  
+  // Tamil phrases
+  'வணக்கம்': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
+  'நன்றி': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
+  'எப்படி இருக்கிறாய்': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', kn: 'ಹೇಗಿದ್ದೀಯಾ?', ml: 'സുഖമാണോ?' },
+  'சரி': { en: 'Okay', te: 'సరే', hi: 'ठीक है', kn: 'ಸರಿ', ml: 'ശരി' },
+  
+  // Kannada phrases
+  'ನಮಸ್ಕಾರ': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', ml: 'നമസ്കാരം' },
+  'ಹೇಗಿದ್ದೀಯಾ': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', ml: 'സുഖമാണോ?' },
+  'ಧನ್ಯವಾದ': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', ml: 'നன്ദി' },
+  
+  // Malayalam phrases
+  'നമസ്കാരം': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ' },
+  'സുഖമാണോ': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?' },
+  'നന്ദി': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ' },
+  
+  // Bengali phrases
+  'নমস্কার': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
+  'কেমন আছো': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?' },
+  'ধন্যবাদ': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி' },
+  
+  // Gujarati phrases
+  'નમસ્તે': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
+  'કેમ છો': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?' },
+  
+  // Marathi phrases (नमस्कार is same as Hindi, so skipping to avoid duplicate)
+  'कसे आहात': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?' },
+};
+
+/**
+ * Try to find a direct translation from the phrase dictionary
+ */
+function getPhraseDictionaryTranslation(
+  text: string,
+  targetLanguage: string
+): string | null {
+  const normalizedText = text.trim();
+  const targetCode = getLanguageInfo(targetLanguage)?.code || targetLanguage.substring(0, 2).toLowerCase();
+  
+  // Check if we have this phrase
+  if (PHRASE_TRANSLATIONS[normalizedText]) {
+    const translation = PHRASE_TRANSLATIONS[normalizedText][targetCode];
+    if (translation) {
+      console.log(`[PhraseDictionary] Match: "${normalizedText}" → "${translation}"`);
+      return translation;
+    }
+    // Try English as fallback
+    const englishTranslation = PHRASE_TRANSLATIONS[normalizedText]['en'];
+    if (englishTranslation && isEnglishLanguage(targetLanguage)) {
+      return englishTranslation;
+    }
+  }
+  
+  return null;
+}
+
+// ============================================================
 // TRANSLATION ROUTING LOGIC
 // ============================================================
 
@@ -432,6 +513,12 @@ async function translateText(
   // Same language check
   if (isSameLanguage(sourceLanguage, targetLanguage)) {
     return { translatedText: text, success: true, pivotUsed: false };
+  }
+  
+  // Try phrase dictionary first for reliable common expressions
+  const dictTranslation = getPhraseDictionaryTranslation(text, targetLanguage);
+  if (dictTranslation) {
+    return { translatedText: dictTranslation, success: true, pivotUsed: false };
   }
   
   const srcIsEnglish = isEnglishLanguage(sourceLanguage);
@@ -478,34 +565,104 @@ async function translateText(
 }
 
 /**
- * Transliterate Latin input to native script
- * Uses English as intermediate: Latin → English → Native
+ * Transliterate Latin/Romanized input to native script
+ * 
+ * APPROACH: Try multiple strategies for romanized → native conversion:
+ * 1. Direct transliteration request (if model supports)
+ * 2. Try treating as same-language romanized (within-language conversion)
+ * 3. Fallback: Use translation English → Target and hope for phonetic match
+ * 
+ * Note: For proper transliteration of Indian languages, a dedicated
+ * IndicXlit service would be ideal. This is a best-effort approach.
  */
 async function transliterateToNative(
   latinText: string,
   targetLanguage: string
-): Promise<{ text: string; success: boolean }> {
+): Promise<{ text: string; success: boolean; wasTransliterated: boolean }> {
   
   if (isEnglishLanguage(targetLanguage)) {
-    return { text: latinText, success: false };
+    return { text: latinText, success: false, wasTransliterated: false };
   }
   
-  console.log(`[Transliterate] "${latinText.substring(0, 30)}..." → ${targetLanguage}`);
+  console.log(`[Transliterate] Attempting: "${latinText.substring(0, 30)}..." → ${targetLanguage}`);
   
-  // Translate English → Native to get native script
+  // Common romanized patterns for Indian languages
+  const commonPhrases: Record<string, Record<string, string>> = {
+    // Telugu common phrases
+    'bagunnava': { te: 'బాగున్నావా', hi: 'ठीक हो', ta: 'நல்லா இருக்கியா', kn: 'ಚೆನ್ನಾಗಿದ್ದೀಯಾ', ml: 'സുഖമാണോ' },
+    'bagunnanu': { te: 'బాగున్నాను', hi: 'ठीक हूं', ta: 'நல்லா இருக்கேன்', kn: 'ಚೆನ್ನಾಗಿದ್ದೇನೆ', ml: 'സുഖമാണ്' },
+    'namaste': { te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার', gu: 'નમસ્તે', mr: 'नमस्कार' },
+    'namaskaram': { te: 'నమస్కారం', hi: 'नमस्कार', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
+    'vanakkam': { ta: 'வணக்கம்', te: 'వణక్కం', hi: 'नमस्ते', kn: 'ವಣಕ್ಕಂ', ml: 'വണക്കം' },
+    'kaise ho': { hi: 'कैसे हो', te: 'ఎలా ఉన్నావ్', ta: 'எப்படி இருக்கிறாய்', bn: 'কেমন আছো' },
+    'kya hal hai': { hi: 'क्या हाल है', ur: 'کیا حال ہے', te: 'ఏమిటి పరిస్థితి' },
+    'dhanyavaad': { hi: 'धन्यवाद', te: 'ధన్యవాదాలు', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
+    'nandri': { ta: 'நன்றி', te: 'కృతజ్ఞతలు', hi: 'धन्यवाद', ml: 'നന്ദി' },
+    'enna peru': { ta: 'என்ன பேரு', te: 'నీ పేరేంటి', ml: 'എന്താണ് പേര്' },
+    'nee peru enti': { te: 'నీ పేరేంటి', ta: 'உன் பேரு என்ன', hi: 'तुम्हारा नाम क्या है' },
+    'hello': { te: 'హలో', hi: 'हैलो', ta: 'ஹலோ', kn: 'ಹಲೋ', ml: 'ഹലോ', bn: 'হ্যালো' },
+    'bye': { te: 'బై', hi: 'बाय', ta: 'பை', kn: 'ಬೈ', ml: 'ബൈ' },
+    'ok': { te: 'ఓకే', hi: 'ठीक', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
+    'sari': { te: 'సరే', hi: 'ठीक', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
+    'haan': { hi: 'हाँ', te: 'అవును', ta: 'ஆம்', ur: 'ہاں' },
+    'nahi': { hi: 'नहीं', te: 'లేదు', ta: 'இல்லை', ur: 'نہیں' },
+    'accha': { hi: 'अच्छा', te: 'మంచిది', ta: 'சரி', ur: 'اچھا' },
+    'theek hai': { hi: 'ठीक है', te: 'సరే', ta: 'சரி' },
+    'chalo': { hi: 'चलो', te: 'పదా', ta: 'போகலாம்' },
+    'aur': { hi: 'और', te: 'మరియు', ta: 'மற்றும்' },
+    'bhai': { hi: 'भाई', te: 'భాయి', ta: 'தம்பி' },
+    'didi': { hi: 'दीदी', te: 'అక్క', ta: 'அக்கா' },
+    'pyaar': { hi: 'प्यार', te: 'ప్రేమ', ta: 'காதல்', ur: 'پیار' },
+    'dost': { hi: 'दोस्त', te: 'స్నేహితుడు', ta: 'நண்பன்', ur: 'دوست' },
+    'paisa': { hi: 'पैसा', te: 'డబ్బు', ta: 'பணம்' },
+  };
+  
+  // Check for exact match in phrase dictionary
+  const normalizedInput = latinText.toLowerCase().trim();
+  const langCode = getLanguageInfo(targetLanguage)?.code || targetLanguage.substring(0, 2).toLowerCase();
+  
+  if (commonPhrases[normalizedInput] && commonPhrases[normalizedInput][langCode]) {
+    const nativeText = commonPhrases[normalizedInput][langCode];
+    console.log(`[Transliterate] Dictionary match: "${latinText}" → "${nativeText}"`);
+    return { text: nativeText, success: true, wasTransliterated: true };
+  }
+  
+  // Strategy 1: Try direct translation (English → Target)
+  // DL-Translate might infer meaning from romanized text
   const result = await callDLTranslate(latinText, 'english', targetLanguage);
   
   if (result.success && result.translatedText !== latinText) {
-    // Verify result contains non-Latin characters
     const hasNonLatin = /[^\x00-\x7F]/.test(result.translatedText);
-    if (hasNonLatin || !isNonLatinLanguage(targetLanguage)) {
-      console.log(`[Transliterate] Success: "${result.translatedText.substring(0, 30)}..."`);
-      return { text: result.translatedText, success: true };
+    if (hasNonLatin) {
+      console.log(`[Transliterate] DL-Translate success: "${result.translatedText.substring(0, 30)}..."`);
+      return { text: result.translatedText, success: true, wasTransliterated: true };
     }
   }
   
-  console.log(`[Transliterate] Failed, keeping original`);
-  return { text: latinText, success: false };
+  // Strategy 2: For known script languages, try treating romanized as phonetic hint
+  // Some models might understand "bagunnava" as phonetic Telugu
+  if (isNonLatinLanguage(targetLanguage)) {
+    // Try with a prompt-like format that might help the model
+    const phoneticHint = `Transliterate to ${getDLTranslateName(targetLanguage)}: ${latinText}`;
+    const hintResult = await callDLTranslate(phoneticHint, 'english', targetLanguage);
+    
+    if (hintResult.success && hintResult.translatedText !== phoneticHint) {
+      const hasNonLatin = /[^\x00-\x7F]/.test(hintResult.translatedText);
+      if (hasNonLatin && hintResult.translatedText !== latinText) {
+        // Extract just the native script part (remove any echoed prompt)
+        const cleanResult = hintResult.translatedText
+          .replace(/transliterate|to|telugu|hindi|tamil/gi, '')
+          .trim();
+        if (cleanResult && /[^\x00-\x7F]/.test(cleanResult)) {
+          console.log(`[Transliterate] Hint method success: "${cleanResult.substring(0, 30)}..."`);
+          return { text: cleanResult, success: true, wasTransliterated: true };
+        }
+      }
+    }
+  }
+  
+  console.log(`[Transliterate] All methods failed, keeping original: "${latinText}"`);
+  return { text: latinText, success: false, wasTransliterated: false };
 }
 
 // ============================================================
