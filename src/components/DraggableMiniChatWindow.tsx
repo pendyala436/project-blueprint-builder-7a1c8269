@@ -1626,16 +1626,17 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // Content moderation - quick sync check
+    // Content moderation - sync check (import is cached after first use)
     const { moderateMessage } = await import('@/lib/content-moderation');
     const moderationResult = moderateMessage(inputText);
     if (moderationResult.isBlocked) {
+      // Re-enable send for retry
+      sendingRef.current = false;
       toast({
         title: "Message Blocked",
         description: moderationResult.reason,
         variant: "destructive"
       });
-      sendingRef.current = false;
       return;
     }
 
