@@ -899,14 +899,18 @@ serve(async (req) => {
       
       // ===================================
       // STEP 2: Translate to receiver's language
+      // CRITICAL FIX: Use English core as pivot to ensure accurate translation
+      // The receiver should ALWAYS see their native script, never English or Latin
+      // (unless English IS their native language)
+      // 
       // ROUTING:
-      // - Native→Native: DIRECT
-      // - Native→Latin: DIRECT
-      // - Latin→Native: DIRECT
-      // - Latin→Latin (non-English): ENGLISH PIVOT
-      // - English involved: DIRECT
+      // - Same language: Use senderNativeText directly
+      // - Receiver is English: Use englishCore
+      // - Otherwise: Translate ENGLISH CORE to receiver's native language
+      //   This avoids mixed-script translation issues
       // ===================================
       let receiverText = inputText;
+      const receiverIsNonLatin = isNonLatinLanguage(langB);
       
       if (sameLanguage) {
         receiverText = senderNativeText;
@@ -916,21 +920,42 @@ serve(async (req) => {
         receiverText = englishCore;
         console.log(`[bidirectional] Receiver is English speaker, using English core`);
         
-      } else if (senderIsEnglish) {
-        // English → Receiver's language (DIRECT)
-        const result = await translateText(inputText, 'english', langB);
-        if (result.success) {
-          receiverText = result.translatedText;
-        }
-        console.log(`[bidirectional] DIRECT: English → ${langB}`);
-        
       } else {
-        // Use translateText which handles routing automatically
-        const result = await translateText(senderNativeText || inputText, langA, langB);
-        if (result.success) {
-          receiverText = result.translatedText;
+        // CRITICAL: Use English core as the source for translation to receiver's language
+        // This ensures:
+        // 1. No mixed-script issues (e.g., "Telugu మా గర్వ" → wrong translation)
+        // 2. Receiver ALWAYS sees their native script (Malayalam script, not English)
+        // 3. Clean, accurate semantic translation
+        
+        const sourceForReceiver = englishCore || normalizedInput;
+        console.log(`[bidirectional] Translating to receiver: "${sourceForReceiver.substring(0, 30)}..." → ${langB}`);
+        
+        const result = await translateText(sourceForReceiver, 'english', langB);
+        if (result.success && result.translatedText !== sourceForReceiver) {
+          // Verify we got native script for non-Latin receiver
+          const hasNativeScript = /[^\x00-\x7F]/.test(result.translatedText);
+          if (receiverIsNonLatin && !hasNativeScript) {
+            // Translation returned Latin/English - try direct translation from sender's native
+            console.log(`[bidirectional] English→${langB} returned Latin, trying direct translation`);
+            const directResult = await translateText(senderNativeText, langA, langB);
+            if (directResult.success && /[^\x00-\x7F]/.test(directResult.translatedText)) {
+              receiverText = directResult.translatedText;
+            } else {
+              // Last resort: use what we got, but this shouldn't happen
+              receiverText = result.translatedText;
+            }
+          } else {
+            receiverText = result.translatedText;
+          }
+        } else {
+          // Fallback: try direct translation
+          console.log(`[bidirectional] English translation failed, trying direct ${langA}→${langB}`);
+          const directResult = await translateText(senderNativeText || normalizedInput, langA, langB);
+          if (directResult.success) {
+            receiverText = directResult.translatedText;
+          }
         }
-        console.log(`[bidirectional] ${langA} → ${langB}, pivot=${result.pivotUsed}`);
+        console.log(`[bidirectional] Final receiverText: "${receiverText.substring(0, 40)}..."`);
       }
       
       const cleanSenderView = cleanTextOutput(senderNativeText);
