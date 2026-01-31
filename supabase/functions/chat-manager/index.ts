@@ -132,7 +132,7 @@ interface ChatRequest {
 }
 
 // Helper to verify authenticated user and extract user ID from JWT
-async function verifyAuthAndGetUser(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
+async function verifyAuthAndGetUser(req: Request): Promise<{ isValid: boolean; error?: string; userId?: string }> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { isValid: false, error: 'Missing or invalid Authorization header' };
@@ -140,8 +140,17 @@ async function verifyAuthAndGetUser(req: Request, supabase: any): Promise<{ isVa
 
   const token = authHeader.replace('Bearer ', '');
   
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  // Create a client with the user's auth header for proper JWT validation
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+  
+  // CRITICAL: Pass token explicitly for proper validation with verify_jwt=false
+  const { data: { user }, error } = await authClient.auth.getUser(token);
   if (error || !user) {
+    console.log(`[AUTH] Token validation failed: ${error?.message || 'No user returned'}`);
     return { isValid: false, error: 'Invalid or expired token' };
   }
 
@@ -159,7 +168,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // SECURITY: Verify caller is authenticated
-    const authResult = await verifyAuthAndGetUser(req, supabase);
+    const authResult = await verifyAuthAndGetUser(req);
     if (!authResult.isValid) {
       console.log(`[SECURITY] Unauthorized access to chat-manager: ${authResult.error}`);
       return new Response(
