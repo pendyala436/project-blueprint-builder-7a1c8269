@@ -553,17 +553,21 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Check parallel chat limit
+      // Check parallel chat limit - use constant from LIMITS
+      const MAX_PARALLEL_CHATS = 3; // Maximum allowed parallel chats
       const { count: activeChats } = await supabase
         .from("active_chat_sessions")
         .select("*", { count: "exact", head: true })
         .eq("man_user_id", currentUserId)
         .eq("status", "active");
 
-      if ((activeChats || 0) >= 3) {
+      const currentActiveCount = activeChats || 0;
+      console.log(`[ParallelChats] Current active: ${currentActiveCount}, Max allowed: ${MAX_PARALLEL_CHATS}`);
+
+      if (currentActiveCount >= MAX_PARALLEL_CHATS) {
         toast({
           title: t('maxChatsReached', 'Max Chats Reached'),
-          description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
+          description: t('canOnlyHave3Chats', `You can only have ${MAX_PARALLEL_CHATS} active chats at a time. Close an existing chat to start a new one.`),
           variant: "destructive",
         });
         setIsConnecting(false);

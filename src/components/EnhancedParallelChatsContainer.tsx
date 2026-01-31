@@ -232,52 +232,7 @@ const EnhancedParallelChatsContainer = ({
     };
   }, [currentUserId, userGender, loadActiveChats, debouncedLoadChats]);
 
-  // Handle accepting incoming chat - check for duplicate partner
-  const handleAcceptChat = useCallback((sessionId: string) => {
-    // Find the incoming chat to get partner ID
-    const incomingChat = incomingChats.find(ic => ic.sessionId === sessionId);
-    
-    if (incomingChat) {
-      // CRITICAL: Check if we already have a chat with this partner
-      if (existingPartnersRef.current.has(incomingChat.partnerId)) {
-        toast({
-          title: "Chat Already Active",
-          description: `You already have an active chat with ${incomingChat.partnerName}`,
-          variant: "destructive"
-        });
-        rejectChat(sessionId);
-        return;
-      }
-    }
-    
-    acceptedSessionsRef.current.add(sessionId);
-    acceptChat(sessionId);
-    
-    // Check if we need to remove old chats to stay within limit
-    if (activeChats.length >= maxParallelChats) {
-      // Find oldest chat to close
-      const oldestChat = activeChats[activeChats.length - 1];
-      if (oldestChat) {
-        handleCloseChat(oldestChat.chatId, oldestChat.id, true);
-        toast({
-          title: "Chat Limit Reached",
-          description: `Closed oldest chat to accept new one`,
-        });
-      }
-    }
-    
-    loadActiveChats();
-  }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast]);
-
-  // Handle rejecting incoming chat - trigger fallback search
-  const handleRejectChat = useCallback(async (sessionId: string) => {
-    await rejectChat(sessionId);
-    
-    // For men: the system will automatically try to find another match
-    // This is handled by the chat-manager edge function
-  }, [rejectChat]);
-
-  // Handle closing a chat
+  // Handle closing a chat - defined first so it can be used by handleAcceptChat
   const handleCloseChat = useCallback(async (chatId: string, sessionId?: string, silent = false) => {
     try {
       if (sessionId) {
@@ -307,6 +262,54 @@ const EnhancedParallelChatsContainer = ({
       console.error("Error closing chat:", error);
     }
   }, [userGender, loadActiveChats, activeChats]);
+
+  // Handle accepting incoming chat - check for duplicate partner
+  const handleAcceptChat = useCallback((sessionId: string) => {
+    // Find the incoming chat to get partner ID
+    const incomingChat = incomingChats.find(ic => ic.sessionId === sessionId);
+    
+    if (incomingChat) {
+      // CRITICAL: Check if we already have a chat with this partner
+      if (existingPartnersRef.current.has(incomingChat.partnerId)) {
+        toast({
+          title: "Chat Already Active",
+          description: `You already have an active chat with ${incomingChat.partnerName}`,
+          variant: "destructive"
+        });
+        rejectChat(sessionId);
+        return;
+      }
+    }
+    
+    acceptedSessionsRef.current.add(sessionId);
+    acceptChat(sessionId);
+    
+    // PARALLEL CHAT LIMIT: Allow up to maxParallelChats (user preference, max 3)
+    // If at limit, auto-close oldest to make room for new
+    console.log(`[ParallelChats] Accepting chat. Active: ${activeChats.length}, Max: ${maxParallelChats}`);
+    
+    if (activeChats.length >= maxParallelChats) {
+      // Find oldest chat to close (last in array since sorted by created_at desc)
+      const oldestChat = activeChats[activeChats.length - 1];
+      if (oldestChat) {
+        handleCloseChat(oldestChat.chatId, oldestChat.id, true);
+        toast({
+          title: "Chat Limit Reached",
+          description: `Closed oldest chat to accept new one (max ${maxParallelChats} parallel chats)`,
+        });
+      }
+    }
+    
+    loadActiveChats();
+  }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat]);
+
+  // Handle rejecting incoming chat - trigger fallback search
+  const handleRejectChat = useCallback(async (sessionId: string) => {
+    await rejectChat(sessionId);
+    
+    // For men: the system will automatically try to find another match
+    // This is handled by the chat-manager edge function
+  }, [rejectChat]);
 
   // Handle focusing a chat window (bring to front)
   const handleFocusChat = useCallback((chatId: string) => {
