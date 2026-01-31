@@ -335,7 +335,7 @@ const DraggableMiniChatWindow = ({
   const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
   const [meaningPreview, setMeaningPreview] = useState<string>(''); // Mother tongue preview
   const [isMeaningLoading, setIsMeaningLoading] = useState(false);
-  const [detectedInputSource, setDetectedInputSource] = useState<'gboard' | 'voice' | 'keyboard' | 'mixed'>('keyboard');
+  const [detectedInputSource, setDetectedInputSource] = useState<'gboard' | 'voice' | 'keyboard' | 'mixed' | 'native'>('keyboard');
   const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -440,31 +440,46 @@ const DraggableMiniChatWindow = ({
     clearTypingBroadcast();
   }, [clearTypingBroadcast]);
 
+  // ============================================================
+  // UNIVERSAL INPUT DETECTION - All 12 typing methods supported
+  // 1. Pure English, 2. Native script, 3. Transliteration (Romanized)
+  // 4. Mixed/code-mixed, 5. Gboard/phonetic, 6. Keyboard layout
+  // 7. Virtual keyboard, 8. Font-based (legacy), 9. Voice single
+  // 10. Voice mixed, 11. AI-predictive, 12. Accessibility
+  // ============================================================
+
   // Detect input source type for better handling
-  const detectInputSource = useCallback((text: string, prevText: string): 'gboard' | 'voice' | 'keyboard' | 'mixed' => {
+  const detectInputSource = useCallback((text: string, prevText: string): 'gboard' | 'voice' | 'keyboard' | 'mixed' | 'native' => {
     if (!text) return 'keyboard';
     
     const newChars = text.slice(prevText.length);
     const hasNonLatin = /[^\x00-\x7F]/.test(newChars);
+    const hasLatinNew = /[a-zA-Z]/.test(newChars);
     const burstSize = newChars.length;
     
-    // Voice-to-text typically adds many characters at once (phrases/sentences)
-    if (burstSize > 15 && text.includes(' ')) {
+    // Voice-to-text: Large burst with spaces (phrases/sentences)
+    if (burstSize > 12 && text.includes(' ')) {
       console.log('[InputDetect] Voice-to-text detected (burst:', burstSize, ')');
       return 'voice';
     }
     
-    // Gboard/IME: Native script input with moderate burst
+    // Native script input (Gboard, IME, virtual keyboard, keyboard layout)
+    if (hasNonLatin && !hasLatinNew && burstSize >= 1) {
+      console.log('[InputDetect] Native script detected (Gboard/IME/INSCRIPT)');
+      return 'native';
+    }
+    
+    // Gboard transliteration (Latin typed, native produced)
     if (hasNonLatin && burstSize >= 1) {
-      console.log('[InputDetect] Gboard/IME detected (native script)');
+      console.log('[InputDetect] Gboard transliteration detected');
       return 'gboard';
     }
     
-    // Mixed mode: Text contains both Latin and non-Latin
-    const hasLatin = /[a-zA-Z]/.test(text);
+    // Mixed mode: Both Latin and non-Latin in the full text
+    const hasLatinTotal = /[a-zA-Z]/.test(text);
     const hasNonLatinTotal = /[^\x00-\x7F]/.test(text);
-    if (hasLatin && hasNonLatinTotal) {
-      console.log('[InputDetect] Mixed mode detected');
+    if (hasLatinTotal && hasNonLatinTotal) {
+      console.log('[InputDetect] Mixed/code-mixed mode detected');
       return 'mixed';
     }
     
