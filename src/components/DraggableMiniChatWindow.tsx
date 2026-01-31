@@ -1333,6 +1333,7 @@ const DraggableMiniChatWindow = ({
   //   - message: sender's mother tongue text (senderView)
   //   - translated_message: receiver's mother tongue text (receiverView)
   //   - original_english: English semantic meaning (englishCore)
+  // ALL TRANSLATIONS RUN IN BACKGROUND - NEVER BLOCKS UI
   const loadMessages = async () => {
     console.log('[DraggableMiniChatWindow] loadMessages called');
     
@@ -1344,26 +1345,16 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // BIDIRECTIONAL: Each user sees messages in THEIR mother tongue
+      // IMMEDIATE: Show messages right away with available data
       const immediateMessages = data.map((m) => {
         const isSentByMe = m.sender_id === currentUserId;
         const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
         
         // CRITICAL: Determine display based on viewer's role
-        // When I SENT this message:
-        //   - message = MY mother tongue (what I see)
-        //   - translated_message = PARTNER's mother tongue (what they see)
-        // When PARTNER SENT this message:
-        //   - message = PARTNER's mother tongue (what they see)
-        //   - translated_message = MY mother tongue (what I see)
-        
         let displayMessage: string;
         if (isSentByMe) {
-          // I'm the SENDER - show message (MY mother tongue)
           displayMessage = m.message;
         } else {
-          // I'm the RECEIVER - show translated_message (MY mother tongue)
-          // Fallback to message if no translation
           displayMessage = hasReceiverTranslation ? m.translated_message : m.message;
         }
         
@@ -1371,27 +1362,64 @@ const DraggableMiniChatWindow = ({
           id: m.id,
           senderId: m.sender_id,
           message: m.message,
-          translatedMessage: displayMessage, // This is what gets displayed
-          englishMessage: m.original_english || undefined, // English meaning always shown
+          translatedMessage: displayMessage,
+          englishMessage: m.original_english || undefined,
           latinMessage: undefined,
           isTranslated: !isSentByMe && hasReceiverTranslation,
-          isTranslating: false,
+          isTranslating: !isSentByMe && !hasReceiverTranslation, // Mark if needs translation
           createdAt: m.created_at
         };
       });
       setMessages(immediateMessages);
 
-      // Generate Latin transliteration for non-Latin display text
+      // ASYNC BACKGROUND: Process translations for messages that need them
       data.forEach((m) => {
         const isSentByMe = m.sender_id === currentUserId;
+        const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
         const displayText = isSentByMe 
           ? m.message 
           : (m.translated_message || m.message);
         
+        // Background: Translate partner messages that don't have translations
+        if (!isSentByMe && !hasReceiverTranslation) {
+          (async () => {
+            try {
+              const result = await translateForChatSemantic(
+                m.message,
+                partnerLanguage,
+                currentUserLanguage
+              );
+              
+              if (result.receiverView || result.englishMeaning) {
+                setMessages(prev => prev.map(msg => 
+                  msg.id === m.id 
+                    ? { 
+                        ...msg, 
+                        translatedMessage: result.receiverView || msg.translatedMessage,
+                        englishMessage: result.englishMeaning || msg.englishMessage,
+                        isTranslated: true,
+                        isTranslating: false 
+                      } 
+                    : msg
+                ));
+              } else {
+                setMessages(prev => prev.map(msg => 
+                  msg.id === m.id ? { ...msg, isTranslating: false } : msg
+                ));
+              }
+            } catch (error) {
+              console.warn('[loadMessages] Background translation failed:', error);
+              setMessages(prev => prev.map(msg => 
+                msg.id === m.id ? { ...msg, isTranslating: false } : msg
+              ));
+            }
+          })();
+        }
+        
+        // Background: Generate Latin transliteration for non-Latin scripts
         const hasNonLatin = /[^\x00-\x7F]/.test(displayText);
         if (hasNonLatin) {
           import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
-            // Use current user's language for transliteration since displayText is in their language
             const latinText = reverseTransliterate(displayText, currentUserLanguage);
             if (latinText && latinText !== displayText) {
               setMessages(prev => prev.map(msg => 
@@ -1405,6 +1433,7 @@ const DraggableMiniChatWindow = ({
   };
 
   // BIDIRECTIONAL: Subscribe to new messages with correct mother tongue views
+  // ALL TRANSLATIONS RUN IN BACKGROUND - NEVER BLOCKS UI
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -1439,10 +1468,11 @@ const DraggableMiniChatWindow = ({
             englishMessage: m.original_english || undefined,
             latinMessage: undefined,
             isTranslated: !isSentByMe && hasReceiverTranslation,
-            isTranslating: false,
+            isTranslating: !isSentByMe && !hasReceiverTranslation, // Mark as translating if no translation yet
             createdAt: m.created_at
           };
           
+          // IMMEDIATE: Add message to UI right away
           setMessages(prev => {
             // Remove temp messages for same sender
             const filtered = prev.filter(msg => 
@@ -1455,9 +1485,47 @@ const DraggableMiniChatWindow = ({
           if (!isSentByMe) {
             setUnreadCount(prev => prev + (isMinimized ? 1 : 0));
             setLastActivityTime(Date.now());
+            
+            // ASYNC BACKGROUND: If partner's message has no translation, translate now
+            if (!hasReceiverTranslation) {
+              // Run translation in background - NEVER blocks
+              (async () => {
+                try {
+                  const result = await translateForChatSemantic(
+                    m.message,
+                    partnerLanguage,
+                    currentUserLanguage
+                  );
+                  
+                  if (result.receiverView || result.englishMeaning) {
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === m.id 
+                        ? { 
+                            ...msg, 
+                            translatedMessage: result.receiverView || msg.translatedMessage,
+                            englishMessage: result.englishMeaning || msg.englishMessage,
+                            isTranslated: true,
+                            isTranslating: false 
+                          } 
+                        : msg
+                    ));
+                  } else {
+                    // Mark as done even if translation failed
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === m.id ? { ...msg, isTranslating: false } : msg
+                    ));
+                  }
+                } catch (error) {
+                  console.warn('[subscribeToMessages] Background translation failed:', error);
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === m.id ? { ...msg, isTranslating: false } : msg
+                  ));
+                }
+              })();
+            }
           }
           
-          // Generate Latin transliteration for non-Latin text
+          // ASYNC BACKGROUND: Generate Latin transliteration for non-Latin text
           const hasNonLatin = /[^\x00-\x7F]/.test(displayMessage);
           if (hasNonLatin) {
             import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
