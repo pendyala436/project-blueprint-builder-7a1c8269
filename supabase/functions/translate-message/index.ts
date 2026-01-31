@@ -238,6 +238,7 @@ function detectScriptFromText(text: string): { isLatin: boolean; script: string;
 
 /**
  * Check if text looks like actual English (vs romanized native)
+ * Enhanced detection for all 12 input methods
  */
 function looksLikeEnglish(text: string): boolean {
   const lowered = text.toLowerCase().trim();
@@ -245,24 +246,102 @@ function looksLikeEnglish(text: string): boolean {
     'hello', 'hi', 'how', 'are', 'you', 'what', 'where', 'when', 'why', 'who',
     'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with', 'good', 'morning',
     'yes', 'no', 'ok', 'okay', 'thank', 'thanks', 'please', 'sorry', 'bye',
-    'love', 'like', 'want', 'need', 'can', 'will', 'have', 'do', 'did',
-    'my', 'your', 'our', 'their', 'his', 'her', 'this', 'that',
-    'and', 'or', 'but', 'if', 'because', 'so', 'very', 'really', 'just'
+    'love', 'like', 'want', 'need', 'can', 'will', 'have', 'do', 'did', 'does',
+    'my', 'your', 'our', 'their', 'his', 'her', 'its', 'this', 'that',
+    'and', 'or', 'but', 'if', 'because', 'so', 'very', 'really', 'just',
+    'i', 'me', 'we', 'us', 'it', 'they', 'she', 'he', 'be', 'am', 'was', 'were',
+    'been', 'being', 'get', 'got', 'go', 'going', 'went', 'come', 'came',
+    'know', 'think', 'see', 'say', 'said', 'tell', 'told', 'give', 'gave',
+    'take', 'took', 'make', 'made', 'find', 'found', 'work', 'day', 'time',
+    'new', 'old', 'first', 'last', 'long', 'great', 'little', 'own', 'other',
+    'right', 'wrong', 'same', 'different', 'many', 'much', 'some', 'any',
+    'hey', 'yeah', 'nope', 'sure', 'maybe', 'probably', 'definitely', 'actually'
   ];
   
-  const words = lowered.split(/\s+/);
-  const englishWordCount = words.filter(w => englishWords.includes(w)).length;
+  const words = lowered.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return true;
   
-  return words.length > 0 && (englishWordCount / words.length) >= 0.3;
+  // Clean punctuation from words for matching
+  const cleanedWords = words.map(w => w.replace(/[^\w]/g, ''));
+  const englishWordCount = cleanedWords.filter(w => englishWords.includes(w)).length;
+  
+  return (englishWordCount / words.length) >= 0.3;
 }
 
 /**
- * Clean text output (remove artifacts)
+ * Detect input method type for better processing
+ * Handles all 12 input methods
+ */
+type InputMethodType = 
+  | 'pure-english'
+  | 'native-script'
+  | 'transliteration'
+  | 'mixed-code'
+  | 'voice-text';
+
+function detectInputMethod(text: string, senderLang: string): InputMethodType {
+  if (!text) return 'pure-english';
+  
+  const hasNative = /[^\x00-\x7F]/.test(text);
+  const hasLatin = /[a-zA-Z]/.test(text);
+  const wordCount = text.split(/\s+/).length;
+  
+  // Pure native script (Gboard, IME, virtual keyboard, keyboard layout)
+  if (hasNative && !hasLatin) {
+    return 'native-script';
+  }
+  
+  // Mixed content (code-mixed typing, voice-to-text mixed)
+  if (hasNative && hasLatin) {
+    return 'mixed-code';
+  }
+  
+  // Pure Latin - could be English or romanized
+  if (hasLatin && !hasNative) {
+    // Check if it looks like English
+    if (looksLikeEnglish(text)) {
+      // Voice-to-text detection: long phrases with spaces
+      if (wordCount > 8) {
+        return 'voice-text';
+      }
+      return 'pure-english';
+    }
+    
+    // Romanized native text (transliteration needed)
+    return 'transliteration';
+  }
+  
+  return 'pure-english';
+}
+
+/**
+ * Clean and normalize text output
+ * Handles Unicode normalization and artifact removal
  */
 function cleanTextOutput(text: string): string {
   if (!text) return '';
   return text
+    // Normalize Unicode (NFC form)
+    .normalize('NFC')
+    // Remove HTML/XML tags
     .replace(/<[^>]*>/g, '')
+    // Remove zero-width characters (except ZWJ/ZWNJ for script rendering)
+    .replace(/[\u200B\uFEFF]/g, '')
+    // Normalize whitespace
+    .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    // Collapse multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Normalize Unicode text before processing
+ */
+function normalizeInputText(text: string): string {
+  if (!text) return '';
+  return text
+    .normalize('NFC')
+    .replace(/[\u200B\uFEFF]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -460,52 +539,107 @@ serve(async (req) => {
 
     // ================================================================
     // MODE: bidirectional - Chat translation for both sender and receiver
+    // Handles ALL 12 input methods with fire-and-forget architecture
     // ================================================================
     if (mode === "bidirectional") {
       const langA = effectiveSourceParam || "english";
       const langB = effectiveTargetParam || "english";
       
-      console.log(`[bidirectional] sender=${langA}, receiver=${langB}`);
+      // Normalize input first
+      const normalizedInput = normalizeInputText(inputText);
       
-      const inputDetected = detectScriptFromText(inputText);
+      // Detect input method for better processing
+      const inputMethod = detectInputMethod(normalizedInput, langA);
+      const inputDetected = detectScriptFromText(normalizedInput);
       const inputIsLatin = inputDetected.isLatin;
       const senderIsNonLatin = isNonLatinLanguage(langA);
       const senderIsEnglish = isEnglishLanguage(langA);
       const receiverIsEnglish = isEnglishLanguage(langB);
       const sameLanguage = isSameLanguage(langA, langB);
       
+      console.log(`[bidirectional] sender=${langA}, receiver=${langB}, inputMethod=${inputMethod}`);
+      
       // ===================================
-      // STEP 1: Process sender's input
+      // STEP 1: Process sender's input based on input method
+      // Handles: pure-english, native-script, transliteration, mixed-code, voice-text
       // ===================================
-      let englishCore = inputText;
-      let senderNativeText = inputText;
+      let englishCore = normalizedInput;
+      let senderNativeText = normalizedInput;
       
       if (senderIsEnglish) {
-        // Sender speaks English
-        englishCore = inputText;
-        senderNativeText = inputText;
+        // Sender speaks English - all Latin input is English
+        englishCore = normalizedInput;
+        senderNativeText = normalizedInput;
         console.log(`[bidirectional] Sender is English speaker`);
         
+      } else if (inputMethod === 'native-script') {
+        // Native script input (Gboard, IME, keyboard layout, virtual keyboard)
+        // Already in native script - just get English meaning
+        senderNativeText = normalizedInput;
+        console.log(`[bidirectional] Native script input detected`);
+        
+        const toEnglish = await translateText(normalizedInput, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== normalizedInput) {
+          englishCore = toEnglish.translatedText;
+        }
+        
+      } else if (inputMethod === 'mixed-code') {
+        // Mixed/code-mixed input (native + Latin together)
+        // Try to preserve meaning while translating
+        console.log(`[bidirectional] Mixed code input detected`);
+        
+        senderNativeText = normalizedInput;
+        const toEnglish = await translateText(normalizedInput, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== normalizedInput) {
+          englishCore = toEnglish.translatedText;
+        }
+        
+      } else if (inputMethod === 'transliteration' && senderIsNonLatin) {
+        // Romanized native text - needs transliteration to native + English meaning
+        console.log(`[bidirectional] Romanized/transliteration input detected`);
+        
+        const translitResult = await transliterateToNative(normalizedInput, langA);
+        if (translitResult.success) {
+          senderNativeText = translitResult.text;
+        }
+        
+        // Get English meaning from native text
+        const toEnglish = await translateText(senderNativeText, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== senderNativeText) {
+          englishCore = toEnglish.translatedText;
+        }
+        
+      } else if (inputMethod === 'pure-english' || inputMethod === 'voice-text') {
+        // Pure English or voice-to-text (detected as English)
+        // Translate to sender's native for display + use as English core
+        console.log(`[bidirectional] Pure English/voice input detected`);
+        
+        englishCore = normalizedInput;
+        
+        if (senderIsNonLatin) {
+          const toSenderNative = await translateText(normalizedInput, 'english', langA);
+          if (toSenderNative.success && toSenderNative.translatedText !== normalizedInput) {
+            senderNativeText = toSenderNative.translatedText;
+          }
+        }
+        
       } else if (inputIsLatin && senderIsNonLatin) {
-        // Sender typed Latin but speaks non-Latin language
-        const isActualEnglish = looksLikeEnglish(inputText);
-        console.log(`[bidirectional] Latin input from non-Latin speaker, isEnglish=${isActualEnglish}`);
+        // Fallback: Latin input from non-Latin speaker
+        const isActualEnglish = looksLikeEnglish(normalizedInput);
+        console.log(`[bidirectional] Fallback: Latin input, isEnglish=${isActualEnglish}`);
         
         if (isActualEnglish) {
-          // User typed actual English - translate to sender's native
-          englishCore = inputText;
-          const toSenderNative = await translateText(inputText, 'english', langA);
-          if (toSenderNative.success && toSenderNative.translatedText !== inputText) {
+          englishCore = normalizedInput;
+          const toSenderNative = await translateText(normalizedInput, 'english', langA);
+          if (toSenderNative.success && toSenderNative.translatedText !== normalizedInput) {
             senderNativeText = toSenderNative.translatedText;
           }
         } else {
-          // Romanized native text - transliterate + get English meaning
-          const translitResult = await transliterateToNative(inputText, langA);
+          const translitResult = await transliterateToNative(normalizedInput, langA);
           if (translitResult.success) {
             senderNativeText = translitResult.text;
           }
           
-          // Get English meaning
           const toEnglish = await translateText(senderNativeText, langA, 'english');
           if (toEnglish.success && toEnglish.translatedText !== senderNativeText) {
             englishCore = toEnglish.translatedText;
@@ -513,10 +647,10 @@ serve(async (req) => {
         }
         
       } else if (!inputIsLatin) {
-        // Native script input (Gboard, IME)
-        senderNativeText = inputText;
-        const toEnglish = await translateText(inputText, langA, 'english');
-        if (toEnglish.success && toEnglish.translatedText !== inputText) {
+        // Non-Latin input (any script)
+        senderNativeText = normalizedInput;
+        const toEnglish = await translateText(normalizedInput, langA, 'english');
+        if (toEnglish.success && toEnglish.translatedText !== normalizedInput) {
           englishCore = toEnglish.translatedText;
         }
         
