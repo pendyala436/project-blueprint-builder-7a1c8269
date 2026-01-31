@@ -494,12 +494,22 @@ async function callDLTranslate(
 const PHRASE_TRANSLATIONS: Record<string, Record<string, string>> = {
   // Telugu phrases
   'బాగున్నావా': { en: 'How are you?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?', ml: 'സുഖമാണോ?', bn: 'কেমন আছো?' },
-  'బాగున్నాను': { en: "I'm fine", hi: 'मैं ठीक हूं', ta: 'நான் நலமாக இருக்கிறேன்', kn: 'ನಾನು ಚೆನ్ನಾಗಿದ್ದೇನೆ', ml: 'ഞാൻ സുഖമാണ്' },
+  'బాగున్నాను': { en: "I'm fine", hi: 'मैं ठीक हूं', ta: 'நான் நலமாக இருக்கிறேன்', kn: 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ', ml: 'ഞാൻ സുഖമാണ്' },
   'నమస్తే': { en: 'Hello', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
-  'నమస్కారం': { en: 'Greetings', hi: 'नमस्कार', ta: 'வணக்கம்', kn: 'ನಮಸ్ಕಾರ', ml: 'നമസ്കാരം' },
+  'నమస్కారం': { en: 'Greetings', hi: 'नमस्कार', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
   'ధన్యవాదాలు': { en: 'Thank you', hi: 'धन्यवाद', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
   'సరే': { en: 'Okay', hi: 'ठीक है', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
   'హలో': { en: 'Hello', hi: 'हैलो', ta: 'ஹலோ', kn: 'ಹಲೋ', ml: 'ഹലോ' },
+  'తెలుగు జాతి మనది': { en: 'Telugu race is ours', hi: 'तेलुगु जाति हमारी है', ta: 'தெலுங்கு இனம் நம்முடையது', kn: 'ತೆಲುಗು ಜಾತಿ ನಮ್ಮದು', ml: 'തെലുങ്ക് വംശം നമ്മുടേതാണ്' },
+  'మన తెలుగు': { en: 'Our Telugu', hi: 'हमारा तेलुगु', ta: 'நம் தெலுங்கு', kn: 'ನಮ್ಮ ತೆಲುಗು', ml: 'നമ്മുടെ തെലുങ്ക്' },
+  'ఎలా ఉన్నావ్': { en: 'How are you?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?', ml: 'സുഖമാണോ?' },
+  'ఎలా ఉన్నారు': { en: 'How are you?', hi: 'कैसे हैं?', ta: 'எப்படி இருக்கிறீர்கள்?', kn: 'ಹೇಗಿದ್ದೀರಿ?', ml: 'സുഖമാണോ?' },
+  'నేను బాగున్నాను': { en: "I am fine", hi: 'मैं ठीक हूं', ta: 'நான் நலமாக இருக்கிறேன்', kn: 'ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ', ml: 'ഞാൻ സുഖമാണ്' },
+  'మీరు ఎలా ఉన్నారు': { en: 'How are you?', hi: 'आप कैसे हैं?', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்?', kn: 'ನೀವು ಹೇಗಿದ್ದೀರಿ?', ml: 'നിങ്ങൾ സുഖമാണോ?' },
+  'శుభోదయం': { en: 'Good morning', hi: 'शुभ प्रभात', ta: 'காலை வணக்கம்', kn: 'ಶುಭೋದಯ', ml: 'സുപ്രഭാതം' },
+  'నా పేరు': { en: 'My name is', hi: 'मेरा नाम है', ta: 'என் பெயர்', kn: 'ನನ್ನ ಹೆಸರು', ml: 'എന്റെ പേര്' },
+  'జై హింద్': { en: 'Victory to India', hi: 'जय हिंद', ta: 'ஜெய் ஹிந்த்', kn: 'ಜೈ ಹಿಂದ್', ml: 'ജയ് ഹിന്ദ്' },
+  'జై తెలుగు': { en: 'Victory to Telugu', hi: 'जय तेलुगु', ta: 'ஜெய் தெலுங்கு', kn: 'ಜೈ ತೆಲುಗು', ml: 'ജയ് തെലുങ്ക്' },
   
   // Hindi phrases  
   'नमस्ते': { en: 'Hello', te: 'నమస్తే', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
@@ -510,6 +520,7 @@ const PHRASE_TRANSLATIONS: Record<string, Record<string, string>> = {
   'धन्यवाद': { en: 'Thank you', te: 'ధన్యవాదాలు', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ', ml: 'നന്ദി' },
   'ठीक है': { en: 'Okay', te: 'సరే', ta: 'சரி', kn: 'ಸರಿ', ml: 'ശരി' },
   'हैलो': { en: 'Hello', te: 'హలో', ta: 'ஹலோ', kn: 'ಹಲೋ', ml: 'ഹലോ' },
+  'जय हिंद': { en: 'Victory to India', te: 'జై హింద్', ta: 'ஜெய் ஹிந்த்', kn: 'ಜೈ ಹಿಂದ್', ml: 'ജയ് ഹിന്ദ്' },
   
   // Tamil phrases
   'வணக்கம்': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം', bn: 'নমস্কার' },
@@ -520,12 +531,13 @@ const PHRASE_TRANSLATIONS: Record<string, Record<string, string>> = {
   // Kannada phrases
   'ನಮಸ್ಕಾರ': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', ml: 'നമസ്കാരം' },
   'ಹೇಗಿದ್ದೀಯಾ': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', ml: 'സുഖമാണോ?' },
-  'ಧನ್ಯವಾದ': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', ml: 'നன്ദി' },
+  'ಧನ್ಯವಾದ': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', ml: 'നന്ദി' },
   
   // Malayalam phrases
   'നമസ്കാരം': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ' },
   'സുഖമാണോ': { en: 'How are you?', te: 'ఎలా ఉన్నావ్?', hi: 'कैसे हो?', ta: 'எப்படி இருக்கிறாய்?', kn: 'ಹೇಗಿದ್ದೀಯಾ?' },
   'നന്ദി': { en: 'Thank you', te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', kn: 'ಧನ್ಯವಾದ' },
+  'തെലുങ്ക് വംശം നമ്മുടേതാണ്': { en: 'Telugu race is ours', te: 'తెలుగు జాతి మనది', hi: 'तेलुगु जाति हमारी है', ta: 'தெலுங்கு இனம் நம்முடையது' },
   
   // Bengali phrases
   'নমস্কার': { en: 'Hello', te: 'నమస్తే', hi: 'नमस्ते', ta: 'வணக்கம்', kn: 'ನಮಸ್ಕಾರ', ml: 'നമസ്കാരം' },
@@ -645,9 +657,9 @@ async function translateText(
  * Transliterate Latin/Romanized input to native script
  * 
  * APPROACH: Try multiple strategies for romanized → native conversion:
- * 1. Direct transliteration request (if model supports)
- * 2. Try treating as same-language romanized (within-language conversion)
- * 3. Fallback: Use translation English → Target and hope for phonetic match
+ * 1. Check phrase dictionary for common romanized phrases
+ * 2. Try direct translation from English to Target (DL-Translate often understands romanized)
+ * 3. Try within-language translation if the model can infer meaning
  * 
  * Note: For proper transliteration of Indian languages, a dedicated
  * IndicXlit service would be ideal. This is a best-effort approach.
@@ -692,6 +704,18 @@ async function transliterateToNative(
     'pyaar': { hi: 'प्यार', te: 'ప్రేమ', ta: 'காதல்', ur: 'پیار' },
     'dost': { hi: 'दोस्त', te: 'స్నేహితుడు', ta: 'நண்பன்', ur: 'دوست' },
     'paisa': { hi: 'पैसा', te: 'డబ్బు', ta: 'பணம்' },
+    // Additional Telugu phrases
+    'telugu jati manadi': { te: 'తెలుగు జాతి మనది', hi: 'तेलुगु जाति हमारी है', ta: 'தெலுங்கு இனம் நம்முடையது', ml: 'തെലുങ്ക് ജാതി നമ്മുടേതാണ്' },
+    'mana telugu': { te: 'మన తెలుగు', hi: 'हमारा तेलुगु', ta: 'நம் தெலுங்கு' },
+    'ela unnav': { te: 'ఎలా ఉన్నావ్', hi: 'कैसे हो', ta: 'எப்படி இருக்கிறாய்', ml: 'സുഖമാണോ' },
+    'ela unnaru': { te: 'ఎలా ఉన్నారు', hi: 'कैसे हैं', ta: 'எப்படி இருக்கிறீர்கள்', ml: 'സുഖമാണോ' },
+    'nenu bagunnanu': { te: 'నేను బాగున్నాను', hi: 'मैं ठीक हूं', ta: 'நான் நலமாக இருக்கிறேன்' },
+    'jai hind': { te: 'జై హింద్', hi: 'जय हिंद', ta: 'ஜெய் ஹிந்த்', ml: 'ജയ് ഹിന്ദ്', kn: 'ಜೈ ಹಿಂದ್' },
+    'jai telugu': { te: 'జై తెలుగు', hi: 'जय तेलुगु', ta: 'ஜெய் தெலுங்கு' },
+    'naa peru': { te: 'నా పేరు', hi: 'मेरा नाम', ta: 'என் பெயர்' },
+    'meeru ela unnaru': { te: 'మీరు ఎలా ఉన్నారు', hi: 'आप कैसे हैं', ta: 'நீங்கள் எப்படி இருக்கிறீர்கள்' },
+    'shubhodayam': { te: 'శుభోదయం', hi: 'शुभ प्रभात', ta: 'காலை வணக்கம்', ml: 'സുപ്രഭാതം' },
+    'dhanyavadalu': { te: 'ధన్యవాదాలు', hi: 'धन्यवाद', ta: 'நன்றி', ml: 'നന്ദി' },
   };
   
   // Check for exact match in phrase dictionary
@@ -705,35 +729,43 @@ async function transliterateToNative(
   }
   
   // Strategy 1: Try direct translation (English → Target)
-  // DL-Translate might infer meaning from romanized text
+  // DL-Translate can often understand romanized text and translate meaningfully
+  console.log(`[Transliterate] Trying direct English→${targetLanguage} translation`);
   const result = await callDLTranslate(latinText, 'english', targetLanguage);
   
   if (result.success && result.translatedText !== latinText) {
     const hasNonLatin = /[^\x00-\x7F]/.test(result.translatedText);
     if (hasNonLatin) {
-      console.log(`[Transliterate] DL-Translate success: "${result.translatedText.substring(0, 30)}..."`);
+      console.log(`[Transliterate] Direct translation success: "${result.translatedText.substring(0, 30)}..."`);
       return { text: result.translatedText, success: true, wasTransliterated: true };
     }
   }
   
-  // Strategy 2: For known script languages, try treating romanized as phonetic hint
-  // Some models might understand "bagunnava" as phonetic Telugu
+  // Strategy 2: Try treating as same-language content
+  // This works if the model understands romanized versions of the target language
   if (isNonLatinLanguage(targetLanguage)) {
-    // Try with a prompt-like format that might help the model
-    const phoneticHint = `Transliterate to ${getDLTranslateName(targetLanguage)}: ${latinText}`;
-    const hintResult = await callDLTranslate(phoneticHint, 'english', targetLanguage);
+    console.log(`[Transliterate] Trying same-language ${targetLanguage}→${targetLanguage} (romanized→native)`);
+    const sameLanguageResult = await callDLTranslate(latinText, targetLanguage, targetLanguage);
     
-    if (hintResult.success && hintResult.translatedText !== phoneticHint) {
-      const hasNonLatin = /[^\x00-\x7F]/.test(hintResult.translatedText);
-      if (hasNonLatin && hintResult.translatedText !== latinText) {
-        // Extract just the native script part (remove any echoed prompt)
-        const cleanResult = hintResult.translatedText
-          .replace(/transliterate|to|telugu|hindi|tamil/gi, '')
-          .trim();
-        if (cleanResult && /[^\x00-\x7F]/.test(cleanResult)) {
-          console.log(`[Transliterate] Hint method success: "${cleanResult.substring(0, 30)}..."`);
-          return { text: cleanResult, success: true, wasTransliterated: true };
-        }
+    if (sameLanguageResult.success && sameLanguageResult.translatedText !== latinText) {
+      const hasNonLatin = /[^\x00-\x7F]/.test(sameLanguageResult.translatedText);
+      if (hasNonLatin) {
+        console.log(`[Transliterate] Same-language success: "${sameLanguageResult.translatedText.substring(0, 30)}..."`);
+        return { text: sameLanguageResult.translatedText, success: true, wasTransliterated: true };
+      }
+    }
+  }
+  
+  // Strategy 3: Try Hindi as pivot (many romanized Indian phrases have Hindi cognates)
+  if (langCode !== 'hi' && isNonLatinLanguage(targetLanguage)) {
+    console.log(`[Transliterate] Trying Hindi pivot: English→Hindi→${targetLanguage}`);
+    const toHindi = await callDLTranslate(latinText, 'english', 'hindi');
+    if (toHindi.success && /[^\x00-\x7F]/.test(toHindi.translatedText)) {
+      // Now translate Hindi to target
+      const toTarget = await callDLTranslate(toHindi.translatedText, 'hindi', targetLanguage);
+      if (toTarget.success && /[^\x00-\x7F]/.test(toTarget.translatedText)) {
+        console.log(`[Transliterate] Hindi pivot success: "${toTarget.translatedText.substring(0, 30)}..."`);
+        return { text: toTarget.translatedText, success: true, wasTransliterated: true };
       }
     }
   }
