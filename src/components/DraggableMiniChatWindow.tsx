@@ -1323,7 +1323,11 @@ const DraggableMiniChatWindow = ({
     }
   }, [partnerLanguage, currentUserLanguage, currentUserId]);
 
-  // SEMANTIC TRANSLATION: Load messages with immediate display + background translation
+  // BIDIRECTIONAL MOTHER TONGUE: Load messages with correct views
+  // DB Schema:
+  //   - message: sender's mother tongue text (senderView)
+  //   - translated_message: receiver's mother tongue text (receiverView)
+  //   - original_english: English semantic meaning (englishCore)
   const loadMessages = async () => {
     console.log('[DraggableMiniChatWindow] loadMessages called');
     
@@ -1335,56 +1339,55 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // STEP 1: IMMEDIATE - Show messages with correct mother tongue translations
-      // Database schema:
-      //   - message: sender's native/mother tongue text (senderView)
-      //   - translated_message: receiver's native/mother tongue text (receiverView)
-      //   - original_english: English semantic meaning (englishCore)
+      // BIDIRECTIONAL: Each user sees messages in THEIR mother tongue
       const immediateMessages = data.map((m) => {
-        const isPartnerMessage = m.sender_id !== currentUserId;
-        const hasPreTranslation = m.translated_message && m.translated_message.length > 0;
+        const isSentByMe = m.sender_id === currentUserId;
+        const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
         
-        // CRITICAL FIX: Use correct view based on who is viewing
-        // - Partner message (I'm receiver) → Use translated_message (my mother tongue)
-        // - My message (I'm sender) → Use message (my mother tongue)
+        // CRITICAL: Determine display based on viewer's role
+        // When I SENT this message:
+        //   - message = MY mother tongue (what I see)
+        //   - translated_message = PARTNER's mother tongue (what they see)
+        // When PARTNER SENT this message:
+        //   - message = PARTNER's mother tongue (what they see)
+        //   - translated_message = MY mother tongue (what I see)
+        
         let displayMessage: string;
-        if (isPartnerMessage) {
-          // I'm the RECEIVER - show translated_message (already in MY mother tongue)
-          displayMessage = hasPreTranslation ? m.translated_message : m.message;
-        } else {
-          // I'm the SENDER - show message (already in MY mother tongue)
+        if (isSentByMe) {
+          // I'm the SENDER - show message (MY mother tongue)
           displayMessage = m.message;
+        } else {
+          // I'm the RECEIVER - show translated_message (MY mother tongue)
+          // Fallback to message if no translation
+          displayMessage = hasReceiverTranslation ? m.translated_message : m.message;
         }
         
         return {
           id: m.id,
           senderId: m.sender_id,
           message: m.message,
-          translatedMessage: displayMessage,
-          // ALWAYS use stored English meaning - no re-translation needed
-          englishMessage: m.original_english || undefined,
+          translatedMessage: displayMessage, // This is what gets displayed
+          englishMessage: m.original_english || undefined, // English meaning always shown
           latinMessage: undefined,
-          isTranslated: isPartnerMessage && hasPreTranslation,
-          isTranslating: false, // No background translation needed - DB has correct values
+          isTranslated: !isSentByMe && hasReceiverTranslation,
+          isTranslating: false,
           createdAt: m.created_at
         };
       });
       setMessages(immediateMessages);
 
-      // STEP 2: OPTIONAL - Generate Latin transliteration only (no re-translation!)
-      // The DB already has correct mother tongue text, we just need Latin for copy/share
+      // Generate Latin transliteration for non-Latin display text
       data.forEach((m) => {
-        const displayText = m.sender_id !== currentUserId 
-          ? (m.translated_message || m.message) 
-          : m.message;
+        const isSentByMe = m.sender_id === currentUserId;
+        const displayText = isSentByMe 
+          ? m.message 
+          : (m.translated_message || m.message);
         
-        // Only run if text contains non-Latin characters
         const hasNonLatin = /[^\x00-\x7F]/.test(displayText);
         if (hasNonLatin) {
           import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
-            const lang = m.sender_id !== currentUserId ? currentUserLanguage : 
-              (m.sender_id === currentUserId ? currentUserLanguage : partnerLanguage);
-            const latinText = reverseTransliterate(displayText, lang);
+            // Use current user's language for transliteration since displayText is in their language
+            const latinText = reverseTransliterate(displayText, currentUserLanguage);
             if (latinText && latinText !== displayText) {
               setMessages(prev => prev.map(msg => 
                 msg.id === m.id ? { ...msg, latinMessage: latinText } : msg
@@ -1396,106 +1399,64 @@ const DraggableMiniChatWindow = ({
     }
   };
 
-  // SEMANTIC TRANSLATION: Subscribe to new messages with immediate display + background translation
+  // BIDIRECTIONAL: Subscribe to new messages with correct mother tongue views
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
       .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `chat_id=eq.${chatId}`
-        },
-        (payload: any) => {
-          const newMsg = payload.new;
-          const isPartnerMessage = newMsg.sender_id !== currentUserId;
-          const hasPreTranslation = newMsg.translated_message && newMsg.translated_message.length > 0;
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const m = payload.new as any;
           
-          // CRITICAL FIX: Use correct view based on who is viewing
-          // Database schema:
-          //   - message: sender's native/mother tongue text (senderView)
-          //   - translated_message: receiver's native/mother tongue text (receiverView)
-          //   - original_english: English semantic meaning (englishCore)
+          // Skip if already exists (optimistic update)
+          const exists = messages.some(msg => msg.id === m.id);
+          if (exists) return;
+          
+          const isSentByMe = m.sender_id === currentUserId;
+          const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
+          
+          // BIDIRECTIONAL VIEW LOGIC:
+          // When I SENT: show message (my mother tongue)
+          // When PARTNER SENT: show translated_message (my mother tongue)
           let displayMessage: string;
-          if (isPartnerMessage) {
-            // I'm the RECEIVER - show translated_message (already in MY mother tongue)
-            displayMessage = hasPreTranslation ? newMsg.translated_message : newMsg.message;
+          if (isSentByMe) {
+            displayMessage = m.message;
           } else {
-            // I'm the SENDER - show message (already in MY mother tongue)
-            displayMessage = newMsg.message;
+            displayMessage = hasReceiverTranslation ? m.translated_message : m.message;
           }
           
-          // STEP 1: IMMEDIATE - Add message to UI with correct translations
+          const newMsg: Message = {
+            id: m.id,
+            senderId: m.sender_id,
+            message: m.message,
+            translatedMessage: displayMessage,
+            englishMessage: m.original_english || undefined,
+            latinMessage: undefined,
+            isTranslated: !isSentByMe && hasReceiverTranslation,
+            isTranslating: false,
+            createdAt: m.created_at
+          };
+          
           setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-
-            // Reconcile our own realtime echo with the optimistic temp message
-            if (!isPartnerMessage) {
-              const serverEnglish = (newMsg.original_english || '').trim();
-              const serverPrimary = (displayMessage || newMsg.message || '').trim();
-
-              const tempIndex = prev.findIndex(m => {
-                if (!m.id.startsWith('temp-')) return false;
-                if (m.senderId !== currentUserId) return false;
-
-                const localEnglish = (m.englishMessage || '').trim();
-                const localPrimary = ((m.translatedMessage || m.message) || '').trim();
-
-                if (serverEnglish && localEnglish && localEnglish === serverEnglish) return true;
-                if (serverPrimary && localPrimary && localPrimary === serverPrimary) return true;
-                return false;
-              });
-
-              if (tempIndex !== -1) {
-                // Replace temp message with real one - use DB values directly
-                return prev.map((m, idx) =>
-                  idx === tempIndex
-                    ? {
-                        ...m,
-                        id: newMsg.id,
-                        message: newMsg.message,
-                        translatedMessage: displayMessage,
-                        englishMessage: newMsg.original_english || m.englishMessage,
-                        latinMessage: undefined,
-                        isTranslated: hasPreTranslation,
-                        isTranslating: false, // No need to re-translate
-                        createdAt: newMsg.created_at,
-                      }
-                    : m
-                );
-              }
-            }
-
-            return [...prev, {
-              id: newMsg.id,
-              senderId: newMsg.sender_id,
-              message: newMsg.message,
-              translatedMessage: displayMessage,
-              // ALWAYS use stored English meaning - no re-translation needed
-              englishMessage: newMsg.original_english || undefined,
-              latinMessage: undefined,
-              isTranslated: isPartnerMessage && hasPreTranslation,
-              isTranslating: false, // DB already has correct values
-              createdAt: newMsg.created_at
-            }];
+            // Remove temp messages for same sender
+            const filtered = prev.filter(msg => 
+              !msg.id.startsWith('temp-') || msg.senderId !== m.sender_id
+            );
+            return [...filtered, newMsg];
           });
-
-          // Update activity and unread count for partner messages
-          if (isPartnerMessage) {
+          
+          // Update counts and activity
+          if (!isSentByMe) {
+            setUnreadCount(prev => prev + (isMinimized ? 1 : 0));
             setLastActivityTime(Date.now());
-            if (isMinimized) {
-              setUnreadCount(prev => prev + 1);
-            }
           }
           
-          // STEP 2: OPTIONAL - Generate Latin transliteration only (no re-translation!)
+          // Generate Latin transliteration for non-Latin text
           const hasNonLatin = /[^\x00-\x7F]/.test(displayMessage);
           if (hasNonLatin) {
             import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
-              const lang = isPartnerMessage ? currentUserLanguage : currentUserLanguage;
-              const latinText = reverseTransliterate(displayMessage, lang);
+              const latinText = reverseTransliterate(displayMessage, currentUserLanguage);
               if (latinText && latinText !== displayMessage) {
                 setMessages(prev => prev.map(msg => 
                   msg.id === newMsg.id ? { ...msg, latinMessage: latinText } : msg
