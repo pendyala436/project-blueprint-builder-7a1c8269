@@ -27,6 +27,70 @@ const corsHeaders = {
 const DLTRANSLATE_SERVER = "http://194.163.175.245:8000";
 
 // ============================================================
+// IN-MEMORY CACHE - LRU with TTL for translation results
+// ============================================================
+
+interface CacheEntry {
+  value: string;
+  timestamp: number;
+}
+
+class TranslationCache {
+  private cache: Map<string, CacheEntry> = new Map();
+  private readonly maxSize: number;
+  private readonly ttlMs: number;
+  
+  constructor(maxSize = 500, ttlMinutes = 30) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMinutes * 60 * 1000;
+  }
+  
+  private generateKey(text: string, srcLang: string, tgtLang: string): string {
+    return `${srcLang.toLowerCase()}:${tgtLang.toLowerCase()}:${text.substring(0, 200)}`;
+  }
+  
+  get(text: string, srcLang: string, tgtLang: string): string | null {
+    const key = this.generateKey(text, srcLang, tgtLang);
+    const entry = this.cache.get(key);
+    
+    if (!entry) return null;
+    
+    // Check TTL
+    if (Date.now() - entry.timestamp > this.ttlMs) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    // Move to end for LRU (delete and re-add)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    
+    console.log(`[Cache] HIT: "${text.substring(0, 30)}..." ${srcLang}→${tgtLang}`);
+    return entry.value;
+  }
+  
+  set(text: string, srcLang: string, tgtLang: string, translatedText: string): void {
+    const key = this.generateKey(text, srcLang, tgtLang);
+    
+    // Evict oldest if at capacity
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
+    
+    this.cache.set(key, { value: translatedText, timestamp: Date.now() });
+    console.log(`[Cache] SET: "${text.substring(0, 30)}..." ${srcLang}→${tgtLang} (size: ${this.cache.size})`);
+  }
+  
+  getStats(): { size: number; maxSize: number } {
+    return { size: this.cache.size, maxSize: this.maxSize };
+  }
+}
+
+// Global cache instance (persists across requests in same worker)
+const translationCache = new TranslationCache(500, 30);
+
+// ============================================================
 // LANGUAGE DATABASE - Full language name mapping for DL-Translate
 // ============================================================
 
@@ -347,20 +411,26 @@ function normalizeInputText(text: string): string {
 }
 
 // ============================================================
-// DL-TRANSLATE API - Direct HTTP calls
+// DL-TRANSLATE API - Direct HTTP calls with caching
 // ============================================================
 
 /**
- * Call DL-Translate API directly
+ * Call DL-Translate API with cache layer
  * Uses full language names as per the API format
  */
 async function callDLTranslate(
   text: string,
   srcLang: string,
   tgtLang: string
-): Promise<{ translatedText: string; success: boolean }> {
+): Promise<{ translatedText: string; success: boolean; cached?: boolean }> {
   const srcName = getDLTranslateName(srcLang);
   const tgtName = getDLTranslateName(tgtLang);
+  
+  // Check cache first
+  const cachedResult = translationCache.get(text, srcName, tgtName);
+  if (cachedResult) {
+    return { translatedText: cachedResult, success: true, cached: true };
+  }
   
   console.log(`[DL-Translate] Calling API: "${text.substring(0, 50)}..." | ${srcName} → ${tgtName}`);
   
@@ -394,6 +464,10 @@ async function callDLTranslate(
         
         if (translated && translated !== text && translated.length > 0) {
           console.log(`[DL-Translate] Success: "${translated.substring(0, 50)}..."`);
+          
+          // Cache successful translation
+          translationCache.set(text, srcName, tgtName, translated);
+          
           return { translatedText: translated, success: true };
         } else {
           console.log(`[DL-Translate] Response unchanged or empty, translated="${translated?.substring(0, 30)}"`);
