@@ -68,7 +68,16 @@ function normalizeLanguageCode(lang: string): string {
     'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
     'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
   };
-  return codeMap[code] || code.slice(0, 2);
+
+  const mapped = codeMap[code];
+  if (mapped) return mapped;
+
+  // If already an ISO-2 code, keep it
+  if (/^[a-z]{2}$/.test(code)) return code;
+
+  // Avoid corrupting non-Latin/native labels (e.g., "తెలుగు") by slicing.
+  // The edge function can match full language names and even native names.
+  return code;
 }
 
 function xenovaSameLanguage(lang1: string, lang2: string): boolean {
@@ -1395,7 +1404,11 @@ const DraggableMiniChatWindow = ({
       // IMMEDIATE: Show messages right away with available data
       const immediateMessages = data.map((m) => {
         const isSentByMe = m.sender_id === currentUserId;
-        const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
+        const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
+        const hasReceiverTranslation =
+          typeof m.translated_message === 'string' &&
+          m.translated_message.trim().length > 0 &&
+          (sameLang || m.translated_message !== m.message);
         
         // CRITICAL: Determine display based on viewer's role
         let displayMessage: string;
@@ -1422,10 +1435,14 @@ const DraggableMiniChatWindow = ({
       // ASYNC BACKGROUND: Process translations for messages that need them
       data.forEach((m) => {
         const isSentByMe = m.sender_id === currentUserId;
-        const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
+        const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
+        const hasReceiverTranslation =
+          typeof m.translated_message === 'string' &&
+          m.translated_message.trim().length > 0 &&
+          (sameLang || m.translated_message !== m.message);
         const displayText = isSentByMe 
           ? m.message 
-          : (m.translated_message || m.message);
+          : (hasReceiverTranslation ? m.translated_message : m.message);
         
         // Background: Translate partner messages that don't have translations
         if (!isSentByMe && !hasReceiverTranslation) {
@@ -1489,13 +1506,13 @@ const DraggableMiniChatWindow = ({
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
         (payload) => {
           const m = payload.new as any;
-          
-          // Skip if already exists (optimistic update)
-          const exists = messages.some(msg => msg.id === m.id);
-          if (exists) return;
-          
+
           const isSentByMe = m.sender_id === currentUserId;
-          const hasReceiverTranslation = m.translated_message && m.translated_message.length > 0;
+          const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
+          const hasReceiverTranslation =
+            typeof m.translated_message === 'string' &&
+            m.translated_message.trim().length > 0 &&
+            (sameLang || m.translated_message !== m.message);
           
           // BIDIRECTIONAL VIEW LOGIC:
           // When I SENT: show message (my mother tongue)
@@ -1521,6 +1538,9 @@ const DraggableMiniChatWindow = ({
           
           // IMMEDIATE: Add message to UI right away
           setMessages(prev => {
+            // Skip if already exists (optimistic update / duplicate event)
+            if (prev.some(msg => msg.id === m.id)) return prev;
+
             // Remove temp messages for same sender
             const filtered = prev.filter(msg => 
               !msg.id.startsWith('temp-') || msg.senderId !== m.sender_id
@@ -1584,6 +1604,38 @@ const DraggableMiniChatWindow = ({
               }
             }).catch(() => {/* ignore */});
           }
+        }
+      )
+      // IMPORTANT: receivers need UPDATE events too (sender updates translated_message later)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const m = payload.new as any;
+
+          const isSentByMe = m.sender_id === currentUserId;
+          const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
+          const hasReceiverTranslation =
+            typeof m.translated_message === 'string' &&
+            m.translated_message.trim().length > 0 &&
+            (sameLang || m.translated_message !== m.message);
+
+          const displayMessage = isSentByMe
+            ? m.message
+            : (hasReceiverTranslation ? m.translated_message : m.message);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === m.id
+              ? {
+                  ...msg,
+                  message: m.message,
+                  translatedMessage: displayMessage,
+                  englishMessage: m.original_english || msg.englishMessage,
+                  isTranslated: !isSentByMe && hasReceiverTranslation,
+                  isTranslating: !isSentByMe && !hasReceiverTranslation,
+                }
+              : msg
+          ));
         }
       )
       .subscribe();
@@ -1759,7 +1811,9 @@ const DraggableMiniChatWindow = ({
             sender_id: currentUserId,
             receiver_id: partnerId,
             message: inputText,
-            translated_message: inputText, // Will be updated after translation
+            // IMPORTANT: leave null until translation completes.
+            // If we set a placeholder here, receivers won't translate (and they listen to INSERT only).
+            translated_message: null,
             original_english: looksLikeEnglish ? inputText : null
           })
           .select('id')
