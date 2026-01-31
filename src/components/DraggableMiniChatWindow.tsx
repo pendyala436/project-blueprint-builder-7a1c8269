@@ -510,9 +510,30 @@ const DraggableMiniChatWindow = ({
       return;
     }
     
+    const trimmedInput = inputText.trim();
+    
     // Skip if same text was already translated (avoid redundant calls)
-    if (inputText.trim() === lastTranslatedInputRef.current) {
+    if (trimmedInput === lastTranslatedInputRef.current) {
       setIsMeaningLoading(false);
+      return;
+    }
+    
+    // PERFORMANCE: Skip translation for very short text (< 2 chars) 
+    // unless it's native script
+    const scriptType = detectScript(trimmedInput);
+    if (trimmedInput.length < 2 && scriptType === 'latin') {
+      setMeaningPreview('');
+      setIsMeaningLoading(false);
+      return;
+    }
+    
+    // PERFORMANCE: Skip if same language (no translation needed)
+    const senderCode = normalizeLanguageCode(currentUserLanguage);
+    const receiverCode = normalizeLanguageCode(partnerLanguage);
+    if (senderCode === receiverCode && scriptType !== 'latin') {
+      setMeaningPreview(trimmedInput);
+      setIsMeaningLoading(false);
+      lastTranslatedInputRef.current = trimmedInput;
       return;
     }
     
@@ -531,14 +552,20 @@ const DraggableMiniChatWindow = ({
     // Show loading state (non-blocking visual feedback)
     setIsMeaningLoading(true);
     
-    // DEBOUNCE: Wait for typing pause before starting translation
-    // Voice input has complete phrases, so shorter debounce
-    const debounceTime = inputSource === 'voice' ? 100 : 300;
+    // DEBOUNCE: Increased from 300ms to 600ms to reduce API calls
+    // Voice input has complete phrases, so shorter debounce (150ms)
+    // Native script typing is intentional, use medium debounce (400ms)
+    let debounceTime = 600; // Default for keyboard Latin input
+    if (inputSource === 'voice') {
+      debounceTime = 150; // Voice has complete phrases
+    } else if (scriptType === 'native') {
+      debounceTime = 400; // Native script typing is more intentional
+    }
     
     // Debounce: wait for pause in typing before starting translation
     meaningPreviewTimeoutRef.current = setTimeout(() => {
       const capturedText = inputText.trim();
-      const scriptType = detectScript(capturedText);
+      const detectedScript = detectScript(capturedText);
       
       // Skip if text changed during debounce (user still typing)
       if (capturedText !== inputText.trim()) {
@@ -551,12 +578,16 @@ const DraggableMiniChatWindow = ({
         userLang: currentUserLanguage,
         partnerLang: partnerLanguage,
         inputSource: inputSource || 'auto',
-        scriptType
+        scriptType: detectedScript
       });
       
       // Create new AbortController for this request
       const abortController = new AbortController();
       translationAbortRef.current = abortController;
+      
+      // Use normalized language codes to reduce duplicate calls
+      const senderLangCode = normalizeLanguageCode(currentUserLanguage);
+      const receiverLangCode = normalizeLanguageCode(partnerLanguage);
       
       // Run translation in background - NEVER blocks typing
       (async () => {
@@ -569,14 +600,14 @@ const DraggableMiniChatWindow = ({
           let translatedText = '';
           
           // ALWAYS use bidirectional edge function for ALL input types
-          console.log('[MeaningPreview] Using bidirectional edge function for:', capturedText.substring(0, 30));
+          console.log('[MeaningPreview] Calling edge function:', capturedText.substring(0, 30), `${senderLangCode}→${receiverLangCode}`);
           
           try {
             const { data, error } = await supabase.functions.invoke('translate-message', {
               body: {
                 text: capturedText,
-                senderLanguage: currentUserLanguage,
-                receiverLanguage: partnerLanguage,
+                senderLanguage: senderLangCode,
+                receiverLanguage: receiverLangCode,
                 mode: 'bidirectional',
               },
             });
@@ -592,11 +623,12 @@ const DraggableMiniChatWindow = ({
               console.log('[MeaningPreview] Edge function success:', {
                 senderView: translatedText.substring(0, 30),
                 receiverView: data.receiverView?.substring(0, 30),
-                englishCore: data.englishCore?.substring(0, 30)
+                englishCore: data.englishCore?.substring(0, 30),
+                cached: data.cached || false
               });
             } else {
               // Fallback: for native script, show as-is
-              if (scriptType === 'native') {
+              if (detectedScript === 'native') {
                 translatedText = capturedText;
                 console.log('[MeaningPreview] Native script - showing as-is');
               } else {
@@ -616,7 +648,7 @@ const DraggableMiniChatWindow = ({
             if (abortController.signal.aborted) return;
             
             console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
-            if (scriptType === 'native') {
+            if (detectedScript === 'native') {
               translatedText = capturedText;
             } else {
               try {
