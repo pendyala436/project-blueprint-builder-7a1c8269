@@ -46,27 +46,29 @@ const EMAIL_PATTERNS = [
 ];
 
 const SOCIAL_MEDIA_PATTERNS = [
-  // Platform names with handles
-  /\b(whatsapp|whats\s*app|wa|watsapp|wapp)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(instagram|insta|ig)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(facebook|fb)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(telegram|tg|telgram)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(snapchat|snap)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(twitter|x\.com|@)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(tiktok|tik\s*tok)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(wechat|we\s*chat)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(line|viber|signal|discord)\s*[:\-#@]?\s*[\w.+-]+/gi,
-  /\b(skype)\s*[:\-#@]?\s*[\w.+-]+/gi,
+  // Platform names with handles - require explicit handle/ID after platform name
+  /\b(whatsapp|whats\s*app|watsapp|wapp)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(instagram|insta)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(facebook|fb)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(telegram|tg|telgram)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(snapchat|snap)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(tiktok|tik\s*tok)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(wechat|we\s*chat)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(discord)\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\b(skype)\s*[:\-#@]\s*[\w.+-]+/gi,
   
-  // Just platform mentions (to catch "add me on whatsapp")
-  /\b(add|contact|reach|text|message|call|dm|msg)\s*(me|us)?\s*(on|at|via)?\s*(whatsapp|whats\s*app|instagram|insta|facebook|fb|telegram|tg|snapchat|snap|twitter|tiktok|wechat|line|viber|signal|discord|skype)/gi,
+  // Twitter/X - require explicit handle format
+  /\btwitter\s*[:\-#@]\s*[\w.+-]+/gi,
+  /\bx\.com\/[\w.+-]+/gi,
   
-  // URLs
-  /\b(wa\.me|t\.me|m\.me|bit\.ly|tinyurl|goo\.gl)\s*\/?\s*\S*/gi,
-  /https?:\/\/[^\s]+/gi,
+  // Explicit "add me on platform" patterns - require full phrase
+  /\b(add|contact|reach|text|message|dm|msg)\s+me\s+(on|at|via)\s+(whatsapp|whats\s*app|instagram|insta|facebook|fb|telegram|tg|snapchat|snap|tiktok|wechat|discord|skype)\b/gi,
   
-  // ID sharing patterns
-  /\b(my|add|contact)\s*(id|username|handle|number|num|no)\s*(is|:)?\s*[\w.@+-]+/gi,
+  // Short URLs known for link sharing
+  /\b(wa\.me|t\.me|m\.me)\/\S+/gi,
+  
+  // ID sharing patterns - require explicit "is" or colon
+  /\b(my|add)\s+(whatsapp|instagram|telegram|snapchat|facebook)\s+(id|username|handle|number)\s*(is|:)\s*[\w.@+-]+/gi,
 ];
 
 // Keywords that indicate contact sharing intent
