@@ -58,8 +58,6 @@ import {
   isEnglishLanguage as checkIsEnglish,
 } from "@/lib/translation/semantic-translate-api";
 import { useSpellCheck } from "@/hooks/useSpellCheck";
-// Browser-based translation with typing mode support
-import { useLibreTranslate } from "@/lib/libre-translate";
 
 // Local utility functions (browser-based models removed)
 function normalizeLanguageCode(lang: string): string {
@@ -414,13 +412,7 @@ const DraggableMiniChatWindow = ({
   // Check block status
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
-  // Browser-based translation with 3 typing modes
-  const { 
-    translateForChat, 
-    isTranslating: isLibreTranslating,
-    getPreview: getInstantPreview,
-    transliterate,
-  } = useLibreTranslate();
+  // NOTE: LibreTranslate removed - using DL-Translate only via edge function
 
   // Real-time typing indicator with bi-directional broadcast - FULLY ASYNC
   const {
