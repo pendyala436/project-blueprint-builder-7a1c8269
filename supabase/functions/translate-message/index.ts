@@ -434,6 +434,8 @@ async function callDLTranslate(
   
   console.log(`[DL-Translate] Calling API: "${text.substring(0, 50)}..." | ${srcName} → ${tgtName}`);
   
+  const startTime = Date.now();
+  
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
@@ -454,8 +456,9 @@ async function callDLTranslate(
     
     clearTimeout(timeoutId);
     
+    const elapsed = Date.now() - startTime;
     const responseText = await response.text();
-    console.log(`[DL-Translate] Response status: ${response.status}, body: ${responseText.substring(0, 200)}`);
+    console.log(`[DL-Translate] Response in ${elapsed}ms, status: ${response.status}, body: ${responseText.substring(0, 200)}`);
     
     if (response.ok) {
       try {
@@ -463,7 +466,7 @@ async function callDLTranslate(
         const translated = data.translated?.trim() || data.translation?.trim() || data.translatedText?.trim() || data.text?.trim();
         
         if (translated && translated !== text && translated.length > 0) {
-          console.log(`[DL-Translate] Success: "${translated.substring(0, 50)}..."`);
+          console.log(`[DL-Translate] ✅ Success in ${elapsed}ms: "${translated.substring(0, 50)}..."`);
           
           // Cache successful translation
           translationCache.set(text, srcName, tgtName, translated);
