@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,10 +28,7 @@ import {
   Video,
   FileText,
   Mic,
-  Square,
-  Languages,
-  MoreHorizontal,
-  Type
+  MoreHorizontal
 } from "lucide-react";
 import {
   Popover,
@@ -42,230 +38,6 @@ import {
 import { MiniChatActions } from "@/components/MiniChatActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
-import { TranslatedTypingIndicator } from "@/components/TranslatedTypingIndicator";
-// Real-time typing with broadcast to partner
-import { useRealtimeTranslation } from "@/lib/translation/useRealtimeTranslation";
-// XENOVA BROWSER-BASED TRANSLATION SDK - Zero server load
-// Supports 1000+ languages via lazy-loaded ML models
-import {
-  isSameLanguage,
-  isLatinScriptLanguage,
-  normalizeUnicode,
-} from "@/lib/translation";
-// Legacy imports for fallback compatibility
-import { 
-  isSameLanguageCheck,
-  isEnglishLanguage as checkIsEnglish,
-} from "@/lib/translation/semantic-translate-api";
-import { useSpellCheck } from "@/hooks/useSpellCheck";
-
-// Local utility functions (browser-based models removed)
-function normalizeLanguageCode(lang: string): string {
-  if (!lang) return 'en';
-  const code = lang.toLowerCase().trim();
-  const codeMap: Record<string, string> = {
-    'english': 'en', 'hindi': 'hi', 'telugu': 'te', 'tamil': 'ta',
-    'kannada': 'kn', 'malayalam': 'ml', 'marathi': 'mr', 'gujarati': 'gu',
-    'bengali': 'bn', 'punjabi': 'pa', 'urdu': 'ur', 'odia': 'or',
-  };
-
-  const mapped = codeMap[code];
-  if (mapped) return mapped;
-
-  // If already an ISO-2 code, keep it
-  if (/^[a-z]{2}$/.test(code)) return code;
-
-  // Avoid corrupting non-Latin/native labels (e.g., "తెలుగు") by slicing.
-  // The edge function can match full language names and even native names.
-  return code;
-}
-
-function xenovaSameLanguage(lang1: string, lang2: string): boolean {
-  return normalizeLanguageCode(lang1) === normalizeLanguageCode(lang2);
-}
-
-function xenovaIsEnglish(lang: string): boolean {
-  const code = normalizeLanguageCode(lang);
-  return code === 'en' || code === 'english';
-}
-
-console.log('[DraggableMiniChatWindow] Module loaded - Translation via Edge Function');
-
-/**
- * Edge function semantic translation
- * Supports ALL input types: English, native script, voice, Gboard, font tools
- * Provides meaning-based translation (not phonetic transliteration)
- */
-async function translateSemantic(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string
-): Promise<{
-  translatedText: string;
-  originalText: string;
-  isTranslated: boolean;
-  sourceLanguage: string;
-  targetLanguage: string;
-  confidence: number;
-}> {
-  if (!text.trim()) {
-    return {
-      translatedText: '',
-      originalText: '',
-      isTranslated: false,
-      sourceLanguage,
-      targetLanguage,
-      confidence: 0,
-    };
-  }
-  
-  const normalizedSource = normalizeLanguageCode(sourceLanguage);
-  const normalizedTarget = normalizeLanguageCode(targetLanguage);
-  
-  console.log(`[translateSemantic] 🔄 "${text.substring(0, 40)}" | ${sourceLanguage}→${normalizedSource} → ${targetLanguage}→${normalizedTarget}`);
-  
-  // Same language check - no translation needed
-  if (xenovaSameLanguage(normalizedSource, normalizedTarget)) {
-    console.log('[translateSemantic] ✅ Same language, passthrough');
-    return {
-      translatedText: text,
-      originalText: text,
-      isTranslated: false,
-      sourceLanguage: normalizedSource,
-      targetLanguage: normalizedTarget,
-      confidence: 1.0,
-    };
-  }
-  
-  // Use edge function for translation
-  try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    console.log('[translateSemantic] Calling edge function...');
-    
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        source: normalizedSource,
-        target: normalizedTarget,
-        mode: 'translate',
-      },
-    });
-    
-    if (error) {
-      console.warn('[translateSemantic] Edge function error:', error);
-      throw error;
-    }
-    
-    const translatedText = data?.translatedText || data?.translatedMessage;
-    const wasTranslated = translatedText && translatedText !== text && translatedText.trim() !== '';
-    
-    if (wasTranslated) {
-      console.log(`[translateSemantic] ✅ Edge function success: "${translatedText?.substring(0, 40)}"`);
-      return {
-        translatedText,
-        originalText: text,
-        isTranslated: true,
-        sourceLanguage: normalizedSource,
-        targetLanguage: normalizedTarget,
-        confidence: 0.85,
-      };
-    }
-    
-    console.log('[translateSemantic] ⚠️ Edge function returned unchanged text');
-  } catch (edgeError) {
-    console.warn('[translateSemantic] Edge function failed:', edgeError);
-  }
-  
-  // Fallback: return original text
-  console.log('[translateSemantic] ❌ Translation failed, returning original');
-  return {
-    translatedText: text,
-    originalText: text,
-    isTranslated: false,
-    sourceLanguage: normalizedSource,
-    targetLanguage: normalizedTarget,
-    confidence: 0,
-  };
-}
-
-/**
- * Edge function bidirectional chat translation
- * Provides proper sender/receiver views based on their mother tongues
- * 
- * @param text - The message text (can be in any language/script)
- * @param senderLang - Sender's mother tongue
- * @param receiverLang - Receiver's mother tongue
- */
-async function translateForChatSemantic(
-  text: string,
-  senderLang: string,
-  receiverLang: string
-): Promise<{
-  senderView: string;
-  receiverView: string;
-  englishMeaning: string;
-  isTranslated: boolean;
-}> {
-  if (!text.trim()) {
-    return {
-      senderView: '',
-      receiverView: '',
-      englishMeaning: '',
-      isTranslated: false,
-    };
-  }
-  
-  const normSender = normalizeLanguageCode(senderLang);
-  const normReceiver = normalizeLanguageCode(receiverLang);
-  
-  console.log(`[translateForChatSemantic] 🔄 "${text.substring(0, 40)}" | sender=${senderLang}→${normSender} | receiver=${receiverLang}→${normReceiver}`);
-  
-  // Use edge function with bidirectional mode
-  try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    console.log('[translateForChatSemantic] Calling edge function...');
-    
-    const { data, error } = await supabase.functions.invoke('translate-message', {
-      body: {
-        text,
-        senderLanguage: normSender,
-        receiverLanguage: normReceiver,
-        mode: 'bidirectional',
-      },
-    });
-    
-    if (error) throw error;
-    
-    const senderView = data?.senderView || text;
-    const receiverView = data?.receiverView || text;
-    const englishCore = data?.englishCore || data?.englishText || text;
-    const wasTranslated = receiverView !== text || englishCore !== text;
-    
-    if (wasTranslated) {
-      console.log(`[translateForChatSemantic] ✅ Edge function success:
-        Sender: "${senderView?.substring(0, 30)}"
-        Receiver: "${receiverView?.substring(0, 30)}"
-        English: "${englishCore?.substring(0, 30)}"`);
-      
-      return {
-        senderView,
-        receiverView,
-        englishMeaning: englishCore,
-        isTranslated: true,
-      };
-    }
-  } catch (edgeError) {
-    console.warn('[translateForChatSemantic] Edge function failed:', edgeError);
-  }
-  
-  console.log('[translateForChatSemantic] ❌ Translation failed, returning original');
-  return {
-    senderView: text,
-    receiverView: text,
-    englishMeaning: text,
-    isTranslated: false,
-  };
-}
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
 const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
@@ -275,12 +47,6 @@ interface Message {
   id: string;
   senderId: string;
   message: string;
-  translatedMessage?: string;
-  englishMessage?: string; // English version for display
-  latinMessage?: string; // Latin/romanized version when native script is shown
-  isTranslated?: boolean;
-  isTranslating?: boolean;
-  detectedLanguage?: string;
   createdAt: string;
 }
 
@@ -309,10 +75,8 @@ const DraggableMiniChatWindow = ({
   partnerId,
   partnerName,
   partnerPhoto,
-  partnerLanguage,
   isPartnerOnline,
   currentUserId,
-  currentUserLanguage,
   userGender,
   ratePerMinute,
   earningRatePerMinute,
@@ -323,12 +87,10 @@ const DraggableMiniChatWindow = ({
 }: DraggableMiniChatWindowProps) => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [rawInput, setRawInput] = useState(""); // What user types (Latin for non-Latin languages)
-  const [newMessage, setNewMessage] = useState(""); // Native script after transliteration
-  // isSending state removed - using sendingRef for non-blocking double-send prevention
+  const [newMessage, setNewMessage] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [areButtonsExpanded, setAreButtonsExpanded] = useState(false); // Action buttons minimized by default
+  const [areButtonsExpanded, setAreButtonsExpanded] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
@@ -340,43 +102,11 @@ const DraggableMiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [transliterationEnabled, setTransliterationEnabled] = useState(true);
-  const [livePreview, setLivePreview] = useState<{ text: string; isLoading: boolean }>({ text: '', isLoading: false });
-  const [meaningPreview, setMeaningPreview] = useState<string>(''); // Mother tongue preview
-  const [isMeaningLoading, setIsMeaningLoading] = useState(false);
-  const [detectedInputSource, setDetectedInputSource] = useState<'gboard' | 'voice' | 'keyboard' | 'mixed' | 'native'>('keyboard');
-  const meaningPreviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const transliterationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // ASYNC TRANSLATION: AbortController to cancel pending translation requests
-  // Ensures new typing cancels old translations without blocking
-  const translationAbortRef = useRef<AbortController | null>(null);
-  const lastTranslatedInputRef = useRef<string>(''); // Track what was last translated
-  
-  // Removed typing modes - now fully auto-detect based on input type
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if translation is needed (based on mother tongue from profiles)
-  const needsTranslation = !isSameLanguage(currentUserLanguage, partnerLanguage);
-
-  // AI-powered spell check for 900+ languages
-  const { 
-    isChecking: isSpellChecking, 
-    lastSuggestion, 
-    checkSpellingDebounced,
-    acceptSuggestion,
-    dismissSuggestion 
-  } = useSpellCheck({ 
-    language: currentUserLanguage, 
-    enabled: false, // Disabled in EN-mode only system
-    debounceMs: 800 
-  });
-
-  // Dragging state - use left/top for absolute positioning anywhere on screen
+  // Dragging state
   const [position, setPosition] = useState(() => {
-    // Default to bottom-right if initialPosition is default {20, 20}
     if (typeof window !== 'undefined') {
       const isMobile = window.innerWidth < 640;
       const defaultWidth = isMobile ? 280 : 320;
@@ -392,7 +122,6 @@ const DraggableMiniChatWindow = ({
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
   const windowRef = useRef<HTMLDivElement>(null);
 
-  // Responsive size - smaller on mobile
   const getResponsiveSize = () => {
     if (typeof window !== 'undefined') {
       const isMobile = window.innerWidth < 640;
@@ -413,287 +142,11 @@ const DraggableMiniChatWindow = ({
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   
-  // State for billing pause and activity tracking
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
 
-  // Check block status
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
-
-  // NOTE: LibreTranslate removed - using DL-Translate only via edge function
-
-  // Real-time typing indicator with bi-directional broadcast - FULLY ASYNC
-  const {
-    sendTypingIndicator: broadcastTyping,
-    clearPreview: clearTypingBroadcast,
-    senderNativePreview,
-    partnerTyping,
-    isTyping,
-    isTranslating: isTypingTranslating,
-  } = useRealtimeTranslation({
-    currentUserId,
-    currentUserLanguage,
-    channelId: chatId,
-    enabled: true,
-  });
-  
-  const clearPreview = useCallback(() => {
-    setMeaningPreview('');
-    lastTranslatedInputRef.current = '';
-    // Cancel any in-flight translation
-    if (translationAbortRef.current) {
-      translationAbortRef.current.abort();
-      translationAbortRef.current = null;
-    }
-    clearTypingBroadcast();
-  }, [clearTypingBroadcast]);
-
-  // ============================================================
-  // UNIVERSAL INPUT DETECTION - All 12 typing methods supported
-  // 1. Pure English, 2. Native script, 3. Transliteration (Romanized)
-  // 4. Mixed/code-mixed, 5. Gboard/phonetic, 6. Keyboard layout
-  // 7. Virtual keyboard, 8. Font-based (legacy), 9. Voice single
-  // 10. Voice mixed, 11. AI-predictive, 12. Accessibility
-  // ============================================================
-
-  // Detect input source type for better handling
-  const detectInputSource = useCallback((text: string, prevText: string): 'gboard' | 'voice' | 'keyboard' | 'mixed' | 'native' => {
-    if (!text) return 'keyboard';
-    
-    const newChars = text.slice(prevText.length);
-    const hasNonLatin = /[^\x00-\x7F]/.test(newChars);
-    const hasLatinNew = /[a-zA-Z]/.test(newChars);
-    const burstSize = newChars.length;
-    
-    // Voice-to-text: Large burst with spaces (phrases/sentences)
-    if (burstSize > 12 && text.includes(' ')) {
-      console.log('[InputDetect] Voice-to-text detected (burst:', burstSize, ')');
-      return 'voice';
-    }
-    
-    // Native script input (Gboard, IME, virtual keyboard, keyboard layout)
-    if (hasNonLatin && !hasLatinNew && burstSize >= 1) {
-      console.log('[InputDetect] Native script detected (Gboard/IME/INSCRIPT)');
-      return 'native';
-    }
-    
-    // Gboard transliteration (Latin typed, native produced)
-    if (hasNonLatin && burstSize >= 1) {
-      console.log('[InputDetect] Gboard transliteration detected');
-      return 'gboard';
-    }
-    
-    // Mixed mode: Both Latin and non-Latin in the full text
-    const hasLatinTotal = /[a-zA-Z]/.test(text);
-    const hasNonLatinTotal = /[^\x00-\x7F]/.test(text);
-    if (hasLatinTotal && hasNonLatinTotal) {
-      console.log('[InputDetect] Mixed/code-mixed mode detected');
-      return 'mixed';
-    }
-    
-    return 'keyboard';
-  }, []);
-
-  // Detect script type from text
-  const detectScript = useCallback((text: string): 'latin' | 'native' | 'mixed' => {
-    const hasLatin = /[a-zA-Z]/.test(text);
-    const hasNonLatin = /[^\x00-\x7F]/.test(text);
-    
-    if (hasLatin && hasNonLatin) return 'mixed';
-    if (hasNonLatin) return 'native';
-    return 'latin';
-  }, []);
-
-  // AUTO-DETECT input type and generate preview in sender's MOTHER TONGUE
-  // Handles: English typing, native script (Gboard/IME), romanized, voice-to-text, mixed
-  // FULLY ASYNC: Runs in background, NEVER blocks typing
-  // Uses AbortController to cancel previous requests when new input arrives
-  const generateMeaningPreview = useCallback((inputText: string, inputSource?: string) => {
-    // CRITICAL: This function NEVER blocks - all state updates are synchronous, 
-    // translation happens in background
-    if (!inputText.trim()) {
-      setMeaningPreview('');
-      setIsMeaningLoading(false);
-      lastTranslatedInputRef.current = '';
-      return;
-    }
-    
-    const trimmedInput = inputText.trim();
-    
-    // Skip if same text was already translated (avoid redundant calls)
-    if (trimmedInput === lastTranslatedInputRef.current) {
-      setIsMeaningLoading(false);
-      return;
-    }
-    
-    // PERFORMANCE: Skip translation for very short text (< 2 chars) 
-    // unless it's native script
-    const scriptType = detectScript(trimmedInput);
-    if (trimmedInput.length < 2 && scriptType === 'latin') {
-      setMeaningPreview('');
-      setIsMeaningLoading(false);
-      return;
-    }
-    
-    // PERFORMANCE: Skip if same language (no translation needed)
-    const senderCode = normalizeLanguageCode(currentUserLanguage);
-    const receiverCode = normalizeLanguageCode(partnerLanguage);
-    if (senderCode === receiverCode && scriptType !== 'latin') {
-      setMeaningPreview(trimmedInput);
-      setIsMeaningLoading(false);
-      lastTranslatedInputRef.current = trimmedInput;
-      return;
-    }
-    
-    // Clear previous timeout IMMEDIATELY
-    if (meaningPreviewTimeoutRef.current) {
-      clearTimeout(meaningPreviewTimeoutRef.current);
-      meaningPreviewTimeoutRef.current = null;
-    }
-    
-    // Cancel any in-flight translation request IMMEDIATELY
-    if (translationAbortRef.current) {
-      translationAbortRef.current.abort();
-      translationAbortRef.current = null;
-    }
-    
-    // Show loading state (non-blocking visual feedback)
-    setIsMeaningLoading(true);
-    
-    // DEBOUNCE: Increased from 300ms to 600ms to reduce API calls
-    // Voice input has complete phrases, so shorter debounce (150ms)
-    // Native script typing is intentional, use medium debounce (400ms)
-    let debounceTime = 600; // Default for keyboard Latin input
-    if (inputSource === 'voice') {
-      debounceTime = 150; // Voice has complete phrases
-    } else if (scriptType === 'native') {
-      debounceTime = 400; // Native script typing is more intentional
-    }
-    
-    // Debounce: wait for pause in typing before starting translation
-    meaningPreviewTimeoutRef.current = setTimeout(() => {
-      const capturedText = inputText.trim();
-      const detectedScript = detectScript(capturedText);
-      
-      // Skip if text changed during debounce (user still typing)
-      if (capturedText !== inputText.trim()) {
-        setIsMeaningLoading(false);
-        return;
-      }
-      
-      console.log('[MeaningPreview] Processing:', { 
-        text: capturedText.substring(0, 30), 
-        userLang: currentUserLanguage,
-        partnerLang: partnerLanguage,
-        inputSource: inputSource || 'auto',
-        scriptType: detectedScript
-      });
-      
-      // Create new AbortController for this request
-      const abortController = new AbortController();
-      translationAbortRef.current = abortController;
-      
-      // Use normalized language codes to reduce duplicate calls
-      const senderLangCode = normalizeLanguageCode(currentUserLanguage);
-      const receiverLangCode = normalizeLanguageCode(partnerLanguage);
-      
-      // Run translation in background - NEVER blocks typing
-      (async () => {
-        // Check if already aborted before starting
-        if (abortController.signal.aborted) {
-          return;
-        }
-        
-        try {
-          let translatedText = '';
-          
-          // ALWAYS use bidirectional edge function for ALL input types
-          console.log('[MeaningPreview] Calling edge function:', capturedText.substring(0, 30), `${senderLangCode}→${receiverLangCode}`);
-          
-          try {
-            const { data, error } = await supabase.functions.invoke('translate-message', {
-              body: {
-                text: capturedText,
-                senderLanguage: senderLangCode,
-                receiverLanguage: receiverLangCode,
-                mode: 'bidirectional',
-              },
-            });
-            
-            // Check if aborted during request
-            if (abortController.signal.aborted) {
-              console.log('[MeaningPreview] Request aborted, discarding result');
-              return;
-            }
-            
-            if (!error && data?.senderView) {
-              translatedText = data.senderView;
-              console.log('[MeaningPreview] Edge function success:', {
-                senderView: translatedText.substring(0, 30),
-                receiverView: data.receiverView?.substring(0, 30),
-                englishCore: data.englishCore?.substring(0, 30),
-                cached: data.cached || false
-              });
-            } else {
-              // Fallback: for native script, show as-is
-              if (detectedScript === 'native') {
-                translatedText = capturedText;
-                console.log('[MeaningPreview] Native script - showing as-is');
-              } else {
-                // Fallback to browser-based translation for Latin text
-                const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-                
-                // Check abort again after fallback
-                if (abortController.signal.aborted) return;
-                
-                if (result?.translatedText && result.translatedText !== capturedText) {
-                  translatedText = result.translatedText;
-                }
-              }
-            }
-          } catch (edgeError) {
-            // Check if aborted
-            if (abortController.signal.aborted) return;
-            
-            console.warn('[MeaningPreview] Edge function error, using fallback:', edgeError);
-            if (detectedScript === 'native') {
-              translatedText = capturedText;
-            } else {
-              try {
-                const result = await translateSemantic(capturedText, 'english', currentUserLanguage);
-                if (abortController.signal.aborted) return;
-                if (result?.translatedText && result.translatedText !== capturedText) {
-                  translatedText = result.translatedText;
-                }
-              } catch (fallbackError) {
-                console.warn('[MeaningPreview] Fallback translation error:', fallbackError);
-              }
-            }
-          }
-          
-          // Final abort check before updating state
-          if (abortController.signal.aborted) return;
-          
-          if (translatedText) {
-            console.log('[MeaningPreview] Setting mother tongue preview:', translatedText.substring(0, 30));
-            setMeaningPreview(translatedText);
-            lastTranslatedInputRef.current = capturedText;
-          } else {
-            setMeaningPreview('');
-          }
-        } catch (error) {
-          if (abortController.signal.aborted) return;
-          console.warn('[MeaningPreview] Background error (non-blocking):', error);
-          setMeaningPreview('');
-        } finally {
-          if (!abortController.signal.aborted) {
-            setIsMeaningLoading(false);
-          }
-        }
-      })();
-    }, debounceTime);
-  }, [currentUserLanguage, partnerLanguage, detectScript]);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -709,7 +162,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // Dragging handlers - supports both mouse and touch
+  // Dragging handlers
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
     e.preventDefault();
@@ -737,7 +190,6 @@ const DraggableMiniChatWindow = ({
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
       
-      // Constrain to viewport bounds
       const maxX = window.innerWidth - size.width;
       const maxY = window.innerHeight - (isMinimized ? 48 : size.height);
       
@@ -767,7 +219,7 @@ const DraggableMiniChatWindow = ({
     };
   }, [isDragging, size, isMinimized]);
 
-  // Resize handlers - support touch and multiple corners
+  // Resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent, corner: string = 'se') => {
     e.preventDefault();
     e.stopPropagation();
@@ -807,7 +259,6 @@ const DraggableMiniChatWindow = ({
       
       const corner = resizeRef.current.corner;
       
-      // Handle different corner resizing
       if (corner.includes('e')) {
         newWidth = Math.max(minWidth, Math.min(maxWidth, resizeRef.current.startWidth + deltaX));
       }
@@ -925,7 +376,6 @@ const DraggableMiniChatWindow = ({
     const hasSentMessage = messages.some(m => m.senderId === currentUserId);
     const hasReceivedMessage = messages.some(m => m.senderId !== currentUserId);
     
-    // Billing starts only when BOTH parties have exchanged messages
     if (hasSentMessage && hasReceivedMessage && !billingStarted) {
       setBillingStarted(true);
       setLastActivityTime(Date.now());
@@ -933,8 +383,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-
-  // Track when both users reply to resume billing
+  // Track message times
   useEffect(() => {
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
@@ -946,7 +395,7 @@ const DraggableMiniChatWindow = ({
     }
   }, [messages, currentUserId]);
 
-  // Resume billing when BOTH users have replied after pause
+  // Resume billing when both users reply
   useEffect(() => {
     if (isBillingPaused && billingStarted) {
       const now = Date.now();
@@ -965,23 +414,17 @@ const DraggableMiniChatWindow = ({
     }
   }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime]);
 
-  // Inactivity check - pause billing at 3 mins, logout at 15 mins
+  // Inactivity check
   useEffect(() => {
-    if (!billingStarted) return;
+    if (!billingStarted || isBillingPaused) return;
 
     const warningInterval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       
-      // Show billing pause warning between 2-3 mins
-      if (!isBillingPaused && timeSinceActivity >= BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
-        const remainingSecs = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Billing pauses in ${remainingSecs}s`);
-      } 
-      // Show logout warning after billing paused (between 3-15 mins)
-      else if (isBillingPaused && timeSinceActivity < LOGOUT_TIMEOUT_MS) {
-        const remainingMins = Math.ceil((LOGOUT_TIMEOUT_MS - timeSinceActivity) / 60000);
-        setInactiveWarning(`Billing paused. Logout in ${remainingMins}m if no activity`);
-      } else if (!isBillingPaused) {
+      if (timeSinceActivity > BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
+        const remainingSeconds = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Billing pauses in ${remainingSeconds}s - send a message!`);
+      } else {
         setInactiveWarning(null);
       }
     }, 1000);
@@ -991,25 +434,24 @@ const DraggableMiniChatWindow = ({
       clearTimeout(billingPauseTimeoutRef.current);
     }
 
-    if (!isBillingPaused) {
-      billingPauseTimeoutRef.current = setTimeout(() => {
-        // Pause billing - stop timer but DON'T close chat
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
-        
-        setIsBillingPaused(true);
-        toast({
-          title: "Billing Paused",
-          description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
-        });
-      }, BILLING_PAUSE_TIMEOUT_MS);
-    }
+    billingPauseTimeoutRef.current = setTimeout(() => {
+      setInactiveWarning(null);
+      
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      
+      setIsBillingPaused(true);
+      toast({
+        title: "Billing Paused",
+        description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
+      });
+    }, BILLING_PAUSE_TIMEOUT_MS);
 
     // Logout timeout (15 minutes)
     if (logoutTimeoutRef.current) {
@@ -1032,7 +474,6 @@ const DraggableMiniChatWindow = ({
           })
           .eq("id", sessionId);
         
-        // Logout user
         await supabase.auth.signOut();
       } catch (error) {
         console.error("Error during inactivity logout:", error);
@@ -1048,11 +489,10 @@ const DraggableMiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
-  // Monitor partner's online status and session status - auto-disconnect if partner goes offline
+  // Monitor partner's online status
   useEffect(() => {
     let partnerOnlineStatus = isPartnerOnline;
     
-    // Subscribe to partner's online status changes via user_status table (more accurate)
     const statusChannel = supabase
       .channel(`partner-user-status-${partnerId}`)
       .on(
@@ -1067,15 +507,12 @@ const DraggableMiniChatWindow = ({
           const newStatus = payload.new;
           const wasOnline = partnerOnlineStatus;
           
-          // Check if partner went offline
           if (newStatus && newStatus.is_online === false && wasOnline) {
-            console.log("Partner went offline (user_status), disconnecting...");
             toast({
               title: "Partner Disconnected",
               description: `${partnerName} went offline. You are now free to chat with others.`,
             });
             
-            // End the chat session
             try {
               await supabase
                 .from("active_chat_sessions")
@@ -1097,62 +534,6 @@ const DraggableMiniChatWindow = ({
       )
       .subscribe();
 
-    // Also subscribe to partner's profile changes as fallback
-    const profileChannel = supabase
-      .channel(`partner-profile-status-${partnerId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${partnerId}`
-        },
-        async (payload: any) => {
-          const newProfile = payload.new;
-          
-          // Check if partner went offline (last_active_at is more than 5 minutes ago)
-          // Use 5 minutes instead of 2 to avoid false disconnects during active chats
-          if (newProfile.last_active_at) {
-            const lastActive = new Date(newProfile.last_active_at).getTime();
-            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-            const isNowOffline = lastActive < fiveMinutesAgo;
-            
-            // Only disconnect if partner was online AND went offline AND no recent messages
-            // Skip if there was activity in the chat within the last minute (they're still chatting)
-            const recentChatActivity = Date.now() - lastActivityTime < 60 * 1000;
-            
-            if (partnerOnlineStatus && isNowOffline && !recentChatActivity) {
-              console.log("Partner went offline (profiles), disconnecting...");
-              toast({
-                title: "Partner Disconnected",
-                description: `${partnerName} went offline. You are now free to chat with others.`,
-              });
-              
-              // End the chat session
-              try {
-                await supabase
-                  .from("active_chat_sessions")
-                  .update({
-                    status: "ended",
-                    ended_at: new Date().toISOString(),
-                    end_reason: "partner_offline"
-                  })
-                  .eq("id", sessionId);
-              } catch (error) {
-                console.error("Error ending chat on partner offline:", error);
-              }
-              
-              onClose();
-            }
-            
-            partnerOnlineStatus = !isNowOffline;
-          }
-        }
-      )
-      .subscribe();
-
-    // Also subscribe to session status changes - if partner ends the chat
     const sessionChannel = supabase
       .channel(`session-status-${sessionId}`)
       .on(
@@ -1166,10 +547,7 @@ const DraggableMiniChatWindow = ({
         (payload: any) => {
           const session = payload.new;
           
-          // If session was ended by partner, close the chat window
           if (session.status === 'ended' && session.end_reason) {
-            console.log("Session ended:", session.end_reason);
-            
             let message = "Chat session ended";
             if (session.end_reason === 'partner_offline') {
               message = `${partnerName} went offline`;
@@ -1192,207 +570,12 @@ const DraggableMiniChatWindow = ({
 
     return () => {
       supabase.removeChannel(statusChannel);
-      supabase.removeChannel(profileChannel);
       supabase.removeChannel(sessionChannel);
     };
   }, [partnerId, partnerName, sessionId, isPartnerOnline, onClose, toast]);
 
-  // UNIVERSAL OFFLINE TRANSLATION: Auto-translate messages for display
-  // Uses translateUniversal for meaning-based translation (NO external APIs)
-  // For RECEIVER: Always translate to receiver's mother tongue + show English meaning
-  // For SENDER: Show their original message + English meaning below
-  const translateMessage = useCallback(async (text: string, senderId: string, originalEnglish?: string): Promise<{
-    translatedMessage?: string;
-    englishMessage?: string;
-    latinMessage?: string;
-    senderView?: string;
-    receiverView?: string;
-    isTranslated?: boolean;
-    detectedLanguage?: string;
-  }> => {
-    try {
-      const isSentByMe = senderId === currentUserId;
-      
-      console.log('[DraggableMiniChatWindow] translateMessage with Universal Offline:', {
-        text: text.substring(0, 50),
-        originalEnglish: originalEnglish?.substring(0, 50),
-        isSentByMe,
-        senderLanguage: isSentByMe ? currentUserLanguage : partnerLanguage,
-        receiverLanguage: isSentByMe ? partnerLanguage : currentUserLanguage
-      });
-      
-      // Import utilities for Latin script handling
-      const { reverseTransliterate } = await import('@/lib/libre-translate/transliterator');
-      const { isLatinText: checkLatinText } = await import('@/lib/libre-translate/language-data');
-      
-      let displayText: string = text;
-      let englishText: string | undefined = originalEnglish;
-      let wasTranslated = false;
-      
-      // Determine source language based on sender
-      const senderLanguage = isSentByMe ? currentUserLanguage : partnerLanguage;
-      const receiverLanguage = isSentByMe ? partnerLanguage : currentUserLanguage;
-      
-      if (isSentByMe) {
-        // ===========================================
-        // SENDER VIEW: Show what sender typed + English meaning
-        // ===========================================
-        displayText = text;
-        
-        // MANDATORY: Generate English meaning if not available
-        if (!englishText) {
-          if (checkIsEnglish(currentUserLanguage)) {
-            englishText = text;
-          } else {
-            try {
-              console.log('[translateMessage] Sender: Generating English from', currentUserLanguage);
-              const englishResult = await translateSemantic(text, currentUserLanguage, 'english');
-              englishText = englishResult?.translatedText || text;
-              console.log('[translateMessage] Sender English result:', englishText?.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Sender English generation failed:', e);
-              englishText = text;
-            }
-          }
-        }
-      } else {
-        // ===========================================
-        // RECEIVER VIEW: ALWAYS translate to receiver's mother tongue
-        // + ALWAYS show English meaning below
-        // ===========================================
-        
-        // Check if originalEnglish is actually English or just Latin phonetic
-        const isActualEnglish = originalEnglish && originalEnglish.trim() && 
-          !originalEnglish.match(/^[a-z\s]+$/i) || // Has punctuation/numbers
-          originalEnglish.split(' ').some(word => 
-            ['how', 'are', 'you', 'what', 'where', 'hello', 'hi', 'good', 'the', 'is', 'a', 'an', 'to', 'for', 'in', 'on', 'with'].includes(word.toLowerCase())
-          ); // Contains common English words
-        
-        // Step 1: Translate to receiver's native language
-        if (isActualEnglish && originalEnglish && originalEnglish.trim()) {
-          // Best case: We have English source - translate directly to receiver's language
-          console.log('[translateMessage] Receiver: Have actual English, translating to:', currentUserLanguage);
-          
-          if (checkIsEnglish(currentUserLanguage)) {
-            // Receiver's language IS English - just show English
-            displayText = originalEnglish;
-          } else {
-            // Translate English → Receiver's mother tongue using Universal Offline
-            try {
-              const result = await translateSemantic(originalEnglish, 'english', currentUserLanguage);
-              displayText = result?.translatedText || text;
-              wasTranslated = result?.isTranslated || (result?.translatedText !== originalEnglish);
-              console.log('[translateMessage] Receiver native result:', displayText.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Translation to receiver failed:', e);
-              displayText = text;
-            }
-          }
-          englishText = originalEnglish;
-        } else {
-          // No actual English available - translate from partner's language to receiver's language
-          console.log('[translateMessage] Receiver: No actual English (might be phonetic), translating from', partnerLanguage, 'to', currentUserLanguage);
-          
-          if (!isSameLanguage(partnerLanguage, currentUserLanguage)) {
-            // Different languages - need translation
-            try {
-              const result = await translateSemantic(text, partnerLanguage, currentUserLanguage);
-              displayText = result?.translatedText || text;
-              wasTranslated = result?.isTranslated || (result?.translatedText !== text);
-              console.log('[translateMessage] Receiver cross-lang result:', displayText.substring(0, 50));
-            } catch (e) {
-              console.error('[translateMessage] Cross-language translation failed:', e);
-              displayText = text;
-            }
-          } else {
-            // Same language - no translation needed
-            displayText = text;
-          }
-          
-          // MANDATORY: Generate ACTUAL English meaning from sender's message
-          // This is needed when original_english contains phonetic text
-          try {
-            console.log('[translateMessage] Generating actual English meaning from:', partnerLanguage);
-            const englishResult = await translateSemantic(text, partnerLanguage, 'english');
-            if (englishResult?.translatedText && englishResult.isTranslated) {
-              englishText = englishResult.translatedText;
-              console.log('[translateMessage] English MEANING result:', englishText?.substring(0, 50));
-            } else if (englishResult?.translatedText && englishResult.translatedText !== text) {
-              englishText = englishResult.translatedText;
-            } else {
-              // Fallback to showing "Translation pending" rather than phonetic
-              englishText = originalEnglish || '(English pending...)';
-            }
-          } catch (e) {
-            console.error('[translateMessage] English meaning generation failed:', e);
-            englishText = originalEnglish || text;
-          }
-        }
-      }
-      
-      // Generate Latin transliteration for non-Latin scripts
-      let latinText: string | undefined;
-      if (displayText && !checkLatinText(displayText)) {
-        latinText = reverseTransliterate(displayText, currentUserLanguage);
-        if (latinText === displayText || !latinText?.trim()) {
-          latinText = reverseTransliterate(displayText, partnerLanguage);
-          if (latinText === displayText || !latinText?.trim()) {
-            latinText = undefined;
-          }
-        }
-      }
-      
-      // FINAL FALLBACK: Ensure we ALWAYS have English for all 9 combinations
-      if (!englishText || englishText === text) {
-        // If English still equals the original text and it's not English, try one more time
-        if (!checkIsEnglish(senderLanguage)) {
-          try {
-            const finalEnglishResult = await translateSemantic(text, senderLanguage, 'english');
-            if (finalEnglishResult?.translatedText && finalEnglishResult.translatedText !== text) {
-              englishText = finalEnglishResult.translatedText;
-            }
-          } catch {
-            // Keep existing englishText
-          }
-        }
-      }
-      
-      // Absolute fallback
-      if (!englishText) {
-        englishText = text;
-      }
-      
-      console.log('[translateMessage] Final result:', {
-        displayText: displayText.substring(0, 30),
-        englishText: englishText?.substring(0, 30),
-        latinText: latinText?.substring(0, 30),
-        wasTranslated
-      });
-      
-      return {
-        translatedMessage: displayText,
-        englishMessage: englishText,
-        latinMessage: latinText,
-        senderView: isSentByMe ? displayText : text,
-        receiverView: isSentByMe ? undefined : displayText,
-        isTranslated: wasTranslated,
-        detectedLanguage: senderLanguage
-      };
-    } catch (error) {
-      console.error('[DraggableMiniChatWindow] Translation error:', error);
-      return { translatedMessage: text, englishMessage: text, isTranslated: false };
-    }
-  }, [partnerLanguage, currentUserLanguage, currentUserId]);
-
-  // BIDIRECTIONAL MOTHER TONGUE: Load messages with correct views
-  // DB Schema:
-  //   - message: sender's mother tongue text (senderView)
-  //   - translated_message: receiver's mother tongue text (receiverView)
-  //   - original_english: English semantic meaning (englishCore)
-  // ALL TRANSLATIONS RUN IN BACKGROUND - NEVER BLOCKS UI
+  // Load messages - simple, no translation
   const loadMessages = async () => {
-    console.log('[DraggableMiniChatWindow] loadMessages called');
-    
     const { data } = await supabase
       .from("chat_messages")
       .select("*")
@@ -1401,103 +584,17 @@ const DraggableMiniChatWindow = ({
       .limit(100);
 
     if (data) {
-      // IMMEDIATE: Show messages right away with available data
-      const immediateMessages = data.map((m) => {
-        const isSentByMe = m.sender_id === currentUserId;
-        const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
-        const hasReceiverTranslation =
-          typeof m.translated_message === 'string' &&
-          m.translated_message.trim().length > 0 &&
-          (sameLang || m.translated_message !== m.message);
-        
-        // CRITICAL: Determine display based on viewer's role
-        let displayMessage: string;
-        if (isSentByMe) {
-          displayMessage = m.message;
-        } else {
-          displayMessage = hasReceiverTranslation ? m.translated_message : m.message;
-        }
-        
-        return {
-          id: m.id,
-          senderId: m.sender_id,
-          message: m.message,
-          translatedMessage: displayMessage,
-          englishMessage: m.original_english || undefined,
-          latinMessage: undefined,
-          isTranslated: !isSentByMe && hasReceiverTranslation,
-          isTranslating: !isSentByMe && !hasReceiverTranslation, // Mark if needs translation
-          createdAt: m.created_at
-        };
-      });
-      setMessages(immediateMessages);
-
-      // ASYNC BACKGROUND: Process translations for messages that need them
-      data.forEach((m) => {
-        const isSentByMe = m.sender_id === currentUserId;
-        const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
-        const hasReceiverTranslation =
-          typeof m.translated_message === 'string' &&
-          m.translated_message.trim().length > 0 &&
-          (sameLang || m.translated_message !== m.message);
-        const displayText = isSentByMe 
-          ? m.message 
-          : (hasReceiverTranslation ? m.translated_message : m.message);
-        
-        // Background: Translate partner messages that don't have translations
-        if (!isSentByMe && !hasReceiverTranslation) {
-          (async () => {
-            try {
-              const result = await translateForChatSemantic(
-                m.message,
-                partnerLanguage,
-                currentUserLanguage
-              );
-              
-              if (result.receiverView || result.englishMeaning) {
-                setMessages(prev => prev.map(msg => 
-                  msg.id === m.id 
-                    ? { 
-                        ...msg, 
-                        translatedMessage: result.receiverView || msg.translatedMessage,
-                        englishMessage: result.englishMeaning || msg.englishMessage,
-                        isTranslated: true,
-                        isTranslating: false 
-                      } 
-                    : msg
-                ));
-              } else {
-                setMessages(prev => prev.map(msg => 
-                  msg.id === m.id ? { ...msg, isTranslating: false } : msg
-                ));
-              }
-            } catch (error) {
-              console.warn('[loadMessages] Background translation failed:', error);
-              setMessages(prev => prev.map(msg => 
-                msg.id === m.id ? { ...msg, isTranslating: false } : msg
-              ));
-            }
-          })();
-        }
-        
-        // Background: Generate Latin transliteration for non-Latin scripts
-        const hasNonLatin = /[^\x00-\x7F]/.test(displayText);
-        if (hasNonLatin) {
-          import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
-            const latinText = reverseTransliterate(displayText, currentUserLanguage);
-            if (latinText && latinText !== displayText) {
-              setMessages(prev => prev.map(msg => 
-                msg.id === m.id ? { ...msg, latinMessage: latinText } : msg
-              ));
-            }
-          }).catch(() => {/* ignore */});
-        }
-      });
+      const formattedMessages = data.map((m) => ({
+        id: m.id,
+        senderId: m.sender_id,
+        message: m.message,
+        createdAt: m.created_at
+      }));
+      setMessages(formattedMessages);
     }
   };
 
-  // BIDIRECTIONAL: Subscribe to new messages with correct mother tongue views
-  // ALL TRANSLATIONS RUN IN BACKGROUND - NEVER BLOCKS UI
+  // Subscribe to new messages - simple, no translation
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`draggable-chat-${chatId}`)
@@ -1506,136 +603,27 @@ const DraggableMiniChatWindow = ({
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
         (payload) => {
           const m = payload.new as any;
-
           const isSentByMe = m.sender_id === currentUserId;
-          const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
-          const hasReceiverTranslation =
-            typeof m.translated_message === 'string' &&
-            m.translated_message.trim().length > 0 &&
-            (sameLang || m.translated_message !== m.message);
-          
-          // BIDIRECTIONAL VIEW LOGIC:
-          // When I SENT: show message (my mother tongue)
-          // When PARTNER SENT: show translated_message (my mother tongue)
-          let displayMessage: string;
-          if (isSentByMe) {
-            displayMessage = m.message;
-          } else {
-            displayMessage = hasReceiverTranslation ? m.translated_message : m.message;
-          }
           
           const newMsg: Message = {
             id: m.id,
             senderId: m.sender_id,
             message: m.message,
-            translatedMessage: displayMessage,
-            englishMessage: m.original_english || undefined,
-            latinMessage: undefined,
-            isTranslated: !isSentByMe && hasReceiverTranslation,
-            isTranslating: !isSentByMe && !hasReceiverTranslation, // Mark as translating if no translation yet
             createdAt: m.created_at
           };
           
-          // IMMEDIATE: Add message to UI right away
           setMessages(prev => {
-            // Skip if already exists (optimistic update / duplicate event)
             if (prev.some(msg => msg.id === m.id)) return prev;
-
-            // Remove temp messages for same sender
             const filtered = prev.filter(msg => 
               !msg.id.startsWith('temp-') || msg.senderId !== m.sender_id
             );
             return [...filtered, newMsg];
           });
           
-          // Update counts and activity
           if (!isSentByMe) {
             setUnreadCount(prev => prev + (isMinimized ? 1 : 0));
             setLastActivityTime(Date.now());
-            
-            // ASYNC BACKGROUND: If partner's message has no translation, translate now
-            if (!hasReceiverTranslation) {
-              // Run translation in background - NEVER blocks
-              (async () => {
-                try {
-                  const result = await translateForChatSemantic(
-                    m.message,
-                    partnerLanguage,
-                    currentUserLanguage
-                  );
-                  
-                  if (result.receiverView || result.englishMeaning) {
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === m.id 
-                        ? { 
-                            ...msg, 
-                            translatedMessage: result.receiverView || msg.translatedMessage,
-                            englishMessage: result.englishMeaning || msg.englishMessage,
-                            isTranslated: true,
-                            isTranslating: false 
-                          } 
-                        : msg
-                    ));
-                  } else {
-                    // Mark as done even if translation failed
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === m.id ? { ...msg, isTranslating: false } : msg
-                    ));
-                  }
-                } catch (error) {
-                  console.warn('[subscribeToMessages] Background translation failed:', error);
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === m.id ? { ...msg, isTranslating: false } : msg
-                  ));
-                }
-              })();
-            }
           }
-          
-          // ASYNC BACKGROUND: Generate Latin transliteration for non-Latin text
-          const hasNonLatin = /[^\x00-\x7F]/.test(displayMessage);
-          if (hasNonLatin) {
-            import('@/lib/libre-translate/transliterator').then(({ reverseTransliterate }) => {
-              const latinText = reverseTransliterate(displayMessage, currentUserLanguage);
-              if (latinText && latinText !== displayMessage) {
-                setMessages(prev => prev.map(msg => 
-                  msg.id === newMsg.id ? { ...msg, latinMessage: latinText } : msg
-                ));
-              }
-            }).catch(() => {/* ignore */});
-          }
-        }
-      )
-      // IMPORTANT: receivers need UPDATE events too (sender updates translated_message later)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `chat_id=eq.${chatId}` },
-        (payload) => {
-          const m = payload.new as any;
-
-          const isSentByMe = m.sender_id === currentUserId;
-          const sameLang = isSameLanguage(partnerLanguage, currentUserLanguage);
-          const hasReceiverTranslation =
-            typeof m.translated_message === 'string' &&
-            m.translated_message.trim().length > 0 &&
-            (sameLang || m.translated_message !== m.message);
-
-          const displayMessage = isSentByMe
-            ? m.message
-            : (hasReceiverTranslation ? m.translated_message : m.message);
-
-          setMessages(prev => prev.map(msg =>
-            msg.id === m.id
-              ? {
-                  ...msg,
-                  message: m.message,
-                  translatedMessage: displayMessage,
-                  englishMessage: m.original_english || msg.englishMessage,
-                  isTranslated: !isSentByMe && hasReceiverTranslation,
-                  isTranslating: !isSentByMe && !hasReceiverTranslation,
-                }
-              : msg
-          ));
         }
       )
       .subscribe();
@@ -1656,7 +644,6 @@ const DraggableMiniChatWindow = ({
           body: { action: "heartbeat", chat_id: chatId, session_id: sessionId }
         });
 
-        // Refresh wallet balance for men
         if (userGender === "male") {
           const { data: wallet } = await supabase
             .from("wallets")
@@ -1667,7 +654,6 @@ const DraggableMiniChatWindow = ({
           if (wallet) {
             setWalletBalance(wallet.balance);
             
-            // Check if balance is too low
             if (wallet.balance < ratePerMinute) {
               toast({
                 title: "Low Balance",
@@ -1683,35 +669,12 @@ const DraggableMiniChatWindow = ({
     }, 60000);
   };
 
-  const handleTyping = useCallback((text: string) => {
-    setLastActivityTime(Date.now());
-    // Send typing indicator with native script preview - broadcasts to partner
-    // Uses setTimeout(0) to ensure it never blocks the input
-    if (text.trim()) {
-      setTimeout(() => {
-        broadcastTyping(text.trim(), partnerLanguage);
-      }, 0);
-    }
-  }, [broadcastTyping, partnerLanguage]);
-
-  const MAX_MESSAGE_LENGTH = 10000; // Support very large messages
-
-  // Track the current preview for this typing session - reset after each send
-  const currentPreviewRef = useRef<string>('');
-
-  // FULLY ASYNC FIRE-AND-FORGET: Send message immediately, translate in complete background
-  // - Message added to UI INSTANTLY
-  // - Database insert happens immediately with original text
-  // - Translation runs COMPLETELY in background and updates DB asynchronously
-  // - Typing is NEVER blocked - send button re-enables immediately
-  // - Both sender and receiver can continue typing without ANY delay
-  const sendingRef = useRef(false); // Track sending state without causing re-renders
+  const MAX_MESSAGE_LENGTH = 10000;
+  const sendingRef = useRef(false);
   
   const sendMessage = async () => {
-    const inputText = rawInput.trim();
-    const previewSnapshot = meaningPreview;
+    const inputText = newMessage.trim();
     
-    // Prevent double-send using ref (not state) to avoid blocking
     if (!inputText || sendingRef.current) return;
     sendingRef.current = true;
 
@@ -1725,11 +688,10 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // Content moderation - sync check (import is cached after first use)
+    // Content moderation
     const { moderateMessage } = await import('@/lib/content-moderation');
     const moderationResult = moderateMessage(inputText);
     if (moderationResult.isBlocked) {
-      // Re-enable send for retry
       sendingRef.current = false;
       toast({
         title: "Message Blocked",
@@ -1739,287 +701,54 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    // === IMMEDIATE: Clear input and add optimistic message ===
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const messageTimestamp = new Date().toISOString();
     
-    // Clear input immediately - user can start typing next message RIGHT AWAY
+    // Clear input immediately
     setNewMessage("");
-    setRawInput("");
-    setMeaningPreview("");
-    setLivePreview({ text: '', isLoading: false });
-    currentPreviewRef.current = '';
-    clearPreview();
     setLastActivityTime(Date.now());
     
-    // Clear all preview timeouts
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = null;
-    }
-    if (meaningPreviewTimeoutRef.current) {
-      clearTimeout(meaningPreviewTimeoutRef.current);
-      meaningPreviewTimeoutRef.current = null;
-    }
-    if (transliterationTimeoutRef.current) {
-      clearTimeout(transliterationTimeoutRef.current);
-      transliterationTimeoutRef.current = null;
-    }
-    
-    // Quick heuristic check if input looks like English or native script
-    const hasNonLatin = /[^\x00-\x7F]/.test(inputText);
-    const looksLikeEnglish = !hasNonLatin && /^[\x00-\x7F\s.,!?'"()-]+$/.test(inputText) && inputText.length > 2;
-    
-    // Determine initial display for sender - use preview if available
-    let senderDisplay = inputText;
-    if (previewSnapshot && previewSnapshot.trim()) {
-      senderDisplay = previewSnapshot;
-    }
-
-    // Add optimistic message IMMEDIATELY
+    // Add optimistic message
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
       message: inputText,
-      translatedMessage: senderDisplay,
-      latinMessage: undefined,
-      englishMessage: looksLikeEnglish ? inputText : '(translating...)',
-      isTranslated: senderDisplay !== inputText,
-      isTranslating: true,
       createdAt: messageTimestamp
     }]);
 
-    // RE-ENABLE SEND IMMEDIATELY - user can send next message right away
     sendingRef.current = false;
 
-    // === FIRE-AND-FORGET BACKGROUND PROCESS ===
-    // This runs completely independently - doesn't block anything
-    (async () => {
-      let messageToStore = inputText;
-      let translatedForReceiver: string | null = null;
-      let originalEnglishToStore: string | null = null;
-      let senderNativeDisplay: string | null = null;
-      let dbMessageId: string | null = null;
+    // Insert to database
+    try {
+      const { data: insertedMessage, error: insertError } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_id: chatId,
+          sender_id: currentUserId,
+          receiver_id: partnerId,
+          message: inputText
+        })
+        .select('id')
+        .single();
 
-      // === STEP 1: INSERT TO DATABASE IMMEDIATELY with original text ===
-      // Don't wait for translation - insert right away
-      try {
-        const { data: insertedMessage, error: insertError } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: partnerId,
-            message: inputText,
-            // IMPORTANT: leave null until translation completes.
-            // If we set a placeholder here, receivers won't translate (and they listen to INSERT only).
-            translated_message: null,
-            original_english: looksLikeEnglish ? inputText : null
-          })
-          .select('id')
-          .single();
-
-        if (insertError) throw insertError;
-        dbMessageId = insertedMessage?.id;
-        
-        // Update temp ID to real ID in local state
-        if (dbMessageId) {
-          setMessages(prev => prev.map(m =>
-            m.id === tempId ? { ...m, id: dbMessageId! } : m
-          ));
-        }
-      } catch (dbError) {
-        console.error("[sendMessage] Initial DB insert error:", dbError);
-        setMessages(prev => prev.filter(m => m.id !== tempId));
-        toast({
-          title: "Error",
-          description: "Failed to send message",
-          variant: "destructive"
-        });
-        return; // Stop background process if initial insert fails
-      }
-
-      // === STEP 2: TRANSLATE IN BACKGROUND (completely async) ===
-      const hasNativeScript = /[^\x00-\x7F]/.test(inputText);
-      const looksLikeEnglishWords = /\b(the|is|are|was|were|have|has|had|do|does|did|what|when|where|why|how|who|hello|hi|hey|thanks|you|your|me|my|we|i|am|be|and|or|but|not)\b/i.test(inputText.toLowerCase());
-      const isEnglishInput = looksLikeEnglishWords && !hasNativeScript;
+      if (insertError) throw insertError;
       
-      console.log(`[sendMessage] Background translation: isEnglish=${isEnglishInput}, hasNative=${hasNativeScript}`);
-      
-      try {
-        // Use bidirectional edge function for translation
-        console.log(`[sendMessage] Bidirectional: ${currentUserLanguage} → ${partnerLanguage}`);
-        
-        const bidirectionalResult = await translateForChatSemantic(
-          inputText, 
-          currentUserLanguage, 
-          partnerLanguage
-        );
-        
-        if (bidirectionalResult.senderView || bidirectionalResult.receiverView) {
-          senderNativeDisplay = bidirectionalResult.senderView;
-          translatedForReceiver = bidirectionalResult.receiverView;
-          originalEnglishToStore = bidirectionalResult.englishMeaning;
-          
-          if (senderNativeDisplay && senderNativeDisplay.trim()) {
-            messageToStore = senderNativeDisplay;
-          }
-          
-          if (!translatedForReceiver || !translatedForReceiver.trim()) {
-            translatedForReceiver = messageToStore;
-          }
-          
-          if (!originalEnglishToStore || !originalEnglishToStore.trim()) {
-            originalEnglishToStore = inputText;
-          }
-          
-          console.log(`[sendMessage] Translation complete:
-            sender: "${senderNativeDisplay?.substring(0, 30)}..."
-            receiver: "${translatedForReceiver?.substring(0, 30)}..."
-            english: "${originalEnglishToStore?.substring(0, 30)}..."`);
-          
-          // Update local UI with translations
-          const displayId = dbMessageId || tempId;
-          setMessages(prev => prev.map(m =>
-            m.id === displayId
-              ? { 
-                  ...m, 
-                  translatedMessage: senderNativeDisplay || inputText,
-                  message: senderNativeDisplay || inputText,
-                  englishMessage: originalEnglishToStore,
-                  isTranslated: true,
-                  isTranslating: false 
-                }
-              : m
-          ));
-          
-          // === STEP 3: UPDATE DATABASE with translations ===
-          if (dbMessageId) {
-            await supabase
-              .from("chat_messages")
-              .update({
-                message: messageToStore || inputText,
-                translated_message: translatedForReceiver || inputText,
-                original_english: originalEnglishToStore || inputText
-              })
-              .eq('id', dbMessageId);
-          }
-        } else {
-          // Fallback translations
-          console.log('[sendMessage] Using fallback parallel translation');
-          
-          const translationPromises: Promise<void>[] = [];
-          
-          if (isEnglishInput) {
-            originalEnglishToStore = inputText;
-            
-            if (!checkIsEnglish(currentUserLanguage)) {
-              if (previewSnapshot && previewSnapshot.trim()) {
-                senderNativeDisplay = previewSnapshot;
-                messageToStore = previewSnapshot;
-              } else {
-                translationPromises.push(
-                  translateSemantic(inputText, 'english', currentUserLanguage)
-                    .then(result => {
-                      if (result?.translatedText && result.translatedText.trim()) {
-                        senderNativeDisplay = result.translatedText;
-                        messageToStore = result.translatedText;
-                        const displayId = dbMessageId || tempId;
-                        setMessages(prev => prev.map(m =>
-                          m.id === displayId
-                            ? { ...m, translatedMessage: result.translatedText, message: result.translatedText, isTranslated: true }
-                            : m
-                        ));
-                      }
-                    })
-                    .catch(e => console.warn('[sendMessage] Sender translation failed:', e))
-                );
-              }
-            }
-            
-            if (!checkIsEnglish(partnerLanguage)) {
-              translationPromises.push(
-                translateSemantic(inputText, 'english', partnerLanguage)
-                  .then(result => {
-                    translatedForReceiver = result?.translatedText || inputText;
-                  })
-                  .catch(e => {
-                    console.warn('[sendMessage] Receiver translation failed:', e);
-                    translatedForReceiver = inputText;
-                  })
-              );
-            } else {
-              translatedForReceiver = inputText;
-            }
-          } else {
-            messageToStore = inputText;
-            
-            if (!checkIsEnglish(currentUserLanguage)) {
-              translationPromises.push(
-                translateSemantic(inputText, currentUserLanguage, 'english')
-                  .then(result => {
-                    if (result?.translatedText && result.isTranslated) {
-                      originalEnglishToStore = result.translatedText;
-                      const displayId = dbMessageId || tempId;
-                      setMessages(prev => prev.map(m =>
-                        m.id === displayId
-                          ? { ...m, englishMessage: result.translatedText }
-                          : m
-                      ));
-                    }
-                  })
-                  .catch(e => console.warn('[sendMessage] English failed:', e))
-              );
-            } else {
-              originalEnglishToStore = inputText;
-            }
-            
-            if (!isSameLanguage(currentUserLanguage, partnerLanguage)) {
-              translationPromises.push(
-                translateSemantic(inputText, currentUserLanguage, partnerLanguage)
-                  .then(result => {
-                    translatedForReceiver = result?.translatedText || inputText;
-                  })
-                  .catch(e => {
-                    console.warn('[sendMessage] Receiver translation failed:', e);
-                    translatedForReceiver = inputText;
-                  })
-              );
-            } else {
-              translatedForReceiver = inputText;
-            }
-          }
-          
-          await Promise.allSettled(translationPromises);
-          
-          // Update DB after fallback translations
-          if (dbMessageId) {
-            await supabase
-              .from("chat_messages")
-              .update({
-                message: messageToStore || inputText,
-                translated_message: translatedForReceiver || inputText,
-                original_english: originalEnglishToStore || inputText
-              })
-              .eq('id', dbMessageId);
-          }
-        }
-        
-        // Mark translation complete
-        const displayId = dbMessageId || tempId;
+      if (insertedMessage?.id) {
         setMessages(prev => prev.map(m =>
-          m.id === displayId ? { ...m, isTranslating: false } : m
-        ));
-        
-      } catch (translationError) {
-        console.error('[sendMessage] Translation error:', translationError);
-        const displayId = dbMessageId || tempId;
-        setMessages(prev => prev.map(m =>
-          m.id === displayId ? { ...m, isTranslating: false } : m
+          m.id === tempId ? { ...m, id: insertedMessage.id } : m
         ));
       }
-    })(); // Fire-and-forget IIFE
+    } catch (dbError) {
+      console.error("[sendMessage] DB insert error:", dbError);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    }
   };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -2068,7 +797,6 @@ const DraggableMiniChatWindow = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 50MB)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
@@ -2101,7 +829,6 @@ const DraggableMiniChatWindow = ({
         .from(bucket)
         .getPublicUrl(fileName);
 
-      // Send message with file
       const emoji = fileType === 'image' ? '📷' : fileType === 'video' ? '🎬' : '📎';
       const { error: messageError } = await supabase
         .from("chat_messages")
@@ -2144,7 +871,6 @@ const DraggableMiniChatWindow = ({
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
   const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
-  // When initialPosition is {0,0}, use relative positioning for flex layout
   const useFlexLayout = initialPosition.x === 0 && initialPosition.y === 0;
   
   const windowStyle = isMaximized 
@@ -2194,7 +920,7 @@ const DraggableMiniChatWindow = ({
         </div>
       )}
       
-      {/* Header - Draggable with mouse and touch support */}
+      {/* Header */}
       <div 
         className={cn(
           "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-transparent border-b touch-none select-none",
@@ -2267,7 +993,6 @@ const DraggableMiniChatWindow = ({
           )}
         </div>
         <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
-          {/* Toggle button to show/hide action buttons */}
           <Button
             variant="ghost"
             size="icon"
@@ -2278,10 +1003,8 @@ const DraggableMiniChatWindow = ({
             <MoreHorizontal className="h-2.5 w-2.5" />
           </Button>
           
-          {/* Expandable action buttons - hidden by default */}
           {areButtonsExpanded && (
             <>
-              {/* Gift Button - only men can send */}
               {userGender === "male" && (
                 <GiftSendButton
                   senderId={currentUserId}
@@ -2290,7 +1013,6 @@ const DraggableMiniChatWindow = ({
                   disabled={!billingStarted}
                 />
               )}
-              {/* Relationship Actions (Block/Unblock/Friend/Unfriend/Stop) */}
               <MiniChatActions
                 currentUserId={currentUserId}
                 targetUserId={partnerId}
@@ -2312,7 +1034,6 @@ const DraggableMiniChatWindow = ({
             </>
           )}
           
-          {/* Always visible: minimize/expand and close */}
           <Button
             variant="ghost"
             size="icon"
@@ -2343,14 +1064,11 @@ const DraggableMiniChatWindow = ({
                 </p>
               )}
               {messages.map((msg) => {
-                // Parse special message formats
                 const isVoice = msg.message.startsWith('[VOICE:');
                 const isImage = msg.message.includes('[IMAGE:');
                 const isVideo = msg.message.includes('[VIDEO:');
                 const isDocument = msg.message.includes('[DOCUMENT:');
-                const isFile = isImage || isVideo || isDocument;
 
-                // Extract URL from special format
                 const extractUrl = (text: string, type: string) => {
                   const match = text.match(new RegExp(`\\[${type}:([^\\]]+)\\]`));
                   return match ? match[1] : null;
@@ -2379,7 +1097,6 @@ const DraggableMiniChatWindow = ({
                           : "bg-muted rounded-bl-sm"
                       )}
                     >
-                      {/* Message content - no language labels */}
                       {isVoice && fileUrl ? (
                         <div className="flex items-center gap-2">
                           <Mic className="h-3 w-3" />
@@ -2412,94 +1129,32 @@ const DraggableMiniChatWindow = ({
                           <FileText className="h-3 w-3" />
                           <span>View Document</span>
                         </a>
-                      ) : msg.senderId === currentUserId ? (
-                        // ===========================================
-                        // OWN MESSAGE (SENDER VIEW)
-                        // ALWAYS show English meaning for ALL 9 combinations
-                        // ===========================================
-                        msg.isTranslating ? (
-                          <div className="flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span className="opacity-70 italic unicode-text" dir="auto">{msg.message}</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            {/* Primary message - mother tongue (native OR Latin based on profile) */}
-                            <p className="unicode-text" dir="auto">
-                              {msg.translatedMessage || msg.message}
-                            </p>
-                            
-                            {/* English meaning - ALWAYS shown below in small letters */}
-                            <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                              🌐 {msg.englishMessage || msg.message}
-                            </p>
-                          </div>
-                        )
-                      ) : msg.isTranslating ? (
-                        // PARTNER MESSAGE: Translation in progress
-                        <div className="flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="opacity-70 italic">{msg.message}</span>
-                        </div>
                       ) : (
-                        // ===========================================
-                        // PARTNER MESSAGE (RECEIVER VIEW)
-                        // ALWAYS show English meaning for ALL 9 combinations
-                        // ===========================================
-                        <div className="space-y-1">
-                          {/* Primary message - mother tongue (native OR Latin based on profile) */}
-                          <p className="unicode-text" dir="auto">
-                            {msg.translatedMessage || msg.message}
-                          </p>
-                          
-                          {/* English meaning - ALWAYS shown below in small letters */}
-                          <p className="text-[9px] opacity-60 italic border-t border-current/10 pt-0.5 mt-0.5">
-                            🌐 {msg.englishMessage || msg.message}
-                          </p>
-                        </div>
+                        <p className="unicode-text" dir="auto">{msg.message}</p>
                       )}
+                      <span className="text-[8px] opacity-50 block mt-0.5">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   </div>
                 );
               })}
-              
-              {/* Partner typing indicator - shows in receiver's native language */}
-              {partnerTyping && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%]">
-                    <TranslatedTypingIndicator
-                      indicator={partnerTyping}
-                      partnerName={partnerName}
-                      className="text-[10px]"
-                    />
-                  </div>
-                </div>
-              )}
-              
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
 
-          {/* Input area - EN MODE ONLY */}
-          <div className="p-1.5 border-t space-y-1">
-            {/* Hidden file input */}
+          {/* Input area */}
+          <div className="p-2 border-t">
             <input
-              ref={fileInputRef}
               type="file"
+              ref={fileInputRef}
               className="hidden"
               onChange={(e) => {
-                const fileType = (e.target.dataset.fileType || 'document') as 'image' | 'video' | 'document';
+                const fileType = fileInputRef.current?.dataset.fileType as 'image' | 'video' | 'document';
                 handleFileUpload(e, fileType);
               }}
             />
-            
             <div className="flex items-center gap-1">
-              {/* Auto-detect indicator - shows input will be auto-detected */}
-              <Badge variant="outline" className="h-6 text-[8px] px-1 shrink-0 opacity-60" title="Auto-detects English, native script, or romanized input">
-                <Languages className="h-3 w-3 mr-0.5" />
-                Auto
-              </Badge>
-              
               {/* Attach button */}
               <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
                 <PopoverTrigger asChild>
@@ -2550,73 +1205,23 @@ const DraggableMiniChatWindow = ({
                 </PopoverContent>
               </Popover>
 
-              {/* Auto-detect preview - shows mother tongue translation */}
-              <div className="flex-1 relative">
-                {/* Mother tongue preview - shown for any input type (Gboard, voice, keyboard, mixed) */}
-                {meaningPreview && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-primary/5 border border-primary/20 rounded text-sm unicode-text" dir="auto">
-                    <span className="text-[8px] opacity-50 mr-1 flex items-center gap-0.5 inline-flex">
-                      {detectedInputSource === 'voice' && <Mic className="h-2 w-2" />}
-                      {detectedInputSource === 'gboard' && <Type className="h-2 w-2" />}
-                      ({currentUserLanguage})
-                    </span>
-                    {meaningPreview}
-                    {isMeaningLoading && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary/50" />}
-                  </div>
-                )}
-                {!meaningPreview && rawInput.trim() && isMeaningLoading && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-1 bg-muted/50 border border-muted rounded text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>
-                      {detectedInputSource === 'voice' ? 'Processing voice...' : 
-                       detectedInputSource === 'gboard' ? 'Processing...' :
-                       `Translating to ${currentUserLanguage}...`}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Same language indicator */}
-                {!needsTranslation && newMessage.trim() && !meaningPreview && (
-                  <div className="absolute bottom-full left-0 right-0 mb-1 px-2 py-0.5 bg-muted/50 rounded text-[9px] text-muted-foreground">
-                    Same language - direct chat
-                  </div>
-                )}
+              <div className="flex-1">
                 <Input
-                  placeholder="Type, speak, or use any keyboard..."
+                  placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    const prevValue = newMessage;
-                    
-                    // Detect input source (Gboard, voice, keyboard, mixed)
-                    const inputSource = detectInputSource(newValue, prevValue);
-                    setDetectedInputSource(inputSource);
-                    
-                    // SYNC ONLY: Update input values immediately (NEVER blocks)
-                    setRawInput(newValue);
-                    setNewMessage(newValue);
-                    
-                    // ASYNC: Schedule preview generation in next microtask (NEVER blocks typing)
-                    // Using requestAnimationFrame for smoother typing experience
-                    requestAnimationFrame(() => {
-                      generateMeaningPreview(newValue, inputSource);
-                      handleTyping(newValue);
-                    });
-                  }}
+                  onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  lang="en"
                   dir="auto"
                   spellCheck={true}
                   autoComplete="off"
                   autoCorrect="on"
                   inputMode="text"
                   enterKeyHint="send"
-                  className="h-8 text-xs w-full unicode-text"
+                  className="h-8 text-xs w-full"
                   disabled={isUploading}
                 />
               </div>
 
-              {/* Send button - never blocks, fires instantly */}
               <Button
                 size="icon"
                 className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90"
@@ -2628,10 +1233,9 @@ const DraggableMiniChatWindow = ({
             </div>
           </div>
 
-          {/* Resize handles - all corners and edges */}
+          {/* Resize handles */}
           {!isMaximized && (
             <>
-              {/* Corner handles */}
               <div
                 className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center touch-none"
                 onMouseDown={(e) => handleResizeStart(e, 'se')}
@@ -2654,7 +1258,6 @@ const DraggableMiniChatWindow = ({
                 onMouseDown={(e) => handleResizeStart(e, 'nw')}
                 onTouchStart={(e) => handleResizeStart(e, 'nw')}
               />
-              {/* Edge handles */}
               <div
                 className="absolute top-0 left-4 right-4 h-1.5 cursor-n-resize touch-none"
                 onMouseDown={(e) => handleResizeStart(e, 'n')}
