@@ -186,32 +186,34 @@ export const useMatchingService = () => {
           isEarningEligible: profile.is_earning_eligible || false,
         };
 
-        // STRICT LANGUAGE MATCHING: Only show same-language users
-        // If user speaks Malayalam, show ONLY Malayalam speakers - NOT Telugu/Hindi/etc
+        // MEN CAN SEE ALL WOMEN (same language + other languages)
         if (isSameLanguage) {
           sameLanguageUsers.push(user);
+        } else if (isWomanNllbSupported) {
+          // Other language women - show them too for men
+          translatedUsers.push(user);
         }
-        // NOTE: Removed cross-language matching - users must speak the same language
       }
 
       // Sort: Badged (earning eligible) women first, then by load balancing
       const sortByBadgeAndLoad = (a: MatchableUser, b: MatchableUser) => {
-        // First: earning eligible (badged) women on top
         if (a.isEarningEligible !== b.isEarningEligible) {
           return a.isEarningEligible ? -1 : 1;
         }
-        // Second: by chat count (lower first = less load)
         return a.currentChatCount - b.currentChatCount;
       };
 
       sameLanguageUsers.sort(sortByBadgeAndLoad);
+      translatedUsers.sort(sortByBadgeAndLoad);
 
-      // STRICT: Only return same-language users - no cross-language matching
+      // MEN see all women: same language first, then other languages
+      const allUsers = [...sameLanguageUsers, ...translatedUsers];
+
       return {
         sameLanguageUsers,
-        translatedUsers: [], // No cross-language matching
-        allUsers: sameLanguageUsers, // Only same language
-        requiresTranslation: false // Never requires translation - same language only
+        translatedUsers,
+        allUsers,
+        requiresTranslation: sameLanguageUsers.length === 0 && translatedUsers.length > 0
       };
     } catch (error) {
       console.error("Error in fetchMatchableWomen:", error);
