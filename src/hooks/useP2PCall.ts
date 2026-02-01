@@ -49,7 +49,7 @@ export const useP2PCall = ({
   currentUserId,
   remoteUserId,
   isInitiator,
-  ratePerMinute = 5,
+  ratePerMinute = 8, // ₹8/min for video calls (spec default)
   onCallEnded,
 }: UseP2PCallProps) => {
   const { toast } = useToast();
