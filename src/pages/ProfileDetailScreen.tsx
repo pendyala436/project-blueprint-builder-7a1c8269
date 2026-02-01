@@ -34,7 +34,13 @@ interface ProfileData {
   isOnline: boolean;
   lastSeen: string;
   isVerified: boolean;
+  bio: string | null;
+  occupation: string | null;
 }
+
+// Fields that should NEVER be shown to other users
+// Phone, Email, and KYC details are strictly private
+const HIDDEN_FIELDS = ['phone', 'email', 'kyc', 'date_of_birth'] as const;
 
 const ProfileDetailScreen = () => {
   const navigate = useNavigate();
@@ -179,6 +185,9 @@ const ProfileDetailScreen = () => {
           isOnline: statusData?.is_online || false,
           lastSeen: statusData?.last_seen || "",
           isVerified: profileData.verification_status || false,
+          bio: profileData.bio || null,
+          occupation: profileData.occupation || null,
+          // NOTE: phone, email, and KYC details are NEVER exposed to other users
         });
       } else {
         setProfile({
@@ -195,6 +204,9 @@ const ProfileDetailScreen = () => {
           isOnline: statusData?.is_online || false,
           lastSeen: statusData?.last_seen || "",
           isVerified: profileData.verification_status || false,
+          bio: profileData.bio || null,
+          occupation: profileData.occupation || null,
+          // NOTE: phone, email, and KYC details are NEVER exposed to other users
         });
       }
 
@@ -454,6 +466,22 @@ const ProfileDetailScreen = () => {
               )}
             </div>
 
+            {/* Bio Section */}
+            {profile.bio && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">{t('about', 'About')}</p>
+                <p className="text-foreground">{profile.bio}</p>
+              </div>
+            )}
+
+            {/* Occupation */}
+            {profile.occupation && (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Sparkles className="w-5 h-5" />
+                <span>{profile.occupation}</span>
+              </div>
+            )}
+
             {/* Interests Section */}
             {profile.interests && profile.interests.length > 0 && (
               <div className="space-y-3">
@@ -479,6 +507,13 @@ const ProfileDetailScreen = () => {
                 <span>{profile.age} {t('yearsOld', 'years old')}</span>
               </div>
             )}
+
+            {/* Privacy Notice - Hidden Fields */}
+            <div className="pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground text-center">
+                {t('privacyNotice', 'Phone, email, and identity documents are not visible to other users')}
+              </p>
+            </div>
           </div>
         </Card>
 
