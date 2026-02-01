@@ -71,7 +71,7 @@ const DraggableVideoCallWindow = ({
   initialPosition = { x: 20, y: 20 },
   zIndex = 60,
   onFocus,
-  ratePerMinute = 5
+  ratePerMinute = 8
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
   const [isMinimized, setIsMinimized] = useState(false);
