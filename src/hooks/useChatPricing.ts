@@ -18,11 +18,11 @@ export interface ChatPricing {
 }
 
 const DEFAULT_PRICING: ChatPricing = {
-  ratePerMinute: 8,              // Men pay ₹8/min for chat
-  womenEarningRate: 0,           // Women earn NOTHING from chat (video only per spec)
+  ratePerMinute: 4,              // Men pay ₹4/min for chat (matches DB)
+  womenEarningRate: 2,           // Women earn ₹2/min for chat
   videoRatePerMinute: 8,         // Men pay ₹8/min for video
-  videoWomenEarningRate: 4,      // Women earn ₹4/min for video ONLY
-  minWithdrawalBalance: 10000,
+  videoWomenEarningRate: 4,      // Women earn ₹4/min for video
+  minWithdrawalBalance: 5000,
   currency: 'INR'
 };
 

@@ -287,7 +287,7 @@ export const ChatInterface = ({
         .eq("is_active", true)
         .maybeSingle();
 
-      const ratePerMinute = pricing?.rate_per_minute || 5;
+      const ratePerMinute = pricing?.rate_per_minute || 4;
 
       // Update match status
       await supabase

@@ -26,7 +26,7 @@ export const useMediaServerCall = ({
   currentUserId,
   remoteUserId,
   isInitiator,
-  ratePerMinute = 5,
+  ratePerMinute = 8,
   onCallEnded,
 }: UseMediaServerCallProps) => {
   const { toast } = useToast();

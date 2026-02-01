@@ -46,7 +46,7 @@ export const useSRSCall = ({
   currentUserId,
   remoteUserId,
   isInitiator,
-  ratePerMinute = 5,
+  ratePerMinute = 8,
   mode = 'call',
   onCallEnded,
 }: UseSRSCallProps) => {

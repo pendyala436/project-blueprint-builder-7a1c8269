@@ -984,7 +984,7 @@ serve(async (req) => {
           .eq("is_active", true)
           .maybeSingle();
 
-        const ratePerMinute = pricing?.rate_per_minute || 5.00;
+        const ratePerMinute = pricing?.rate_per_minute || 4.00;
         const womenEarningRate = pricing?.women_earning_rate || 2.00;
 
         // Create chat session
