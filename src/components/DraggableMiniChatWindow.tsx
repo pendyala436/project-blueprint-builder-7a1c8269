@@ -63,6 +63,7 @@ interface DraggableMiniChatWindowProps {
   userGender: "male" | "female";
   ratePerMinute: number;
   earningRatePerMinute: number;
+  partnerCountry?: string; // Used to determine if Indian woman earns
   onClose: () => void;
   initialPosition?: { x: number; y: number };
   zIndex?: number;
@@ -80,6 +81,7 @@ const DraggableMiniChatWindow = ({
   userGender,
   ratePerMinute,
   earningRatePerMinute,
+  partnerCountry,
   onClose,
   initialPosition = { x: 20, y: 20 },
   zIndex = 50,
@@ -145,8 +147,36 @@ const DraggableMiniChatWindow = ({
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+  const [isEarningEligible, setIsEarningEligible] = useState(false); // For women: Indian origin = can earn
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
+  
+  // Check if current user (woman) is Indian and eligible to earn
+  useEffect(() => {
+    const checkEarningEligibility = async () => {
+      if (userGender !== "female") return;
+      
+      try {
+        // Check current user's country
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("country")
+          .eq("user_id", currentUserId)
+          .maybeSingle();
+        
+        if (profile?.country) {
+          const country = profile.country.toLowerCase().trim();
+          const isIndian = ['india', 'in', 'ind', 'भारत'].includes(country);
+          setIsEarningEligible(isIndian);
+        }
+      } catch (error) {
+        console.error("Error checking earning eligibility:", error);
+        setIsEarningEligible(false);
+      }
+    };
+    
+    checkEarningEligibility();
+  }, [currentUserId, userGender]);
 
   // Auto-close if blocked
   useEffect(() => {
@@ -321,25 +351,38 @@ const DraggableMiniChatWindow = ({
             setWalletBalance(wallet.balance);
           }
         } else {
-          const today = new Date().toISOString().split("T")[0];
-          const { data: earnings } = await supabase
-            .from("women_earnings")
-            .select("amount")
-            .eq("user_id", currentUserId)
-            .gte("created_at", `${today}T00:00:00`);
-          
-          const total = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
-          setTodayEarnings(total);
+          // Only fetch earnings for Indian women (earning eligible)
+          if (isEarningEligible) {
+            const today = new Date().toISOString().split("T")[0];
+            const { data: earnings } = await supabase
+              .from("women_earnings")
+              .select("amount")
+              .eq("user_id", currentUserId)
+              .gte("created_at", `${today}T00:00:00`);
+            
+            const total = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+            setTodayEarnings(total);
+          }
         }
 
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
-          toast({
-            title: "Chat Started",
-            description: userGender === "male" 
-              ? `You're being charged ₹${ratePerMinute}/min`
-              : "Start chatting to earn!",
-          });
+          if (userGender === "male") {
+            toast({
+              title: "Chat Started",
+              description: `You're being charged ₹${ratePerMinute}/min`,
+            });
+          } else if (isEarningEligible) {
+            toast({
+              title: "Chat Started",
+              description: `You earn ₹${earningRatePerMinute}/min - Start chatting!`,
+            });
+          } else {
+            toast({
+              title: "Chat Started",
+              description: "Enjoy chatting! (Free chat - no earnings)",
+            });
+          }
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -347,7 +390,7 @@ const DraggableMiniChatWindow = ({
     };
 
     loadInitialData();
-  }, [currentUserId, userGender, ratePerMinute, earningRatePerMinute]);
+  }, [currentUserId, userGender, ratePerMinute, earningRatePerMinute, isEarningEligible]);
 
   // Load messages and subscribe
   useEffect(() => {
@@ -868,8 +911,10 @@ const DraggableMiniChatWindow = ({
     }
   };
 
+  // Males are ALWAYS charged, regardless of partner's origin
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
-  const estimatedEarning = billingStarted ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
+  // Only Indian women earn - non-Indian women don't earn even though men are charged
+  const estimatedEarning = billingStarted && isEarningEligible ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
 
   const useFlexLayout = initialPosition.x === 0 && initialPosition.y === 0;
   
@@ -953,9 +998,14 @@ const DraggableMiniChatWindow = ({
                   <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(0)}
                 </Badge>
               )}
-              {userGender === "female" && todayEarnings > 0 && (
+              {userGender === "female" && isEarningEligible && todayEarnings > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
                   <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(0)}
+                </Badge>
+              )}
+              {userGender === "female" && !isEarningEligible && (
+                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-muted text-muted-foreground">
+                  Free
                 </Badge>
               )}
             </div>
@@ -969,12 +1019,14 @@ const DraggableMiniChatWindow = ({
                     <IndianRupee className="h-2 w-2 text-destructive" />
                     <span className="text-destructive">₹{estimatedCost.toFixed(1)}</span>
                   </>
-                ) : (
+                ) : isEarningEligible ? (
                   <>
                     <span className="text-muted-foreground">•</span>
                     <TrendingUp className="h-2 w-2 text-green-500" />
                     <span className="text-green-500">+₹{estimatedEarning.toFixed(1)}</span>
                   </>
+                ) : (
+                  <span className="text-muted-foreground text-[9px]">(Free chat)</span>
                 )}
               </div>
             )}
@@ -982,7 +1034,9 @@ const DraggableMiniChatWindow = ({
               <p className="text-[10px] text-muted-foreground">
                 {userGender === "male" 
                   ? `₹${ratePerMinute}/min - Both reply to start` 
-                  : "Reply to start earning"}
+                  : isEarningEligible 
+                    ? `₹${earningRatePerMinute}/min - Reply to start earning`
+                    : "Free chat - Reply to start"}
               </p>
             )}
           </div>
