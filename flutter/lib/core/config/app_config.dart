@@ -62,8 +62,8 @@ class AppConfig {
   static const List<String> supportedCurrencies = ['INR', 'USD', 'EUR'];
 
   /// Pricing Defaults (synced with database defaults)
-  static const double defaultRatePerMinute = 2.0;
-  static const double defaultWomenEarningRate = 2.0;
-  static const double defaultVideoRatePerMinute = 10.0;
-  static const double defaultVideoWomenEarningRate = 5.0;
+  static const double defaultRatePerMinute = 8.0;           // Men pay ₹8/min chat
+  static const double defaultWomenEarningRate = 0.0;        // Women earn NOTHING from chat
+  static const double defaultVideoRatePerMinute = 8.0;      // Men pay ₹8/min video
+  static const double defaultVideoWomenEarningRate = 4.0;   // Women earn ₹4/min video ONLY
 }

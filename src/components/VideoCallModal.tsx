@@ -56,7 +56,7 @@ const VideoCallModal = ({
     currentUserId,
     remoteUserId,
     isInitiator,
-    ratePerMinute: 5,
+    ratePerMinute: 8, // ₹8/min for video calls (spec default)
     onCallEnded: onClose,
   });
 

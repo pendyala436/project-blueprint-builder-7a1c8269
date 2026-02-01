@@ -50,10 +50,10 @@ class ChatSessionModel with _$ChatSessionModel {
 @freezed
 class ChatPricingModel with _$ChatPricingModel {
   const factory ChatPricingModel({
-    @Default(2) double ratePerMinute,
-    @Default(2) double womenEarningRate,
-    @Default(10) double videoRatePerMinute,
-    @Default(5) double videoWomenEarningRate,
+    @Default(8) double ratePerMinute,           // Men pay ₹8/min chat
+    @Default(0) double womenEarningRate,        // Women earn NOTHING from chat
+    @Default(8) double videoRatePerMinute,      // Men pay ₹8/min video
+    @Default(4) double videoWomenEarningRate,   // Women earn ₹4/min video ONLY
     @Default(10000) double minWithdrawalBalance,
     @Default('INR') String currency,
   }) = _ChatPricingModel;

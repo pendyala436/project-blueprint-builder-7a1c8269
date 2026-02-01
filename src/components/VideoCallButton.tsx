@@ -50,7 +50,7 @@ const VideoCallButton = ({
     const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
     
     if (!isSuperUser) {
-      // Minimum balance required to start video call
+      // Minimum balance required to start video call (₹8/min * 2 min buffer)
       const minBalance = 16;
       
       if (walletBalance <= 0) {
@@ -58,7 +58,7 @@ const VideoCallButton = ({
         setShowRechargeDialog(true);
         return;
       } else if (walletBalance < minBalance) {
-        setRechargeMessage(`You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹8/minute). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
         setShowRechargeDialog(true);
         return;
       }
@@ -97,7 +97,7 @@ const VideoCallButton = ({
           man_user_id: currentUserId,
           woman_user_id: result.woman.user_id,
           status: 'ringing',
-          rate_per_minute: 5.00
+          rate_per_minute: 8.00 // ₹8/min per spec
         });
 
       if (sessionError) throw sessionError;
