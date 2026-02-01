@@ -51,6 +51,7 @@ import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
+import { WomenKYCForm } from "@/components/WomenKYCForm";
 
 interface Notification {
   id: string;
@@ -1077,6 +1078,13 @@ const WomenDashboardScreen = () => {
               maxItems={8}
               showViewAll={true}
             />
+          </div>
+        )}
+
+        {/* KYC Verification for Indian Women - Required for Payouts */}
+        {currentUserId && currentWomanCountry?.toLowerCase().includes('india') && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.157s" }}>
+            <WomenKYCForm />
           </div>
         )}
 
