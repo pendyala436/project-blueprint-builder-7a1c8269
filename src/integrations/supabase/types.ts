@@ -3499,6 +3499,84 @@ export type Database = {
           },
         ]
       }
+      women_kyc: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          bank_name: string
+          consent_given: boolean
+          consent_timestamp: string | null
+          country_of_residence: string
+          created_at: string
+          date_of_birth: string
+          document_back_url: string | null
+          document_front_url: string | null
+          full_name_as_per_bank: string
+          gender: string | null
+          id: string
+          id_number: string
+          id_type: string
+          ifsc_code: string
+          rejection_reason: string | null
+          selfie_url: string | null
+          updated_at: string
+          user_id: string
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          bank_name: string
+          consent_given?: boolean
+          consent_timestamp?: string | null
+          country_of_residence?: string
+          created_at?: string
+          date_of_birth: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          full_name_as_per_bank: string
+          gender?: string | null
+          id?: string
+          id_number: string
+          id_type: string
+          ifsc_code: string
+          rejection_reason?: string | null
+          selfie_url?: string | null
+          updated_at?: string
+          user_id: string
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          bank_name?: string
+          consent_given?: boolean
+          consent_timestamp?: string | null
+          country_of_residence?: string
+          created_at?: string
+          date_of_birth?: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          full_name_as_per_bank?: string
+          gender?: string | null
+          id?: string
+          id_number?: string
+          id_type?: string
+          ifsc_code?: string
+          rejection_reason?: string | null
+          selfie_url?: string | null
+          updated_at?: string
+          user_id?: string
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       women_shift_assignments: {
         Row: {
           assigned_at: string
