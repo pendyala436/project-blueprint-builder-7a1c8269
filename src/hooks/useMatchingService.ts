@@ -186,16 +186,12 @@ export const useMatchingService = () => {
           isEarningEligible: profile.is_earning_eligible || false,
         };
 
+        // STRICT LANGUAGE MATCHING: Only show same-language users
+        // If user speaks Malayalam, show ONLY Malayalam speakers - NOT Telugu/Hindi/etc
         if (isSameLanguage) {
-          // Priority 1: Same language users
           sameLanguageUsers.push(user);
-        } else {
-          // Priority 2: Any other available woman with NLLB support for auto-translation
-          // Global matching - no country restrictions
-          if (isWomanNllbSupported) {
-            translatedUsers.push(user);
-          }
         }
+        // NOTE: Removed cross-language matching - users must speak the same language
       }
 
       // Sort: Badged (earning eligible) women first, then by load balancing
@@ -209,15 +205,13 @@ export const useMatchingService = () => {
       };
 
       sameLanguageUsers.sort(sortByBadgeAndLoad);
-      translatedUsers.sort(sortByBadgeAndLoad);
 
-      const allUsers = [...sameLanguageUsers, ...translatedUsers];
-
+      // STRICT: Only return same-language users - no cross-language matching
       return {
         sameLanguageUsers,
-        translatedUsers,
-        allUsers,
-        requiresTranslation: sameLanguageUsers.length === 0 && translatedUsers.length > 0
+        translatedUsers: [], // No cross-language matching
+        allUsers: sameLanguageUsers, // Only same language
+        requiresTranslation: false // Never requires translation - same language only
       };
     } catch (error) {
       console.error("Error in fetchMatchableWomen:", error);
@@ -301,8 +295,11 @@ export const useMatchingService = () => {
             // Skip users who are already at max chats (3)
             if (currentChatCount >= 3) continue;
 
-            // Global matching - allow cross-language with auto-translation
+            // STRICT LANGUAGE MATCHING: Only show same-language users
             const isSameLanguage = manLanguage.toLowerCase() === userLanguage.toLowerCase();
+            
+            // Skip users who don't speak the same language
+            if (!isSameLanguage) continue;
 
             matchableMen.push({
               userId: profile.user_id,
@@ -317,20 +314,17 @@ export const useMatchingService = () => {
               currentChatCount,
               walletBalance,
               hasRecharged: walletBalance > 0,
-              isSameLanguage,
+              isSameLanguage: true, // Always true now
               isNllbSupported: nllbLanguageNames.has(manLanguage.toLowerCase()),
-              requiresTranslation: requiresTranslation(userLanguage, manLanguage),
-              isEarningEligible: false, // Men don't have earning eligibility
+              requiresTranslation: false, // Never - same language only
+              isEarningEligible: false,
             });
           }
         }
       }
 
       // Note: Only real authenticated users are shown - no sample/mock data
-
-      // Sort: same language first, then by wallet balance (higher first), then by availability
-      const sameLanguageUsers = matchableMen.filter(m => m.isSameLanguage);
-      const translatedUsers = matchableMen.filter(m => !m.isSameLanguage);
+      // STRICT: All users are same-language (filtered above)
 
       const sortByPriority = (a: MatchableUser, b: MatchableUser) => {
         // First by availability (fewer chats = more available)
@@ -341,14 +335,14 @@ export const useMatchingService = () => {
         return b.walletBalance - a.walletBalance;
       };
 
-      sameLanguageUsers.sort(sortByPriority);
-      translatedUsers.sort(sortByPriority);
+      matchableMen.sort(sortByPriority);
 
+      // STRICT: Only return same-language users
       return {
-        sameLanguageUsers,
-        translatedUsers,
-        allUsers: [...sameLanguageUsers, ...translatedUsers],
-        requiresTranslation: sameLanguageUsers.length === 0 && translatedUsers.length > 0
+        sameLanguageUsers: matchableMen,
+        translatedUsers: [], // No cross-language matching
+        allUsers: matchableMen,
+        requiresTranslation: false
       };
     } catch (error) {
       console.error("Error in fetchMatchableMen:", error);
