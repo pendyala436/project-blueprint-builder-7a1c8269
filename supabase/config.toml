@@ -50,3 +50,15 @@ verify_jwt = false
 
 [functions.monthly-earning-rotation]
 verify_jwt = false
+
+[functions.auto-approve-kyc]
+verify_jwt = false
+
+[functions.check-libretranslate]
+verify_jwt = false
+
+[functions.seed-translation-data]
+verify_jwt = false
+
+[functions.spell-check]
+verify_jwt = false
