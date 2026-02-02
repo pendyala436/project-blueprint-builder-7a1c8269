@@ -57,8 +57,6 @@ import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget"
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
 
-// Translation helper - returns fallback text directly (no translation)
-const t = (_key: string, fallback: string) => fallback;
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
@@ -109,6 +107,8 @@ interface PaymentGateway {
 const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Plain English helper - no translation, returns fallback directly
+  const t = (_key: string, fallback: string) => fallback;
   
   const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
