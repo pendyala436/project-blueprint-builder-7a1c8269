@@ -65,9 +65,10 @@ class AppConfig {
 
   /// Pricing Defaults (synced with database chat_pricing table)
   static const double defaultRatePerMinute = 4.0;           // Men pay ₹4/min chat
-  static const double defaultWomenEarningRate = 0.0;        // Women earn NOTHING from chat
+  static const double defaultWomenEarningRate = 2.0;        // Indian women earn ₹2/min for chat (admin configurable)
+  static const double nonIndianWomenEarningRate = 0.0;      // Non-Indian women earn ₹0/min
   static const double defaultVideoRatePerMinute = 8.0;      // Men pay ₹8/min video
-  static const double defaultVideoWomenEarningRate = 4.0;   // Women earn ₹4/min video ONLY
+  static const double defaultVideoWomenEarningRate = 4.0;   // Women earn ₹4/min video
   static const double minWithdrawalBalance = 10000.0;       // Minimum ₹10,000 to withdraw
 
   /// Platform Support
