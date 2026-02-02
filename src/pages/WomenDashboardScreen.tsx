@@ -49,7 +49,7 @@ import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
-import GboardHintMarquee from "@/components/GboardHintMarquee";
+
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 
 interface Notification {
@@ -843,8 +843,6 @@ const WomenDashboardScreen = () => {
         </div>
       </header>
 
-      {/* Gboard Hint Marquee */}
-      <GboardHintMarquee />
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Section 1: Welcome & Status */}
