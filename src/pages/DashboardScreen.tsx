@@ -57,7 +57,8 @@ import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget"
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import GboardHintMarquee from "@/components/GboardHintMarquee";
 
-import { useTranslation } from "@/contexts/TranslationContext";
+// Translation helper - returns fallback text directly (no translation)
+const t = (_key: string, fallback: string) => fallback;
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
@@ -108,7 +109,7 @@ interface PaymentGateway {
 const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
+  
   const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
@@ -879,20 +880,8 @@ const DashboardScreen = () => {
       .order("created_at", { ascending: false })
       .limit(5);
 
-    // Translate notification titles and messages based on current language
-    if (data && data.length > 0 && currentLanguage !== 'English') {
-      const textsToTranslate = data.flatMap(n => [n.title, n.message]);
-      const translated = await translateDynamicBatch(textsToTranslate);
-      
-      const translatedData = data.map((n, i) => ({
-        ...n,
-        title: translated[i * 2] || n.title,
-        message: translated[i * 2 + 1] || n.message,
-      }));
-      setNotifications(translatedData);
-    } else {
-      setNotifications(data || []);
-    }
+    // Display notifications as-is (no translation)
+    setNotifications(data || []);
     setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
   };
 
