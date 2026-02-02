@@ -70,11 +70,79 @@ export const useP2PCall = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const billingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const sessionIdRef = useRef<string | null>(null);
+  const lastBilledMinuteRef = useRef<number>(0);
 
-  // Start call timer when active
+  // Get session ID for billing
+  const getSessionId = async () => {
+    if (sessionIdRef.current) return sessionIdRef.current;
+    
+    const { data } = await supabase
+      .from('video_call_sessions')
+      .select('id')
+      .eq('call_id', callId)
+      .single();
+    
+    if (data) {
+      sessionIdRef.current = data.id;
+    }
+    return data?.id || null;
+  };
+
+  // Process video call billing per minute
+  const processBilling = async () => {
+    // Only bill if call is active and initiator (man) pays
+    if (state.callStatus !== 'active' || !isInitiator) return;
+    
+    const sessionId = await getSessionId();
+    if (!sessionId) {
+      console.error('[P2P] No session ID for billing');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('process_video_billing', {
+        p_session_id: sessionId,
+        p_minutes: 1 // Bill 1 minute at a time
+      });
+
+      if (error) {
+        console.error('[P2P] Billing error:', error);
+        // If insufficient balance, end call
+        if (error.message?.includes('insufficient') || error.message?.includes('Insufficient')) {
+          toast({
+            title: "Insufficient Balance",
+            description: "Call ended due to low balance. Please recharge.",
+            variant: "destructive",
+          });
+          endCall();
+        }
+        return;
+      }
+
+      console.log('[P2P] Billing processed:', data);
+
+      // Check if session was ended due to insufficient funds
+      const result = data as Record<string, unknown> | null;
+      if (result?.session_ended) {
+        toast({
+          title: "Call Ended",
+          description: "Insufficient wallet balance. Please recharge to continue.",
+          variant: "destructive",
+        });
+        endCall();
+      }
+    } catch (err) {
+      console.error('[P2P] Billing failed:', err);
+    }
+  };
+
+  // Start call timer and billing when active
   useEffect(() => {
     if (state.callStatus === 'active') {
+      // Duration counter (every second)
       callTimerRef.current = setInterval(() => {
         setState(prev => {
           const newDuration = prev.callDuration + 1;
@@ -85,11 +153,21 @@ export const useP2PCall = ({
           };
         });
       }, 1000);
+
+      // Billing processing (every 60 seconds) - only after first minute
+      billingTimerRef.current = setInterval(() => {
+        processBilling();
+      }, 60000); // Bill every 60 seconds
+
+      console.log('[P2P] Call timers started - billing starts after first minute');
     }
 
     return () => {
       if (callTimerRef.current) {
         clearInterval(callTimerRef.current);
+      }
+      if (billingTimerRef.current) {
+        clearInterval(billingTimerRef.current);
       }
     };
   }, [state.callStatus, ratePerMinute]);
@@ -449,6 +527,11 @@ export const useP2PCall = ({
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
       callTimerRef.current = null;
+    }
+
+    if (billingTimerRef.current) {
+      clearInterval(billingTimerRef.current);
+      billingTimerRef.current = null;
     }
 
     if (localStreamRef.current) {
