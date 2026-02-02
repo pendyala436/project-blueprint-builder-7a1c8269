@@ -56,7 +56,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 // VideoCallMiniButton removed from men's dashboard
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
-import GboardHintMarquee from "@/components/GboardHintMarquee";
+
 
 import { isIndianLanguage, INDIAN_NLLB200_LANGUAGES, NON_INDIAN_NLLB200_LANGUAGES, ALL_NLLB200_LANGUAGES } from "@/data/nllb200Languages";
 import { useChatPricing } from "@/hooks/useChatPricing";
@@ -1061,8 +1061,6 @@ const DashboardScreen = () => {
         </div>
       </header>
 
-      {/* Gboard Hint Marquee */}
-      <GboardHintMarquee />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
