@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, PhoneOff, Video } from "lucide-react";
+import { Phone, PhoneOff, Video, MessageSquare, PauseCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
@@ -28,6 +28,7 @@ const IncomingVideoCallWindow = ({
   const { toast } = useToast();
   const [isAnswered, setIsAnswered] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
+  const [pausedChatCount, setPausedChatCount] = useState(0);
 
   // Countdown timer and auto-decline
   useEffect(() => {
@@ -46,8 +47,50 @@ const IncomingVideoCallWindow = ({
     return () => clearInterval(timer);
   }, [isAnswered]);
 
+  // Check active chats on mount to show warning
+  useEffect(() => {
+    checkActiveChats();
+  }, []);
+
+  const checkActiveChats = async () => {
+    const { count } = await supabase
+      .from('active_chat_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('woman_user_id', currentUserId)
+      .eq('status', 'active');
+    
+    setPausedChatCount(count || 0);
+  };
+
+  // Pause all active chats when answering video call
+  const pauseActiveChats = async () => {
+    try {
+      // Update all active chat sessions to paused status
+      const { error } = await supabase
+        .from('active_chat_sessions')
+        .update({ 
+          status: 'paused',
+          end_reason: 'video_call_priority'
+        })
+        .eq('woman_user_id', currentUserId)
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('[VideoCall] Error pausing chats:', error);
+      } else {
+        console.log('[VideoCall] All active chats paused for video call priority');
+      }
+    } catch (err) {
+      console.error('[VideoCall] Failed to pause chats:', err);
+    }
+  };
+
   const handleAnswer = async () => {
     try {
+      // First, pause all active chats - VIDEO CALL HAS PRIORITY
+      await pauseActiveChats();
+
+      // Update call status to active
       await supabase
         .from('video_call_sessions')
         .update({ 
@@ -60,7 +103,9 @@ const IncomingVideoCallWindow = ({
       
       toast({
         title: "Call Connected",
-        description: `Connected with ${callerName}`,
+        description: pausedChatCount > 0 
+          ? `Connected with ${callerName}. ${pausedChatCount} chat(s) paused.`
+          : `Connected with ${callerName}`,
       });
     } catch (error) {
       console.error('Error answering call:', error);
@@ -134,6 +179,15 @@ const IncomingVideoCallWindow = ({
 
         <h3 className="text-lg font-semibold text-white mb-1">{callerName}</h3>
         <p className="text-gray-400 text-sm mb-1">wants to video call you</p>
+        
+        {/* Show chat pause warning */}
+        {pausedChatCount > 0 && (
+          <div className="flex items-center gap-1 text-amber-400 text-xs mb-1">
+            <PauseCircle className="w-3 h-3" />
+            <span>{pausedChatCount} chat(s) will be paused</span>
+          </div>
+        )}
+        
         <p className="text-xs text-gray-500 mb-4">Auto-decline in {timeRemaining}s</p>
 
         <div className="flex items-center gap-4">
