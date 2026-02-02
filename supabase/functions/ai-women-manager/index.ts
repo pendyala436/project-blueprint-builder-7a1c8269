@@ -233,79 +233,118 @@ async function suspendInactiveWomen(supabase: any) {
 }
 
 // AI distribution for chat - find best available woman based on load
+// CRITICAL: Must check BOTH women_availability.is_available AND user_status.is_online
 async function distributeWomanForChat(supabase: any, data: any) {
   const { language, excludeUserIds = [] } = data;
-  console.log(`Finding available woman for chat in language: ${language}`);
+  const normalizedLanguage = (language || 'english').toLowerCase().trim();
+  console.log(`[Chat] Finding available ONLINE woman for chat: ${normalizedLanguage}`);
 
-  // Get language limits
-  const { data: limits } = await supabase
-    .from('language_limits')
-    .select('*')
-    .eq('language_name', language)
-    .single();
+  // Step 1: Get ONLY online users from user_status (critical check!)
+  const { data: onlineStatuses } = await supabase
+    .from('user_status')
+    .select('user_id')
+    .eq('is_online', true);
 
-  // Get online women who speak this language and have capacity
-  const { data: availableWomen, error } = await supabase
-    .from('women_availability')
-    .select(`
-      user_id,
-      current_chat_count,
-      max_concurrent_chats,
-      is_available
-    `)
-    .eq('is_available', true)
-    .lt('current_chat_count', 3); // Less than max concurrent chats
-
-  if (error || !availableWomen?.length) {
-    console.log('No available women found');
+  const onlineUserIds = onlineStatuses?.map((s: any) => s.user_id) || [];
+  
+  if (onlineUserIds.length === 0) {
+    console.log('[Chat] No users online');
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No available women' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No users online' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  // Get profiles for these women
-  const userIds = availableWomen.map((w: any) => w.user_id).filter((id: string) => !excludeUserIds.includes(id));
+  // Step 2: Get women who are available AND online
+  const { data: availableWomen, error } = await supabase
+    .from('women_availability')
+    .select('user_id, current_chat_count, max_concurrent_chats, is_available')
+    .eq('is_available', true)
+    .lt('current_chat_count', 3)
+    .in('user_id', onlineUserIds); // MUST be online
+
+  if (error || !availableWomen?.length) {
+    console.log('[Chat] No online available women found');
+    return new Response(
+      JSON.stringify({ success: false, woman: null, reason: 'No online available women' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Step 3: Filter out excluded users and get profiles
+  const candidateUserIds = availableWomen
+    .map((w: any) => w.user_id)
+    .filter((id: string) => !excludeUserIds.includes(id));
   
+  if (candidateUserIds.length === 0) {
+    return new Response(
+      JSON.stringify({ success: false, woman: null, reason: 'All available women excluded' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Step 4: Get user languages from user_languages table
+  const { data: userLanguages } = await supabase
+    .from('user_languages')
+    .select('user_id, language_name')
+    .in('user_id', candidateUserIds);
+
+  const languageMap = new Map<string, string>();
+  (userLanguages || []).forEach((l: any) => {
+    languageMap.set(l.user_id, (l.language_name || '').toLowerCase().trim());
+  });
+
+  // Step 5: Get profiles for online available women
   const { data: womenProfiles } = await supabase
     .from('female_profiles')
     .select('user_id, full_name, photo_url, primary_language, age')
-    .in('user_id', userIds)
+    .in('user_id', candidateUserIds)
     .eq('approval_status', 'approved')
     .eq('account_status', 'active')
     .not('photo_url', 'is', null);
 
   if (!womenProfiles?.length) {
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No matching profiles' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No matching online profiles' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  // Prioritize same language, then by lowest load
-  const sameLanguage = womenProfiles.filter((w: any) => 
-    w.primary_language?.toLowerCase() === language?.toLowerCase()
-  );
-
-  const candidates = sameLanguage.length > 0 ? sameLanguage : womenProfiles;
-
-  // Sort by load (lowest chat count first)
+  // Step 6: Prioritize same language, then by lowest load
   const availabilityMap = new Map<string, any>(availableWomen.map((w: any) => [w.user_id, w]));
-  candidates.sort((a: any, b: any) => {
-    const availA = availabilityMap.get(a.user_id);
-    const availB = availabilityMap.get(b.user_id);
-    const loadA = availA?.current_chat_count || 0;
-    const loadB = availB?.current_chat_count || 0;
-    return loadA - loadB;
+  
+  // Add language info to profiles
+  const profilesWithLanguage = womenProfiles.map((w: any) => {
+    const womanLanguage = (
+      languageMap.get(w.user_id) || 
+      w.primary_language || 
+      ''
+    ).toLowerCase().trim();
+    return {
+      ...w,
+      language: womanLanguage,
+      isSameLanguage: womanLanguage === normalizedLanguage,
+      currentChats: availabilityMap.get(w.user_id)?.current_chat_count || 0
+    };
   });
 
-  const selectedWoman = candidates[0];
+  // Sort: same language first, then by load
+  profilesWithLanguage.sort((a: any, b: any) => {
+    if (a.isSameLanguage !== b.isSameLanguage) {
+      return a.isSameLanguage ? -1 : 1;
+    }
+    return a.currentChats - b.currentChats;
+  });
+
+  const selectedWoman = profilesWithLanguage[0];
+  console.log(`[Chat] Selected ONLINE woman: ${selectedWoman.full_name} (language: ${selectedWoman.language}, same: ${selectedWoman.isSameLanguage})`);
 
   return new Response(
     JSON.stringify({ 
       success: true, 
       woman: selectedWoman,
-      needs_translation: selectedWoman.primary_language?.toLowerCase() !== language?.toLowerCase()
+      needs_translation: !selectedWoman.isSameLanguage,
+      same_language: selectedWoman.isSameLanguage
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

@@ -606,6 +606,24 @@ serve(async (req) => {
         const requestedLanguage = preferred_language || "en";
         const requestedLanguageLower = requestedLanguage.toLowerCase().trim();
 
+        console.log(`[get_available_woman] Finding ONLINE woman for language: ${requestedLanguage}`);
+
+        // CRITICAL: First get only ONLINE users from user_status
+        const { data: onlineStatuses } = await supabase
+          .from("user_status")
+          .select("user_id")
+          .eq("is_online", true);
+
+        const onlineUserIds = onlineStatuses?.map((s: any) => s.user_id) || [];
+        
+        if (onlineUserIds.length === 0) {
+          console.log("[get_available_woman] No users online at all");
+          return new Response(
+            JSON.stringify({ success: false, message: "No women online at the moment. Please try again later." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Find language group for this language
         const { data: languageGroups } = await supabase
           .from("language_groups")
@@ -622,7 +640,7 @@ serve(async (req) => {
           }
         }
 
-        // First try to find a woman with matching language group
+        // Find available AND online women
         let availableWomen: any[] = [];
         
         if (matchingGroupId) {
@@ -635,6 +653,7 @@ serve(async (req) => {
             `)
             .eq("is_available", true)
             .lt("current_chat_count", 3)
+            .in("user_id", onlineUserIds) // MUST be online
             .eq("women_shift_assignments.language_group_id", matchingGroupId)
             .order("current_chat_count", { ascending: true })
             .order("last_assigned_at", { ascending: true, nullsFirst: true })
@@ -645,13 +664,14 @@ serve(async (req) => {
           }
         }
 
-        // If no language match, find any available woman
+        // If no language match, find any available AND online woman
         if (availableWomen.length === 0) {
           const { data, error } = await supabase
             .from("women_availability")
             .select("user_id, current_chat_count")
             .eq("is_available", true)
             .lt("current_chat_count", 3)
+            .in("user_id", onlineUserIds) // MUST be online
             .order("current_chat_count", { ascending: true })
             .order("last_assigned_at", { ascending: true, nullsFirst: true })
             .limit(1);
@@ -662,9 +682,9 @@ serve(async (req) => {
 
         // No sample/mock data fallback - only use real authenticated users
         if (availableWomen.length === 0) {
-          console.log("No real women available for chat");
+          console.log("[get_available_woman] No online women available for chat");
           return new Response(
-            JSON.stringify({ success: false, message: "No women available at the moment. Please try again later." }),
+            JSON.stringify({ success: false, message: "No women online at the moment. Please try again later." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
@@ -677,6 +697,8 @@ serve(async (req) => {
           .select("full_name, photo_url, primary_language")
           .eq("user_id", selectedWoman.user_id)
           .single();
+
+        console.log(`[get_available_woman] Found ONLINE woman: ${profile?.full_name || selectedWoman.user_id}`);
 
         return new Response(
           JSON.stringify({ 
