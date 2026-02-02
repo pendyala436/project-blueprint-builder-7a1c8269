@@ -57,7 +57,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     fetchMyMemberships();
     fetchWalletBalance();
 
-    // Subscribe to realtime updates
+    // Subscribe to realtime updates - including owner online status
     const channel = supabase
       .channel('available-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, () => {
@@ -65,6 +65,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_memberships' }, () => {
         fetchMyMemberships();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_status' }, () => {
+        // Re-fetch groups when any user's online status changes (owner might go offline)
+        fetchGroups();
       })
       .subscribe();
 
@@ -75,6 +79,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchGroups = async () => {
     try {
+      // Step 1: Get all live groups
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
@@ -86,12 +91,30 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       if (error) throw error;
 
-      // Fetch owner profiles using secure function
       if (data && data.length > 0) {
         const ownerIds = [...new Set(data.map(g => g.owner_id))];
         
-        // Use secure function to get group owner profiles
-        const profilePromises = ownerIds.map(async (ownerId) => {
+        // Step 2: Check which owners are ONLINE (strict mode)
+        const { data: onlineOwners } = await supabase
+          .from('user_status')
+          .select('user_id')
+          .in('user_id', ownerIds)
+          .eq('is_online', true);
+        
+        const onlineOwnerSet = new Set(onlineOwners?.map(o => o.user_id) || []);
+        
+        // Step 3: Filter groups to only those with ONLINE owners
+        const liveGroups = data.filter(g => onlineOwnerSet.has(g.owner_id));
+        
+        if (liveGroups.length === 0) {
+          setGroups([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Step 4: Fetch owner profiles using secure function
+        const liveOwnerIds = [...new Set(liveGroups.map(g => g.owner_id))];
+        const profilePromises = liveOwnerIds.map(async (ownerId) => {
           const { data: profileData } = await supabase.rpc('get_group_owner_profile', {
             owner_user_id: ownerId
           });
@@ -105,7 +128,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
             .map(p => [p.user_id, p])
         );
         
-        const enrichedGroups = data.map(group => ({
+        const enrichedGroups = liveGroups.map(group => ({
           ...group,
           owner_name: profileMap.get(group.owner_id)?.full_name || 'Anonymous',
           owner_photo: profileMap.get(group.owner_id)?.photo_url
