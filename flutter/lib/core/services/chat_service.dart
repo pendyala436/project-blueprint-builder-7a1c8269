@@ -27,11 +27,11 @@ class ChatService {
       }
 
       return ChatPricingModel(
-        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 2,
-        womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2,
-        videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 10,
-        videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 5,
-        minWithdrawalBalance: (response['min_withdrawal_balance'] as num?)?.toDouble() ?? 10000,
+        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 4.0,  // ₹4/min chat
+        womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 0.0, // Women earn 0 from chat
+        videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 8.0, // ₹8/min video
+        videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 4.0, // ₹4/min video earning
+        minWithdrawalBalance: (response['min_withdrawal_balance'] as num?)?.toDouble() ?? 10000.0,
         currency: response['currency'] as String? ?? 'INR',
       );
     } catch (e) {
@@ -127,7 +127,7 @@ class ChatService {
                     : null,
                 totalMinutes: (json['total_minutes'] as num?)?.toDouble() ?? 0,
                 totalEarned: (json['total_earned'] as num?)?.toDouble() ?? 0,
-                ratePerMinute: (json['rate_per_minute'] as num?)?.toDouble() ?? 2,
+                ratePerMinute: (json['rate_per_minute'] as num?)?.toDouble() ?? 4.0,
                 lastActivityAt: json['last_activity_at'] != null
                     ? DateTime.parse(json['last_activity_at'])
                     : null,

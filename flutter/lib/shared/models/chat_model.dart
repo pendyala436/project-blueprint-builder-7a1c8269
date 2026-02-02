@@ -37,7 +37,7 @@ class ChatSessionModel with _$ChatSessionModel {
     DateTime? endedAt,
     @Default(0) double totalMinutes,
     @Default(0) double totalEarned,
-    @Default(2) double ratePerMinute,
+    @Default(4.0) double ratePerMinute, // Men pay ₹4/min chat (synced with DB)
     String? endReason,
     DateTime? lastActivityAt,
   }) = _ChatSessionModel;
@@ -50,11 +50,11 @@ class ChatSessionModel with _$ChatSessionModel {
 @freezed
 class ChatPricingModel with _$ChatPricingModel {
   const factory ChatPricingModel({
-    @Default(8) double ratePerMinute,           // Men pay ₹8/min chat
-    @Default(0) double womenEarningRate,        // Women earn NOTHING from chat
-    @Default(8) double videoRatePerMinute,      // Men pay ₹8/min video
-    @Default(4) double videoWomenEarningRate,   // Women earn ₹4/min video ONLY
-    @Default(10000) double minWithdrawalBalance,
+    @Default(4.0) double ratePerMinute,           // Men pay ₹4/min chat
+    @Default(0.0) double womenEarningRate,        // Women earn NOTHING from chat
+    @Default(8.0) double videoRatePerMinute,      // Men pay ₹8/min video
+    @Default(4.0) double videoWomenEarningRate,   // Women earn ₹4/min video ONLY
+    @Default(10000.0) double minWithdrawalBalance,
     @Default('INR') String currency,
   }) = _ChatPricingModel;
 

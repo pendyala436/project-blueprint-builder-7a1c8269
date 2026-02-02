@@ -27,6 +27,8 @@ class AppConfig {
   static const int maxMessageLength = 2000; // synced
   static const int maxParallelChats = 3; // synced with React LIMITS.MAX_PARALLEL_CHATS
   static const int chatSessionTimeout = 30; // minutes
+  static const int chatIdleTimeoutMinutes = 3; // Auto-end after 3 min inactivity
+  static const int pausedSessionTimeoutMinutes = 10; // Auto-end paused sessions
 
   /// Private Group Call Configuration
   static const int maxGroupCallParticipants = 50;
@@ -61,9 +63,15 @@ class AppConfig {
   static const String currencySymbol = '₹';
   static const List<String> supportedCurrencies = ['INR', 'USD', 'EUR'];
 
-  /// Pricing Defaults (synced with database defaults)
-  static const double defaultRatePerMinute = 8.0;           // Men pay ₹8/min chat
+  /// Pricing Defaults (synced with database chat_pricing table)
+  static const double defaultRatePerMinute = 4.0;           // Men pay ₹4/min chat
   static const double defaultWomenEarningRate = 0.0;        // Women earn NOTHING from chat
   static const double defaultVideoRatePerMinute = 8.0;      // Men pay ₹8/min video
   static const double defaultVideoWomenEarningRate = 4.0;   // Women earn ₹4/min video ONLY
+  static const double minWithdrawalBalance = 10000.0;       // Minimum ₹10,000 to withdraw
+
+  /// Platform Support
+  static const bool enablePWA = true;
+  static const bool enableCapacitor = true;
+  static const bool enableFlutterNative = true;
 }
