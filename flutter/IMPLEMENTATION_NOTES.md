@@ -55,8 +55,11 @@
 |---------|-------|--------------|
 | MAX_MESSAGE_LENGTH | 2000 | constants/index.ts, app_config.dart |
 | MAX_PARALLEL_CHATS | 3 | constants/index.ts, app_config.dart |
-| rate_per_minute (default) | 2 INR | chat.service.ts, chat_service.dart, chat_model.dart, DB |
-| women_earning_rate (default) | 2 INR | chat.service.ts, chat_service.dart |
+| rate_per_minute (chat) | 4 INR | chat.service.ts, chat_service.dart, chat_model.dart, DB |
+| women_earning_rate (chat) | 0 INR | chat.service.ts, chat_service.dart (Women earn 0 from chat) |
+| video_rate_per_minute | 8 INR | chat.service.ts, chat_service.dart, DB |
+| video_women_earning_rate | 4 INR | chat.service.ts, chat_service.dart (Women earn only from video) |
+| min_withdrawal_balance | 10000 INR | chat_service.dart, wallet_model.dart |
 | Transaction status (default) | completed | wallet.service.ts, wallet_model.dart, DB |
 | Currency (default) | INR | constants/index.ts, wallet_model.dart, gift_model.dart |
 
@@ -68,5 +71,28 @@
 | Profile | /profile/:userId | /profile/:userId |
 | Send Gift | /send-gift/:receiverId | /send-gift/:receiverId |
 
-## Last Sync: December 2025
+## Last Sync: February 2026
+
+## Platform Support
+
+| Platform | Method | Status |
+|----------|--------|--------|
+| Web (All Browsers) | PWA | ✅ Full Support |
+| iOS Safari | PWA (Add to Home Screen) | ✅ Full Support |
+| Android Chrome | PWA + Install Prompt | ✅ Full Support |
+| iOS Native | Flutter + Capacitor | ✅ Ready |
+| Android Native | Flutter + Capacitor | ✅ Ready |
+| Windows | PWA | ✅ Full Support |
+| macOS | PWA + Safari Dock | ✅ Full Support |
+| Linux | PWA | ✅ Full Support |
+
+## Cross-Platform Sync Checklist
+
+- [x] Pricing synced (₹4/min chat, ₹8/min video)
+- [x] Women earnings synced (₹0 chat, ₹4/min video)
+- [x] Message limits synced (2000 chars, 3 parallel chats)
+- [x] Offline mode enabled
+- [x] Real-time subscriptions configured
+- [x] Push notifications ready
+- [x] Stale session cleanup (3min idle, 10min paused)
 
