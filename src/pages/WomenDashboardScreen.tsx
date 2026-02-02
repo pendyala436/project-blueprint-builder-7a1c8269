@@ -45,7 +45,8 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
-import { useTranslation } from "@/contexts/TranslationContext";
+// Translation helper - returns fallback text directly (no translation)
+const t = (_key: string, fallback: string) => fallback;
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 
@@ -97,7 +98,7 @@ interface BiggestEarner {
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, translateDynamicBatch, currentLanguage, setLanguage, isLoading: isTranslating } = useTranslation();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
