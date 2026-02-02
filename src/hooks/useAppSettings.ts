@@ -148,9 +148,18 @@ export const useAppSettings = () => {
             let value: any;
             try {
               if (row.setting_type === "json") {
-                value = typeof row.setting_value === "string" 
-                  ? JSON.parse(row.setting_value)
-                  : row.setting_value;
+                // Handle JSON values - they might already be parsed by Supabase
+                if (typeof row.setting_value === "string") {
+                  // Try parsing as JSON, but fall back to raw string if it fails
+                  try {
+                    value = JSON.parse(row.setting_value);
+                  } catch {
+                    // If JSON parse fails, use the raw string value
+                    value = row.setting_value;
+                  }
+                } else {
+                  value = row.setting_value;
+                }
               } else if (row.setting_type === "number") {
                 value = typeof row.setting_value === "string"
                   ? parseFloat(row.setting_value)
@@ -160,7 +169,9 @@ export const useAppSettings = () => {
               }
               (parsedSettings as any)[propertyName] = value;
             } catch (parseError) {
-              console.warn(`Failed to parse setting ${row.setting_key}:`, parseError);
+              // Use raw value as fallback
+              (parsedSettings as any)[propertyName] = row.setting_value;
+              console.warn(`Failed to parse setting ${row.setting_key}, using raw value`);
             }
           }
         });
