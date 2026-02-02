@@ -47,13 +47,15 @@ class ChatSessionModel with _$ChatSessionModel {
 }
 
 /// Chat Pricing Model
+/// Note: Indian women earn womenEarningRate (₹2/min default), non-Indian women earn ₹0/min
+/// Eligibility is checked via is_earning_eligible flag in female_profiles
 @freezed
 class ChatPricingModel with _$ChatPricingModel {
   const factory ChatPricingModel({
     @Default(4.0) double ratePerMinute,           // Men pay ₹4/min chat
-    @Default(0.0) double womenEarningRate,        // Women earn NOTHING from chat
+    @Default(2.0) double womenEarningRate,        // Indian women earn ₹2/min for chat (admin configurable)
     @Default(8.0) double videoRatePerMinute,      // Men pay ₹8/min video
-    @Default(4.0) double videoWomenEarningRate,   // Women earn ₹4/min video ONLY
+    @Default(4.0) double videoWomenEarningRate,   // Women earn ₹4/min video
     @Default(10000.0) double minWithdrawalBalance,
     @Default('INR') String currency,
   }) = _ChatPricingModel;

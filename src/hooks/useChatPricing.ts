@@ -19,12 +19,13 @@ export interface ChatPricing {
 
 const DEFAULT_PRICING: ChatPricing = {
   ratePerMinute: 4,              // Men pay ₹4/min for chat (matches DB)
-  womenEarningRate: 2,           // Women earn ₹2/min for chat
+  womenEarningRate: 2,           // Indian women earn ₹2/min for chat (admin configurable)
   videoRatePerMinute: 8,         // Men pay ₹8/min for video
   videoWomenEarningRate: 4,      // Women earn ₹4/min for video
   minWithdrawalBalance: 5000,
   currency: 'INR'
 };
+// Note: Non-Indian women earn ₹0/min - checked via is_earning_eligible flag
 
 export const useChatPricing = () => {
   const [pricing, setPricing] = useState<ChatPricing>(DEFAULT_PRICING);
