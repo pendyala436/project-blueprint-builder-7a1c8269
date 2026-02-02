@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
     try {
       const idleCutoff = new Date(now.getTime() - CHAT_IDLE_MINUTES * 60 * 1000);
       
+      // Close active sessions that have been idle
       const { data: idleSessions, error: idleError } = await supabase
         .from('active_chat_sessions')
         .update({
@@ -113,6 +114,26 @@ Deno.serve(async (req) => {
         results.errors.push(`Idle sessions: ${idleError.message}`);
       } else if (idleSessions) {
         console.log(`[Data Cleanup] Closed ${idleSessions.length} idle chat sessions (3min inactivity)`);
+      }
+
+      // Also close paused/billing_paused sessions that have been idle for 10+ minutes
+      const pausedCutoff = new Date(now.getTime() - 10 * 60 * 1000);
+      const { data: pausedSessions, error: pausedError } = await supabase
+        .from('active_chat_sessions')
+        .update({
+          status: 'ended',
+          end_reason: 'paused_timeout',
+          ended_at: now.toISOString(),
+        })
+        .lt('last_activity_at', pausedCutoff.toISOString())
+        .in('status', ['paused', 'billing_paused'])
+        .select('id');
+
+      if (pausedError) {
+        console.error('[Data Cleanup] Error closing paused sessions:', pausedError);
+        results.errors.push(`Paused sessions: ${pausedError.message}`);
+      } else if (pausedSessions) {
+        console.log(`[Data Cleanup] Closed ${pausedSessions.length} paused sessions (10min timeout)`);
       }
 
       // Also run the DB function for idle sessions cleanup
