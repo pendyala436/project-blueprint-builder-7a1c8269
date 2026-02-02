@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 import { RandomChatButton } from "@/components/RandomChatButton";
+import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 // VideoCallMiniButton removed from men's dashboard
@@ -1351,7 +1352,7 @@ const DashboardScreen = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <RandomChatButton 
                   userGender="male"
                   userLanguage={userLanguage}
@@ -1361,6 +1362,15 @@ const DashboardScreen = () => {
                   size="lg"
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
                 />
+                {/* Video Call Button - India Only */}
+                {userCountry === "IN" && (
+                  <VideoCallMiniButton
+                    currentUserId={currentUserId}
+                    userLanguage={userLanguage}
+                    walletBalance={walletBalance}
+                    onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                  />
+                )}
                 <Button 
                   variant="aurora" 
                   size="lg"
