@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { isIndianLanguage } from "@/data/nllb200Languages";
+import { isIndianLanguage } from "@/data/supportedLanguages";
 import { filterWomenByNLLBRules, getVisibilityExplanation, WomanProfile, ProfileVisibility, getVisibilityWeight, shouldShowProfile } from "@/hooks/useNLLBVisibility";
 import {
   Tooltip,
@@ -254,7 +254,13 @@ const MatchingScreen = () => {
       );
 
       // Apply profile visibility filtering (probability-based)
-      const visibilityFilteredWomen = women.filter(w => shouldShowProfile(w.profileVisibility));
+      const visibilityFilteredWomen = women.filter(w => {
+        // Simple probability-based visibility using profileVisibility
+        const vis = (w as any).profileVisibility as string;
+        if (vis === 'low') return Math.random() < 0.25;
+        if (vis === 'medium') return Math.random() < 0.5;
+        return true; // high, very_high
+      });
 
       // Apply NLLB-200 visibility rules
       const visibilityResult = filterWomenByNLLBRules(
@@ -269,8 +275,8 @@ const MatchingScreen = () => {
       // Sort visible women: visibility priority first, then not busy, then by chat count
       const sortedWomen = visibilityResult.visibleWomen.sort((a, b) => {
         // First by visibility priority (higher = first)
-        const visA = getVisibilityWeight(a.profileVisibility);
-        const visB = getVisibilityWeight(b.profileVisibility);
+        const visA = getVisibilityWeight(a, motherTongue);
+        const visB = getVisibilityWeight(b, motherTongue);
         if (visA !== visB) return visB - visA;
         
         // Then by busy status

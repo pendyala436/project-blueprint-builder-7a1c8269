@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2, Languages, Globe } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
-import { dynamicTransliterate, isLatinScriptLanguage } from '@/lib/translation/dynamic-transliterator';
+// Translation removed - messages sent as plain text
+const dynamicTransliterate = (text: string, _lang: string): string => text;
+const isLatinScriptLanguage = (_lang: string): boolean => true;
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string, nativeText?: string) => void;

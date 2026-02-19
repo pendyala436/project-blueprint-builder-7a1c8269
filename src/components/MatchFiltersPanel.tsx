@@ -66,11 +66,11 @@ import {
 } from "lucide-react";
 import { countries } from "@/data/countries";
 import { 
-  ALL_NLLB200_LANGUAGES, 
-  INDIAN_NLLB200_LANGUAGES, 
-  NON_INDIAN_NLLB200_LANGUAGES,
-  NLLB200Language 
-} from "@/data/nllb200Languages";
+  ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES, 
+  INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, 
+  NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES,
+  type SupportedLanguage as NLLB200Language 
+} from "@/data/supportedLanguages";
 import { cn } from "@/lib/utils";
 
 export interface MatchFilters {
