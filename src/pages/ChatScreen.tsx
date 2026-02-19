@@ -90,7 +90,7 @@ import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
-import { RealtimeChatInput, type MessageViews } from "@/components/chat/RealtimeChatInput";
+import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -914,25 +914,8 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Use ONLY Universal Translator for all translations
-      const { translateText, isSameLanguage } = await import('@/lib/translation/translate');
-      
-      const source = sourceLanguage || currentUserLanguage;
-      
-      // Skip if same language
-      if (isSameLanguage(source, targetLanguage)) {
-        return { translatedMessage: message, isTranslated: false, detectedLanguage: source, translationPair: "" };
-      }
-      
-      // Use Universal Translator (Edge Function-based semantic translation)
-      const result = await translateText(message, source, targetLanguage);
-      
-      return { 
-        translatedMessage: result.text, 
-        isTranslated: result.isTranslated,
-        detectedLanguage: result.sourceLanguage || source,
-        translationPair: result.isTranslated ? `${source} → ${targetLanguage}` : ""
-      };
+      // Translation removed - return message as-is
+      return { translatedMessage: message, isTranslated: false, detectedLanguage: sourceLanguage || currentUserLanguage, translationPair: "" };
     } catch (error) {
       console.error("Translation error:", error);
       // Return original message on error
@@ -968,30 +951,8 @@ const ChatScreen = () => {
    */
   const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
     try {
-      // Use Universal Translator utilities
-      const { isLatinScriptLanguage, isLatinText } = await import('@/lib/translation/translate');
-      const { dynamicTransliterate } = await import('@/lib/translation/dynamic-transliterator');
-      
-      // Skip if target is Latin script or input is already native script
-      if (isLatinScriptLanguage(targetLanguage) || !isLatinText(message)) {
-        return message;
-      }
-      
-      // IMPORTANT: Only transliterate if sender's language is the SAME as target
-      // If sender types German (Latin) → Telugu (non-Latin), we need TRANSLATION, not transliteration
-      // Transliteration is only for romanized input like "bagunnava" → బాగున్నావా when both are Telugu
-      const senderUsesLatinScript = isLatinScriptLanguage(currentUserLanguage);
-      
-      if (senderUsesLatinScript) {
-        // Sender's language uses Latin script (German, French, English, etc.)
-        // Don't transliterate - let the translation handle it
-        return message;
-      }
-      
-      // Sender's language is non-Latin (Hindi, Telugu, etc.) but typed in Latin
-      // This is romanized input that needs transliteration using dynamic transliterator
-      const result = dynamicTransliterate(message, targetLanguage);
-      return result || message;
+      // Translation/transliteration removed - return message as-is
+      return message;
     } catch (error) {
       console.error("Conversion failed:", error);
       return message;
@@ -1015,7 +976,7 @@ const ChatScreen = () => {
     messageToStore: string, 
     senderView: string, 
     receiverView: string,
-    messageViews?: MessageViews
+    messageViews?: any
   ) => {
     // ============= VALIDATION =============
     
@@ -1935,12 +1896,11 @@ const ChatScreen = () => {
             )}
           </div>
           
-          {/* Realtime Chat Input with typing modes */}
-          <RealtimeChatInput
-            onSendMessage={handleSendMessage}
-            senderLanguage={currentUserLanguage || "english"}
-            receiverLanguage={chatPartner?.preferredLanguage || "english"}
+          {/* Simple Chat Input */}
+          <ChatMessageInput
+            onSendMessage={(msg) => handleSendMessage(msg, msg, msg)}
             disabled={isSending || isBlocked || isBlockedByPartner}
+            userLanguage={currentUserLanguage || "english"}
           />
         </div>
       </footer>

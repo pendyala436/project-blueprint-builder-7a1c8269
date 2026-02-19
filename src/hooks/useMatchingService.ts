@@ -2,11 +2,13 @@ import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   isIndianLanguage, 
-  getNLLB200Code, 
-  INDIAN_NLLB200_LANGUAGES, 
-  NON_INDIAN_NLLB200_LANGUAGES,
-  ALL_NLLB200_LANGUAGES 
-} from '@/data/nllb200Languages';
+  INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, 
+  NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES,
+  ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES 
+} from '@/data/supportedLanguages';
+
+// Stub for removed NLLB code lookup
+const getNLLB200Code = (_name: string): string | null => null;
 
 // Super user balance bypass is handled at the database level via RPC functions
 
