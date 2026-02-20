@@ -951,6 +951,8 @@ export type Database = {
           earning_slot_assigned_at: string | null
           education_level: string | null
           full_name: string | null
+          golden_badge_expires_at: string | null
+          has_golden_badge: boolean | null
           height_cm: number | null
           id: string
           interests: string[] | null
@@ -996,6 +998,8 @@ export type Database = {
           earning_slot_assigned_at?: string | null
           education_level?: string | null
           full_name?: string | null
+          golden_badge_expires_at?: string | null
+          has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
@@ -1041,6 +1045,8 @@ export type Database = {
           earning_slot_assigned_at?: string | null
           education_level?: string | null
           full_name?: string | null
+          golden_badge_expires_at?: string | null
+          has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
@@ -1154,6 +1160,42 @@ export type Database = {
           price?: number
           sort_order?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      golden_badge_subscriptions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          expires_at: string
+          id: string
+          purchased_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          purchased_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          purchased_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2248,7 +2290,9 @@ export type Database = {
           fitness_level: string | null
           full_name: string | null
           gender: string | null
+          golden_badge_expires_at: string | null
           has_children: boolean | null
+          has_golden_badge: boolean | null
           height_cm: number | null
           id: string
           interests: string[] | null
@@ -2305,7 +2349,9 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          golden_badge_expires_at?: string | null
           has_children?: boolean | null
+          has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
@@ -2362,7 +2408,9 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          golden_badge_expires_at?: string | null
           has_children?: boolean | null
+          has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
           interests?: string[] | null
@@ -3834,6 +3882,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_golden_badge: { Args: { p_user_id: string }; Returns: Json }
       rotate_monthly_shifts: { Args: never; Returns: undefined }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
