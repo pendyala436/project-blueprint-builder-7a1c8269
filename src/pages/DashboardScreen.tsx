@@ -1335,12 +1335,13 @@ const DashboardScreen = () => {
         {/* Section 3: Wallet & Primary Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
           <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-center gap-4">
+              {/* Balance */}
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-primary/20">
                   <Wallet className="w-6 h-6 text-primary" />
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-sm text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
                   <p className="text-2xl font-bold text-foreground">
                     ₹{walletBalance.toLocaleString()}
@@ -1350,7 +1351,8 @@ const DashboardScreen = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3 flex-wrap">
+              {/* Action Buttons - centered */}
+              <div className="flex flex-wrap justify-center gap-3 w-full">
                 <RandomChatButton 
                   userGender="male"
                   userLanguage={userLanguage}
