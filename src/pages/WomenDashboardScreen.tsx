@@ -118,6 +118,10 @@ const WomenDashboardScreen = () => {
   });
   const [myTodayEarnings, setMyTodayEarnings] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
+  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
+  const [goldenBadgeExpiry, setGoldenBadgeExpiry] = useState<string | null>(null);
+  const [isPurchasingBadge, setIsPurchasingBadge] = useState(false);
+  const [isIndianWoman, setIsIndianWoman] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
