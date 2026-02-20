@@ -21,13 +21,15 @@ interface VideoCallButtonProps {
   userLanguage: string;
   walletBalance: number;
   onBalanceChange?: (newBalance: number) => void;
+  hasGoldenBadge?: boolean;
 }
 
 const VideoCallButton = ({ 
   currentUserId, 
   userLanguage, 
   walletBalance,
-  onBalanceChange 
+  onBalanceChange,
+  hasGoldenBadge = false
 }: VideoCallButtonProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
