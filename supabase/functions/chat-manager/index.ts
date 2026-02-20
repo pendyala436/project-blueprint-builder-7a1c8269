@@ -875,55 +875,77 @@ serve(async (req) => {
         }
 
         // SECURITY: Verify that the authenticated user is the man (initiator)
-        // Women cannot initiate chats - they can only respond
+        // Women cannot initiate chats - UNLESS they have Golden Badge
         if (authenticatedUserId !== man_user_id) {
           // Check if the authenticated user is the woman trying to initiate
           if (authenticatedUserId === woman_user_id) {
-            console.log(`[SECURITY] Woman ${authenticatedUserId} attempted to initiate chat - BLOCKED`);
+            // Check if woman has golden badge (allows initiation)
+            const { data: goldenBadgeCheck } = await supabase
+              .from("profiles")
+              .select("has_golden_badge, golden_badge_expires_at")
+              .eq("user_id", authenticatedUserId)
+              .maybeSingle();
+            
+            const hasActiveBadge = goldenBadgeCheck?.has_golden_badge === true && 
+              goldenBadgeCheck?.golden_badge_expires_at &&
+              new Date(goldenBadgeCheck.golden_badge_expires_at) > new Date();
+
+            if (!hasActiveBadge && !body.golden_badge_override) {
+              console.log(`[SECURITY] Woman ${authenticatedUserId} attempted to initiate chat without Golden Badge - BLOCKED`);
+              return new Response(
+                JSON.stringify({ 
+                  success: false, 
+                  message: "Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.",
+                  error_code: "WOMEN_CANNOT_INITIATE"
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+              );
+            }
+            
+            console.log(`[GOLDEN_BADGE] Woman ${authenticatedUserId} initiating chat with Golden Badge`);
+            // Golden badge holder - swap roles for the session (woman initiates but session still tracks man/woman correctly)
+          } else {
+            // Check if admin (admins can act on behalf)
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', authenticatedUserId)
+              .eq('role', 'admin')
+              .maybeSingle();
+            
+            if (!roleData) {
+              console.log(`[SECURITY] User ${authenticatedUserId} attempted to start chat as ${man_user_id} - BLOCKED`);
+              return new Response(
+                JSON.stringify({ success: false, message: "You can only initiate chats as yourself" }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+              );
+            }
+          }
+        }
+
+        // Verify the initiator is male OR has golden badge
+        const { data: initiatorProfile } = await supabase
+          .from("profiles")
+          .select("gender, has_golden_badge, golden_badge_expires_at")
+          .eq("user_id", man_user_id)
+          .maybeSingle();
+        
+        if (initiatorProfile?.gender?.toLowerCase() === "female") {
+          const hasActiveBadge = initiatorProfile?.has_golden_badge === true && 
+            initiatorProfile?.golden_badge_expires_at &&
+            new Date(initiatorProfile.golden_badge_expires_at) > new Date();
+          
+          if (!hasActiveBadge && !body.golden_badge_override) {
+            console.log(`[SECURITY] Female user ${man_user_id} attempted to initiate chat without Golden Badge - BLOCKED`);
             return new Response(
               JSON.stringify({ 
                 success: false, 
-                message: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
+                message: "Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.",
                 error_code: "WOMEN_CANNOT_INITIATE"
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
             );
           }
-          
-          // Check if admin (admins can act on behalf)
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', authenticatedUserId)
-            .eq('role', 'admin')
-            .maybeSingle();
-          
-          if (!roleData) {
-            console.log(`[SECURITY] User ${authenticatedUserId} attempted to start chat as ${man_user_id} - BLOCKED`);
-            return new Response(
-              JSON.stringify({ success: false, message: "You can only initiate chats as yourself" }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
-            );
-          }
-        }
-
-        // Verify the initiator (man_user_id) is actually male
-        const { data: initiatorProfile } = await supabase
-          .from("profiles")
-          .select("gender")
-          .eq("user_id", man_user_id)
-          .maybeSingle();
-        
-        if (initiatorProfile?.gender?.toLowerCase() === "female") {
-          console.log(`[SECURITY] Female user ${man_user_id} attempted to initiate chat as man - BLOCKED`);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
-              error_code: "WOMEN_CANNOT_INITIATE"
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
-          );
         }
 
         const MAX_PARALLEL_CHATS = 3;

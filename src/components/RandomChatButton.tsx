@@ -49,6 +49,7 @@ interface RandomChatButtonProps {
   size?: "default" | "lg" | "sm";
   className?: string;
   onInsufficientBalance?: () => void;
+  hasGoldenBadge?: boolean;
 }
 
 export const RandomChatButton = ({
@@ -59,7 +60,8 @@ export const RandomChatButton = ({
   variant = "aurora",
   size = "lg",
   className = "",
-  onInsufficientBalance
+  onInsufficientBalance,
+  hasGoldenBadge = false
 }: RandomChatButtonProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -78,11 +80,11 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
-    // SECURITY: Women cannot initiate chats - they can only respond
-    if (userGender === "female") {
+    // SECURITY: Women cannot initiate chats - UNLESS they have Golden Badge
+    if (userGender === "female" && !hasGoldenBadge) {
       toast({
         title: "Action Not Allowed",
-        description: "Women cannot initiate chats. Please wait for men to start a conversation with you.",
+        description: "Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.",
         variant: "destructive"
       });
       return;

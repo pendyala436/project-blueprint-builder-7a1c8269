@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
+import VideoCallButton from "@/components/VideoCallButton";
+import { RandomChatButton } from "@/components/RandomChatButton";
 import { 
   Heart, 
   Users, 
@@ -28,7 +30,11 @@ import {
   Globe,
   Filter,
   Power,
-  Users2
+  Users2,
+  Star,
+  Loader2,
+  MessageCircle as MessageCircleIcon,
+  Video
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
@@ -357,12 +363,25 @@ const WomenDashboardScreen = () => {
       // First check gender and approval from main profiles table for redirection
       const { data: mainProfile } = await supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian, has_golden_badge, golden_badge_expires_at")
         .eq("user_id", user.id)
         .maybeSingle();
         
       // Store user's photo for chat validation
       setUserPhoto(mainProfile?.photo_url || null);
+      
+      // Check golden badge status
+      const isIndian = mainProfile?.is_indian === true || 
+        mainProfile?.country?.toLowerCase().includes('india');
+      setIsIndianWoman(isIndian && mainProfile?.gender?.toLowerCase() === 'female');
+      
+      const badgeActive = mainProfile?.has_golden_badge === true && 
+        mainProfile?.golden_badge_expires_at && 
+        new Date(mainProfile.golden_badge_expires_at) > new Date();
+      setHasGoldenBadge(!!badgeActive);
+      if (mainProfile?.golden_badge_expires_at) {
+        setGoldenBadgeExpiry(mainProfile.golden_badge_expires_at);
+      }
 
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
@@ -657,22 +676,93 @@ const WomenDashboardScreen = () => {
     });
   };
 
-  // Women cannot initiate chats - they can only respond to incoming chats from men
-  // This function is disabled for women users
+  // Women cannot initiate chats - UNLESS they have Golden Badge
   const handleStartChatWithUser = async (userId: string) => {
-    toast({
-      title: t('actionNotAllowed', 'Action Not Allowed'),
-      description: t('womenCannotInitiateChat', 'Women cannot initiate chats. Please wait for men to start a conversation with you.'),
-      variant: "destructive",
-    });
-    return;
+    if (!hasGoldenBadge) {
+      toast({
+        title: t('actionNotAllowed', 'Action Not Allowed'),
+        description: t('womenCannotInitiateChat', 'Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Golden badge holder - initiate chat
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "start_chat",
+          man_user_id: userId,
+          woman_user_id: currentUserId,
+          golden_badge_override: true
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) {
+        toast({
+          title: t('cannotStartChat', 'Cannot Start Chat'),
+          description: data.message || "Unable to start chat",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: t('chatStarted', 'Chat Started!'),
+        description: t('chatInitiated', 'Chat session started successfully'),
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to start chat",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePurchaseGoldenBadge = async () => {
+    setIsPurchasingBadge(true);
+    try {
+      const { data, error } = await supabase.rpc('purchase_golden_badge', {
+        p_user_id: currentUserId
+      });
+
+      if (error) throw error;
+
+      const result = data as any;
+      if (result?.success) {
+        setHasGoldenBadge(true);
+        setGoldenBadgeExpiry(result.expires_at);
+        toast({
+          title: "🌟 Golden Badge Activated!",
+          description: "You can now initiate chats and video calls with men for 30 days!",
+        });
+        loadDashboardData();
+      } else {
+        toast({
+          title: "Purchase Failed",
+          description: result?.error || "Could not purchase badge",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to purchase badge",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPurchasingBadge(false);
+    }
   };
 
   const handleViewProfile = (userId: string) => {
-    // Stay on dashboard - profile info shown in UserCard, chats handled by parallel container
     toast({
       title: t('viewingProfile', 'Profile'),
-      description: t('waitForChatRequest', 'Wait for this user to send you a chat request'),
+      description: hasGoldenBadge 
+        ? t('useButtonsToChat', 'Use the Chat or Video buttons to connect')
+        : t('waitForChatRequest', 'Wait for this user to send you a chat request'),
     });
   };
 
@@ -759,6 +849,17 @@ const WomenDashboardScreen = () => {
           </div>
 
           <div className="flex flex-col gap-2">
+            {hasGoldenBadge && (
+              <Button 
+                size="sm" 
+                variant="aurora"
+                onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
+                title="Start Chat (Golden Badge)"
+              >
+                <MessageCircleIcon className="h-4 w-4 mr-1" />
+                Chat
+              </Button>
+            )}
             <Button 
               size="sm" 
               variant="auroraOutline"
@@ -932,6 +1033,81 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
+        {/* Golden Badge Section */}
+        {isIndianWoman && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
+            {hasGoldenBadge ? (
+              <Card className="p-4 bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-500/30 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-amber-500/20">
+                    <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
+                      <Badge className="bg-amber-500 text-white text-[10px]">PRO</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      You can initiate chats & video calls with men
+                    </p>
+                    {goldenBadgeExpiry && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  {/* Golden Badge action buttons */}
+                  <div className="flex flex-col gap-2">
+                    <RandomChatButton
+                      userGender="female"
+                      userLanguage={currentWomanLanguage}
+                      userCountry={currentWomanCountry}
+                      variant="aurora"
+                      size="sm"
+                      hasGoldenBadge={true}
+                    />
+                    <VideoCallButton
+                      currentUserId={currentUserId}
+                      userLanguage={currentWomanLanguage}
+                      walletBalance={999999}
+                      hasGoldenBadge={true}
+                    />
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-5 bg-gradient-to-br from-amber-500/5 to-amber-600/10 border-amber-500/20">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-amber-500/10">
+                    <Star className="w-7 h-7 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground">🌟 Golden Badge</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Buy for ₹1,000/month to initiate chats & video calls with men
+                    </p>
+                  </div>
+                  <Button
+                    variant="aurora"
+                    size="sm"
+                    onClick={handlePurchaseGoldenBadge}
+                    disabled={isPurchasingBadge}
+                    className="gap-1 whitespace-nowrap"
+                  >
+                    {isPurchasingBadge ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <IndianRupee className="h-3 w-3" />
+                        1,000
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
         <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recharged" className="flex items-center gap-2">
@@ -1052,7 +1228,7 @@ const WomenDashboardScreen = () => {
 
         </div>
 
-        {/* Section 3: Active Chats Info - Women can only reply to existing chats */}
+        {/* Section 3: Active Chats Info */}
         <div className="animate-fade-in" style={{ animationDelay: "0.12s" }}>
           <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
@@ -1060,8 +1236,14 @@ const WomenDashboardScreen = () => {
                 <MessageCircle className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold">{t('chatMode', 'Reply Mode')}</p>
-                <p className="text-xs text-muted-foreground">{t('womenCanOnlyReply', 'You can reply to messages from men who start chats with you')}</p>
+                <p className="text-sm font-bold">
+                  {hasGoldenBadge ? t('chatMode', 'Chat & Call Mode') : t('chatMode', 'Reply Mode')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {hasGoldenBadge 
+                    ? t('goldenBadgeMode', 'You can initiate chats & calls, and reply to incoming ones')
+                    : t('womenCanOnlyReply', 'You can reply to messages from men who start chats with you')}
+                </p>
               </div>
               <Badge variant="secondary" className="text-xs">
                 {activeChatCount} {t('activeChats', 'active')}
