@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { Upload, CheckCircle, Clock, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
+const aadhaarRegex = /^\d{12}$/;
+
 const kycSchema = z.object({
   full_name_as_per_bank: z.string().min(2, "Full name is required").max(100),
   date_of_birth: z.string().min(1, "Date of birth is required"),
@@ -23,7 +25,10 @@ const kycSchema = z.object({
   account_holder_name: z.string().min(2, "Account holder name is required").max(100),
   account_number: z.string().min(9, "Valid account number required").max(18),
   ifsc_code: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
-  id_type: z.enum(["aadhaar", "pan", "passport", "voter_id"]),
+  // Address Proof - Aadhaar mandatory
+  aadhaar_number: z.string().regex(aadhaarRegex, "Aadhaar must be 12 digits"),
+  // ID Proof - separate
+  id_type: z.enum(["pan", "passport", "voter_id"]),
   id_number: z.string().min(6, "Valid ID number required").max(20),
   consent_given: z.boolean().refine(val => val === true, "You must provide consent"),
 });
@@ -43,6 +48,11 @@ interface KYCRecord {
   ifsc_code: string;
   id_type: string;
   id_number: string;
+  aadhaar_number: string | null;
+  aadhaar_front_url: string | null;
+  aadhaar_back_url: string | null;
+  id_proof_front_url: string | null;
+  id_proof_back_url: string | null;
   document_front_url: string | null;
   document_back_url: string | null;
   selfie_url: string | null;
@@ -57,10 +67,14 @@ export function WomenKYCForm() {
   const [submitting, setSubmitting] = useState(false);
   const [existingKYC, setExistingKYC] = useState<KYCRecord | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  
-  // File upload states
-  const [documentFront, setDocumentFront] = useState<File | null>(null);
-  const [documentBack, setDocumentBack] = useState<File | null>(null);
+
+  // Address Proof (Aadhaar) file uploads
+  const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
+  const [aadhaarBack, setAadhaarBack] = useState<File | null>(null);
+  // ID Proof file uploads
+  const [idProofFront, setIdProofFront] = useState<File | null>(null);
+  const [idProofBack, setIdProofBack] = useState<File | null>(null);
+  // Selfie
   const [selfie, setSelfie] = useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
@@ -75,7 +89,8 @@ export function WomenKYCForm() {
       account_holder_name: "",
       account_number: "",
       ifsc_code: "",
-      id_type: "aadhaar",
+      aadhaar_number: "",
+      id_type: "pan",
       id_number: "",
       consent_given: false,
     },
@@ -89,7 +104,7 @@ export function WomenKYCForm() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      
+
       setUserId(user.id);
 
       const { data, error } = await supabase
@@ -105,7 +120,6 @@ export function WomenKYCForm() {
 
       if (data) {
         setExistingKYC(data as KYCRecord);
-        // Pre-fill form with existing data
         form.reset({
           full_name_as_per_bank: data.full_name_as_per_bank,
           date_of_birth: data.date_of_birth,
@@ -115,8 +129,9 @@ export function WomenKYCForm() {
           account_holder_name: data.account_holder_name,
           account_number: data.account_number,
           ifsc_code: data.ifsc_code,
-          id_type: data.id_type as any,
-          id_number: data.id_number,
+          aadhaar_number: (data as any).aadhaar_number || "",
+          id_type: (data.id_type === 'aadhaar' ? 'pan' : data.id_type) as any,
+          id_number: data.id_type === 'aadhaar' ? "" : data.id_number,
           consent_given: data.consent_given,
         });
       }
@@ -129,10 +144,10 @@ export function WomenKYCForm() {
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     if (!userId) return null;
-    
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${folder}/${Date.now()}.${fileExt}`;
-    
+
     const { error } = await supabase.storage
       .from('kyc-documents')
       .upload(fileName, file, { upsert: true });
@@ -159,16 +174,25 @@ export function WomenKYCForm() {
     setUploadingFiles(true);
 
     try {
-      // Upload documents if provided
-      let documentFrontUrl = existingKYC?.document_front_url || null;
-      let documentBackUrl = existingKYC?.document_back_url || null;
+      // Upload Aadhaar documents (address proof)
+      let aadhaarFrontUrl = existingKYC?.aadhaar_front_url || null;
+      let aadhaarBackUrl = existingKYC?.aadhaar_back_url || null;
+      // Upload ID proof documents
+      let idProofFrontUrl = existingKYC?.id_proof_front_url || null;
+      let idProofBackUrl = existingKYC?.id_proof_back_url || null;
       let selfieUrl = existingKYC?.selfie_url || null;
 
-      if (documentFront) {
-        documentFrontUrl = await uploadFile(documentFront, 'id-front');
+      if (aadhaarFront) {
+        aadhaarFrontUrl = await uploadFile(aadhaarFront, 'aadhaar-front');
       }
-      if (documentBack) {
-        documentBackUrl = await uploadFile(documentBack, 'id-back');
+      if (aadhaarBack) {
+        aadhaarBackUrl = await uploadFile(aadhaarBack, 'aadhaar-back');
+      }
+      if (idProofFront) {
+        idProofFrontUrl = await uploadFile(idProofFront, 'id-proof-front');
+      }
+      if (idProofBack) {
+        idProofBackUrl = await uploadFile(idProofBack, 'id-proof-back');
       }
       if (selfie) {
         selfieUrl = await uploadFile(selfie, 'selfie');
@@ -186,10 +210,18 @@ export function WomenKYCForm() {
         account_holder_name: data.account_holder_name.trim(),
         account_number: data.account_number.trim(),
         ifsc_code: data.ifsc_code.toUpperCase().trim(),
+        // Address proof
+        aadhaar_number: data.aadhaar_number.trim(),
+        aadhaar_front_url: aadhaarFrontUrl,
+        aadhaar_back_url: aadhaarBackUrl,
+        // ID proof
         id_type: data.id_type,
         id_number: data.id_number.trim(),
-        document_front_url: documentFrontUrl,
-        document_back_url: documentBackUrl,
+        id_proof_front_url: idProofFrontUrl,
+        id_proof_back_url: idProofBackUrl,
+        // Legacy fields (keep for compatibility)
+        document_front_url: aadhaarFrontUrl,
+        document_back_url: aadhaarBackUrl,
         selfie_url: selfieUrl,
         consent_given: data.consent_given,
         consent_timestamp: new Date().toISOString(),
@@ -197,20 +229,16 @@ export function WomenKYCForm() {
       };
 
       if (existingKYC) {
-        // Update existing
         const { error } = await supabase
           .from('women_kyc')
           .update(kycData)
           .eq('user_id', userId);
-
         if (error) throw error;
         toast.success("KYC updated successfully!");
       } else {
-        // Insert new
         const { error } = await supabase
           .from('women_kyc')
           .insert(kycData);
-
         if (error) throw error;
         toast.success("KYC submitted successfully!");
       }
@@ -237,6 +265,15 @@ export function WomenKYCForm() {
         return <Badge className="bg-red-500"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  const getIdTypeLabel = (type: string) => {
+    switch (type) {
+      case 'pan': return 'PAN Card';
+      case 'passport': return 'Passport';
+      case 'voter_id': return 'Voter ID';
+      default: return type;
     }
   };
 
@@ -278,6 +315,14 @@ export function WomenKYCForm() {
               <Label className="text-muted-foreground">IFSC</Label>
               <p className="font-medium">{existingKYC.ifsc_code}</p>
             </div>
+            <div>
+              <Label className="text-muted-foreground">Aadhaar (Address Proof)</Label>
+              <p className="font-medium">****{(existingKYC.aadhaar_number || '').slice(-4)}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">ID Proof</Label>
+              <p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -285,6 +330,34 @@ export function WomenKYCForm() {
   }
 
   const isEditable = !existingKYC || existingKYC.verification_status === 'pending' || existingKYC.verification_status === 'rejected';
+
+  const FileUploadBox = ({ label, file, existingUrl, onFileChange }: {
+    label: string;
+    file: File | null;
+    existingUrl: string | null | undefined;
+    onFileChange: (f: File | null) => void;
+  }) => (
+    <div>
+      <Label>{label}</Label>
+      <div className="mt-1">
+        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
+          <Upload className="w-6 h-6 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground mt-1">
+            {file?.name || existingUrl ? 'Replace' : 'Upload'}
+          </span>
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*,.pdf"
+            onChange={(e) => onFileChange(e.target.files?.[0] || null)}
+          />
+        </label>
+        {(file || existingUrl) && (
+          <p className="text-xs text-green-600 mt-1">✓ Uploaded</p>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <Card>
@@ -427,9 +500,9 @@ export function WomenKYCForm() {
                     <FormItem>
                       <FormLabel>IFSC Code *</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="e.g., SBIN0001234" 
+                        <Input
+                          {...field}
+                          placeholder="e.g., SBIN0001234"
                           disabled={!isEditable}
                           onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                         />
@@ -441,9 +514,53 @@ export function WomenKYCForm() {
               </div>
             </div>
 
-            {/* KYC Documents */}
+            {/* Address Proof - Aadhaar (Mandatory) */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">KYC Documents</h3>
+              <h3 className="font-semibold text-lg">Address Proof — Aadhaar Card</h3>
+              <p className="text-sm text-muted-foreground">Aadhaar is mandatory as address proof for KYC verification.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="aadhaar_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aadhaar Number (12 digits) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Enter 12-digit Aadhaar number"
+                          maxLength={12}
+                          disabled={!isEditable}
+                          onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {isEditable && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FileUploadBox
+                    label="Aadhaar Front *"
+                    file={aadhaarFront}
+                    existingUrl={existingKYC?.aadhaar_front_url}
+                    onFileChange={setAadhaarFront}
+                  />
+                  <FileUploadBox
+                    label="Aadhaar Back *"
+                    file={aadhaarBack}
+                    existingUrl={existingKYC?.aadhaar_back_url}
+                    onFileChange={setAadhaarBack}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ID Proof - Separate */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">ID Proof</h3>
+              <p className="text-sm text-muted-foreground">Select a government-issued ID different from Aadhaar for identity verification.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -458,7 +575,6 @@ export function WomenKYCForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="aadhaar">Aadhaar Card</SelectItem>
                           <SelectItem value="pan">PAN Card</SelectItem>
                           <SelectItem value="passport">Passport</SelectItem>
                           <SelectItem value="voter_id">Voter ID</SelectItem>
@@ -482,70 +598,35 @@ export function WomenKYCForm() {
                   )}
                 />
               </div>
+              {isEditable && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FileUploadBox
+                    label="ID Proof Front *"
+                    file={idProofFront}
+                    existingUrl={existingKYC?.id_proof_front_url}
+                    onFileChange={setIdProofFront}
+                  />
+                  <FileUploadBox
+                    label="ID Proof Back"
+                    file={idProofBack}
+                    existingUrl={existingKYC?.id_proof_back_url}
+                    onFileChange={setIdProofBack}
+                  />
+                </div>
+              )}
+            </div>
 
-              {/* Document Uploads */}
+            {/* Selfie */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Selfie / Liveness</h3>
               {isEditable && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Document Front</Label>
-                    <div className="mt-1">
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {documentFront?.name || existingKYC?.document_front_url ? 'Replace' : 'Upload front'}
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*,.pdf"
-                          onChange={(e) => setDocumentFront(e.target.files?.[0] || null)}
-                        />
-                      </label>
-                      {(documentFront || existingKYC?.document_front_url) && (
-                        <p className="text-xs text-green-600 mt-1">✓ Uploaded</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Document Back</Label>
-                    <div className="mt-1">
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {documentBack?.name || existingKYC?.document_back_url ? 'Replace' : 'Upload back'}
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*,.pdf"
-                          onChange={(e) => setDocumentBack(e.target.files?.[0] || null)}
-                        />
-                      </label>
-                      {(documentBack || existingKYC?.document_back_url) && (
-                        <p className="text-xs text-green-600 mt-1">✓ Uploaded</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Selfie / Liveness</Label>
-                    <div className="mt-1">
-                      <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50">
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1">
-                          {selfie?.name || existingKYC?.selfie_url ? 'Replace' : 'Upload selfie'}
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => setSelfie(e.target.files?.[0] || null)}
-                        />
-                      </label>
-                      {(selfie || existingKYC?.selfie_url) && (
-                        <p className="text-xs text-green-600 mt-1">✓ Uploaded</p>
-                      )}
-                    </div>
-                  </div>
+                  <FileUploadBox
+                    label="Selfie Photo *"
+                    file={selfie}
+                    existingUrl={existingKYC?.selfie_url}
+                    onFileChange={(f) => setSelfie(f)}
+                  />
                 </div>
               )}
             </div>
