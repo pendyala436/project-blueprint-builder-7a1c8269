@@ -3549,6 +3549,9 @@ export type Database = {
       }
       women_kyc: {
         Row: {
+          aadhaar_back_url: string | null
+          aadhaar_front_url: string | null
+          aadhaar_number: string | null
           account_holder_name: string
           account_number: string
           bank_name: string
@@ -3563,6 +3566,8 @@ export type Database = {
           gender: string | null
           id: string
           id_number: string
+          id_proof_back_url: string | null
+          id_proof_front_url: string | null
           id_type: string
           ifsc_code: string
           rejection_reason: string | null
@@ -3574,6 +3579,9 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          aadhaar_number?: string | null
           account_holder_name: string
           account_number: string
           bank_name: string
@@ -3588,6 +3596,8 @@ export type Database = {
           gender?: string | null
           id?: string
           id_number: string
+          id_proof_back_url?: string | null
+          id_proof_front_url?: string | null
           id_type: string
           ifsc_code: string
           rejection_reason?: string | null
@@ -3599,6 +3609,9 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          aadhaar_number?: string | null
           account_holder_name?: string
           account_number?: string
           bank_name?: string
@@ -3613,6 +3626,8 @@ export type Database = {
           gender?: string | null
           id?: string
           id_number?: string
+          id_proof_back_url?: string | null
+          id_proof_front_url?: string | null
           id_type?: string
           ifsc_code?: string
           rejection_reason?: string | null
