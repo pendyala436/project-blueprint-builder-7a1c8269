@@ -95,6 +95,7 @@ const AdminLanguageLimits = lazy(() => import(/* webpackChunkName: "admin" */ ".
 const PasswordResetScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetScreen"));
 const PasswordResetSuccessScreen = lazy(() => import(/* webpackChunkName: "auth" */ "./pages/PasswordResetSuccessScreen"));
 const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminTransactionHistory"));
+const AdminKYCManagement = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminKYCManagement"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 // Translation test pages removed
@@ -223,6 +224,7 @@ const App = () => (
             <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
             <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
             <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
+            <Route path="/admin/kyc" element={<LazyRoute component={AdminKYCManagement} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             {/* Translation test routes removed */}
             <Route path="*" element={<LazyRoute component={NotFound} />} />
