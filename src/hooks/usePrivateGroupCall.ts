@@ -141,10 +141,10 @@ export function usePrivateGroupCall({
       
       // If we're a participant and this stream is from the host, set it as hostStream
       if (!isOwner) {
+        console.log('[PrivateGroupCall] Setting hostStream for participant');
         setState(prev => ({ ...prev, hostStream: remoteStream }));
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-        }
+        // Don't set remoteVideoRef here - the video element may not exist yet
+        // The component will handle attaching the stream via useEffect
       }
     };
 

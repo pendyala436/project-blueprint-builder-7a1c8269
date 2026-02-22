@@ -280,6 +280,14 @@ export function PrivateGroupCallWindow({
     }
   }, [isOwner, group.is_live, isConnected, isConnecting, joinStream, hasVideo]);
 
+  // Attach host stream to video element when both are available
+  useEffect(() => {
+    if (hostStream && remoteVideoRef.current) {
+      console.log('[PrivateGroupCallWindow] Attaching hostStream to video element');
+      remoteVideoRef.current.srcObject = hostStream;
+    }
+  }, [hostStream, remoteVideoRef]);
+
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -704,7 +712,15 @@ export function PrivateGroupCallWindow({
                     <>
                       {hostStream ? (
                         <video
-                          ref={remoteVideoRef}
+                          ref={(el) => {
+                            if (el && hostStream) {
+                              el.srcObject = hostStream;
+                            }
+                            // Also update the hook's ref
+                            if (remoteVideoRef && 'current' in remoteVideoRef) {
+                              (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+                            }
+                          }}
                           autoPlay
                           playsInline
                           className="w-full h-full object-cover rounded-lg"
