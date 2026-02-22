@@ -119,7 +119,7 @@ export const TransactionHistoryWidget = ({
       if (wallet) {
         setCurrentBalance(Number(wallet.balance) || 0);
 
-        // Get all wallet transactions BEFORE selected month to calculate opening balance
+        // Calculate opening balance: all prior credits - all prior debits from wallet_transactions
         const { data: priorTxData } = await supabase
           .from("wallet_transactions")
           .select("type, amount")
@@ -132,7 +132,7 @@ export const TransactionHistoryWidget = ({
           else openingBalance -= Number(tx.amount);
         });
 
-        // For women: add prior earnings and subtract prior debits
+        // For women: add prior earnings (these are separate from wallet_transactions)
         if (userGender === 'female') {
           const { data: priorEarnings } = await supabase
             .from("women_earnings")
@@ -145,21 +145,6 @@ export const TransactionHistoryWidget = ({
             openingBalance += Number(e.amount);
           });
         }
-
-        // Get prior gift transactions
-        const { data: priorGifts } = await supabase
-          .from("gift_transactions")
-          .select("sender_id, receiver_id, price_paid")
-          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-          .lt("created_at", monthStart)
-          .limit(5000);
-
-        priorGifts?.forEach(g => {
-          // Only count if not already in wallet_transactions
-          const isSender = g.sender_id === userId;
-          if (isSender) openingBalance -= Number(g.price_paid);
-          else openingBalance += Number(g.price_paid);
-        });
 
         const { data: txData } = await supabase
           .from("wallet_transactions")
