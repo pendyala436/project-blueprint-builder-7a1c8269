@@ -49,6 +49,8 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import WomenChatModeSwitcher from "@/components/WomenChatModeSwitcher";
+import { useWomenChatMode } from "@/hooks/useWomenChatMode";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -131,6 +133,9 @@ const WomenDashboardScreen = () => {
   const [isIndianWoman, setIsIndianWoman] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
+  
+  // Women Chat Mode (paid/free/exclusive_free)
+  const chatMode = useWomenChatMode(currentUserId || null);
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
     heightRange: [140, 200],
@@ -1181,7 +1186,24 @@ const WomenDashboardScreen = () => {
             )}
           </div>
         )}
-        <Tabs defaultValue="recharged" className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
+
+        {/* Chat Mode Switcher */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.045s" }}>
+          <WomenChatModeSwitcher
+            currentMode={chatMode.currentMode}
+            freeMinutesUsed={chatMode.freeMinutesUsed}
+            freeMinutesLimit={chatMode.freeMinutesLimit}
+            freeTimeRemaining={chatMode.freeTimeRemaining}
+            exclusiveFreeLockedUntil={chatMode.exclusiveFreeLockedUntil}
+            canSwitchToPaid={chatMode.canSwitchToPaid}
+            canSwitchToFree={chatMode.canSwitchToFree}
+            canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
+            isLoading={chatMode.isLoading}
+            onSwitchMode={chatMode.switchMode}
+          />
+        </div>
+
+        <Tabs defaultValue={chatMode.currentMode === "paid" ? "recharged" : "non-recharged"} className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="recharged" className="flex items-center gap-2">
               <Crown className="h-4 w-4" />
