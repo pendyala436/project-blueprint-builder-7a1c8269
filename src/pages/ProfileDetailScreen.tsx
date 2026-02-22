@@ -20,6 +20,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
 
+interface UserPhoto {
+  id: string;
+  photo_url: string;
+  photo_type: string;
+  display_order: number;
+  is_primary: boolean;
+}
+
 interface ProfileData {
   userId: string;
   fullName: string;
@@ -36,6 +44,7 @@ interface ProfileData {
   isVerified: boolean;
   bio: string | null;
   occupation: string | null;
+  photos: UserPhoto[];
 }
 
 // Fields that should NEVER be shown to other users
@@ -51,6 +60,7 @@ const ProfileDetailScreen = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   useEffect(() => {
     if (userId) {
@@ -123,6 +133,13 @@ const ProfileDetailScreen = () => {
         .select("language_name")
         .eq("user_id", targetUserId);
 
+      // Fetch all user photos
+      const { data: userPhotos } = await supabase
+        .from("user_photos")
+        .select("*")
+        .eq("user_id", targetUserId)
+        .order("display_order", { ascending: true });
+
       // Fetch online status
       const { data: statusData } = await supabase
         .from("user_status")
@@ -187,7 +204,7 @@ const ProfileDetailScreen = () => {
           isVerified: profileData.verification_status || false,
           bio: profileData.bio || null,
           occupation: profileData.occupation || null,
-          // NOTE: phone, email, and KYC details are NEVER exposed to other users
+          photos: (userPhotos as UserPhoto[]) || [],
         });
       } else {
         setProfile({
@@ -206,7 +223,7 @@ const ProfileDetailScreen = () => {
           isVerified: profileData.verification_status || false,
           bio: profileData.bio || null,
           occupation: profileData.occupation || null,
-          // NOTE: phone, email, and KYC details are NEVER exposed to other users
+          photos: (userPhotos as UserPhoto[]) || [],
         });
       }
 
@@ -366,23 +383,60 @@ const ProfileDetailScreen = () => {
       <main className="max-w-2xl mx-auto px-6 py-8 space-y-6">
         {/* Profile Card */}
         <Card className="overflow-hidden animate-fade-in shadow-card">
-          {/* Avatar Section */}
+          {/* Photo Gallery Section */}
           <div className="relative">
-            <div className="aspect-square max-h-[400px] overflow-hidden bg-muted">
-              {profile.avatar ? (
-                <img 
-                  src={profile.avatar} 
-                  alt={profile.fullName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-rose-500/20">
-                  <span className="text-9xl font-bold text-primary/50">
-                    {profile.fullName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
+            {(() => {
+              const allPhotos = profile.photos.length > 0 
+                ? profile.photos.map(p => p.photo_url) 
+                : profile.avatar ? [profile.avatar] : [];
+              const currentPhoto = allPhotos[selectedPhotoIndex] || allPhotos[0];
+              
+              return (
+                <>
+                  <div className="aspect-square max-h-[400px] overflow-hidden bg-muted">
+                    {currentPhoto ? (
+                      <img 
+                        src={currentPhoto} 
+                        alt={profile.fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20">
+                        <span className="text-9xl font-bold text-primary/50">
+                          {profile.fullName.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photo thumbnails */}
+                  {allPhotos.length > 1 && (
+                    <div className="flex gap-1.5 p-3 bg-card/80 backdrop-blur-sm overflow-x-auto">
+                      {allPhotos.map((photo, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedPhotoIndex(idx)}
+                          className={`w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
+                            idx === selectedPhotoIndex 
+                              ? "border-primary ring-2 ring-primary/30" 
+                              : "border-transparent opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Photo counter */}
+                  {allPhotos.length > 1 && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-background/70 backdrop-blur-sm text-xs font-medium text-foreground">
+                      {selectedPhotoIndex + 1} / {allPhotos.length}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Online Status Badge */}
             <div className={`absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${
