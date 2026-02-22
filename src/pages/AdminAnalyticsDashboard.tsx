@@ -32,6 +32,7 @@ import {
   Bell,
   Shield,
   Home,
+  Wallet,
 } from "lucide-react";
 import {
   LineChart,
@@ -61,6 +62,7 @@ interface AnalyticsData {
   menRecharges: number;
   menSpent: number;
   womenEarnings: number;
+  womenWithdrawals: number;
   newUsersToday: number;
   messagesCount: number;
   avgSessionTime: number;
@@ -107,6 +109,7 @@ const AdminAnalyticsDashboard = () => {
     menRecharges: 0,
     menSpent: 0,
     womenEarnings: 0,
+    womenWithdrawals: 0,
     newUsersToday: 0,
     messagesCount: 0,
     avgSessionTime: 0,
@@ -136,7 +139,7 @@ const AdminAnalyticsDashboard = () => {
         .from("matches")
         .select("*", { count: "exact", head: true });
 
-      // Fetch men's wallet recharges (credits added to wallet) - exclude test credits
+      // Fetch men's wallet deposits (all credits = deposits by men)
       const { data: menRechargesData } = await supabase
         .from("wallet_transactions")
         .select("amount, created_at, description")
@@ -144,23 +147,7 @@ const AdminAnalyticsDashboard = () => {
         .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      // Filter out test/seed data - only count real recharges from payment gateways
-      // Exclude all test transactions and manual credits
-      const realRecharges = menRechargesData?.filter(tx => {
-        const desc = tx.description?.toLowerCase() || '';
-        // Exclude test data, free credits, seeds, and manual/admin credits
-        if (desc.includes('test') || 
-            desc.includes('free credits') || 
-            desc.includes('seed') ||
-            desc.includes('manual') ||
-            desc.includes('admin')) {
-          return false;
-        }
-        // Only count if it has a valid payment gateway reference and amount > 0
-        // For now, since there are no real payments yet, return false
-        return false; // No real payments processed yet
-      }) || [];
-      const totalMenRecharges = realRecharges.reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const totalMenRecharges = menRechargesData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
       // Fetch men's spending (debits - what they spent on chats/calls/gifts per minute)
       const { data: menSpentData } = await supabase
@@ -172,17 +159,17 @@ const AdminAnalyticsDashboard = () => {
 
       const totalMenSpent = menSpentData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-      // Fetch total earnings paid to women (based on per minute rate set by admin)
-      const { data: womenEarningsData } = await supabase
-        .from("women_earnings")
+      // Fetch completed withdrawals by women
+      const { data: withdrawalsData } = await supabase
+        .from("withdrawal_requests")
         .select("amount, created_at")
+        .eq("status", "completed")
         .gte("created_at", startDate.toISOString());
 
-      const totalWomenEarned = womenEarningsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const totalWithdrawals = withdrawalsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-      // Admin profit = What men spent - What women earned
-      // This is the margin between the rate men pay per minute and women earn per minute
-      const adminProfit = totalMenSpent - totalWomenEarned;
+      // Admin profit = Total Deposits (Men) - Total Withdrawals (Women)
+      const adminProfit = totalMenRecharges - totalWithdrawals;
 
       // Fetch new users today
       const today = new Date();
@@ -227,6 +214,14 @@ const AdminAnalyticsDashboard = () => {
         ? Math.round(totalSessionMinutes / sessionData.length) 
         : 0;
 
+      // Fetch women earnings for display
+      const { data: womenEarningsData } = await supabase
+        .from("women_earnings")
+        .select("amount, created_at")
+        .gte("created_at", startDate.toISOString());
+
+      const totalWomenEarned = womenEarningsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
       setAnalytics({
         totalUsers: totalUsers || 0,
         activeUsers: activeUsers || 0,
@@ -235,6 +230,7 @@ const AdminAnalyticsDashboard = () => {
         menRecharges: totalMenRecharges,
         menSpent: totalMenSpent,
         womenEarnings: totalWomenEarned,
+        womenWithdrawals: totalWithdrawals,
         newUsersToday: newUsersToday || 0,
         messagesCount: messagesCount || 0,
         avgSessionTime,
@@ -286,15 +282,11 @@ const AdminAnalyticsDashboard = () => {
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-        const dailyMenSpent = menSpentData?.filter(tx => 
+        const dailyWithdrawals = withdrawalsData?.filter(tx => 
           tx.created_at >= dayStart && tx.created_at <= dayEnd
         ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
 
-        const dailyWomenEarned = womenEarningsData?.filter(tx => 
-          tx.created_at >= dayStart && tx.created_at <= dayEnd
-        ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-
-        const dailyProfit = dailyMenSpent - dailyWomenEarned;
+        const dailyProfit = dailyMenRecharges - dailyWithdrawals;
 
         chartDataPoints.push({
           date: dateStr,
@@ -346,10 +338,11 @@ const AdminAnalyticsDashboard = () => {
   const handleExport = () => {
     const csvData = [
       ["Metric", "Value"],
-      ["Men Recharges", analytics.menRecharges],
+      ["Total Deposits (Men)", analytics.menRecharges],
       ["Men Spent", analytics.menSpent],
       ["Women Earnings", analytics.womenEarnings],
-      ["Admin Profit", analytics.adminProfit],
+      ["Total Withdrawals (Women)", analytics.womenWithdrawals],
+      ["Total Profit (Deposits - Withdrawals)", analytics.adminProfit],
       ["Total Users", analytics.totalUsers],
       ["Active Users", analytics.activeUsers],
       ["Total Matches", analytics.totalMatches],
@@ -503,26 +496,10 @@ const AdminAnalyticsDashboard = () => {
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* System Status Banner */}
-        {analytics.menRecharges === 0 && (
-          <Card className="border-warning/50 bg-warning/5">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-warning/20">
-                <Activity className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="font-medium text-warning">System Not Live</p>
-                <p className="text-sm text-muted-foreground">
-                  Payment gateways not connected. All stats show real-time data only - no test/mock data included.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
-            title="Men Recharges"
+            title="Total Deposits (Men)"
             value={`₹${analytics.menRecharges.toLocaleString()}`}
             icon={IndianRupee}
             color="success"
@@ -540,7 +517,13 @@ const AdminAnalyticsDashboard = () => {
             color="danger"
           />
           <StatCard
-            title="Admin Profit"
+            title="Total Withdrawals (Women)"
+            value={`₹${analytics.womenWithdrawals.toLocaleString()}`}
+            icon={Wallet}
+            color="warning"
+          />
+          <StatCard
+            title="Total Profit (Deposits − Withdrawals)"
             value={`₹${analytics.adminProfit.toLocaleString()}`}
             icon={TrendingUp}
             color={analytics.adminProfit > 0 ? "success" : "danger"}
