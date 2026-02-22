@@ -14,6 +14,13 @@ interface WomenChatModeState {
   canSwitchToFree: boolean;
   canSwitchToExclusiveFree: boolean;
   freeTimeRemaining: number; // in seconds
+  // Force free mode (non-Indian only) - 15 min/day where men aren't charged
+  isForceFreeActive: boolean;
+  forceFreeMinutesUsed: number;
+  forceFreeMinutesLimit: number;
+  forceFreeTimeRemaining: number; // in seconds
+  toggleForceFree: () => Promise<boolean>;
+  trackForceFreeMinute: () => Promise<void>;
   switchMode: (newMode: WomenChatMode) => Promise<boolean>;
   trackFreeMinute: () => Promise<void>;
 }
@@ -26,6 +33,9 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
   const [freeMinutesLimit, setFreeMinutesLimit] = useState(isIndian ? 60 : Infinity);
   const [exclusiveFreeLockedUntil, setExclusiveFreeLockedUntil] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isForceFreeActive, setIsForceFreeActive] = useState(false);
+  const [forceFreeMinutesUsed, setForceFreeMinutesUsed] = useState(0);
+  const [forceFreeMinutesLimit, setForceFreeMinutesLimit] = useState(15);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load current mode from DB
@@ -52,11 +62,13 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
           const lastReset = data.last_free_reset_date;
 
           // Reset free minutes if it's a new day
-          if (lastReset !== today) {
+           if (lastReset !== today) {
             await supabase
               .from("women_chat_modes")
               .update({
                 free_minutes_used_today: 0,
+                force_free_minutes_used_today: 0,
+                is_force_free_active: false,
                 last_free_reset_date: today,
                 // If exclusive free lock expired, reset to default mode
                 ...(data.exclusive_free_locked_until && 
@@ -68,6 +80,8 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
               .eq("user_id", userId);
             
             setFreeMinutesUsed(0);
+            setForceFreeMinutesUsed(0);
+            setIsForceFreeActive(false);
             
             // Check if exclusive free lock expired
             if (data.exclusive_free_locked_until && 
@@ -82,6 +96,14 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
             setCurrentMode(data.current_mode as WomenChatMode);
             setFreeMinutesUsed(Number(data.free_minutes_used_today) || 0);
             setExclusiveFreeLockedUntil(data.exclusive_free_locked_until);
+            // Load force free state
+            const ffUsed = Number((data as any).force_free_minutes_used_today) || 0;
+            const ffLimit = Number((data as any).force_free_minutes_limit) || 15;
+            const ffActive = (data as any).is_force_free_active ?? false;
+            setForceFreeMinutesUsed(ffUsed);
+            setForceFreeMinutesLimit(ffLimit);
+            // Auto-deactivate if limit reached
+            setIsForceFreeActive(ffActive && ffUsed < ffLimit);
           }
           setFreeMinutesLimit(isIndian ? (Number(data.free_minutes_limit) || 60) : Infinity);
         } else {
@@ -194,6 +216,58 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
     }
   }, [userId, currentMode, freeMinutesUsed, freeMinutesLimit, switchMode]);
 
+  // Force free mode toggle (non-Indian only) - 15 min/day where men aren't charged
+  const forceFreeTimeRemaining = Math.max(0, (forceFreeMinutesLimit - forceFreeMinutesUsed) * 60);
+
+  const toggleForceFree = useCallback(async (): Promise<boolean> => {
+    if (!userId || isIndian) return false;
+
+    const newActive = !isForceFreeActive;
+
+    // Can't activate if limit reached
+    if (newActive && forceFreeMinutesUsed >= forceFreeMinutesLimit) return false;
+
+    try {
+      const { error } = await supabase
+        .from("women_chat_modes")
+        .update({ is_force_free_active: newActive } as any)
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("[useWomenChatMode] Force free toggle error:", error);
+        return false;
+      }
+
+      setIsForceFreeActive(newActive);
+      return true;
+    } catch (err) {
+      console.error("[useWomenChatMode] Error:", err);
+      return false;
+    }
+  }, [userId, isIndian, isForceFreeActive, forceFreeMinutesUsed, forceFreeMinutesLimit]);
+
+  // Track force free minutes
+  const trackForceFreeMinute = useCallback(async () => {
+    if (!userId || !isForceFreeActive) return;
+
+    const newUsed = forceFreeMinutesUsed + 1;
+    setForceFreeMinutesUsed(newUsed);
+
+    await supabase
+      .from("women_chat_modes")
+      .update({ force_free_minutes_used_today: newUsed } as any)
+      .eq("user_id", userId);
+
+    // Auto-deactivate when limit reached
+    if (newUsed >= forceFreeMinutesLimit) {
+      setIsForceFreeActive(false);
+      await supabase
+        .from("women_chat_modes")
+        .update({ is_force_free_active: false } as any)
+        .eq("user_id", userId);
+    }
+  }, [userId, isForceFreeActive, forceFreeMinutesUsed, forceFreeMinutesLimit]);
+
   return {
     currentMode,
     isIndian,
@@ -205,6 +279,12 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
     canSwitchToFree,
     canSwitchToExclusiveFree,
     freeTimeRemaining,
+    isForceFreeActive,
+    forceFreeMinutesUsed,
+    forceFreeMinutesLimit,
+    forceFreeTimeRemaining,
+    toggleForceFree,
+    trackForceFreeMinute,
     switchMode,
     trackFreeMinute,
   };

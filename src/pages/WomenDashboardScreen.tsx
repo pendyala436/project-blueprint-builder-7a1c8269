@@ -1201,6 +1201,11 @@ const WomenDashboardScreen = () => {
             isLoading={chatMode.isLoading}
             isIndian={chatMode.isIndian}
             onSwitchMode={chatMode.switchMode}
+            isForceFreeActive={chatMode.isForceFreeActive}
+            forceFreeMinutesUsed={chatMode.forceFreeMinutesUsed}
+            forceFreeMinutesLimit={chatMode.forceFreeMinutesLimit}
+            forceFreeTimeRemaining={chatMode.forceFreeTimeRemaining}
+            onToggleForceFree={chatMode.toggleForceFree}
           />
         </div>
 

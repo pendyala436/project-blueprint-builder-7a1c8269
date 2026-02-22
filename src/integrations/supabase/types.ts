@@ -3514,9 +3514,12 @@ export type Database = {
           created_at: string
           current_mode: string
           exclusive_free_locked_until: string | null
+          force_free_minutes_limit: number
+          force_free_minutes_used_today: number
           free_minutes_limit: number
           free_minutes_used_today: number
           id: string
+          is_force_free_active: boolean
           last_free_reset_date: string
           mode_switched_at: string
           updated_at: string
@@ -3526,9 +3529,12 @@ export type Database = {
           created_at?: string
           current_mode?: string
           exclusive_free_locked_until?: string | null
+          force_free_minutes_limit?: number
+          force_free_minutes_used_today?: number
           free_minutes_limit?: number
           free_minutes_used_today?: number
           id?: string
+          is_force_free_active?: boolean
           last_free_reset_date?: string
           mode_switched_at?: string
           updated_at?: string
@@ -3538,9 +3544,12 @@ export type Database = {
           created_at?: string
           current_mode?: string
           exclusive_free_locked_until?: string | null
+          force_free_minutes_limit?: number
+          force_free_minutes_used_today?: number
           free_minutes_limit?: number
           free_minutes_used_today?: number
           id?: string
+          is_force_free_active?: boolean
           last_free_reset_date?: string
           mode_switched_at?: string
           updated_at?: string
