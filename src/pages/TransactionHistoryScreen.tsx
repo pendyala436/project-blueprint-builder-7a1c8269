@@ -708,7 +708,8 @@ const TransactionHistoryScreen = () => {
 
           {/* Chat Sessions */}
           <TabsContent value="chats" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <p className="text-xs text-muted-foreground mb-2">Total: {chatSessions.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-300px)]">
               <div className="space-y-3 pr-4">
                 {chatSessions.map((session) => (
                   <Card key={session.id} className="overflow-hidden">
@@ -775,7 +776,8 @@ const TransactionHistoryScreen = () => {
 
           {/* Video Call Sessions */}
           <TabsContent value="video" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <p className="text-xs text-muted-foreground mb-2">Total: {videoCallSessions.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-300px)]">
               <div className="space-y-3 pr-4">
                 {videoCallSessions.map((session) => (
                   <Card key={session.id} className="overflow-hidden">
@@ -845,7 +847,8 @@ const TransactionHistoryScreen = () => {
 
           {/* Gift Transactions */}
           <TabsContent value="wallet" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <p className="text-xs text-muted-foreground mb-2">Total: {giftTransactions.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-300px)]">
               <div className="space-y-3 pr-4">
                 {giftTransactions.map((gift) => (
                   <Card key={gift.id} className="overflow-hidden">
@@ -900,7 +903,8 @@ const TransactionHistoryScreen = () => {
 
           {/* Withdrawals */}
           <TabsContent value="withdrawals" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <p className="text-xs text-muted-foreground mb-2">Total: {withdrawalRequests.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-300px)]">
               <div className="space-y-3 pr-4">
                 {withdrawalRequests.map((wr) => (
                   <Card key={wr.id} className="overflow-hidden">
