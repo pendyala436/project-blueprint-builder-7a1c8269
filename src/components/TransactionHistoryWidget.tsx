@@ -108,6 +108,7 @@ export const TransactionHistoryWidget = ({
     setLoading(true);
     try {
       const unified: UnifiedTransaction[] = [];
+      let openingBalance = 0;
 
       const { data: wallet } = await supabase
         .from("wallets")
@@ -117,6 +118,48 @@ export const TransactionHistoryWidget = ({
 
       if (wallet) {
         setCurrentBalance(Number(wallet.balance) || 0);
+
+        // Get all wallet transactions BEFORE selected month to calculate opening balance
+        const { data: priorTxData } = await supabase
+          .from("wallet_transactions")
+          .select("type, amount")
+          .eq("user_id", userId)
+          .lt("created_at", monthStart)
+          .limit(5000);
+
+        priorTxData?.forEach(tx => {
+          if (tx.type === 'credit') openingBalance += Number(tx.amount);
+          else openingBalance -= Number(tx.amount);
+        });
+
+        // For women: add prior earnings and subtract prior debits
+        if (userGender === 'female') {
+          const { data: priorEarnings } = await supabase
+            .from("women_earnings")
+            .select("amount")
+            .eq("user_id", userId)
+            .lt("created_at", monthStart)
+            .limit(5000);
+
+          priorEarnings?.forEach(e => {
+            openingBalance += Number(e.amount);
+          });
+        }
+
+        // Get prior gift transactions
+        const { data: priorGifts } = await supabase
+          .from("gift_transactions")
+          .select("sender_id, receiver_id, price_paid")
+          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+          .lt("created_at", monthStart)
+          .limit(5000);
+
+        priorGifts?.forEach(g => {
+          // Only count if not already in wallet_transactions
+          const isSender = g.sender_id === userId;
+          if (isSender) openingBalance -= Number(g.price_paid);
+          else openingBalance += Number(g.price_paid);
+        });
 
         const { data: txData } = await supabase
           .from("wallet_transactions")
@@ -230,8 +273,8 @@ export const TransactionHistoryWidget = ({
       // Sort chronologically to calculate running balance
       unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       
-      // Calculate running balance: deposits - withdrawals
-      let runningBal = 0;
+      // Calculate running balance starting from opening balance (carryforward)
+      let runningBal = openingBalance;
       unified.forEach(tx => {
         if (tx.is_credit) {
           runningBal += tx.amount;
