@@ -528,11 +528,8 @@ export function usePrivateGroupCall({
           viewerCount: sessionRef.current?.participants.size || 0,
         }));
 
-        // Host initiates WebRTC connection to new participant
-        if (isOwner && localStream.current) {
-          console.log(`[PrivateGroupCall] Host connecting to new participant: ${key}`);
-          connectToParticipant(key);
-        }
+        // DON'T send offer here - wait for participant's 'participant-ready' signal
+        // This avoids the race condition where the offer arrives before the participant's listeners are ready
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         if (sessionRef.current) {
@@ -575,6 +572,16 @@ export function usePrivateGroupCall({
           cleanup();
         }
       })
+      // Participant signals it's ready to receive WebRTC offer
+      .on('broadcast', { event: 'participant-ready' }, async ({ payload }) => {
+        if (isOwner && localStream.current && payload.participantId) {
+          console.log(`[PrivateGroupCall] Participant ${payload.participantId} is ready, sending WebRTC offer`);
+          // Small delay to ensure participant's listeners are fully active
+          setTimeout(() => {
+            connectToParticipant(payload.participantId);
+          }, 300);
+        }
+      })
       // WebRTC signaling events
       .on('broadcast', { event: 'offer' }, async ({ payload }) => {
         if (payload.to === currentUserId) {
@@ -606,6 +613,18 @@ export function usePrivateGroupCall({
         });
         
         setState(prev => ({ ...prev, isConnected: true }));
+
+        // If participant, signal ready for WebRTC after a brief delay
+        if (!isOwner) {
+          setTimeout(() => {
+            console.log('[PrivateGroupCall] Participant sending ready signal');
+            channel.send({
+              type: 'broadcast',
+              event: 'participant-ready',
+              payload: { participantId: currentUserId },
+            });
+          }, 500);
+        }
       }
     });
 
