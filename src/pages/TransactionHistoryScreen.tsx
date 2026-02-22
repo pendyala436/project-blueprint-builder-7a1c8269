@@ -803,38 +803,44 @@ const TransactionHistoryScreen = () => {
           </TabsContent>
 
 
-
-          {/* Wallet Transactions / Earnings */}
+          {/* Gift Transactions */}
           <TabsContent value="wallet" className="space-y-3">
             <ScrollArea className="h-[calc(100vh-280px)]">
               <div className="space-y-3 pr-4">
-                {/* For women: Show earnings */}
-                {!isMale && womenEarnings.map((earning) => (
-                  <Card key={earning.id} className="overflow-hidden">
+                {giftTransactions.map((gift) => (
+                  <Card key={gift.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-green-500/10">
-                          <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                        <div className="p-2 rounded-full bg-amber-500/10">
+                          <span className="text-lg">{gift.gift_emoji}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium truncate">
-                              {earning.earning_type === "chat" ? "Chat Earnings" : 
-                               earning.earning_type === "video_call" ? "Video Call Earnings" :
-                               earning.earning_type === "gift" ? "Gift Received" : earning.earning_type}
-                              {earning.partner_name && ` with ${earning.partner_name}`}
-                            </span>
-                            <span className="font-semibold text-green-600 whitespace-nowrap">
-                              +₹{earning.amount.toFixed(2)}
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">
+                                {gift.gift_name} {gift.is_sender ? "to" : "from"} {gift.partner_name}
+                              </span>
+                              {getStatusBadge(gift.status)}
+                            </div>
+                            <span className={cn(
+                              "font-semibold whitespace-nowrap",
+                              gift.is_sender ? "text-destructive" : "text-green-600"
+                            )}>
+                              {gift.is_sender ? "-" : "+"}₹{(gift.is_sender ? Number(gift.price_paid) : Number(gift.price_paid) * 0.5).toFixed(2)}
                             </span>
                           </div>
-                          {earning.description && (
+                          {!gift.is_sender && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {earning.description}
+                              (50% of ₹{Number(gift.price_paid).toFixed(2)} gift value)
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(earning.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          {gift.message && (
+                            <p className="text-xs text-muted-foreground mt-1 italic">
+                              "{gift.message}"
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(gift.created_at), "MMM d, yyyy 'at' h:mm a")}
                           </p>
                         </div>
                       </div>
@@ -842,61 +848,10 @@ const TransactionHistoryScreen = () => {
                   </Card>
                 ))}
 
-                {/* For men: Show wallet transactions */}
-                {isMale && walletTransactions.map((tx) => (
-                  <Card key={tx.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className={cn(
-                          "p-2 rounded-full",
-                          tx.type === "credit" ? "bg-green-500/10" : "bg-destructive/10"
-                        )}>
-                          {tx.type === "credit" ? (
-                            <ArrowDownLeft className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <ArrowUpRight className="h-4 w-4 text-destructive" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">
-                                {tx.description || (tx.type === "credit" ? "Wallet Recharge" : "Payment")}
-                              </span>
-                              {getStatusBadge(tx.status)}
-                            </div>
-                            <span className={cn(
-                              "font-semibold whitespace-nowrap",
-                              tx.type === "credit" ? "text-green-600" : "text-destructive"
-                            )}>
-                              {tx.type === "credit" ? "+" : "-"}₹{tx.amount.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(tx.created_at), "MMM d, yyyy 'at' h:mm a")}
-                            </p>
-                            {tx.balance_after !== undefined && (
-                              <p className="text-xs text-muted-foreground">
-                                Balance: ₹{tx.balance_after.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                          {tx.reference_id && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Ref: {tx.reference_id}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {((isMale && walletTransactions.length === 0) || (!isMale && womenEarnings.length === 0)) && (
+                {giftTransactions.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
-                    <IndianRupee className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No {isMale ? "transactions" : "earnings"} yet</p>
+                    <Gift className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No gift transactions yet</p>
                   </div>
                 )}
               </div>
