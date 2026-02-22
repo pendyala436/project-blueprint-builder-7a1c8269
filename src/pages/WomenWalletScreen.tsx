@@ -138,13 +138,21 @@ const WomenWalletScreen = () => {
         setMinWithdrawal(pricing.min_withdrawal_balance);
       }
 
-      // Fetch all earnings for total calculation (no limit)
-      const { data: allEarningsData } = await supabase
-        .from("women_earnings")
-        .select("amount")
-        .eq("user_id", user.id);
+      // Fetch all earnings and all wallet debits for accurate balance
+      const [{ data: allEarningsData }, { data: allDebitsData }] = await Promise.all([
+        supabase
+          .from("women_earnings")
+          .select("amount")
+          .eq("user_id", user.id),
+        supabase
+          .from("wallet_transactions")
+          .select("amount")
+          .eq("user_id", user.id)
+          .eq("type", "debit")
+      ]);
 
       const total = allEarningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const totalDebits = allDebitsData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       setTotalEarnings(total);
 
       // Fetch recent earnings for display (limited)
@@ -170,12 +178,9 @@ const WomenWalletScreen = () => {
         .reduce((sum, w) => sum + Number(w.amount), 0) || 0;
       setPendingWithdrawals(pending);
 
-      // Calculate completed withdrawals
-      const completed = withdrawalsData
-        ?.filter(w => w.status === "completed")
-        .reduce((sum, w) => sum + Number(w.amount), 0) || 0;
-
-      setAvailableBalance(total - pending - completed);
+      // Available balance = total earnings - all debits (Golden Badge, etc.) - pending withdrawals
+      // Note: completed withdrawals are already in wallet_transactions as debits
+      setAvailableBalance(total - totalDebits - pending);
 
     } catch (error) {
       console.error("Error loading wallet data:", error);
