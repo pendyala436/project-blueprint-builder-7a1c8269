@@ -1047,7 +1047,10 @@ const WomenDashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Wallet Balance (Total Earnings - Total Withdrawals) */}
-            <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+            <Card 
+              className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 cursor-pointer hover:shadow-md transition-all"
+              onClick={() => navigate("/women-wallet")}
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-blue-500/20">
                   <Wallet className="w-5 h-5 text-blue-600" />
@@ -1056,7 +1059,17 @@ const WomenDashboardScreen = () => {
                   <p className="text-xs text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
                   <p className="text-xl font-bold text-blue-600">₹{myWalletBalance.toLocaleString()}</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-3 gap-2 text-blue-600 border-blue-500/30 hover:bg-blue-500/10"
+                onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}
+              >
+                <IndianRupee className="w-3.5 h-3.5" />
+                {t('withdraw', 'Withdraw')}
+              </Button>
             </Card>
             {/* My Today's Earnings */}
             <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
