@@ -145,7 +145,7 @@ const AdminTransactionHistory = () => {
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("statement");
   const [dateRange, setDateRange] = useState("7");
   const [searchQuery, setSearchQuery] = useState("");
   const [userFilter, setUserFilter] = useState<"all" | "men" | "women">("all");
@@ -672,7 +672,8 @@ const AdminTransactionHistory = () => {
 
           {/* Transaction Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="statement">Statement</TabsTrigger>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="wallet">Wallet</TabsTrigger>
               <TabsTrigger value="chats">Chats</TabsTrigger>
@@ -680,6 +681,97 @@ const AdminTransactionHistory = () => {
               <TabsTrigger value="gifts">Gifts</TabsTrigger>
               <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
             </TabsList>
+
+            {/* Statement Tab - Bank Statement Format */}
+            <TabsContent value="statement">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <IndianRupee className="h-4 w-4" />
+                    All Users Transaction Statement
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ScrollArea className="max-h-[600px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-bold">Transaction Date</TableHead>
+                          <TableHead className="font-bold">Value Date</TableHead>
+                          <TableHead className="font-bold">User</TableHead>
+                          <TableHead className="font-bold">Description</TableHead>
+                          <TableHead className="font-bold">Reference Number</TableHead>
+                          <TableHead className="font-bold text-destructive">Withdrawals</TableHead>
+                          <TableHead className="font-bold text-green-600">Deposits</TableHead>
+                          <TableHead className="font-bold">Running Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          // Merge all wallet transactions sorted by date ascending for running balance
+                          const filtered = filterBySearch(walletTransactions);
+                          const sorted = [...filtered].sort(
+                            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                          );
+                          let runningBalance = 0;
+                          return sorted.map(tx => {
+                            const isDebit = tx.type === "debit";
+                            const amount = Number(tx.amount);
+                            if (isDebit) {
+                              runningBalance -= amount;
+                            } else {
+                              runningBalance += amount;
+                            }
+                            const txDate = new Date(tx.created_at);
+                            return (
+                              <TableRow key={tx.id}>
+                                <TableCell className="text-sm whitespace-nowrap">
+                                  {format(txDate, "dd MMM yyyy, HH:mm")}
+                                </TableCell>
+                                <TableCell className="text-sm whitespace-nowrap">
+                                  {format(txDate, "dd MMM yyyy")}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium text-sm">{tx.user_name}</p>
+                                    <p className="text-xs text-muted-foreground capitalize">{tx.user_gender}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="max-w-48 text-sm">
+                                  {tx.description || "-"}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground font-mono">
+                                  {tx.reference_id || tx.id.slice(0, 8).toUpperCase()}
+                                </TableCell>
+                                <TableCell className="font-semibold text-destructive">
+                                  {isDebit ? `₹${amount.toFixed(2)}` : ""}
+                                </TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  {!isDebit ? `₹${amount.toFixed(2)}` : ""}
+                                </TableCell>
+                                <TableCell className={cn(
+                                  "font-bold",
+                                  runningBalance >= 0 ? "text-foreground" : "text-destructive"
+                                )}>
+                                  ₹{runningBalance.toFixed(2)}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
+                        {filterBySearch(walletTransactions).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              No transactions found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4">
