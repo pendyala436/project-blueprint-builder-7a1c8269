@@ -56,6 +56,8 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 // VideoCallMiniButton removed from men's dashboard
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
+import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
+import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 
 
 import { isIndianLanguage, INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES, ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES } from "@/data/supportedLanguages";
@@ -193,6 +195,9 @@ const DashboardScreen = () => {
     findNextAvailableWoman, 
     initiateReconnect 
   } = useAutoReconnect(currentUserId, userLanguage);
+
+  // Men's free chat minutes (10 min every 15 days)
+  const menFreeMinutes = useMenFreeMinutes(currentUserId || null);
 
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
@@ -1582,6 +1587,19 @@ const DashboardScreen = () => {
         </div>
 
         {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
+
+        {/* Men's Free Chat Minutes */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.23s" }}>
+            <MenFreeMinutesBadge
+              hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
+              freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
+              freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
+              nextResetDate={menFreeMinutes.nextResetDate}
+              isLoading={menFreeMinutes.isLoading}
+            />
+          </div>
+        )}
 
         {/* Section 6: Transaction History */}
         {currentUserId && (

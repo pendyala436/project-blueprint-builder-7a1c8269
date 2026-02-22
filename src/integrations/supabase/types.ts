@@ -1718,6 +1718,42 @@ export type Database = {
         }
         Relationships: []
       }
+      men_free_chat_allowance: {
+        Row: {
+          created_at: string
+          first_login_date: string
+          free_minutes_total: number
+          free_minutes_used: number
+          id: string
+          last_reset_date: string
+          next_reset_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_login_date?: string
+          free_minutes_total?: number
+          free_minutes_used?: number
+          id?: string
+          last_reset_date?: string
+          next_reset_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_login_date?: string
+          free_minutes_total?: number
+          free_minutes_used?: number
+          id?: string
+          last_reset_date?: string
+          next_reset_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_rate_limits: {
         Row: {
           created_at: string | null
@@ -3749,6 +3785,7 @@ export type Database = {
         Args: { p_group_id: string; p_user_id: string }
         Returns: Json
       }
+      check_men_free_minutes: { Args: { p_user_id: string }; Returns: Json }
       check_message_rate_limit: {
         Args: {
           max_messages?: number
@@ -3950,6 +3987,7 @@ export type Database = {
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
+      use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
