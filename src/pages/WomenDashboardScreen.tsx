@@ -123,6 +123,7 @@ const WomenDashboardScreen = () => {
     todayEarnings: 0
   });
   const [myTodayEarnings, setMyTodayEarnings] = useState(0);
+  const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
   const [goldenBadgeExpiry, setGoldenBadgeExpiry] = useState<string | null>(null);
@@ -446,7 +447,8 @@ const WomenDashboardScreen = () => {
         fetchOnlineMen(user.id, womanLanguage, userCountryValue),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
-        fetchTodayEarnings(user.id)
+        fetchTodayEarnings(user.id),
+        fetchWalletBalance(user.id)
       ]);
 
     } catch {
@@ -579,6 +581,31 @@ const WomenDashboardScreen = () => {
 
     setNotifications(data || []);
     setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+  };
+
+  const fetchWalletBalance = async (userId: string) => {
+    try {
+      // Total earnings
+      const { data: earnings } = await supabase
+        .from("women_earnings")
+        .select("amount")
+        .eq("user_id", userId);
+      
+      const totalEarnings = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+
+      // Total withdrawals
+      const { data: withdrawals } = await supabase
+        .from("wallet_transactions")
+        .select("amount")
+        .eq("user_id", userId)
+        .eq("type", "debit");
+      
+      const totalWithdrawals = withdrawals?.reduce((acc, w) => acc + Number(w.amount), 0) || 0;
+
+      setMyWalletBalance(totalEarnings - totalWithdrawals);
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+    }
   };
 
   const fetchTodayEarnings = async (userId: string) => {
@@ -1016,9 +1043,21 @@ const WomenDashboardScreen = () => {
           </div>
         </div>
 
-        {/* Today's Earnings Summary */}
+        {/* Wallet Balance & Today's Earnings Summary */}
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Wallet Balance (Total Earnings - Total Withdrawals) */}
+            <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/20">
+                  <Wallet className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
+                  <p className="text-xl font-bold text-blue-600">₹{myWalletBalance.toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
             {/* My Today's Earnings */}
             <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
               <div className="flex items-center gap-3">
