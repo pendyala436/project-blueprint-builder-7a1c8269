@@ -119,7 +119,7 @@ const TransactionHistoryScreen = () => {
   const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("chats");
 
   useEffect(() => {
     loadData();
@@ -658,65 +658,13 @@ const TransactionHistoryScreen = () => {
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
-            <TabsTrigger value="gifts" className="text-xs">Gifts</TabsTrigger>
-            <TabsTrigger value="wallet" className="text-xs">
-              {isMale ? "Wallet" : "Earnings"}
-            </TabsTrigger>
+            <TabsTrigger value="wallet" className="text-xs">Gifts</TabsTrigger>
           </TabsList>
 
-          {/* All Transactions */}
-          <TabsContent value="all" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3 pr-4">
-                {unifiedTransactions.map((tx) => (
-                  <Card key={tx.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        {getTransactionIcon(tx.icon, tx.is_credit)}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium truncate text-sm">
-                              {tx.description}
-                            </span>
-                            <span className={cn(
-                              "font-semibold whitespace-nowrap",
-                              tx.is_credit ? "text-green-600" : "text-destructive"
-                            )}>
-                              {tx.is_credit ? "+" : "-"}₹{tx.amount.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(tx.created_at), "MMM d, yyyy 'at' h:mm a")}
-                            </p>
-                            {tx.balance_after !== undefined && (
-                              <p className="text-xs text-muted-foreground">
-                                Bal: ₹{tx.balance_after.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                          {tx.details && (
-                            <p className="text-xs text-muted-foreground mt-1">{tx.details}</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
 
-                {unifiedTransactions.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No transactions yet</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
 
           {/* Chat Sessions */}
           <TabsContent value="chats" className="space-y-3">
@@ -854,60 +802,7 @@ const TransactionHistoryScreen = () => {
             </ScrollArea>
           </TabsContent>
 
-          {/* Gift Transactions */}
-          <TabsContent value="gifts" className="space-y-3">
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3 pr-4">
-                {giftTransactions.map((gift) => (
-                  <Card key={gift.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-amber-500/10">
-                          <span className="text-lg">{gift.gift_emoji}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">
-                                {gift.gift_name} {gift.is_sender ? "to" : "from"} {gift.partner_name}
-                              </span>
-                              {getStatusBadge(gift.status)}
-                            </div>
-                            <span className={cn(
-                              "font-semibold whitespace-nowrap",
-                              gift.is_sender ? "text-destructive" : "text-green-600"
-                            )}>
-                              {gift.is_sender ? "-" : "+"}₹{(gift.is_sender ? Number(gift.price_paid) : Number(gift.price_paid) * 0.5).toFixed(2)}
-                            </span>
-                          </div>
-                          {!gift.is_sender && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              (50% of ₹{Number(gift.price_paid).toFixed(2)} gift value)
-                            </p>
-                          )}
-                          {gift.message && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">
-                              "{gift.message}"
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(gift.created_at), "MMM d, yyyy 'at' h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
 
-                {giftTransactions.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Gift className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No gift transactions yet</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
 
           {/* Wallet Transactions / Earnings */}
           <TabsContent value="wallet" className="space-y-3">
