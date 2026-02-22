@@ -239,10 +239,10 @@ const PhotoUploadScreen = () => {
       return;
     }
 
-    if (additionalPhotos.length < 1) {
+    if (additionalPhotos.length < MAX_ADDITIONAL_PHOTOS) {
       toast({
-        title: "Additional photos required",
-        description: "Please upload at least 1 additional photo besides your selfie",
+        title: "All 5 photos required",
+        description: `Please upload ${MAX_ADDITIONAL_PHOTOS - additionalPhotos.length} more photo(s). Total ${MAX_ADDITIONAL_PHOTOS} additional photos are mandatory.`,
         variant: "destructive",
       });
       return;
@@ -449,7 +449,7 @@ const PhotoUploadScreen = () => {
             <Upload className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Additional Photos <span className="text-destructive">*</span></h2>
             <span className="ml-auto text-xs text-muted-foreground">
-              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} (min 1)
+              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} (all required)
             </span>
           </div>
 
@@ -513,7 +513,7 @@ const PhotoUploadScreen = () => {
           className="w-full max-w-sm mt-6"
           size="lg"
           onClick={handleNext}
-          disabled={verificationState !== "verified" || additionalPhotos.length < 1}
+          disabled={verificationState !== "verified" || additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
         >
           Continue
         </Button>
