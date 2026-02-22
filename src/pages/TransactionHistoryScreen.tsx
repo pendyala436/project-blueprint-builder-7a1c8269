@@ -577,7 +577,7 @@ const TransactionHistoryScreen = () => {
             <Button
               variant="auroraGhost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate(isMale ? '/dashboard' : '/women-dashboard')}
               className="rounded-full"
             >
               <ArrowLeft className="h-5 w-5" />
