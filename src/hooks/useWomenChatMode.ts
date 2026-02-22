@@ -5,6 +5,7 @@ export type WomenChatMode = "paid" | "free" | "exclusive_free";
 
 interface WomenChatModeState {
   currentMode: WomenChatMode;
+  isIndian: boolean;
   freeMinutesUsed: number;
   freeMinutesLimit: number;
   exclusiveFreeLockedUntil: string | null;
@@ -17,8 +18,10 @@ interface WomenChatModeState {
   trackFreeMinute: () => Promise<void>;
 }
 
-export const useWomenChatMode = (userId: string | null): WomenChatModeState => {
-  const [currentMode, setCurrentMode] = useState<WomenChatMode>("paid");
+export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean): WomenChatModeState => {
+  const isIndian = isIndianUser ?? false;
+  const defaultMode: WomenChatMode = isIndian ? "paid" : "free";
+  const [currentMode, setCurrentMode] = useState<WomenChatMode>(defaultMode);
   const [freeMinutesUsed, setFreeMinutesUsed] = useState(0);
   const [freeMinutesLimit, setFreeMinutesLimit] = useState(60);
   const [exclusiveFreeLockedUntil, setExclusiveFreeLockedUntil] = useState<string | null>(null);
@@ -55,10 +58,10 @@ export const useWomenChatMode = (userId: string | null): WomenChatModeState => {
               .update({
                 free_minutes_used_today: 0,
                 last_free_reset_date: today,
-                // If exclusive free lock expired, reset to paid
+                // If exclusive free lock expired, reset to default mode
                 ...(data.exclusive_free_locked_until && 
                   new Date(data.exclusive_free_locked_until) <= new Date() 
-                  ? { current_mode: "paid", exclusive_free_locked_until: null }
+                  ? { current_mode: defaultMode, exclusive_free_locked_until: null }
                   : {}
                 )
               })
@@ -69,7 +72,7 @@ export const useWomenChatMode = (userId: string | null): WomenChatModeState => {
             // Check if exclusive free lock expired
             if (data.exclusive_free_locked_until && 
                 new Date(data.exclusive_free_locked_until) <= new Date()) {
-              setCurrentMode("paid");
+              setCurrentMode(defaultMode);
               setExclusiveFreeLockedUntil(null);
             } else {
               setCurrentMode(data.current_mode as WomenChatMode);
@@ -82,15 +85,15 @@ export const useWomenChatMode = (userId: string | null): WomenChatModeState => {
           }
           setFreeMinutesLimit(Number(data.free_minutes_limit) || 60);
         } else {
-          // Create default record
+          // Create default record - Indian women default to paid, non-Indian to free
           await supabase.from("women_chat_modes").insert({
             user_id: userId,
-            current_mode: "paid",
+            current_mode: defaultMode,
             free_minutes_used_today: 0,
             free_minutes_limit: 60,
             last_free_reset_date: new Date().toISOString().split("T")[0]
           });
-          setCurrentMode("paid");
+          setCurrentMode(defaultMode);
         }
       } catch (err) {
         console.error("[useWomenChatMode] Error:", err);
@@ -187,13 +190,14 @@ export const useWomenChatMode = (userId: string | null): WomenChatModeState => {
 
     // Auto-end chats when free time expires (only for free mode, not exclusive_free)
     if (currentMode === "free" && newUsed >= freeMinutesLimit) {
-      // Auto-switch to paid mode
-      await switchMode("paid");
+      // Auto-switch to default mode (paid for Indian, free stays for non-Indian but ends chats)
+      await switchMode(defaultMode);
     }
   }, [userId, currentMode, freeMinutesUsed, freeMinutesLimit, switchMode]);
 
   return {
     currentMode,
+    isIndian,
     freeMinutesUsed,
     freeMinutesLimit,
     exclusiveFreeLockedUntil,
