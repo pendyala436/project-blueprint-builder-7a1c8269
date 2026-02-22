@@ -23,7 +23,7 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
   const defaultMode: WomenChatMode = isIndian ? "paid" : "free";
   const [currentMode, setCurrentMode] = useState<WomenChatMode>(defaultMode);
   const [freeMinutesUsed, setFreeMinutesUsed] = useState(0);
-  const [freeMinutesLimit, setFreeMinutesLimit] = useState(60);
+  const [freeMinutesLimit, setFreeMinutesLimit] = useState(isIndian ? 60 : Infinity);
   const [exclusiveFreeLockedUntil, setExclusiveFreeLockedUntil] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,7 +83,7 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
             setFreeMinutesUsed(Number(data.free_minutes_used_today) || 0);
             setExclusiveFreeLockedUntil(data.exclusive_free_locked_until);
           }
-          setFreeMinutesLimit(Number(data.free_minutes_limit) || 60);
+          setFreeMinutesLimit(isIndian ? (Number(data.free_minutes_limit) || 60) : Infinity);
         } else {
           // Create default record - Indian women default to paid, non-Indian to free
           await supabase.from("women_chat_modes").insert({
@@ -110,10 +110,10 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
     new Date(exclusiveFreeLockedUntil) > new Date();
 
   const canSwitchToPaid = currentMode !== "paid" && !isExclusiveFreeLocked;
-  const canSwitchToFree = currentMode !== "free" && !isExclusiveFreeLocked && freeMinutesUsed < freeMinutesLimit;
+  const canSwitchToFree = currentMode !== "free" && !isExclusiveFreeLocked && (!isIndian || freeMinutesUsed < freeMinutesLimit);
   const canSwitchToExclusiveFree = currentMode !== "exclusive_free" && !isExclusiveFreeLocked;
 
-  const freeTimeRemaining = Math.max(0, (freeMinutesLimit - freeMinutesUsed) * 60);
+  const freeTimeRemaining = isIndian ? Math.max(0, (freeMinutesLimit - freeMinutesUsed) * 60) : Infinity;
 
   const switchMode = useCallback(async (newMode: WomenChatMode): Promise<boolean> => {
     if (!userId) return false;
@@ -188,9 +188,8 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
       .update({ free_minutes_used_today: newUsed })
       .eq("user_id", userId);
 
-    // Auto-end chats when free time expires (only for free mode, not exclusive_free)
-    if (currentMode === "free" && newUsed >= freeMinutesLimit) {
-      // Auto-switch to default mode (paid for Indian, free stays for non-Indian but ends chats)
+    // Auto-end chats when free time expires (only for Indian women in free mode with time limit)
+    if (isIndian && currentMode === "free" && newUsed >= freeMinutesLimit) {
       await switchMode(defaultMode);
     }
   }, [userId, currentMode, freeMinutesUsed, freeMinutesLimit, switchMode]);

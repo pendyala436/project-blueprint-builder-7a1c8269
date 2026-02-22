@@ -101,7 +101,7 @@ const WomenChatModeSwitcher = ({
     {
       mode: "free",
       label: "⏱️ Free Mode",
-      description: `1hr/day free chat with regular men (${formatTime(freeTimeRemaining)} left)`,
+      description: isIndian ? `1hr/day free chat with regular men (${formatTime(freeTimeRemaining)} left)` : `Unlimited free chat with regular men`,
       icon: <Clock className="h-5 w-5" />,
       color: "from-blue-500/20 to-blue-600/10 border-blue-500/30",
       canSwitch: canSwitchToFree,
@@ -177,13 +177,13 @@ const WomenChatModeSwitcher = ({
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Timer className="h-3 w-3" />
-                {currentMode === "free" ? "Free time used" : "Exclusive free (no time limit)"}
+                {currentMode === "free" && isIndian ? "Free time used" : currentMode === "free" ? "Unlimited free mode" : "Exclusive free (no time limit)"}
               </span>
-              {currentMode === "free" && (
+              {currentMode === "free" && isIndian && (
                 <span>{freeMinutesUsed}/{freeMinutesLimit} min</span>
               )}
             </div>
-            {currentMode === "free" && (
+            {currentMode === "free" && isIndian && (
               <div className="w-full bg-muted rounded-full h-1.5">
                 <div
                   className={cn(
