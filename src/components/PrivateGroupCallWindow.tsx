@@ -136,6 +136,8 @@ export function PrivateGroupCallWindow({
     totalEarnings,
     isRefunding,
     localVideoRef,
+    remoteVideoRef,
+    hostStream,
     goLive,
     joinStream,
     endStream,
@@ -696,33 +698,39 @@ export function PrivateGroupCallWindow({
                   </div>
                 </div>
               ) : (
-                // Participants see ONLY host video
+                // Participants see host's video stream via WebRTC
                 <div className="relative w-full h-full max-w-2xl">
                   {isConnected ? (
                     <>
-                      {/* Host video placeholder - would be replaced with actual stream */}
-                      <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
-                        <div className="text-center text-white">
-                          <Avatar className="h-24 w-24 mx-auto mb-4">
-                            <AvatarImage src={participants.find(p => p.isOwner)?.photo} />
-                            <AvatarFallback className="text-3xl">
-                              {participants.find(p => p.isOwner)?.name?.[0] || 'H'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p className="text-lg font-medium">
-                            {participants.find(p => p.isOwner)?.name || 'Host'}
-                          </p>
-                          <p className="text-sm text-gray-400 mt-2">
-                            🎥 Only host video is visible
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            You can speak and chat with everyone
-                          </p>
+                      {hostStream ? (
+                        <video
+                          ref={remoteVideoRef}
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
+                          <div className="text-center text-white">
+                            <Avatar className="h-24 w-24 mx-auto mb-4">
+                              <AvatarImage src={participants.find(p => p.isOwner)?.photo} />
+                              <AvatarFallback className="text-3xl">
+                                {participants.find(p => p.isOwner)?.name?.[0] || 'H'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="text-lg font-medium">
+                              {participants.find(p => p.isOwner)?.name || 'Host'}
+                            </p>
+                            <Loader2 className="h-6 w-6 mx-auto mt-3 animate-spin text-primary" />
+                            <p className="text-sm text-gray-400 mt-2">
+                              Connecting to host video...
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <Badge className="absolute top-2 left-2 bg-red-600">
                         <Radio className="h-3 w-3 mr-1 animate-pulse" />
-                        Watching Host
+                        {hostStream ? 'Watching Host' : 'Connecting...'}
                       </Badge>
                     </>
                   ) : (
