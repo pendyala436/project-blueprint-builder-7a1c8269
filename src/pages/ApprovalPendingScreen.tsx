@@ -8,7 +8,7 @@ import MeowLogo from "@/components/MeowLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type ApprovalStatus = "pending" | "approved" | "disapproved";
+type ApprovalStatus = "pending" | "approved" | "disapproved" | "inactive";
 
 const ApprovalPendingScreen = () => {
   const navigate = useNavigate();
@@ -181,14 +181,22 @@ const ApprovalPendingScreen = () => {
               </>
             )}
             
-            {status === "disapproved" && (
+            {(status === "disapproved" || status === "inactive") && (
               <>
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <XCircle className="w-10 h-10 text-destructive" />
+                  {status === "inactive" ? (
+                    <Clock className="w-10 h-10 text-warning" />
+                  ) : (
+                    <XCircle className="w-10 h-10 text-destructive" />
+                  )}
                 </div>
-                <CardTitle className="text-2xl text-destructive">Application Declined</CardTitle>
+                <CardTitle className="text-2xl">
+                  {status === "inactive" ? "Account Inactive" : "Application Declined"}
+                </CardTitle>
                 <CardDescription>
-                  We're sorry, but your application was not approved at this time.
+                  {status === "inactive" 
+                    ? `Hi ${userName || "there"}! Your account became inactive due to inactivity. You can reactivate it below.`
+                    : "We're sorry, but your application was not approved at this time."}
                 </CardDescription>
               </>
             )}
@@ -241,7 +249,7 @@ const ApprovalPendingScreen = () => {
               </>
             )}
 
-            {status === "disapproved" && (
+            {(status === "disapproved" || status === "inactive") && (
               <>
                 {disapprovalReason && (
                   <div className="bg-destructive/10 rounded-xl p-4 border border-destructive/20">
