@@ -283,10 +283,11 @@ export function PrivateGroupCallWindow({
   // Attach host stream to video element when both are available
   useEffect(() => {
     if (hostStream && remoteVideoRef.current) {
-      console.log('[PrivateGroupCallWindow] Attaching hostStream to video element');
+      console.log('[PrivateGroupCallWindow] useEffect: Attaching hostStream to video element');
       remoteVideoRef.current.srcObject = hostStream;
+      remoteVideoRef.current.play().catch(e => console.warn('[PrivateGroupCallWindow] play() failed:', e));
     }
-  }, [hostStream, remoteVideoRef]);
+  }, [hostStream]);
 
   useEffect(() => {
     if (error) {
@@ -713,16 +714,22 @@ export function PrivateGroupCallWindow({
                       {hostStream ? (
                         <video
                           ref={(el) => {
-                            if (el && hostStream) {
-                              el.srcObject = hostStream;
-                            }
-                            // Also update the hook's ref
-                            if (remoteVideoRef && 'current' in remoteVideoRef) {
-                              (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+                            if (el) {
+                              // Always update the hook's ref
+                              if (remoteVideoRef && 'current' in remoteVideoRef) {
+                                (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+                              }
+                              // Attach stream if available
+                              if (hostStream && el.srcObject !== hostStream) {
+                                console.log('[PrivateGroupCallWindow] Callback ref: attaching hostStream to video');
+                                el.srcObject = hostStream;
+                                el.play().catch(e => console.warn('[PrivateGroupCallWindow] play() failed:', e));
+                              }
                             }
                           }}
                           autoPlay
                           playsInline
+                          muted={false}
                           className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (

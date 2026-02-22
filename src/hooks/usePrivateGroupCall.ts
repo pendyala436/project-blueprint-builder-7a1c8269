@@ -141,10 +141,23 @@ export function usePrivateGroupCall({
       
       // If we're a participant and this stream is from the host, set it as hostStream
       if (!isOwner) {
-        console.log('[PrivateGroupCall] Setting hostStream for participant');
+        const videoTracks = remoteStream.getVideoTracks();
+        const audioTracks = remoteStream.getAudioTracks();
+        console.log('[PrivateGroupCall] Setting hostStream for participant', {
+          videoTracks: videoTracks.length,
+          audioTracks: audioTracks.length,
+          videoEnabled: videoTracks.map(t => t.enabled),
+          videoMuted: videoTracks.map(t => t.muted),
+          videoReadyState: videoTracks.map(t => t.readyState),
+        });
         setState(prev => ({ ...prev, hostStream: remoteStream }));
-        // Don't set remoteVideoRef here - the video element may not exist yet
-        // The component will handle attaching the stream via useEffect
+        
+        // Also try to attach to video element immediately if available
+        if (remoteVideoRef.current) {
+          console.log('[PrivateGroupCall] Attaching hostStream to video element immediately');
+          remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.play().catch(e => console.warn('[PrivateGroupCall] Auto-play failed:', e));
+        }
       }
     };
 
