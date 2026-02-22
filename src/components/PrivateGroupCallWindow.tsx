@@ -112,6 +112,9 @@ export function PrivateGroupCallWindow({
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   
+  // View mode: show both panels, video only, or chat only
+  const [viewMode, setViewMode] = useState<'both' | 'video' | 'chat'>('both');
+  
   // Gift tickets display (shows for 1 minute at top)
   const [giftTickets, setGiftTickets] = useState<GiftTicket[]>([]);
   
@@ -123,6 +126,27 @@ export function PrivateGroupCallWindow({
 
   const hasChat = group.access_type === 'chat' || group.access_type === 'both';
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
+  
+  // Determine what's actually shown based on viewMode and access_type
+  const showVideo = hasVideo && (viewMode === 'both' || viewMode === 'video');
+  const showChat = hasChat && (viewMode === 'both' || viewMode === 'chat');
+
+  // Helper to get participant name by user ID
+  const getParticipantName = (userId: string): string => {
+    if (userId === currentUserId) return userName;
+    if (userId === group.owner_id) {
+      const host = participants.find(p => p.isOwner);
+      return host?.name || 'Host';
+    }
+    const participant = participants.find(p => p.id === userId);
+    return participant?.name || 'Participant';
+  };
+
+  const getParticipantPhoto = (userId: string): string | undefined => {
+    if (userId === currentUserId) return userPhoto || undefined;
+    const participant = participants.find(p => p.id === userId);
+    return participant?.photo;
+  };
 
   // Enhanced group call hook
   const {
@@ -581,6 +605,38 @@ export function PrivateGroupCallWindow({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* View mode toggles - only when both chat and video are available */}
+          {hasVideo && hasChat && (
+            <div className="flex items-center border rounded-md overflow-hidden">
+              <Button 
+                variant={viewMode === 'video' ? 'default' : 'ghost'} 
+                size="sm" 
+                className="rounded-none h-7 px-2 text-xs"
+                onClick={() => setViewMode(viewMode === 'video' ? 'both' : 'video')}
+                title="Video only"
+              >
+                <Video className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant={viewMode === 'both' ? 'default' : 'ghost'} 
+                size="sm" 
+                className="rounded-none h-7 px-2 text-xs border-x"
+                onClick={() => setViewMode('both')}
+                title="Video + Chat"
+              >
+                <Maximize2 className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant={viewMode === 'chat' ? 'default' : 'ghost'} 
+                size="sm" 
+                className="rounded-none h-7 px-2 text-xs"
+                onClick={() => setViewMode(viewMode === 'chat' ? 'both' : 'chat')}
+                title="Chat only"
+              >
+                <MessageCircle className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
           <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
@@ -677,10 +733,10 @@ export function PrivateGroupCallWindow({
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Video Section - Host Only */}
-        {hasVideo && (
+        {showVideo && (
           <div className={cn(
-            "flex flex-col border-r min-h-0",
-            hasChat ? "w-1/2" : "flex-1"
+            "flex flex-col border-r min-h-0 transition-all duration-300",
+            showChat ? "w-1/2" : "flex-1"
           )}>
             {/* Video Display */}
             <div className="flex-1 p-2 bg-black min-h-0 flex items-center justify-center">
@@ -761,6 +817,23 @@ export function PrivateGroupCallWindow({
                       <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin" />
                       <p>Connecting to stream...</p>
                     </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Participants list overlay on video */}
+              {participants.length > 0 && (
+                <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
+                  {participants.filter(p => !p.isOwner).slice(0, 8).map((p) => (
+                    <Badge key={p.id} variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
+                      <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                      {p.name}
+                    </Badge>
+                  ))}
+                  {participants.filter(p => !p.isOwner).length > 8 && (
+                    <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none">
+                      +{participants.filter(p => !p.isOwner).length - 8} more
+                    </Badge>
                   )}
                 </div>
               )}
@@ -877,14 +950,17 @@ export function PrivateGroupCallWindow({
         )}
 
         {/* Chat Section */}
-        {hasChat && (
+        {showChat && (
           <div className={cn(
-            "flex flex-col",
-            hasVideo ? "w-1/2" : "flex-1"
+            "flex flex-col transition-all duration-300",
+            showVideo ? "w-1/2" : "flex-1"
           )}>
             <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/20">
               <MessageCircle className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Group Chat</span>
+              <Badge variant="secondary" className="text-[10px] ml-auto">
+                {participants.length} online
+              </Badge>
             </div>
 
             <ScrollArea className="flex-1 p-3">
@@ -897,20 +973,23 @@ export function PrivateGroupCallWindow({
                   messages.map((msg) => {
                     const isOwn = msg.sender_id === currentUserId;
                     const isHost = msg.sender_id === group.owner_id;
+                    const senderName = getParticipantName(msg.sender_id);
+                    const senderPhoto = getParticipantPhoto(msg.sender_id);
                     return (
                       <div
                         key={msg.id}
                         className={cn("flex gap-2", isOwn ? 'flex-row-reverse' : 'flex-row')}
                       >
                         <Avatar className="h-7 w-7 flex-shrink-0">
+                          <AvatarImage src={senderPhoto} />
                           <AvatarFallback className="text-xs">
-                            {isOwn ? userName[0] : isHost ? 'H' : 'P'}
+                            {senderName[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div className={cn("max-w-[75%]", isOwn ? 'items-end' : 'items-start')}>
                           {!isOwn && (
                             <p className="text-xs text-muted-foreground mb-1">
-                              {isHost ? '👑 Host' : 'Participant'}
+                              {isHost ? '👑 ' : ''}{senderName}
                             </p>
                           )}
                           <div
