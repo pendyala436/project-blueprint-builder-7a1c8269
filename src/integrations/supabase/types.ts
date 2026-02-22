@@ -3509,6 +3509,45 @@ export type Database = {
         }
         Relationships: []
       }
+      women_chat_modes: {
+        Row: {
+          created_at: string
+          current_mode: string
+          exclusive_free_locked_until: string | null
+          free_minutes_limit: number
+          free_minutes_used_today: number
+          id: string
+          last_free_reset_date: string
+          mode_switched_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_mode?: string
+          exclusive_free_locked_until?: string | null
+          free_minutes_limit?: number
+          free_minutes_used_today?: number
+          id?: string
+          last_free_reset_date?: string
+          mode_switched_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_mode?: string
+          exclusive_free_locked_until?: string | null
+          free_minutes_limit?: number
+          free_minutes_used_today?: number
+          id?: string
+          last_free_reset_date?: string
+          mode_switched_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       women_earnings: {
         Row: {
           amount: number
