@@ -612,7 +612,15 @@ const TransactionHistoryScreen = () => {
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Balance</p>
-              <p className="font-semibold text-primary">₹{currentBalance.toFixed(2)}</p>
+              <p className="font-semibold text-primary">
+                ₹{(
+                  (isMale 
+                    ? currentBalance 
+                    : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0) - 
+                      withdrawalRequests.filter(w => w.status !== 'rejected').reduce((sum, w) => sum + Number(w.amount), 0)
+                  )
+                ).toFixed(2)}
+              </p>
             </div>
             <Button
               variant="auroraGhost"
