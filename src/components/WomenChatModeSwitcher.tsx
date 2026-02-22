@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { 
   IndianRupee, 
@@ -10,7 +10,8 @@ import {
   Zap,
   Timer,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  ShieldOff
 } from "lucide-react";
 import { WomenChatMode } from "@/hooks/useWomenChatMode";
 import {
@@ -36,6 +37,12 @@ interface WomenChatModeSwitcherProps {
   isLoading: boolean;
   isIndian: boolean;
   onSwitchMode: (mode: WomenChatMode) => Promise<boolean>;
+  // Force free props (non-Indian only)
+  isForceFreeActive?: boolean;
+  forceFreeMinutesUsed?: number;
+  forceFreeMinutesLimit?: number;
+  forceFreeTimeRemaining?: number;
+  onToggleForceFree?: () => Promise<boolean>;
 }
 
 const formatTime = (seconds: number): string => {
@@ -58,6 +65,11 @@ const WomenChatModeSwitcher = ({
   isLoading,
   isIndian,
   onSwitchMode,
+  isForceFreeActive = false,
+  forceFreeMinutesUsed = 0,
+  forceFreeMinutesLimit = 15,
+  forceFreeTimeRemaining = 0,
+  onToggleForceFree,
 }: WomenChatModeSwitcherProps) => {
   const [confirmMode, setConfirmMode] = useState<WomenChatMode | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
@@ -68,7 +80,7 @@ const WomenChatModeSwitcher = ({
   const handleSwitch = async () => {
     if (!confirmMode) return;
     setIsSwitching(true);
-    const success = await onSwitchMode(confirmMode);
+    await onSwitchMode(confirmMode);
     setIsSwitching(false);
     setConfirmMode(null);
   };
@@ -124,6 +136,8 @@ const WomenChatModeSwitcher = ({
     );
   }
 
+  const forceFreeExpired = forceFreeMinutesUsed >= forceFreeMinutesLimit;
+
   return (
     <>
       <Card className="p-4 space-y-3">
@@ -141,7 +155,7 @@ const WomenChatModeSwitcher = ({
         </div>
 
         <div className={cn("grid gap-2", isIndian ? "grid-cols-3" : "grid-cols-2")}>
-          {modes.filter(m => isIndian || m.mode !== "paid").map(({ mode, label, description, icon, color, canSwitch }) => {
+          {modes.filter(m => isIndian || m.mode !== "paid").map(({ mode, label, description, color, canSwitch }) => {
             const isActive = currentMode === mode;
             return (
               <button
@@ -196,6 +210,41 @@ const WomenChatModeSwitcher = ({
             )}
           </div>
         )}
+
+        {/* Force Free Mode Toggle (non-Indian only) */}
+        {!isIndian && onToggleForceFree && (
+          <div className="border-t border-border pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldOff className="h-4 w-4 text-orange-500" />
+                <div>
+                  <div className="text-xs font-semibold text-foreground">Force Free Mode</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {forceFreeExpired 
+                      ? "Daily limit reached (resets tomorrow)" 
+                      : `Men not charged • ${forceFreeMinutesLimit - forceFreeMinutesUsed}m left today`
+                    }
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={isForceFreeActive}
+                onCheckedChange={() => onToggleForceFree()}
+                disabled={forceFreeExpired && !isForceFreeActive}
+              />
+            </div>
+            {/* Force free progress bar */}
+            <div className="w-full bg-muted rounded-full h-1.5">
+              <div
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  forceFreeExpired ? "bg-destructive" : isForceFreeActive ? "bg-orange-500" : "bg-muted-foreground/30"
+                )}
+                style={{ width: `${Math.min(100, (forceFreeMinutesUsed / forceFreeMinutesLimit) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Confirmation Dialog */}
@@ -208,10 +257,10 @@ const WomenChatModeSwitcher = ({
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               {confirmMode === "paid" && (
-                <p>Switching to <strong>Paid Mode</strong> will disconnect you from regular (non-recharged) men. You'll earn money chatting with premium men.</p>
+                <p>Switching to <strong>Paid Mode</strong> will disconnect you from regular (non-recharged) men. You&apos;ll earn money chatting with premium men.</p>
               )}
               {confirmMode === "free" && (
-                <p>Switching to <strong>Free Mode</strong> gives you {freeMinutesLimit - freeMinutesUsed} minutes of free chat with regular men. You won't earn money. You can switch back to Paid mode anytime.</p>
+                <p>Switching to <strong>Free Mode</strong> gives you {isIndian ? `${freeMinutesLimit - freeMinutesUsed} minutes of` : "unlimited"} free chat with regular men. You won&apos;t earn money. You can switch back to Paid mode anytime.</p>
               )}
               {confirmMode === "exclusive_free" && (
                 <p>Switching to <strong>Exclusive Free Mode</strong> locks you in for 24 hours. You can chat with regular men freely but <strong>cannot switch to Paid mode until tomorrow</strong>. No earnings in this mode.</p>
