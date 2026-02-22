@@ -92,6 +92,16 @@ interface GiftTransaction {
   is_sender: boolean;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  status: string;
+  payment_method: string | null;
+  created_at: string;
+  processed_at: string | null;
+  rejection_reason: string | null;
+}
+
 interface UnifiedTransaction {
   id: string;
   type: 'recharge' | 'chat' | 'video' | 'gift' | 'withdrawal' | 'other';
@@ -118,6 +128,7 @@ const TransactionHistoryScreen = () => {
   const [videoCallSessions, setVideoCallSessions] = useState<VideoCallSession[]>([]);
   const [womenEarnings, setWomenEarnings] = useState<WomenEarning[]>([]);
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
   const [activeTab, setActiveTab] = useState("chats");
 
@@ -375,6 +386,15 @@ const TransactionHistoryScreen = () => {
           }
         }
       }
+
+      // Fetch withdrawal requests
+      const { data: withdrawals } = await supabase
+        .from("withdrawal_requests")
+        .select("id, amount, status, payment_method, created_at, processed_at, rejection_reason")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setWithdrawalRequests(withdrawals || []);
 
       // Build unified transaction list
       buildUnifiedTransactions(
@@ -654,14 +674,26 @@ const TransactionHistoryScreen = () => {
               {isMale ? `${walletTransactions.length} txns` : `${womenEarnings.length} entries`}
             </p>
           </Card>
+          <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20 col-span-2 sm:col-span-4">
+            <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
+            <p className="text-xs text-muted-foreground">Total Withdrawals</p>
+            <p className="text-lg font-bold text-red-600">
+              ₹{withdrawalRequests
+                .filter(w => w.status !== 'rejected')
+                .reduce((sum, w) => sum + Number(w.amount), 0)
+                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{withdrawalRequests.length} requests</p>
+          </Card>
         </div>
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Gifts</TabsTrigger>
+            <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>
           </TabsList>
 
 
@@ -852,6 +884,61 @@ const TransactionHistoryScreen = () => {
                   <div className="text-center py-12 text-muted-foreground">
                     <Gift className="h-12 w-12 mx-auto mb-3 opacity-30" />
                     <p>No gift transactions yet</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Withdrawals */}
+          <TabsContent value="withdrawals" className="space-y-3">
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <div className="space-y-3 pr-4">
+                {withdrawalRequests.map((wr) => (
+                  <Card key={wr.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-full bg-red-500/10">
+                          <ArrowUpRight className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">Withdrawal</span>
+                              {getStatusBadge(wr.status)}
+                            </div>
+                            <span className="font-semibold text-red-600 whitespace-nowrap">
+                              -₹{Number(wr.amount).toFixed(2)}
+                            </span>
+                          </div>
+                          {wr.payment_method && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Via {wr.payment_method}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Requested: {format(new Date(wr.created_at), "MMM d, yyyy 'at' h:mm a")}
+                          </p>
+                          {wr.processed_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Processed: {format(new Date(wr.processed_at), "MMM d, yyyy 'at' h:mm a")}
+                            </p>
+                          )}
+                          {wr.rejection_reason && (
+                            <p className="text-xs text-destructive mt-1">
+                              Reason: {wr.rejection_reason}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {withdrawalRequests.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No withdrawal requests yet</p>
                   </div>
                 )}
               </div>
