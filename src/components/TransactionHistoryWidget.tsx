@@ -338,21 +338,46 @@ export const TransactionHistoryWidget = ({
   const exportToPDF = useCallback(() => {
     if (!transactions.length) return;
     const monthLabel = format(selectedMonth, "MMMM yyyy");
-    let html = `<html><head><title>Transactions - ${monthLabel}</title>
+    let html = `<html><head><title>Meow-meow Transaction Statement - ${monthLabel}</title>
     <style>
-      body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
-      h2 { text-align: center; margin-bottom: 4px; }
-      h4 { text-align: center; color: #666; margin-top: 0; }
-      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-      th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
-      th { background: #f0f0f0; font-size: 11px; }
-      .red { color: #dc2626; }
-      .green { color: #16a34a; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; padding: 24px; color: #1e293b; }
+      .header { background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; padding: 20px 24px; border-radius: 12px; margin-bottom: 16px; }
+      .header h1 { margin: 0 0 4px 0; font-size: 22px; font-weight: 700; }
+      .header p { margin: 0; font-size: 12px; opacity: 0.9; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 11px; }
+      .info-label { color: #64748b; }
+      .info-value { font-weight: 600; text-align: right; }
+      .balance-bar { display: flex; justify-content: space-between; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; }
+      .balance-bar .label { color: #15803d; font-size: 11px; }
+      .balance-bar .value { color: #15803d; font-size: 16px; font-weight: 700; }
+      table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 8px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+      th { background: #7c3aed; color: #fff; padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+      td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
+      tr:nth-child(even) td { background: #f8fafc; }
+      tr:last-child td { border-bottom: none; }
+      .red { color: #dc2626; font-weight: 600; }
+      .green { color: #16a34a; font-weight: 600; }
       .right { text-align: right; }
-      .mono { font-family: monospace; }
+      .mono { font-family: 'Courier New', monospace; font-size: 10px; color: #64748b; }
+      .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
     </style></head><body>
-    <h2>Transaction Statement</h2>
-    <h4>${monthLabel} | Balance: ₹${currentBalance.toLocaleString()}</h4>
+    <div class="header">
+      <h1>🐱 Meow-meow</h1>
+      <p>Transaction Statement — ${monthLabel}</p>
+    </div>
+    <div class="info-grid">
+      <span class="info-label">Company</span><span class="info-value">Meow-meow</span>
+      <span class="info-label">Joint Holder</span><span class="info-value">${userName}</span>
+      <span class="info-label">Nominee Details</span><span class="info-value">Not Registered</span>
+      <span class="info-label">Account Status</span><span class="info-value" style="color:#16a34a;">● Active</span>
+      <span class="info-label">Statement Period</span><span class="info-value">${monthLabel}</span>
+      <span class="info-label">Generated On</span><span class="info-value">${format(new Date(), "dd MMM yyyy, hh:mm a")}</span>
+    </div>
+    <div class="balance-bar">
+      <div><span class="label">Current Balance</span></div>
+      <div><span class="value">₹${currentBalance.toLocaleString()}</span></div>
+    </div>
     <table>
     <tr><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>`;
     
@@ -367,7 +392,9 @@ export const TransactionHistoryWidget = ({
         <td class="right">${tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}</td>
       </tr>`;
     });
-    html += `</table></body></html>`;
+    html += `</table>
+    <div class="footer">This is a computer-generated statement from Meow-meow. No signature required.</div>
+    </body></html>`;
     
     const win = window.open('', '_blank');
     if (win) {
@@ -375,7 +402,7 @@ export const TransactionHistoryWidget = ({
       win.document.close();
       setTimeout(() => win.print(), 500);
     }
-  }, [transactions, selectedMonth, currentBalance]);
+  }, [transactions, selectedMonth, currentBalance, userName]);
 
   if (loading) {
     return (
