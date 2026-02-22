@@ -117,7 +117,10 @@ export const TransactionHistoryWidget = ({
         .maybeSingle();
 
       if (wallet) {
-        setCurrentBalance(Number(wallet.balance) || 0);
+        // For men: use wallet balance directly. For women: calculate from earnings - debits
+        if (userGender === 'male') {
+          setCurrentBalance(Number(wallet.balance) || 0);
+        }
 
         // Calculate opening balance: all prior credits - all prior debits from wallet_transactions
         const { data: priorTxData } = await supabase
@@ -224,16 +227,34 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // For women: Get earnings this month
+      // For women: Get earnings this month AND calculate correct balance
       if (userGender === 'female') {
-        const { data: earnings } = await supabase
-          .from("women_earnings")
-          .select("*")
-          .eq("user_id", userId)
-          .gte("created_at", monthStart)
-          .lte("created_at", monthEnd)
-          .order("created_at", { ascending: false })
-          .limit(maxItems);
+        const [{ data: earnings }, { data: allEarnings }, { data: allDebits }] = await Promise.all([
+          supabase
+            .from("women_earnings")
+            .select("*")
+            .eq("user_id", userId)
+            .gte("created_at", monthStart)
+            .lte("created_at", monthEnd)
+            .order("created_at", { ascending: false })
+            .limit(maxItems),
+          supabase
+            .from("women_earnings")
+            .select("amount")
+            .eq("user_id", userId)
+            .limit(5000),
+          supabase
+            .from("wallet_transactions")
+            .select("amount")
+            .eq("user_id", userId)
+            .eq("type", "debit")
+            .limit(5000)
+        ]);
+
+        // Set correct balance for women: total earnings - total debits
+        const totalEarnings = allEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+        const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+        setCurrentBalance(totalEarnings - totalDebits);
 
         earnings?.forEach(e => {
           let description = e.description || `${e.earning_type} earnings`;
