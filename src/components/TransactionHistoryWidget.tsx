@@ -241,11 +241,7 @@ export const TransactionHistoryWidget = ({
         tx.balance_after = runningBal;
       });
 
-      // Use the final running balance as the display balance
-      // This reflects actual deposits - withdrawals across all sources
-      if (unified.length > 0) {
-        setCurrentBalance(runningBal);
-      }
+      // Keep wallet balance from DB as the header balance (already set above)
 
       // Reverse for display (newest first)
       unified.reverse();
