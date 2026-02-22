@@ -315,25 +315,64 @@ export const TransactionHistoryWidget = ({
 
   const exportToCSV = useCallback(() => {
     if (!transactions.length) return;
-    const headers = ["Transaction Date", "Value Date", "Description", "Reference Number", "Withdrawals", "Deposits", "Running Balance"];
-    const rows = transactions.map(tx => [
-      format(new Date(tx.created_at), "dd/MM/yyyy hh:mm a"),
-      format(new Date(tx.created_at), "dd/MM/yyyy"),
-      `"${tx.description.replace(/"/g, '""')}"`,
-      tx.reference_id || '',
-      !tx.is_credit ? tx.amount.toString() : '',
-      tx.is_credit ? tx.amount.toString() : '',
-      tx.balance_after !== undefined ? tx.balance_after.toString() : ''
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const monthLabel = format(selectedMonth, "MMMM yyyy");
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8">
+    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+    <x:Name>Statement</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+    </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    <style>
+      td, th { mso-number-format:\\@; padding: 5px 8px; font-family: Calibri, sans-serif; font-size: 11pt; }
+      .header-row { background: #7c3aed; color: #ffffff; font-weight: bold; font-size: 10pt; text-transform: uppercase; }
+      .brand { background: #7c3aed; color: #ffffff; font-size: 16pt; font-weight: bold; padding: 10px; }
+      .brand-sub { background: #7c3aed; color: #e9d5ff; font-size: 10pt; }
+      .info-label { background: #f8fafc; color: #64748b; font-size: 10pt; }
+      .info-value { background: #f8fafc; font-weight: bold; font-size: 10pt; }
+      .balance-label { background: #f0fdf4; color: #15803d; font-size: 10pt; }
+      .balance-value { background: #f0fdf4; color: #15803d; font-size: 14pt; font-weight: bold; }
+      .red { color: #dc2626; font-weight: bold; }
+      .green { color: #16a34a; font-weight: bold; }
+      .even { background: #f8fafc; }
+      .right { text-align: right; }
+      .mono { font-family: Courier New; font-size: 9pt; color: #64748b; }
+      .footer { color: #94a3b8; font-size: 9pt; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    </style></head><body>
+    <table>
+      <tr><td colspan="7" class="brand">🐱 Meow-meow</td></tr>
+      <tr><td colspan="7" class="brand-sub">Transaction Statement — ${monthLabel}</td></tr>
+      <tr><td colspan="7"></td></tr>
+      <tr><td colspan="2" class="info-label">Company</td><td colspan="2" class="info-value">Meow-meow</td><td class="info-label">Statement Period</td><td colspan="2" class="info-value">${monthLabel}</td></tr>
+      <tr><td colspan="2" class="info-label">Joint Holder</td><td colspan="2" class="info-value">${userName}</td><td class="info-label">Generated On</td><td colspan="2" class="info-value">${format(new Date(), "dd MMM yyyy, hh:mm a")}</td></tr>
+      <tr><td colspan="2" class="info-label">Nominee Details</td><td colspan="2" class="info-value">Not Registered</td><td class="info-label">Account Status</td><td colspan="2" class="info-value" style="color:#16a34a;">● Active</td></tr>
+      <tr><td colspan="7"></td></tr>
+      <tr><td colspan="5" class="balance-label">Current Balance</td><td colspan="2" class="balance-value right">₹${currentBalance.toLocaleString()}</td></tr>
+      <tr><td colspan="7"></td></tr>
+      <tr class="header-row"><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>`;
+
+    transactions.forEach((tx, i) => {
+      const rowClass = i % 2 === 0 ? '' : 'even';
+      html += `<tr class="${rowClass}">
+        <td>${format(new Date(tx.created_at), "dd/MM/yyyy hh:mm a")}</td>
+        <td>${format(new Date(tx.created_at), "dd/MM/yyyy")}</td>
+        <td>${tx.description}</td>
+        <td class="mono">${tx.reference_id || '—'}</td>
+        <td class="right ${!tx.is_credit ? 'red' : ''}">${!tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}</td>
+        <td class="right ${tx.is_credit ? 'green' : ''}">${tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}</td>
+        <td class="right">${tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}</td>
+      </tr>`;
+    });
+    html += `<tr><td colspan="7"></td></tr>
+    <tr><td colspan="7" class="footer">This is a computer-generated statement from Meow-meow. No signature required.</td></tr>
+    </table></body></html>`;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `transactions_${format(selectedMonth, "MMM_yyyy")}.csv`;
+    a.download = `Meowmeow_Statement_${format(selectedMonth, "MMM_yyyy")}.xls`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [transactions, selectedMonth]);
+  }, [transactions, selectedMonth, currentBalance, userName]);
 
   const exportToPDF = useCallback(() => {
     if (!transactions.length) return;
