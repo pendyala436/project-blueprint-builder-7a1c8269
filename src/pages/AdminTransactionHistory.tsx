@@ -371,11 +371,13 @@ const AdminTransactionHistory = () => {
       });
 
       // Set all stats - only from real data
+      // Men deposit money, women withdraw money
+      // Profit = Total Deposits - Total Withdrawals
       setStats({
-        totalRevenue: totalCredits,
+        totalRevenue: totalCredits, // Men's deposits
         totalEarningsPaid: totalEarningsPaid,
-        totalWithdrawals: completedWithdrawals,
-        platformProfit: Math.max(0, totalCredits - totalEarningsPaid - completedWithdrawals),
+        totalWithdrawals: completedWithdrawals, // Women's withdrawals
+        platformProfit: totalCredits - completedWithdrawals, // Deposits - Withdrawals
         totalTransactions: enrichedWalletTxns.length,
         totalChatSessions: enrichedChatSessions.length,
         totalVideoCalls: enrichedVideoCalls.length,
@@ -536,7 +538,7 @@ const AdminTransactionHistory = () => {
           </div>
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -544,8 +546,8 @@ const AdminTransactionHistory = () => {
                     <TrendingUp className="h-5 w-5 text-success" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Revenue</p>
-                    <p className="text-xl font-bold">₹{stats.totalRevenue.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Total Deposits (Men)</p>
+                    <p className="text-xl font-bold text-success">₹{stats.totalRevenue.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -553,38 +555,28 @@ const AdminTransactionHistory = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-warning/10">
-                    <Users className="h-5 w-5 text-warning" />
+                  <div className="p-2 rounded-lg bg-destructive/10">
+                    <TrendingDown className="h-5 w-5 text-destructive" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Earnings Paid</p>
-                    <p className="text-xl font-bold">₹{stats.totalEarningsPaid.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Total Withdrawals (Women)</p>
+                    <p className="text-xl font-bold text-destructive">₹{stats.totalWithdrawals.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-info/10">
-                    <CreditCard className="h-5 w-5 text-info" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Withdrawals</p>
-                    <p className="text-xl font-bold">₹{stats.totalWithdrawals.toLocaleString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
+            <Card className="border-primary/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Wallet className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Platform Profit</p>
-                    <p className="text-xl font-bold">₹{stats.platformProfit.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Total Profit (Deposits − Withdrawals)</p>
+                    <p className={cn(
+                      "text-xl font-bold",
+                      stats.platformProfit >= 0 ? "text-success" : "text-destructive"
+                    )}>₹{stats.platformProfit.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
