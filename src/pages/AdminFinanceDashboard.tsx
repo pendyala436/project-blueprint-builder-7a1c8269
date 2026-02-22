@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -81,6 +82,7 @@ const AdminFinanceDashboard = () => {
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
   const [totalWallets, setTotalWallets] = useState(0);
   const [totalBalance, setTotalBalance] = useState(0);
+  const [totalWithdrawals, setTotalWithdrawals] = useState(0);
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
   const [transactionTypes, setTransactionTypes] = useState<{ name: string; value: number }[]>([]);
 
@@ -121,6 +123,16 @@ const AdminFinanceDashboard = () => {
       setTotalWallets(wallets?.length || 0);
       setTotalBalance(wallets?.reduce((sum, w) => sum + Number(w.balance), 0) || 0);
 
+      // Load completed withdrawals
+      const { data: withdrawals } = await supabase
+        .from("withdrawal_requests")
+        .select("amount")
+        .eq("status", "completed")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+      
+      setTotalWithdrawals(withdrawals?.reduce((sum, w) => sum + Number(w.amount), 0) || 0);
+
       // Calculate daily revenue
       const revenueByDay: Record<string, { revenue: number; transactions: number }> = {};
       for (let i = days; i >= 0; i--) {
@@ -128,14 +140,9 @@ const AdminFinanceDashboard = () => {
         revenueByDay[date] = { revenue: 0, transactions: 0 };
       }
 
-      // Add wallet transaction credits as revenue (exclude test/seed data)
+      // Add all wallet credits as revenue (real deposits by men)
       walletTxns?.forEach((txn) => {
         if (txn.type === "credit" && txn.status === "completed") {
-          // Skip test/seed data
-          const desc = (txn.description || '').toLowerCase();
-          if (desc.includes('test') || desc.includes('free credits') || desc.includes('seed')) {
-            return;
-          }
           const date = format(new Date(txn.created_at), "yyyy-MM-dd");
           if (revenueByDay[date]) {
             revenueByDay[date].revenue += Number(txn.amount);
@@ -246,6 +253,7 @@ const AdminFinanceDashboard = () => {
   const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);
   const totalTransactions = walletTransactions.length + giftTransactions.length;
   const giftRevenue = giftTransactions.reduce((sum, t) => sum + Number(t.price_paid), 0);
+  const totalProfit = totalRevenue - totalWithdrawals;
 
   if (loading) {
     return (
@@ -313,38 +321,20 @@ const AdminFinanceDashboard = () => {
       </header>
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* System Status Banner */}
-        {totalRevenue === 0 && (
-          <Card className="border-amber-500/50 bg-amber-500/5">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-amber-500/20">
-                <TrendingUp className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="font-medium text-amber-600 dark:text-amber-400">System Not Live</p>
-                <p className="text-sm text-muted-foreground">
-                  Payment gateways are not connected. All financial stats show real-time data - currently ₹0 as no actual recharges have occurred.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold flex items-center">
+                  <p className="text-sm text-muted-foreground">Total Deposits (Men)</p>
+                  <p className="text-2xl font-bold flex items-center text-success">
                     <IndianRupee className="h-5 w-5" />
                     {totalRevenue.toLocaleString("en-IN")}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Real transactions only</p>
                 </div>
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-primary" />
+                <div className="p-3 bg-success/10 rounded-full">
+                  <TrendingUp className="h-6 w-6 text-success" />
                 </div>
               </div>
             </CardContent>
@@ -354,30 +344,32 @@ const AdminFinanceDashboard = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Gift Revenue</p>
-                  <p className="text-2xl font-bold flex items-center">
+                  <p className="text-sm text-muted-foreground">Total Withdrawals (Women)</p>
+                  <p className="text-2xl font-bold flex items-center text-destructive">
                     <IndianRupee className="h-5 w-5" />
-                    {giftRevenue.toLocaleString("en-IN")}
+                    {totalWithdrawals.toLocaleString("en-IN")}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">From gift transactions</p>
                 </div>
-                <div className="p-3 bg-pink-500/10 rounded-full">
-                  <Gift className="h-6 w-6 text-pink-500" />
+                <div className="p-3 bg-destructive/10 rounded-full">
+                  <ArrowDownRight className="h-6 w-6 text-destructive" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "100ms" }}>
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300 border-primary/30" style={{ animationDelay: "100ms" }}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active Wallets</p>
-                  <p className="text-2xl font-bold">{totalWallets}</p>
-                  <p className="text-xs text-muted-foreground mt-1">User wallet count</p>
+                  <p className="text-sm text-muted-foreground">Total Profit</p>
+                  <p className={cn("text-2xl font-bold flex items-center", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+                    <IndianRupee className="h-5 w-5" />
+                    {totalProfit.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Deposits − Withdrawals</p>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-full">
-                  <Wallet className="h-6 w-6 text-blue-500" />
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Wallet className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -387,15 +379,29 @@ const AdminFinanceDashboard = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Balance</p>
+                  <p className="text-sm text-muted-foreground">Gift Revenue</p>
                   <p className="text-2xl font-bold flex items-center">
                     <IndianRupee className="h-5 w-5" />
-                    {totalBalance.toLocaleString("en-IN")}
+                    {giftRevenue.toLocaleString("en-IN")}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Sum of all wallets</p>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-full">
-                  <CreditCard className="h-6 w-6 text-green-500" />
+                <div className="p-3 bg-secondary/10 rounded-full">
+                  <Gift className="h-6 w-6 text-secondary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "200ms" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Wallets</p>
+                  <p className="text-2xl font-bold">{totalWallets}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Balance: ₹{totalBalance.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <CreditCard className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>

@@ -120,6 +120,7 @@ const AdminFinanceReports = () => {
   const [totals, setTotals] = useState({
     totalMenSpending: 0,
     totalWomenEarnings: 0,
+    totalWithdrawals: 0,
     totalProfit: 0,
     totalMen: 0,
     totalWomen: 0,
@@ -484,11 +485,33 @@ const AdminFinanceReports = () => {
       
       const totalMenSpend = menList.reduce((sum, m) => sum + m.total_spent, 0);
       const totalWomenEarn = womenList.reduce((sum, w) => sum + w.total_earned, 0);
+
+      // Get total deposits (men wallet credits) for this month
+      const { data: creditTxns } = await supabase
+        .from("wallet_transactions")
+        .select("amount")
+        .eq("type", "credit")
+        .eq("status", "completed")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString());
+      
+      const totalDeposits = creditTxns?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+      // Get total withdrawals (women) for this month
+      const { data: withdrawalTxns } = await supabase
+        .from("withdrawal_requests")
+        .select("amount")
+        .eq("status", "completed")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString());
+
+      const totalWithdrawalsAmount = withdrawalTxns?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
       
       setTotals({
-        totalMenSpending: totalMenSpend,
+        totalMenSpending: totalDeposits,
         totalWomenEarnings: totalWomenEarn,
-        totalProfit: totalMenSpend - totalWomenEarn,
+        totalWithdrawals: totalWithdrawalsAmount,
+        totalProfit: totalDeposits - totalWithdrawalsAmount,
         totalMen: menList.length,
         totalWomen: womenList.length,
       });
@@ -706,12 +729,12 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-500/10 rounded-lg">
-                  <TrendingDown className="h-6 w-6 text-red-500" />
+                <div className="p-3 bg-success/10 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Men Spending</p>
-                  <p className="text-2xl font-bold">₹{totals.totalMenSpending.toFixed(0)}</p>
+                  <p className="text-sm text-muted-foreground">Total Deposits (Men)</p>
+                  <p className="text-2xl font-bold text-success">₹{totals.totalMenSpending.toFixed(0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -720,26 +743,26 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-orange-500/10 rounded-lg">
-                  <IndianRupee className="h-6 w-6 text-orange-500" />
+                <div className="p-3 bg-destructive/10 rounded-lg">
+                  <TrendingDown className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Women Earnings</p>
-                  <p className="text-2xl font-bold">₹{totals.totalWomenEarnings.toFixed(0)}</p>
+                  <p className="text-sm text-muted-foreground">Total Withdrawals (Women)</p>
+                  <p className="text-2xl font-bold text-destructive">₹{totals.totalWithdrawals.toFixed(0)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={totals.totalProfit >= 0 ? "border-green-500/50" : "border-red-500/50"}>
+          <Card className={totals.totalProfit >= 0 ? "border-success/50" : "border-destructive/50"}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-lg ${totals.totalProfit >= 0 ? "bg-green-500/10" : "bg-red-500/10"}`}>
-                  <DollarSign className={`h-6 w-6 ${totals.totalProfit >= 0 ? "text-green-500" : "text-red-500"}`} />
+                <div className={cn("p-3 rounded-lg", totals.totalProfit >= 0 ? "bg-success/10" : "bg-destructive/10")}>
+                  <DollarSign className={cn("h-6 w-6", totals.totalProfit >= 0 ? "text-success" : "text-destructive")} />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Platform Profit</p>
-                  <p className={`text-2xl font-bold ${totals.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <p className="text-sm text-muted-foreground">Total Profit (Deposits − Withdrawals)</p>
+                  <p className={cn("text-2xl font-bold", totals.totalProfit >= 0 ? "text-success" : "text-destructive")}>
                     {totals.totalProfit >= 0 ? "+" : ""}₹{totals.totalProfit.toFixed(0)}
                   </p>
                 </div>
