@@ -67,6 +67,55 @@ const EnhancedParallelChatsContainer = ({
   const isLoadingRef = useRef(false);
   const lastLoadTimeRef = useRef(0);
   
+  // Indian women chat restriction state
+  const [isIndianWoman, setIsIndianWoman] = useState(false);
+  const [isEarningEligible, setIsEarningEligible] = useState(false);
+  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
+
+  // Check Indian woman eligibility for chatting
+  useEffect(() => {
+    if (userGender !== "female" || !currentUserId) return;
+    
+    const checkEligibility = async () => {
+      // Check female_profiles first, then profiles
+      const { data: femaleProfile } = await supabase
+        .from("female_profiles")
+        .select("is_indian, is_earning_eligible, has_golden_badge, golden_badge_expires_at, country")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      if (femaleProfile) {
+        const indian = femaleProfile.is_indian === true || 
+          femaleProfile.country?.toLowerCase().includes('india');
+        setIsIndianWoman(!!indian);
+        setIsEarningEligible(femaleProfile.is_earning_eligible ?? false);
+        const badgeActive = femaleProfile.has_golden_badge === true && 
+          femaleProfile.golden_badge_expires_at && 
+          new Date(femaleProfile.golden_badge_expires_at) > new Date();
+        setHasGoldenBadge(!!badgeActive);
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_indian, is_earning_eligible, has_golden_badge, golden_badge_expires_at, country")
+          .eq("user_id", currentUserId)
+          .maybeSingle();
+        
+        if (profile) {
+          const indian = profile.is_indian === true || 
+            profile.country?.toLowerCase().includes('india');
+          setIsIndianWoman(!!indian);
+          setIsEarningEligible(profile.is_earning_eligible ?? false);
+          const badgeActive = profile.has_golden_badge === true && 
+            profile.golden_badge_expires_at && 
+            new Date(profile.golden_badge_expires_at) > new Date();
+          setHasGoldenBadge(!!badgeActive);
+        }
+      }
+    };
+    
+    checkEligibility();
+  }, [currentUserId, userGender]);
+  
   // Get user's parallel chat settings
   const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
     useParallelChatSettings(currentUserId);
@@ -265,6 +314,17 @@ const EnhancedParallelChatsContainer = ({
 
   // Handle accepting incoming chat - check for duplicate partner
   const handleAcceptChat = useCallback((sessionId: string) => {
+    // RESTRICTION: Indian women cannot chat for free - must be earning eligible or have golden badge
+    if (userGender === "female" && isIndianWoman && !isEarningEligible && !hasGoldenBadge) {
+      toast({
+        title: "Chat Not Available",
+        description: "Indian women need an earning badge or Golden Badge to chat. Purchase a Golden Badge to start chatting!",
+        variant: "destructive"
+      });
+      rejectChat(sessionId);
+      return;
+    }
+
     // Find the incoming chat to get partner ID
     const incomingChat = incomingChats.find(ic => ic.sessionId === sessionId);
     
@@ -301,7 +361,7 @@ const EnhancedParallelChatsContainer = ({
     }
     
     loadActiveChats();
-  }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat]);
+  }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat, userGender, isIndianWoman, isEarningEligible, hasGoldenBadge]);
 
   // Handle rejecting incoming chat - trigger fallback search
   const handleRejectChat = useCallback(async (sessionId: string) => {
