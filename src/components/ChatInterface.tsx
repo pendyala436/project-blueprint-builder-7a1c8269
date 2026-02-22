@@ -261,38 +261,6 @@ export const ChatInterface = ({
   };
 
   const handleAcceptChat = async (request: ChatRequest) => {
-    // RESTRICTION: Check if Indian woman without earning eligibility or golden badge
-    if (userGender === "female") {
-      const { data: femaleProfile } = await supabase
-        .from("female_profiles")
-        .select("is_indian, is_earning_eligible, has_golden_badge, golden_badge_expires_at, country")
-        .eq("user_id", currentUserId)
-        .maybeSingle();
-
-      const profile = femaleProfile || (await supabase
-        .from("profiles")
-        .select("is_indian, is_earning_eligible, has_golden_badge, golden_badge_expires_at, country")
-        .eq("user_id", currentUserId)
-        .maybeSingle()).data;
-
-      if (profile) {
-        const isIndian = profile.is_indian === true || profile.country?.toLowerCase().includes('india');
-        const isEarning = profile.is_earning_eligible ?? false;
-        const hasBadge = profile.has_golden_badge === true && 
-          profile.golden_badge_expires_at && 
-          new Date(profile.golden_badge_expires_at) > new Date();
-        
-        if (isIndian && !isEarning && !hasBadge) {
-          toast({
-            title: "Chat Not Available",
-            description: "Indian women need an earning badge or Golden Badge to chat.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-    }
-
     setIsLoading(true);
     try {
       // Check parallel chat limit for women (max 3)
