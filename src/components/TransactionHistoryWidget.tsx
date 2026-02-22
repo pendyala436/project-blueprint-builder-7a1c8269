@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,12 @@ import {
 import { 
   Wallet,
   ChevronRight,
-  RefreshCw
+  ChevronLeft,
+  RefreshCw,
+  FileDown,
+  FileSpreadsheet
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface UnifiedTransaction {
@@ -48,7 +51,7 @@ interface TransactionHistoryWidgetProps {
 export const TransactionHistoryWidget = ({
   userId,
   userGender,
-  maxItems = 10,
+  maxItems = 50,
   showViewAll = true,
   compact = false
 }: TransactionHistoryWidgetProps) => {
@@ -57,6 +60,7 @@ export const TransactionHistoryWidget = ({
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [earningRates, setEarningRates] = useState<{ chatRate: number; videoRate: number } | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
   useEffect(() => {
     if (userId) {
@@ -65,7 +69,7 @@ export const TransactionHistoryWidget = ({
         loadEarningRates();
       }
     }
-  }, [userId, userGender]);
+  }, [userId, userGender, selectedMonth]);
 
   const loadEarningRates = async () => {
     const { data } = await supabase
@@ -97,6 +101,9 @@ export const TransactionHistoryWidget = ({
     };
   }, [userId]);
 
+  const monthStart = startOfMonth(selectedMonth).toISOString();
+  const monthEnd = endOfMonth(selectedMonth).toISOString();
+
   const loadTransactions = async () => {
     setLoading(true);
     try {
@@ -115,37 +122,42 @@ export const TransactionHistoryWidget = ({
           .from("wallet_transactions")
           .select("*")
           .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(maxItems * 2);
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+          .order("created_at", { ascending: true })
+          .limit(500);
 
-        const sortedTx = [...(txData || [])].sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-        
-        let calculatedBalance = 0;
-        const balanceMap = new Map<string, number>();
-        sortedTx.forEach(tx => {
+        // Calculate running balance by getting all transactions before this month
+        const { data: priorTx } = await supabase
+          .from("wallet_transactions")
+          .select("type, amount")
+          .eq("user_id", userId)
+          .lt("created_at", monthStart)
+          .order("created_at", { ascending: true });
+
+        let runningBalance = 0;
+        priorTx?.forEach(tx => {
           if (tx.type === 'credit') {
-            calculatedBalance += Number(tx.amount);
+            runningBalance += Number(tx.amount);
           } else {
-            calculatedBalance -= Number(tx.amount);
+            runningBalance -= Number(tx.amount);
           }
-          balanceMap.set(tx.id, calculatedBalance);
         });
 
         txData?.forEach(tx => {
-          const isRecharge = tx.description?.toLowerCase().includes('recharge');
-          const isGift = tx.description?.toLowerCase().includes('gift');
-          const isChat = tx.description?.toLowerCase().includes('chat');
-          const isVideo = tx.description?.toLowerCase().includes('video');
-          const isWithdrawal = tx.description?.toLowerCase().includes('withdrawal');
+          if (tx.type === 'credit') {
+            runningBalance += Number(tx.amount);
+          } else {
+            runningBalance -= Number(tx.amount);
+          }
 
+          const desc = tx.description?.toLowerCase() || '';
           let type: UnifiedTransaction['type'] = 'other';
-          if (isRecharge) type = 'recharge';
-          else if (isGift) type = 'gift';
-          else if (isChat) type = 'chat';
-          else if (isVideo) type = 'video';
-          else if (isWithdrawal) type = 'withdrawal';
+          if (desc.includes('recharge')) type = 'recharge';
+          else if (desc.includes('gift')) type = 'gift';
+          else if (desc.includes('chat')) type = 'chat';
+          else if (desc.includes('video')) type = 'video';
+          else if (desc.includes('withdrawal')) type = 'withdrawal';
 
           unified.push({
             id: tx.id,
@@ -154,18 +166,20 @@ export const TransactionHistoryWidget = ({
             description: tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit'),
             created_at: tx.created_at,
             status: tx.status,
-            balance_after: balanceMap.get(tx.id),
+            balance_after: runningBalance,
             is_credit: tx.type === 'credit',
             reference_id: tx.reference_id || tx.id.slice(0, 8).toUpperCase(),
           });
         });
       }
 
-      // Get gift transactions
+      // Get gift transactions for this month
       const { data: giftsData } = await supabase
         .from("gift_transactions")
         .select("*")
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .gte("created_at", monthStart)
+        .lte("created_at", monthEnd)
         .order("created_at", { ascending: false })
         .limit(maxItems);
 
@@ -206,74 +220,23 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // For women: Get earnings
+      // For women: Get earnings this month
       if (userGender === 'female') {
-        const [{ data: earnings }, { data: chatSessions }, { data: videoSessions }] = await Promise.all([
-          supabase
-            .from("women_earnings")
-            .select("*")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(maxItems),
-          supabase
-            .from("active_chat_sessions")
-            .select("id, man_user_id, total_minutes, rate_per_minute, total_earned, status, end_reason, created_at")
-            .eq("woman_user_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(maxItems),
-          supabase
-            .from("video_call_sessions")
-            .select("id, man_user_id, total_minutes, total_earned, status, created_at")
-            .eq("woman_user_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(maxItems)
-        ]);
-
-        const manUserIds = new Set<string>();
-        chatSessions?.forEach(s => manUserIds.add(s.man_user_id));
-        videoSessions?.forEach(s => manUserIds.add(s.man_user_id));
-
-        let profileMap = new Map<string, string>();
-        if (manUserIds.size > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", Array.from(manUserIds));
-          profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name || 'User']) || []);
-        }
-
-        const chatSessionMap = new Map(chatSessions?.map(s => [s.id, s]) || []);
-        const videoSessionMap = new Map(videoSessions?.map(s => [s.id, s]) || []);
+        const { data: earnings } = await supabase
+          .from("women_earnings")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+          .order("created_at", { ascending: false })
+          .limit(maxItems);
 
         earnings?.forEach(e => {
           let description = e.description || `${e.earning_type} earnings`;
-          let counterparty: string | undefined;
-          let duration: number | undefined;
-          let rate: number | undefined;
-          
-          const chatSession = e.chat_session_id ? chatSessionMap.get(e.chat_session_id) : null;
-          
-          if (e.earning_type === 'chat' && chatSession) {
-            counterparty = profileMap.get(chatSession.man_user_id) || 'User';
-            rate = earningRates?.chatRate || Number(chatSession.rate_per_minute) || 0;
-            duration = Number(chatSession.total_minutes) || 0;
-            description = `💬 Chat with ${counterparty}`;
-          } else if (e.earning_type === 'video_call') {
-            const videoSession = Array.from(videoSessionMap.values()).find(v => 
-              Math.abs(new Date(v.created_at).getTime() - new Date(e.created_at).getTime()) < 300000
-            );
-            if (videoSession) {
-              counterparty = profileMap.get(videoSession.man_user_id) || 'User';
-              duration = Number(videoSession.total_minutes) || 0;
-            }
-            rate = earningRates?.videoRate || 0;
-            description = `📹 Video call${counterparty ? ` with ${counterparty}` : ''}`;
-          } else if (e.earning_type === 'gift') {
-            description = `🎁 Gift earnings`;
-          } else if (e.earning_type === 'chat') {
-            rate = earningRates?.chatRate || 0;
-            description = `💬 Chat earnings`;
-          }
+          if (e.earning_type === 'chat') description = `💬 Chat earnings`;
+          else if (e.earning_type === 'video_call') description = `📹 Video call earnings`;
+          else if (e.earning_type === 'gift') description = `🎁 Gift earnings`;
+          else if (e.earning_type === 'private_call') description = `📞 Private call earnings`;
 
           unified.push({
             id: `earning-${e.id}`,
@@ -283,22 +246,84 @@ export const TransactionHistoryWidget = ({
             created_at: e.created_at,
             status: 'completed',
             is_credit: true,
-            counterparty,
-            duration,
-            rate,
             reference_id: e.id.slice(0, 8).toUpperCase(),
           });
         });
       }
 
+      // Sort by date descending for display
       unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setTransactions(unified.slice(0, maxItems));
+      setTransactions(unified);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  const exportToCSV = useCallback(() => {
+    if (!transactions.length) return;
+    const headers = ["Transaction Date", "Value Date", "Description", "Reference Number", "Withdrawals", "Deposits", "Running Balance"];
+    const rows = transactions.map(tx => [
+      format(new Date(tx.created_at), "dd/MM/yyyy hh:mm a"),
+      format(new Date(tx.created_at), "dd/MM/yyyy"),
+      `"${tx.description.replace(/"/g, '""')}"`,
+      tx.reference_id || '',
+      !tx.is_credit ? tx.amount.toString() : '',
+      tx.is_credit ? tx.amount.toString() : '',
+      tx.balance_after !== undefined ? tx.balance_after.toString() : ''
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${format(selectedMonth, "MMM_yyyy")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [transactions, selectedMonth]);
+
+  const exportToPDF = useCallback(() => {
+    if (!transactions.length) return;
+    const monthLabel = format(selectedMonth, "MMMM yyyy");
+    let html = `<html><head><title>Transactions - ${monthLabel}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
+      h2 { text-align: center; margin-bottom: 4px; }
+      h4 { text-align: center; color: #666; margin-top: 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+      th { background: #f0f0f0; font-size: 11px; }
+      .red { color: #dc2626; }
+      .green { color: #16a34a; }
+      .right { text-align: right; }
+      .mono { font-family: monospace; }
+    </style></head><body>
+    <h2>Transaction Statement</h2>
+    <h4>${monthLabel} | Balance: ₹${currentBalance.toLocaleString()}</h4>
+    <table>
+    <tr><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>`;
+    
+    transactions.forEach(tx => {
+      html += `<tr>
+        <td>${format(new Date(tx.created_at), "dd/MM/yyyy hh:mm a")}</td>
+        <td>${format(new Date(tx.created_at), "dd/MM/yyyy")}</td>
+        <td>${tx.description}</td>
+        <td class="mono">${tx.reference_id || '—'}</td>
+        <td class="right ${!tx.is_credit ? 'red' : ''}">${!tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}</td>
+        <td class="right ${tx.is_credit ? 'green' : ''}">${tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}</td>
+        <td class="right">${tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}</td>
+      </tr>`;
+    });
+    html += `</table></body></html>`;
+    
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 500);
+    }
+  }, [transactions, selectedMonth, currentBalance]);
 
   if (loading) {
     return (
@@ -339,6 +364,37 @@ export const TransactionHistoryWidget = ({
             </Button>
           </div>
         </div>
+
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between mt-2">
+          <Button variant="outline" size="sm" onClick={() => setSelectedMonth(prev => subMonths(prev, 1))}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <span className="text-sm font-semibold">
+            {format(selectedMonth, "MMMM yyyy")}
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setSelectedMonth(prev => addMonths(prev, 1))}
+            disabled={startOfMonth(addMonths(selectedMonth, 1)) > startOfMonth(new Date())}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Export Buttons */}
+        <div className="flex items-center gap-2 mt-2">
+          <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!transactions.length}>
+            <FileDown className="w-3.5 h-3.5 mr-1" />
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={!transactions.length}>
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+            Excel
+          </Button>
+        </div>
+
         {userGender === 'female' && earningRates && (
           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
             <span>Earning Rates:</span>
@@ -350,7 +406,7 @@ export const TransactionHistoryWidget = ({
       <CardContent className="px-2 sm:px-6">
         {transactions.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm">
-            No transactions yet
+            No transactions for {format(selectedMonth, "MMMM yyyy")}
           </div>
         ) : (
           <ScrollArea className={compact ? "h-[250px]" : "h-[400px]"}>
@@ -361,7 +417,7 @@ export const TransactionHistoryWidget = ({
                   <TableHead className="text-xs font-semibold whitespace-nowrap">Value Date</TableHead>
                   <TableHead className="text-xs font-semibold">Description</TableHead>
                   <TableHead className="text-xs font-semibold whitespace-nowrap">Ref No.</TableHead>
-                  <TableHead className="text-xs font-semibold text-right whitespace-nowrap text-red-600">Withdrawals</TableHead>
+                  <TableHead className="text-xs font-semibold text-right whitespace-nowrap text-destructive">Withdrawals</TableHead>
                   <TableHead className="text-xs font-semibold text-right whitespace-nowrap text-green-600">Deposits</TableHead>
                   <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Running Balance</TableHead>
                 </TableRow>
@@ -391,7 +447,7 @@ export const TransactionHistoryWidget = ({
                     </TableCell>
                     <TableCell className={cn(
                       "text-right whitespace-nowrap py-2 font-semibold",
-                      !tx.is_credit ? "text-red-600" : ""
+                      !tx.is_credit ? "text-destructive" : ""
                     )}>
                       {!tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}
                     </TableCell>
@@ -401,7 +457,7 @@ export const TransactionHistoryWidget = ({
                     )}>
                       {tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}
                     </TableCell>
-                    <TableCell className="text-right whitespace-nowrap py-2 font-semibold">
+                    <TableCell className="text-right whitespace-nowrap py-2 font-bold">
                       {tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}
                     </TableCell>
                   </TableRow>
