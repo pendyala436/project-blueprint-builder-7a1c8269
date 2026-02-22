@@ -61,6 +61,14 @@ export const TransactionHistoryWidget = ({
   const [currentBalance, setCurrentBalance] = useState(0);
   const [earningRates, setEarningRates] = useState<{ chatRate: number; videoRate: number } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    if (userId) {
+      supabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle()
+        .then(({ data }) => setUserName(data?.full_name || "User"));
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (userId) {
@@ -425,6 +433,14 @@ export const TransactionHistoryWidget = ({
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
+        </div>
+
+        {/* Account Info Header */}
+        <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border text-xs space-y-1">
+          <div className="flex justify-between"><span className="text-muted-foreground">Company:</span><span className="font-medium">Meow-meow</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Joint Holder:</span><span className="font-medium">{userName}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Nominee Details:</span><span className="font-medium">Not Registered</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Account Status:</span><Badge variant="successOutline" className="text-[10px] h-4">Active</Badge></div>
         </div>
 
         {/* Export Buttons */}
