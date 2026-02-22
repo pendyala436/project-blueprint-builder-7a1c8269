@@ -127,30 +127,7 @@ export const TransactionHistoryWidget = ({
           .order("created_at", { ascending: true })
           .limit(500);
 
-        // Calculate running balance by getting all transactions before this month
-        const { data: priorTx } = await supabase
-          .from("wallet_transactions")
-          .select("type, amount")
-          .eq("user_id", userId)
-          .lt("created_at", monthStart)
-          .order("created_at", { ascending: true });
-
-        let runningBalance = 0;
-        priorTx?.forEach(tx => {
-          if (tx.type === 'credit') {
-            runningBalance += Number(tx.amount);
-          } else {
-            runningBalance -= Number(tx.amount);
-          }
-        });
-
         txData?.forEach(tx => {
-          if (tx.type === 'credit') {
-            runningBalance += Number(tx.amount);
-          } else {
-            runningBalance -= Number(tx.amount);
-          }
-
           const desc = tx.description?.toLowerCase() || '';
           let type: UnifiedTransaction['type'] = 'other';
           if (desc.includes('recharge')) type = 'recharge';
@@ -166,7 +143,6 @@ export const TransactionHistoryWidget = ({
             description: tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit'),
             created_at: tx.created_at,
             status: tx.status,
-            balance_after: runningBalance,
             is_credit: tx.type === 'credit',
             reference_id: tx.reference_id || tx.id.slice(0, 8).toUpperCase(),
           });
@@ -251,8 +227,22 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // Sort by date descending for display
-      unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      // Sort chronologically to calculate running balance
+      unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      
+      // Calculate running balance: deposits - withdrawals
+      let runningBal = 0;
+      unified.forEach(tx => {
+        if (tx.is_credit) {
+          runningBal += tx.amount;
+        } else {
+          runningBal -= tx.amount;
+        }
+        tx.balance_after = runningBal;
+      });
+
+      // Reverse for display (newest first)
+      unified.reverse();
       setTransactions(unified);
     } catch (error) {
       console.error("Error loading transactions:", error);
