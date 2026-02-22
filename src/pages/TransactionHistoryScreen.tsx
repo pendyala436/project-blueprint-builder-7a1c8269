@@ -199,7 +199,18 @@ const TransactionHistoryScreen = () => {
         .maybeSingle();
 
       if (wallet) {
-        setCurrentBalance(Number(wallet.balance) || 0);
+        // For men: use wallet balance. For women: calculate from earnings - debits
+        if (gender === 'male') {
+          setCurrentBalance(Number(wallet.balance) || 0);
+        } else {
+          const [{ data: allEarnings }, { data: allDebits }] = await Promise.all([
+            supabase.from("women_earnings").select("amount").eq("user_id", user.id),
+            supabase.from("wallet_transactions").select("amount").eq("user_id", user.id).eq("type", "debit")
+          ]);
+          const totalEarnings = allEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+          const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+          setCurrentBalance(totalEarnings - totalDebits);
+        }
         
         const { data: txData } = await supabase
           .from("wallet_transactions")
@@ -208,27 +219,23 @@ const TransactionHistoryScreen = () => {
           .order("created_at", { ascending: false })
           .limit(200);
 
-        // Calculate balance after each transaction
-        let runningBalance = Number(wallet.balance) || 0;
-        const txWithBalance = (txData || []).map((tx, index) => {
-          const balanceAfter = runningBalance;
-          // Work backwards to calculate previous balance
-          if (index < (txData || []).length - 1) {
-            if (tx.type === 'credit') {
-              runningBalance = runningBalance - Number(tx.amount);
-            } else {
-              runningBalance = runningBalance + Number(tx.amount);
-            }
-          }
-          return { ...tx, balance_after: balanceAfter };
-        });
-
-        // Recalculate properly from oldest to newest
+        // Recalculate running balance from oldest to newest
         const sortedTx = [...(txData || [])].sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
         
         let calculatedBalance = 0;
+        // For women: start running balance from earnings before first wallet tx
+        if (gender === 'female' && sortedTx.length > 0) {
+          const firstTxDate = sortedTx[0].created_at;
+          const { data: priorEarnings } = await supabase
+            .from("women_earnings")
+            .select("amount")
+            .eq("user_id", user.id)
+            .lt("created_at", firstTxDate);
+          calculatedBalance = priorEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+        }
+        
         const balanceMap = new Map<string, number>();
         sortedTx.forEach(tx => {
           if (tx.type === 'credit') {
@@ -458,6 +465,9 @@ const TransactionHistoryScreen = () => {
 
     // Add gift transactions (single source — no duplicates)
     gifts.forEach(g => {
+      // For women receiving gifts: skip here since earnings are tracked in women_earnings
+      if (!g.is_sender && !isMale) return;
+      
       unified.push({
         id: `gift-${g.id}`,
         type: 'gift',
