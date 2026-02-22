@@ -34,6 +34,7 @@ interface WomenChatModeSwitcherProps {
   canSwitchToFree: boolean;
   canSwitchToExclusiveFree: boolean;
   isLoading: boolean;
+  isIndian: boolean;
   onSwitchMode: (mode: WomenChatMode) => Promise<boolean>;
 }
 
@@ -55,6 +56,7 @@ const WomenChatModeSwitcher = ({
   canSwitchToFree,
   canSwitchToExclusiveFree,
   isLoading,
+  isIndian,
   onSwitchMode,
 }: WomenChatModeSwitcherProps) => {
   const [confirmMode, setConfirmMode] = useState<WomenChatMode | null>(null);
@@ -138,8 +140,8 @@ const WomenChatModeSwitcher = ({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {modes.map(({ mode, label, description, icon, color, canSwitch }) => {
+        <div className={cn("grid gap-2", isIndian ? "grid-cols-3" : "grid-cols-2")}>
+          {modes.filter(m => isIndian || m.mode !== "paid").map(({ mode, label, description, icon, color, canSwitch }) => {
             const isActive = currentMode === mode;
             return (
               <button

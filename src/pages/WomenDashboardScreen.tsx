@@ -135,7 +135,7 @@ const WomenDashboardScreen = () => {
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   
   // Women Chat Mode (paid/free/exclusive_free)
-  const chatMode = useWomenChatMode(currentUserId || null);
+  const chatMode = useWomenChatMode(currentUserId || null, isIndianWoman);
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
     heightRange: [140, 200],
@@ -1199,6 +1199,7 @@ const WomenDashboardScreen = () => {
             canSwitchToFree={chatMode.canSwitchToFree}
             canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
             isLoading={chatMode.isLoading}
+            isIndian={chatMode.isIndian}
             onSwitchMode={chatMode.switchMode}
           />
         </div>
