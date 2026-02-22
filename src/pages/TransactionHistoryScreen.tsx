@@ -695,6 +695,26 @@ const TransactionHistoryScreen = () => {
           </Card>
         </div>
 
+        {/* Combined Total */}
+        <Card className="p-3 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <p className="text-xs text-muted-foreground">Total (Chats + Videos + Gifts)</p>
+          <p className="text-xl font-bold text-primary">
+            ₹{(
+              (isMale 
+                ? chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
+                  videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
+                  giftTransactions.reduce((sum, g) => sum + Number(g.price_paid), 0)
+                : womenEarnings.filter(e => e.earning_type === 'chat').reduce((sum, e) => sum + Number(e.amount), 0) +
+                  womenEarnings.filter(e => e.earning_type === 'video_call').reduce((sum, e) => sum + Number(e.amount), 0) +
+                  womenEarnings.filter(e => e.earning_type === 'gift').reduce((sum, e) => sum + Number(e.amount), 0)
+              )
+            ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {chatSessions.length + videoCallSessions.length + giftTransactions.length} total entries
+          </p>
+        </Card>
+
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-4">
