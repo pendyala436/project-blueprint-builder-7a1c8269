@@ -67,6 +67,7 @@ export function WomenKYCForm() {
   const [submitting, setSubmitting] = useState(false);
   const [existingKYC, setExistingKYC] = useState<KYCRecord | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [editingApproved, setEditingApproved] = useState(false);
 
   // Address Proof (Aadhaar) file uploads
   const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
@@ -272,10 +273,18 @@ export function WomenKYCForm() {
     switch (type) {
       case 'pan': return 'PAN Card';
       case 'passport': return 'Passport';
-      case 'voter_id': return 'Voter ID';
+      case 'voter_id': return 'Voter ID (Election Card)';
+      case 'driving_license': return 'Driving Licence';
+      case 'ration_card': return 'Ration Card';
+      case 'college_id': return 'College / University ID';
+      case 'government_id': return 'Government Employee ID';
+      case 'nrega_card': return 'NREGA Job Card';
+      case 'defence_id': return 'Defence / Ex-Servicemen ID';
+      case 'postal_id': return 'India Post ID Card';
       default: return type;
     }
   };
+
 
   if (loading) {
     return (
@@ -287,8 +296,8 @@ export function WomenKYCForm() {
     );
   }
 
-  // If KYC is approved, show read-only status
-  if (existingKYC?.verification_status === 'approved') {
+  // If KYC is approved, show read-only status with option to edit
+  if (existingKYC?.verification_status === 'approved' && !editingApproved) {
     return (
       <Card>
         <CardHeader>
@@ -324,12 +333,20 @@ export function WomenKYCForm() {
               <p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p>
             </div>
           </div>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground mb-2">
+              Need to update your details? Editing will reset your KYC status to pending for re-verification.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setEditingApproved(true)}>
+              Edit KYC Details
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  const isEditable = !existingKYC || existingKYC.verification_status === 'pending' || existingKYC.verification_status === 'rejected';
+  const isEditable = !existingKYC || existingKYC.verification_status === 'pending' || existingKYC.verification_status === 'rejected' || editingApproved;
 
   const FileUploadBox = ({ label, file, existingUrl, onFileChange }: {
     label: string;

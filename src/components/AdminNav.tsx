@@ -23,7 +23,8 @@ import {
   Menu,
   Home,
   UserCheck,
-  History
+  History,
+  Search
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Language Groups", path: "/admin/languages", icon: <Globe className="h-4 w-4" /> },
     { title: "Language Limits", path: "/admin/language-limits", icon: <Languages className="h-4 w-4" /> },
     { title: "KYC Management", path: "/admin/kyc", icon: <UserCheck className="h-4 w-4" /> },
+    { title: "User Lookup", path: "/admin/user-lookup", icon: <Search className="h-4 w-4" /> },
     { title: "Moderation", path: "/admin/moderation", icon: <Shield className="h-4 w-4" /> },
     { title: "Policy Alerts", path: "/admin/policy-alerts", icon: <AlertTriangle className="h-4 w-4" />, badge: policyAlerts },
     
