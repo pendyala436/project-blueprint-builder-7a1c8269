@@ -617,7 +617,7 @@ const TransactionHistoryScreen = () => {
                   (isMale 
                     ? currentBalance 
                     : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0) - 
-                      withdrawalRequests.filter(w => w.status !== 'rejected').reduce((sum, w) => sum + Number(w.amount), 0)
+                      walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
                   )
                 ).toFixed(2)}
               </p>
@@ -686,12 +686,12 @@ const TransactionHistoryScreen = () => {
             <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
             <p className="text-xs text-muted-foreground">Total Withdrawals</p>
             <p className="text-lg font-bold text-red-600">
-              ₹{withdrawalRequests
-                .filter(w => w.status !== 'rejected')
-                .reduce((sum, w) => sum + Number(w.amount), 0)
+              ₹{walletTransactions
+                .filter(t => t.type === 'debit')
+                .reduce((sum, t) => sum + Number(t.amount), 0)
                 .toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-muted-foreground">{withdrawalRequests.length} requests</p>
+            <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
           </Card>
         </div>
 
