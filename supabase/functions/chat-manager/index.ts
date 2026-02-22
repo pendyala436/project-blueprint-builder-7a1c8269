@@ -185,8 +185,12 @@ serve(async (req) => {
     const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = await req.json();
 
     // SECURITY: Verify the user_id in request matches authenticated user (prevent impersonation)
-    const requestedUserId = user_id || man_user_id || woman_user_id;
-    if (requestedUserId && requestedUserId !== authenticatedUserId) {
+    // For actions with both man_user_id and woman_user_id (e.g. start_chat), 
+    // the authenticated user must be one of them
+    const allRequestedIds = [user_id, man_user_id, woman_user_id].filter(Boolean);
+    const userIsInRequest = allRequestedIds.length === 0 || allRequestedIds.includes(authenticatedUserId);
+    
+    if (!userIsInRequest) {
       // Check if authenticated user is admin (admins can act on behalf of others)
       const { data: roleData } = await supabase
         .from('user_roles')
@@ -196,7 +200,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (!roleData) {
-        console.log(`[SECURITY] User ${authenticatedUserId} attempted to act as ${requestedUserId}`);
+        console.log(`[SECURITY] User ${authenticatedUserId} attempted to act as ${allRequestedIds.join(', ')}`);
         return new Response(
           JSON.stringify({ success: false, error: 'Cannot perform actions for other users' }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
