@@ -29,6 +29,7 @@ const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
+const DirectionToggle = lazy(() => import("@/components/DirectionToggle"));
 // TranslationLoadingIndicator removed - browser-based models no longer used
 
 // Preload dashboard routes immediately after first paint
@@ -153,7 +154,7 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
                     <Sonner />
                     <PWAInstallPrompt />
                     <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
-                    
+                    <DirectionToggle />
                   </Suspense>
                   {children}
                 </SecurityProvider>
