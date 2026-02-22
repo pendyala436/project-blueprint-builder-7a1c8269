@@ -186,9 +186,30 @@ const WomenDashboardScreen = () => {
   ];
 
   useEffect(() => {
-    loadDashboardData();
-    updateUserOnlineStatus(true);
-    loadActiveChatCount();
+    // Quick approval check before loading heavy dashboard data
+    const initDashboard = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate("/"); return; }
+      
+      // Quick approval gate - redirect immediately if not approved
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("gender, approval_status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (profile?.gender?.toLowerCase() === "female" && profile?.approval_status !== "approved") {
+        navigate("/approval-pending");
+        return;
+      }
+
+      // Only load heavy data after approval confirmed
+      loadDashboardData();
+      updateUserOnlineStatus(true);
+      loadActiveChatCount();
+    };
+    
+    initDashboard();
 
     return () => {
       updateUserOnlineStatus(false);
