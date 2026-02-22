@@ -88,6 +88,18 @@ interface OnlineWoman {
   is_earning_eligible?: boolean; // Badged women shown at top
 }
 
+interface MatchedWoman {
+  matchId: string;
+  userId: string;
+  fullName: string;
+  photoUrl: string | null;
+  age: number | null;
+  country: string | null;
+  primaryLanguage: string | null;
+  isOnline: boolean;
+  matchedAt: string;
+}
+
 interface DashboardStats {
   onlineUsersCount: number;
   matchCount: number;
@@ -125,6 +137,8 @@ const DashboardScreen = () => {
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
   const [loadingOnlineWomen, setLoadingOnlineWomen] = useState(false);
+  const [matchedWomen, setMatchedWomen] = useState<MatchedWoman[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const [isNonIndianNLLBUser, setIsNonIndianNLLBUser] = useState(false); // Is man's language non-Indian but NLLB-200 supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -870,6 +884,73 @@ const DashboardScreen = () => {
       .eq("status", "accepted");
 
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
+    
+    // Also fetch matched women profiles
+    await fetchMatchedWomen(userId);
+  };
+
+  const fetchMatchedWomen = async (userId: string) => {
+    setLoadingMatches(true);
+    try {
+      // Fetch all matches (both pending and accepted) where this man is involved
+      const { data: matches } = await supabase
+        .from("matches")
+        .select("id, matched_user_id, user_id, matched_at, status")
+        .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
+        .order("matched_at", { ascending: false })
+        .limit(50);
+
+      if (!matches || matches.length === 0) {
+        setMatchedWomen([]);
+        setLoadingMatches(false);
+        return;
+      }
+
+      // Get the other user's ID from each match
+      const otherUserIds = matches.map(m => 
+        m.user_id === userId ? m.matched_user_id : m.user_id
+      );
+
+      // Fetch profiles for matched users
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, photo_url, age, country, primary_language, gender")
+        .in("user_id", otherUserIds);
+
+      // Fetch online status
+      const { data: statuses } = await supabase
+        .from("user_status")
+        .select("user_id, is_online")
+        .in("user_id", otherUserIds);
+
+      const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      const matched: MatchedWoman[] = matches
+        .map(m => {
+          const otherId = m.user_id === userId ? m.matched_user_id : m.user_id;
+          const profile = profileMap.get(otherId);
+          if (!profile || profile.gender?.toLowerCase() !== 'female') return null;
+          return {
+            matchId: m.id,
+            userId: otherId,
+            fullName: profile.full_name || 'Anonymous',
+            photoUrl: profile.photo_url,
+            age: profile.age,
+            country: profile.country,
+            primaryLanguage: profile.primary_language,
+            isOnline: statusMap.get(otherId) || false,
+            matchedAt: m.matched_at,
+          };
+        })
+        .filter(Boolean) as MatchedWoman[];
+
+      setMatchedWomen(matched);
+    } catch (error) {
+      console.error("Error fetching matched women:", error);
+    } finally {
+      setLoadingMatches(false);
+    }
   };
 
   const fetchNotifications = async (userId: string) => {
@@ -1287,6 +1368,102 @@ const DashboardScreen = () => {
                 )}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Matches Section - Women this man has matched with */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.07s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Heart className="w-5 h-5 text-primary" />
+              {t('yourMatches', 'Your Matches')}
+              <span className="text-xs text-muted-foreground">({matchedWomen.length})</span>
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => currentUserId && fetchMatchedWomen(currentUserId)}
+              disabled={loadingMatches}
+              className="gap-1"
+            >
+              <RefreshCw className={cn("w-4 h-4", loadingMatches && "animate-spin")} />
+              {t('refresh', 'Refresh')}
+            </Button>
+          </div>
+
+          {loadingMatches ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          ) : matchedWomen.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-1">
+              {matchedWomen.map((woman) => (
+                <Card
+                  key={woman.matchId}
+                  className="p-3 hover:shadow-lg transition-all cursor-pointer group border-primary/20"
+                  onClick={() => navigate(`/profile/${woman.userId}`)}
+                >
+                  <div className="flex flex-col items-center text-center gap-2">
+                    <div className="relative">
+                      <Avatar className="w-16 h-16 border-2 border-primary/30 shadow-md">
+                        <AvatarImage src={woman.photoUrl || undefined} alt={woman.fullName} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
+                          {woman.fullName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={cn(
+                        "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
+                        woman.isOnline ? "bg-online" : "bg-muted-foreground/40"
+                      )} />
+                    </div>
+                    <div className="min-w-0 w-full">
+                      <p className="font-medium text-sm text-foreground truncate">
+                        {woman.fullName}
+                      </p>
+                      {woman.age && (
+                        <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
+                      )}
+                      {woman.primaryLanguage && (
+                        <span className="block px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded-full mt-1 truncate">
+                          {woman.primaryLanguage}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 w-full">
+                      <Button
+                        variant="aurora"
+                        size="sm"
+                        className="flex-1 gap-1 text-xs h-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartChatWithWoman(woman.userId, woman.fullName);
+                        }}
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        {t('chat', 'Chat')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${woman.userId}`);
+                        }}
+                      >
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 text-center">
+              <Heart className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">{t('noMatchesYet', 'No matches yet')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('likeProfilesToMatch', 'Like profiles to start matching!')}</p>
+            </Card>
           )}
         </div>
 
