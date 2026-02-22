@@ -28,7 +28,7 @@ const kycSchema = z.object({
   // Address Proof - Aadhaar mandatory
   aadhaar_number: z.string().regex(aadhaarRegex, "Aadhaar must be 12 digits"),
   // ID Proof - separate
-  id_type: z.enum(["pan", "passport", "voter_id"]),
+  id_type: z.enum(["pan", "passport", "voter_id", "driving_license", "ration_card", "college_id", "government_id", "nrega_card", "defence_id", "postal_id"]),
   id_number: z.string().min(6, "Valid ID number required").max(20),
   consent_given: z.boolean().refine(val => val === true, "You must provide consent"),
 });
@@ -577,7 +577,14 @@ export function WomenKYCForm() {
                         <SelectContent>
                           <SelectItem value="pan">PAN Card</SelectItem>
                           <SelectItem value="passport">Passport</SelectItem>
-                          <SelectItem value="voter_id">Voter ID</SelectItem>
+                          <SelectItem value="voter_id">Voter ID (Election Card)</SelectItem>
+                          <SelectItem value="driving_license">Driving Licence</SelectItem>
+                          <SelectItem value="ration_card">Ration Card</SelectItem>
+                          <SelectItem value="college_id">College / University ID Card</SelectItem>
+                          <SelectItem value="government_id">Government Employee ID</SelectItem>
+                          <SelectItem value="nrega_card">NREGA Job Card</SelectItem>
+                          <SelectItem value="defence_id">Defence / Ex-Servicemen ID</SelectItem>
+                          <SelectItem value="postal_id">India Post ID Card</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
