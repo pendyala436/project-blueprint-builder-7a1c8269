@@ -204,10 +204,13 @@ export const TransactionHistoryWidget = ({
         const giftMap = new Map(gifts?.map(g => [g.id, g]) || []);
         const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
 
-        giftsData.forEach(g => {
+      giftsData.forEach(g => {
           const isSender = g.sender_id === userId;
           const giftInfo = giftMap.get(g.gift_id);
           const partnerName = profileMap.get(isSender ? g.receiver_id : g.sender_id) || "Anonymous";
+          
+          // For women receiving gifts: skip adding as credit here since earnings are tracked in women_earnings
+          if (!isSender && userGender === 'female') return;
           
           if (!unified.some(u => u.id === g.id)) {
             unified.push({
