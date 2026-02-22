@@ -135,8 +135,7 @@ export const TransactionHistoryWidget = ({
           .from("wallet_transactions")
           .select("type, amount")
           .eq("user_id", userId)
-          .lt("created_at", monthStart)
-          .limit(5000);
+          .lt("created_at", monthStart);
 
         priorTxData?.forEach(tx => {
           if (tx.type === 'credit') openingBalance += Number(tx.amount);
@@ -149,8 +148,7 @@ export const TransactionHistoryWidget = ({
             .from("women_earnings")
             .select("amount")
             .eq("user_id", userId)
-            .lt("created_at", monthStart)
-            .limit(5000);
+            .lt("created_at", monthStart);
 
           priorEarnings?.forEach(e => {
             openingBalance += Number(e.amount);
@@ -163,8 +161,7 @@ export const TransactionHistoryWidget = ({
           .eq("user_id", userId)
           .gte("created_at", monthStart)
           .lte("created_at", monthEnd)
-          .order("created_at", { ascending: true })
-          .limit(500);
+          .order("created_at", { ascending: true });
 
         txData?.forEach(tx => {
           const desc = tx.description?.toLowerCase() || '';
@@ -174,6 +171,7 @@ export const TransactionHistoryWidget = ({
           else if (desc.includes('chat')) type = 'chat';
           else if (desc.includes('video')) type = 'video';
           else if (desc.includes('withdrawal')) type = 'withdrawal';
+          else if (desc.includes('golden badge')) type = 'other';
 
           unified.push({
             id: tx.id,
@@ -188,15 +186,15 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // Get gift transactions for this month
+      // Get gift transactions for this month — only for enriching descriptions
+      // The actual debit/credit amounts are already in wallet_transactions (for men) or women_earnings (for women)
       const { data: giftsData } = await supabase
         .from("gift_transactions")
         .select("*")
         .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
         .gte("created_at", monthStart)
         .lte("created_at", monthEnd)
-        .order("created_at", { ascending: false })
-        .limit(maxItems);
+        .order("created_at", { ascending: false });
 
       if (giftsData?.length) {
         const giftIds = [...new Set(giftsData.map(g => g.gift_id))];
@@ -212,33 +210,44 @@ export const TransactionHistoryWidget = ({
         const giftMap = new Map(gifts?.map(g => [g.id, g]) || []);
         const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
 
-      giftsData.forEach(g => {
+        // Enrich existing wallet_transactions that are gift-related with better descriptions
+        giftsData.forEach(g => {
           const isSender = g.sender_id === userId;
           const giftInfo = giftMap.get(g.gift_id);
           const partnerName = profileMap.get(isSender ? g.receiver_id : g.sender_id) || "Anonymous";
-          
-          // For women receiving gifts: skip adding as credit here since earnings are tracked in women_earnings
-          if (!isSender && userGender === 'female') return;
-          
-          if (!unified.some(u => u.id === g.id)) {
-            unified.push({
-              id: `gift-${g.id}`,
-              type: 'gift',
-              amount: Number(g.price_paid),
-              description: isSender 
-                ? `${giftInfo?.emoji || '🎁'} Sent ${giftInfo?.name || 'Gift'} to ${partnerName}`
-                : `${giftInfo?.emoji || '🎁'} Received ${giftInfo?.name || 'Gift'} from ${partnerName}`,
-              created_at: g.created_at,
-              status: g.status,
-              counterparty: partnerName,
-              is_credit: !isSender,
-              reference_id: g.id.slice(0, 8).toUpperCase(),
-            });
+
+          // For senders: find matching wallet_transaction debit and enrich description
+          if (isSender) {
+            const matchingTx = unified.find(u => 
+              u.type === 'gift' && !u.is_credit && 
+              Math.abs(new Date(u.created_at).getTime() - new Date(g.created_at).getTime()) < 2000
+            );
+            if (matchingTx) {
+              matchingTx.description = `${giftInfo?.emoji || '🎁'} Sent ${giftInfo?.name || 'Gift'} to ${partnerName}`;
+              matchingTx.counterparty = partnerName;
+            }
+          }
+          // For women receiving gifts: already in women_earnings, skip
+          // For men receiving gifts: add as credit if not already in wallet_transactions
+          if (!isSender && userGender === 'male') {
+            if (!unified.some(u => u.id === g.id || u.id === `gift-${g.id}`)) {
+              unified.push({
+                id: `gift-${g.id}`,
+                type: 'gift',
+                amount: Number(g.price_paid),
+                description: `${giftInfo?.emoji || '🎁'} Received ${giftInfo?.name || 'Gift'} from ${partnerName}`,
+                created_at: g.created_at,
+                status: g.status,
+                counterparty: partnerName,
+                is_credit: true,
+                reference_id: g.id.slice(0, 8).toUpperCase(),
+              });
+            }
           }
         });
       }
 
-      // For women: Get earnings this month AND calculate correct balance
+      // For women: Get ALL earnings this month and calculate correct balance
       if (userGender === 'female') {
         const [{ data: earnings }, { data: allEarnings }, { data: allDebits }] = await Promise.all([
           supabase
@@ -247,19 +256,16 @@ export const TransactionHistoryWidget = ({
             .eq("user_id", userId)
             .gte("created_at", monthStart)
             .lte("created_at", monthEnd)
-            .order("created_at", { ascending: false })
-            .limit(maxItems),
+            .order("created_at", { ascending: false }),
           supabase
             .from("women_earnings")
             .select("amount")
-            .eq("user_id", userId)
-            .limit(5000),
+            .eq("user_id", userId),
           supabase
             .from("wallet_transactions")
             .select("amount")
             .eq("user_id", userId)
             .eq("type", "debit")
-            .limit(5000)
         ]);
 
         // Set correct balance for women: total earnings - total debits
