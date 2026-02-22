@@ -239,6 +239,15 @@ const PhotoUploadScreen = () => {
       return;
     }
 
+    if (additionalPhotos.length < 1) {
+      toast({
+        title: "Additional photos required",
+        description: "Please upload at least 1 additional photo besides your selfie",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Store photo data for later upload (after auth)
     if (selfiePreview) {
       localStorage.setItem("pendingPhotoData", selfiePreview);
@@ -438,9 +447,9 @@ const PhotoUploadScreen = () => {
         <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="flex items-center gap-2 mb-3">
             <Upload className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-foreground">Additional Photos</h2>
+            <h2 className="font-semibold text-foreground">Additional Photos <span className="text-destructive">*</span></h2>
             <span className="ml-auto text-xs text-muted-foreground">
-              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS}
+              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} (min 1)
             </span>
           </div>
 
@@ -504,7 +513,7 @@ const PhotoUploadScreen = () => {
           className="w-full max-w-sm mt-6"
           size="lg"
           onClick={handleNext}
-          disabled={verificationState !== "verified"}
+          disabled={verificationState !== "verified" || additionalPhotos.length < 1}
         >
           Continue
         </Button>
