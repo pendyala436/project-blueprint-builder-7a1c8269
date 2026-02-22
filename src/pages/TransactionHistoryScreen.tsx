@@ -337,8 +337,7 @@ const TransactionHistoryScreen = () => {
           .from("women_earnings")
           .select("*")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(200);
+          .order("created_at", { ascending: false });
 
         if (earnings && earnings.length > 0) {
           const sessionIds = earnings.filter(e => e.chat_session_id).map(e => e.chat_session_id);
@@ -401,21 +400,25 @@ const TransactionHistoryScreen = () => {
     isMale: boolean
   ) => {
     const unified: UnifiedTransaction[] = [];
+    const giftTxIds = new Set(gifts.map(g => g.id));
 
-    // Add wallet transactions
+    // Add wallet transactions — skip gift-related ones to avoid duplicates
     walletTx.forEach(tx => {
-      const isRecharge = tx.type === 'credit' && tx.description?.toLowerCase().includes('recharge');
-      const isWithdrawal = tx.description?.toLowerCase().includes('withdrawal');
-      const isGift = tx.description?.toLowerCase().includes('gift');
-      const isChat = tx.description?.toLowerCase().includes('chat');
-      const isVideo = tx.description?.toLowerCase().includes('video');
+      const desc = tx.description?.toLowerCase() || '';
+      const isRecharge = tx.type === 'credit' && desc.includes('recharge');
+      const isWithdrawal = desc.includes('withdrawal');
+      const isGift = desc.includes('gift');
+      const isChat = desc.includes('chat');
+      const isVideo = desc.includes('video');
+
+      // Skip gift wallet entries — they'll come from gift_transactions
+      if (isGift) return;
 
       let type: UnifiedTransaction['type'] = 'other';
       let icon: UnifiedTransaction['icon'] = 'arrow';
 
       if (isRecharge) { type = 'recharge'; icon = 'wallet'; }
       else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
-      else if (isGift) { type = 'gift'; icon = 'gift'; }
       else if (isChat) { type = 'chat'; icon = 'chat'; }
       else if (isVideo) { type = 'video'; icon = 'video'; }
 
@@ -433,7 +436,7 @@ const TransactionHistoryScreen = () => {
       });
     });
 
-    // Add gift transactions
+    // Add gift transactions (single source — no duplicates)
     gifts.forEach(g => {
       unified.push({
         id: `gift-${g.id}`,
@@ -605,23 +608,51 @@ const TransactionHistoryScreen = () => {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2 text-center">
+        {/* Summary Stats - Total amounts per category */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="p-3 text-center bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+            <MessageCircle className="h-4 w-4 mx-auto mb-1 text-blue-600" />
             <p className="text-xs text-muted-foreground">Chats</p>
-            <p className="text-lg font-bold">{chatSessions.length}</p>
+            <p className="text-lg font-bold text-blue-600">
+              ₹{(isMale 
+                ? chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0)
+                : womenEarnings.filter(e => e.earning_type === 'chat').reduce((sum, e) => sum + Number(e.amount), 0)
+              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{chatSessions.length} sessions</p>
           </Card>
-          <Card className="p-2 text-center">
-            <p className="text-xs text-muted-foreground">Video</p>
-            <p className="text-lg font-bold">{videoCallSessions.length}</p>
+          <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
+            <Video className="h-4 w-4 mx-auto mb-1 text-purple-600" />
+            <p className="text-xs text-muted-foreground">Video Calls</p>
+            <p className="text-lg font-bold text-purple-600">
+              ₹{(isMale
+                ? videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0)
+                : womenEarnings.filter(e => e.earning_type === 'video_call').reduce((sum, e) => sum + Number(e.amount), 0)
+              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{videoCallSessions.length} calls</p>
           </Card>
-          <Card className="p-2 text-center">
+          <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
+            <Gift className="h-4 w-4 mx-auto mb-1 text-amber-600" />
             <p className="text-xs text-muted-foreground">Gifts</p>
-            <p className="text-lg font-bold">{giftTransactions.length}</p>
+            <p className="text-lg font-bold text-amber-600">
+              ₹{giftTransactions.reduce((sum, g) => sum + (g.is_sender ? Number(g.price_paid) : Number(g.price_paid) * 0.5), 0)
+                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{giftTransactions.length} gifts</p>
           </Card>
-          <Card className="p-2 text-center">
-            <p className="text-xs text-muted-foreground">{isMale ? "Txns" : "Earnings"}</p>
-            <p className="text-lg font-bold">{isMale ? walletTransactions.length : womenEarnings.length}</p>
+          <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+            <Wallet className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
+            <p className="text-xs text-muted-foreground">{isMale ? "Total Spent" : "Total Earnings"}</p>
+            <p className="text-lg font-bold text-emerald-600">
+              ₹{(isMale
+                ? walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
+                : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0)
+              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {isMale ? `${walletTransactions.length} txns` : `${womenEarnings.length} entries`}
+            </p>
           </Card>
         </div>
 
