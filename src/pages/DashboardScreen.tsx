@@ -1016,7 +1016,7 @@ const DashboardScreen = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <MeowLogo size="sm" />
           
           <div className="flex items-center gap-4">
@@ -1063,7 +1063,7 @@ const DashboardScreen = () => {
 
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
         {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
@@ -1094,7 +1094,7 @@ const DashboardScreen = () => {
                   {getStatusText()}
                 </Badge>
               </div>
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-xl sm:text-3xl font-bold text-foreground">
                 {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -1133,7 +1133,7 @@ const DashboardScreen = () => {
               <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* Left Column: Same Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
@@ -1291,7 +1291,7 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
           <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3">
@@ -1319,7 +1319,7 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Notifications */}
-          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all col-span-2 md:col-span-1">
+          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all sm:col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-accent/20">
                 <Bell className="w-6 h-6 text-accent" />
@@ -1388,7 +1388,7 @@ const DashboardScreen = () => {
         {/* Section 4: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <button
                 key={index}

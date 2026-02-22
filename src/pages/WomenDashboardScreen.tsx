@@ -1001,7 +1001,7 @@ const WomenDashboardScreen = () => {
                   {getStatusText()}
                 </Badge>
               </div>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                 {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -1018,7 +1018,7 @@ const WomenDashboardScreen = () => {
 
         {/* Today's Earnings Summary */}
         <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* My Today's Earnings */}
             <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
               <div className="flex items-center gap-3">
@@ -1210,7 +1210,7 @@ const WomenDashboardScreen = () => {
         </Tabs>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/20">
@@ -1320,7 +1320,7 @@ const WomenDashboardScreen = () => {
         {/* Section 5: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {quickActions.map((action, index) => (
               <button
                 key={index}
