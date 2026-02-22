@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
-  ArrowUpRight, 
-  ArrowDownLeft,
-  MessageCircle,
-  Video,
-  Gift,
   Wallet,
   ChevronRight,
   RefreshCw
@@ -29,7 +32,7 @@ interface UnifiedTransaction {
   counterparty?: string;
   balance_after?: number;
   is_credit: boolean;
-  icon: 'wallet' | 'chat' | 'video' | 'gift' | 'arrow';
+  reference_id?: string;
   duration?: number;
   rate?: number;
 }
@@ -79,7 +82,6 @@ export const TransactionHistoryWidget = ({
     }
   };
 
-  // Real-time updates
   useEffect(() => {
     if (!userId) return;
 
@@ -100,7 +102,6 @@ export const TransactionHistoryWidget = ({
     try {
       const unified: UnifiedTransaction[] = [];
 
-      // Get wallet and balance
       const { data: wallet } = await supabase
         .from("wallets")
         .select("id, balance")
@@ -110,7 +111,6 @@ export const TransactionHistoryWidget = ({
       if (wallet) {
         setCurrentBalance(Number(wallet.balance) || 0);
 
-        // Get wallet transactions
         const { data: txData } = await supabase
           .from("wallet_transactions")
           .select("*")
@@ -118,7 +118,6 @@ export const TransactionHistoryWidget = ({
           .order("created_at", { ascending: false })
           .limit(maxItems * 2);
 
-        // Calculate running balances
         const sortedTx = [...(txData || [])].sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
@@ -135,21 +134,18 @@ export const TransactionHistoryWidget = ({
         });
 
         txData?.forEach(tx => {
-          const isRecharge = tx.description?.toLowerCase().includes('recharge') || 
-                            tx.description?.toLowerCase().includes('wallet recharge');
+          const isRecharge = tx.description?.toLowerCase().includes('recharge');
           const isGift = tx.description?.toLowerCase().includes('gift');
           const isChat = tx.description?.toLowerCase().includes('chat');
           const isVideo = tx.description?.toLowerCase().includes('video');
           const isWithdrawal = tx.description?.toLowerCase().includes('withdrawal');
 
           let type: UnifiedTransaction['type'] = 'other';
-          let icon: UnifiedTransaction['icon'] = 'arrow';
-
-          if (isRecharge) { type = 'recharge'; icon = 'wallet'; }
-          else if (isGift) { type = 'gift'; icon = 'gift'; }
-          else if (isChat) { type = 'chat'; icon = 'chat'; }
-          else if (isVideo) { type = 'video'; icon = 'video'; }
-          else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
+          if (isRecharge) type = 'recharge';
+          else if (isGift) type = 'gift';
+          else if (isChat) type = 'chat';
+          else if (isVideo) type = 'video';
+          else if (isWithdrawal) type = 'withdrawal';
 
           unified.push({
             id: tx.id,
@@ -160,7 +156,7 @@ export const TransactionHistoryWidget = ({
             status: tx.status,
             balance_after: balanceMap.get(tx.id),
             is_credit: tx.type === 'credit',
-            icon
+            reference_id: tx.reference_id || tx.id.slice(0, 8).toUpperCase(),
           });
         });
       }
@@ -192,7 +188,6 @@ export const TransactionHistoryWidget = ({
           const giftInfo = giftMap.get(g.gift_id);
           const partnerName = profileMap.get(isSender ? g.receiver_id : g.sender_id) || "Anonymous";
           
-          // Only add if not already in wallet transactions
           if (!unified.some(u => u.id === g.id)) {
             unified.push({
               id: `gift-${g.id}`,
@@ -205,13 +200,13 @@ export const TransactionHistoryWidget = ({
               status: g.status,
               counterparty: partnerName,
               is_credit: !isSender,
-              icon: 'gift'
+              reference_id: g.id.slice(0, 8).toUpperCase(),
             });
           }
         });
       }
 
-      // For women: Get earnings with chat/call session details and counterparty
+      // For women: Get earnings
       if (userGender === 'female') {
         const [{ data: earnings }, { data: chatSessions }, { data: videoSessions }] = await Promise.all([
           supabase
@@ -234,7 +229,6 @@ export const TransactionHistoryWidget = ({
             .limit(maxItems)
         ]);
 
-        // Get all man user IDs to fetch their profiles
         const manUserIds = new Set<string>();
         chatSessions?.forEach(s => manUserIds.add(s.man_user_id));
         videoSessions?.forEach(s => manUserIds.add(s.man_user_id));
@@ -259,14 +253,12 @@ export const TransactionHistoryWidget = ({
           
           const chatSession = e.chat_session_id ? chatSessionMap.get(e.chat_session_id) : null;
           
-          // Build description with user, duration, and rate
           if (e.earning_type === 'chat' && chatSession) {
             counterparty = profileMap.get(chatSession.man_user_id) || 'User';
             rate = earningRates?.chatRate || Number(chatSession.rate_per_minute) || 0;
             duration = Number(chatSession.total_minutes) || 0;
             description = `💬 Chat with ${counterparty}`;
           } else if (e.earning_type === 'video_call') {
-            // Find matching video session
             const videoSession = Array.from(videoSessionMap.values()).find(v => 
               Math.abs(new Date(v.created_at).getTime() - new Date(e.created_at).getTime()) < 300000
             );
@@ -291,15 +283,14 @@ export const TransactionHistoryWidget = ({
             created_at: e.created_at,
             status: 'completed',
             is_credit: true,
-            icon: e.earning_type === 'chat' ? 'chat' : e.earning_type === 'video_call' ? 'video' : 'gift',
             counterparty,
             duration,
-            rate
+            rate,
+            reference_id: e.id.slice(0, 8).toUpperCase(),
           });
         });
       }
 
-      // Sort by date and limit
       unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setTransactions(unified.slice(0, maxItems));
     } catch (error) {
@@ -309,50 +300,20 @@ export const TransactionHistoryWidget = ({
     }
   };
 
-  const getIcon = (icon: string, isCredit: boolean) => {
-    const className = cn("w-4 h-4", isCredit ? "text-green-500" : "text-red-500");
-    switch (icon) {
-      case 'wallet': return <Wallet className={className} />;
-      case 'chat': return <MessageCircle className={className} />;
-      case 'video': return <Video className={className} />;
-      case 'gift': return <Gift className={className} />;
-      default: return isCredit ? <ArrowDownLeft className={className} /> : <ArrowUpRight className={className} />;
-    }
-  };
-
-  const getTypeBadge = (type: string) => {
-    const variants: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      recharge: { label: "Recharge", variant: "default" },
-      chat: { label: "Chat", variant: "secondary" },
-      video: { label: "Video", variant: "secondary" },
-      gift: { label: "Gift", variant: "outline" },
-      earning: { label: "Earning", variant: "default" },
-      withdrawal: { label: "Withdrawal", variant: "outline" },
-      other: { label: "Transaction", variant: "outline" }
-    };
-    const config = variants[type] || variants.other;
-    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
-  };
-
   if (loading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Wallet className="w-4 h-4" />
-            Transaction History
+            Transaction Statement
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton className="w-8 h-8 rounded-full" />
-                <div className="flex-1 space-y-1">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-4 w-16" />
+                <Skeleton className="w-full h-8" />
               </div>
             ))}
           </div>
@@ -367,11 +328,11 @@ export const TransactionHistoryWidget = ({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Wallet className="w-4 h-4" />
-            Transaction History
+            Transaction Statement
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="font-mono">
-              ₹{currentBalance.toLocaleString()}
+              Balance: ₹{currentBalance.toLocaleString()}
             </Badge>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={loadTransactions}>
               <RefreshCw className="w-3 h-3" />
@@ -386,58 +347,67 @@ export const TransactionHistoryWidget = ({
           </div>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         {transactions.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm">
             No transactions yet
           </div>
         ) : (
-          <ScrollArea className={compact ? "h-[200px]" : "h-[300px]"}>
-            <div className="space-y-2">
-              {transactions.map((tx) => (
-                <div 
-                  key={tx.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center",
-                    tx.is_credit ? "bg-green-500/10" : "bg-red-500/10"
-                  )}>
-                    {getIcon(tx.icon, tx.is_credit)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{tx.description}</p>
-                      {!compact && getTypeBadge(tx.type)}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                      <span>{format(new Date(tx.created_at), "MMM d, h:mm a")}</span>
-                      {tx.counterparty && (
-                        <span className="text-foreground/70 font-medium">
-                          • {tx.counterparty}
-                        </span>
-                      )}
+          <ScrollArea className={compact ? "h-[250px]" : "h-[400px]"}>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-xs font-semibold whitespace-nowrap">Transaction Date</TableHead>
+                  <TableHead className="text-xs font-semibold whitespace-nowrap">Value Date</TableHead>
+                  <TableHead className="text-xs font-semibold">Description</TableHead>
+                  <TableHead className="text-xs font-semibold whitespace-nowrap">Ref No.</TableHead>
+                  <TableHead className="text-xs font-semibold text-right whitespace-nowrap text-red-600">Withdrawals</TableHead>
+                  <TableHead className="text-xs font-semibold text-right whitespace-nowrap text-green-600">Deposits</TableHead>
+                  <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Running Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx) => (
+                  <TableRow key={tx.id} className="text-xs">
+                    <TableCell className="whitespace-nowrap py-2">
+                      {format(new Date(tx.created_at), "dd/MM/yyyy")}
+                      <div className="text-muted-foreground text-[10px]">
+                        {format(new Date(tx.created_at), "hh:mm a")}
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap py-2">
+                      {format(new Date(tx.created_at), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell className="py-2 max-w-[200px]">
+                      <span className="font-medium block truncate">{tx.description}</span>
                       {tx.duration !== undefined && tx.rate !== undefined && (
-                        <span className="text-primary/80">
-                          • {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
+                        <span className="text-muted-foreground text-[10px] block">
+                          {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
                         </span>
                       )}
-                      {tx.balance_after !== undefined && (
-                        <span className="text-muted-foreground/70">
-                          • Bal: ₹{tx.balance_after.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className={cn(
-                    "text-sm font-semibold whitespace-nowrap",
-                    tx.is_credit ? "text-green-600" : "text-red-600"
-                  )}>
-                    {tx.is_credit ? "+" : "-"}₹{tx.amount.toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap py-2 font-mono text-muted-foreground">
+                      {tx.reference_id || '—'}
+                    </TableCell>
+                    <TableCell className={cn(
+                      "text-right whitespace-nowrap py-2 font-semibold",
+                      !tx.is_credit ? "text-red-600" : ""
+                    )}>
+                      {!tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}
+                    </TableCell>
+                    <TableCell className={cn(
+                      "text-right whitespace-nowrap py-2 font-semibold",
+                      tx.is_credit ? "text-green-600" : ""
+                    )}>
+                      {tx.is_credit ? `₹${tx.amount.toLocaleString()}` : '—'}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap py-2 font-semibold">
+                      {tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </ScrollArea>
         )}
         
