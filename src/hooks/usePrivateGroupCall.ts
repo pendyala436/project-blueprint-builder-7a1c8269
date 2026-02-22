@@ -22,10 +22,16 @@ interface Participant {
   name: string;
   photo?: string;
   audioStream?: MediaStream;
+  videoStream?: MediaStream; // Remote video stream from host
   isOwner: boolean;
   joinedAt: number;
   amountPaid: number;
   balanceRemaining: number;
+}
+
+interface PeerConnectionEntry {
+  pc: RTCPeerConnection;
+  participantId: string;
 }
 
 interface GroupSession {
@@ -59,6 +65,7 @@ interface PrivateGroupCallState {
   remainingTime: number; // seconds
   totalEarnings: number;
   isRefunding: boolean;
+  hostStream: MediaStream | null; // Host's remote stream for participants
 }
 
 export function usePrivateGroupCall({
@@ -82,21 +89,149 @@ export function usePrivateGroupCall({
     remainingTime: MAX_DURATION_MINUTES * 60,
     totalEarnings: 0,
     isRefunding: false,
+    hostStream: null,
   });
 
   const { pricing } = useChatPricing();
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useRef<MediaStream | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const sessionRef = useRef<GroupSession | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const billingRef = useRef<NodeJS.Timeout | null>(null);
+  const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
   // ICE servers for WebRTC
   const iceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ];
+
+  // Create a peer connection to a specific participant
+  const createPeerConnection = useCallback((participantId: string) => {
+    const pc = new RTCPeerConnection({ iceServers });
+
+    // Add local tracks to peer connection
+    if (localStream.current) {
+      localStream.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStream.current!);
+      });
+    }
+
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate && channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'ice-candidate',
+          payload: {
+            candidate: event.candidate,
+            from: currentUserId,
+            to: participantId,
+          },
+        });
+      }
+    };
+
+    // Handle remote stream (participants receive host video here)
+    pc.ontrack = (event) => {
+      const [remoteStream] = event.streams;
+      console.log(`[PrivateGroupCall] Received remote track from ${participantId}`, remoteStream.getTracks().map(t => t.kind));
+      
+      // If we're a participant and this stream is from the host, set it as hostStream
+      if (!isOwner) {
+        setState(prev => ({ ...prev, hostStream: remoteStream }));
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[PrivateGroupCall] Connection state with ${participantId}:`, pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        console.warn(`[PrivateGroupCall] Connection failed with ${participantId}, attempting reconnect...`);
+        // Remove failed connection
+        peerConnections.current.delete(participantId);
+      }
+    };
+
+    peerConnections.current.set(participantId, pc);
+    return pc;
+  }, [currentUserId, isOwner]);
+
+  // Handle incoming WebRTC offer
+  const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, fromId: string) => {
+    let pc = peerConnections.current.get(fromId);
+    if (!pc) {
+      pc = createPeerConnection(fromId);
+    }
+
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'answer',
+        payload: {
+          answer,
+          from: currentUserId,
+          to: fromId,
+        },
+      });
+    } catch (error) {
+      console.error('[PrivateGroupCall] Error handling offer:', error);
+    }
+  }, [createPeerConnection, currentUserId]);
+
+  // Handle incoming WebRTC answer
+  const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit, fromId: string) => {
+    const pc = peerConnections.current.get(fromId);
+    if (pc) {
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (error) {
+        console.error('[PrivateGroupCall] Error handling answer:', error);
+      }
+    }
+  }, []);
+
+  // Handle incoming ICE candidate
+  const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit, fromId: string) => {
+    const pc = peerConnections.current.get(fromId);
+    if (pc) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.error('[PrivateGroupCall] Error handling ICE candidate:', error);
+      }
+    }
+  }, []);
+
+  // Initiate WebRTC connection to a participant (host sends offer)
+  const connectToParticipant = useCallback(async (participantId: string) => {
+    try {
+      const pc = createPeerConnection(participantId);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'offer',
+        payload: {
+          offer,
+          from: currentUserId,
+          to: participantId,
+        },
+      });
+      console.log(`[PrivateGroupCall] Sent offer to ${participantId}`);
+    } catch (error) {
+      console.error('[PrivateGroupCall] Error connecting to participant:', error);
+    }
+  }, [createPeerConnection, currentUserId]);
 
   // Initialize host media (video + audio)
   const initHostMedia = useCallback(async () => {
@@ -392,11 +527,25 @@ export function usePrivateGroupCall({
           participants: Array.from(sessionRef.current?.participants.values() || []),
           viewerCount: sessionRef.current?.participants.size || 0,
         }));
+
+        // Host initiates WebRTC connection to new participant
+        if (isOwner && localStream.current) {
+          console.log(`[PrivateGroupCall] Host connecting to new participant: ${key}`);
+          connectToParticipant(key);
+        }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         if (sessionRef.current) {
           sessionRef.current.participants.delete(key);
         }
+        
+        // Close peer connection
+        const pc = peerConnections.current.get(key);
+        if (pc) {
+          pc.close();
+          peerConnections.current.delete(key);
+        }
+        
         onParticipantLeave?.(key, 'left');
         
         setState(prev => ({
@@ -426,11 +575,23 @@ export function usePrivateGroupCall({
           cleanup();
         }
       })
-      .on('broadcast', { event: 'host-audio' }, ({ payload }) => {
-        // Handle host audio stream for participants
+      // WebRTC signaling events
+      .on('broadcast', { event: 'offer' }, async ({ payload }) => {
+        if (payload.to === currentUserId) {
+          console.log(`[PrivateGroupCall] Received offer from ${payload.from}`);
+          await handleOffer(payload.offer, payload.from);
+        }
       })
-      .on('broadcast', { event: 'participant-audio' }, ({ payload }) => {
-        // Handle participant audio for host
+      .on('broadcast', { event: 'answer' }, async ({ payload }) => {
+        if (payload.to === currentUserId) {
+          console.log(`[PrivateGroupCall] Received answer from ${payload.from}`);
+          await handleAnswer(payload.answer, payload.from);
+        }
+      })
+      .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+        if (payload.to === currentUserId) {
+          await handleIceCandidate(payload.candidate, payload.from);
+        }
       });
 
     channel.subscribe(async (status) => {
@@ -450,7 +611,7 @@ export function usePrivateGroupCall({
 
     channelRef.current = channel;
     return channel;
-  }, [groupId, currentUserId, userName, userPhoto, isOwner, onParticipantJoin, onParticipantLeave, onSessionEnd, checkCanJoin]);
+  }, [groupId, currentUserId, userName, userPhoto, isOwner, onParticipantJoin, onParticipantLeave, onSessionEnd, checkCanJoin, connectToParticipant, handleOffer, handleAnswer, handleIceCandidate]);
 
   // Go live (host only)
   const goLive = useCallback(async () => {
@@ -615,6 +776,10 @@ export function usePrivateGroupCall({
     localStream.current?.getTracks().forEach(track => track.stop());
     localStream.current = null;
 
+    // Close all peer connections
+    peerConnections.current.forEach(pc => pc.close());
+    peerConnections.current.clear();
+
     // Unsubscribe from channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -633,6 +798,7 @@ export function usePrivateGroupCall({
       remainingTime: MAX_DURATION_MINUTES * 60,
       totalEarnings: 0,
       isRefunding: false,
+      hostStream: null,
     });
   }, []);
 
@@ -646,6 +812,7 @@ export function usePrivateGroupCall({
   return {
     ...state,
     localVideoRef,
+    remoteVideoRef,
     goLive,
     joinStream,
     endStream,
