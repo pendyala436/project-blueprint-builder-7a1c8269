@@ -713,6 +713,15 @@ const TransactionHistoryScreen = () => {
           <p className="text-[10px] text-muted-foreground">
             {chatSessions.length + videoCallSessions.length + giftTransactions.length} total entries
           </p>
+          <div className="mt-2 pt-2 border-t border-primary/10">
+            <p className="text-xs text-muted-foreground">Total Withdrawals</p>
+            <p className="text-lg font-bold text-destructive">
+              ₹{withdrawalRequests
+                .filter(w => w.status !== 'rejected')
+                .reduce((sum, w) => sum + Number(w.amount), 0)
+                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+          </div>
         </Card>
 
         {/* Transaction Tabs */}
