@@ -138,7 +138,16 @@ const WomenWalletScreen = () => {
         setMinWithdrawal(pricing.min_withdrawal_balance);
       }
 
-      // Fetch earnings
+      // Fetch all earnings for total calculation (no limit)
+      const { data: allEarningsData } = await supabase
+        .from("women_earnings")
+        .select("amount")
+        .eq("user_id", user.id);
+
+      const total = allEarningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      setTotalEarnings(total);
+
+      // Fetch recent earnings for display (limited)
       const { data: earningsData } = await supabase
         .from("women_earnings")
         .select("*")
@@ -147,8 +156,6 @@ const WomenWalletScreen = () => {
         .limit(50);
 
       setEarnings(earningsData || []);
-      const total = earningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-      setTotalEarnings(total);
 
       // Fetch withdrawal requests
       const { data: withdrawalsData } = await supabase
