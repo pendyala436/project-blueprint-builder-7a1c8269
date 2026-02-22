@@ -98,29 +98,19 @@ export const useIncomingChats = (
   const acceptedChatsRef = useRef<Set<string>>(new Set());
   const previousCountRef = useRef<number>(0);
 
-  // Start/stop buzz sound based on incoming chats - ONLY for women
+  // Start/stop buzz sound based on incoming chats - for BOTH men and women
   useEffect(() => {
-    if (userGender === "female") {
-      // Women get continuous buzz until they reply or cancel
-      if (incomingChats.length > 0) {
-        startBuzzLoop();
-      } else {
-        stopBuzzLoop();
-      }
+    if (incomingChats.length > 0) {
+      // Both genders get continuous buzz until they accept/reject
+      startBuzzLoop();
     } else {
-      // Men get a small notification sound only when new chats arrive
-      if (incomingChats.length > previousCountRef.current && incomingChats.length > 0) {
-        playSmallNotificationSound();
-      }
-      stopBuzzLoop(); // Always stop buzz loop for men
+      stopBuzzLoop();
     }
-    
-    previousCountRef.current = incomingChats.length;
 
     return () => {
       stopBuzzLoop();
     };
-  }, [incomingChats.length, userGender]);
+  }, [incomingChats.length]);
 
   // Subscribe to new incoming chat sessions - OPTIMIZED for lakhs of users
   useEffect(() => {
