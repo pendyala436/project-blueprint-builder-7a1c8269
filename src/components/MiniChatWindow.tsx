@@ -60,8 +60,10 @@ const MiniChatWindow = ({
   partnerId,
   partnerName,
   partnerPhoto,
+  partnerLanguage,
   isPartnerOnline,
   currentUserId,
+  currentUserLanguage,
   userGender,
   ratePerMinute,
   onClose,
@@ -630,29 +632,38 @@ const MiniChatWindow = ({
                   Say hi to start!
                 </p>
               )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex",
-                    msg.senderId === currentUserId ? "justify-end" : "justify-start"
-                  )}
-                >
+              {messages.map((msg) => {
+                const isOwn = msg.senderId === currentUserId;
+                const senderName = isOwn ? "You" : partnerName;
+                const senderLang = isOwn ? currentUserLanguage : partnerLanguage;
+                return (
                   <div
+                    key={msg.id}
                     className={cn(
-                      "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-                      msg.senderId === currentUserId
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted rounded-bl-sm"
+                      "flex flex-col",
+                      isOwn ? "items-end" : "items-start"
                     )}
                   >
-                    <p className="unicode-text" dir="auto">{msg.message}</p>
-                    <span className="text-[8px] opacity-50 block mt-0.5">
-                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
+                      {senderName}
+                      {senderLang && <span className="opacity-60"> • {senderLang}</span>}
                     </span>
+                    <div
+                      className={cn(
+                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+                        isOwn
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
+                      )}
+                    >
+                      <p className="unicode-text" dir="auto">{msg.message}</p>
+                      <span className="text-[8px] opacity-50 block mt-0.5">
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
