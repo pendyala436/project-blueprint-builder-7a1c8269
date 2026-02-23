@@ -88,19 +88,24 @@ export const useChatPricing = () => {
   }, [fetchPricing]);
 
   /**
-   * Calculate cost for a given duration
+   * Calculate cost for a given duration (supports fractional minutes for per-second billing)
+   * Admin sets rate per minute, but billing is calculated per second
    */
   const calculateCost = useCallback((minutes: number, isVideoCall = false): number => {
     const rate = isVideoCall ? pricing.videoRatePerMinute : pricing.ratePerMinute;
-    return Math.ceil(minutes * rate);
+    // Per-second precision: (seconds / 60) * rate_per_minute
+    const totalSeconds = Math.round(minutes * 60);
+    return (totalSeconds / 60) * rate;
   }, [pricing]);
 
   /**
-   * Calculate earnings for women for a given duration
+   * Calculate earnings for women for a given duration (per-second precision)
+   * Admin sets rate per minute, but earnings are calculated per second
    */
   const calculateEarnings = useCallback((minutes: number, isVideoCall = false): number => {
     const rate = isVideoCall ? pricing.videoWomenEarningRate : pricing.womenEarningRate;
-    return Math.ceil(minutes * rate);
+    const totalSeconds = Math.round(minutes * 60);
+    return (totalSeconds / 60) * rate;
   }, [pricing]);
 
   /**

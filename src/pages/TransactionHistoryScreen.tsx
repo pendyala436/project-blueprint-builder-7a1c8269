@@ -687,7 +687,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {chatSessions.length} sessions • ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min (₹{((chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)) / 60).toFixed(4)}/sec)
+              {chatSessions.length} sessions • {isMale ? 'Spend' : 'Earn'}: ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min (₹{((chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)) / 60).toFixed(4)}/sec)
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
@@ -700,7 +700,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {videoCallSessions.length + privateCalls.length} calls • ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min (₹{((chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)) / 60).toFixed(4)}/sec)
+              {videoCallSessions.length + privateCalls.length} calls • {isMale ? 'Spend' : 'Earn'}: ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min (₹{((chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)) / 60).toFixed(4)}/sec)
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
