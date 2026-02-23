@@ -679,35 +679,56 @@ const TransactionHistoryScreen = () => {
             </p>
             <p className="text-[10px] text-muted-foreground">{giftTransactions.length} gifts</p>
           </Card>
-          <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
-            <Wallet className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
-            <p className="text-xs text-muted-foreground">{isMale ? "Total Spent" : "Total Earnings"}</p>
-            <p className="text-lg font-bold text-emerald-600">
-              ₹{(isMale
-                ? walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
-                : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0)
-              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              {isMale ? `${walletTransactions.length} txns` : `${womenEarnings.length} entries`}
-            </p>
-          </Card>
-          <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20 col-span-2 sm:col-span-4">
-            <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
-            <p className="text-xs text-muted-foreground">Total Withdrawals</p>
-            <p className="text-lg font-bold text-red-600">
-              ₹{walletTransactions
-                .filter(t => t.type === 'debit')
-                .reduce((sum, t) => sum + Number(t.amount), 0)
-                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
-          </Card>
+          {isMale ? (
+            <>
+              <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+                <Wallet className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
+                <p className="text-xs text-muted-foreground">Total Recharge</p>
+                <p className="text-lg font-bold text-emerald-600">
+                  ₹{walletTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + Number(t.amount), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'credit').length} deposits</p>
+              </Card>
+              <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20">
+                <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
+                <p className="text-xs text-muted-foreground">Total Spending</p>
+                <p className="text-lg font-bold text-red-600">
+                  ₹{walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+                <Wallet className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
+                <p className="text-xs text-muted-foreground">Total Earnings</p>
+                <p className="text-lg font-bold text-emerald-600">
+                  ₹{womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{womenEarnings.length} entries</p>
+              </Card>
+              <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20 col-span-2 sm:col-span-4">
+                <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
+                <p className="text-xs text-muted-foreground">Total Withdrawals</p>
+                <p className="text-lg font-bold text-red-600">
+                  ₹{walletTransactions
+                    .filter(t => t.type === 'debit')
+                    .reduce((sum, t) => sum + Number(t.amount), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Combined Total */}
         <Card className="p-3 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <p className="text-xs text-muted-foreground">Total (Chats + Videos + Gifts)</p>
+          <p className="text-xs text-muted-foreground">{isMale ? "Total Spending (Chats + Videos + Gifts)" : "Total (Chats + Videos + Gifts)"}</p>
           <p className="text-xl font-bold text-primary">
             ₹{(
               (isMale 
@@ -723,24 +744,26 @@ const TransactionHistoryScreen = () => {
           <p className="text-[10px] text-muted-foreground">
             {chatSessions.length + videoCallSessions.length + giftTransactions.length} total entries
           </p>
-          <div className="mt-2 pt-2 border-t border-primary/10">
-            <p className="text-xs text-muted-foreground">Total Withdrawals</p>
-            <p className="text-lg font-bold text-destructive">
-              ₹{withdrawalRequests
-                .filter(w => w.status !== 'rejected')
-                .reduce((sum, w) => sum + Number(w.amount), 0)
-                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </p>
-          </div>
+          {!isMale && (
+            <div className="mt-2 pt-2 border-t border-primary/10">
+              <p className="text-xs text-muted-foreground">Total Withdrawals</p>
+              <p className="text-lg font-bold text-destructive">
+                ₹{withdrawalRequests
+                  .filter(w => w.status !== 'rejected')
+                  .reduce((sum, w) => sum + Number(w.amount), 0)
+                  .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-3" : "grid-cols-4")}>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Gifts</TabsTrigger>
-            <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>
+            {!isMale && <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>}
           </TabsList>
 
 
