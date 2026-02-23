@@ -537,16 +537,16 @@ export const TransactionHistoryWidget = ({
 
         {pricingRates && (
           <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-            <span>Rates:</span>
+            <span>Rates ({userGender === 'female' ? 'Earning' : 'Spending'}):</span>
             {userGender === 'female' ? (
               <>
-                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.chatRate}/min</Badge>
-                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.videoRate}/min</Badge>
+                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.chatRate}/min (₹{(pricingRates.chatRate / 60).toFixed(4)}/sec)</Badge>
+                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.videoRate}/min (₹{(pricingRates.videoRate / 60).toFixed(4)}/sec)</Badge>
               </>
             ) : (
               <>
-                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.menChatRate}/min</Badge>
-                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.menVideoRate}/min</Badge>
+                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.menChatRate}/min (₹{(pricingRates.menChatRate / 60).toFixed(4)}/sec)</Badge>
+                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.menVideoRate}/min (₹{(pricingRates.menVideoRate / 60).toFixed(4)}/sec)</Badge>
               </>
             )}
           </div>
@@ -587,7 +587,7 @@ export const TransactionHistoryWidget = ({
                       <span className="font-medium block truncate">{tx.description}</span>
                       {tx.duration !== undefined && tx.rate !== undefined && (
                         <span className="text-muted-foreground text-[10px] block">
-                          {tx.duration.toFixed(1)} min × ₹{tx.rate}/min
+                          {Math.round(tx.duration * 60)}s × ₹{(tx.rate / 60).toFixed(4)}/sec = ₹{(tx.duration * tx.rate).toFixed(2)}
                         </span>
                       )}
                     </TableCell>
