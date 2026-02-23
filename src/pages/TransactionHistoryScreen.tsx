@@ -62,6 +62,7 @@ interface VideoCallSession {
   started_at: string | null;
   ended_at: string | null;
   end_reason: string | null;
+  created_at: string;
   partner_name?: string;
   partner_photo?: string;
 }
@@ -760,7 +761,7 @@ const TransactionHistoryScreen = () => {
             <p className="text-xs text-muted-foreground">Gifts</p>
             <p className="text-lg font-bold text-amber-600">
               ₹{(isMale
-                ? giftTransactions.filter(g => g.is_sender).reduce((sum, g) => sum + Number(g.price_paid), 0)
+                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('gift'))).reduce((sum, t) => sum + Number(t.amount), 0)
                 : womenEarnings.filter(e => e.earning_type === 'gift').reduce((sum, e) => sum + Number(e.amount), 0)
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
@@ -893,12 +894,28 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-destructive" : "text-green-600"
                             )}>
                             {(() => {
-                              const sessionRate = Number(session.rate_per_minute) || 0;
-                              const totalSeconds = Math.round(Number(session.total_minutes) * 60);
-                              const amount = isMale 
-                                ? (totalSeconds / 60) * sessionRate
-                                : Number(session.total_earned) || 0;
-                              return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
+                              // For men: find matching wallet_transaction debit for this session (ACID source of truth)
+                              // For women: use total_earned from session
+                              if (isMale) {
+                                const matchingDebit = walletTransactions.find(t => 
+                                  t.type === 'debit' && 
+                                  t.description?.toLowerCase().includes('chat') &&
+                                  Math.abs(new Date(t.created_at).getTime() - new Date(session.started_at).getTime()) < 60000
+                                );
+                                if (matchingDebit) return `-₹${Number(matchingDebit.amount).toFixed(2)}`;
+                                // Fallback: sum all chat debits matching this session timeframe
+                                const sessionDebits = walletTransactions.filter(t =>
+                                  t.type === 'debit' &&
+                                  t.description?.toLowerCase().includes('chat') &&
+                                  new Date(t.created_at) >= new Date(session.started_at) &&
+                                  (!session.ended_at || new Date(t.created_at) <= new Date(session.ended_at))
+                                );
+                                const totalDebited = sessionDebits.reduce((sum, t) => sum + Number(t.amount), 0);
+                                return `-₹${totalDebited.toFixed(2)}`;
+                              } else {
+                                const amount = Number(session.total_earned) || 0;
+                                return `+₹${amount.toFixed(2)}`;
+                              }
                             })()}
                             </span>
                           </div>
@@ -968,12 +985,27 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-purple-600" : "text-pink-600"
                             )}>
                             {(() => {
-                              const sessionRate = Number(session.rate_per_minute) || 0;
-                              const totalSeconds = Math.round(Number(session.total_minutes) * 60);
-                              const amount = isMale
-                                ? (totalSeconds / 60) * sessionRate
-                                : Number(session.total_earned) || 0;
-                              return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
+                              // For men: find matching wallet_transaction debit for this video session (ACID source of truth)
+                              // For women: use total_earned from session
+                              if (isMale) {
+                                const matchingDebit = walletTransactions.find(t => 
+                                  t.type === 'debit' && 
+                                  t.description?.toLowerCase().includes('video') &&
+                                  Math.abs(new Date(t.created_at).getTime() - new Date(session.started_at || session.created_at).getTime()) < 60000
+                                );
+                                if (matchingDebit) return `-₹${Number(matchingDebit.amount).toFixed(2)}`;
+                                const sessionDebits = walletTransactions.filter(t =>
+                                  t.type === 'debit' &&
+                                  t.description?.toLowerCase().includes('video') &&
+                                  new Date(t.created_at) >= new Date(session.started_at || session.created_at) &&
+                                  (!session.ended_at || new Date(t.created_at) <= new Date(session.ended_at))
+                                );
+                                const totalDebited = sessionDebits.reduce((sum, t) => sum + Number(t.amount), 0);
+                                return `-₹${totalDebited.toFixed(2)}`;
+                              } else {
+                                const amount = Number(session.total_earned) || 0;
+                                return `+₹${amount.toFixed(2)}`;
+                              }
                             })()}
                             </span>
                           </div>
