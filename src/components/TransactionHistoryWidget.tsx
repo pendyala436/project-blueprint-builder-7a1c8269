@@ -100,11 +100,13 @@ export const TransactionHistoryWidget = ({
     const channel = supabase
       .channel(`transaction-widget-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wallet_transactions' }, () => loadTransactions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'women_earnings' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_calls' }, () => loadTransactions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => loadTransactions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_pricing' }, () => loadTransactions())
       .subscribe();
 
