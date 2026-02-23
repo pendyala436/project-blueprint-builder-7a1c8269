@@ -59,7 +59,7 @@ export const TransactionHistoryWidget = ({
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [currentBalance, setCurrentBalance] = useState(0);
-  const [earningRates, setEarningRates] = useState<{ chatRate: number; videoRate: number } | null>(null);
+  const [pricingRates, setPricingRates] = useState<{ chatRate: number; videoRate: number; menChatRate: number; menVideoRate: number } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [userName, setUserName] = useState<string>("");
 
@@ -73,23 +73,25 @@ export const TransactionHistoryWidget = ({
   useEffect(() => {
     if (userId) {
       loadTransactions();
-      if (userGender === 'female') {
-        loadEarningRates();
-      }
+      loadPricingRates();
     }
   }, [userId, userGender, selectedMonth]);
 
-  const loadEarningRates = async () => {
+  const loadPricingRates = async () => {
     const { data } = await supabase
       .from("chat_pricing")
-      .select("women_earning_rate, video_women_earning_rate")
+      .select("rate_per_minute, video_rate_per_minute, women_earning_rate, video_women_earning_rate")
       .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     
     if (data) {
-      setEarningRates({
-        chatRate: Number(data.women_earning_rate) || 0,
-        videoRate: Number(data.video_women_earning_rate) || 0
+      setPricingRates({
+        chatRate: Number(data.women_earning_rate) || 2,
+        videoRate: Number(data.video_women_earning_rate) || 4,
+        menChatRate: Number(data.rate_per_minute) || 4,
+        menVideoRate: Number(data.video_rate_per_minute) || 8,
       });
     }
   };
@@ -533,11 +535,20 @@ export const TransactionHistoryWidget = ({
           </Button>
         </div>
 
-        {userGender === 'female' && earningRates && (
-          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-            <span>Earning Rates:</span>
-            <Badge variant="outline" className="text-xs">Chat: ₹{earningRates.chatRate}/min</Badge>
-            <Badge variant="outline" className="text-xs">Video: ₹{earningRates.videoRate}/min</Badge>
+        {pricingRates && (
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+            <span>Rates:</span>
+            {userGender === 'female' ? (
+              <>
+                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.chatRate}/min</Badge>
+                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.videoRate}/min</Badge>
+              </>
+            ) : (
+              <>
+                <Badge variant="outline" className="text-xs">Chat: ₹{pricingRates.menChatRate}/min</Badge>
+                <Badge variant="outline" className="text-xs">Video: ₹{pricingRates.menVideoRate}/min</Badge>
+              </>
+            )}
           </div>
         )}
       </CardHeader>

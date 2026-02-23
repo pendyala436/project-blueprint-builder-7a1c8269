@@ -532,11 +532,14 @@ const TransactionHistoryScreen = () => {
   };
 
   const formatDuration = (minutes: number) => {
-    if (minutes < 1) return "< 1 min";
-    if (minutes < 60) return `${Math.round(minutes)} min`;
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return `${hours}h ${mins}m`;
+    const totalSeconds = Math.round(minutes * 60);
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (mins < 60) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    const remainMins = mins % 60;
+    return remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -684,7 +687,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {chatSessions.length} sessions • ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min
+              {chatSessions.length} sessions • ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min (₹{((chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)) / 60).toFixed(4)}/sec)
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
@@ -697,7 +700,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {videoCallSessions.length + privateCalls.length} calls • ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min
+              {videoCallSessions.length + privateCalls.length} calls • ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min (₹{((chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)) / 60).toFixed(4)}/sec)
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
@@ -844,7 +847,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              {isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min
+                              ₹{isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -915,7 +918,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              {isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min
+                              ₹{isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min
                             </span>
                             {session.started_at && (
                               <span className="flex items-center gap-1">
