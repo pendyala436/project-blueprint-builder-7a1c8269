@@ -98,6 +98,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_broadcast_messages: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          is_broadcast: boolean
+          is_read: boolean
+          message: string
+          recipient_id: string | null
+          subject: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          is_read?: boolean
+          message: string
+          recipient_id?: string | null
+          subject: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          is_read?: boolean
+          message?: string
+          recipient_id?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
       admin_revenue_transactions: {
         Row: {
           amount: number

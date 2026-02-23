@@ -72,7 +72,14 @@ import {
   HeartOff,
   UserPlus,
   UserMinus,
+  FileText,
+  MessageSquare,
+  Send,
+  Megaphone,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
@@ -108,6 +115,34 @@ interface LanguageGroup {
   max_women_users: number;
   current_women_count: number;
   is_active: boolean;
+}
+
+interface WomenKYC {
+  id: string;
+  user_id: string;
+  full_name_as_per_bank: string;
+  date_of_birth: string;
+  gender: string | null;
+  country_of_residence: string;
+  aadhaar_number: string | null;
+  aadhaar_front_url: string | null;
+  aadhaar_back_url: string | null;
+  id_type: string;
+  id_number: string;
+  id_proof_front_url: string | null;
+  id_proof_back_url: string | null;
+  document_front_url: string | null;
+  document_back_url: string | null;
+  selfie_url: string | null;
+  bank_name: string;
+  account_holder_name: string;
+  account_number: string;
+  ifsc_code: string;
+  verification_status: string;
+  rejection_reason: string | null;
+  verified_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -518,6 +553,93 @@ const AdminUserManagement = () => {
   const [friendTargetUser, setFriendTargetUser] = useState<UserProfile | null>(null);
   const [friendWithUserId, setFriendWithUserId] = useState("");
 
+  // KYC Viewer
+  const [kycDialogOpen, setKycDialogOpen] = useState(false);
+  const [kycData, setKycData] = useState<WomenKYC | null>(null);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [kycUser, setKycUser] = useState<UserProfile | null>(null);
+
+  // Admin Chat / Broadcast
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [chatTargetUser, setChatTargetUser] = useState<UserProfile | null>(null); // null = broadcast
+  const [chatSubject, setChatSubject] = useState("");
+  const [chatMessage, setChatMessage] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
+
+  const handleViewKYC = async (user: UserProfile) => {
+    setKycUser(user);
+    setKycLoading(true);
+    setKycDialogOpen(true);
+    try {
+      const { data, error } = await supabase
+        .from("women_kyc")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setKycData(data as WomenKYC | null);
+    } catch (error) {
+      console.error("Error loading KYC:", error);
+      toast.error("Failed to load KYC details");
+    } finally {
+      setKycLoading(false);
+    }
+  };
+
+  const handleOpenChat = (user?: UserProfile) => {
+    setChatTargetUser(user || null);
+    setChatSubject("");
+    setChatMessage("");
+    setChatDialogOpen(true);
+  };
+
+  const handleSendChat = async () => {
+    if (!chatSubject.trim() || !chatMessage.trim()) {
+      toast.error("Subject and message are required");
+      return;
+    }
+    setSendingChat(true);
+    try {
+      const { data: { user: adminUser } } = await supabase.auth.getUser();
+      if (!adminUser) throw new Error("Not authenticated");
+
+      if (chatTargetUser) {
+        // Send to individual user
+        const { error } = await supabase
+          .from("admin_broadcast_messages")
+          .insert({
+            admin_id: adminUser.id,
+            recipient_id: chatTargetUser.user_id,
+            subject: chatSubject,
+            message: chatMessage,
+            is_broadcast: false,
+          });
+        if (error) throw error;
+        toast.success(`Message sent to ${chatTargetUser.full_name || "user"}`);
+      } else {
+        // Broadcast to all users
+        const { error } = await supabase
+          .from("admin_broadcast_messages")
+          .insert({
+            admin_id: adminUser.id,
+            recipient_id: null,
+            subject: chatSubject,
+            message: chatMessage,
+            is_broadcast: true,
+          });
+        if (error) throw error;
+        toast.success("Broadcast message sent to all users");
+      }
+      setChatDialogOpen(false);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setSendingChat(false);
+    }
+  };
+
   const handleOpenFriendDialog = (user: UserProfile) => {
     setFriendTargetUser(user);
     setFriendWithUserId("");
@@ -697,6 +819,15 @@ const AdminUserManagement = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenChat()}
+              className="gap-1"
+            >
+              <Megaphone className="h-4 w-4" />
+              <span className="hidden md:inline">Broadcast All</span>
+            </Button>
             <AdminUserSearchDialog />
             <Badge variant="secondary" className="gap-1">
               <Shield className="h-3 w-3" />
@@ -1034,6 +1165,18 @@ const AdminUserManagement = () => {
                                     </>
                                   )}
                                   
+                                  {/* View KYC (only for women) */}
+                                  {user.gender?.toLowerCase() === "female" && (
+                                    <DropdownMenuItem onClick={() => handleViewKYC(user)}>
+                                      <FileText className="h-4 w-4 mr-2" /> View KYC
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {/* Send Message */}
+                                  <DropdownMenuItem onClick={() => handleOpenChat(user)}>
+                                    <MessageSquare className="h-4 w-4 mr-2" /> Send Message
+                                  </DropdownMenuItem>
+
                                   {/* Friend Management */}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem onClick={() => handleOpenFriendDialog(user)}>
@@ -1340,6 +1483,187 @@ const AdminUserManagement = () => {
             <Button onClick={handleCreateFriendship} disabled={!friendWithUserId}>
               <Heart className="h-4 w-4 mr-2" />
               Create Friendship
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* KYC Details Dialog */}
+      <Dialog open={kycDialogOpen} onOpenChange={setKycDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              KYC Details - {kycUser?.full_name || "User"}
+            </DialogTitle>
+            <DialogDescription>
+              Complete KYC verification information
+            </DialogDescription>
+          </DialogHeader>
+          {kycLoading ? (
+            <div className="space-y-3 py-4">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : !kycData ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
+              <p>No KYC data submitted yet</p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Verification Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Status:</span>
+                <Badge variant={kycData.verification_status === 'approved' ? 'success' : kycData.verification_status === 'rejected' ? 'destructive' : 'secondary'}>
+                  {kycData.verification_status}
+                </Badge>
+                {kycData.rejection_reason && (
+                  <span className="text-xs text-destructive">({kycData.rejection_reason})</span>
+                )}
+              </div>
+
+              {/* Personal Info */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 text-primary">Personal Information</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">Name (Bank):</span> <span className="font-medium">{kycData.full_name_as_per_bank}</span></div>
+                  <div><span className="text-muted-foreground">DOB:</span> <span className="font-medium">{kycData.date_of_birth}</span></div>
+                  <div><span className="text-muted-foreground">Gender:</span> <span className="font-medium">{kycData.gender || "N/A"}</span></div>
+                  <div><span className="text-muted-foreground">Country:</span> <span className="font-medium">{kycData.country_of_residence}</span></div>
+                </div>
+              </div>
+
+              {/* Aadhaar */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 text-primary">Address Proof (Aadhaar)</h4>
+                <p className="text-sm mb-2"><span className="text-muted-foreground">Aadhaar Number:</span> <span className="font-medium">{kycData.aadhaar_number || "N/A"}</span></p>
+                <div className="grid grid-cols-2 gap-3">
+                  {kycData.aadhaar_front_url && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Front</p>
+                      <a href={kycData.aadhaar_front_url} target="_blank" rel="noopener noreferrer">
+                        <img src={kycData.aadhaar_front_url} alt="Aadhaar Front" className="w-full h-32 object-cover rounded border" />
+                      </a>
+                    </div>
+                  )}
+                  {kycData.aadhaar_back_url && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Back</p>
+                      <a href={kycData.aadhaar_back_url} target="_blank" rel="noopener noreferrer">
+                        <img src={kycData.aadhaar_back_url} alt="Aadhaar Back" className="w-full h-32 object-cover rounded border" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ID Proof */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 text-primary">ID Proof ({kycData.id_type})</h4>
+                <p className="text-sm mb-2"><span className="text-muted-foreground">ID Number:</span> <span className="font-medium">{kycData.id_number}</span></p>
+                <div className="grid grid-cols-2 gap-3">
+                  {(kycData.id_proof_front_url || kycData.document_front_url) && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Front</p>
+                      <a href={kycData.id_proof_front_url || kycData.document_front_url || "#"} target="_blank" rel="noopener noreferrer">
+                        <img src={kycData.id_proof_front_url || kycData.document_front_url || ""} alt="ID Front" className="w-full h-32 object-cover rounded border" />
+                      </a>
+                    </div>
+                  )}
+                  {(kycData.id_proof_back_url || kycData.document_back_url) && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Back</p>
+                      <a href={kycData.id_proof_back_url || kycData.document_back_url || "#"} target="_blank" rel="noopener noreferrer">
+                        <img src={kycData.id_proof_back_url || kycData.document_back_url || ""} alt="ID Back" className="w-full h-32 object-cover rounded border" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Selfie */}
+              {kycData.selfie_url && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 text-primary">Selfie</h4>
+                  <a href={kycData.selfie_url} target="_blank" rel="noopener noreferrer">
+                    <img src={kycData.selfie_url} alt="Selfie" className="w-32 h-32 object-cover rounded border" />
+                  </a>
+                </div>
+              )}
+
+              {/* Bank Details */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 text-primary">Bank Details</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{kycData.bank_name}</span></div>
+                  <div><span className="text-muted-foreground">Account Holder:</span> <span className="font-medium">{kycData.account_holder_name}</span></div>
+                  <div><span className="text-muted-foreground">Account No:</span> <span className="font-medium">{kycData.account_number}</span></div>
+                  <div><span className="text-muted-foreground">IFSC:</span> <span className="font-medium">{kycData.ifsc_code}</span></div>
+                </div>
+              </div>
+
+              {/* Timestamps */}
+              <div className="text-xs text-muted-foreground border-t pt-3">
+                <p>Submitted: {format(new Date(kycData.created_at), "MMM dd, yyyy HH:mm")}</p>
+                {kycData.verified_at && <p>Verified: {format(new Date(kycData.verified_at), "MMM dd, yyyy HH:mm")}</p>}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Chat / Broadcast Dialog */}
+      <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {chatTargetUser ? (
+                <><MessageSquare className="h-5 w-5 text-primary" /> Message {chatTargetUser.full_name || "User"}</>
+              ) : (
+                <><Megaphone className="h-5 w-5 text-primary" /> Broadcast to All Users</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {chatTargetUser
+                ? "Send a direct message to this user"
+                : "This message will be sent to all registered users"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="chat-subject">Subject</Label>
+              <Input
+                id="chat-subject"
+                placeholder="Message subject..."
+                value={chatSubject}
+                onChange={(e) => setChatSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="chat-message">Message</Label>
+              <Textarea
+                id="chat-message"
+                placeholder="Type your message..."
+                rows={4}
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+              />
+            </div>
+            {chatTargetUser && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm"><strong>To:</strong> {chatTargetUser.full_name || "Unknown"}</p>
+                <p className="text-xs text-muted-foreground">ID: {chatTargetUser.user_id}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChatDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendChat} disabled={sendingChat || !chatSubject.trim() || !chatMessage.trim()}>
+              <Send className="h-4 w-4 mr-2" />
+              {sendingChat ? "Sending..." : chatTargetUser ? "Send Message" : "Broadcast"}
             </Button>
           </DialogFooter>
         </DialogContent>
