@@ -171,7 +171,7 @@ export const TransactionHistoryWidget = ({
             if (tx.type === 'credit') afterCredits += Number(tx.amount);
             else afterDebits += Number(tx.amount);
           });
-          openingBalance = walletBalance - thisMonthCredits + thisMonthDebits + afterCredits - afterDebits;
+          openingBalance = walletBalance - thisMonthCredits + thisMonthDebits - afterCredits + afterDebits;
         } else {
           // For women: calculate from earnings - debits (prior to month)
           const { data: priorTxData } = await supabase
