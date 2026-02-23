@@ -130,6 +130,8 @@ const TransactionHistoryScreen = () => {
   const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
+  const [privateCalls, setPrivateCalls] = useState<any[]>([]);
+  const [chatPricing, setChatPricing] = useState<{ ratePerMinute: number; videoRatePerMinute: number; womenEarningRate: number; videoWomenEarningRate: number } | null>(null);
   const [activeTab, setActiveTab] = useState("chats");
 
   useEffect(() => {
@@ -140,31 +142,13 @@ const TransactionHistoryScreen = () => {
   useEffect(() => {
     const channel = supabase
       .channel('transaction-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'wallet_transactions' },
-        () => { loadData(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'active_chat_sessions' },
-        () => { loadData(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'video_call_sessions' },
-        () => { loadData(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'women_earnings' },
-        () => { loadData(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'gift_transactions' },
-        () => { loadData(); }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallet_transactions' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_earnings' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_calls' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_pricing' }, () => { loadData(); })
       .subscribe();
 
     return () => {
@@ -174,6 +158,24 @@ const TransactionHistoryScreen = () => {
 
   const loadData = async () => {
     try {
+      // Fetch chat pricing first (ACID-compliant rates)
+      const { data: pricingData } = await supabase
+        .from("chat_pricing")
+        .select("rate_per_minute, video_rate_per_minute, women_earning_rate, video_women_earning_rate")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pricingData) {
+        setChatPricing({
+          ratePerMinute: Number(pricingData.rate_per_minute) || 4,
+          videoRatePerMinute: Number(pricingData.video_rate_per_minute) || 8,
+          womenEarningRate: Number(pricingData.women_earning_rate) || 2,
+          videoWomenEarningRate: Number(pricingData.video_women_earning_rate) || 4,
+        });
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/");
@@ -402,6 +404,36 @@ const TransactionHistoryScreen = () => {
         .order("created_at", { ascending: false });
 
       setWithdrawalRequests(withdrawals || []);
+
+      // Fetch private calls (1-to-1 video calls via gift)
+      const privateCallField = gender === "male" ? "receiver_id" : "caller_id";
+      const privatePartnerField = gender === "male" ? "caller_id" : "receiver_id";
+      
+      const { data: privateCallsData } = await supabase
+        .from("private_calls")
+        .select("*")
+        .eq(privateCallField, user.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (privateCallsData && privateCallsData.length > 0) {
+        const partnerIds = privateCallsData.map(pc => pc[privatePartnerField as keyof typeof pc] as string);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, photo_url")
+          .in("user_id", partnerIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        
+        const enrichedPrivateCalls = privateCallsData.map(pc => ({
+          ...pc,
+          partner_name: profileMap.get(pc[privatePartnerField as keyof typeof pc] as string)?.full_name || "Anonymous",
+        }));
+
+        setPrivateCalls(enrichedPrivateCalls);
+      } else {
+        setPrivateCalls([]);
+      }
 
       // Build unified transaction list
       buildUnifiedTransactions(
@@ -653,29 +685,35 @@ const TransactionHistoryScreen = () => {
             <p className="text-xs text-muted-foreground">Chats</p>
             <p className="text-lg font-bold text-blue-600">
               ₹{(isMale 
-                ? chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0)
+                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('chat'))).reduce((sum, t) => sum + Number(t.amount), 0)
                 : womenEarnings.filter(e => e.earning_type === 'chat').reduce((sum, e) => sum + Number(e.amount), 0)
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-muted-foreground">{chatSessions.length} sessions</p>
+            <p className="text-[10px] text-muted-foreground">
+              {chatSessions.length} sessions • ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min
+            </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
             <Video className="h-4 w-4 mx-auto mb-1 text-purple-600" />
             <p className="text-xs text-muted-foreground">Video Calls</p>
             <p className="text-lg font-bold text-purple-600">
               ₹{(isMale
-                ? videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0)
-                : womenEarnings.filter(e => e.earning_type === 'video_call').reduce((sum, e) => sum + Number(e.amount), 0)
+                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('video'))).reduce((sum, t) => sum + Number(t.amount), 0)
+                : womenEarnings.filter(e => e.earning_type === 'video_call' || e.earning_type === 'private_call').reduce((sum, e) => sum + Number(e.amount), 0)
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-muted-foreground">{videoCallSessions.length} calls</p>
+            <p className="text-[10px] text-muted-foreground">
+              {videoCallSessions.length + privateCalls.length} calls • ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min
+            </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
             <Gift className="h-4 w-4 mx-auto mb-1 text-amber-600" />
             <p className="text-xs text-muted-foreground">Gifts</p>
             <p className="text-lg font-bold text-amber-600">
-              ₹{giftTransactions.reduce((sum, g) => sum + (g.is_sender ? Number(g.price_paid) : Number(g.price_paid) * 0.5), 0)
-                .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              ₹{(isMale
+                ? giftTransactions.filter(g => g.is_sender).reduce((sum, g) => sum + Number(g.price_paid), 0)
+                : womenEarnings.filter(e => e.earning_type === 'gift').reduce((sum, e) => sum + Number(e.amount), 0)
+              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">{giftTransactions.length} gifts</p>
           </Card>
@@ -694,14 +732,11 @@ const TransactionHistoryScreen = () => {
                 <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
                 <p className="text-xs text-muted-foreground">Total Spending</p>
                 <p className="text-xl font-bold text-red-600">
-                  ₹{(
-                    chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
-                    videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
-                    giftTransactions.reduce((sum, g) => sum + Number(g.price_paid), 0)
-                  ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  ₹{walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  {chatSessions.length + videoCallSessions.length + giftTransactions.length} transactions
+                  {walletTransactions.filter(t => t.type === 'debit').length} transactions (ACID-verified)
                 </p>
               </Card>
             </>
@@ -733,21 +768,19 @@ const TransactionHistoryScreen = () => {
 
         {/* Combined Total */}
         <Card className="p-3 text-center bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <p className="text-xs text-muted-foreground">{isMale ? "Total Spending (Chats + Videos + Gifts)" : "Total (Chats + Videos + Gifts)"}</p>
+          <p className="text-xs text-muted-foreground">{isMale ? "Total Spending (Chats + Videos + Gifts + Private Calls)" : "Total Earnings (Chats + Videos + Gifts + Private Calls)"}</p>
           <p className="text-xl font-bold text-primary">
             ₹{(
               (isMale 
-                ? chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
-                  videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
-                  giftTransactions.reduce((sum, g) => sum + Number(g.price_paid), 0)
-                : womenEarnings.filter(e => e.earning_type === 'chat').reduce((sum, e) => sum + Number(e.amount), 0) +
-                  womenEarnings.filter(e => e.earning_type === 'video_call').reduce((sum, e) => sum + Number(e.amount), 0) +
-                  womenEarnings.filter(e => e.earning_type === 'gift').reduce((sum, e) => sum + Number(e.amount), 0)
+                ? walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
+                : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0)
               )
             ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {chatSessions.length + videoCallSessions.length + giftTransactions.length} total entries
+            {isMale 
+              ? `${walletTransactions.filter(t => t.type === 'debit').length} total debits` 
+              : `${womenEarnings.length} total earnings`}
           </p>
           {!isMale && (
             <div className="mt-2 pt-2 border-t border-primary/10">
@@ -764,9 +797,10 @@ const TransactionHistoryScreen = () => {
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-3" : "grid-cols-4")}>
+          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-4" : "grid-cols-5")}>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
+            <TabsTrigger value="private" className="text-xs">Private</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Gifts</TabsTrigger>
             {!isMale && <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>}
           </TabsList>
@@ -803,7 +837,7 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               isMale ? "text-destructive" : "text-green-600"
                             )}>
-                              {isMale ? "-" : "+"}₹{Number(session.total_earned).toFixed(2)}
+                              {isMale ? "-" : "+"}₹{(isMale ? Number(session.total_minutes) * Number(session.rate_per_minute) : Number(session.total_earned)).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -871,7 +905,7 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               isMale ? "text-purple-600" : "text-pink-600"
                             )}>
-                              {isMale ? "-" : "+"}₹{Number(session.total_earned).toFixed(2)}
+                              {isMale ? "-" : "+"}₹{(isMale ? Number(session.total_minutes) * Number(session.rate_per_minute) : Number(session.total_earned)).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -911,6 +945,69 @@ const TransactionHistoryScreen = () => {
             </ScrollArea>
           </TabsContent>
 
+
+          {/* Private Calls */}
+          <TabsContent value="private" className="space-y-3">
+            <p className="text-xs text-muted-foreground mb-2">Total: {privateCalls.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-300px)]">
+              <div className="space-y-3 pr-4">
+                {privateCalls.map((pc: any) => (
+                  <Card key={pc.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "p-2 rounded-full",
+                          isMale ? "bg-pink-500/10" : "bg-emerald-500/10"
+                        )}>
+                          <Video className={cn(
+                            "h-4 w-4",
+                            isMale ? "text-pink-500" : "text-emerald-600"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate">
+                                Private call with {pc.partner_name}
+                              </span>
+                              {getStatusBadge(pc.status)}
+                            </div>
+                            <span className={cn(
+                              "font-semibold whitespace-nowrap",
+                              isMale ? "text-pink-600" : "text-emerald-600"
+                            )}>
+                              {isMale ? `-₹${Number(pc.gift_amount).toFixed(2)}` : `+₹${Number(pc.woman_earnings || 0).toFixed(2)}`}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {pc.duration_seconds ? formatDuration(pc.duration_seconds / 60) : "30 min access"}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Gift className="h-3 w-3" />
+                              Gift: ₹{Number(pc.gift_amount).toFixed(0)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(pc.created_at), "MMM d, h:mm a")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {privateCalls.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Video className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>No private calls yet</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
           {/* Gift Transactions */}
           <TabsContent value="wallet" className="space-y-3">
