@@ -834,10 +834,12 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               isMale ? "text-destructive" : "text-green-600"
                             )}>
-                              {isMale ? "-" : "+"}₹{(isMale 
-                                ? Number(session.total_minutes) * (chatPricing?.ratePerMinute || 4) 
-                                : Number(session.total_minutes) * (chatPricing?.womenEarningRate || 2)
-                              ).toFixed(2)}
+                            {(() => {
+                              const ratePerMin = isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2);
+                              const totalSeconds = Math.round(Number(session.total_minutes) * 60);
+                              const amount = (totalSeconds / 60) * ratePerMin;
+                              return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
+                            })()}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -847,7 +849,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min
+                              ₹{isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min • ₹{((isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)) / 60).toFixed(4)}/sec
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -905,10 +907,12 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               isMale ? "text-purple-600" : "text-pink-600"
                             )}>
-                              {isMale ? "-" : "+"}₹{(isMale 
-                                ? Number(session.total_minutes) * (chatPricing?.videoRatePerMinute || 8) 
-                                : Number(session.total_minutes) * (chatPricing?.videoWomenEarningRate || 4)
-                              ).toFixed(2)}
+                            {(() => {
+                              const ratePerMin = isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4);
+                              const totalSeconds = Math.round(Number(session.total_minutes) * 60);
+                              const amount = (totalSeconds / 60) * ratePerMin;
+                              return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
+                            })()}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
@@ -918,7 +922,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min
+                              ₹{isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min • ₹{((isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)) / 60).toFixed(4)}/sec
                             </span>
                             {session.started_at && (
                               <span className="flex items-center gap-1">
