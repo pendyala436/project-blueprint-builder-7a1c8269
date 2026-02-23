@@ -832,7 +832,7 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-destructive" : "text-green-600"
                             )}>
                               {isMale ? "-" : "+"}₹{(isMale 
-                                ? Number(session.total_minutes) * Number(session.rate_per_minute) 
+                                ? Number(session.total_minutes) * (chatPricing?.ratePerMinute || 4) 
                                 : Number(session.total_minutes) * (chatPricing?.womenEarningRate || 2)
                               ).toFixed(2)}
                             </span>
@@ -844,7 +844,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              {isMale ? session.rate_per_minute : (chatPricing?.womenEarningRate || 2)}/min
+                              {isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -903,7 +903,7 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-purple-600" : "text-pink-600"
                             )}>
                               {isMale ? "-" : "+"}₹{(isMale 
-                                ? Number(session.total_minutes) * Number(session.rate_per_minute) 
+                                ? Number(session.total_minutes) * (chatPricing?.videoRatePerMinute || 8) 
                                 : Number(session.total_minutes) * (chatPricing?.videoWomenEarningRate || 4)
                               ).toFixed(2)}
                             </span>
@@ -915,7 +915,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              {isMale ? session.rate_per_minute : (chatPricing?.videoWomenEarningRate || 4)}/min
+                              {isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min
                             </span>
                             {session.started_at && (
                               <span className="flex items-center gap-1">
