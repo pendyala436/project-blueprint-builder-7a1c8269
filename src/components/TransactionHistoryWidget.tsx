@@ -59,6 +59,7 @@ export const TransactionHistoryWidget = ({
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [currentBalance, setCurrentBalance] = useState(0);
+  const [openingBalance, setOpeningBalance] = useState(0);
   const [pricingRates, setPricingRates] = useState<{ chatRate: number; videoRate: number; menChatRate: number; menVideoRate: number } | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [userName, setUserName] = useState<string>("");
@@ -400,7 +401,8 @@ export const TransactionHistoryWidget = ({
       // Sort chronologically to calculate running balance
       unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       
-      // Calculate running balance starting from opening balance (carryforward)
+      // ACID: Calculate running balance starting from opening balance (carry forward from previous month)
+      setOpeningBalance(openingBalance);
       let runningBal = openingBalance;
       unified.forEach(tx => {
         if (tx.is_credit) {
@@ -410,8 +412,6 @@ export const TransactionHistoryWidget = ({
         }
         tx.balance_after = runningBal;
       });
-
-      // Keep wallet balance from DB as the header balance (already set above)
 
       // Reverse for display (newest first)
       unified.reverse();
@@ -457,7 +457,16 @@ export const TransactionHistoryWidget = ({
       <tr><td colspan="7"></td></tr>
       <tr><td colspan="5" class="balance-label">Current Balance</td><td colspan="2" class="balance-value right">₹${currentBalance.toLocaleString()}</td></tr>
       <tr><td colspan="7"></td></tr>
-      <tr class="header-row"><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>`;
+      <tr class="header-row"><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>
+      <tr style="background:#ede9fe;font-weight:bold;">
+        <td>${format(startOfMonth(selectedMonth), "dd/MM/yyyy")} 12:00 AM</td>
+        <td>${format(startOfMonth(selectedMonth), "dd/MM/yyyy")}</td>
+        <td>📋 Opening Balance (Carry Forward from ${format(subMonths(selectedMonth, 1), "MMM yyyy")})</td>
+        <td class="mono">CF</td>
+        <td>—</td>
+        <td>—</td>
+        <td class="right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      </tr>`;
 
     transactions.forEach((tx, i) => {
       const rowClass = i % 2 === 0 ? '' : 'even';
@@ -482,7 +491,7 @@ export const TransactionHistoryWidget = ({
     a.download = `Meowmeow_Statement_${format(selectedMonth, "MMM_yyyy")}.xls`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [transactions, selectedMonth, currentBalance, userName]);
+  }, [transactions, selectedMonth, currentBalance, userName, openingBalance]);
 
   const exportToPDF = useCallback(() => {
     if (!transactions.length) return;
@@ -528,7 +537,16 @@ export const TransactionHistoryWidget = ({
       <div><span class="value">₹${currentBalance.toLocaleString()}</span></div>
     </div>
     <table>
-    <tr><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>`;
+    <tr><th>Transaction Date</th><th>Value Date</th><th>Description</th><th>Ref No.</th><th class="right">Withdrawals</th><th class="right">Deposits</th><th class="right">Running Balance</th></tr>
+    <tr style="background:#ede9fe;font-weight:bold;">
+      <td>${format(startOfMonth(selectedMonth), "dd/MM/yyyy")} 12:00 AM</td>
+      <td>${format(startOfMonth(selectedMonth), "dd/MM/yyyy")}</td>
+      <td>📋 Opening Balance (Carry Forward from ${format(subMonths(selectedMonth, 1), "MMM yyyy")})</td>
+      <td class="mono">CF</td>
+      <td>—</td>
+      <td>—</td>
+      <td class="right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+    </tr>`;
     
     transactions.forEach(tx => {
       html += `<tr>
@@ -551,7 +569,7 @@ export const TransactionHistoryWidget = ({
       win.document.close();
       setTimeout(() => win.print(), 500);
     }
-  }, [transactions, selectedMonth, currentBalance, userName]);
+  }, [transactions, selectedMonth, currentBalance, userName, openingBalance]);
 
   if (loading) {
     return (
@@ -668,6 +686,28 @@ export const TransactionHistoryWidget = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Opening Balance Carry Forward Row */}
+                <TableRow className="bg-primary/5 border-b-2 border-primary/20">
+                  <TableCell className="whitespace-nowrap py-2 text-xs font-semibold">
+                    {format(startOfMonth(selectedMonth), "dd/MM/yyyy")}
+                    <div className="text-muted-foreground text-[10px]">12:00 AM</div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap py-2 text-xs">
+                    {format(startOfMonth(selectedMonth), "dd/MM/yyyy")}
+                  </TableCell>
+                  <TableCell className="py-2 text-xs">
+                    <span className="font-bold">📋 Opening Balance (Carry Forward)</span>
+                    <span className="text-muted-foreground text-[10px] block">
+                      Net balance from {format(subMonths(selectedMonth, 1), "MMMM yyyy")}
+                    </span>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap py-2 font-mono text-muted-foreground text-xs">CF</TableCell>
+                  <TableCell className="text-right whitespace-nowrap py-2 text-xs">—</TableCell>
+                  <TableCell className="text-right whitespace-nowrap py-2 text-xs">—</TableCell>
+                  <TableCell className="text-right whitespace-nowrap py-2 font-bold text-xs text-primary">
+                    ₹{openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </TableCell>
+                </TableRow>
                 {transactions.map((tx) => (
                   <TableRow key={tx.id} className="text-xs">
                     <TableCell className="whitespace-nowrap py-2">

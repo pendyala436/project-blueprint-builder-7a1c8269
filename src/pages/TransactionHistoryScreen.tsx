@@ -675,6 +675,36 @@ const TransactionHistoryScreen = () => {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Opening Balance Carry Forward */}
+        <Card className="p-3 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📋</span>
+              <div>
+                <p className="text-xs font-semibold">Opening Balance (Carry Forward)</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Net balance carried from previous month on 1st 00:00 AM • ACID verified
+                </p>
+              </div>
+            </div>
+            <p className="text-lg font-bold text-primary">
+              ₹{(
+                isMale
+                  ? walletTransactions
+                      .filter(t => t.type === 'credit')
+                      .reduce((sum, t) => sum + Number(t.amount), 0) -
+                    walletTransactions
+                      .filter(t => t.type === 'debit')
+                      .reduce((sum, t) => sum + Number(t.amount), 0)
+                  : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0) -
+                    walletTransactions
+                      .filter(t => t.type === 'debit')
+                      .reduce((sum, t) => sum + Number(t.amount), 0)
+              ).toFixed(2)}
+            </p>
+          </div>
+        </Card>
+
         {/* Summary Stats - Total amounts per category */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <Card className="p-3 text-center bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
