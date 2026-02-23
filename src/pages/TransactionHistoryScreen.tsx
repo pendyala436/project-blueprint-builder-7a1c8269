@@ -750,14 +750,20 @@ const TransactionHistoryScreen = () => {
               </Card>
               <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20 col-span-2 sm:col-span-4">
                 <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
-                <p className="text-xs text-muted-foreground">Total Withdrawals</p>
+                <p className="text-xs text-muted-foreground">Total Debits</p>
                 <p className="text-lg font-bold text-red-600">
                   ₹{walletTransactions
                     .filter(t => t.type === 'debit')
                     .reduce((sum, t) => sum + Number(t.amount), 0)
                     .toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
+                <div className="mt-1 space-y-0.5">
+                  {walletTransactions.filter(t => t.type === 'debit').map(t => (
+                    <p key={t.id} className="text-[10px] text-muted-foreground truncate">
+                      {t.description || 'Debit'} — ₹{Number(t.amount).toLocaleString()}
+                    </p>
+                  ))}
+                </div>
               </Card>
             </>
           )}
