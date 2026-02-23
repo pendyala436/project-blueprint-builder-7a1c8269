@@ -134,25 +134,57 @@ export const TransactionHistoryWidget = ({
         .maybeSingle();
 
       if (wallet) {
+        const walletBalance = Number(wallet.balance) || 0;
+
         // For men: use wallet balance directly. For women: calculate from earnings - debits
         if (userGender === 'male') {
-          setCurrentBalance(Number(wallet.balance) || 0);
+          setCurrentBalance(walletBalance);
         }
 
-        // Calculate opening balance: all prior credits - all prior debits from wallet_transactions
-        const { data: priorTxData } = await supabase
+        // Fetch this month's transactions first
+        const { data: txData } = await supabase
+          .from("wallet_transactions")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+          .order("created_at", { ascending: true });
+
+        // Fetch transactions AFTER this month (for non-current months) to derive opening balance
+        const { data: afterTxData } = await supabase
           .from("wallet_transactions")
           .select("type, amount")
           .eq("user_id", userId)
-          .lt("created_at", monthStart);
+          .gt("created_at", monthEnd);
 
-        priorTxData?.forEach(tx => {
-          if (tx.type === 'credit') openingBalance += Number(tx.amount);
-          else openingBalance -= Number(tx.amount);
-        });
+        if (userGender === 'male') {
+          // For men: anchor to wallet.balance and work backwards
+          // wallet.balance = openingBalance + thisMonthCredits - thisMonthDebits - afterCredits + afterDebits
+          // So: openingBalance = wallet.balance - thisMonthCredits + thisMonthDebits + afterCredits - afterDebits
+          let thisMonthCredits = 0, thisMonthDebits = 0;
+          txData?.forEach(tx => {
+            if (tx.type === 'credit') thisMonthCredits += Number(tx.amount);
+            else thisMonthDebits += Number(tx.amount);
+          });
+          let afterCredits = 0, afterDebits = 0;
+          afterTxData?.forEach(tx => {
+            if (tx.type === 'credit') afterCredits += Number(tx.amount);
+            else afterDebits += Number(tx.amount);
+          });
+          openingBalance = walletBalance - thisMonthCredits + thisMonthDebits + afterCredits - afterDebits;
+        } else {
+          // For women: calculate from earnings - debits (prior to month)
+          const { data: priorTxData } = await supabase
+            .from("wallet_transactions")
+            .select("type, amount")
+            .eq("user_id", userId)
+            .lt("created_at", monthStart);
 
-        // For women: add prior earnings (these are separate from wallet_transactions)
-        if (userGender === 'female') {
+          priorTxData?.forEach(tx => {
+            if (tx.type === 'credit') openingBalance += Number(tx.amount);
+            else openingBalance -= Number(tx.amount);
+          });
+
           const { data: priorEarnings } = await supabase
             .from("women_earnings")
             .select("amount")
@@ -163,14 +195,6 @@ export const TransactionHistoryWidget = ({
             openingBalance += Number(e.amount);
           });
         }
-
-        const { data: txData } = await supabase
-          .from("wallet_transactions")
-          .select("*")
-          .eq("user_id", userId)
-          .gte("created_at", monthStart)
-          .lte("created_at", monthEnd)
-          .order("created_at", { ascending: true });
 
         txData?.forEach(tx => {
           const desc = tx.description?.toLowerCase() || '';
