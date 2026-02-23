@@ -257,7 +257,7 @@ export const TransactionHistoryWidget = ({
 
       // For women: Get ALL earnings this month and calculate correct balance
       if (userGender === 'female') {
-        const [{ data: earnings }, { data: allEarnings }, { data: allDebits }] = await Promise.all([
+        const [{ data: earnings }, { data: allEarnings }, { data: allDebits }, { data: chatSessions }] = await Promise.all([
           supabase
             .from("women_earnings")
             .select("*")
@@ -273,7 +273,14 @@ export const TransactionHistoryWidget = ({
             .from("wallet_transactions")
             .select("amount")
             .eq("user_id", userId)
-            .eq("type", "debit")
+            .eq("type", "debit"),
+          supabase
+            .from("active_chat_sessions")
+            .select("*")
+            .eq("woman_user_id", userId)
+            .gte("started_at", monthStart)
+            .lte("started_at", monthEnd)
+            .order("started_at", { ascending: false })
         ]);
 
         // Set correct balance for women: total earnings - total debits
@@ -281,12 +288,17 @@ export const TransactionHistoryWidget = ({
         const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
         setCurrentBalance(totalEarnings - totalDebits);
 
+        // Track earning IDs to avoid duplicates
+        const earningSessionIds = new Set<string>();
+
         earnings?.forEach(e => {
           let description = e.description || `${e.earning_type} earnings`;
           if (e.earning_type === 'chat') description = `💬 Chat earnings`;
           else if (e.earning_type === 'video_call') description = `📹 Video call earnings`;
           else if (e.earning_type === 'gift') description = `🎁 Gift earnings`;
           else if (e.earning_type === 'private_call') description = `📞 Private call earnings`;
+
+          if (e.chat_session_id) earningSessionIds.add(e.chat_session_id);
 
           unified.push({
             id: `earning-${e.id}`,
@@ -297,6 +309,106 @@ export const TransactionHistoryWidget = ({
             status: 'completed',
             is_credit: true,
             reference_id: e.id.slice(0, 8).toUpperCase(),
+          });
+        });
+
+        // Get man profile names for chat sessions
+        const manIds = [...new Set(chatSessions?.map(s => s.man_user_id) || [])];
+        let manProfileMap = new Map<string, string>();
+        if (manIds.length > 0) {
+          const { data: manProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", manIds);
+          manProfileMap = new Map(manProfiles?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
+        }
+
+        // Add chat sessions that don't have corresponding earnings
+        chatSessions?.forEach(session => {
+          // Skip if already covered by an earning entry
+          if (earningSessionIds.has(session.id) || earningSessionIds.has(session.chat_id)) return;
+          
+          // Check if there's already a matching earning by timestamp proximity
+          const sessionTime = new Date(session.started_at).getTime();
+          const hasMatchingEarning = earnings?.some(e => {
+            const earningTime = new Date(e.created_at).getTime();
+            return Math.abs(earningTime - sessionTime) < 120000; // within 2 minutes
+          });
+          if (hasMatchingEarning) return;
+
+          const manName = manProfileMap.get(session.man_user_id) || 'Unknown';
+          const startTime = new Date(session.started_at);
+          const endTime = session.ended_at ? new Date(session.ended_at) : startTime;
+          const durationSeconds = Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 1000));
+          
+          // Calculate earning using per-second precision from admin rate
+          const ratePerMin = pricingRates?.chatRate || Number(session.rate_per_minute) / 2 || 2;
+          const calculatedAmount = (durationSeconds / 60) * ratePerMin;
+
+          unified.push({
+            id: `session-${session.id}`,
+            type: 'chat',
+            amount: calculatedAmount,
+            description: `💬 Chat with ${manName} (${durationSeconds}s @ ₹${ratePerMin}/min)`,
+            created_at: session.started_at,
+            status: session.status,
+            is_credit: true,
+            reference_id: session.id.slice(0, 8).toUpperCase(),
+            duration: durationSeconds,
+            rate: ratePerMin,
+          });
+        });
+      }
+
+      // For men: include chat sessions from active_chat_sessions
+      if (userGender === 'male') {
+        const { data: chatSessions } = await supabase
+          .from("active_chat_sessions")
+          .select("*")
+          .eq("man_user_id", userId)
+          .gte("started_at", monthStart)
+          .lte("started_at", monthEnd)
+          .order("started_at", { ascending: false });
+
+        const womanIds = [...new Set(chatSessions?.map(s => s.woman_user_id) || [])];
+        let womanProfileMap = new Map<string, string>();
+        if (womanIds.length > 0) {
+          const { data: womanProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", womanIds);
+          womanProfileMap = new Map(womanProfiles?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
+        }
+
+        chatSessions?.forEach(session => {
+          // Skip if already covered by a wallet_transaction
+          const sessionTime = new Date(session.started_at).getTime();
+          const hasMatchingTx = unified.some(u => {
+            if (u.type !== 'chat') return false;
+            const txTime = new Date(u.created_at).getTime();
+            return Math.abs(txTime - sessionTime) < 120000;
+          });
+          if (hasMatchingTx) return;
+
+          const womanName = womanProfileMap.get(session.woman_user_id) || 'Unknown';
+          const startTime = new Date(session.started_at);
+          const endTime = session.ended_at ? new Date(session.ended_at) : startTime;
+          const durationSeconds = Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 1000));
+          
+          const ratePerMin = pricingRates?.menChatRate || Number(session.rate_per_minute) || 4;
+          const calculatedAmount = (durationSeconds / 60) * ratePerMin;
+
+          unified.push({
+            id: `session-${session.id}`,
+            type: 'chat',
+            amount: calculatedAmount,
+            description: `💬 Chat with ${womanName} (${durationSeconds}s @ ₹${ratePerMin}/min)`,
+            created_at: session.started_at,
+            status: session.status,
+            is_credit: false,
+            reference_id: session.id.slice(0, 8).toUpperCase(),
+            duration: durationSeconds,
+            rate: ratePerMin,
           });
         });
       }
