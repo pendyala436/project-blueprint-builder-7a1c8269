@@ -1533,8 +1533,8 @@ const DashboardScreen = () => {
                   </p>
                 </div>
               </div>
-              {/* Action Buttons - centered */}
-              <div className="flex flex-wrap justify-center gap-3 w-full">
+              {/* Action Buttons - stacked vertically */}
+              <div className="flex flex-col gap-3 w-full">
                 <RandomChatButton 
                   userGender="male"
                   userLanguage={userLanguage}
@@ -1543,21 +1543,24 @@ const DashboardScreen = () => {
                   variant="aurora"
                   size="lg"
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
+                  className="w-full"
                 />
                 {/* Video Call Button - India Only */}
                 {userCountry === "IN" && (
-                  <VideoCallMiniButton
-                    currentUserId={currentUserId}
-                    userLanguage={userLanguage}
-                    walletBalance={walletBalance}
-                    onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                  />
+                  <div className="w-full">
+                    <VideoCallMiniButton
+                      currentUserId={currentUserId}
+                      userLanguage={userLanguage}
+                      walletBalance={walletBalance}
+                      onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                    />
+                  </div>
                 )}
                 <Button 
                   variant="aurora" 
                   size="lg"
                   onClick={() => setRechargeDialogOpen(true)}
-                  className="gap-2"
+                  className="gap-2 w-full"
                 >
                   <CreditCard className="w-5 h-5" />
                   {t('rechargeWallet', 'Recharge')}
