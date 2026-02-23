@@ -140,14 +140,17 @@ const TransactionHistoryScreen = () => {
 
   // Real-time subscription for transactions and sessions
   useEffect(() => {
+    if (!userId) return;
     const channel = supabase
-      .channel('transaction-updates')
+      .channel(`transaction-updates-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wallet_transactions' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'women_earnings' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_calls' }, () => { loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => { loadData(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_pricing' }, () => { loadData(); })
       .subscribe();
 
@@ -434,15 +437,6 @@ const TransactionHistoryScreen = () => {
       } else {
         setPrivateCalls([]);
       }
-
-      // Build unified transaction list
-      buildUnifiedTransactions(
-        walletTransactions,
-        chatSessions,
-        videoCallSessions,
-        giftTransactions,
-        gender === "male"
-      );
 
     } catch (error) {
       console.error("Error loading transaction data:", error);
