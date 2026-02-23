@@ -237,22 +237,7 @@ export const TransactionHistoryWidget = ({
             }
           }
           // For women receiving gifts: already in women_earnings, skip
-          // For men receiving gifts: add as credit if not already in wallet_transactions
-          if (!isSender && userGender === 'male') {
-            if (!unified.some(u => u.id === g.id || u.id === `gift-${g.id}`)) {
-              unified.push({
-                id: `gift-${g.id}`,
-                type: 'gift',
-                amount: Number(g.price_paid),
-                description: `${giftInfo?.emoji || '🎁'} Received ${giftInfo?.name || 'Gift'} from ${partnerName}`,
-                created_at: g.created_at,
-                status: g.status,
-                counterparty: partnerName,
-                is_credit: true,
-                reference_id: g.id.slice(0, 8).toUpperCase(),
-              });
-            }
-          }
+          // For men: gift debits are already in wallet_transactions, no extra entries needed
         });
       }
 
