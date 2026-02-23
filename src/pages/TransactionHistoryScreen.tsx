@@ -487,7 +487,16 @@ const TransactionHistoryScreen = () => {
     const unified: UnifiedTransaction[] = [];
     const giftTxIds = new Set(gifts.map(g => g.id));
 
-    // Add wallet transactions — skip gift-related ones to avoid duplicates
+    // For men: wallet_transactions is the SINGLE source of truth
+    // All debits and credits (including gifts) are already recorded there
+    // For women: wallet_transactions only has debits, earnings come from women_earnings
+
+    // Build a gift lookup map for enriching descriptions
+    const giftLookup = new Map<string, GiftTransaction>();
+    gifts.forEach(g => {
+      giftLookup.set(g.id, g);
+    });
+
     walletTx.forEach(tx => {
       const desc = tx.description?.toLowerCase() || '';
       const isRecharge = tx.type === 'credit' && desc.includes('recharge');
@@ -496,22 +505,32 @@ const TransactionHistoryScreen = () => {
       const isChat = desc.includes('chat');
       const isVideo = desc.includes('video');
 
-      // Skip gift wallet entries — they'll come from gift_transactions
-      if (isGift) return;
-
       let type: UnifiedTransaction['type'] = 'other';
       let icon: UnifiedTransaction['icon'] = 'arrow';
 
       if (isRecharge) { type = 'recharge'; icon = 'wallet'; }
       else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
+      else if (isGift) { type = 'gift'; icon = 'gift'; }
       else if (isChat) { type = 'chat'; icon = 'chat'; }
       else if (isVideo) { type = 'video'; icon = 'video'; }
+
+      // Try to enrich gift descriptions with gift name/emoji
+      let description = tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit');
+      if (isGift) {
+        // Find matching gift transaction by timestamp proximity
+        const matchingGift = gifts.find(g => 
+          Math.abs(new Date(g.created_at).getTime() - new Date(tx.created_at).getTime()) < 3000
+        );
+        if (matchingGift) {
+          description = `${matchingGift.gift_emoji} ${matchingGift.is_sender ? 'Sent' : 'Received'} ${matchingGift.gift_name} ${matchingGift.is_sender ? 'to' : 'from'} ${matchingGift.partner_name}`;
+        }
+      }
 
       unified.push({
         id: tx.id,
         type,
         amount: Number(tx.amount),
-        description: tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit'),
+        description,
         created_at: tx.created_at,
         status: tx.status,
         balance_after: tx.balance_after,
@@ -521,24 +540,13 @@ const TransactionHistoryScreen = () => {
       });
     });
 
-    // Add gift transactions (single source — no duplicates)
-    gifts.forEach(g => {
-      // For women receiving gifts: skip here since earnings are tracked in women_earnings
-      if (!g.is_sender && !isMale) return;
-      
-      unified.push({
-        id: `gift-${g.id}`,
-        type: 'gift',
-        amount: g.is_sender ? Number(g.price_paid) : Number(g.price_paid) * 0.5,
-        description: `${g.gift_emoji} ${g.gift_name} ${g.is_sender ? 'sent to' : 'received from'} ${g.partner_name}`,
-        created_at: g.created_at,
-        status: g.status,
-        counterparty: g.partner_name,
-        is_credit: !g.is_sender,
-        icon: 'gift',
-        details: g.message || undefined
+    // For women only: add gift earnings from gift_transactions (not in wallet_transactions)
+    if (!isMale) {
+      gifts.forEach(g => {
+        // Skip — women's gift earnings are tracked in women_earnings, not here
+        return;
       });
-    });
+    }
 
     // Sort by date descending
     unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
