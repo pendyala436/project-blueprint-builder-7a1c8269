@@ -323,18 +323,10 @@ export const TransactionHistoryWidget = ({
           manProfileMap = new Map(manProfiles?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
         }
 
-        // Add chat sessions that don't have corresponding earnings
+        // Add ALL chat sessions to statement — always include regardless of earnings
         chatSessions?.forEach(session => {
-          // Skip if already covered by an earning entry
+          // Only skip if there's a direct match by session ID in earnings
           if (earningSessionIds.has(session.id) || earningSessionIds.has(session.chat_id)) return;
-          
-          // Check if there's already a matching earning by timestamp proximity
-          const sessionTime = new Date(session.started_at).getTime();
-          const hasMatchingEarning = earnings?.some(e => {
-            const earningTime = new Date(e.created_at).getTime();
-            return Math.abs(earningTime - sessionTime) < 120000; // within 2 minutes
-          });
-          if (hasMatchingEarning) return;
 
           const manName = manProfileMap.get(session.man_user_id) || 'Unknown';
           const startTime = new Date(session.started_at);
@@ -380,16 +372,8 @@ export const TransactionHistoryWidget = ({
           womanProfileMap = new Map(womanProfiles?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
         }
 
+        // Add ALL chat sessions to statement for men — always include
         chatSessions?.forEach(session => {
-          // Skip if already covered by a wallet_transaction
-          const sessionTime = new Date(session.started_at).getTime();
-          const hasMatchingTx = unified.some(u => {
-            if (u.type !== 'chat') return false;
-            const txTime = new Date(u.created_at).getTime();
-            return Math.abs(txTime - sessionTime) < 120000;
-          });
-          if (hasMatchingTx) return;
-
           const womanName = womanProfileMap.get(session.woman_user_id) || 'Unknown';
           const startTime = new Date(session.started_at);
           const endTime = session.ended_at ? new Date(session.ended_at) : startTime;
