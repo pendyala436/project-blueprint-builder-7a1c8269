@@ -717,7 +717,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {chatSessions.length} sessions • {isMale ? 'Spend' : 'Earn'}: ₹{chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)}/min (₹{((chatPricing ? (isMale ? chatPricing.ratePerMinute : chatPricing.womenEarningRate) : (isMale ? 4 : 2)) / 60).toFixed(4)}/sec)
+              {chatSessions.length} sessions • from transaction records
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
@@ -730,7 +730,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {videoCallSessions.length + privateCalls.length} calls • {isMale ? 'Spend' : 'Earn'}: ₹{chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)}/min (₹{((chatPricing ? (isMale ? chatPricing.videoRatePerMinute : chatPricing.videoWomenEarningRate) : (isMale ? 8 : 4)) / 60).toFixed(4)}/sec)
+              {videoCallSessions.length + privateCalls.length} calls • from transaction records
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
@@ -871,9 +871,11 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-destructive" : "text-green-600"
                             )}>
                             {(() => {
-                              const ratePerMin = isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2);
+                              const sessionRate = Number(session.rate_per_minute) || 0;
                               const totalSeconds = Math.round(Number(session.total_minutes) * 60);
-                              const amount = (totalSeconds / 60) * ratePerMin;
+                              const amount = isMale 
+                                ? (totalSeconds / 60) * sessionRate
+                                : Number(session.total_earned) || 0;
                               return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
                             })()}
                             </span>
@@ -885,7 +887,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)}/min • ₹{((isMale ? (chatPricing?.ratePerMinute || 4) : (chatPricing?.womenEarningRate || 2)) / 60).toFixed(4)}/sec
+                              ₹{Number(session.rate_per_minute) || 0}/min (session rate)
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -944,9 +946,11 @@ const TransactionHistoryScreen = () => {
                               isMale ? "text-purple-600" : "text-pink-600"
                             )}>
                             {(() => {
-                              const ratePerMin = isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4);
+                              const sessionRate = Number(session.rate_per_minute) || 0;
                               const totalSeconds = Math.round(Number(session.total_minutes) * 60);
-                              const amount = (totalSeconds / 60) * ratePerMin;
+                              const amount = isMale
+                                ? (totalSeconds / 60) * sessionRate
+                                : Number(session.total_earned) || 0;
                               return `${isMale ? "-" : "+"}₹${amount.toFixed(2)}`;
                             })()}
                             </span>
@@ -958,7 +962,7 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)}/min • ₹{((isMale ? (chatPricing?.videoRatePerMinute || 8) : (chatPricing?.videoWomenEarningRate || 4)) / 60).toFixed(4)}/sec
+                              ₹{Number(session.rate_per_minute) || 0}/min (session rate)
                             </span>
                             {session.started_at && (
                               <span className="flex items-center gap-1">
