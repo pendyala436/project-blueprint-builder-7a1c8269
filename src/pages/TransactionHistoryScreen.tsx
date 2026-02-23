@@ -684,13 +684,7 @@ const TransactionHistoryScreen = () => {
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Balance</p>
               <p className="font-semibold text-primary">
-                ₹{(
-                  (isMale 
-                    ? currentBalance 
-                    : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0) - 
-                      walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
-                  )
-                ).toFixed(2)}
+                ₹{currentBalance.toFixed(2)}
               </p>
             </div>
             <Button
