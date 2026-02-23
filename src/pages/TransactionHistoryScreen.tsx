@@ -206,9 +206,11 @@ const TransactionHistoryScreen = () => {
         .maybeSingle();
 
       if (wallet) {
+        const walletBalance = Number(wallet.balance) || 0;
+
         // For men: use wallet balance. For women: calculate from earnings - debits
         if (gender === 'male') {
-          setCurrentBalance(Number(wallet.balance) || 0);
+          setCurrentBalance(walletBalance);
         } else {
           const [{ data: allEarnings }, { data: allDebits }] = await Promise.all([
             supabase.from("women_earnings").select("amount").eq("user_id", user.id),
@@ -219,25 +221,44 @@ const TransactionHistoryScreen = () => {
           setCurrentBalance(totalEarnings - totalDebits);
         }
 
-        // Calculate opening balance: all transactions BEFORE current month start
+        // Fetch ALL wallet transactions (no limit)
+        const { data: txData } = await supabase
+          .from("wallet_transactions")
+          .select("*")
+          .eq("wallet_id", wallet.id)
+          .order("created_at", { ascending: false });
+
+        // Calculate opening balance anchored to wallet.balance for men
         const currentMonthStart = new Date();
         currentMonthStart.setDate(1);
         currentMonthStart.setHours(0, 0, 0, 0);
         const monthStartISO = currentMonthStart.toISOString();
 
         let calcOpeningBal = 0;
-        const { data: priorWalletTx } = await supabase
-          .from("wallet_transactions")
-          .select("type, amount")
-          .eq("user_id", user.id)
-          .lt("created_at", monthStartISO);
 
-        priorWalletTx?.forEach(tx => {
-          if (tx.type === 'credit') calcOpeningBal += Number(tx.amount);
-          else calcOpeningBal -= Number(tx.amount);
-        });
+        if (gender === 'male') {
+          // Anchor to wallet.balance: openingBal = walletBalance - thisMonthCredits + thisMonthDebits
+          let thisMonthCredits = 0, thisMonthDebits = 0;
+          txData?.forEach(tx => {
+            if (new Date(tx.created_at) >= currentMonthStart) {
+              if (tx.type === 'credit') thisMonthCredits += Number(tx.amount);
+              else thisMonthDebits += Number(tx.amount);
+            }
+          });
+          calcOpeningBal = walletBalance - thisMonthCredits + thisMonthDebits;
+        } else {
+          // For women: sum prior wallet_transactions + prior earnings
+          const { data: priorWalletTx } = await supabase
+            .from("wallet_transactions")
+            .select("type, amount")
+            .eq("user_id", user.id)
+            .lt("created_at", monthStartISO);
 
-        if (gender === 'female') {
+          priorWalletTx?.forEach(tx => {
+            if (tx.type === 'credit') calcOpeningBal += Number(tx.amount);
+            else calcOpeningBal -= Number(tx.amount);
+          });
+
           const { data: priorEarningsForOpening } = await supabase
             .from("women_earnings")
             .select("amount")
@@ -250,39 +271,48 @@ const TransactionHistoryScreen = () => {
 
         setOpeningBalance(calcOpeningBal);
 
-        const { data: txData } = await supabase
-          .from("wallet_transactions")
-          .select("*")
-          .eq("wallet_id", wallet.id)
-          .order("created_at", { ascending: false })
-          .limit(200);
-
-        // Recalculate running balance from oldest to newest
+        // Calculate running balance anchored to wallet.balance for men
         const sortedTx = [...(txData || [])].sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
         
-        let calculatedBalance = 0;
-        // For women: start running balance from earnings before first wallet tx
-        if (gender === 'female' && sortedTx.length > 0) {
-          const firstTxDate = sortedTx[0].created_at;
-          const { data: priorEarnings } = await supabase
-            .from("women_earnings")
-            .select("amount")
-            .eq("user_id", user.id)
-            .lt("created_at", firstTxDate);
-          calculatedBalance = priorEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-        }
-        
+        // For men: work backwards from wallet.balance to assign running balances
+        // For women: work forwards from earnings
         const balanceMap = new Map<string, number>();
-        sortedTx.forEach(tx => {
-          if (tx.type === 'credit') {
-            calculatedBalance += Number(tx.amount);
-          } else {
-            calculatedBalance -= Number(tx.amount);
+        
+        if (gender === 'male') {
+          // Reverse iterate: start from walletBalance, subtract credits / add debits going backwards
+          let bal = walletBalance;
+          for (let i = sortedTx.length - 1; i >= 0; i--) {
+            const tx = sortedTx[i];
+            balanceMap.set(tx.id, bal);
+            // Undo this transaction to get balance before it
+            if (tx.type === 'credit') {
+              bal -= Number(tx.amount);
+            } else {
+              bal += Number(tx.amount);
+            }
           }
-          balanceMap.set(tx.id, calculatedBalance);
-        });
+        } else {
+          let calculatedBalance = 0;
+          if (sortedTx.length > 0) {
+            const firstTxDate = sortedTx[0].created_at;
+            const { data: priorEarnings } = await supabase
+              .from("women_earnings")
+              .select("amount")
+              .eq("user_id", user.id)
+              .lt("created_at", firstTxDate);
+            calculatedBalance = priorEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+          }
+          sortedTx.forEach(tx => {
+            if (tx.type === 'credit') {
+              calculatedBalance += Number(tx.amount);
+            } else {
+              calculatedBalance -= Number(tx.amount);
+            }
+            balanceMap.set(tx.id, calculatedBalance);
+          });
+        }
 
         const enrichedTx = (txData || []).map(tx => ({
           ...tx,
