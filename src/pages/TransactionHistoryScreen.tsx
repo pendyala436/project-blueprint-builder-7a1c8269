@@ -681,23 +681,28 @@ const TransactionHistoryScreen = () => {
           </Card>
           {isMale ? (
             <>
-              <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+              <Card className="p-3 text-center bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20 col-span-2 sm:col-span-4">
                 <Wallet className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
-                <p className="text-xs text-muted-foreground">Total Recharge</p>
-                <p className="text-lg font-bold text-emerald-600">
+                <p className="text-xs text-muted-foreground">Total Recharges</p>
+                <p className="text-xl font-bold text-emerald-600">
                   ₹{walletTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + Number(t.amount), 0)
                     .toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
                 <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'credit').length} deposits</p>
               </Card>
-              <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20">
+              <Card className="p-3 text-center bg-gradient-to-br from-red-500/5 to-red-500/10 border-red-500/20 col-span-2 sm:col-span-4">
                 <ArrowUpRight className="h-4 w-4 mx-auto mb-1 text-red-600" />
                 <p className="text-xs text-muted-foreground">Total Spending</p>
-                <p className="text-lg font-bold text-red-600">
-                  ₹{walletTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + Number(t.amount), 0)
-                    .toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                <p className="text-xl font-bold text-red-600">
+                  ₹{(
+                    chatSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
+                    videoCallSessions.reduce((sum, s) => sum + Number(s.total_earned), 0) +
+                    giftTransactions.reduce((sum, g) => sum + Number(g.price_paid), 0)
+                  ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
-                <p className="text-[10px] text-muted-foreground">{walletTransactions.filter(t => t.type === 'debit').length} transactions</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {chatSessions.length + videoCallSessions.length + giftTransactions.length} transactions
+                </p>
               </Card>
             </>
           ) : (
