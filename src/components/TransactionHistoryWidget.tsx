@@ -464,7 +464,7 @@ export const TransactionHistoryWidget = ({
         <td>📋 Opening Balance (Carry Forward from ${format(subMonths(selectedMonth, 1), "MMM yyyy")})</td>
         <td class="mono">CF</td>
         <td>—</td>
-        <td>—</td>
+        <td class="green right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
         <td class="right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
       </tr>`;
 
@@ -480,7 +480,21 @@ export const TransactionHistoryWidget = ({
         <td class="right">${tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}</td>
       </tr>`;
     });
+    const excelTotalDeposits = openingBalance + transactions.filter(t => t.is_credit).reduce((s, t) => s + t.amount, 0);
+    const excelTotalWithdrawals = transactions.filter(t => !t.is_credit).reduce((s, t) => s + t.amount, 0);
+    const excelClosing = excelTotalDeposits - excelTotalWithdrawals;
     html += `<tr><td colspan="7"></td></tr>
+    <tr style="background:#f1f5f9;font-weight:bold;">
+      <td colspan="4" style="text-align:right;">TOTALS</td>
+      <td class="right red">₹${excelTotalWithdrawals.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      <td class="right green">₹${excelTotalDeposits.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      <td class="right">₹${excelClosing.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+    </tr>
+    <tr style="background:#f0fdf4;">
+      <td colspan="4" style="text-align:right;font-weight:bold;">Closing Balance (Deposits − Withdrawals)</td>
+      <td colspan="3" class="right" style="font-size:14pt;font-weight:bold;color:#7c3aed;">₹${excelClosing.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+    </tr>
+    <tr><td colspan="7"></td></tr>
     <tr><td colspan="7" class="footer">This is a computer-generated statement from Meow-meow. No signature required.</td></tr>
     </table></body></html>`;
 
@@ -544,7 +558,7 @@ export const TransactionHistoryWidget = ({
       <td>📋 Opening Balance (Carry Forward from ${format(subMonths(selectedMonth, 1), "MMM yyyy")})</td>
       <td class="mono">CF</td>
       <td>—</td>
-      <td>—</td>
+      <td class="green right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
       <td class="right">₹${openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
     </tr>`;
     
@@ -559,7 +573,20 @@ export const TransactionHistoryWidget = ({
         <td class="right">${tx.balance_after !== undefined ? `₹${tx.balance_after.toLocaleString()}` : '—'}</td>
       </tr>`;
     });
-    html += `</table>
+    const pdfTotalDeposits = openingBalance + transactions.filter(t => t.is_credit).reduce((s, t) => s + t.amount, 0);
+    const pdfTotalWithdrawals = transactions.filter(t => !t.is_credit).reduce((s, t) => s + t.amount, 0);
+    const pdfClosing = pdfTotalDeposits - pdfTotalWithdrawals;
+    html += `<tr style="background:#f1f5f9;font-weight:bold;">
+      <td colspan="4" style="text-align:right;">TOTALS</td>
+      <td class="right red">₹${pdfTotalWithdrawals.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      <td class="right green">₹${pdfTotalDeposits.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      <td class="right">₹${pdfClosing.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+    </tr>
+    <tr style="background:#f0fdf4;">
+      <td colspan="4" style="text-align:right;font-weight:bold;">Closing Balance (Deposits − Withdrawals)</td>
+      <td colspan="3" class="right" style="font-size:14px;font-weight:bold;color:#7c3aed;">₹${pdfClosing.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+    </tr>
+    </table>
     <div class="footer">This is a computer-generated statement from Meow-meow. No signature required.</div>
     </body></html>`;
     
@@ -686,7 +713,7 @@ export const TransactionHistoryWidget = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Opening Balance Carry Forward Row */}
+                {/* Opening Balance Carry Forward Row - shown as a DEPOSIT */}
                 <TableRow className="bg-primary/5 border-b-2 border-primary/20">
                   <TableCell className="whitespace-nowrap py-2 text-xs font-semibold">
                     {format(startOfMonth(selectedMonth), "dd/MM/yyyy")}
@@ -703,7 +730,9 @@ export const TransactionHistoryWidget = ({
                   </TableCell>
                   <TableCell className="whitespace-nowrap py-2 font-mono text-muted-foreground text-xs">CF</TableCell>
                   <TableCell className="text-right whitespace-nowrap py-2 text-xs">—</TableCell>
-                  <TableCell className="text-right whitespace-nowrap py-2 text-xs">—</TableCell>
+                  <TableCell className="text-right whitespace-nowrap py-2 text-xs font-semibold text-green-600">
+                    ₹{openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap py-2 font-bold text-xs text-primary">
                     ₹{openingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </TableCell>
@@ -747,6 +776,34 @@ export const TransactionHistoryWidget = ({
                     </TableCell>
                   </TableRow>
                 ))}
+                {/* Summary Row: Total Deposits, Total Withdrawals, Closing Balance */}
+                {(() => {
+                  const totalDeposits = openingBalance + transactions.filter(t => t.is_credit).reduce((s, t) => s + t.amount, 0);
+                  const totalWithdrawals = transactions.filter(t => !t.is_credit).reduce((s, t) => s + t.amount, 0);
+                  const closingBalance = totalDeposits - totalWithdrawals;
+                  return (
+                    <>
+                      <TableRow className="bg-muted/80 border-t-2 border-primary/30">
+                        <TableCell colSpan={4} className="py-2 text-xs font-bold text-right">TOTALS</TableCell>
+                        <TableCell className="text-right whitespace-nowrap py-2 text-xs font-bold text-destructive">
+                          ₹{totalWithdrawals.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap py-2 text-xs font-bold text-green-600">
+                          ₹{totalDeposits.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap py-2 text-xs font-bold text-primary">
+                          ₹{closingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="bg-green-50 dark:bg-green-950/20">
+                        <TableCell colSpan={4} className="py-2 text-xs font-bold text-right">Closing Balance (Deposits − Withdrawals)</TableCell>
+                        <TableCell colSpan={3} className="text-right whitespace-nowrap py-2 text-sm font-bold text-primary">
+                          ₹{closingBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  );
+                })()}
               </TableBody>
             </Table>
           </ScrollArea>
