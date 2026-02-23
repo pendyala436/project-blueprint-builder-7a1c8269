@@ -133,6 +133,7 @@ const TransactionHistoryScreen = () => {
   const [privateCalls, setPrivateCalls] = useState<any[]>([]);
   const [chatPricing, setChatPricing] = useState<{ ratePerMinute: number; videoRatePerMinute: number; womenEarningRate: number; videoWomenEarningRate: number } | null>(null);
   const [activeTab, setActiveTab] = useState("chats");
+  const [openingBalance, setOpeningBalance] = useState<number>(0);
 
   useEffect(() => {
     loadData();
@@ -216,7 +217,38 @@ const TransactionHistoryScreen = () => {
           const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
           setCurrentBalance(totalEarnings - totalDebits);
         }
-        
+
+        // Calculate opening balance: all transactions BEFORE current month start
+        const currentMonthStart = new Date();
+        currentMonthStart.setDate(1);
+        currentMonthStart.setHours(0, 0, 0, 0);
+        const monthStartISO = currentMonthStart.toISOString();
+
+        let calcOpeningBal = 0;
+        const { data: priorWalletTx } = await supabase
+          .from("wallet_transactions")
+          .select("type, amount")
+          .eq("user_id", user.id)
+          .lt("created_at", monthStartISO);
+
+        priorWalletTx?.forEach(tx => {
+          if (tx.type === 'credit') calcOpeningBal += Number(tx.amount);
+          else calcOpeningBal -= Number(tx.amount);
+        });
+
+        if (gender === 'female') {
+          const { data: priorEarningsForOpening } = await supabase
+            .from("women_earnings")
+            .select("amount")
+            .eq("user_id", user.id)
+            .lt("created_at", monthStartISO);
+          priorEarningsForOpening?.forEach(e => {
+            calcOpeningBal += Number(e.amount);
+          });
+        }
+
+        setOpeningBalance(calcOpeningBal);
+
         const { data: txData } = await supabase
           .from("wallet_transactions")
           .select("*")
@@ -688,19 +720,7 @@ const TransactionHistoryScreen = () => {
               </div>
             </div>
             <p className="text-lg font-bold text-primary">
-              ₹{(
-                isMale
-                  ? walletTransactions
-                      .filter(t => t.type === 'credit')
-                      .reduce((sum, t) => sum + Number(t.amount), 0) -
-                    walletTransactions
-                      .filter(t => t.type === 'debit')
-                      .reduce((sum, t) => sum + Number(t.amount), 0)
-                  : womenEarnings.reduce((sum, e) => sum + Number(e.amount), 0) -
-                    walletTransactions
-                      .filter(t => t.type === 'debit')
-                      .reduce((sum, t) => sum + Number(t.amount), 0)
-              ).toFixed(2)}
+              ₹{openingBalance.toFixed(2)}
             </p>
           </div>
         </Card>
