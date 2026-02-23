@@ -89,10 +89,10 @@ export const TransactionHistoryWidget = ({
     
     if (data) {
       setPricingRates({
-        chatRate: Number(data.women_earning_rate) || 2,
-        videoRate: Number(data.video_women_earning_rate) || 4,
-        menChatRate: Number(data.rate_per_minute) || 4,
-        menVideoRate: Number(data.video_rate_per_minute) || 8,
+        chatRate: Number(data.women_earning_rate) || 0,
+        videoRate: Number(data.video_women_earning_rate) || 0,
+        menChatRate: Number(data.rate_per_minute) || 0,
+        menVideoRate: Number(data.video_rate_per_minute) || 0,
       });
     }
   };

@@ -174,10 +174,10 @@ const TransactionHistoryScreen = () => {
 
       if (pricingData) {
         setChatPricing({
-          ratePerMinute: Number(pricingData.rate_per_minute) || 4,
-          videoRatePerMinute: Number(pricingData.video_rate_per_minute) || 8,
-          womenEarningRate: Number(pricingData.women_earning_rate) || 2,
-          videoWomenEarningRate: Number(pricingData.video_women_earning_rate) || 4,
+          ratePerMinute: Number(pricingData.rate_per_minute) || 0,
+          videoRatePerMinute: Number(pricingData.video_rate_per_minute) || 0,
+          womenEarningRate: Number(pricingData.women_earning_rate) || 0,
+          videoWomenEarningRate: Number(pricingData.video_women_earning_rate) || 0,
         });
       }
 
@@ -1107,13 +1107,19 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               isMale ? "text-pink-600" : "text-emerald-600"
                             )}>
-                              {isMale ? `-₹${Number(pc.gift_amount).toFixed(2)}` : `+₹${Number(pc.woman_earnings || 0).toFixed(2)}`}
+                              {isMale 
+                                ? `-₹${Number(pc.gift_amount).toFixed(2)}` 
+                                : `+₹${Number(pc.woman_earnings || 0).toFixed(2)}`}
                             </span>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {pc.duration_seconds ? formatDuration(pc.duration_seconds / 60) : "30 min access"}
+                              {pc.duration_seconds 
+                                ? formatDuration(pc.duration_seconds / 60) 
+                                : pc.access_expires_at 
+                                  ? `${Math.round((new Date(pc.access_expires_at).getTime() - new Date(pc.created_at).getTime()) / 60000)} min access`
+                                  : "N/A"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Gift className="h-3 w-3" />
@@ -1164,14 +1170,32 @@ const TransactionHistoryScreen = () => {
                               "font-semibold whitespace-nowrap",
                               gift.is_sender ? "text-destructive" : "text-green-600"
                             )}>
-                              {gift.is_sender ? "-" : "+"}₹{(gift.is_sender ? Number(gift.price_paid) : Number(gift.price_paid) * 0.5).toFixed(2)}
+                              {gift.is_sender 
+                                ? `-₹${Number(gift.price_paid).toFixed(2)}`
+                                : (() => {
+                                    // Find actual earning from women_earnings for this gift
+                                    const matchingEarning = womenEarnings.find(e => 
+                                      e.earning_type === 'gift' && 
+                                      Math.abs(new Date(e.created_at).getTime() - new Date(gift.created_at).getTime()) < 5000
+                                    );
+                                    return `+₹${(matchingEarning ? Number(matchingEarning.amount) : Number(gift.price_paid)).toFixed(2)}`;
+                                  })()
+                              }
                             </span>
                           </div>
-                          {!gift.is_sender && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              (50% of ₹{Number(gift.price_paid).toFixed(2)} gift value)
-                            </p>
-                          )}
+                          {!gift.is_sender && (() => {
+                            const matchingEarning = womenEarnings.find(e => 
+                              e.earning_type === 'gift' && 
+                              Math.abs(new Date(e.created_at).getTime() - new Date(gift.created_at).getTime()) < 5000
+                            );
+                            const earnedAmount = matchingEarning ? Number(matchingEarning.amount) : null;
+                            const percentage = earnedAmount ? Math.round((earnedAmount / Number(gift.price_paid)) * 100) : null;
+                            return percentage ? (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                ({percentage}% of ₹{Number(gift.price_paid).toFixed(2)} gift value)
+                              </p>
+                            ) : null;
+                          })()}
                           {gift.message && (
                             <p className="text-xs text-muted-foreground mt-1 italic">
                               "{gift.message}"
