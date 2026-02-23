@@ -303,50 +303,9 @@ export const TransactionHistoryWidget = ({
         });
       }
 
-      // For men: include chat sessions from active_chat_sessions
-      if (userGender === 'male') {
-        const { data: chatSessions } = await supabase
-          .from("active_chat_sessions")
-          .select("*")
-          .eq("man_user_id", userId)
-          .gte("started_at", monthStart)
-          .lte("started_at", monthEnd)
-          .order("started_at", { ascending: false });
-
-        const womanIds = [...new Set(chatSessions?.map(s => s.woman_user_id) || [])];
-        let womanProfileMap = new Map<string, string>();
-        if (womanIds.length > 0) {
-          const { data: womanProfiles } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", womanIds);
-          womanProfileMap = new Map(womanProfiles?.map(p => [p.user_id, p.full_name || 'Unknown']) || []);
-        }
-
-        // Add ALL chat sessions to statement for men — always include
-        chatSessions?.forEach(session => {
-          const womanName = womanProfileMap.get(session.woman_user_id) || 'Unknown';
-          const startTime = new Date(session.started_at);
-          const endTime = session.ended_at ? new Date(session.ended_at) : startTime;
-          const durationSeconds = Math.max(0, Math.round((endTime.getTime() - startTime.getTime()) / 1000));
-          
-          const ratePerMin = pricingRates?.menChatRate || Number(session.rate_per_minute) || 4;
-          const calculatedAmount = (durationSeconds / 60) * ratePerMin;
-
-          unified.push({
-            id: `session-${session.id}`,
-            type: 'chat',
-            amount: calculatedAmount,
-            description: `💬 Chat with ${womanName} (${durationSeconds}s @ ₹${ratePerMin}/min)`,
-            created_at: session.started_at,
-            status: session.status,
-            is_credit: false,
-            reference_id: session.id.slice(0, 8).toUpperCase(),
-            duration: durationSeconds,
-            rate: ratePerMin,
-          });
-        });
-      }
+      // For men: wallet_transactions is the SINGLE source of truth
+      // All charges (chat, video, gift) and credits (recharge) are already recorded there
+      // No need to re-calculate from active_chat_sessions
 
       // Sort chronologically to calculate running balance
       unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
