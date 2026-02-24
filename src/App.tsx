@@ -1,8 +1,6 @@
 /**
  * ULTRA-OPTIMIZED App Component
  * Target: Sub-second initial render
- * 
- * TRANSLATION: Models are preloaded on app startup for reliable browser-based translation
  */
 
 import { lazy, Suspense, memo, startTransition, useEffect } from "react";
