@@ -73,8 +73,9 @@ export const useIncomingCalls = (currentUserId: string | null) => {
         (payload) => {
           const call = payload.new;
           
-          // Clear incoming call if it's no longer ringing
-          if (call.status !== 'ringing' && incomingCall?.callId === call.call_id) {
+          // Only clear incoming call if it's ended/declined/missed
+          // Do NOT clear when status changes to 'active' or 'connecting' - that means the call was accepted
+          if (['ended', 'declined', 'missed', 'timeout_cleanup'].includes(call.status) && incomingCall?.callId === call.call_id) {
             setIncomingCall(null);
           }
         }
