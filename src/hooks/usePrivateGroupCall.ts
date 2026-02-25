@@ -794,7 +794,7 @@ export function usePrivateGroupCall({
     // Update database
     await supabase
       .from('private_groups')
-      .update({ is_live: false, stream_id: null })
+      .update({ is_live: false, stream_id: null, current_host_id: null, current_host_name: null, participant_count: 0 } as any)
       .eq('id', groupId);
 
     // Recalculate host (woman) status after stream ends
