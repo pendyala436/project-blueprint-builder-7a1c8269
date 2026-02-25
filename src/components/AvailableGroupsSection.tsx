@@ -83,6 +83,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         .select('*')
         .eq('is_active', true)
         .eq('is_live', true)
+        .not('current_host_id', 'is', null)
         .order('name', { ascending: true });
 
       if (error) throw error;
