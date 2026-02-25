@@ -366,6 +366,17 @@ async function distributeWomanForCall(supabase: any, data: any, authenticatedUse
   const normalizedLanguage = (language || "english").toLowerCase().trim();
   console.log(`[VideoCall] Finding IDLE woman for video call: ${normalizedLanguage}`);
 
+  // Auto-cleanup stale ringing/connecting sessions older than 2 minutes
+  const { data: staleSessions } = await supabase
+    .from('video_call_sessions')
+    .update({ status: 'ended', ended_at: new Date().toISOString(), end_reason: 'timeout_cleanup' })
+    .in('status', ['ringing', 'connecting'])
+    .lt('created_at', new Date(Date.now() - 2 * 60 * 1000).toISOString())
+    .select('call_id');
+  
+  if (staleSessions?.length) {
+    console.log(`[VideoCall] Cleaned up ${staleSessions.length} stale sessions`);
+  }
   // Step 1: Get ONLY online users
   const { data: onlineStatuses } = await supabase
     .from('user_status')
