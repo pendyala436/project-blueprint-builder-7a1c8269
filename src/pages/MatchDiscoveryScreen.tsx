@@ -45,7 +45,8 @@ import {
   Eye,             // View profile icon
   Shield,          // Verified badge icon
   Star,            // Premium badge icon
-  MoreVertical     // Actions menu icon
+  MoreVertical,    // Actions menu icon
+  Home             // Home navigation icon
 } from "lucide-react";
 // Relationship actions component
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
@@ -636,14 +637,21 @@ const MatchDiscoveryScreen = () => {
       {/* ============= HEADER SECTION ============= */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Back button - navigates to dashboard */}
-          <button 
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">Back</span>
-          </button>
+          {/* Back & Home buttons */}
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <button 
+              onClick={() => navigate("/dashboard")}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <Home className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
           
           {/* App logo centered */}
           <MeowLogo size="sm" />
