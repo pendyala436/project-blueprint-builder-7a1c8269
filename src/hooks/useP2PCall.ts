@@ -33,7 +33,8 @@ interface UseP2PCallProps {
   onCallEnded?: () => void;
 }
 
-// Free STUN servers for NAT traversal
+// STUN + TURN servers for NAT traversal reliability
+// TURN fallback is required for users behind symmetric NAT / strict firewalls.
 const ICE_SERVERS: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -41,6 +42,17 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
+    // Public TURN relay fallback (best-effort).
+    // Replace with your own TURN credentials for production scale/reliability.
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ]
 };
 
@@ -368,6 +380,21 @@ export const useP2PCall = ({
     // Monitor ICE connection state
     pc.oniceconnectionstatechange = () => {
       console.log('[P2P] ICE connection state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed') {
+        toast({
+          title: 'Network Traversal Failed',
+          description: 'Could not establish media path. Please retry or switch network.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    pc.onicecandidateerror = (event) => {
+      console.warn('[P2P] ICE candidate error:', {
+        errorCode: event.errorCode,
+        errorText: event.errorText,
+        url: event.url,
+      });
     };
 
     peerConnectionRef.current = pc;
@@ -710,7 +737,7 @@ export const useP2PCall = ({
       await createPeerConnection(localStream);
 
       // Tell initiator we're ready (safe point to (re)send offer)
-      signalChannelRef.current?.send({
+      await signalChannelRef.current?.send({
         type: 'broadcast',
         event: 'peer-ready',
         payload: { senderId: currentUserId }
