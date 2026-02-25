@@ -244,6 +244,79 @@ export const useP2PCall = ({
     iceCandidateQueueRef.current = [];
   }, []);
 
+  // Update user status when call starts/ends
+  const syncCallStatus = useCallback(async (callActive: boolean) => {
+    try {
+      // Update women_availability if current user is woman
+      const { data: avail } = await supabase
+        .from('women_availability')
+        .select('user_id, current_call_count')
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+      if (avail) {
+        const newCallCount = callActive
+          ? (avail.current_call_count || 0) + 1
+          : Math.max(0, (avail.current_call_count || 0) - 1);
+        await supabase
+          .from('women_availability')
+          .update({
+            current_call_count: newCallCount,
+            is_available_for_calls: newCallCount === 0,
+            is_available: !callActive || newCallCount < 3,
+          })
+          .eq('user_id', currentUserId);
+      }
+
+      // Also sync remote user's availability
+      const { data: remoteAvail } = await supabase
+        .from('women_availability')
+        .select('user_id, current_call_count')
+        .eq('user_id', remoteUserId)
+        .maybeSingle();
+
+      if (remoteAvail) {
+        const newRemoteCallCount = callActive
+          ? (remoteAvail.current_call_count || 0) + 1
+          : Math.max(0, (remoteAvail.current_call_count || 0) - 1);
+        await supabase
+          .from('women_availability')
+          .update({
+            current_call_count: newRemoteCallCount,
+            is_available_for_calls: newRemoteCallCount === 0,
+            is_available: !callActive || newRemoteCallCount < 3,
+          })
+          .eq('user_id', remoteUserId);
+      }
+
+      // Update user_status for both users
+      const statusText = callActive ? 'busy' : 'online';
+      const now = new Date().toISOString();
+      
+      if (callActive) {
+        await Promise.all([
+          supabase.from('user_status').update({ status_text: statusText, last_seen: now }).eq('user_id', currentUserId),
+          supabase.from('user_status').update({ status_text: statusText, last_seen: now }).eq('user_id', remoteUserId),
+        ]);
+      } else {
+        // Recalculate status based on remaining active sessions
+        for (const uid of [currentUserId, remoteUserId]) {
+          const [{ count: chatCount }, { count: callCount }] = await Promise.all([
+            supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
+            supabase.from('video_call_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
+          ]);
+          const total = (chatCount || 0) + (callCount || 0);
+          await supabase.from('user_status').update({
+            status_text: total >= 3 ? 'busy' : 'online',
+            last_seen: now,
+          }).eq('user_id', uid);
+        }
+      }
+    } catch (err) {
+      console.error('[P2P] Error syncing call status:', err);
+    }
+  }, [currentUserId, remoteUserId]);
+
   // Create peer connection with all event handlers
   const createPeerConnection = useCallback(async (localStream: MediaStream) => {
     console.log('[P2P] Creating peer connection...');
@@ -261,6 +334,8 @@ export const useP2PCall = ({
       if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
         setState(prev => ({ ...prev, callStatus: 'active', isConnected: true }));
+        // Sync status to busy when call becomes active
+        syncCallStatus(true);
       }
     };
 
@@ -311,7 +386,7 @@ export const useP2PCall = ({
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [currentUserId, onCallEnded, toast]);
+  }, [currentUserId, onCallEnded, toast, syncCallStatus]);
 
   // Setup signaling channel via Supabase Realtime
   const setupSignaling = useCallback(async () => {
@@ -507,10 +582,13 @@ export const useP2PCall = ({
       })
       .eq('call_id', callId);
 
+    // Sync status for both users
+    await syncCallStatus(false);
+
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, state.callDuration, state.totalCost, onCallEnded]);
+  }, [callId, currentUserId, state.callDuration, state.totalCost, onCallEnded, syncCallStatus]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {

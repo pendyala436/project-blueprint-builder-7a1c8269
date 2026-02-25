@@ -210,7 +210,7 @@ serve(async (req) => {
 
     console.log(`[AUDIT] User ${authenticatedUserId} called chat-manager action: ${action}`, { man_user_id, woman_user_id, user_id, chat_id, preferred_language, man_country });
 
-    // Helper function to update user status based on their chat sessions
+    // Helper function to update user status based on their chat AND video call sessions
     const updateUserStatus = async (userId: string) => {
       // Get active chat count
       const { count: manChats } = await supabase
@@ -225,11 +225,28 @@ serve(async (req) => {
         .eq("woman_user_id", userId)
         .eq("status", "active");
 
+      // Also count active video call sessions
+      const { count: manVideoCalls } = await supabase
+        .from("video_call_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("man_user_id", userId)
+        .eq("status", "active");
+
+      const { count: womanVideoCalls } = await supabase
+        .from("video_call_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("woman_user_id", userId)
+        .eq("status", "active");
+
       const totalChats = (manChats || 0) + (womanChats || 0);
+      const totalVideoCalls = (manVideoCalls || 0) + (womanVideoCalls || 0);
+      const totalSessions = totalChats + totalVideoCalls;
       
-      // Determine status: 3 sessions = busy, 1-2 = online, 0 = depends on if logged in
+      // Determine status: in video call = busy, 3+ chat sessions = busy, otherwise online
       let statusText = "online";
-      if (totalChats >= 3) {
+      if (totalVideoCalls > 0) {
+        statusText = "busy"; // Any active video call = busy
+      } else if (totalChats >= 3) {
         statusText = "busy";
       } else if (totalChats > 0) {
         statusText = "online";
@@ -262,7 +279,7 @@ serve(async (req) => {
           });
       }
 
-      return { totalChats, statusText };
+      return { totalChats, totalVideoCalls, totalSessions, statusText };
     };
 
     switch (action) {
@@ -1764,26 +1781,34 @@ async function endChatSession(supabase: any, chatId: string, reason: string, ses
     .eq("chat_id", chatId);
 
   // Sync woman's availability with ACTUAL active session count (not just decrement)
-  const { count: actualActiveCount } = await supabase
-    .from("active_chat_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("woman_user_id", session.woman_user_id)
-    .eq("status", "active");
+  const [{ count: womanChatCount }, { count: womanVideoCount }] = await Promise.all([
+    supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("woman_user_id", session.woman_user_id)
+      .eq("status", "active"),
+    supabase
+      .from("video_call_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("woman_user_id", session.woman_user_id)
+      .eq("status", "active")
+  ]);
 
-  const newChatCount = actualActiveCount || 0;
+  const newChatCount = womanChatCount || 0;
+  const womanInVideoCall = (womanVideoCount || 0) > 0;
 
   // Update women_availability with accurate count
   await supabase
     .from("women_availability")
     .update({
       current_chat_count: newChatCount,
-      is_available: newChatCount < 3
+      is_available: newChatCount < 3 && !womanInVideoCall
     })
     .eq("user_id", session.woman_user_id);
 
-  // Update user_status to reflect correct status based on actual chat count
+  // Update user_status to reflect correct status based on actual chat + video count
   let newStatusText = "online";
-  if (newChatCount >= 3) {
+  if (womanInVideoCall || newChatCount >= 3) {
     newStatusText = "busy";
   }
 
@@ -1795,15 +1820,23 @@ async function endChatSession(supabase: any, chatId: string, reason: string, ses
     })
     .eq("user_id", session.woman_user_id);
 
-  // Also update man's status
-  const { count: manActiveCount } = await supabase
-    .from("active_chat_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("man_user_id", session.man_user_id)
-    .eq("status", "active");
+  // Also update man's status (count both chats and video calls)
+  const [{ count: manChatCount }, { count: manVideoCount }] = await Promise.all([
+    supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("man_user_id", session.man_user_id)
+      .eq("status", "active"),
+    supabase
+      .from("video_call_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("man_user_id", session.man_user_id)
+      .eq("status", "active")
+  ]);
 
+  const manInVideoCall = (manVideoCount || 0) > 0;
   let manStatusText = "online";
-  if ((manActiveCount || 0) >= 3) {
+  if (manInVideoCall || (manChatCount || 0) >= 3) {
     manStatusText = "busy";
   }
 
@@ -1831,11 +1864,27 @@ async function syncUserStatus(supabase: any, userId: string) {
     .eq("woman_user_id", userId)
     .eq("status", "active");
 
+  // Also count video calls
+  const { count: manVideoCalls } = await supabase
+    .from("video_call_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("man_user_id", userId)
+    .eq("status", "active");
+
+  const { count: womanVideoCalls } = await supabase
+    .from("video_call_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("woman_user_id", userId)
+    .eq("status", "active");
+
   const totalChats = (manChats || 0) + (womanChats || 0);
+  const totalVideoCalls = (manVideoCalls || 0) + (womanVideoCalls || 0);
   
   // Determine correct status
   let statusText = "online";
-  if (totalChats >= 3) {
+  if (totalVideoCalls > 0) {
+    statusText = "busy";
+  } else if (totalChats >= 3) {
     statusText = "busy";
   }
 
@@ -1853,9 +1902,9 @@ async function syncUserStatus(supabase: any, userId: string) {
     .from("women_availability")
     .update({
       current_chat_count: womanChats || 0,
-      is_available: (womanChats || 0) < 3
+      is_available: (womanChats || 0) < 3 && totalVideoCalls === 0
     })
     .eq("user_id", userId);
 
-  return { totalChats, statusText };
+  return { totalChats, totalVideoCalls, statusText };
 }
