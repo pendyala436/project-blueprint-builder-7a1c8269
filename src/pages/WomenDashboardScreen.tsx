@@ -503,8 +503,8 @@ const WomenDashboardScreen = () => {
         const manLanguage = man.mother_tongue || man.primary_language || man.preferred_language || "Unknown";
         const isSameLanguage = effectiveWomanLanguage.toLowerCase() === manLanguage.toLowerCase();
         const walletBalance = Number(man.wallet_balance) || 0;
-        // Premium users have wallet balance > 10 INR, regular users have <= 10 INR
-        const hasRecharged = walletBalance > 10;
+        // Premium users have wallet balance > 0 (recharged), regular users have 0
+        const hasRecharged = walletBalance > 0;
 
         return {
           userId: man.user_id,
@@ -538,15 +538,15 @@ const WomenDashboardScreen = () => {
         return b.walletBalance - a.walletBalance;
       });
 
-      // Separate premium (balance > 10) and regular (balance <= 10)
+      // Separate premium (balance > 0) and regular (balance = 0)
       const recharged = sortedMen.filter(m => m.hasRecharged);
       const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
 
       // Sort premium men by wallet balance descending (highest balance first)
       const sortedRecharged = recharged.sort((a, b) => b.walletBalance - a.walletBalance);
 
-      console.log("[WomenDashboard] Online premium men (>₹10):", sortedRecharged.length, sortedRecharged.map(m => ({ name: m.fullName, balance: m.walletBalance })));
-      console.log("[WomenDashboard] Online regular men (<=₹10):", nonRecharged.length);
+      console.log("[WomenDashboard] Online premium men (>₹0):", sortedRecharged.length, sortedRecharged.map(m => ({ name: m.fullName, balance: m.walletBalance })));
+      console.log("[WomenDashboard] Online regular men (₹0):", nonRecharged.length);
 
       setRechargedMen(sortedRecharged);
       setNonRechargedMen(nonRecharged);
