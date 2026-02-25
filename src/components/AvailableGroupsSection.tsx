@@ -351,7 +351,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                           disabled={!group.is_live || group.participant_count >= MAX_PARTICIPANTS}
                         >
                           <Video className="h-4 w-4" />
-                          {group.participant_count >= MAX_PARTICIPANTS ? 'Full' : group.is_live ? 'Join Call' : 'Offline'}
+                          {group.participant_count >= MAX_PARTICIPANTS ? 'Full (50 max)' : group.is_live ? 'Join Call' : 'Offline'}
                         </Button>
                       )}
                     </div>

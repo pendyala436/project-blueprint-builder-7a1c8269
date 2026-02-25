@@ -14,6 +14,7 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, 
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
+const MAX_GROUPS_PER_USER = 3;
 // Gift amounts available as optional tips
 const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
 
@@ -98,6 +99,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
     if (!chatEnabled && !videoEnabled) {
       toast.error('Please enable at least chat or video call');
+      return;
+    }
+    if (groups.length >= MAX_GROUPS_PER_USER) {
+      toast.error(`You can only have ${MAX_GROUPS_PER_USER} private groups at a time`);
       return;
     }
 
@@ -207,9 +212,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         </h3>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" disabled={groups.length >= MAX_GROUPS_PER_USER}>
               <Plus className="h-4 w-4" />
-              Create Group
+              {groups.length >= MAX_GROUPS_PER_USER ? `Max ${MAX_GROUPS_PER_USER} Groups` : 'Create Group'}
             </Button>
           </DialogTrigger>
           <DialogContent>
