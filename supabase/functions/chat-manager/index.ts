@@ -1245,6 +1245,33 @@ serve(async (req) => {
         const lastActivity = new Date(session.last_activity_at);
         const minutesElapsed = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
 
+        // RACE CONDITION GUARD: Atomically update last_activity_at only if it hasn't changed
+        // This prevents two concurrent heartbeats from both billing for the same period
+        const { data: lockResult, error: lockError } = await supabase
+          .from("active_chat_sessions")
+          .update({ last_activity_at: now.toISOString() })
+          .eq("chat_id", chat_id)
+          .eq("last_activity_at", session.last_activity_at)
+          .select("id")
+          .maybeSingle();
+
+        if (!lockResult) {
+          // Another heartbeat already processed this period - skip to avoid duplicate billing
+          console.log(`[HEARTBEAT] Skipping duplicate heartbeat for chat ${chat_id} (last_activity_at already updated)`);
+          return new Response(
+            JSON.stringify({
+              success: true,
+              billing_started: true,
+              minutes_elapsed: 0,
+              men_charged: 0,
+              women_earned: 0,
+              remaining_balance: wallet?.balance || 0,
+              duplicate_skipped: true
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Calculate charges and earnings for this period (different rates)
         const menCharge = minutesElapsed * session.rate_per_minute;
         const newTotalMinutes = session.total_minutes + minutesElapsed;
@@ -1278,7 +1305,7 @@ serve(async (req) => {
         
         // Super users don't get charged but women still earn
         if (isSuperUser) {
-          // Just update activity and credit woman without charging man
+          // Just credit woman without charging man
           const womenEarnings = minutesElapsed * womenEarningRate;
           
           await supabase
@@ -1294,7 +1321,6 @@ serve(async (req) => {
           await supabase
             .from("active_chat_sessions")
             .update({
-              last_activity_at: now.toISOString(),
               total_minutes: newTotalMinutes,
               total_earned: session.total_earned + womenEarnings
             })
@@ -1355,11 +1381,10 @@ serve(async (req) => {
             description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
           });
 
-        // Update session
+        // Update session totals (last_activity_at already updated by the lock)
         await supabase
           .from("active_chat_sessions")
           .update({
-            last_activity_at: now.toISOString(),
             total_minutes: newTotalMinutes,
             total_earned: newTotalEarned
           })
