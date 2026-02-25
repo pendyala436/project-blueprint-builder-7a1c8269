@@ -271,15 +271,32 @@ const ProfileDetailScreen = () => {
     if (!profile || !currentUserId) return;
 
     try {
-      // Get current user's gender
+      // Get current user's gender and golden badge status
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("gender")
+        .select("gender, has_golden_badge, golden_badge_expires_at")
         .eq("user_id", currentUserId)
         .maybeSingle();
 
       const currentUserGender = currentProfile?.gender?.toLowerCase();
       const isMale = currentUserGender === "male";
+      const isFemale = currentUserGender === "female";
+
+      // Women without golden badge cannot initiate chats
+      if (isFemale) {
+        const badgeActive = currentProfile?.has_golden_badge === true && 
+          currentProfile?.golden_badge_expires_at && 
+          new Date(currentProfile.golden_badge_expires_at) > new Date();
+        
+        if (!badgeActive) {
+          toast({
+            title: "Action Not Allowed",
+            description: "Wait for men to send you a chat request, or purchase a Golden Badge to initiate chats.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
       // Create chat ID
       const chatId = [currentUserId, profile.userId].sort().join("-");
@@ -303,7 +320,7 @@ const ProfileDetailScreen = () => {
         });
       }
 
-      // Navigate back to dashboard - the parallel chat container will show the chat
+      // Navigate back to dashboard
       const dashboardRoute = isMale ? "/dashboard" : "/women-dashboard";
       navigate(dashboardRoute);
       
