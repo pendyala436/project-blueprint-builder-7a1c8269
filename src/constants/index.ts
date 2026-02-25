@@ -46,7 +46,7 @@ export const ROUTES = {
   WOMEN_WALLET: '/women-wallet',
   TRANSACTION_HISTORY: '/transaction-history',
   SETTINGS: '/settings',
-  SHIFT_MANAGEMENT: '/shift-management',
+  
   SHIFT_COMPLIANCE: '/shift-compliance',
   SEND_GIFT: '/send-gift/:receiverId',
   INSTALL: '/install',

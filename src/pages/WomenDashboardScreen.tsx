@@ -19,7 +19,7 @@ import {
   Circle,
   LogOut,
   Wallet,
-  Clock,
+  
   IndianRupee,
   Crown,
   MapPin,
@@ -965,12 +965,6 @@ const WomenDashboardScreen = () => {
               <Users2 className="w-5 h-5 text-primary" />
             </button>
 
-            <button 
-              className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
-              onClick={() => navigate("/shift-management")}
-            >
-              <Clock className="w-5 h-5 text-primary" />
-            </button>
 
             <button 
               className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
