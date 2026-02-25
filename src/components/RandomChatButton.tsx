@@ -310,7 +310,7 @@ export const RandomChatButton = ({
       if (!user) return;
 
       if (userGender === "male") {
-        // Start the chat session via edge function
+        // Man initiating chat with woman
         const { data, error } = await supabase.functions.invoke("chat-manager", {
           body: {
             action: "start_chat",
@@ -329,11 +329,31 @@ export const RandomChatButton = ({
           });
           return;
         }
+      } else if (userGender === "female") {
+        // Woman with Golden Badge initiating chat with man
+        const { data, error } = await supabase.functions.invoke("chat-manager", {
+          body: {
+            action: "start_chat",
+            man_user_id: matchedUser.userId,
+            woman_user_id: user.id
+          }
+        });
+
+        if (error) throw error;
+
+        if (!data.success) {
+          toast({
+            title: "Cannot Start Chat",
+            description: data.message || "Unable to start chat session",
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
-      // Close dialog and navigate to dashboard - parallel chat container will show the chat
+      // Close dialog and navigate to appropriate dashboard
       setSearchDialogOpen(false);
-      navigate("/dashboard");
+      navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast({
