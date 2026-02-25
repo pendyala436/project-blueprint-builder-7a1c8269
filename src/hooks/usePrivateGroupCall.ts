@@ -396,9 +396,9 @@ export function usePrivateGroupCall({
       if (totalDeducted > 0) {
         const activeParticipantCount = Array.from(session.participants.values()).filter(p => !p.isOwner).length - participantsToRemove.length;
         const hostEarning = totalDeducted * (pricing.womenEarningRate / pricing.ratePerMinute);
-        const adminRevenue = totalDeducted - hostEarning;
         
         // Insert into women_earnings (NOT wallet_transactions credit)
+        // No admin revenue needed - admin already received 100% at recharge time
         await supabase
           .from('women_earnings')
           .insert({
@@ -408,20 +408,6 @@ export function usePrivateGroupCall({
             chat_session_id: session.sessionId,
             description: `Private group call earnings - ${activeParticipantCount} participant(s) × ₹${pricing.womenEarningRate}/min`
           });
-
-        // Record admin revenue (difference between men's payment and women's earning)
-        if (adminRevenue > 0) {
-          await supabase
-            .from('admin_revenue_transactions')
-            .insert({
-              transaction_type: 'chat_revenue',
-              amount: adminRevenue,
-              currency: pricing.currency,
-              description: `Private group call admin share - ${activeParticipantCount} participant(s)`,
-              woman_user_id: session.hostId,
-              session_id: session.sessionId
-            });
-        }
 
         session.totalEarnings += hostEarning;
         setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
@@ -465,66 +451,11 @@ export function usePrivateGroupCall({
     }, 1000);
   }, []);
 
-  // Process refunds when host ends early
+  // No refund logic needed - billing is per-minute, no prepayment
   const processRefunds = useCallback(async () => {
-    if (!sessionRef.current) return;
-
-    setState(prev => ({ ...prev, isRefunding: true }));
-    const session = sessionRef.current;
-    const elapsedMinutes = Math.floor((Date.now() - session.startTime) / 60000);
-    const remainingMinutes = MAX_DURATION_MINUTES - elapsedMinutes;
-
-    if (remainingMinutes <= 0) {
-      setState(prev => ({ ...prev, isRefunding: false }));
-      return;
-    }
-
-    let totalRefunded = 0;
-    let totalDeductedFromHost = 0;
-
-    // Refund each participant proportionally
-    for (const [participantId, participant] of session.participants) {
-      if (participant.isOwner) continue;
-
-      const minutesPaid = Math.floor(participant.amountPaid / pricing.ratePerMinute);
-      const unusedMinutes = Math.max(0, minutesPaid - elapsedMinutes);
-      
-      if (unusedMinutes > 0) {
-        const refundAmount = unusedMinutes * pricing.ratePerMinute;
-
-        // Refund to participant
-        await supabase.rpc('process_wallet_transaction', {
-          p_user_id: participantId,
-          p_amount: refundAmount,
-          p_type: 'credit',
-          p_description: `Refund - Host ended private group call early`,
-          p_reference_id: session.sessionId
-        });
-
-        totalRefunded += refundAmount;
-        
-        // Deduct proportional amount from host earnings
-        const hostDeduction = refundAmount * (pricing.womenEarningRate / pricing.ratePerMinute);
-        totalDeductedFromHost += hostDeduction;
-      }
-    }
-
-    // Deduct from host earnings (record as negative earning)
-    if (totalDeductedFromHost > 0) {
-      await supabase
-        .from('women_earnings')
-        .insert({
-          user_id: session.hostId,
-          amount: -totalDeductedFromHost,
-          earning_type: 'chat',
-          chat_session_id: session.sessionId,
-          description: `Refund deduction - Host ended group call early`
-        });
-    }
-
-    console.log(`Refunds processed: ₹${totalRefunded} to participants, ₹${totalDeductedFromHost} from host`);
-    setState(prev => ({ ...prev, isRefunding: false }));
-  }, [pricing]);
+    // No-op: men are billed per minute as they go, nothing to refund
+    return;
+  }, []);
 
   // Setup signaling channel
   const setupSignaling = useCallback(() => {

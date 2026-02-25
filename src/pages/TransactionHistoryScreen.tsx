@@ -831,14 +831,29 @@ const TransactionHistoryScreen = () => {
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
             <Gift className="h-4 w-4 mx-auto mb-1 text-amber-600" />
-            <p className="text-xs text-muted-foreground">Gifts</p>
+            <p className="text-xs text-muted-foreground">Gifts & Tips</p>
             <p className="text-lg font-bold text-amber-600">
               ₹{(isMale
-                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('gift'))).reduce((sum, t) => sum + Number(t.amount), 0)
+                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('gift') || t.description?.toLowerCase().includes('tip'))).reduce((sum, t) => sum + Number(t.amount), 0)
                 : womenEarnings.filter(e => e.earning_type === 'gift').reduce((sum, e) => sum + Number(e.amount), 0)
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] text-muted-foreground">{giftTransactions.length} gifts</p>
+            <p className="text-[10px] text-muted-foreground">{giftTransactions.length} gifts/tips</p>
+          </Card>
+          <Card className="p-3 text-center bg-gradient-to-br from-teal-500/5 to-teal-500/10 border-teal-500/20">
+            <Users className="h-4 w-4 mx-auto mb-1 text-teal-600" />
+            <p className="text-xs text-muted-foreground">Group Calls</p>
+            <p className="text-lg font-bold text-teal-600">
+              ₹{(isMale
+                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group')).reduce((sum, t) => sum + Number(t.amount), 0)
+                : womenEarnings.filter(e => e.description?.toLowerCase().includes('group')).reduce((sum, e) => sum + Number(e.amount), 0)
+              ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {isMale 
+                ? `${walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group')).length} entries`
+                : `${womenEarnings.filter(e => e.description?.toLowerCase().includes('group')).length} entries`}
+            </p>
           </Card>
           {isMale ? (
             <>
@@ -926,10 +941,11 @@ const TransactionHistoryScreen = () => {
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-5" : "grid-cols-6")}>
+          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-6" : "grid-cols-7")}>
             <TabsTrigger value="statement" className="text-xs">Statement</TabsTrigger>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
+            <TabsTrigger value="group" className="text-xs">Group</TabsTrigger>
             <TabsTrigger value="private" className="text-xs">Private</TabsTrigger>
             <TabsTrigger value="wallet" className="text-xs">Gifts</TabsTrigger>
             {!isMale && <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>}
@@ -1193,6 +1209,128 @@ const TransactionHistoryScreen = () => {
             </ScrollArea>
           </TabsContent>
 
+          {/* Group Calls & Tips */}
+          <TabsContent value="group" className="space-y-3">
+            {(() => {
+              const groupSpending = isMale 
+                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group'))
+                : [];
+              const groupEarnings = !isMale 
+                ? womenEarnings.filter(e => e.description?.toLowerCase().includes('group'))
+                : [];
+              const groupTips = isMale
+                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group tip'))
+                : womenEarnings.filter(e => e.description?.toLowerCase().includes('group tip'));
+              const groupCallEntries = isMale
+                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('private group call'))
+                : womenEarnings.filter(e => e.description?.toLowerCase().includes('private group call'));
+
+              const totalAmount = isMale
+                ? groupSpending.reduce((sum, t) => sum + Number(t.amount), 0)
+                : groupEarnings.reduce((sum, e) => sum + Number(e.amount), 0);
+              const tipAmount = groupTips.reduce((sum, t) => sum + Number(t.amount), 0);
+              const callAmount = groupCallEntries.reduce((sum, t) => sum + Number(t.amount), 0);
+
+              return (
+                <>
+                  {/* Group Summary */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Card className="p-3 text-center bg-gradient-to-br from-teal-500/5 to-teal-500/10 border-teal-500/20">
+                      <p className="text-[10px] text-muted-foreground">{isMale ? 'Total Spent' : 'Total Earned'}</p>
+                      <p className="text-lg font-bold text-teal-600">₹{totalAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                    </Card>
+                    <Card className="p-3 text-center bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+                      <p className="text-[10px] text-muted-foreground">Call {isMale ? 'Charges' : 'Earnings'}</p>
+                      <p className="text-lg font-bold text-blue-600">₹{callAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                      <p className="text-[10px] text-muted-foreground">{groupCallEntries.length} entries</p>
+                    </Card>
+                    <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
+                      <p className="text-[10px] text-muted-foreground">Tips {isMale ? 'Sent' : 'Received'}</p>
+                      <p className="text-lg font-bold text-amber-600">₹{tipAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                      <p className="text-[10px] text-muted-foreground">{groupTips.length} tips</p>
+                    </Card>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    {isMale ? `Men pay ₹${chatPricing?.ratePerMinute || 4}/min per group call` : `Host earns ₹${chatPricing?.womenEarningRate || 2}/min per participant`} • Tips: {isMale ? 'full deducted' : '50% credited'}
+                  </p>
+
+                  {/* Group Call Entries */}
+                  {groupCallEntries.length > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-muted-foreground mt-2">📞 Group Call {isMale ? 'Charges' : 'Earnings'}</p>
+                      <ScrollArea className="max-h-[300px]">
+                        <div className="space-y-2">
+                          {groupCallEntries.map((entry: any) => (
+                            <Card key={entry.id} className="overflow-hidden">
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={cn("p-1.5 rounded-full", isMale ? "bg-destructive/10" : "bg-green-500/10")}>
+                                      <Users className={cn("h-3.5 w-3.5", isMale ? "text-destructive" : "text-green-600")} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium truncate max-w-[200px]">{entry.description}</p>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        {format(new Date(entry.created_at), "MMM d, h:mm a")}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className={cn("text-sm font-semibold", isMale ? "text-destructive" : "text-green-600")}>
+                                    {isMale ? '-' : '+'}₹{Number(entry.amount).toFixed(2)}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+
+                  {/* Tip Entries */}
+                  {groupTips.length > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-muted-foreground mt-2">🎫 Group Tips</p>
+                      <ScrollArea className="max-h-[300px]">
+                        <div className="space-y-2">
+                          {groupTips.map((entry: any) => (
+                            <Card key={entry.id} className="overflow-hidden">
+                              <CardContent className="p-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={cn("p-1.5 rounded-full", isMale ? "bg-amber-500/10" : "bg-amber-500/10")}>
+                                      <Gift className={cn("h-3.5 w-3.5 text-amber-600")} />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium truncate max-w-[200px]">{entry.description}</p>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        {format(new Date(entry.created_at), "MMM d, h:mm a")}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className={cn("text-sm font-semibold", isMale ? "text-destructive" : "text-green-600")}>
+                                    {isMale ? '-' : '+'}₹{Number(entry.amount).toFixed(2)}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </>
+                  )}
+
+                  {groupCallEntries.length === 0 && groupTips.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>No group call transactions yet</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </TabsContent>
 
           {/* Private Calls */}
           <TabsContent value="private" className="space-y-3">
