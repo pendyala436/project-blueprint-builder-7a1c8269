@@ -132,35 +132,21 @@ export function PrivateGroupCallWindow({
   const showChat = hasChat && (viewMode === 'both' || viewMode === 'chat');
 
   // Helper to get participant name by user ID
-  // Men can't see other men's identity - only host is named
+  // Men see other men's real names in chat. Host sees everything.
   const getParticipantName = (userId: string): string => {
     if (userId === currentUserId) return userName;
     if (userId === group.owner_id) {
       const host = participants.find(p => p.isOwner);
       return host?.name || 'Host';
     }
-    // If current user is host, show participant names
-    if (isOwner) {
-      const participant = participants.find(p => p.id === userId);
-      return participant?.name || 'Participant';
-    }
-    // Men can't see other men's names
-    return 'Participant';
+    const participant = participants.find(p => p.id === userId);
+    return participant?.name || 'Participant';
   };
 
   const getParticipantPhoto = (userId: string): string | undefined => {
     if (userId === currentUserId) return userPhoto || undefined;
-    if (userId === group.owner_id) {
-      const participant = participants.find(p => p.id === userId);
-      return participant?.photo;
-    }
-    // If current user is host, show participant photos
-    if (isOwner) {
-      const participant = participants.find(p => p.id === userId);
-      return participant?.photo;
-    }
-    // Men can't see other men's photos
-    return undefined;
+    const participant = participants.find(p => p.id === userId);
+    return participant?.photo;
   };
 
   // Enhanced group call hook
@@ -836,13 +822,29 @@ export function PrivateGroupCallWindow({
                 </div>
               )}
               
-              {/* Participant count overlay - host only sees count, men don't see other men */}
-              {isOwner && participants.length > 1 && (
-                <div className="absolute bottom-2 left-2 right-2">
-                  <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
-                    <Users className="h-3 w-3" />
-                    {participants.filter(p => !p.isOwner).length} viewers connected
-                  </Badge>
+              {/* Participant count overlay - host sees count + names, men see only count */}
+              {participants.length > 1 && (
+                <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
+                  {isOwner ? (
+                    <>
+                      {participants.filter(p => !p.isOwner).slice(0, 8).map((p) => (
+                        <Badge key={p.id} variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
+                          <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                          {p.name}
+                        </Badge>
+                      ))}
+                      {participants.filter(p => !p.isOwner).length > 8 && (
+                        <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none">
+                          +{participants.filter(p => !p.isOwner).length - 8} more
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
+                      <Users className="h-3 w-3" />
+                      {viewerCount} in group
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
@@ -966,12 +968,9 @@ export function PrivateGroupCallWindow({
             <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/20">
               <MessageCircle className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Group Chat</span>
-              {/* Only show participant count to host, not individual names */}
-              {isOwner && (
-                <Badge variant="secondary" className="text-[10px] ml-auto">
-                  {participants.length} online
-                </Badge>
-              )}
+              <Badge variant="secondary" className="text-[10px] ml-auto">
+                {participants.length} online
+              </Badge>
             </div>
 
             <ScrollArea className="flex-1 p-3">
