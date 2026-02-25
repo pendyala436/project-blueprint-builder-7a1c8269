@@ -541,17 +541,29 @@ export const useP2PCall = ({
       payload: { senderId: currentUserId }
     });
 
-    // Update database
-    await supabase
+    // Calculate duration in minutes
+    const durationMinutes = state.callDuration / 60;
+
+    // Update database - only if not already ended (prevent double-update)
+    const { data: currentSession } = await supabase
       .from('video_call_sessions')
-      .update({
-        status: 'ended',
-        ended_at: new Date().toISOString(),
-        end_reason: 'user_ended',
-        total_minutes: state.callDuration / 60,
-        total_earned: state.totalCost,
-      })
-      .eq('call_id', callId);
+      .select('status')
+      .eq('call_id', callId)
+      .single();
+
+    if (currentSession && currentSession.status !== 'ended') {
+      await supabase
+        .from('video_call_sessions')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          end_reason: 'user_ended',
+          total_minutes: durationMinutes,
+          // total_earned stores the man's charge amount (rate_per_minute * minutes)
+          total_earned: Math.ceil(durationMinutes) * ratePerMinute,
+        })
+        .eq('call_id', callId);
+    }
 
     // Sync status for both users
     await syncCallStatus(false);
@@ -559,7 +571,7 @@ export const useP2PCall = ({
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, state.callDuration, state.totalCost, onCallEnded, syncCallStatus]);
+  }, [callId, currentUserId, state.callDuration, ratePerMinute, onCallEnded, syncCallStatus]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {
@@ -647,14 +659,17 @@ export const useP2PCall = ({
           const status = payload.new.status;
           console.log('[P2P] Call status update from DB:', status);
           
-          if (status === 'declined' || status === 'missed') {
-            toast({
-              title: "Call Ended",
-              description: status === 'declined' ? 'Call was declined' : 'Call was missed',
-            });
-            cleanup();
-            setState(prev => ({ ...prev, callStatus: 'ended' }));
-            onCallEnded?.();
+          if (['declined', 'missed', 'ended'].includes(status)) {
+            // Only react if WE didn't trigger it (avoid double-cleanup)
+            if (state.callStatus !== 'ended') {
+              toast({
+                title: "Call Ended",
+                description: status === 'declined' ? 'Call was declined' : status === 'missed' ? 'Call was missed' : 'The other user ended the call',
+              });
+              cleanup();
+              setState(prev => ({ ...prev, callStatus: 'ended' }));
+              onCallEnded?.();
+            }
           }
         }
       )
