@@ -56,6 +56,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { RecentActivityWidget } from "@/components/RecentActivityWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
+import { UserAdminChat } from "@/components/UserAdminChat";
 import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 
@@ -1874,6 +1875,11 @@ const DashboardScreen = () => {
           userGender="male"
           onClose={() => setShowFriendsPanel(false)}
         />
+      )}
+
+      {/* Admin Chat */}
+      {currentUserId && (
+        <UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} />
       )}
     </div>
   );
