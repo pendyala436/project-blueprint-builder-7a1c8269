@@ -18,7 +18,8 @@ import {
   Calendar,
   Video,
   Gift,
-  Wallet
+  Wallet,
+  Home
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -703,14 +704,22 @@ const TransactionHistoryScreen = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="auroraGhost"
               size="icon"
-              onClick={() => window.history.length > 1 ? navigate(-1) : navigate(isMale ? '/dashboard' : '/women-dashboard')}
+              onClick={() => navigate(-1)}
               className="rounded-full"
             >
               <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => navigate(isMale ? '/dashboard' : '/women-dashboard')}
+              className="rounded-full"
+            >
+              <Home className="h-5 w-5" />
             </Button>
             <div>
               <h1 className="text-xl font-semibold">Transaction History</h1>

@@ -15,7 +15,8 @@ import {
   Shield,
   Loader2,
   X,
-  Sparkles
+  Sparkles,
+  Home
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -402,17 +403,31 @@ const ProfileDetailScreen = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">{t('back', 'Back')}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="rounded-full"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <Button 
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => {
+                if (currentUserGender === "female") navigate("/women-dashboard");
+                else navigate("/dashboard");
+              }}
+              className="rounded-full"
+            >
+              <Home className="w-5 h-5" />
+            </Button>
+          </div>
           
           <MeowLogo size="sm" />
           
-          <div className="w-20" /> {/* Spacer for centering */}
+          <div className="w-20" />
         </div>
       </header>
 

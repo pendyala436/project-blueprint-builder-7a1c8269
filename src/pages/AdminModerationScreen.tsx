@@ -55,7 +55,8 @@ import {
   Clock,               // Pending status
   Users,               // Users icon
   Flag,                // Report flag icon
-  MessageSquare        // Message icon
+  MessageSquare,       // Message icon
+  Home                 // Home navigation icon
 } from 'lucide-react';
 
 /**
@@ -549,10 +550,12 @@ const AdminModerationScreen = () => {
       {/* ============= HEADER ============= */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            {/* Back navigation */}
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/analytics')}>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+              <Home className="w-5 h-5" />
             </Button>
             <div>
               <h1 className="text-xl font-bold">Moderation Center</h1>

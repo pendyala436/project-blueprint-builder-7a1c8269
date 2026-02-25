@@ -57,7 +57,8 @@ import {
   Heart,        // Friend icon
   AlertTriangle, // Warning icon
   PhoneOff,     // Stop chat icon
-  LogOut        // Leave chat icon
+  LogOut,       // Leave chat icon
+  Home          // Home navigation icon
 } from "lucide-react";
 import {
   Popover,
@@ -1328,13 +1329,21 @@ const ChatScreen = () => {
       {/* ============= HEADER SECTION ============= */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          {/* Back button */}
-          <button 
-            onClick={() => navigate(-1)} // Go back to previous page
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
-          </button>
+          {/* Back & Home buttons */}
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </button>
+            <button 
+              onClick={() => navigate("/dashboard")}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <Home className="w-5 h-5 text-foreground" />
+            </button>
+          </div>
           
           {/* Chat partner info - clickable to view profile */}
           {chatPartner && (

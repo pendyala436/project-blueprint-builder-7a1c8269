@@ -35,7 +35,8 @@ import {
   Euro,
   CheckCircle2,
   Banknote,
-  Building2
+  Building2,
+  Home
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -417,7 +418,7 @@ const WalletScreen = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="auroraGhost"
               size="icon"
@@ -425,6 +426,14 @@ const WalletScreen = () => {
               className="rounded-full"
             >
               <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="auroraGhost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+              className="rounded-full"
+            >
+              <Home className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-semibold">{t('myWallet', 'My Wallet')}</h1>
           </div>
