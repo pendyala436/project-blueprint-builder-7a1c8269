@@ -45,6 +45,7 @@ interface GroupSession {
 
 interface UsePrivateGroupCallProps {
   groupId: string;
+  groupName: string;
   currentUserId: string;
   userName: string;
   userPhoto?: string | null;
@@ -70,6 +71,7 @@ interface PrivateGroupCallState {
 
 export function usePrivateGroupCall({
   groupId,
+  groupName,
   currentUserId,
   userName,
   userPhoto,
@@ -376,7 +378,7 @@ export function usePrivateGroupCall({
           p_user_id: participantId,
           p_amount: costPerMinute,
           p_type: 'debit',
-          p_description: `Private group call (1 min)`,
+          p_description: `Group call: ${groupName} (₹${costPerMinute}/min)`,
           p_reference_id: session.sessionId
         });
 
@@ -406,7 +408,7 @@ export function usePrivateGroupCall({
             amount: hostEarning,
             earning_type: 'chat',
             chat_session_id: session.sessionId,
-            description: `Private group call earnings - ${activeParticipantCount} participant(s) × ₹${pricing.womenEarningRate}/min`
+            description: `Group call earnings: ${groupName} - ${activeParticipantCount} participant(s) × ₹${pricing.womenEarningRate}/min`
           });
 
         session.totalEarnings += hostEarning;
