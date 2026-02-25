@@ -10,17 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, DollarSign } from 'lucide-react';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
-// Fixed gift amounts available in the app
-const GIFT_AMOUNTS = [0, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 600, 800, 1000, 2000, 3000, 4000, 5000, 10000];
-
-const getAmountLabel = (amount: number) => {
-  if (amount === 0) return 'Free (Private Call - No Gift Required)';
-  return `₹${amount}`;
-};
+// Gift amounts available as optional tips
+const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
 
 interface PrivateGroup {
   id: string;
@@ -113,9 +108,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           owner_id: currentUserId,
           name: groupName.trim(),
           description: groupDescription.trim() || null,
-          min_gift_amount: minGiftAmount,
+          min_gift_amount: 0, // Free entry - billing is per-minute
           access_type: getAccessType(),
-          participant_count: 1 // Owner is automatically a member
+          participant_count: 1
         })
         .select()
         .single();
@@ -221,7 +216,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
             <DialogHeader>
               <DialogTitle>Create Private Group</DialogTitle>
               <DialogDescription>
-                Create a private group. You can enable chat, video call, or both. Set the minimum gift for men to join.
+                Create a private group with chat, video call, or both. Men pay ₹4/min, you earn ₹2/min per man. Tips are optional.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -241,23 +236,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   placeholder="What's your group about?"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Minimum Gift Amount (₹)</Label>
-                <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select amount" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GIFT_AMOUNTS.map((amount) => (
-                      <SelectItem key={amount} value={String(amount)}>
-                        {getAmountLabel(amount)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Every gift sent is split: 50% to you, 50% to admin.
-                </p>
+              <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">💰 Billing Info</p>
+                <p>{TIP_INFO}</p>
               </div>
               <div className="space-y-3">
                 <Label>Access Type</Label>
@@ -334,8 +315,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 )}
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="gap-1">
-                    <Gift className="h-3 w-3" />
-                    {group.min_gift_amount === 0 ? 'Free (No Gift Required)' : `Min ₹${group.min_gift_amount} to Join`}
+                    <DollarSign className="h-3 w-3" />
+                    ₹4/min per man
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
@@ -380,27 +361,13 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           <DialogHeader>
             <DialogTitle>Update Group Settings</DialogTitle>
             <DialogDescription>
-              Change the minimum gift required for men to enter your group.
+              Update access type for your group. Men pay ₹4/min, you earn ₹2/min per man.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Minimum Gift Amount (₹)</Label>
-              <Select value={String(minGiftAmount)} onValueChange={(val) => setMinGiftAmount(Number(val))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select amount" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GIFT_AMOUNTS.map((amount) => (
-                    <SelectItem key={amount} value={String(amount)}>
-                      {getAmountLabel(amount)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Men must send gift of this amount to join
-              </p>
+            <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">💰 Billing</p>
+              <p>Free entry. Men charged ₹4/min. You earn ₹2/min per man. Optional tips — 50% reaches you.</p>
             </div>
             <div className="space-y-3">
               <Label>Access Type</Label>
