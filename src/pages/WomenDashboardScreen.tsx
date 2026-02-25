@@ -1370,13 +1370,15 @@ const WomenDashboardScreen = () => {
 
 
         {/* Private Groups Section */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
-          <PrivateGroupsSection
-            currentUserId={currentUserId}
-            userName={userName || 'User'}
-            userPhoto={null}
-          />
-        </div>
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
+            <PrivateGroupsSection
+              currentUserId={currentUserId}
+              userName={userName || 'User'}
+              userPhoto={userPhoto}
+            />
+          </div>
+        )}
 
         {/* Section 5: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
