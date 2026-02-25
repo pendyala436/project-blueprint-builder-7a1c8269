@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Video, MessageCircle, LayoutGrid, DollarSign, Radio, Square } from 'lucide-react';
+import { Users, Video, MessageCircle, LayoutGrid, DollarSign, Radio, Square, RefreshCw } from 'lucide-react';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -166,6 +166,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         <Badge variant="outline" className="text-xs">
           {groups.filter(g => g.is_live).length}/{groups.length} Live
         </Badge>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsLoading(true); fetchGroups(); }}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">

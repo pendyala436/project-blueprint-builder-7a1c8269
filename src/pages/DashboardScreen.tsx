@@ -1635,7 +1635,7 @@ const DashboardScreen = () => {
 
 
 
-        {/* Private Rooms Section */}
+        {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
           <AvailableGroupsSection
             currentUserId={currentUserId}
