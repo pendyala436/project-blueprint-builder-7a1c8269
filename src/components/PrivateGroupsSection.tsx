@@ -14,7 +14,7 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, 
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
-const MAX_GROUPS_PER_USER = 3;
+const MAX_GROUPS_APP_WIDE = 3;
 // Gift amounts available as optional tips
 const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
 
@@ -39,6 +39,7 @@ interface PrivateGroupsSectionProps {
 
 export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: PrivateGroupsSectionProps) {
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
+  const [totalAppGroups, setTotalAppGroups] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -54,12 +55,13 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
   useEffect(() => {
     fetchGroups();
+    fetchTotalAppGroups();
     
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('private-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, () => {
         fetchGroups();
+        fetchTotalAppGroups();
       })
       .subscribe();
 
@@ -67,6 +69,14 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
+
+  const fetchTotalAppGroups = async () => {
+    const { count } = await supabase
+      .from('private_groups')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true);
+    setTotalAppGroups(count || 0);
+  };
 
   const fetchGroups = async () => {
     try {
@@ -101,8 +111,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       toast.error('Please enable at least chat or video call');
       return;
     }
-    if (groups.length >= MAX_GROUPS_PER_USER) {
-      toast.error(`You can only have ${MAX_GROUPS_PER_USER} private groups at a time`);
+    if (totalAppGroups >= MAX_GROUPS_APP_WIDE) {
+      toast.error(`Only ${MAX_GROUPS_APP_WIDE} private groups are allowed across the entire app`);
       return;
     }
 
@@ -212,9 +222,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         </h3>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2" disabled={groups.length >= MAX_GROUPS_PER_USER}>
+            <Button size="sm" className="gap-2" disabled={totalAppGroups >= MAX_GROUPS_APP_WIDE}>
               <Plus className="h-4 w-4" />
-              {groups.length >= MAX_GROUPS_PER_USER ? `Max ${MAX_GROUPS_PER_USER} Groups` : 'Create Group'}
+              {totalAppGroups >= MAX_GROUPS_APP_WIDE ? `Max ${MAX_GROUPS_APP_WIDE} Groups` : `Create Group (${totalAppGroups}/${MAX_GROUPS_APP_WIDE})`}
             </Button>
           </DialogTrigger>
           <DialogContent>
