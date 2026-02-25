@@ -77,16 +77,15 @@ const P2PVideoCallModal = ({
     }
   }, [isBlocked]);
 
+  // Callback refs that also trigger stream binding when video elements mount
   const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
-    if (element) {
-      (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    }
+    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+    // The useP2PCall effect will handle binding via bindStreamToVideo
   }, [localVideoRef]);
 
   const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
-    if (element) {
-      (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    }
+    (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+    // The useP2PCall effect will handle binding via bindStreamToVideo
   }, [remoteVideoRef]);
 
   const formatDuration = (seconds: number) => {
