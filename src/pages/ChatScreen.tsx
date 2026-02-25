@@ -1583,16 +1583,7 @@ const ChatScreen = () => {
         </div>
       )}
 
-      {/* ============= TRANSLATION INFO BAR ============= */}
-      {chatPartner && currentUserLanguage !== chatPartner.preferredLanguage && showTranslations && (
-        <div className="bg-info/10 border-b border-info/20 px-4 py-2">
-          <div className="flex items-center justify-center gap-2 text-sm text-info">
-            <Languages className="w-4 h-4" />
-            <span>Auto-translating: <strong>{currentUserLanguage}</strong> ↔ <strong>{chatPartner.preferredLanguage}</strong></span>
-            <span className="text-xs opacity-75">(NLLB-200)</span>
-          </div>
-        </div>
-      )}
+      {/* Translation info bar removed - auto-translate disabled */}
 
       {/* ============= BILLING/EARNINGS BAR ============= */}
       {chatPartner && (
