@@ -3813,7 +3813,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_friend_request: { Args: { p_request_id: string }; Returns: Json }
       assign_earning_slots: { Args: never; Returns: Json }
+      block_user: { Args: { p_target_user_id: string }; Returns: Json }
+      cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
       check_group_video_access: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: Json
@@ -3902,6 +3905,10 @@ export type Database = {
           user_id: string
           wallet_balance: number
         }[]
+      }
+      get_relationship_status: {
+        Args: { p_target_user_id: string }
+        Returns: Json
       }
       get_safe_profile: {
         Args: { target_user_id: string }
@@ -4016,9 +4023,13 @@ export type Database = {
         Returns: Json
       }
       purchase_golden_badge: { Args: { p_user_id: string }; Returns: Json }
+      reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       rotate_monthly_shifts: { Args: never; Returns: undefined }
+      send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
+      unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
+      unfriend_user: { Args: { p_target_user_id: string }; Returns: Json }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
     }
