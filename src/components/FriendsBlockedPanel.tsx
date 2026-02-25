@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,7 +47,8 @@ import {
   Check,
   X,
   Clock,
-  Send
+  Send,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +80,7 @@ export const FriendsBlockedPanel = ({
   onStartChat,
 }: FriendsBlockedPanelProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // All relationship data and actions from the hook
   const {
