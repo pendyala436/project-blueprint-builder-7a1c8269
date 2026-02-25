@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Video, MessageCircle, LayoutGrid, DollarSign, Radio, Square } from 'lucide-react';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
-import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
+import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
 const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
 
@@ -211,7 +211,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                     {group.participant_count}/{MAX_PARTICIPANTS}
                   </Badge>
                   <Badge variant="outline" className="gap-1 text-xs">
-                    ⏱️ {MAX_DURATION_MINUTES}min max
+                    ⏱️ No time limit
                   </Badge>
                   <Badge variant="outline" className="gap-1">
                     <MessageCircle className="h-3 w-3" /> Chat
