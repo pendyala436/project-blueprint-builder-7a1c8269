@@ -1254,22 +1254,36 @@ const DashboardScreen = () => {
                               {woman.primary_language}
                             </span>
                           </div>
-                          <Button
-                            variant="aurora"
-                            size="sm"
-                            className={cn(
-                              "gap-1 text-xs h-8",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={(woman.active_chat_count || 0) >= 3}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                            }}
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="auroraOutline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${woman.user_id}`);
+                              }}
+                              title="View Profile"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="aurora"
+                              size="sm"
+                              className={cn(
+                                "gap-1 text-xs h-8",
+                                (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                              )}
+                              disabled={(woman.active_chat_count || 0) >= 3}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                              }}
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     ))}
@@ -1330,22 +1344,36 @@ const DashboardScreen = () => {
                               </span>
                             </div>
                           </div>
-                          <Button
-                            variant="aurora"
-                            size="sm"
-                            className={cn(
-                              "gap-1 text-xs h-8",
-                              (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                            )}
-                            disabled={(woman.active_chat_count || 0) >= 3}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                            }}
-                          >
-                            <MessageCircle className="w-3 h-3" />
-                            {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="auroraOutline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${woman.user_id}`);
+                              }}
+                              title="View Profile"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="aurora"
+                              size="sm"
+                              className={cn(
+                                "gap-1 text-xs h-8",
+                                (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
+                              )}
+                              disabled={(woman.active_chat_count || 0) >= 3}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                              }}
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     ))}
