@@ -74,6 +74,7 @@ export const useP2PCall = ({
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
+  const billingInProgressRef = useRef<boolean>(false);
 
   // Get session ID for billing
   const getSessionId = async () => {
@@ -96,9 +97,17 @@ export const useP2PCall = ({
     // Only bill if call is active and initiator (man) pays
     if (state.callStatus !== 'active' || !isInitiator) return;
     
+    // Prevent concurrent billing calls (race condition guard)
+    if (billingInProgressRef.current) {
+      console.log('[P2P] Billing already in progress - skipping');
+      return;
+    }
+    billingInProgressRef.current = true;
+
     const sessionId = await getSessionId();
     if (!sessionId) {
       console.error('[P2P] No session ID for billing');
+      billingInProgressRef.current = false;
       return;
     }
 
@@ -119,6 +128,7 @@ export const useP2PCall = ({
           });
           endCall();
         }
+        billingInProgressRef.current = false;
         return;
       }
 
@@ -134,8 +144,14 @@ export const useP2PCall = ({
         });
         endCall();
       }
+      
+      if (result?.duplicate_skipped) {
+        console.log('[P2P] Duplicate billing skipped by server');
+      }
     } catch (err) {
       console.error('[P2P] Billing failed:', err);
+    } finally {
+      billingInProgressRef.current = false;
     }
   };
 
