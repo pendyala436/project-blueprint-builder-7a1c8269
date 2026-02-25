@@ -1122,12 +1122,6 @@ const WomenDashboardScreen = () => {
                       size="sm"
                       hasGoldenBadge={true}
                     />
-                    <VideoCallButton
-                      currentUserId={currentUserId}
-                      userLanguage={currentWomanLanguage}
-                      walletBalance={999999}
-                      hasGoldenBadge={true}
-                    />
                   </div>
                 </div>
               </Card>
