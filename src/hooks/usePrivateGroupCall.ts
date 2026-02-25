@@ -14,7 +14,7 @@ import { useChatPricing } from './useChatPricing';
 import { toast } from 'sonner';
 
 export const MAX_PARTICIPANTS = 50;
-export const MAX_DURATION_MINUTES = 30;
+export const MAX_DURATION_MINUTES = 0; // No time limit
 export const BILLING_INTERVAL_SECONDS = 60; // Bill every minute
 
 interface Participant {
@@ -86,7 +86,7 @@ export function usePrivateGroupCall({
     participants: [],
     viewerCount: 0,
     error: null,
-    remainingTime: MAX_DURATION_MINUTES * 60,
+    remainingTime: 0, // No time limit
     totalEarnings: 0,
     isRefunding: false,
     hostStream: null,
@@ -433,21 +433,15 @@ export function usePrivateGroupCall({
     }, BILLING_INTERVAL_SECONDS * 1000);
   }, [isOwner, pricing, onParticipantLeave]);
 
-  // Start countdown timer
+  // Start elapsed time tracker (no time limit)
   const startCountdownTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
 
     const startTime = Date.now();
-    const endTime = startTime + (MAX_DURATION_MINUTES * 60 * 1000);
 
     timerRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setState(prev => ({ ...prev, remainingTime: remaining }));
-
-      if (remaining <= 0) {
-        // Time's up - end session normally
-        endStream(false);
-      }
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setState(prev => ({ ...prev, remainingTime: elapsed }));
     }, 1000);
   }, []);
 
