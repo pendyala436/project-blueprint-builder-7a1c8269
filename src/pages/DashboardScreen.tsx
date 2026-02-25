@@ -390,22 +390,19 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return t('available', 'Available');
     if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
-    return t('busy', 'Busy') + `(${activeChatCount})`;
+    return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    // Uses semantic colors: online (green), busy (amber), destructive (red)
-    if (activeChatCount === 0) return "bg-online";
+    // Green = online/available, Red = at max capacity (3 chats)
     if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    return "bg-online";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-online";
     if (activeChatCount >= 3) return "bg-destructive";
-    return "bg-busy";
+    return "bg-online";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -1163,8 +1160,7 @@ const DashboardScreen = () => {
                 </div>
                 <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
                   <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-online/60" : 
-                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-warning-foreground/60"
+                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
                   )} />
                   {getStatusText()}
                 </Badge>
@@ -1237,8 +1233,7 @@ const DashboardScreen = () => {
                             </Avatar>
                             <div className={cn(
                               "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-online"
                             )} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1321,8 +1316,7 @@ const DashboardScreen = () => {
                             </Avatar>
                             <div className={cn(
                               "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) === 0 ? "bg-online" :
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-busy"
+                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-online"
                             )} />
                           </div>
                           <div className="flex-1 min-w-0">
