@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -77,18 +77,17 @@ const P2PVideoCallModal = ({
     }
   }, [isBlocked]);
 
-  // Connect refs to video elements
-  const localVideoElement = useRef<HTMLVideoElement>(null);
-  const remoteVideoElement = useRef<HTMLVideoElement>(null);
+  const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
+    if (element) {
+      (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+    }
+  }, [localVideoRef]);
 
-  useEffect(() => {
-    if (localVideoElement.current) {
-      (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = localVideoElement.current;
+  const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
+    if (element) {
+      (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
     }
-    if (remoteVideoElement.current) {
-      (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = remoteVideoElement.current;
-    }
-  }, [localVideoRef, remoteVideoRef]);
+  }, [remoteVideoRef]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -126,8 +125,15 @@ const P2PVideoCallModal = ({
         <div className="relative w-full h-full flex flex-col">
           {/* Remote Video (Full screen) */}
           <div className="flex-1 relative bg-gray-900">
-            {callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'idle' ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+            <video
+              ref={setRemoteVideoElement}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+
+            {(callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'idle') && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/40">
                 <Avatar className="w-32 h-32 mb-4">
                   <AvatarImage src={remotePhoto || undefined} />
                   <AvatarFallback className="text-4xl bg-gradient-to-br from-primary to-accent">
@@ -141,19 +147,12 @@ const P2PVideoCallModal = ({
                 </div>
                 <p className="text-xs text-gray-500 mt-4">P2P WebRTC Connection</p>
               </div>
-            ) : (
-              <video
-                ref={remoteVideoElement}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
             )}
 
             {/* Local Video (Picture-in-picture) */}
             <div className="absolute bottom-20 right-4 w-40 h-28 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
               <video
-                ref={localVideoElement}
+                ref={setLocalVideoElement}
                 autoPlay
                 playsInline
                 muted

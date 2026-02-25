@@ -634,7 +634,19 @@ export const useP2PCall = ({
     }
 
     iceCandidateQueueRef.current = [];
+    setRemoteStream(null);
   }, []);
+
+  // Ensure streams bind even if video refs mount after media events
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current && localVideoRef.current.srcObject !== localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+
+    if (remoteVideoRef.current && remoteStream && remoteVideoRef.current.srcObject !== remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, state.callStatus, state.isConnecting]);
 
   // Auto-start based on role (initiator vs receiver)
   useEffect(() => {
