@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Shuffle, MessageCircle, UserCheck, X, Languages, Shield, Wallet } from "lucide-react";
+import { Loader2, Shuffle, MessageCircle, UserCheck, X, Shield, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/supportedLanguages";
@@ -76,7 +76,6 @@ export const RandomChatButton = ({
     photoUrl: string | null;
     language: string;
     isSameLanguage: boolean;
-    requiresTranslation: boolean;
   } | null>(null);
 
   const findRandomPartner = async () => {
@@ -153,14 +152,13 @@ export const RandomChatButton = ({
           const womanLanguage = data.profile?.primary_language || userLanguage;
           const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
           
-          setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
+          setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match!");
           setMatchedUser({
             userId: data.woman_user_id,
             fullName: data.profile?.full_name || "Anonymous",
             photoUrl: data.profile?.photo_url || null,
             language: womanLanguage,
             isSameLanguage,
-            requiresTranslation: !isSameLanguage
           });
         } else {
           // Try general matching
@@ -178,14 +176,13 @@ export const RandomChatButton = ({
             const womanLanguage = generalData.profile?.primary_language || userLanguage;
             const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
             
-            setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
+            setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match!");
             setMatchedUser({
               userId: generalData.woman_user_id,
               fullName: generalData.profile?.full_name || "Anonymous",
               photoUrl: generalData.profile?.photo_url || null,
               language: womanLanguage,
               isSameLanguage,
-              requiresTranslation: !isSameLanguage
             });
           } else {
             setSearchStatus("No partners available right now. Please try again later.");
@@ -286,14 +283,13 @@ export const RandomChatButton = ({
         const isSameLanguage = manLang.toLowerCase() === userLanguage.toLowerCase();
         const randomMan = chosenMan;
 
-        setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
+        setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match!");
         setMatchedUser({
           userId: randomMan.user_id,
           fullName: randomMan.full_name || "Anonymous",
           photoUrl: randomMan.photo_url || null,
           language: manLang,
           isSameLanguage,
-          requiresTranslation: !isSameLanguage
         });
       }
     } catch (error: any) {
@@ -439,14 +435,13 @@ export const RandomChatButton = ({
                   <p className="text-sm text-muted-foreground">
                     Speaks {matchedUser.language}
                   </p>
-                  {matchedUser.requiresTranslation ? (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Languages className="h-3 w-3" />
-                      Auto-translate
-                    </Badge>
-                  ) : (
+                  {matchedUser.isSameLanguage ? (
                     <Badge variant="successOutline" className="text-xs">
                       Same language
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      Different language
                     </Badge>
                   )}
                 </div>
