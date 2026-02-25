@@ -113,7 +113,7 @@ export function PrivateGroupCallWindow({
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   
   // View mode: show both panels, video only, or chat only
-  const [viewMode, setViewMode] = useState<'both' | 'video' | 'chat'>('both');
+  const [viewMode, setViewMode] = useState<'both' | 'video' | 'chat'>('video'); // Default to video only, chat hidden
   
   // Gift tickets display (shows for 1 minute at top)
   const [giftTickets, setGiftTickets] = useState<GiftTicket[]>([]);
@@ -823,31 +823,33 @@ export function PrivateGroupCallWindow({
                 </div>
               )}
               
-              {/* Participant count overlay - host sees count + names, men see only count */}
-              {participants.length > 1 && (
-                <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1">
-                  {isOwner ? (
-                    <>
-                      {participants.filter(p => !p.isOwner).slice(0, 8).map((p) => (
+              {/* Participant names overlay */}
+              {isOwner ? (
+                // Host sees ALL joined user names
+                <div className="absolute bottom-2 left-2 right-2 max-h-24 overflow-y-auto">
+                  <div className="flex flex-wrap gap-1">
+                    {participants.filter(p => !p.isOwner).length === 0 ? (
+                      <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none">
+                        Waiting for participants...
+                      </Badge>
+                    ) : (
+                      participants.filter(p => !p.isOwner).map((p) => (
                         <Badge key={p.id} variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
-                          <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                           {p.name}
                         </Badge>
-                      ))}
-                      {participants.filter(p => !p.isOwner).length > 8 && (
-                        <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none">
-                          +{participants.filter(p => !p.isOwner).length - 8} more
-                        </Badge>
-                      )}
-                    </>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
-                      <Users className="h-3 w-3" />
-                      {viewerCount} in group
-                    </Badge>
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
-              )}
+              ) : participants.length > 1 ? (
+                <div className="absolute bottom-2 left-2">
+                  <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
+                    <Users className="h-3 w-3" />
+                    {viewerCount} in group
+                  </Badge>
+                </div>
+              ) : null}
             </div>
 
             {/* Video Controls */}
