@@ -14,7 +14,7 @@ import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, 
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
-const MAX_GROUPS_APP_WIDE = 10;
+const MAX_GROUPS_APP_WIDE = 4;
 // Gift amounts available as optional tips
 const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
 
