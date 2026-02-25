@@ -432,7 +432,7 @@ export function PrivateGroupCallWindow({
   const handleSendGift = async (gift: GiftItem) => {
     // Optional tip - 50% goes to host, 50% to admin
     try {
-      const { data, error } = await supabase.rpc('process_group_gift', {
+      const { data, error } = await supabase.rpc('process_group_tip' as any, {
         p_sender_id: currentUserId,
         p_group_id: group.id,
         p_gift_id: gift.id

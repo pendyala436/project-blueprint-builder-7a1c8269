@@ -4020,6 +4020,10 @@ export type Database = {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
       }
+      process_group_tip: {
+        Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
       process_group_video_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
