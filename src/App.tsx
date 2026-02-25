@@ -142,21 +142,13 @@ const AppShell = memo(({ children }: { children: React.ReactNode }) => (
           <TranslationProvider>
             <TooltipProvider>
               <Suspense fallback={null}>
-                <SecurityProvider
-                  enableDevToolsDetection={false}
-                  enableKeyboardBlocking={false}
-                  enableConsoleProtection={false}
-                >
-                  <Suspense fallback={null}>
-                    <Toaster />
-                    <Sonner />
-                    <PWAInstallPrompt />
-                    <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
-                    <DirectionToggle />
-                  </Suspense>
-                  {children}
-                </SecurityProvider>
+                <Toaster />
+                <Sonner />
+                <PWAInstallPrompt />
+                <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
+                <DirectionToggle />
               </Suspense>
+              {children}
             </TooltipProvider>
           </TranslationProvider>
         </I18nProvider>
