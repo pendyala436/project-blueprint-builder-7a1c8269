@@ -50,10 +50,9 @@ import { cn } from "@/lib/utils";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 import { RandomChatButton } from "@/components/RandomChatButton";
-import VideoCallMiniButton from "@/components/VideoCallMiniButton";
+// 1-on-1 video calls removed from app
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-// VideoCallMiniButton removed from men's dashboard
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { RecentActivityWidget } from "@/components/RecentActivityWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
@@ -1552,17 +1551,7 @@ const DashboardScreen = () => {
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
                   className="w-full"
                 />
-                {/* Video Call Button - India Only */}
-                {userCountry === "IN" && (
-                  <div className="w-full">
-                    <VideoCallMiniButton
-                      currentUserId={currentUserId}
-                      userLanguage={userLanguage}
-                      walletBalance={walletBalance}
-                      onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                    />
-                  </div>
-                )}
+                {/* 1-on-1 Video Call removed from app */}
                 <Button 
                   variant="aurora" 
                   size="lg"
