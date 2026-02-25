@@ -312,6 +312,38 @@ export const useP2PCall = ({
     }
   }, [currentUserId, remoteUserId]);
 
+  // Helper: safely assign stream to a video element and force play
+  const bindStreamToVideo = useCallback((video: HTMLVideoElement | null, stream: MediaStream | null) => {
+    if (!video || !stream) return;
+    if (video.srcObject === stream) {
+      // Already bound — just make sure it's playing
+      if (video.paused) {
+        video.play().catch(() => {});
+      }
+      return;
+    }
+    video.srcObject = stream;
+    // Force play with muted-fallback for iOS Safari autoplay restrictions
+    const attemptPlay = () => {
+      video.play().catch(() => {
+        // iOS blocks unmuted autoplay; try muted then unmute after play
+        video.muted = true;
+        video.play().then(() => {
+          // Unmute after playback starts (user already interacted to accept call)
+          setTimeout(() => { video.muted = false; }, 300);
+        }).catch(err => {
+          console.warn('[P2P] Video play failed even muted:', err);
+        });
+      });
+    };
+    // If metadata not ready yet, wait for it
+    if (video.readyState >= 2) {
+      attemptPlay();
+    } else {
+      video.addEventListener('loadedmetadata', attemptPlay, { once: true });
+    }
+  }, []);
+
   // Create peer connection with all event handlers
   const createPeerConnection = useCallback(async (localStream: MediaStream) => {
     console.log('[P2P] Creating peer connection...');
@@ -327,10 +359,9 @@ export const useP2PCall = ({
     pc.ontrack = (event) => {
       console.log('[P2P] Received remote track:', event.track.kind);
       if (event.streams[0]) {
-        setRemoteStream(event.streams[0]);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
+        const stream = event.streams[0];
+        setRemoteStream(stream);
+        bindStreamToVideo(remoteVideoRef.current, stream);
         setState(prev => ({ ...prev, callStatus: 'active', isConnected: true }));
         // Sync status to busy when call becomes active
         syncCallStatus(true);
@@ -399,7 +430,7 @@ export const useP2PCall = ({
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [currentUserId, onCallEnded, toast, syncCallStatus]);
+  }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo]);
 
   // Send/re-send offer (used for initial dial + peer-ready handshake)
   const sendOffer = useCallback(async () => {
@@ -867,14 +898,9 @@ export const useP2PCall = ({
 
   // Ensure streams bind even if video refs mount after media events
   useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current && localVideoRef.current.srcObject !== localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
-    }
-
-    if (remoteVideoRef.current && remoteStream && remoteVideoRef.current.srcObject !== remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream, state.callStatus, state.isConnecting]);
+    bindStreamToVideo(localVideoRef.current, localStreamRef.current);
+    bindStreamToVideo(remoteVideoRef.current, remoteStream);
+  }, [remoteStream, state.callStatus, state.isConnecting, bindStreamToVideo]);
 
   // Auto-start based on role (initiator vs receiver)
   useEffect(() => {
