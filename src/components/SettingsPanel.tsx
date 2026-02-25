@@ -397,17 +397,7 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
             description={t('languageDescription', 'Select your preferred language for the app interface')}
           />
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="auto-translate" className="cursor-pointer">{t('autoTranslateMessages', 'Auto-translate Messages')}</Label>
-            </div>
-            <Switch
-              id="auto-translate"
-              checked={settings.auto_translate}
-              onCheckedChange={(checked) => updateSetting("auto_translate", checked)}
-            />
-          </div>
+          {/* Auto-translate setting removed - feature disabled */}
 
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
