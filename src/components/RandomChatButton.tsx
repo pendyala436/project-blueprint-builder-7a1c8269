@@ -50,6 +50,7 @@ interface RandomChatButtonProps {
   className?: string;
   onInsufficientBalance?: () => void;
   hasGoldenBadge?: boolean;
+  chatMode?: "paid" | "free" | "exclusive_free";
 }
 
 export const RandomChatButton = ({
@@ -61,7 +62,8 @@ export const RandomChatButton = ({
   size = "lg",
   className = "",
   onInsufficientBalance,
-  hasGoldenBadge = false
+  hasGoldenBadge = false,
+  chatMode = "paid"
 }: RandomChatButtonProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -225,21 +227,38 @@ export const RandomChatButton = ({
 
         const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-        // Check wallet balance using secure RPC (bypasses RLS)
-        const { data: walletData } = await supabase.rpc('get_men_with_balance', {
-          p_user_ids: menProfiles.map(m => m.user_id)
-        });
-
-        const menWithBalance = walletData?.map((w: any) => w.user_id) || [];
-
-        // Filter to men who have balance
-        const qualifiedMen = menProfiles.filter(m => 
-          menWithBalance.includes(m.user_id)
-        );
-
-        if (qualifiedMen.length === 0) {
-          setSearchStatus("No available men with wallet balance. Please try again later.");
-          return;
+        // Filter men based on woman's chat mode
+        let qualifiedMen;
+        
+        if (chatMode === "paid") {
+          // PAID MODE: Only match with men who have sufficient balance (≥₹8)
+          const { data: walletData } = await supabase.rpc('get_men_with_balance', {
+            p_user_ids: menProfiles.map(m => m.user_id)
+          });
+          const menWithBalance = walletData?.map((w: any) => w.user_id) || [];
+          qualifiedMen = menProfiles.filter(m => menWithBalance.includes(m.user_id));
+          
+          if (qualifiedMen.length === 0) {
+            setSearchStatus("No available men with wallet balance. Please try again later.");
+            return;
+          }
+        } else {
+          // FREE / EXCLUSIVE FREE MODE: Match with regular men (zero or low balance)
+          const { data: walletData } = await supabase.rpc('get_men_with_balance', {
+            p_user_ids: menProfiles.map(m => m.user_id)
+          });
+          const menWithBalance = new Set(walletData?.map((w: any) => w.user_id) || []);
+          
+          // Prefer men WITHOUT sufficient balance (regular/non-recharged users)
+          const regularMen = menProfiles.filter(m => !menWithBalance.has(m.user_id));
+          
+          // If no regular men available, allow all men
+          qualifiedMen = regularMen.length > 0 ? regularMen : menProfiles;
+          
+          if (qualifiedMen.length === 0) {
+            setSearchStatus("No available men right now. Please try again later.");
+            return;
+          }
         }
 
         // Check active chat sessions to find idle/free men
