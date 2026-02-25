@@ -192,10 +192,10 @@ export const RandomChatButton = ({
           }
         }
       } else {
-        // Women looking for men - find online men with same language
-        setSearchStatus("Finding an available man for you...");
+      // Women looking for men - same language first, then any language
+        setSearchStatus(`Looking for men who speak ${userLanguage}...`);
         
-        // Get online men with matching language
+        // Get online men
         const { data: onlineStatuses } = await supabase
           .from("user_status")
           .select("user_id")
@@ -228,31 +228,18 @@ export const RandomChatButton = ({
 
         const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-        // Find men with same language first, then any online man
-        const sameLanguageMen = menProfiles.filter(m => {
-          const manLang = languageMap.get(m.user_id) || m.primary_language || m.preferred_language || "";
-          return manLang.toLowerCase() === userLanguage.toLowerCase();
-        });
-
-        const availableMen = sameLanguageMen.length > 0 ? sameLanguageMen : menProfiles;
-
-        // Check wallet balance for men (must have recharged) - but super users bypass
+        // Check wallet balance for ALL men first
         const { data: wallets } = await supabase
           .from("wallets")
           .select("user_id, balance")
-          .in("user_id", availableMen.map(m => m.user_id));
+          .in("user_id", menProfiles.map(m => m.user_id));
 
-        const menWithBalance = wallets?.filter(w => w.balance > 0).map(w => w.user_id) || [];
-
-        // Get emails to check for super users
-        const menEmails = new Map<string, string>();
-        // Note: We can't easily get emails client-side, so super users are identified by their unlimited balance
-        // Super users have balance of 999999999 (set by seed function)
         const superUserBalance = 999999999;
+        const menWithBalance = wallets?.filter(w => w.balance > 0).map(w => w.user_id) || [];
         const superUsers = wallets?.filter(w => w.balance >= superUserBalance).map(w => w.user_id) || [];
 
-        // Qualified men: either have balance > 0 or are super users
-        const qualifiedMen = availableMen.filter(m => 
+        // Filter to men who have balance or are super users
+        const qualifiedMen = menProfiles.filter(m => 
           menWithBalance.includes(m.user_id) || superUsers.includes(m.user_id)
         );
 
@@ -261,10 +248,43 @@ export const RandomChatButton = ({
           return;
         }
 
-        // Pick a random man
-        const randomMan = qualifiedMen[Math.floor(Math.random() * qualifiedMen.length)];
-        const manLang = languageMap.get(randomMan.user_id) || randomMan.primary_language || "Unknown";
+        // Check active chat sessions to find idle/free men
+        const { data: activeSessions } = await supabase
+          .from("active_chat_sessions")
+          .select("man_user_id")
+          .eq("status", "active")
+          .in("man_user_id", qualifiedMen.map(m => m.user_id));
+
+        const busyMenIds = new Set(activeSessions?.map(s => s.man_user_id) || []);
+        const freeMen = qualifiedMen.filter(m => !busyMenIds.has(m.user_id));
+        const poolToSearch = freeMen.length > 0 ? freeMen : qualifiedMen;
+
+        // Split into same-language and different-language
+        const sameLanguageMen = poolToSearch.filter(m => {
+          const manLang = languageMap.get(m.user_id) || m.primary_language || m.preferred_language || "";
+          return manLang.toLowerCase() === userLanguage.toLowerCase();
+        });
+        const diffLanguageMen = poolToSearch.filter(m => {
+          const manLang = languageMap.get(m.user_id) || m.primary_language || m.preferred_language || "";
+          return manLang.toLowerCase() !== userLanguage.toLowerCase();
+        });
+
+        // Priority: same language first, then different language
+        let chosenMan;
+        if (sameLanguageMen.length > 0) {
+          chosenMan = sameLanguageMen[Math.floor(Math.random() * sameLanguageMen.length)];
+        } else if (diffLanguageMen.length > 0) {
+          setSearchStatus("No same-language men available. Finding men who speak other languages...");
+          await new Promise(r => setTimeout(r, 800));
+          chosenMan = diffLanguageMen[Math.floor(Math.random() * diffLanguageMen.length)];
+        } else {
+          setSearchStatus("No available men right now. Please try again later.");
+          return;
+        }
+
+        const manLang = languageMap.get(chosenMan.user_id) || chosenMan.primary_language || "Unknown";
         const isSameLanguage = manLang.toLowerCase() === userLanguage.toLowerCase();
+        const randomMan = chosenMan;
 
         setSearchStatus(isSameLanguage ? "Found a same-language match!" : "Found a match with auto-translation!");
         setMatchedUser({
