@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Lock, Unlock, Gift, MessageCircle, Video, Users, Radio, Clock } from 'lucide-react';
 import { GroupChatWindow } from './GroupChatWindow';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
-import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
+import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
 interface PrivateGroup {
   id: string;
@@ -321,12 +321,6 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       <Users className="h-3 w-3" />
                       {group.participant_count}/{MAX_PARTICIPANTS}
                     </Badge>
-                    {group.is_live && (
-                      <Badge variant="outline" className="gap-1 text-xs">
-                        <Clock className="h-3 w-3" />
-                        {MAX_DURATION_MINUTES}min
-                      </Badge>
-                    )}
                   </div>
 
                   {unlocked ? (
