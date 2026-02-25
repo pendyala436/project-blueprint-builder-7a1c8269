@@ -112,6 +112,11 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       }, { onConflict: 'group_id,user_id' });
 
       toast.success(`You are now live in ${group.name}!`);
+      
+      // Auto-open the call window immediately
+      const updatedGroup = { ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName, participant_count: 1 };
+      setActiveGroup(updatedGroup);
+      
       fetchGroups();
     } catch (error: any) {
       toast.error(error.message || 'Failed to go live');

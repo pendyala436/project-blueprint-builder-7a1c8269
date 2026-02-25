@@ -27,7 +27,7 @@ import {
   X, Send, Paperclip, File, MessageCircle, Maximize2, Minimize2,
   Clock, Gift, DollarSign, AlertTriangle, Ticket, Timer
 } from 'lucide-react';
-import { usePrivateGroupCall, MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
+import { usePrivateGroupCall, MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -194,14 +194,14 @@ export function PrivateGroupCallWindow({
     },
   });
 
-  // Format remaining time
+  // Format elapsed time
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+    if (hrs > 0) return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  const timeProgress = ((MAX_DURATION_MINUTES * 60 - remainingTime) / (MAX_DURATION_MINUTES * 60)) * 100;
   
 
   // Calculate ticket display length based on price (min 5s, max 60s based on price)
@@ -298,12 +298,14 @@ export function PrivateGroupCallWindow({
     }
   }, [group.id, hasChat]);
 
-  // Auto-join if not owner and stream is live
+  // Auto-start: host auto-goes-live, participants auto-join
   useEffect(() => {
-    if (hasVideo && !isOwner && group.is_live && !isConnected && !isConnecting) {
+    if (isOwner && !isConnected && !isConnecting && !isLive) {
+      goLive();
+    } else if (hasVideo && !isOwner && group.is_live && !isConnected && !isConnecting) {
       joinStream();
     }
-  }, [isOwner, group.is_live, isConnected, isConnecting, joinStream, hasVideo]);
+  }, [isOwner, group.is_live, isConnected, isConnecting, joinStream, hasVideo, goLive, isLive]);
 
   // Attach host stream to video element when both are available
   useEffect(() => {
@@ -647,12 +649,11 @@ export function PrivateGroupCallWindow({
         </div>
       </div>
 
-      {/* Timer Progress Bar */}
-      {isLive && (
-        <div className="px-4 py-1 bg-muted/20">
-          <Progress value={timeProgress} className="h-1" />
-          <p className="text-[10px] text-muted-foreground text-center mt-1">
-            {MAX_DURATION_MINUTES - Math.floor(remainingTime / 60)} of {MAX_DURATION_MINUTES} minutes used
+      {/* Elapsed Time Display */}
+      {isLive && remainingTime > 0 && (
+        <div className="px-4 py-1 bg-muted/20 text-center">
+          <p className="text-[10px] text-muted-foreground">
+            Live for {formatTime(remainingTime)}
           </p>
         </div>
       )}
@@ -1096,7 +1097,7 @@ export function PrivateGroupCallWindow({
               End Stream Early?
             </DialogTitle>
             <DialogDescription>
-              If you end the stream before 30 minutes, participants with remaining balance will receive a refund, and the refund amount will be deducted from your earnings.
+              Ending the stream will disconnect all participants. Are you sure?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">
@@ -1104,64 +1105,12 @@ export function PrivateGroupCallWindow({
               Continue Stream
             </Button>
             <Button variant="destructive" onClick={handleEndStream}>
-              End & Process Refunds
+              End Stream
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Extension Request Dialog */}
-      <Dialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-primary" />
-              Request Time Extension
-            </DialogTitle>
-            <DialogDescription>
-              You can request one extension per month per group. Please provide a valid reason.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {!canExtendThisMonth ? (
-            <div className="text-center py-6">
-              <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-              <p className="text-muted-foreground">
-                You've already used your monthly extension for this group
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Extensions reset at the start of each month
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Reason for extension</label>
-                <Textarea
-                  value={extensionReason}
-                  onChange={(e) => setExtensionReason(e.target.value)}
-                  placeholder="Explain why you need an extension..."
-                  rows={3}
-                  maxLength={200}
-                />
-                <p className="text-xs text-muted-foreground text-right">
-                  {extensionReason.length}/200
-                </p>
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-4">
-                <Button variant="outline" onClick={() => setShowExtensionDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleRequestExtension} disabled={isExtending || !extensionReason.trim()}>
-                  {isExtending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Request Extension
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
