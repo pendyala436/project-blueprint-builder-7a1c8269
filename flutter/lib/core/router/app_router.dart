@@ -39,7 +39,7 @@ import '../../shared/screens/approval_pending_screen.dart';
 import '../../shared/screens/welcome_tutorial_screen.dart';
 import '../services/auth_service.dart';
 
-/// App Route Names
+/// App Route Names - Synced with React constants/index.ts ROUTES
 class AppRoutes {
   AppRoutes._();
 
@@ -101,181 +101,67 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.aiProcessing ||
           state.matchedLocation == AppRoutes.registrationComplete;
 
-      if (!isLoggedIn && !isAuthRoute) {
-        return AppRoutes.auth;
-      }
-
-      if (isLoggedIn && state.matchedLocation == AppRoutes.auth) {
-        return AppRoutes.dashboard;
-      }
-
+      if (!isLoggedIn && !isAuthRoute) return AppRoutes.auth;
+      if (isLoggedIn && state.matchedLocation == AppRoutes.auth) return AppRoutes.dashboard;
       return null;
     },
     errorBuilder: (context, state) => const NotFoundScreen(),
     routes: [
       // Auth Routes
-      GoRoute(
-        path: AppRoutes.auth,
-        builder: (context, state) => const AuthScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.forgotPassword,
-        builder: (context, state) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.passwordReset,
-        builder: (context, state) => const PasswordResetScreen(),
-      ),
+      GoRoute(path: AppRoutes.auth, builder: (_, __) => const AuthScreen()),
+      GoRoute(path: AppRoutes.forgotPassword, builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: AppRoutes.passwordReset, builder: (_, __) => const PasswordResetScreen()),
       
       // Registration Routes
-      GoRoute(
-        path: AppRoutes.register,
-        builder: (context, state) => const LanguageCountryScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.basicInfo,
-        builder: (context, state) => const BasicInfoScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.passwordSetup,
-        builder: (context, state) => const PasswordSetupScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.photoUpload,
-        builder: (context, state) => const PhotoUploadScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.locationSetup,
-        builder: (context, state) => const LocationSetupScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.languagePreferences,
-        builder: (context, state) => const LanguagePreferencesScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.termsAgreement,
-        builder: (context, state) => const TermsAgreementScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.aiProcessing,
-        builder: (context, state) => const AIProcessingScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.registrationComplete,
-        builder: (context, state) => const RegistrationCompleteScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.welcomeTutorial,
-        builder: (context, state) => const WelcomeTutorialScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.approvalPending,
-        builder: (context, state) => const ApprovalPendingScreen(),
-      ),
+      GoRoute(path: AppRoutes.register, builder: (_, __) => const LanguageCountryScreen()),
+      GoRoute(path: AppRoutes.basicInfo, builder: (_, __) => const BasicInfoScreen()),
+      GoRoute(path: AppRoutes.passwordSetup, builder: (_, __) => const PasswordSetupScreen()),
+      GoRoute(path: AppRoutes.photoUpload, builder: (_, __) => const PhotoUploadScreen()),
+      GoRoute(path: AppRoutes.locationSetup, builder: (_, __) => const LocationSetupScreen()),
+      GoRoute(path: AppRoutes.languagePreferences, builder: (_, __) => const LanguagePreferencesScreen()),
+      GoRoute(path: AppRoutes.termsAgreement, builder: (_, __) => const TermsAgreementScreen()),
+      GoRoute(path: AppRoutes.aiProcessing, builder: (_, __) => const AIProcessingScreen()),
+      GoRoute(path: AppRoutes.registrationComplete, builder: (_, __) => const RegistrationCompleteScreen()),
+      GoRoute(path: AppRoutes.welcomeTutorial, builder: (_, __) => const WelcomeTutorialScreen()),
+      GoRoute(path: AppRoutes.approvalPending, builder: (_, __) => const ApprovalPendingScreen()),
       
       // Dashboard Routes
-      GoRoute(
-        path: AppRoutes.dashboard,
-        builder: (context, state) => const DashboardScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.womenDashboard,
-        builder: (context, state) => const WomenDashboardScreen(),
-      ),
+      GoRoute(path: AppRoutes.dashboard, builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: AppRoutes.womenDashboard, builder: (_, __) => const WomenDashboardScreen()),
       
       // Matching Routes
-      GoRoute(
-        path: AppRoutes.onlineUsers,
-        builder: (context, state) => const OnlineUsersScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.findMatch,
-        builder: (context, state) => const MatchingScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.matchDiscovery,
-        builder: (context, state) => const MatchDiscoveryScreen(),
-      ),
+      GoRoute(path: AppRoutes.onlineUsers, builder: (_, __) => const OnlineUsersScreen()),
+      GoRoute(path: AppRoutes.findMatch, builder: (_, __) => const MatchingScreen()),
+      GoRoute(path: AppRoutes.matchDiscovery, builder: (_, __) => const MatchDiscoveryScreen()),
       
       // Profile Routes
-      GoRoute(
-        path: AppRoutes.profile,
-        builder: (context, state) => ProfileDetailScreen(
-          userId: state.pathParameters['userId']!,
-        ),
-      ),
+      GoRoute(path: AppRoutes.profile, builder: (_, state) => ProfileDetailScreen(userId: state.pathParameters['userId']!)),
       
       // Chat Routes
-      GoRoute(
-        path: AppRoutes.chat,
-        builder: (context, state) => ChatScreen(
-          chatId: state.pathParameters['chatId']!,
-        ),
-      ),
+      GoRoute(path: AppRoutes.chat, builder: (_, state) => ChatScreen(chatId: state.pathParameters['chatId']!)),
       
       // Wallet Routes
-      GoRoute(
-        path: AppRoutes.wallet,
-        builder: (context, state) => const WalletScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.womenWallet,
-        builder: (context, state) => const WomenWalletScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.transactionHistory,
-        builder: (context, state) => const TransactionHistoryScreen(),
-      ),
+      GoRoute(path: AppRoutes.wallet, builder: (_, __) => const WalletScreen()),
+      GoRoute(path: AppRoutes.womenWallet, builder: (_, __) => const WomenWalletScreen()),
+      GoRoute(path: AppRoutes.transactionHistory, builder: (_, __) => const TransactionHistoryScreen()),
       
       // Gift Routes
-      GoRoute(
-        path: AppRoutes.sendGift,
-        builder: (context, state) => GiftSendingScreen(
-          receiverId: state.pathParameters['receiverId']!,
-        ),
-      ),
+      GoRoute(path: AppRoutes.sendGift, builder: (_, state) => GiftSendingScreen(receiverId: state.pathParameters['receiverId']!)),
       
       // Settings Routes
-      GoRoute(
-        path: AppRoutes.settings,
-        builder: (context, state) => const SettingsScreen(),
-      ),
+      GoRoute(path: AppRoutes.settings, builder: (_, __) => const SettingsScreen()),
       
-      // Shift Routes (Women)
-      GoRoute(
-        path: AppRoutes.shiftManagement,
-        builder: (context, state) => const ShiftManagementScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.shiftCompliance,
-        builder: (context, state) => const ShiftComplianceScreen(),
-      ),
+      // Shift Routes
+      GoRoute(path: AppRoutes.shiftManagement, builder: (_, __) => const ShiftManagementScreen()),
+      GoRoute(path: AppRoutes.shiftCompliance, builder: (_, __) => const ShiftComplianceScreen()),
       
       // Admin Routes
-      GoRoute(
-        path: AppRoutes.admin,
-        builder: (context, state) => const AdminDashboardScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminAnalytics,
-        builder: (context, state) => const AdminAnalyticsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminUsers,
-        builder: (context, state) => const AdminUsersScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminFinance,
-        builder: (context, state) => const AdminFinanceScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminModeration,
-        builder: (context, state) => const AdminModerationScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminSettings,
-        builder: (context, state) => const AdminSettingsScreen(),
-      ),
+      GoRoute(path: AppRoutes.admin, builder: (_, __) => const AdminDashboardScreen()),
+      GoRoute(path: AppRoutes.adminAnalytics, builder: (_, __) => const AdminAnalyticsScreen()),
+      GoRoute(path: AppRoutes.adminUsers, builder: (_, __) => const AdminUsersScreen()),
+      GoRoute(path: AppRoutes.adminFinance, builder: (_, __) => const AdminFinanceScreen()),
+      GoRoute(path: AppRoutes.adminModeration, builder: (_, __) => const AdminModerationScreen()),
+      GoRoute(path: AppRoutes.adminSettings, builder: (_, __) => const AdminSettingsScreen()),
     ],
   );
 });
