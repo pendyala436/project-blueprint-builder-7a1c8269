@@ -427,7 +427,7 @@ export function PrivateGroupCallWindow({
   };
 
   const handleSendGift = async (gift: GiftItem) => {
-    // No restrictions on optional gifts after joining - user can send any gift
+    // Optional tip - 50% goes to host, 50% to admin
     try {
       const { data, error } = await supabase.rpc('process_group_gift', {
         p_sender_id: currentUserId,
@@ -443,14 +443,14 @@ export function PrivateGroupCallWindow({
         // Add gift ticket to display
         addGiftTicket(userName, gift);
         
-        // Broadcast gift to all participants
-        toast.success(`${gift.emoji} Gift sent to host!`);
+        // Broadcast tip to all participants
+        toast.success(`${gift.emoji} Tip sent to host! (50% reaches host)`);
         setShowGiftDialog(false);
       } else {
-        toast.error(result.error || 'Failed to send gift');
+        toast.error(result.error || 'Failed to send tip');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send gift');
+      toast.error(error.message || 'Failed to send tip');
     }
   };
 
@@ -883,7 +883,7 @@ export function PrivateGroupCallWindow({
                 )}
               </div>
 
-              {/* Optional gift button for participants with remaining budget */}
+              {/* Optional tip button for participants */}
               {!isOwner && isConnected && (
                 <Button
                   variant="outline"
@@ -892,7 +892,7 @@ export function PrivateGroupCallWindow({
                   className="gap-1"
                 >
                   <Gift className="h-4 w-4" />
-                  Send Gift
+                  Send Tip
                 </Button>
               )}
 
@@ -1049,9 +1049,9 @@ export function PrivateGroupCallWindow({
       <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send Gift to Host</DialogTitle>
+            <DialogTitle>Send Tip to Host</DialogTitle>
             <DialogDescription>
-              Optional: Send an additional gift to the host during the call
+              Optional: Send a tip to support the host. 50% of the tip reaches the host.
             </DialogDescription>
           </DialogHeader>
           

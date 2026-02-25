@@ -185,14 +185,8 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   };
 
   const handleUnlockGroup = async (group: PrivateGroup) => {
-    // If free group, grant access directly without gift
-    if (group.min_gift_amount === 0) {
-      await handleFreeJoin(group);
-      return;
-    }
-    setSelectedGroup(group);
-    await fetchGifts(group.min_gift_amount);
-    setShowGiftDialog(true);
+    // Free entry - no gift required
+    await handleFreeJoin(group);
   };
 
   const handleFreeJoin = async (group: PrivateGroup) => {
@@ -314,17 +308,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       {unlocked ? (
                         <>
                           <Unlock className="h-3 w-3" />
-                          Unlocked
-                        </>
-                      ) : group.min_gift_amount === 0 ? (
-                        <>
-                          <Unlock className="h-3 w-3" />
-                          Open
+                          Joined
                         </>
                       ) : (
                         <>
-                          <Lock className="h-3 w-3" />
-                          ₹{group.min_gift_amount}+
+                          <Unlock className="h-3 w-3" />
+                          Free Entry
                         </>
                       )}
                     </Badge>
@@ -371,17 +360,8 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       className="w-full gap-2" 
                       onClick={() => handleUnlockGroup(group)}
                     >
-                      {group.min_gift_amount === 0 ? (
-                        <>
-                          <Users className="h-4 w-4" />
-                          Join
-                        </>
-                      ) : (
-                        <>
-                          <Gift className="h-4 w-4" />
-                          Send Gift to Unlock
-                        </>
-                      )}
+                      <Users className="h-4 w-4" />
+                      Join (₹4/min)
                     </Button>
                   )}
                 </CardContent>
@@ -391,61 +371,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         </div>
       )}
 
-      {/* Gift Selection Dialog */}
-      <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Unlock {selectedGroup?.name}
-            </DialogTitle>
-            <DialogDescription>
-              This private room requires a gift of ₹{selectedGroup?.min_gift_amount}+ to join.
-              Send a gift to unlock chat and video call access.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Your balance: <span className="font-semibold">₹{walletBalance}</span>
-            </p>
-            
-            {gifts.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">
-                No gifts available at this price point
-              </p>
-            ) : (
-              <ScrollArea className="h-64">
-                <div className="grid grid-cols-2 gap-3">
-                  {gifts.map((gift) => (
-                    <Button
-                      key={gift.id}
-                      variant="outline"
-                      className="h-auto flex-col py-4 gap-2"
-                      disabled={isSendingGift || walletBalance < gift.price}
-                      onClick={() => handleSendGift(gift)}
-                    >
-                      <span className="text-3xl">{gift.emoji}</span>
-                      <span className="font-medium">{gift.name}</span>
-                      <span className="text-sm text-muted-foreground">₹{gift.price}</span>
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-
-            <p className="text-xs text-muted-foreground mt-4 text-center">
-              Gift split: 50% to creator, 50% to admin
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowGiftDialog(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Gift/Tip Selection Dialog - kept for backward compat but no longer used for entry */}
 
       {/* Group Chat Window */}
       {activeGroupChat && (

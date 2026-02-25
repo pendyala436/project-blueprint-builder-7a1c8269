@@ -300,11 +300,11 @@ export function usePrivateGroupCall({
     }
   }, []);
 
-  // Check if user can join (balance check)
+  // Check if user can join (balance check) - uses chat rates (₹4/min men, ₹2/min women)
   const checkCanJoin = useCallback(async (): Promise<{ canJoin: boolean; balance: number }> => {
     if (isOwner) return { canJoin: true, balance: 0 };
 
-    const costPerMinute = pricing.videoRatePerMinute;
+    const costPerMinute = pricing.ratePerMinute; // Use chat rate (₹4/min)
     const minBalance = costPerMinute * 5; // Need at least 5 minutes worth
 
     const { data: wallet } = await supabase
@@ -320,7 +320,7 @@ export function usePrivateGroupCall({
     }
 
     return { canJoin: true, balance };
-  }, [currentUserId, isOwner, pricing.videoRatePerMinute]);
+  }, [currentUserId, isOwner, pricing.ratePerMinute]);
 
   // Start billing timer (runs every minute)
   const startBillingTimer = useCallback(() => {
@@ -337,7 +337,7 @@ export function usePrivateGroupCall({
       for (const [participantId, participant] of session.participants) {
         if (participant.isOwner) continue;
 
-        const costPerMinute = pricing.videoRatePerMinute;
+        const costPerMinute = pricing.ratePerMinute; // ₹4/min for men
         
         // Check participant balance
         const { data: wallet } = await supabase
@@ -375,9 +375,9 @@ export function usePrivateGroupCall({
         totalDeducted += costPerMinute;
       }
 
-      // Credit earnings to host (50% split)
+      // Credit earnings to host - women earn ₹2/min per man (chat earning rate)
       if (totalDeducted > 0) {
-        const hostEarning = totalDeducted * (pricing.videoWomenEarningRate / pricing.videoRatePerMinute);
+        const hostEarning = totalDeducted * (pricing.womenEarningRate / pricing.ratePerMinute);
         
         await supabase.rpc('process_wallet_transaction', {
           p_user_id: session.hostId,
@@ -451,11 +451,11 @@ export function usePrivateGroupCall({
     for (const [participantId, participant] of session.participants) {
       if (participant.isOwner) continue;
 
-      const minutesPaid = Math.floor(participant.amountPaid / pricing.videoRatePerMinute);
+      const minutesPaid = Math.floor(participant.amountPaid / pricing.ratePerMinute);
       const unusedMinutes = Math.max(0, minutesPaid - elapsedMinutes);
       
       if (unusedMinutes > 0) {
-        const refundAmount = unusedMinutes * pricing.videoRatePerMinute;
+        const refundAmount = unusedMinutes * pricing.ratePerMinute;
 
         // Refund to participant
         await supabase.rpc('process_wallet_transaction', {
@@ -469,7 +469,7 @@ export function usePrivateGroupCall({
         totalRefunded += refundAmount;
         
         // Deduct proportional amount from host earnings
-        const hostDeduction = refundAmount * (pricing.videoWomenEarningRate / pricing.videoRatePerMinute);
+        const hostDeduction = refundAmount * (pricing.womenEarningRate / pricing.ratePerMinute);
         totalDeductedFromHost += hostDeduction;
       }
     }
@@ -722,7 +722,7 @@ export function usePrivateGroupCall({
         setState(prev => ({ 
           ...prev, 
           isConnecting: false, 
-          error: `Insufficient balance. You need at least ₹${pricing.videoRatePerMinute * 5}` 
+          error: `Insufficient balance. You need at least ₹${pricing.ratePerMinute * 5}` 
         }));
         return false;
       }
@@ -751,7 +751,7 @@ export function usePrivateGroupCall({
       }));
       return false;
     }
-  }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, pricing.videoRatePerMinute]);
+  }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, pricing.ratePerMinute]);
 
   // End stream (host only)
   const endStream = useCallback(async (processRefundsFlag = true) => {
