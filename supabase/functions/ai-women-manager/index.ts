@@ -382,14 +382,12 @@ async function distributeWomanForCall(supabase: any, data: any) {
     );
   }
 
-  // Step 2: Get women who are available AND idle (no active chats, no active calls)
+  // Step 2: Get women who are generally available and online
+  // NOTE: Do NOT hard-block on is_available_for_calls because that flag can be stale.
   const { data: availableWomen, error } = await supabase
     .from('women_availability')
     .select('user_id, current_call_count, current_chat_count, max_concurrent_calls, is_available, is_available_for_calls')
     .eq('is_available', true)
-    .eq('is_available_for_calls', true)
-    .eq('current_call_count', 0) // Not on any call
-    .eq('current_chat_count', 0) // IDLE: Not in any chat
     .in('user_id', onlineUserIds); // MUST be online
 
   if (error) {
@@ -401,32 +399,41 @@ async function distributeWomanForCall(supabase: any, data: any) {
   }
 
   if (!availableWomen?.length) {
-    console.log('[VideoCall] No idle women available for calls (all are busy with chats or calls)');
+    console.log('[VideoCall] No available women found in women_availability');
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'No idle women available. All women are currently busy with chats or calls.' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No available women right now.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  // Step 3: Filter out women who are already receiving another incoming call (ringing)
+  // Step 3: Recompute IDLE state from live session tables (source of truth)
   const candidateUserIds = availableWomen.map((w: any) => w.user_id);
-  
-  const { data: ringingCalls } = await supabase
-    .from('video_call_sessions')
-    .select('woman_user_id')
-    .eq('status', 'ringing')
-    .in('woman_user_id', candidateUserIds);
-  
-  const ringingUserIds = new Set((ringingCalls || []).map((c: any) => c.woman_user_id));
-  
+
+  const [{ data: activeChatRows }, { data: activeOrRingingCallRows }] = await Promise.all([
+    supabase
+      .from('active_chat_sessions')
+      .select('woman_user_id')
+      .eq('status', 'active')
+      .in('woman_user_id', candidateUserIds),
+    supabase
+      .from('video_call_sessions')
+      .select('woman_user_id')
+      .in('woman_user_id', candidateUserIds)
+      .in('status', ['active', 'connecting', 'ringing'])
+  ]);
+
+  const womenInActiveChat = new Set((activeChatRows || []).map((r: any) => r.woman_user_id));
+  const womenInCallFlow = new Set((activeOrRingingCallRows || []).map((r: any) => r.woman_user_id));
+
   const idleUserIds = candidateUserIds
-    .filter((id: string) => !ringingUserIds.has(id))
+    .filter((id: string) => !womenInActiveChat.has(id))
+    .filter((id: string) => !womenInCallFlow.has(id))
     .filter((id: string) => !excludeUserIds.includes(id));
 
   if (idleUserIds.length === 0) {
-    console.log('[VideoCall] All candidate women are currently receiving calls');
+    console.log('[VideoCall] No idle women available for calls (all are in chat/call/ringing)');
     return new Response(
-      JSON.stringify({ success: false, woman: null, reason: 'All available women are currently receiving other calls. Please try again.' }),
+      JSON.stringify({ success: false, woman: null, reason: 'No idle women available. All women are currently busy with chats or calls.' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

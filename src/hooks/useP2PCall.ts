@@ -274,12 +274,13 @@ export const useP2PCall = ({
           last_seen: now,
         }).eq('user_id', uid);
 
-        // Also update women_availability for accurate is_available
+        // Also update women_availability for accurate call/chat availability flags
         await supabase
           .from('women_availability')
           .update({
             current_call_count: totalVideoCalls,
             is_available: totalChats < 3 && totalVideoCalls === 0,
+            is_available_for_calls: totalVideoCalls === 0,
           })
           .eq('user_id', uid);
       }
