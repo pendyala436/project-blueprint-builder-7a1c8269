@@ -102,17 +102,22 @@ export function usePrivateGroupCall({
   const billingRef = useRef<NodeJS.Timeout | null>(null);
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-  // ICE servers for WebRTC
+  // ICE servers for WebRTC - single STUN server to reduce overhead
   const iceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
   ];
 
   // Create a peer connection to a specific participant
+  // Architecture: Host sends video+audio to each participant via 1-to-many.
+  // Participants send audio-only back to host. No participant-to-participant connections.
   const createPeerConnection = useCallback((participantId: string) => {
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({
+      iceServers,
+      // Reduce ICE gathering overhead
+      iceCandidatePoolSize: 1,
+    });
 
-    // Add local tracks to peer connection
+    // Only add local tracks - host sends video+audio, participants send audio only
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => {
         pc.addTrack(track, localStream.current!);
@@ -249,17 +254,19 @@ export function usePrivateGroupCall({
   // Initialize host media (video + audio)
   const initHostMedia = useCallback(async () => {
     try {
+      // Use lower resolution to reduce bandwidth - 50 participants means conservative settings
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30 },
+          width: { ideal: 640, max: 960 },
+          height: { ideal: 480, max: 720 },
+          frameRate: { ideal: 24, max: 30 },
           facingMode: 'user',
         },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          sampleRate: 22050, // Lower sample rate for group calls
         },
       });
       localStream.current = stream;
