@@ -70,6 +70,7 @@ export const useActivityStatus = (userId: string | null) => {
   }, []);
 
   // Set user online status in database
+  // IMPORTANT: When going online, preserve "busy" status if user has active sessions
   const setOnlineStatus = useCallback(async (isOnline: boolean) => {
     if (!userId) return;
 
@@ -77,6 +78,28 @@ export const useActivityStatus = (userId: string | null) => {
     isOnlineRef.current = isOnline;
 
     try {
+      // When going online, check if user should actually be "busy"
+      let statusText: string | undefined;
+      if (isOnline) {
+        const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
+          supabase.from("active_chat_sessions").select("*", { count: "exact", head: true })
+            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq("status", "active"),
+          supabase.from("video_call_sessions").select("*", { count: "exact", head: true })
+            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq("status", "active"),
+        ]);
+        
+        const totalVideoCalls = videoCount || 0;
+        const totalChats = chatCount || 0;
+        
+        if (totalVideoCalls > 0) {
+          statusText = "busy";
+        } else if (totalChats >= 3) {
+          statusText = "busy";
+        } else {
+          statusText = "online";
+        }
+      }
+
       // Update user_status table
       const { data: existing } = await supabase
         .from("user_status")
@@ -84,14 +107,24 @@ export const useActivityStatus = (userId: string | null) => {
         .eq("user_id", userId)
         .maybeSingle();
 
+      const updateData: Record<string, unknown> = {
+        is_online: isOnline,
+        last_seen: now,
+        updated_at: now,
+      };
+      
+      // Only set status_text when we have a calculated value (going online)
+      // or when going offline
+      if (!isOnline) {
+        updateData.status_text = "offline";
+      } else if (statusText) {
+        updateData.status_text = statusText;
+      }
+
       if (existing) {
         await supabase
           .from("user_status")
-          .update({
-            is_online: isOnline,
-            last_seen: now,
-            updated_at: now
-          })
+          .update(updateData)
           .eq("user_id", userId);
       } else {
         await supabase
@@ -99,7 +132,8 @@ export const useActivityStatus = (userId: string | null) => {
           .insert({
             user_id: userId,
             is_online: isOnline,
-            last_seen: now
+            last_seen: now,
+            status_text: isOnline ? (statusText || "online") : "offline",
           });
       }
 

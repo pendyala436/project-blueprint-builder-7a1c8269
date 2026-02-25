@@ -245,72 +245,43 @@ export const useP2PCall = ({
   }, []);
 
   // Update user status when call starts/ends
+  // NOTE: women_availability is handled by DB trigger on video_call_sessions changes
+  // This function only handles user_status recalculation
   const syncCallStatus = useCallback(async (callActive: boolean) => {
     try {
-      // Update women_availability if current user is woman
-      const { data: avail } = await supabase
-        .from('women_availability')
-        .select('user_id, current_call_count')
-        .eq('user_id', currentUserId)
-        .maybeSingle();
-
-      if (avail) {
-        const newCallCount = callActive
-          ? (avail.current_call_count || 0) + 1
-          : Math.max(0, (avail.current_call_count || 0) - 1);
-        await supabase
-          .from('women_availability')
-          .update({
-            current_call_count: newCallCount,
-            is_available_for_calls: newCallCount === 0,
-            is_available: !callActive || newCallCount < 3,
-          })
-          .eq('user_id', currentUserId);
-      }
-
-      // Also sync remote user's availability
-      const { data: remoteAvail } = await supabase
-        .from('women_availability')
-        .select('user_id, current_call_count')
-        .eq('user_id', remoteUserId)
-        .maybeSingle();
-
-      if (remoteAvail) {
-        const newRemoteCallCount = callActive
-          ? (remoteAvail.current_call_count || 0) + 1
-          : Math.max(0, (remoteAvail.current_call_count || 0) - 1);
-        await supabase
-          .from('women_availability')
-          .update({
-            current_call_count: newRemoteCallCount,
-            is_available_for_calls: newRemoteCallCount === 0,
-            is_available: !callActive || newRemoteCallCount < 3,
-          })
-          .eq('user_id', remoteUserId);
-      }
-
-      // Update user_status for both users
-      const statusText = callActive ? 'busy' : 'online';
       const now = new Date().toISOString();
       
-      if (callActive) {
-        await Promise.all([
-          supabase.from('user_status').update({ status_text: statusText, last_seen: now }).eq('user_id', currentUserId),
-          supabase.from('user_status').update({ status_text: statusText, last_seen: now }).eq('user_id', remoteUserId),
+      // Always recalculate status from actual DB counts for BOTH users
+      for (const uid of [currentUserId, remoteUserId]) {
+        const [{ count: chatCount }, { count: callCount }] = await Promise.all([
+          supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
+          supabase.from('video_call_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
         ]);
-      } else {
-        // Recalculate status based on remaining active sessions
-        for (const uid of [currentUserId, remoteUserId]) {
-          const [{ count: chatCount }, { count: callCount }] = await Promise.all([
-            supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
-            supabase.from('video_call_sessions').select('*', { count: 'exact', head: true }).or(`man_user_id.eq.${uid},woman_user_id.eq.${uid}`).eq('status', 'active'),
-          ]);
-          const total = (chatCount || 0) + (callCount || 0);
-          await supabase.from('user_status').update({
-            status_text: total >= 3 ? 'busy' : 'online',
-            last_seen: now,
-          }).eq('user_id', uid);
+        
+        const totalVideoCalls = callCount || 0;
+        const totalChats = chatCount || 0;
+        
+        // Status rules: any video call = busy, 3+ chats = busy, else online
+        let statusText = 'online';
+        if (totalVideoCalls > 0) {
+          statusText = 'busy';
+        } else if (totalChats >= 3) {
+          statusText = 'busy';
         }
+        
+        await supabase.from('user_status').update({
+          status_text: statusText,
+          last_seen: now,
+        }).eq('user_id', uid);
+
+        // Also update women_availability for accurate is_available
+        await supabase
+          .from('women_availability')
+          .update({
+            current_call_count: totalVideoCalls,
+            is_available: totalChats < 3 && totalVideoCalls === 0,
+          })
+          .eq('user_id', uid);
       }
     } catch (err) {
       console.error('[P2P] Error syncing call status:', err);
