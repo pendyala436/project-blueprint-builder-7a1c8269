@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-// VideoCallButton removed - women only accept/reject video calls, never initiate
+// 1-on-1 video calls removed from app
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { 
   Heart, 
@@ -49,10 +49,9 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+// 1-on-1 video call components removed
 import WomenChatModeSwitcher from "@/components/WomenChatModeSwitcher";
 import { useWomenChatMode } from "@/hooks/useWomenChatMode";
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
@@ -113,7 +112,7 @@ const WomenDashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
+  // 1-on-1 video calls removed
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -1473,17 +1472,7 @@ const WomenDashboardScreen = () => {
         />
       )}
 
-      {/* Incoming Video Call Window - Draggable like mini chat */}
-      {incomingCall && (
-        <IncomingVideoCallWindow
-          callId={incomingCall.callId}
-          callerUserId={incomingCall.callerUserId}
-          callerName={incomingCall.callerName}
-          callerPhoto={incomingCall.callerPhoto}
-          currentUserId={currentUserId}
-          onClose={clearIncomingCall}
-        />
-      )}
+      {/* 1-on-1 Video Call removed from app */}
 
       {/* Friends & Blocked Panel */}
       {showFriendsPanel && currentUserId && (
