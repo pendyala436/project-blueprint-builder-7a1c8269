@@ -100,6 +100,7 @@ export function usePrivateGroupCall({
   const sessionRef = useRef<GroupSession | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const billingRef = useRef<NodeJS.Timeout | null>(null);
+  const billingInProgressRef = useRef<boolean>(false);
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
   // ICE servers for WebRTC - single STUN server to reduce overhead
@@ -335,7 +336,15 @@ export function usePrivateGroupCall({
 
     billingRef.current = setInterval(async () => {
       if (!sessionRef.current || !isOwner) return;
+      
+      // Prevent concurrent billing calls
+      if (billingInProgressRef.current) {
+        console.log('[GROUP] Billing already in progress - skipping');
+        return;
+      }
+      billingInProgressRef.current = true;
 
+      try {
       const session = sessionRef.current;
       let totalDeducted = 0;
       const participantsToRemove: string[] = [];
@@ -416,6 +425,11 @@ export function usePrivateGroupCall({
         participants: Array.from(session.participants.values()),
         viewerCount: session.participants.size,
       }));
+      } catch (err) {
+        console.error('[GROUP] Billing error:', err);
+      } finally {
+        billingInProgressRef.current = false;
+      }
     }, BILLING_INTERVAL_SECONDS * 1000);
   }, [isOwner, pricing, onParticipantLeave]);
 
