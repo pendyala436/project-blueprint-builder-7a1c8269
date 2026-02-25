@@ -55,6 +55,7 @@ import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 // VideoCallMiniButton removed from men's dashboard
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
+import { RecentActivityWidget } from "@/components/RecentActivityWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
@@ -1588,6 +1589,17 @@ const DashboardScreen = () => {
               freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
               nextResetDate={menFreeMinutes.nextResetDate}
               isLoading={menFreeMinutes.isLoading}
+            />
+          </div>
+        )}
+
+        {/* Recent Activity - Chat/Call history from last 3 days */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.235s" }}>
+            <RecentActivityWidget
+              currentUserId={currentUserId}
+              userGender="male"
+              onStartChat={(targetId, targetName) => handleStartChatWithWoman(targetId, targetName)}
             />
           </div>
         )}
