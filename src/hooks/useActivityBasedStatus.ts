@@ -17,16 +17,34 @@ export const useActivityBasedStatus = ({
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
-  // Update online status in database
+  // Update online status in database with proper status_text
   const updateOnlineStatus = useCallback(async (online: boolean) => {
     if (!userId) return;
     
     try {
+      let statusText = 'offline';
+      
+      if (online) {
+        // Check active sessions to determine busy vs online
+        const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
+          supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true })
+            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq('status', 'active'),
+          supabase.from('video_call_sessions').select('*', { count: 'exact', head: true })
+            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq('status', 'active'),
+        ]);
+        
+        const totalChats = chatCount || 0;
+        const totalVideoCalls = videoCount || 0;
+        
+        statusText = (totalVideoCalls > 0 || totalChats >= 3) ? 'busy' : 'online';
+      }
+
       await supabase
         .from('user_status')
         .update({
           is_online: online,
-          last_seen: new Date().toISOString()
+          last_seen: new Date().toISOString(),
+          status_text: statusText,
         })
         .eq('user_id', userId);
     } catch (error) {
