@@ -249,25 +249,26 @@ const TransactionHistoryScreen = () => {
           });
           calcOpeningBal = walletBalance - thisMonthCredits + thisMonthDebits;
         } else {
-          // For women: sum prior wallet_transactions + prior earnings
-          const { data: priorWalletTx } = await supabase
-            .from("wallet_transactions")
-            .select("type, amount")
-            .eq("user_id", user.id)
-            .lt("created_at", monthStartISO);
+          // For women: opening balance = all prior earnings - all prior debits
+          const [{ data: priorWalletTx }, { data: priorEarningsForOpening }] = await Promise.all([
+            supabase
+              .from("wallet_transactions")
+              .select("type, amount")
+              .eq("user_id", user.id)
+              .lt("created_at", monthStartISO),
+            supabase
+              .from("women_earnings")
+              .select("amount")
+              .eq("user_id", user.id)
+              .lt("created_at", monthStartISO)
+          ]);
 
+          priorEarningsForOpening?.forEach(e => {
+            calcOpeningBal += Number(e.amount);
+          });
           priorWalletTx?.forEach(tx => {
             if (tx.type === 'credit') calcOpeningBal += Number(tx.amount);
             else calcOpeningBal -= Number(tx.amount);
-          });
-
-          const { data: priorEarningsForOpening } = await supabase
-            .from("women_earnings")
-            .select("amount")
-            .eq("user_id", user.id)
-            .lt("created_at", monthStartISO);
-          priorEarningsForOpening?.forEach(e => {
-            calcOpeningBal += Number(e.amount);
           });
         }
 
@@ -518,10 +519,7 @@ const TransactionHistoryScreen = () => {
     isMale: boolean
   ) => {
     const unified: UnifiedTransaction[] = [];
-    const seenIds = new Set<string>(); // Prevent duplicates
-
-    // For men: wallet_transactions is the SINGLE source of truth
-    // For women: wallet_transactions has debits, women_earnings has credits (earnings)
+    const seenIds = new Set<string>();
 
     // Build a gift lookup map for enriching descriptions
     const giftLookup = new Map<string, GiftTransaction>();
@@ -535,24 +533,28 @@ const TransactionHistoryScreen = () => {
       seenIds.add(tx.id);
 
       const desc = tx.description?.toLowerCase() || '';
-      const isRecharge = tx.type === 'credit' && desc.includes('recharge');
+      const isRecharge = tx.type === 'credit' && (desc.includes('recharge') || desc.includes('deposit') || desc.includes('added'));
       const isWithdrawal = desc.includes('withdrawal');
-      const isGift = desc.includes('gift');
-      const isChat = desc.includes('chat');
-      const isVideo = desc.includes('video');
+      const isGoldenBadge = desc.includes('golden badge');
+      const isGift = desc.includes('gift') || desc.includes('tip');
+      const isChat = desc.includes('chat') && !desc.includes('group');
+      const isVideo = desc.includes('video') && !desc.includes('group');
+      const isGroup = desc.includes('group');
 
       let type: UnifiedTransaction['type'] = 'other';
       let icon: UnifiedTransaction['icon'] = 'arrow';
 
       if (isRecharge) { type = 'recharge'; icon = 'wallet'; }
       else if (isWithdrawal) { type = 'withdrawal'; icon = 'wallet'; }
+      else if (isGoldenBadge) { type = 'other'; icon = 'wallet'; }
+      else if (isGroup) { type = 'chat'; icon = 'chat'; }
       else if (isGift) { type = 'gift'; icon = 'gift'; }
       else if (isChat) { type = 'chat'; icon = 'chat'; }
       else if (isVideo) { type = 'video'; icon = 'video'; }
 
-      // Try to enrich gift descriptions with gift name/emoji
+      // Enrich gift descriptions
       let description = tx.description || (tx.type === 'credit' ? 'Credit' : 'Debit');
-      if (isGift) {
+      if (isGift && !isGoldenBadge) {
         const matchingGift = gifts.find(g => 
           Math.abs(new Date(g.created_at).getTime() - new Date(tx.created_at).getTime()) < 3000
         );
@@ -575,7 +577,7 @@ const TransactionHistoryScreen = () => {
       });
     });
 
-    // For women: add earnings from women_earnings as deposits (single source of truth for credits)
+    // For women: add earnings from women_earnings as deposits
     if (!isMale) {
       womenEarnings.forEach(earning => {
         const earningId = `earning-${earning.id}`;
@@ -583,22 +585,19 @@ const TransactionHistoryScreen = () => {
         seenIds.add(earningId);
 
         const earningType = earning.earning_type?.toLowerCase() || '';
+        const descLower = earning.description?.toLowerCase() || '';
         let type: UnifiedTransaction['type'] = 'other';
         let icon: UnifiedTransaction['icon'] = 'arrow';
         let description = earning.description || 'Earning';
 
-        if (earningType.includes('chat')) {
+        if (descLower.includes('group')) {
           type = 'chat'; icon = 'chat';
-          description = earning.description || `Chat earning${earning.partner_name ? ` from ${earning.partner_name}` : ''}`;
-        } else if (earningType.includes('video')) {
+        } else if (earningType.includes('chat')) {
+          type = 'chat'; icon = 'chat';
+        } else if (earningType.includes('video') || earningType.includes('private')) {
           type = 'video'; icon = 'video';
-          description = earning.description || `Video call earning${earning.partner_name ? ` from ${earning.partner_name}` : ''}`;
         } else if (earningType.includes('gift')) {
           type = 'gift'; icon = 'gift';
-          description = earning.description || `Gift earning${earning.partner_name ? ` from ${earning.partner_name}` : ''}`;
-        } else if (earningType.includes('private')) {
-          type = 'video'; icon = 'video';
-          description = earning.description || `Private call earning${earning.partner_name ? ` from ${earning.partner_name}` : ''}`;
         }
 
         unified.push({
@@ -614,14 +613,40 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Sort by date ascending first to compute running balance
-    unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    // Current month boundaries
+    const currentMonthStart = new Date();
+    currentMonthStart.setDate(1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+    const currentMonthEnd = new Date(currentMonthStart);
+    currentMonthEnd.setMonth(currentMonthEnd.getMonth() + 1);
 
-    // For women: recompute running balance across ALL unified entries (earnings + debits)
-    // since women_earnings entries don't have balance_after from the wallet query
-    if (!isMale) {
+    // Filter to current month for the statement view
+    const currentMonthEntries = unified.filter(tx => {
+      const txDate = new Date(tx.created_at);
+      return txDate >= currentMonthStart && txDate < currentMonthEnd;
+    });
+
+    // Sort ascending for running balance computation
+    currentMonthEntries.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    // Compute running balance for current month entries
+    if (isMale) {
+      // For men: recompute from openingBalance forward for current month
+      // (more accurate than backwards approach when filtering to month)
       let runningBal = openingBalance;
-      unified.forEach(tx => {
+      currentMonthEntries.forEach(tx => {
+        if (tx.is_credit) {
+          runningBal += tx.amount;
+        } else {
+          runningBal -= tx.amount;
+        }
+        tx.balance_after = runningBal;
+      });
+    } else {
+      // For women: openingBalance = prior earnings - prior debits
+      // Process ONLY current month entries to avoid double counting
+      let runningBal = openingBalance;
+      currentMonthEntries.forEach(tx => {
         if (tx.is_credit) {
           runningBal += tx.amount;
         } else {
@@ -631,9 +656,9 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Sort by date descending for display
-    unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    setUnifiedTransactions(unified);
+    // Sort descending for display
+    currentMonthEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setUnifiedTransactions(currentMonthEntries);
   };
 
   useEffect(() => {
@@ -646,7 +671,7 @@ const TransactionHistoryScreen = () => {
         userGender === "male"
       );
     }
-  }, [walletTransactions, chatSessions, videoCallSessions, giftTransactions, womenEarnings, userGender, loading]);
+  }, [walletTransactions, chatSessions, videoCallSessions, giftTransactions, womenEarnings, userGender, loading, openingBalance]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
