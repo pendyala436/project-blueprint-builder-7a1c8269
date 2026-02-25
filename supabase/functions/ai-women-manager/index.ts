@@ -72,7 +72,7 @@ serve(async (req) => {
         return await distributeWomanForChat(supabase, data);
       
       case 'distribute_for_call':
-        return await distributeWomanForCall(supabase, data);
+        return await distributeWomanForCall(supabase, data, authenticatedUserId);
       
       case 'get_available_woman':
         return await getAvailableWoman(supabase, data);
@@ -361,7 +361,7 @@ async function distributeWomanForChat(supabase: any, data: any) {
 
 // AI distribution for video call - STRICT: same language + IDLE women only
 // Idle = Online + Not in any video call + Not in any chat + Not receiving another call
-async function distributeWomanForCall(supabase: any, data: any) {
+async function distributeWomanForCall(supabase: any, data: any, authenticatedUserId: string | null = null) {
   const { language, excludeUserIds = [] } = data;
   const normalizedLanguage = (language || "english").toLowerCase().trim();
   console.log(`[VideoCall] Finding IDLE woman for video call: ${normalizedLanguage}`);
@@ -494,13 +494,39 @@ async function distributeWomanForCall(supabase: any, data: any) {
   
   console.log(`[VideoCall] Selected IDLE woman: ${selectedWoman.full_name} (language: ${selectedWoman.primary_language})`);
 
+  // Step 8: Create video_call_sessions record server-side (bypasses RLS)
+  const manId = authenticatedUserId || data.man_user_id;
+  const callId = `call_${manId}_${selectedWoman.user_id}_${Date.now()}`;
+
+  let sessionCreated = false;
+  if (manId) {
+    const { error: sessionError } = await supabase
+      .from('video_call_sessions')
+      .insert({
+        call_id: callId,
+        man_user_id: manId,
+        woman_user_id: selectedWoman.user_id,
+        status: 'ringing',
+        rate_per_minute: 5.00
+      });
+
+    if (sessionError) {
+      console.error('[VideoCall] Error creating session:', sessionError);
+    } else {
+      sessionCreated = true;
+      console.log(`[VideoCall] Created session: ${callId}`);
+    }
+  }
+
   return new Response(
     JSON.stringify({ 
       success: true, 
       woman: selectedWoman,
       same_language: true,
       language: normalizedLanguage,
-      idle: true
+      idle: true,
+      call_id: sessionCreated ? callId : null,
+      session_created: sessionCreated
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

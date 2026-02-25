@@ -70,10 +70,11 @@ const VideoCallMiniButton = ({
 
     try {
       // Use AI to find available woman for video call with same language
+      // Pass man_user_id so edge function can create the session server-side (bypasses RLS)
       const { data: result, error } = await supabase.functions.invoke('ai-women-manager', {
         body: {
           action: 'distribute_for_call',
-          data: { language: userLanguage }
+          data: { language: userLanguage, man_user_id: currentUserId }
         }
       });
 
@@ -89,22 +90,11 @@ const VideoCallMiniButton = ({
         return;
       }
 
-      // Create video call session using dashboard user id (preview can run with anon auth)
-      if (!currentUserId) throw new Error('Missing current user id');
-
-      const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
-      
-      const { error: sessionError } = await supabase
-        .from('video_call_sessions')
-        .insert({
-          call_id: callId,
-          man_user_id: currentUserId,
-          woman_user_id: result.woman.user_id,
-          status: 'ringing',
-          rate_per_minute: 5.00
-        });
-
-      if (sessionError) throw sessionError;
+      // Session is created server-side; use the returned call_id
+      const callId = result.call_id;
+      if (!callId) {
+        throw new Error('Server failed to create video call session');
+      }
 
       // Set active call - will show draggable window
       setActiveCall({
