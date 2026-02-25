@@ -407,6 +407,15 @@ export const FriendsBlockedPanel = ({
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5">
+                            {/* View Profile */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => navigate(`/profile/${f.friendId}`)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
                             {/* Chat button */}
                             <Button
                               size="sm"
@@ -479,6 +488,9 @@ export const FriendsBlockedPanel = ({
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
+                                  <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/profile/${req.fromUserId}`)}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
                                   <Button size="sm" className="gap-1 text-xs h-8" disabled={actionLoading} onClick={() => acceptRequest(req.id)}>
                                     <Check className="h-3.5 w-3.5" /> Accept
                                   </Button>
@@ -518,15 +530,20 @@ export const FriendsBlockedPanel = ({
                                     </Badge>
                                   </div>
                                 </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-1 text-xs h-8"
-                                  disabled={actionLoading}
-                                  onClick={() => cancelRequest(req.id)}
-                                >
-                                  <X className="h-3.5 w-3.5" /> Cancel
-                                </Button>
+                                <div className="flex items-center gap-1.5">
+                                  <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/profile/${req.toUserId}`)}>
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1 text-xs h-8"
+                                    disabled={actionLoading}
+                                    onClick={() => cancelRequest(req.id)}
+                                  >
+                                    <X className="h-3.5 w-3.5" /> Cancel
+                                  </Button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -582,7 +599,12 @@ export const FriendsBlockedPanel = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0">{renderBrowseActions(user)}</div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/profile/${user.userId}`)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            {renderBrowseActions(user)}
+                          </div>
                         </div>
                       ))}
                     </div>
