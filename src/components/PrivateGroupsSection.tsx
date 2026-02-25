@@ -2,21 +2,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users, MessageCircle, Video, Settings, Gift, LayoutGrid, DollarSign } from 'lucide-react';
+import { Users, Video, MessageCircle, LayoutGrid, DollarSign, Radio, Square } from 'lucide-react';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS, MAX_DURATION_MINUTES } from '@/hooks/usePrivateGroupCall';
 
-const MAX_GROUPS_APP_WIDE = 4;
-// Gift amounts available as optional tips
 const TIP_INFO = 'Men are charged ₹4/min. Women earn ₹2/min per man. Tips are optional — 50% reaches host.';
+
+const FLOWER_EMOJIS: Record<string, string> = {
+  Rose: '🌹',
+  Lily: '🌸',
+  Jasmine: '🌼',
+  Orchid: '🌺',
+};
 
 interface PrivateGroup {
   id: string;
@@ -29,6 +28,8 @@ interface PrivateGroup {
   stream_id: string | null;
   participant_count: number;
   created_at: string;
+  current_host_id: string | null;
+  current_host_name: string | null;
 }
 
 interface PrivateGroupsSectionProps {
@@ -39,56 +40,35 @@ interface PrivateGroupsSectionProps {
 
 export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: PrivateGroupsSectionProps) {
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
-  const [totalAppGroups, setTotalAppGroups] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
   const [activeGroup, setActiveGroup] = useState<PrivateGroup | null>(null);
-  
-  // Form state
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
-  const [minGiftAmount, setMinGiftAmount] = useState(0);
-  const [chatEnabled, setChatEnabled] = useState(true);
-  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [goingLive, setGoingLive] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGroups();
-    fetchTotalAppGroups();
-    
+
     const channel = supabase
       .channel('private-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, () => {
         fetchGroups();
-        fetchTotalAppGroups();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
-
-  const fetchTotalAppGroups = async () => {
-    const { count } = await supabase
-      .from('private_groups')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
-    setTotalAppGroups(count || 0);
-  };
+  }, []);
 
   const fetchGroups = async () => {
     try {
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
-        .eq('owner_id', currentUserId)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (error) throw error;
-      setGroups(data || []);
+      setGroups((data as any[]) || []);
     } catch (error) {
       console.error('Error fetching groups:', error);
     } finally {
@@ -96,238 +76,131 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
   };
 
-  const getAccessType = (): 'chat' | 'video' | 'both' => {
-    if (chatEnabled && videoEnabled) return 'both';
-    if (chatEnabled) return 'chat';
-    return 'video';
-  };
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim()) {
-      toast.error('Please enter a group name');
-      return;
-    }
-    if (!chatEnabled && !videoEnabled) {
-      toast.error('Please enable at least chat or video call');
-      return;
-    }
-    if (totalAppGroups >= MAX_GROUPS_APP_WIDE) {
-      toast.error(`Only ${MAX_GROUPS_APP_WIDE} private groups are allowed across the entire app`);
+  const handleGoLive = async (group: PrivateGroup) => {
+    if (group.is_live) {
+      toast.error('This group is already live');
       return;
     }
 
-    try {
-      const { data: newGroup, error } = await supabase
-        .from('private_groups')
-        .insert({
-          owner_id: currentUserId,
-          name: groupName.trim(),
-          description: groupDescription.trim() || null,
-          min_gift_amount: 0, // Free entry - billing is per-minute
-          access_type: getAccessType(),
-          participant_count: 1
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Automatically add owner as a member
-      const { error: membershipError } = await supabase
-        .from('group_memberships')
-        .insert({
-          group_id: newGroup.id,
-          user_id: currentUserId,
-          has_access: true,
-          gift_amount_paid: 0
-        });
-
-      if (membershipError) {
-        console.error('Failed to add owner membership:', membershipError);
-      }
-
-      toast.success('Private group created successfully!');
-      setShowCreateDialog(false);
-      resetForm();
-      fetchGroups();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create group');
+    // Check if user is already live in another group
+    const alreadyLive = groups.find(g => g.current_host_id === currentUserId && g.is_live);
+    if (alreadyLive) {
+      toast.error(`You are already live in ${alreadyLive.name}. Stop that first.`);
+      return;
     }
-  };
 
-  const handleUpdateGiftRequirement = async () => {
-    if (!selectedGroup) return;
-
+    setGoingLive(group.id);
     try {
       const { error } = await supabase
         .from('private_groups')
-        .update({ 
-          min_gift_amount: minGiftAmount,
-          access_type: getAccessType()
-        })
-        .eq('id', selectedGroup.id);
+        .update({
+          is_live: true,
+          current_host_id: currentUserId,
+          current_host_name: userName,
+          participant_count: 1,
+        } as any)
+        .eq('id', group.id);
 
       if (error) throw error;
 
-      toast.success('Gift requirement updated!');
-      setShowUpdateDialog(false);
+      // Add owner as member
+      await supabase.from('group_memberships').upsert({
+        group_id: group.id,
+        user_id: currentUserId,
+        has_access: true,
+        gift_amount_paid: 0,
+      }, { onConflict: 'group_id,user_id' });
+
+      toast.success(`You are now live in ${group.name}!`);
       fetchGroups();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update');
+      toast.error(error.message || 'Failed to go live');
+    } finally {
+      setGoingLive(null);
     }
   };
 
-  const handleDeleteGroup = async (groupId: string) => {
+  const handleStopLive = async (group: PrivateGroup) => {
     try {
       const { error } = await supabase
         .from('private_groups')
-        .delete()
-        .eq('id', groupId);
+        .update({
+          is_live: false,
+          current_host_id: null,
+          current_host_name: null,
+          participant_count: 0,
+        } as any)
+        .eq('id', group.id);
 
       if (error) throw error;
 
-      toast.success('Group deleted. All members lost access.');
+      // Clean up memberships
+      await supabase.from('group_memberships').delete().eq('group_id', group.id);
+
+      toast.success(`Stopped live in ${group.name}`);
+      setActiveGroup(null);
       fetchGroups();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete group');
+      toast.error(error.message || 'Failed to stop');
     }
-  };
-
-  const resetForm = () => {
-    setGroupName('');
-    setGroupDescription('');
-    setMinGiftAmount(100);
-    setChatEnabled(true);
-    setVideoEnabled(true);
-  };
-
-  const openUpdateDialog = (group: PrivateGroup) => {
-    setSelectedGroup(group);
-    setMinGiftAmount(group.min_gift_amount);
-    setChatEnabled(group.access_type === 'chat' || group.access_type === 'both');
-    setVideoEnabled(group.access_type === 'video' || group.access_type === 'both');
-    setShowUpdateDialog(true);
   };
 
   if (isLoading) {
     return <div className="animate-pulse h-32 bg-muted rounded-lg" />;
   }
 
+  const isHostOfAny = groups.some(g => g.current_host_id === currentUserId && g.is_live);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
-          My Private Groups
+          Private Groups
         </h3>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2" disabled={totalAppGroups >= MAX_GROUPS_APP_WIDE}>
-              <Plus className="h-4 w-4" />
-              {totalAppGroups >= MAX_GROUPS_APP_WIDE ? `Max ${MAX_GROUPS_APP_WIDE} Groups` : `Create Group (${totalAppGroups}/${MAX_GROUPS_APP_WIDE})`}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Private Group</DialogTitle>
-              <DialogDescription>
-                Create a private group with chat, video call, or both. Men pay ₹4/min, you earn ₹2/min per man. Tips are optional.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Group Name</Label>
-                <Input 
-                  value={groupName} 
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="My Private Room"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description (optional)</Label>
-                <Textarea 
-                  value={groupDescription}
-                  onChange={(e) => setGroupDescription(e.target.value)}
-                  placeholder="What's your group about?"
-                />
-              </div>
-              <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">💰 Billing Info</p>
-                <p>{TIP_INFO}</p>
-              </div>
-              <div className="space-y-3">
-                <Label>Access Type</Label>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="chat" 
-                      checked={chatEnabled}
-                      onCheckedChange={(checked) => setChatEnabled(checked as boolean)}
-                    />
-                    <Label htmlFor="chat" className="flex items-center gap-2 cursor-pointer">
-                      <MessageCircle className="h-4 w-4" /> Chat
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="video" 
-                      checked={videoEnabled}
-                      onCheckedChange={(checked) => setVideoEnabled(checked as boolean)}
-                    />
-                    <Label htmlFor="video" className="flex items-center gap-2 cursor-pointer">
-                      <Video className="h-4 w-4" /> Video Call
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-              <Button onClick={handleCreateGroup}>Create Group</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Badge variant="outline" className="text-xs">
+          {groups.filter(g => g.is_live).length}/{groups.length} Live
+        </Badge>
       </div>
 
-      {groups.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No private groups yet</p>
-            <p className="text-sm">Create one to start earning from gifts!</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {groups.map((group) => (
-            <Card key={group.id} className="relative">
+      <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground mb-1">💰 How it works</p>
+        <p>{TIP_INFO}</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {groups.map((group) => {
+          const isMyHost = group.current_host_id === currentUserId;
+          const isLive = group.is_live;
+          const canGoLive = !isLive && !isHostOfAny;
+
+          return (
+            <Card key={group.id} className={`relative ${isLive ? 'border-destructive/50 shadow-md' : ''}`}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base">{group.name}</CardTitle>
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => openUpdateDialog(group)}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteGroup(group.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <span className="text-xl">{FLOWER_EMOJIS[group.name] || '🌸'}</span>
+                    {group.name}
+                  </CardTitle>
+                  {isLive && (
+                    <Badge variant="destructive" className="gap-1 animate-pulse">
+                      <Radio className="h-3 w-3" />
+                      LIVE
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {group.description && (
                   <p className="text-sm text-muted-foreground">{group.description}</p>
                 )}
+
+                {isLive && group.current_host_name && (
+                  <p className="text-sm font-medium text-primary">
+                    Host: {isMyHost ? 'You' : group.current_host_name}
+                  </p>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary" className="gap-1">
                     <DollarSign className="h-3 w-3" />
@@ -340,94 +213,75 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   <Badge variant="outline" className="gap-1 text-xs">
                     ⏱️ {MAX_DURATION_MINUTES}min max
                   </Badge>
-                  {(group.access_type === 'chat' || group.access_type === 'both') && (
-                    <Badge variant="outline" className="gap-1">
-                      <MessageCircle className="h-3 w-3" />
-                      Chat
-                    </Badge>
-                  )}
-                  {(group.access_type === 'video' || group.access_type === 'both') && (
-                    <Badge variant="outline" className="gap-1">
-                      <Video className="h-3 w-3" />
-                      Video
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="gap-1">
+                    <MessageCircle className="h-3 w-3" /> Chat
+                  </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <Video className="h-3 w-3" /> Video
+                  </Badge>
                 </div>
+
                 <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="default"
-                    className="flex-1 gap-2"
-                    onClick={() => setActiveGroup(group)}
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                    Open Group
-                  </Button>
+                  {isMyHost && isLive ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="flex-1 gap-2"
+                        onClick={() => setActiveGroup(group)}
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                        Open Group
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="gap-2"
+                        onClick={() => handleStopLive(group)}
+                      >
+                        <Square className="h-4 w-4" />
+                        Stop
+                      </Button>
+                    </>
+                  ) : canGoLive ? (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="flex-1 gap-2"
+                      disabled={goingLive === group.id}
+                      onClick={() => handleGoLive(group)}
+                    >
+                      <Radio className="h-4 w-4" />
+                      {goingLive === group.id ? 'Going Live...' : 'Go Live'}
+                    </Button>
+                  ) : isLive && !isMyHost ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Currently hosted by {group.current_host_name}
+                    </p>
+                  ) : isHostOfAny && !isMyHost ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Stop your current live first
+                    </p>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      {/* Update Gift Requirement Dialog */}
-      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Group Settings</DialogTitle>
-            <DialogDescription>
-              Update access type for your group. Men pay ₹4/min, you earn ₹2/min per man.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">💰 Billing</p>
-              <p>Free entry. Men charged ₹4/min. You earn ₹2/min per man. Optional tips — 50% reaches you.</p>
-            </div>
-            <div className="space-y-3">
-              <Label>Access Type</Label>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="update-chat" 
-                    checked={chatEnabled}
-                    onCheckedChange={(checked) => setChatEnabled(checked as boolean)}
-                  />
-                  <Label htmlFor="update-chat" className="flex items-center gap-2 cursor-pointer">
-                    <MessageCircle className="h-4 w-4" /> Chat
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="update-video" 
-                    checked={videoEnabled}
-                    onCheckedChange={(checked) => setVideoEnabled(checked as boolean)}
-                  />
-                  <Label htmlFor="update-video" className="flex items-center gap-2 cursor-pointer">
-                    <Video className="h-4 w-4" /> Video Call
-                  </Label>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUpdateDialog(false)}>Cancel</Button>
-            <Button onClick={handleUpdateGiftRequirement}>Update</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Private Group Call Window (Host-only video, 30min limit, refunds) */}
       {activeGroup && (
         <PrivateGroupCallWindow
           group={{
             ...activeGroup,
-            owner_id: currentUserId
+            owner_id: currentUserId,
           }}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
-          onClose={() => setActiveGroup(null)}
+          onClose={() => {
+            handleStopLive(activeGroup);
+          }}
           isOwner={true}
         />
       )}
