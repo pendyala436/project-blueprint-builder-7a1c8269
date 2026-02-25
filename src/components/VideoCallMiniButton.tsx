@@ -5,6 +5,7 @@ import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ const VideoCallMiniButton = ({
 }: VideoCallMiniButtonProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { pricing } = useChatPricing();
   const [isSearching, setIsSearching] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
@@ -52,15 +54,15 @@ const VideoCallMiniButton = ({
     const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
     
     if (!isSuperUser) {
-      // Minimum balance required to start video call
-      const minBalance = 16;
+      // Minimum balance: at least 2 minutes of video call at admin-configured rate
+      const minBalance = pricing.videoRatePerMinute * 2;
       
       if (walletBalance <= 0) {
         setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start video calls.");
         setShowRechargeDialog(true);
         return;
       } else if (walletBalance < minBalance) {
-        setRechargeMessage(`You need at least ₹${minBalance} to start a video call. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹${pricing.videoRatePerMinute}/min). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
         setShowRechargeDialog(true);
         return;
       }
@@ -174,6 +176,7 @@ const VideoCallMiniButton = ({
           onClose={handleEndCall}
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
           zIndex={70}
+          ratePerMinute={pricing.videoRatePerMinute}
         />
       )}
 
