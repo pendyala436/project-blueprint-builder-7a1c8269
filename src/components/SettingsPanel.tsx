@@ -146,9 +146,14 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
     fetchSettings();
   }, []);
 
+  // Only sync from realtime when NOT editing (no unsaved changes)
   useRealtimeSubscription({
     table: "user_settings",
-    onUpdate: fetchSettings
+    onUpdate: () => {
+      if (!hasChanges) {
+        fetchSettings();
+      }
+    }
   });
 
   // Update parallel chats selection when loaded
@@ -165,24 +170,51 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast.error("You must be logged in to save settings");
+        navigate("/auth");
+        return;
+      }
+
+      // Only send columns that exist in user_settings table
+      const updatePayload = {
+        theme: settings.theme,
+        accent_color: settings.accent_color,
+        notification_matches: settings.notification_matches,
+        notification_messages: settings.notification_messages,
+        notification_promotions: settings.notification_promotions,
+        notification_sound: settings.notification_sound,
+        notification_vibration: settings.notification_vibration,
+        language: settings.language,
+        auto_translate: settings.auto_translate,
+        show_online_status: settings.show_online_status,
+        show_read_receipts: settings.show_read_receipts,
+        profile_visibility: settings.profile_visibility,
+        distance_unit: settings.distance_unit,
+      };
 
       const { error } = await supabase
         .from("user_settings")
-        .update(settings)
+        .update(updatePayload)
         .eq("user_id", user.id);
 
       if (error) throw error;
 
       // Save parallel chat settings
-      await setMaxParallelChats(Number(selectedParallelChats));
+      try {
+        await setMaxParallelChats(Number(selectedParallelChats));
+      } catch (parallelError) {
+        console.error("Error saving parallel chat settings:", parallelError);
+        // Don't fail the whole save for this
+      }
 
-      setOriginalSettings(settings);
+      setOriginalSettings({ ...settings });
+      setHasChanges(false);
       toast.success("Settings saved successfully!");
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      toast.error("Failed to save settings. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -474,9 +506,9 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
+      {/* Save Button - always visible when changes exist */}
       {hasChanges && (
-        <div className="sticky bottom-20 z-40 flex justify-center pb-4">
+        <div className="sticky bottom-4 z-50 flex justify-center pb-4 pt-2">
           <Button
             variant="aurora"
             size="lg"
