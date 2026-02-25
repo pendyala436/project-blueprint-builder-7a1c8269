@@ -60,6 +60,8 @@ const OFFER_RETRY_INTERVAL_MS = 1500;
 const MAX_OFFER_RETRIES = 20;
 const ANSWER_RETRY_INTERVAL_MS = 1500;
 const MAX_ANSWER_RETRIES = 20;
+const SIGNAL_SEND_MAX_RETRIES = 3;
+const SIGNAL_SEND_RETRY_DELAY_MS = 250;
 
 export const useP2PCall = ({
   callId,
@@ -98,6 +100,44 @@ export const useP2PCall = ({
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
   const billingInProgressRef = useRef<boolean>(false);
+
+  const wait = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), []);
+
+  const sendSignal = useCallback(async (
+    event: string,
+    payload: Record<string, unknown>,
+    retries = SIGNAL_SEND_MAX_RETRIES
+  ): Promise<boolean> => {
+    const channel = signalChannelRef.current;
+    if (!channel) {
+      console.warn(`[P2P] Cannot send ${event}: signaling channel not ready`);
+      return false;
+    }
+
+    for (let attempt = 1; attempt <= retries; attempt += 1) {
+      try {
+        const status = await channel.send({
+          type: 'broadcast',
+          event,
+          payload,
+        });
+
+        if (status === 'ok') {
+          return true;
+        }
+
+        console.warn(`[P2P] Signal send failed (${event}) attempt ${attempt}/${retries}:`, status);
+      } catch (error) {
+        console.error(`[P2P] Signal send error (${event}) attempt ${attempt}/${retries}:`, error);
+      }
+
+      if (attempt < retries) {
+        await wait(SIGNAL_SEND_RETRY_DELAY_MS);
+      }
+    }
+
+    return false;
+  }, [wait]);
 
   // Get session ID for billing
   const getSessionId = async () => {
@@ -369,16 +409,12 @@ export const useP2PCall = ({
     };
 
     // Handle ICE candidates - send to remote peer via signaling
-    pc.onicecandidate = (event) => {
-      if (event.candidate && signalChannelRef.current) {
+    pc.onicecandidate = async (event) => {
+      if (event.candidate) {
         console.log('[P2P] Sending ICE candidate');
-        signalChannelRef.current.send({
-          type: 'broadcast',
-          event: 'ice-candidate',
-          payload: { 
-            candidate: event.candidate.toJSON(), 
-            senderId: currentUserId 
-          }
+        await sendSignal('ice-candidate', {
+          candidate: event.candidate.toJSON(),
+          senderId: currentUserId,
         });
       }
     };
@@ -457,11 +493,7 @@ export const useP2PCall = ({
       console.log('[P2P] Re-sending existing local offer');
     }
 
-    channel.send({
-      type: 'broadcast',
-      event: 'offer',
-      payload: { sdp: offerSdp, senderId: currentUserId }
-    });
+    await sendSignal('offer', { sdp: offerSdp, senderId: currentUserId });
 
     setState(prev => ({
       ...prev,
@@ -500,11 +532,7 @@ export const useP2PCall = ({
       return;
     }
 
-    await channel.send({
-      type: 'broadcast',
-      event: 'answer',
-      payload: { sdp: answerSdp, senderId: currentUserId }
-    });
+    await sendSignal('answer', { sdp: answerSdp, senderId: currentUserId });
   }, [currentUserId]);
 
   const startOfferRetry = useCallback(() => {
@@ -632,11 +660,7 @@ export const useP2PCall = ({
             console.log('[P2P] Set remote description (answer)');
             stopOfferRetry();
 
-            channel.send({
-              type: 'broadcast',
-              event: 'answer-ack',
-              payload: { senderId: currentUserId }
-            });
+            await sendSignal('answer-ack', { senderId: currentUserId });
 
             // Process any queued ICE candidates
             await processIceCandidateQueue();
@@ -768,11 +792,7 @@ export const useP2PCall = ({
       await createPeerConnection(localStream);
 
       // Tell initiator we're ready (safe point to (re)send offer)
-      await signalChannelRef.current?.send({
-        type: 'broadcast',
-        event: 'peer-ready',
-        payload: { senderId: currentUserId }
-      });
+      await sendSignal('peer-ready', { senderId: currentUserId });
 
       setState(prev => ({ ...prev, isConnecting: false }));
       console.log('[P2P] Ready to receive offer');
@@ -794,11 +814,7 @@ export const useP2PCall = ({
     stopOfferRetry();
 
     // Notify remote peer
-    signalChannelRef.current?.send({
-      type: 'broadcast',
-      event: 'call-ended',
-      payload: { senderId: currentUserId }
-    });
+    void sendSignal('call-ended', { senderId: currentUserId });
 
     // Calculate duration in minutes
     const durationMinutes = state.callDuration / 60;
