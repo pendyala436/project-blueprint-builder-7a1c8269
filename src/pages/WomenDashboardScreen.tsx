@@ -904,7 +904,7 @@ const WomenDashboardScreen = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            {isPremium && hasGoldenBadge && (
+            {hasGoldenBadge && (
               <Button 
                 size="sm" 
                 variant="aurora"
