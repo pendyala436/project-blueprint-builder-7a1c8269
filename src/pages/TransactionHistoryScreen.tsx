@@ -614,7 +614,24 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Sort by date descending
+    // Sort by date ascending first to compute running balance
+    unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    // For women: recompute running balance across ALL unified entries (earnings + debits)
+    // since women_earnings entries don't have balance_after from the wallet query
+    if (!isMale) {
+      let runningBal = openingBalance;
+      unified.forEach(tx => {
+        if (tx.is_credit) {
+          runningBal += tx.amount;
+        } else {
+          runningBal -= tx.amount;
+        }
+        tx.balance_after = runningBal;
+      });
+    }
+
+    // Sort by date descending for display
     unified.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setUnifiedTransactions(unified);
   };
