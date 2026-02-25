@@ -69,6 +69,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Legal Documents", path: "/admin/legal-documents", icon: <FileText className="h-4 w-4" /> },
     { title: "Backups", path: "/admin/backups", icon: <Database className="h-4 w-4" /> },
     { title: "Audit Logs", path: "/admin/audit-logs", icon: <Clock className="h-4 w-4" /> },
+    { title: "Messaging", path: "/admin/messaging", icon: <MessageSquare className="h-4 w-4" /> },
     { title: "Settings", path: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
   ];
 

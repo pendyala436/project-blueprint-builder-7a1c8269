@@ -212,6 +212,42 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_user_messages: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          sender_id: string
+          sender_role: string
+          target_group: string
+          target_user_id: string | null
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          sender_id: string
+          sender_role?: string
+          target_group?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          sender_id?: string
+          sender_role?: string
+          target_group?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           category: string
@@ -3843,6 +3879,7 @@ export type Database = {
       cleanup_chat_media: { Args: never; Returns: undefined }
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
+      cleanup_old_admin_messages: { Args: never; Returns: undefined }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
