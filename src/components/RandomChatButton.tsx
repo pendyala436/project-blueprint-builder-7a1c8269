@@ -362,14 +362,14 @@ export const RandomChatButton = ({
         }
       }
 
-      // Close dialog and navigate
+      // Close dialog and navigate back to dashboard
+      // Chat windows are handled via parallel chat containers on the dashboard
       setSearchDialogOpen(false);
-      // Golden badge women go directly to chat screen with matched user
-      if (userGender === "female" && hasGoldenBadge) {
-        navigate(`/chat?userId=${matchedUser.userId}`);
-      } else {
-        navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
-      }
+      toast({
+        title: "Chat Started!",
+        description: "Your chat session is now active on the dashboard.",
+      });
+      navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast({
