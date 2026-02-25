@@ -134,7 +134,7 @@ const TransactionHistoryScreen = () => {
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
   const [privateCalls, setPrivateCalls] = useState<any[]>([]);
   const [chatPricing, setChatPricing] = useState<{ ratePerMinute: number; videoRatePerMinute: number; womenEarningRate: number; videoWomenEarningRate: number } | null>(null);
-  const [activeTab, setActiveTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("statement");
   const [openingBalance, setOpeningBalance] = useState<number>(0);
 
   useEffect(() => {
@@ -892,7 +892,8 @@ const TransactionHistoryScreen = () => {
 
         {/* Transaction Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-4" : "grid-cols-5")}>
+          <TabsList className={cn("grid w-full mb-4", isMale ? "grid-cols-5" : "grid-cols-6")}>
+            <TabsTrigger value="statement" className="text-xs">Statement</TabsTrigger>
             <TabsTrigger value="chats" className="text-xs">Chats</TabsTrigger>
             <TabsTrigger value="video" className="text-xs">Video</TabsTrigger>
             <TabsTrigger value="private" className="text-xs">Private</TabsTrigger>
@@ -900,6 +901,79 @@ const TransactionHistoryScreen = () => {
             {!isMale && <TabsTrigger value="withdrawals" className="text-xs">Withdrawals</TabsTrigger>}
           </TabsList>
 
+          {/* Bank Statement */}
+          <TabsContent value="statement" className="space-y-3">
+            {/* Statement Header */}
+            <Card className="p-4 border-primary/20">
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Company:</span><span className="font-semibold">Meow-meow</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Account Status:</span><span className="font-semibold text-green-600">Active</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Nominee Details:</span><span className="font-semibold">Not Registered</span></div>
+              </div>
+            </Card>
+
+            <p className="text-xs text-muted-foreground mb-2">Total: {unifiedTransactions.length} entries</p>
+            <ScrollArea className="h-[calc(100vh-400px)]">
+              {/* Table Header */}
+              <div className="grid grid-cols-12 gap-1 px-3 py-2 bg-muted/50 rounded-t-lg text-[10px] font-semibold text-muted-foreground sticky top-0 z-10">
+                <div className="col-span-2">Date</div>
+                <div className="col-span-4">Description</div>
+                <div className="col-span-2 text-right text-destructive">Withdrawal</div>
+                <div className="col-span-2 text-right text-green-600">Deposit</div>
+                <div className="col-span-2 text-right">Balance</div>
+              </div>
+
+              {/* Opening Balance Row */}
+              <div className="grid grid-cols-12 gap-1 px-3 py-2 border-b border-border text-xs bg-primary/5">
+                <div className="col-span-2 text-muted-foreground">
+                  {format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "dd/MM")}
+                </div>
+                <div className="col-span-4 font-medium">Opening Balance (C/F)</div>
+                <div className="col-span-2"></div>
+                <div className="col-span-2"></div>
+                <div className="col-span-2 text-right font-semibold">₹{openingBalance.toFixed(2)}</div>
+              </div>
+
+              {/* Transaction Rows */}
+              <div className="space-y-0">
+                {unifiedTransactions.map((tx) => (
+                  <div key={tx.id} className="grid grid-cols-12 gap-1 px-3 py-2 border-b border-border/50 text-xs hover:bg-muted/30 transition-colors">
+                    <div className="col-span-2 text-muted-foreground">
+                      {format(new Date(tx.created_at), "dd/MM HH:mm")}
+                    </div>
+                    <div className="col-span-4 truncate" title={tx.description}>
+                      {tx.description}
+                    </div>
+                    <div className="col-span-2 text-right text-destructive font-medium">
+                      {!tx.is_credit ? `₹${tx.amount.toFixed(2)}` : ''}
+                    </div>
+                    <div className="col-span-2 text-right text-green-600 font-medium">
+                      {tx.is_credit ? `₹${tx.amount.toFixed(2)}` : ''}
+                    </div>
+                    <div className="col-span-2 text-right font-semibold">
+                      {tx.balance_after !== undefined ? `₹${tx.balance_after.toFixed(2)}` : '-'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Closing Balance */}
+              <div className="grid grid-cols-12 gap-1 px-3 py-2 bg-primary/5 rounded-b-lg text-xs border-t border-primary/20">
+                <div className="col-span-2 text-muted-foreground">Today</div>
+                <div className="col-span-4 font-semibold">Closing Balance</div>
+                <div className="col-span-2"></div>
+                <div className="col-span-2"></div>
+                <div className="col-span-2 text-right font-bold text-primary">₹{currentBalance.toFixed(2)}</div>
+              </div>
+
+              {unifiedTransactions.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Wallet className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>No transactions yet</p>
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
 
 
           {/* Chat Sessions */}
