@@ -349,6 +349,17 @@ export const RandomChatButton = ({
           });
           return;
         }
+
+        // Auto-accept this session for the woman since she initiated it
+        // Send an initial message so the incoming chat hook doesn't treat it as "incoming"
+        if (data.chat_id) {
+          await supabase.from("chat_messages").insert({
+            chat_id: data.chat_id,
+            sender_id: user.id,
+            receiver_id: matchedUser.userId,
+            message: "👋 Hi!"
+          });
+        }
       }
 
       // Close dialog and navigate to appropriate dashboard
