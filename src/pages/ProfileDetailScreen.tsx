@@ -61,6 +61,8 @@ const ProfileDetailScreen = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
+  const [currentUserGender, setCurrentUserGender] = useState("");
 
   useEffect(() => {
     if (userId) {
@@ -109,6 +111,23 @@ const ProfileDetailScreen = () => {
         return;
       }
       setCurrentUserId(user.id);
+
+      // Fetch current user's gender and golden badge status
+      const { data: currentUserProfile } = await supabase
+        .from("profiles")
+        .select("gender, has_golden_badge, golden_badge_expires_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const gender = currentUserProfile?.gender?.toLowerCase() || "";
+      setCurrentUserGender(gender);
+      
+      if (gender === "female") {
+        const badgeActive = currentUserProfile?.has_golden_badge === true && 
+          currentUserProfile?.golden_badge_expires_at && 
+          new Date(currentUserProfile.golden_badge_expires_at) > new Date();
+        setHasGoldenBadge(!!badgeActive);
+      }
 
       // Fetch profile data
       const { data: profileData } = await supabase
@@ -601,16 +620,27 @@ const ProfileDetailScreen = () => {
             {isLiked ? t('liked', 'Liked') : t('like', 'Like')}
           </Button>
 
-          {/* Chat Button */}
-          <Button
-            variant="auroraOutline"
-            className="flex-1 h-14 text-lg gap-2"
-            onClick={handleChat}
-          >
-            <MessageCircle className="w-6 h-6" />
-            {t('chat', 'Chat')}
-          </Button>
+          {/* Chat Button - Only for men or Golden Badge women */}
+          {(currentUserGender === "male" || hasGoldenBadge) && (
+            <Button
+              variant="auroraOutline"
+              className="flex-1 h-14 text-lg gap-2"
+              onClick={handleChat}
+            >
+              <MessageCircle className="w-6 h-6" />
+              {t('chat', 'Chat')}
+            </Button>
+          )}
         </div>
+
+        {/* View-only notice for women without Golden Badge */}
+        {currentUserGender === "female" && !hasGoldenBadge && (
+          <Card className="p-4 animate-fade-in bg-muted/50 border-border" style={{ animationDelay: "0.25s" }}>
+            <p className="text-sm text-muted-foreground text-center">
+              {t('viewOnlyMode', 'View-only mode — wait for men to send you a chat or video call request, or purchase a Golden Badge to initiate.')}
+            </p>
+          </Card>
+        )}
 
         {/* Online Status Card */}
         <Card className={`p-4 animate-fade-in border-2 transition-colors ${
