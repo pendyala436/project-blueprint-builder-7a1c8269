@@ -1261,11 +1261,11 @@ const TransactionHistoryScreen = () => {
                 ? womenEarnings.filter(e => e.description?.toLowerCase().includes('group'))
                 : [];
               const groupTips = isMale
-                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group tip'))
+                ? walletTransactions.filter(t => t.type === 'debit' && (t.description?.toLowerCase().includes('group tip')))
                 : womenEarnings.filter(e => e.description?.toLowerCase().includes('group tip'));
               const groupCallEntries = isMale
-                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('private group call'))
-                : womenEarnings.filter(e => e.description?.toLowerCase().includes('private group call'));
+                ? walletTransactions.filter(t => t.type === 'debit' && t.description?.toLowerCase().includes('group call'))
+                : womenEarnings.filter(e => e.description?.toLowerCase().includes('group call'));
 
               const totalAmount = isMale
                 ? groupSpending.reduce((sum, t) => sum + Number(t.amount), 0)

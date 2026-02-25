@@ -651,13 +651,15 @@ export function usePrivateGroupCall({
       startCountdownTimer();
       startBillingTimer();
 
-      // Update group status in database
+      // Update group status in database - set host info so tips work and other women can't go live
       await supabase
         .from('private_groups')
         .update({ 
           is_live: true, 
           stream_id: sessionId,
-        })
+          current_host_id: currentUserId,
+          current_host_name: userName,
+        } as any)
         .eq('id', groupId);
 
       // Set host (woman) status to busy during live stream
