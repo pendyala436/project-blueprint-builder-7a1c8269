@@ -371,12 +371,12 @@ export function usePrivateGroupCall({
           continue;
         }
 
-        // Deduct from participant wallet
+        // Deduct from participant wallet (men pay ₹4/min)
         const { error: deductError } = await supabase.rpc('process_wallet_transaction', {
           p_user_id: participantId,
           p_amount: costPerMinute,
           p_type: 'debit',
-          p_description: `Private group call - ${session.groupId}`,
+          p_description: `Private group call (1 min)`,
           p_reference_id: session.sessionId
         });
 
@@ -391,17 +391,37 @@ export function usePrivateGroupCall({
         totalDeducted += costPerMinute;
       }
 
-      // Credit earnings to host - women earn ₹2/min per man (chat earning rate)
+      // Credit earnings to host via women_earnings (single source of truth for women deposits)
+      // Host earns ₹2/min per man participant (chat earning rate)
       if (totalDeducted > 0) {
+        const activeParticipantCount = Array.from(session.participants.values()).filter(p => !p.isOwner).length - participantsToRemove.length;
         const hostEarning = totalDeducted * (pricing.womenEarningRate / pricing.ratePerMinute);
+        const adminRevenue = totalDeducted - hostEarning;
         
-        await supabase.rpc('process_wallet_transaction', {
-          p_user_id: session.hostId,
-          p_amount: hostEarning,
-          p_type: 'credit',
-          p_description: `Private group call earnings - ${participantsToRemove.length} participants`,
-          p_reference_id: session.sessionId
-        });
+        // Insert into women_earnings (NOT wallet_transactions credit)
+        await supabase
+          .from('women_earnings')
+          .insert({
+            user_id: session.hostId,
+            amount: hostEarning,
+            earning_type: 'chat',
+            chat_session_id: session.sessionId,
+            description: `Private group call earnings - ${activeParticipantCount} participant(s) × ₹${pricing.womenEarningRate}/min`
+          });
+
+        // Record admin revenue (difference between men's payment and women's earning)
+        if (adminRevenue > 0) {
+          await supabase
+            .from('admin_revenue_transactions')
+            .insert({
+              transaction_type: 'chat_revenue',
+              amount: adminRevenue,
+              currency: pricing.currency,
+              description: `Private group call admin share - ${activeParticipantCount} participant(s)`,
+              woman_user_id: session.hostId,
+              session_id: session.sessionId
+            });
+        }
 
         session.totalEarnings += hostEarning;
         setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
@@ -489,15 +509,17 @@ export function usePrivateGroupCall({
       }
     }
 
-    // Deduct from host wallet
+    // Deduct from host earnings (record as negative earning)
     if (totalDeductedFromHost > 0) {
-      await supabase.rpc('process_wallet_transaction', {
-        p_user_id: session.hostId,
-        p_amount: totalDeductedFromHost,
-        p_type: 'debit',
-        p_description: `Deduction for ending group call early - refunds issued`,
-        p_reference_id: session.sessionId
-      });
+      await supabase
+        .from('women_earnings')
+        .insert({
+          user_id: session.hostId,
+          amount: -totalDeductedFromHost,
+          earning_type: 'chat',
+          chat_session_id: session.sessionId,
+          description: `Refund deduction - Host ended group call early`
+        });
     }
 
     console.log(`Refunds processed: ₹${totalRefunded} to participants, ₹${totalDeductedFromHost} from host`);
