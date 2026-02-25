@@ -362,9 +362,14 @@ export const RandomChatButton = ({
         }
       }
 
-      // Close dialog and navigate to appropriate dashboard
+      // Close dialog and navigate
       setSearchDialogOpen(false);
-      navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
+      // Golden badge women go directly to chat screen with matched user
+      if (userGender === "female" && hasGoldenBadge) {
+        navigate(`/chat?userId=${matchedUser.userId}`);
+      } else {
+        navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
+      }
     } catch (error: any) {
       console.error("Error starting chat:", error);
       toast({
