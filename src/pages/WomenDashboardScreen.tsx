@@ -34,7 +34,8 @@ import {
   Star,
   Loader2,
   MessageCircle as MessageCircleIcon,
-  Video
+  Video,
+  Eye
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
@@ -820,7 +821,7 @@ const WomenDashboardScreen = () => {
     });
   };
 
-  const UserCard = ({ user }: { user: OnlineMan }) => (
+  const UserCard = ({ user, isPremium = false }: { user: OnlineMan; isPremium?: boolean }) => (
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
@@ -877,10 +878,10 @@ const WomenDashboardScreen = () => {
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
               </div>
-              {user.isNllbLanguage && !user.isSameLanguage && (
-                <Badge variant="outline" className="text-[10px]">
-                  <Globe className="h-2.5 w-2.5 mr-1" />
-                  {t('autoTranslateMessages', 'Auto-translate')}
+              {isPremium && (
+                <Badge variant="outline" className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-600">
+                  <Crown className="h-2.5 w-2.5 mr-1" />
+                  Premium
                 </Badge>
               )}
             </div>
@@ -903,7 +904,7 @@ const WomenDashboardScreen = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            {hasGoldenBadge && (
+            {isPremium && hasGoldenBadge && (
               <Button 
                 size="sm" 
                 variant="aurora"
@@ -917,10 +918,10 @@ const WomenDashboardScreen = () => {
             <Button 
               size="sm" 
               variant="auroraOutline"
-              onClick={(e) => { e.stopPropagation(); handleViewProfile(user.userId); }}
+              onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}
               title={t('viewProfile', 'View Profile')}
             >
-              <User className="h-4 w-4 mr-1" />
+              <Eye className="h-4 w-4 mr-1" />
               {t('viewProfile', 'View')}
             </Button>
           </div>
@@ -1238,7 +1239,7 @@ const WomenDashboardScreen = () => {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <UserCard user={user} />
+                    <UserCard user={user} isPremium={true} />
                   </div>
                 ))}
               </div>
@@ -1248,7 +1249,7 @@ const WomenDashboardScreen = () => {
           {/* Non-Recharged Men */}
           <TabsContent value="non-recharged" className="space-y-3 mt-4">
             <p className="text-sm text-muted-foreground">
-              {t('usersWithoutBalance', 'Users without wallet balance')}
+              {t('usersWithoutBalance', 'Regular users - View profiles only')}
             </p>
 
             {nonRechargedMen.length === 0 ? (
@@ -1264,7 +1265,7 @@ const WomenDashboardScreen = () => {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <UserCard user={user} />
+                    <UserCard user={user} isPremium={false} />
                   </div>
                 ))}
               </div>
