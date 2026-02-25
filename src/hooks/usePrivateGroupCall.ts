@@ -711,6 +711,17 @@ export function usePrivateGroupCall({
         })
         .eq('id', groupId);
 
+      // Set host (woman) status to busy during live stream
+      await supabase
+        .from('user_status')
+        .update({ status_text: 'busy', last_seen: new Date().toISOString() })
+        .eq('user_id', currentUserId);
+      
+      await supabase
+        .from('women_availability')
+        .update({ is_available: false, is_available_for_calls: false })
+        .eq('user_id', currentUserId);
+
       setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
@@ -796,6 +807,29 @@ export function usePrivateGroupCall({
       .from('private_groups')
       .update({ is_live: false, stream_id: null })
       .eq('id', groupId);
+
+    // Recalculate host (woman) status after stream ends
+    const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
+      supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true })
+        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
+      supabase.from('video_call_sessions').select('*', { count: 'exact', head: true })
+        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
+    ]);
+    
+    const totalVideo = videoCount || 0;
+    const totalChats = chatCount || 0;
+    const newStatus = totalVideo > 0 ? 'busy' : totalChats >= 3 ? 'busy' : 'online';
+    
+    await supabase.from('user_status')
+      .update({ status_text: newStatus, last_seen: new Date().toISOString() })
+      .eq('user_id', currentUserId);
+    
+    await supabase.from('women_availability')
+      .update({ 
+        is_available: totalChats < 3 && totalVideo === 0,
+        is_available_for_calls: totalVideo === 0,
+      })
+      .eq('user_id', currentUserId);
 
     cleanup();
     onSessionEnd?.(processRefundsFlag);
