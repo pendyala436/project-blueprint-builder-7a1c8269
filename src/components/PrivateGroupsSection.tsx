@@ -150,6 +150,17 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
   };
 
+  // Auto-fix stale groups that are marked live but have no host
+  useEffect(() => {
+    const staleGroups = groups.filter(g => g.is_live && !g.current_host_id);
+    staleGroups.forEach(async (g) => {
+      await supabase.from('private_groups').update({
+        is_live: false, stream_id: null, current_host_id: null, current_host_name: null, participant_count: 0,
+      } as any).eq('id', g.id);
+    });
+    if (staleGroups.length > 0) fetchGroups();
+  }, [groups]);
+
   if (isLoading) {
     return <div className="animate-pulse h-32 bg-muted rounded-lg" />;
   }
@@ -179,7 +190,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       <div className="grid gap-4 md:grid-cols-2">
         {groups.map((group) => {
           const isMyHost = group.current_host_id === currentUserId;
-          const isLive = group.is_live;
+          // A group is truly live only if it has both is_live flag AND a host
+          const isLive = group.is_live && !!group.current_host_id;
           const canGoLive = !isLive && !isHostOfAny;
 
           return (
