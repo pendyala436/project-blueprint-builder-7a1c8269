@@ -2241,6 +2241,8 @@ export type Database = {
         Row: {
           access_type: string
           created_at: string
+          current_host_id: string | null
+          current_host_name: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -2256,6 +2258,8 @@ export type Database = {
         Insert: {
           access_type?: string
           created_at?: string
+          current_host_id?: string | null
+          current_host_name?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -2271,6 +2275,8 @@ export type Database = {
         Update: {
           access_type?: string
           created_at?: string
+          current_host_id?: string | null
+          current_host_name?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
