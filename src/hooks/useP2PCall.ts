@@ -364,10 +364,48 @@ export const useP2PCall = ({
     return pc;
   }, [currentUserId, onCallEnded, toast, syncCallStatus]);
 
+  // Send/re-send offer (used for initial dial + peer-ready handshake)
+  const sendOffer = useCallback(async () => {
+    const pc = peerConnectionRef.current;
+    const channel = signalChannelRef.current;
+
+    if (!pc || !channel) {
+      console.warn('[P2P] Cannot send offer: peer connection or signaling channel not ready');
+      return;
+    }
+
+    let offerSdp: RTCSessionDescriptionInit | null = pc.localDescription?.toJSON() ?? null;
+
+    if (!offerSdp || offerSdp.type !== 'offer') {
+      console.log('[P2P] Creating fresh offer...');
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+      await pc.setLocalDescription(offer);
+      offerSdp = offer;
+      console.log('[P2P] Set local description (offer)');
+    } else {
+      console.log('[P2P] Re-sending existing local offer');
+    }
+
+    channel.send({
+      type: 'broadcast',
+      event: 'offer',
+      payload: { sdp: offerSdp, senderId: currentUserId }
+    });
+
+    setState(prev => ({
+      ...prev,
+      isConnecting: false,
+      callStatus: prev.callStatus === 'active' ? prev.callStatus : 'ringing'
+    }));
+  }, [currentUserId]);
+
   // Setup signaling channel via Supabase Realtime
   const setupSignaling = useCallback(async () => {
     console.log('[P2P] Setting up signaling channel:', callId);
-    
+
     const channel = supabase.channel(`p2p-signal-${callId}`, {
       config: { broadcast: { self: false } }
     });
@@ -378,19 +416,24 @@ export const useP2PCall = ({
         console.log('[P2P] Received offer from:', payload.senderId);
         if (peerConnectionRef.current && payload.senderId !== currentUserId) {
           try {
+            if (peerConnectionRef.current.remoteDescription) {
+              console.log('[P2P] Ignoring duplicate offer (remote description already set)');
+              return;
+            }
+
             await peerConnectionRef.current.setRemoteDescription(
               new RTCSessionDescription(payload.sdp)
             );
             console.log('[P2P] Set remote description (offer)');
-            
+
             // Process any queued ICE candidates
             await processIceCandidateQueue();
-            
+
             // Create and send answer
             const answer = await peerConnectionRef.current.createAnswer();
             await peerConnectionRef.current.setLocalDescription(answer);
             console.log('[P2P] Created and set local description (answer)');
-            
+
             channel.send({
               type: 'broadcast',
               event: 'answer',
@@ -406,11 +449,16 @@ export const useP2PCall = ({
         console.log('[P2P] Received answer from:', payload.senderId);
         if (peerConnectionRef.current && payload.senderId !== currentUserId) {
           try {
+            if (peerConnectionRef.current.signalingState !== 'have-local-offer') {
+              console.log('[P2P] Ignoring late/duplicate answer in state:', peerConnectionRef.current.signalingState);
+              return;
+            }
+
             await peerConnectionRef.current.setRemoteDescription(
               new RTCSessionDescription(payload.sdp)
             );
             console.log('[P2P] Set remote description (answer)');
-            
+
             // Process any queued ICE candidates
             await processIceCandidateQueue();
           } catch (error) {
@@ -418,11 +466,22 @@ export const useP2PCall = ({
           }
         }
       })
+      // Receiver notifies initiator it is ready; initiator re-sends offer safely
+      .on('broadcast', { event: 'peer-ready' }, async ({ payload }) => {
+        if (payload.senderId !== currentUserId && isInitiator) {
+          console.log('[P2P] Peer is ready, sending/re-sending offer');
+          try {
+            await sendOffer();
+          } catch (error) {
+            console.error('[P2P] Error sending offer on peer-ready:', error);
+          }
+        }
+      })
       // Handle incoming ICE candidates
       .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
         if (payload.senderId !== currentUserId) {
           console.log('[P2P] Received ICE candidate');
-          
+
           if (peerConnectionRef.current?.remoteDescription) {
             try {
               await peerConnectionRef.current.addIceCandidate(
@@ -447,18 +506,35 @@ export const useP2PCall = ({
             title: "Call Ended",
             description: "The other user ended the call",
           });
-          cleanup();
           setState(prev => ({ ...prev, callStatus: 'ended' }));
           onCallEnded?.();
         }
-      })
-      .subscribe((status) => {
-        console.log('[P2P] Signaling channel status:', status);
       });
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Signaling subscribe timeout'));
+      }, 10000);
+
+      channel.subscribe((status) => {
+        console.log('[P2P] Signaling channel status:', status);
+
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timeout);
+          resolve();
+          return;
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          clearTimeout(timeout);
+          reject(new Error(`Signaling subscribe failed: ${status}`));
+        }
+      });
+    });
 
     signalChannelRef.current = channel;
     return channel;
-  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast]);
+  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast, isInitiator, sendOffer]);
 
   // Start call (initiator creates offer)
   const startCall = useCallback(async () => {
@@ -475,25 +551,10 @@ export const useP2PCall = ({
       // Initialize media and signaling
       const localStream = await initLocalMedia();
       await setupSignaling();
-      const pc = await createPeerConnection(localStream);
+      await createPeerConnection(localStream);
 
-      // Create and send offer
-      console.log('[P2P] Creating offer...');
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
-      await pc.setLocalDescription(offer);
-      console.log('[P2P] Set local description (offer)');
-
-      // Send offer via signaling
-      signalChannelRef.current?.send({
-        type: 'broadcast',
-        event: 'offer',
-        payload: { sdp: offer, senderId: currentUserId }
-      });
-
-      setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ringing' }));
+      // Initial offer send; if receiver subscribes late, peer-ready handler will re-send
+      await sendOffer();
     } catch (error) {
       console.error('[P2P] Error starting call:', error);
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
@@ -503,7 +564,7 @@ export const useP2PCall = ({
         variant: "destructive",
       });
     }
-  }, [callId, currentUserId, initLocalMedia, setupSignaling, createPeerConnection, toast]);
+  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, sendOffer, toast]);
 
   // Join call (receiver waits for offer)
   const joinCall = useCallback(async () => {
@@ -515,11 +576,17 @@ export const useP2PCall = ({
       // The women-side accept flow already marks session as "active" before this hook mounts.
       // Overwriting it here causes active -> connecting flicker and can collapse call UI state.
 
-
       // Initialize media and signaling
       const localStream = await initLocalMedia();
       await setupSignaling();
       await createPeerConnection(localStream);
+
+      // Tell initiator we're ready (safe point to (re)send offer)
+      signalChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'peer-ready',
+        payload: { senderId: currentUserId }
+      });
 
       setState(prev => ({ ...prev, isConnecting: false }));
       console.log('[P2P] Ready to receive offer');
@@ -532,7 +599,7 @@ export const useP2PCall = ({
         variant: "destructive",
       });
     }
-  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, toast]);
+  }, [initLocalMedia, setupSignaling, createPeerConnection, currentUserId, toast]);
 
   // End call and cleanup
   const endCall = useCallback(async () => {
