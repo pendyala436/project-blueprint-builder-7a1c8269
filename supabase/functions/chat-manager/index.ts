@@ -529,12 +529,21 @@ serve(async (req) => {
           );
         }
 
-        // Step 3: Get availability for load balancing
+        // Step 3: Get availability and active video calls for load balancing
         const womenIds = womenProfiles.map((w: any) => w.user_id);
-        const { data: availabilities } = await supabase
-          .from("women_availability")
-          .select("user_id, current_chat_count, max_concurrent_chats, is_available")
-          .in("user_id", womenIds);
+        const [{ data: availabilities }, { data: activeVideoCalls }] = await Promise.all([
+          supabase
+            .from("women_availability")
+            .select("user_id, current_chat_count, max_concurrent_chats, is_available")
+            .in("user_id", womenIds),
+          supabase
+            .from("video_call_sessions")
+            .select("woman_user_id, man_user_id")
+            .in("woman_user_id", womenIds)
+            .eq("status", "active")
+        ]);
+
+        const usersInVideoCall = new Set((activeVideoCalls || []).map((v: any) => v.woman_user_id));
 
         const availabilityMap = new Map<string, any>();
         (availabilities || []).forEach((a: any) => availabilityMap.set(a.user_id, a));
@@ -561,8 +570,8 @@ serve(async (req) => {
           const currentChats = avail?.current_chat_count || 0;
           const isAvailable = avail?.is_available !== false;
           
-          // Check if woman has capacity
-          if (currentChats >= maxChats || !isAvailable) {
+          // Check if woman has capacity and is not in a video call
+          if (currentChats >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
             continue;
           }
 
@@ -661,7 +670,17 @@ serve(async (req) => {
           }
         }
 
-        // Find available AND online women
+        // Get women currently in video calls to exclude them
+        const { data: videoCallWomen } = await supabase
+          .from("video_call_sessions")
+          .select("woman_user_id")
+          .in("woman_user_id", onlineUserIds)
+          .eq("status", "active");
+        
+        const womenInVideoCall = new Set((videoCallWomen || []).map((v: any) => v.woman_user_id));
+        const availableOnlineIds = onlineUserIds.filter((id: string) => !womenInVideoCall.has(id));
+
+        // Find available AND online women (not in video calls)
         let availableWomen: any[] = [];
         
         if (matchingGroupId) {
@@ -674,7 +693,7 @@ serve(async (req) => {
             `)
             .eq("is_available", true)
             .lt("current_chat_count", 3)
-            .in("user_id", onlineUserIds) // MUST be online
+            .in("user_id", availableOnlineIds) // MUST be online and not in video call
             .eq("women_shift_assignments.language_group_id", matchingGroupId)
             .order("current_chat_count", { ascending: true })
             .order("last_assigned_at", { ascending: true, nullsFirst: true })
@@ -685,14 +704,14 @@ serve(async (req) => {
           }
         }
 
-        // If no language match, find any available AND online woman
+        // If no language match, find any available AND online woman (not in video call)
         if (availableWomen.length === 0) {
           const { data, error } = await supabase
             .from("women_availability")
             .select("user_id, current_chat_count")
             .eq("is_available", true)
             .lt("current_chat_count", 3)
-            .in("user_id", onlineUserIds) // MUST be online
+            .in("user_id", availableOnlineIds) // MUST be online and not in video call
             .order("current_chat_count", { ascending: true })
             .order("last_assigned_at", { ascending: true, nullsFirst: true })
             .limit(1);
@@ -768,20 +787,27 @@ serve(async (req) => {
 
         const womenIds = womenProfiles.map(w => w.user_id);
 
-        // Get availability for load balancing
-        const { data: availabilities } = await supabase
-          .from("women_availability")
-          .select("user_id, current_chat_count, max_concurrent_chats, is_available")
-          .in("user_id", womenIds);
+        // Get availability, video calls, and languages in parallel
+        const [{ data: availabilities }, { data: activeVideoCalls }, { data: userLanguages }] = await Promise.all([
+          supabase
+            .from("women_availability")
+            .select("user_id, current_chat_count, max_concurrent_chats, is_available")
+            .in("user_id", womenIds),
+          supabase
+            .from("video_call_sessions")
+            .select("woman_user_id")
+            .in("woman_user_id", womenIds)
+            .eq("status", "active"),
+          supabase
+            .from("user_languages")
+            .select("user_id, language_name")
+            .in("user_id", womenIds)
+        ]);
+
+        const usersInVideoCall = new Set((activeVideoCalls || []).map((v: any) => v.woman_user_id));
 
         const availabilityMap = new Map<string, any>();
         (availabilities || []).forEach((a: any) => availabilityMap.set(a.user_id, a));
-
-        // Get languages from user_languages table
-        const { data: userLanguages } = await supabase
-          .from("user_languages")
-          .select("user_id, language_name")
-          .in("user_id", womenIds);
 
         const languageMap = new Map<string, string>();
         (userLanguages || []).forEach((l: any) => {
@@ -799,8 +825,8 @@ serve(async (req) => {
           const currentChats = avail?.current_chat_count || 0;
           const isAvailable = avail?.is_available !== false;
           
-          // Check if woman has capacity
-          if (currentChats >= maxChats || !isAvailable) {
+          // Check if woman has capacity and is not in a video call
+          if (currentChats >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
             continue;
           }
 
@@ -1590,20 +1616,30 @@ serve(async (req) => {
 
         const onlineUserIds = onlineStatuses?.map((s: any) => s.user_id) || [];
 
-        // Get available women with capacity
-        const { data: availableWomen } = await supabase
-          .from("women_availability")
-          .select("user_id, current_chat_count, max_concurrent_chats")
-          .in("user_id", onlineUserIds)
-          .eq("is_available", true)
-          .order("current_chat_count", { ascending: true })
-          .order("last_assigned_at", { ascending: true, nullsFirst: true });
+        // Get available women with capacity and check active video calls
+        const [{ data: availableWomen }, { data: videoCallWomen }] = await Promise.all([
+          supabase
+            .from("women_availability")
+            .select("user_id, current_chat_count, max_concurrent_chats")
+            .in("user_id", onlineUserIds)
+            .eq("is_available", true)
+            .order("current_chat_count", { ascending: true })
+            .order("last_assigned_at", { ascending: true, nullsFirst: true }),
+          supabase
+            .from("video_call_sessions")
+            .select("woman_user_id")
+            .in("woman_user_id", onlineUserIds)
+            .eq("status", "active")
+        ]);
 
-        // Filter women with capacity and not excluded
+        const womenInVideoCall = new Set((videoCallWomen || []).map((v: any) => v.woman_user_id));
+
+        // Filter women with capacity, not excluded, and not in video call
         let eligibleWomen = (availableWomen || []).filter((w: any) => {
           const hasCapacity = w.current_chat_count < (w.max_concurrent_chats || 3);
           const notExcluded = !allExcludeIds.includes(w.user_id);
-          return hasCapacity && notExcluded;
+          const notInVideoCall = !womenInVideoCall.has(w.user_id);
+          return hasCapacity && notExcluded && notInVideoCall;
         });
 
         // Get profiles and languages for eligible women
