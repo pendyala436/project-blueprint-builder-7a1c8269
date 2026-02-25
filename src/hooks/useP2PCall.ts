@@ -46,6 +46,8 @@ const ICE_SERVERS: RTCConfiguration = {
 
 const OFFER_RETRY_INTERVAL_MS = 1500;
 const MAX_OFFER_RETRIES = 20;
+const ANSWER_RETRY_INTERVAL_MS = 1500;
+const MAX_ANSWER_RETRIES = 20;
 
 export const useP2PCall = ({
   callId,
@@ -77,6 +79,9 @@ export const useP2PCall = ({
   const billingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const offerRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const offerRetryAttemptsRef = useRef<number>(0);
+  const answerRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const answerRetryAttemptsRef = useRef<number>(0);
+  const lastLocalAnswerRef = useRef<RTCSessionDescriptionInit | null>(null);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
@@ -415,6 +420,35 @@ export const useP2PCall = ({
     offerRetryAttemptsRef.current = 0;
   }, []);
 
+  const stopAnswerRetry = useCallback(() => {
+    if (answerRetryTimerRef.current) {
+      clearInterval(answerRetryTimerRef.current);
+      answerRetryTimerRef.current = null;
+    }
+    answerRetryAttemptsRef.current = 0;
+  }, []);
+
+  const sendAnswer = useCallback(async (answer?: RTCSessionDescriptionInit) => {
+    const channel = signalChannelRef.current;
+    const pc = peerConnectionRef.current;
+
+    const answerSdp =
+      answer ??
+      lastLocalAnswerRef.current ??
+      pc?.localDescription?.toJSON() ??
+      null;
+
+    if (!channel || !answerSdp || answerSdp.type !== 'answer') {
+      return;
+    }
+
+    await channel.send({
+      type: 'broadcast',
+      event: 'answer',
+      payload: { sdp: answerSdp, senderId: currentUserId }
+    });
+  }, [currentUserId]);
+
   const startOfferRetry = useCallback(() => {
     if (!isInitiator || offerRetryTimerRef.current) {
       return;
@@ -453,6 +487,37 @@ export const useP2PCall = ({
     }, OFFER_RETRY_INTERVAL_MS);
   }, [isInitiator, onCallEnded, sendOffer, stopOfferRetry, toast]);
 
+  const startAnswerRetry = useCallback(() => {
+    if (isInitiator || answerRetryTimerRef.current) {
+      return;
+    }
+
+    answerRetryAttemptsRef.current = 0;
+    answerRetryTimerRef.current = setInterval(async () => {
+      const pc = peerConnectionRef.current;
+      if (!pc) return;
+
+      if (pc.connectionState === 'connected') {
+        stopAnswerRetry();
+        return;
+      }
+
+      answerRetryAttemptsRef.current += 1;
+      console.log(`[P2P] Answer retry ${answerRetryAttemptsRef.current}/${MAX_ANSWER_RETRIES}`);
+
+      try {
+        await sendAnswer();
+      } catch (error) {
+        console.error('[P2P] Answer retry failed:', error);
+      }
+
+      if (answerRetryAttemptsRef.current >= MAX_ANSWER_RETRIES) {
+        stopAnswerRetry();
+        console.warn('[P2P] Answer retries exhausted; waiting for new offer');
+      }
+    }, ANSWER_RETRY_INTERVAL_MS);
+  }, [isInitiator, sendAnswer, stopAnswerRetry]);
+
   // Setup signaling channel via Supabase Realtime
   const setupSignaling = useCallback(async () => {
     console.log('[P2P] Setting up signaling channel:', callId);
@@ -483,13 +548,11 @@ export const useP2PCall = ({
             // Create and send answer
             const answer = await peerConnectionRef.current.createAnswer();
             await peerConnectionRef.current.setLocalDescription(answer);
+            lastLocalAnswerRef.current = answer;
             console.log('[P2P] Created and set local description (answer)');
 
-            channel.send({
-              type: 'broadcast',
-              event: 'answer',
-              payload: { sdp: answer, senderId: currentUserId }
-            });
+            await sendAnswer(answer);
+            startAnswerRetry();
           } catch (error) {
             console.error('[P2P] Error handling offer:', error);
           }
@@ -500,8 +563,8 @@ export const useP2PCall = ({
         console.log('[P2P] Received answer from:', payload.senderId);
         if (peerConnectionRef.current && payload.senderId !== currentUserId) {
           try {
-            if (peerConnectionRef.current.signalingState !== 'have-local-offer') {
-              console.log('[P2P] Ignoring late/duplicate answer in state:', peerConnectionRef.current.signalingState);
+            if (peerConnectionRef.current.remoteDescription) {
+              console.log('[P2P] Ignoring duplicate answer (remote description already set)');
               return;
             }
 
@@ -510,6 +573,12 @@ export const useP2PCall = ({
             );
             console.log('[P2P] Set remote description (answer)');
             stopOfferRetry();
+
+            channel.send({
+              type: 'broadcast',
+              event: 'answer-ack',
+              payload: { senderId: currentUserId }
+            });
 
             // Process any queued ICE candidates
             await processIceCandidateQueue();
@@ -527,6 +596,12 @@ export const useP2PCall = ({
           } catch (error) {
             console.error('[P2P] Error sending offer on peer-ready:', error);
           }
+        }
+      })
+      .on('broadcast', { event: 'answer-ack' }, ({ payload }) => {
+        if (payload.senderId !== currentUserId && !isInitiator) {
+          console.log('[P2P] Answer acknowledged by initiator');
+          stopAnswerRetry();
         }
       })
       // Handle incoming ICE candidates
@@ -586,7 +661,7 @@ export const useP2PCall = ({
 
     signalChannelRef.current = channel;
     return channel;
-  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast, isInitiator, sendOffer, stopOfferRetry]);
+  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast, isInitiator, sendOffer, stopOfferRetry, sendAnswer, startAnswerRetry, stopAnswerRetry]);
 
   // Start call (initiator creates offer)
   const startCall = useCallback(async () => {
@@ -738,6 +813,7 @@ export const useP2PCall = ({
     }
 
     stopOfferRetry();
+    stopAnswerRetry();
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
@@ -757,9 +833,10 @@ export const useP2PCall = ({
       signalChannelRef.current = null;
     }
 
+    lastLocalAnswerRef.current = null;
     iceCandidateQueueRef.current = [];
     setRemoteStream(null);
-  }, [stopOfferRetry]);
+  }, [stopOfferRetry, stopAnswerRetry]);
 
   // Ensure streams bind even if video refs mount after media events
   useEffect(() => {
