@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import VideoCallButton from "@/components/VideoCallButton";
+// VideoCallButton removed - women only accept/reject video calls, never initiate
 import { RandomChatButton } from "@/components/RandomChatButton";
 import { 
   Heart, 
@@ -788,7 +788,7 @@ const WomenDashboardScreen = () => {
         setGoldenBadgeExpiry(result.expires_at);
         toast({
           title: "🌟 Golden Badge Activated!",
-          description: "You can now initiate chats and video calls with men for 30 days!",
+          description: "You can now initiate chats with men for 30 days!",
         });
         loadDashboardData();
       } else {
@@ -1104,7 +1104,7 @@ const WomenDashboardScreen = () => {
                       <Badge className="bg-amber-500 text-white text-[10px]">PRO</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      You can initiate chats & video calls with men
+                      You can initiate chats with men
                     </p>
                     {goldenBadgeExpiry && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -1134,7 +1134,7 @@ const WomenDashboardScreen = () => {
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-foreground">🌟 Golden Badge</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Buy for ₹1,000/month to initiate chats & video calls with men
+                      Buy for ₹1,000/month to initiate chats with men
                     </p>
                   </div>
                   <Button
