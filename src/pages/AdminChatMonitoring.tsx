@@ -832,11 +832,6 @@ const AdminChatMonitoring = () => {
                             </span>
                           </div>
                           <p className="text-sm">{msg.message}</p>
-                          {msg.translated_message && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">
-                              Translation: {msg.translated_message}
-                            </p>
-                          )}
                         </div>
                       ))}
                       {silentMonitorMessages.length === 0 && (
@@ -1111,14 +1106,6 @@ const AdminChatMonitoring = () => {
                   <p className="text-sm">{selectedMessage.message}</p>
                 </div>
               </div>
-              {selectedMessage.translated_message && (
-                <div>
-                  <span className="text-sm text-muted-foreground">Translated:</span>
-                  <div className="p-3 bg-muted rounded-lg mt-1">
-                    <p className="text-sm">{selectedMessage.translated_message}</p>
-                  </div>
-                </div>
-              )}
               {selectedMessage.flag_reason && (
                 <div>
                   <span className="text-sm text-muted-foreground">Flag Reason:</span>

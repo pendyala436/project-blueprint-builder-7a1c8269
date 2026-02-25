@@ -37,7 +37,7 @@ interface OnlineUser {
 const OnlineUsersScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -153,20 +153,10 @@ const OnlineUsersScreen = () => {
           })
       );
 
-      // Translate user data if not English
-      let translatedUsers = users;
-      if (currentLanguage !== 'English' && users.length > 0) {
-        const textsToTranslate = users.map(u => u.motherTongue);
-        const translated = await translateDynamicBatch(textsToTranslate);
-        translatedUsers = users.map((u, i) => ({
-          ...u,
-          motherTongue: translated[i] || u.motherTongue,
-        }));
-      }
+      setOnlineUsers(users);
 
-      setOnlineUsers(translatedUsers);
-      if (translatedUsers.length > 0) {
-        setSelectedUser(translatedUsers[0]);
+      if (users.length > 0) {
+        setSelectedUser(users[0]);
       }
     } catch (error) {
       console.error("Error loading online users:", error);

@@ -1,16 +1,13 @@
 import React, { memo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, Languages, RotateCcw } from 'lucide-react';
+import { Check, CheckCheck, MessageCircle } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 export interface ChatMessage {
   id: string;
   content: string;
-  translatedContent?: string;
   senderId: string;
   senderName: string;
   senderAvatar?: string | null;
@@ -18,15 +15,12 @@ export interface ChatMessage {
   timestamp: string;
   isRead?: boolean;
   isDelivered?: boolean;
-  showOriginal?: boolean;
 }
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
   currentUserId: string;
   className?: string;
-  showTranslations?: boolean;
-  onToggleTranslation?: (messageId: string) => void;
 }
 
 const formatMessageTime = (timestamp: string) => {
@@ -55,19 +49,10 @@ MessageStatus.displayName = 'MessageStatus';
 const MessageBubble = memo(({
   message,
   isOwn,
-  showTranslation,
-  onToggleTranslation,
 }: {
   message: ChatMessage;
   isOwn: boolean;
-  showTranslation?: boolean;
-  onToggleTranslation?: () => void;
 }) => {
-  const { t } = useTranslation();
-  const displayContent = showTranslation && message.translatedContent && !message.showOriginal
-    ? message.translatedContent
-    : message.content;
-
   return (
     <div
       className={cn(
@@ -107,26 +92,8 @@ const MessageBubble = memo(({
           dir="auto"
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-            {displayContent}
+            {message.content}
           </p>
-
-          {/* Translation indicator */}
-          {message.translatedContent && showTranslation && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleTranslation}
-              className={cn(
-                'h-auto p-0 mt-1 text-xs font-normal',
-                isOwn
-                  ? 'text-primary-foreground/70 hover:text-primary-foreground hover:bg-transparent'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
-              )}
-            >
-              <Languages className="h-3 w-3 me-1" />
-              {message.showOriginal ? t('chat.showTranslation') : t('chat.showOriginal')}
-            </Button>
-          )}
         </div>
 
         {/* Timestamp and status */}
@@ -151,10 +118,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
   messages,
   currentUserId,
   className,
-  showTranslations = true,
-  onToggleTranslation,
 }) => {
-  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -194,8 +158,6 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
                   key={message.id}
                   message={message}
                   isOwn={message.senderId === currentUserId}
-                  showTranslation={showTranslations}
-                  onToggleTranslation={() => onToggleTranslation?.(message.id)}
                 />
               ))}
             </div>
@@ -205,13 +167,13 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
         {messages.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-              <Languages className="h-8 w-8 text-muted-foreground/50" />
+              <MessageCircle className="h-8 w-8 text-muted-foreground/50" />
             </div>
             <h3 className="font-medium text-foreground mb-1">
-              {t('chat.noMessages')}
+              No messages yet
             </h3>
             <p className="text-sm text-muted-foreground">
-              {t('chat.startConversation')}
+              Start the conversation!
             </p>
           </div>
         )}

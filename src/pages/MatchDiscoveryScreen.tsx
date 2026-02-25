@@ -6,7 +6,7 @@
  * 
  * KEY FEATURES:
  * - Tinder-style card swiping interface
- * - Language-based matching algorithm (NLLB-200)
+ * - Language-based matching algorithm
  * - Advanced filtering (age, location, lifestyle, etc.)
  * - Real-time match score calculation
  * - Integration with Supabase for data persistence
@@ -96,7 +96,7 @@ const MatchDiscoveryScreen = () => {
   const { toast } = useToast();
 
   // Translation hook
-  const { t, translateDynamicBatch, currentLanguage } = useTranslation();
+  const { t } = useTranslation();
   
   // ============= STATE DECLARATIONS =============
   
@@ -429,7 +429,7 @@ const MatchDiscoveryScreen = () => {
             theirLanguages.forEach(l => languagesSet.add(l));
             if (profile.country) countriesSet.add(profile.country);
 
-            // ============= LANGUAGE MATCHING ALGORITHM (NLLB-200 BASED) =============
+            // ============= LANGUAGE MATCHING ALGORITHM =============
             
             // Find common languages between current user and this profile
             const commonLanguages = userLanguages.filter(lang => 
@@ -503,27 +503,8 @@ const MatchDiscoveryScreen = () => {
       // Sort descending: highest match scores first
       filteredMatches.sort((a, b) => b.matchScore - a.matchScore);
 
-      // ============= TRANSLATE DYNAMIC CONTENT =============
-      
-      // Translate bios and country names if not English
-      let translatedMatches = filteredMatches;
-      if (currentLanguage !== 'English' && filteredMatches.length > 0) {
-        const textsToTranslate = filteredMatches.flatMap(m => [
-          m.bio || '',
-          m.country || ''
-        ]);
-        
-        const translated = await translateDynamicBatch(textsToTranslate);
-        
-        translatedMatches = filteredMatches.map((m, i) => ({
-          ...m,
-          bio: translated[i * 2] || m.bio,
-          country: translated[i * 2 + 1] || m.country,
-        }));
-      }
-
       // Update state with processed matches
-      setMatches(translatedMatches);
+      setMatches(filteredMatches);
       setCurrentIndex(0); // Reset to first match
       
     } catch (error) {

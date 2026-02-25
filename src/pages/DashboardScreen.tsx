@@ -803,7 +803,7 @@ const DashboardScreen = () => {
         return a.active_chat_count - b.active_chat_count;
       };
 
-      // Split: same language first, others for auto-translate
+      // Split: same language first, others second
       const sameLanguage = womenWithChatCount
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
         .sort(sortByBadgeAndLoad);
@@ -813,7 +813,7 @@ const DashboardScreen = () => {
         .sort(sortByBadgeAndLoad);
 
       console.log("[Dashboard] Online same-language women:", sameLanguage.length);
-      console.log("[Dashboard] Online other-language women (auto-translate):", otherWomen.length);
+      console.log("[Dashboard] Online other-language women:", otherWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
       setIndianTranslatedWomen(otherWomen.slice(0, 15));
     } catch (error) {
@@ -1282,14 +1282,10 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: All NLLB-200 Women with Auto-Translation */}
+              {/* Right Column: Other Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-info/20 text-info rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {t('autoTranslate', 'Auto-Translate')}
-                  </span>
                   <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
                 </div>
                 
@@ -1357,7 +1353,7 @@ const DashboardScreen = () => {
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">{t('noTranslateWomen', 'No women with auto-translate available')}</p>
+                    <p className="text-sm text-muted-foreground">{t('noOtherWomen', 'No women speaking other languages available')}</p>
                   </Card>
                 )}
               </div>

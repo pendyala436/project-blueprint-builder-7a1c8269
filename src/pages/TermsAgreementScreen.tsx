@@ -65,7 +65,7 @@ By creating an account or using Meow Meow, you agree to these Terms of Service. 
 • No video calls
 • No audio calls
 • No media sharing (temporary only, auto-deleted)
-• Auto-translation using NLLB-200
+• Plain text messaging only
 • Only online users are visible
 • Matching based on gender + language rules
 
@@ -102,7 +102,7 @@ You agree that your data may be stored and processed in India or other Asia-base
 We may suspend or terminate accounts without notice for any policy violation.
 
 9. Disclaimer
-The service is provided "AS IS". We are not liable for user behavior, technical issues, or translation inaccuracies.
+The service is provided "AS IS". We are not liable for user behavior or technical issues.
 
 10. Governing Law
 Subject to the jurisdiction of the company's registration.`
@@ -132,7 +132,7 @@ We do not collect:
 
 3. How We Use Data
 • Matching
-• Auto-translation
+• Communication
 • Safety
 • Fraud detection
 • Legal compliance
@@ -350,7 +350,7 @@ All users must verify their age before accessing the platform.`
     content: `MEOW MEOW – AI USAGE DISCLOSURE
 
 AI is used for:
-• Auto-translation (NLLB-200)
+• Gender verification
 • Gender verification
 • Fraud prevention
 • Content moderation
