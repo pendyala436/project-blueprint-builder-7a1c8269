@@ -1121,6 +1121,7 @@ const WomenDashboardScreen = () => {
                       variant="aurora"
                       size="sm"
                       hasGoldenBadge={true}
+                      chatMode={chatMode.currentMode}
                     />
                   </div>
                 </div>
