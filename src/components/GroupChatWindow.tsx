@@ -12,7 +12,6 @@ interface GroupMessage {
   id: string;
   sender_id: string;
   message: string;
-  translated_message: string | null;
   created_at: string;
   sender_name?: string;
   sender_photo?: string;
@@ -193,7 +192,7 @@ export function GroupChatWindow({
                           : 'bg-muted'
                       }`}
                     >
-                      {msg.translated_message || msg.message}
+                      {msg.message}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {format(new Date(msg.created_at), 'HH:mm')}
