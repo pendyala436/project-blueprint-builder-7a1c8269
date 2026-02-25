@@ -507,11 +507,10 @@ export const useP2PCall = ({
       console.log('[P2P] Joining call as receiver...');
       setState(prev => ({ ...prev, isConnecting: true, callStatus: 'connecting' }));
 
-      // Update database
-      await supabase
-        .from('video_call_sessions')
-        .update({ status: 'connecting' })
-        .eq('call_id', callId);
+      // IMPORTANT: do not downgrade DB status back to "connecting" on receiver side.
+      // The women-side accept flow already marks session as "active" before this hook mounts.
+      // Overwriting it here causes active -> connecting flicker and can collapse call UI state.
+
 
       // Initialize media and signaling
       const localStream = await initLocalMedia();
