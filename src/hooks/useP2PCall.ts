@@ -44,6 +44,9 @@ const ICE_SERVERS: RTCConfiguration = {
   ]
 };
 
+const OFFER_RETRY_INTERVAL_MS = 1500;
+const MAX_OFFER_RETRIES = 20;
+
 export const useP2PCall = ({
   callId,
   currentUserId,
@@ -72,6 +75,8 @@ export const useP2PCall = ({
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const billingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const offerRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const offerRetryAttemptsRef = useRef<number>(0);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
@@ -402,6 +407,52 @@ export const useP2PCall = ({
     }));
   }, [currentUserId]);
 
+  const stopOfferRetry = useCallback(() => {
+    if (offerRetryTimerRef.current) {
+      clearInterval(offerRetryTimerRef.current);
+      offerRetryTimerRef.current = null;
+    }
+    offerRetryAttemptsRef.current = 0;
+  }, []);
+
+  const startOfferRetry = useCallback(() => {
+    if (!isInitiator || offerRetryTimerRef.current) {
+      return;
+    }
+
+    offerRetryAttemptsRef.current = 0;
+    offerRetryTimerRef.current = setInterval(async () => {
+      const pc = peerConnectionRef.current;
+      if (!pc) return;
+
+      if (pc.remoteDescription || pc.connectionState === 'connected') {
+        stopOfferRetry();
+        return;
+      }
+
+      offerRetryAttemptsRef.current += 1;
+      console.log(`[P2P] Offer retry ${offerRetryAttemptsRef.current}/${MAX_OFFER_RETRIES}`);
+
+      try {
+        await sendOffer();
+      } catch (error) {
+        console.error('[P2P] Offer retry failed:', error);
+      }
+
+      if (offerRetryAttemptsRef.current >= MAX_OFFER_RETRIES) {
+        stopOfferRetry();
+        console.warn('[P2P] Offer retries exhausted; ending call setup');
+        setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
+        toast({
+          title: 'Connection Timeout',
+          description: 'Could not connect the call. Please try again.',
+          variant: 'destructive',
+        });
+        onCallEnded?.();
+      }
+    }, OFFER_RETRY_INTERVAL_MS);
+  }, [isInitiator, onCallEnded, sendOffer, stopOfferRetry, toast]);
+
   // Setup signaling channel via Supabase Realtime
   const setupSignaling = useCallback(async () => {
     console.log('[P2P] Setting up signaling channel:', callId);
@@ -458,6 +509,7 @@ export const useP2PCall = ({
               new RTCSessionDescription(payload.sdp)
             );
             console.log('[P2P] Set remote description (answer)');
+            stopOfferRetry();
 
             // Process any queued ICE candidates
             await processIceCandidateQueue();
@@ -534,7 +586,7 @@ export const useP2PCall = ({
 
     signalChannelRef.current = channel;
     return channel;
-  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast, isInitiator, sendOffer]);
+  }, [callId, currentUserId, processIceCandidateQueue, onCallEnded, toast, isInitiator, sendOffer, stopOfferRetry]);
 
   // Start call (initiator creates offer)
   const startCall = useCallback(async () => {
@@ -553,8 +605,9 @@ export const useP2PCall = ({
       await setupSignaling();
       await createPeerConnection(localStream);
 
-      // Initial offer send; if receiver subscribes late, peer-ready handler will re-send
+      // Initial offer send; if receiver subscribes late, peer-ready handler and retry loop will re-send
       await sendOffer();
+      startOfferRetry();
     } catch (error) {
       console.error('[P2P] Error starting call:', error);
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
@@ -564,7 +617,7 @@ export const useP2PCall = ({
         variant: "destructive",
       });
     }
-  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, sendOffer, toast]);
+  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, sendOffer, startOfferRetry, toast]);
 
   // Join call (receiver waits for offer)
   const joinCall = useCallback(async () => {
@@ -605,6 +658,8 @@ export const useP2PCall = ({
   const endCall = useCallback(async () => {
     console.log('[P2P] Ending call...');
     
+    stopOfferRetry();
+
     // Notify remote peer
     signalChannelRef.current?.send({
       type: 'broadcast',
@@ -642,7 +697,7 @@ export const useP2PCall = ({
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, state.callDuration, ratePerMinute, onCallEnded, syncCallStatus]);
+  }, [callId, currentUserId, state.callDuration, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {
@@ -682,6 +737,8 @@ export const useP2PCall = ({
       billingTimerRef.current = null;
     }
 
+    stopOfferRetry();
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.stop();
@@ -702,7 +759,7 @@ export const useP2PCall = ({
 
     iceCandidateQueueRef.current = [];
     setRemoteStream(null);
-  }, []);
+  }, [stopOfferRetry]);
 
   // Ensure streams bind even if video refs mount after media events
   useEffect(() => {
