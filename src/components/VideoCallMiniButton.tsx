@@ -89,14 +89,17 @@ const VideoCallMiniButton = ({
         return;
       }
 
-      // Create video call session
-      const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
+      // Create video call session - use auth.uid() from fresh session to match RLS policy
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+      
+      const callId = `call_${authUser.id}_${result.woman.user_id}_${Date.now()}`;
       
       const { error: sessionError } = await supabase
         .from('video_call_sessions')
         .insert({
           call_id: callId,
-          man_user_id: currentUserId,
+          man_user_id: authUser.id,
           woman_user_id: result.woman.user_id,
           status: 'ringing',
           rate_per_minute: 5.00
