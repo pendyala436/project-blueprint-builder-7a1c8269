@@ -1823,6 +1823,39 @@ export type Database = {
         }
         Relationships: []
       }
+      men_free_minutes: {
+        Row: {
+          created_at: string
+          free_minutes_total: number
+          free_minutes_used: number
+          id: string
+          last_reset_at: string
+          next_reset_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          free_minutes_total?: number
+          free_minutes_used?: number
+          id?: string
+          last_reset_at?: string
+          next_reset_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          free_minutes_total?: number
+          free_minutes_used?: number
+          id?: string
+          last_reset_at?: string
+          next_reset_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_rate_limits: {
         Row: {
           created_at: string | null
@@ -3892,6 +3925,7 @@ export type Database = {
           video_rate: number
         }[]
       }
+      get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
       get_group_owner_profile: {
         Args: { owner_user_id: string }
         Returns: {
@@ -3947,6 +3981,23 @@ export type Database = {
           state: string
           user_id: string
           wallet_balance: number
+        }[]
+      }
+      get_online_women_dashboard: {
+        Args: never
+        Returns: {
+          age: number
+          country: string
+          current_chat_count: number
+          full_name: string
+          is_available: boolean
+          is_earning_eligible: boolean
+          last_seen: string
+          max_concurrent_chats: number
+          mother_tongue: string
+          photo_url: string
+          primary_language: string
+          user_id: string
         }[]
       }
       get_relationship_status: {
