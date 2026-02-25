@@ -225,19 +225,16 @@ export const RandomChatButton = ({
 
         const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
 
-        // Check wallet balance for ALL men first
-        const { data: wallets } = await supabase
-          .from("wallets")
-          .select("user_id, balance")
-          .in("user_id", menProfiles.map(m => m.user_id));
+        // Check wallet balance using secure RPC (bypasses RLS)
+        const { data: walletData } = await supabase.rpc('get_men_with_balance', {
+          p_user_ids: menProfiles.map(m => m.user_id)
+        });
 
-        const superUserBalance = 999999999;
-        const menWithBalance = wallets?.filter(w => w.balance > 0).map(w => w.user_id) || [];
-        const superUsers = wallets?.filter(w => w.balance >= superUserBalance).map(w => w.user_id) || [];
+        const menWithBalance = walletData?.map((w: any) => w.user_id) || [];
 
-        // Filter to men who have balance or are super users
+        // Filter to men who have balance
         const qualifiedMen = menProfiles.filter(m => 
-          menWithBalance.includes(m.user_id) || superUsers.includes(m.user_id)
+          menWithBalance.includes(m.user_id)
         );
 
         if (qualifiedMen.length === 0) {

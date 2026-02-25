@@ -3966,6 +3966,13 @@ export type Database = {
           state: string
         }[]
       }
+      get_men_with_balance: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          balance: number
+          user_id: string
+        }[]
+      }
       get_online_men_dashboard: {
         Args: never
         Returns: {
