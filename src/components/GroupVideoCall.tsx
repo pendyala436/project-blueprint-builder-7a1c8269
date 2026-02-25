@@ -270,7 +270,7 @@ export function GroupVideoCall({
 
           {/* Info */}
           <div className="text-center text-xs text-muted-foreground">
-            SFU Group Call • {remoteParticipants.length + 1} connected
+            WebRTC Group Call • {remoteParticipants.length + 1} connected
           </div>
         </div>
       </DialogContent>
