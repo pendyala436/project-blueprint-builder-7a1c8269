@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { Users, Video, Radio, Loader2 } from 'lucide-react';
+import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -88,11 +88,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Enrich with host info from current_host_name
         const enrichedGroups = data.map(group => ({
           ...group,
-          owner_id: (group as any).current_host_id || group.owner_id,
-          owner_name: (group as any).current_host_name || 'Host',
+          owner_id: group.current_host_id || group.owner_id,
+          owner_name: group.current_host_name || 'Host',
         }));
         setGroups(enrichedGroups as PrivateGroup[]);
       } else {
@@ -184,7 +183,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">No private rooms live</p>
+          <p className="font-medium">No private groups live</p>
           <p className="text-sm">Check back later when a host goes live!</p>
         </CardContent>
       </Card>
@@ -199,11 +198,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Video className="h-5 w-5 text-primary" />
-          Private Rooms
+          Private Groups
         </h3>
-        <Badge variant="outline" className="text-xs">
-          {groups.length} Live
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsLoading(true); fetchGroups(); fetchWalletBalance(); }}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Badge variant="outline" className="text-xs">
+            {groups.length} Live
+          </Badge>
+        </div>
       </div>
 
       {!hasEnoughBalance && (
