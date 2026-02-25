@@ -1,59 +1,70 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'gift_model.freezed.dart';
-part 'gift_model.g.dart';
-
 /// Gift Model
-@freezed
-class GiftModel with _$GiftModel {
-  const factory GiftModel({
-    required String id,
-    required String name,
-    @Default('🎁') String emoji,
-    @Default(0) double price,
-    @Default('INR') String currency,
-    @Default('general') String category,
-    String? description,
-    @Default(true) bool isActive,
-    @Default(0) int sortOrder,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) = _GiftModel;
+class GiftModel {
+  final String id;
+  final String name;
+  final String emoji;
+  final double price;
+  final String currency;
+  final String category;
+  final String? description;
+  final bool isActive;
+  final int sortOrder;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-  factory GiftModel.fromJson(Map<String, dynamic> json) =>
-      _$GiftModelFromJson(json);
+  const GiftModel({
+    required this.id,
+    required this.name,
+    this.emoji = '🎁',
+    this.price = 0,
+    this.currency = 'INR',
+    this.category = 'general',
+    this.description,
+    this.isActive = true,
+    this.sortOrder = 0,
+    this.createdAt,
+    this.updatedAt,
+  });
 }
 
 /// Gift Transaction Model
-@freezed
-class GiftTransactionModel with _$GiftTransactionModel {
-  const factory GiftTransactionModel({
-    required String id,
-    required String senderId,
-    required String receiverId,
-    required String giftId,
-    required double pricePaid,
-    @Default('INR') String currency,
-    String? message,
-    @Default('completed') String status,
-    DateTime? createdAt,
-  }) = _GiftTransactionModel;
+class GiftTransactionModel {
+  final String id;
+  final String senderId;
+  final String receiverId;
+  final String giftId;
+  final double pricePaid;
+  final String currency;
+  final String? message;
+  final String status;
+  final DateTime? createdAt;
 
-  factory GiftTransactionModel.fromJson(Map<String, dynamic> json) =>
-      _$GiftTransactionModelFromJson(json);
+  const GiftTransactionModel({
+    required this.id,
+    required this.senderId,
+    required this.receiverId,
+    required this.giftId,
+    required this.pricePaid,
+    this.currency = 'INR',
+    this.message,
+    this.status = 'completed',
+    this.createdAt,
+  });
 }
 
 /// Gift with Sender Info (for display)
-@freezed
-class ReceivedGift with _$ReceivedGift {
-  const factory ReceivedGift({
-    required GiftModel gift,
-    required String senderName,
-    String? senderPhotoUrl,
-    String? message,
-    DateTime? receivedAt,
-  }) = _ReceivedGift;
+class ReceivedGift {
+  final GiftModel gift;
+  final String senderName;
+  final String? senderPhotoUrl;
+  final String? message;
+  final DateTime? receivedAt;
 
-  factory ReceivedGift.fromJson(Map<String, dynamic> json) =>
-      _$ReceivedGiftFromJson(json);
+  const ReceivedGift({
+    required this.gift,
+    required this.senderName,
+    this.senderPhotoUrl,
+    this.message,
+    this.receivedAt,
+  });
 }

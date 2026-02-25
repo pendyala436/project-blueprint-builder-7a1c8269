@@ -1,65 +1,82 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'match_model.freezed.dart';
-part 'match_model.g.dart';
-
 /// Match Model
-@freezed
-class MatchModel with _$MatchModel {
-  const factory MatchModel({
-    required String id,
-    required String userId,
-    required String matchedUserId,
-    int? matchScore,
-    @Default('pending') String status,
-    DateTime? matchedAt,
-    DateTime? createdAt,
-  }) = _MatchModel;
+class MatchModel {
+  final String id;
+  final String userId;
+  final String matchedUserId;
+  final int? matchScore;
+  final String status;
+  final DateTime? matchedAt;
+  final DateTime? createdAt;
 
-  factory MatchModel.fromJson(Map<String, dynamic> json) =>
-      _$MatchModelFromJson(json);
+  const MatchModel({
+    required this.id,
+    required this.userId,
+    required this.matchedUserId,
+    this.matchScore,
+    this.status = 'pending',
+    this.matchedAt,
+    this.createdAt,
+  });
 }
 
 /// Match Profile (with calculated score)
-@freezed
-class MatchProfileModel with _$MatchProfileModel {
-  const factory MatchProfileModel({
-    required String id,
-    required String userId,
-    String? fullName,
-    int? age,
-    String? gender,
-    String? country,
-    String? state,
-    String? bio,
-    String? photoUrl,
-    @Default([]) List<String> interests,
-    String? occupation,
-    @Default(false) bool isVerified,
-    @Default(false) bool isOnline,
-    @Default(0) int matchScore,
-    @Default([]) List<String> commonLanguages,
-    @Default([]) List<String> commonInterests,
-  }) = _MatchProfileModel;
+class MatchProfileModel {
+  final String id;
+  final String userId;
+  final String? fullName;
+  final int? age;
+  final String? gender;
+  final String? country;
+  final String? state;
+  final String? bio;
+  final String? photoUrl;
+  final List<String> interests;
+  final String? occupation;
+  final bool isVerified;
+  final bool isOnline;
+  final int matchScore;
+  final List<String> commonLanguages;
+  final List<String> commonInterests;
 
-  factory MatchProfileModel.fromJson(Map<String, dynamic> json) =>
-      _$MatchProfileModelFromJson(json);
+  const MatchProfileModel({
+    required this.id,
+    required this.userId,
+    this.fullName,
+    this.age,
+    this.gender,
+    this.country,
+    this.state,
+    this.bio,
+    this.photoUrl,
+    this.interests = const [],
+    this.occupation,
+    this.isVerified = false,
+    this.isOnline = false,
+    this.matchScore = 0,
+    this.commonLanguages = const [],
+    this.commonInterests = const [],
+  });
 }
 
 /// Match Filter Options
-@freezed
-class MatchFilters with _$MatchFilters {
-  const factory MatchFilters({
-    int? minAge,
-    int? maxAge,
-    String? country,
-    String? state,
-    List<String>? languages,
-    List<String>? interests,
-    bool? onlineOnly,
-    bool? verifiedOnly,
-  }) = _MatchFilters;
+class MatchFilters {
+  final int? minAge;
+  final int? maxAge;
+  final String? country;
+  final String? state;
+  final List<String>? languages;
+  final List<String>? interests;
+  final bool? onlineOnly;
+  final bool? verifiedOnly;
 
-  factory MatchFilters.fromJson(Map<String, dynamic> json) =>
-      _$MatchFiltersFromJson(json);
+  const MatchFilters({
+    this.minAge,
+    this.maxAge,
+    this.country,
+    this.state,
+    this.languages,
+    this.interests,
+    this.onlineOnly,
+    this.verifiedOnly,
+  });
 }

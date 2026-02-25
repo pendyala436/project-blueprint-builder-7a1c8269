@@ -1,80 +1,97 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'chat_model.freezed.dart';
-part 'chat_model.g.dart';
-
 /// Chat Message Model
-@freezed
-class ChatMessageModel with _$ChatMessageModel {
-  const factory ChatMessageModel({
-    required String id,
-    required String chatId,
-    required String senderId,
-    required String receiverId,
-    required String message,
-    String? translatedMessage,
-    @Default(false) bool isTranslated,
-    @Default(false) bool isRead,
-    @Default(false) bool flagged,
-    String? flagReason,
-    DateTime? createdAt,
-  }) = _ChatMessageModel;
+class ChatMessageModel {
+  final String id;
+  final String chatId;
+  final String senderId;
+  final String receiverId;
+  final String message;
+  final String? translatedMessage;
+  final bool isTranslated;
+  final bool isRead;
+  final bool flagged;
+  final String? flagReason;
+  final DateTime? createdAt;
 
-  factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
-      _$ChatMessageModelFromJson(json);
+  const ChatMessageModel({
+    required this.id,
+    required this.chatId,
+    required this.senderId,
+    required this.receiverId,
+    required this.message,
+    this.translatedMessage,
+    this.isTranslated = false,
+    this.isRead = false,
+    this.flagged = false,
+    this.flagReason,
+    this.createdAt,
+  });
 }
 
 /// Chat Session Model
-@freezed
-class ChatSessionModel with _$ChatSessionModel {
-  const factory ChatSessionModel({
-    required String id,
-    required String chatId,
-    required String manUserId,
-    required String womanUserId,
-    @Default('active') String status,
-    DateTime? startedAt,
-    DateTime? endedAt,
-    @Default(0) double totalMinutes,
-    @Default(0) double totalEarned,
-    @Default(4.0) double ratePerMinute, // Men pay ₹4/min chat (synced with DB)
-    String? endReason,
-    DateTime? lastActivityAt,
-  }) = _ChatSessionModel;
+class ChatSessionModel {
+  final String id;
+  final String chatId;
+  final String manUserId;
+  final String womanUserId;
+  final String status;
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+  final double totalMinutes;
+  final double totalEarned;
+  final double ratePerMinute;
+  final String? endReason;
+  final DateTime? lastActivityAt;
 
-  factory ChatSessionModel.fromJson(Map<String, dynamic> json) =>
-      _$ChatSessionModelFromJson(json);
+  const ChatSessionModel({
+    required this.id,
+    required this.chatId,
+    required this.manUserId,
+    required this.womanUserId,
+    this.status = 'active',
+    this.startedAt,
+    this.endedAt,
+    this.totalMinutes = 0,
+    this.totalEarned = 0,
+    this.ratePerMinute = 4.0,
+    this.endReason,
+    this.lastActivityAt,
+  });
 }
 
 /// Chat Pricing Model
-/// Note: Indian women earn womenEarningRate (₹2/min default), non-Indian women earn ₹0/min
-/// Eligibility is checked via is_earning_eligible flag in female_profiles
-@freezed
-class ChatPricingModel with _$ChatPricingModel {
-  const factory ChatPricingModel({
-    @Default(4.0) double ratePerMinute,           // Men pay ₹4/min chat
-    @Default(2.0) double womenEarningRate,        // Indian women earn ₹2/min for chat (admin configurable)
-    @Default(8.0) double videoRatePerMinute,      // Men pay ₹8/min video
-    @Default(4.0) double videoWomenEarningRate,   // Women earn ₹4/min video
-    @Default(10000.0) double minWithdrawalBalance,
-    @Default('INR') String currency,
-  }) = _ChatPricingModel;
+/// Note: Indian women earn womenEarningRate, non-Indian women earn ₹0/min
+/// Eligibility checked via is_earning_eligible flag in female_profiles
+class ChatPricingModel {
+  final double ratePerMinute;
+  final double womenEarningRate;
+  final double videoRatePerMinute;
+  final double videoWomenEarningRate;
+  final double minWithdrawalBalance;
+  final String currency;
 
-  factory ChatPricingModel.fromJson(Map<String, dynamic> json) =>
-      _$ChatPricingModelFromJson(json);
+  const ChatPricingModel({
+    this.ratePerMinute = 4.0,
+    this.womenEarningRate = 2.0,
+    this.videoRatePerMinute = 8.0,
+    this.videoWomenEarningRate = 4.0,
+    this.minWithdrawalBalance = 10000.0,
+    this.currency = 'INR',
+  });
 }
 
 /// Chat Partner Info (for display)
-@freezed
-class ChatPartnerInfo with _$ChatPartnerInfo {
-  const factory ChatPartnerInfo({
-    required String userId,
-    required String name,
-    String? photoUrl,
-    @Default(false) bool isOnline,
-    DateTime? lastSeen,
-  }) = _ChatPartnerInfo;
+class ChatPartnerInfo {
+  final String userId;
+  final String name;
+  final String? photoUrl;
+  final bool isOnline;
+  final DateTime? lastSeen;
 
-  factory ChatPartnerInfo.fromJson(Map<String, dynamic> json) =>
-      _$ChatPartnerInfoFromJson(json);
+  const ChatPartnerInfo({
+    required this.userId,
+    required this.name,
+    this.photoUrl,
+    this.isOnline = false,
+    this.lastSeen,
+  });
 }

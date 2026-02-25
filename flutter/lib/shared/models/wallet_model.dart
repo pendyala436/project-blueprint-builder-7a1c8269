@@ -1,91 +1,108 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'wallet_model.freezed.dart';
-part 'wallet_model.g.dart';
-
 /// Wallet Model
-@freezed
-class WalletModel with _$WalletModel {
-  const factory WalletModel({
-    required String id,
-    required String userId,
-    @Default(0) double balance,
-    @Default('INR') String currency,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) = _WalletModel;
+class WalletModel {
+  final String id;
+  final String userId;
+  final double balance;
+  final String currency;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-  factory WalletModel.fromJson(Map<String, dynamic> json) =>
-      _$WalletModelFromJson(json);
+  const WalletModel({
+    required this.id,
+    required this.userId,
+    this.balance = 0,
+    this.currency = 'INR',
+    this.createdAt,
+    this.updatedAt,
+  });
 }
 
 /// Wallet Transaction Model
-@freezed
-class WalletTransactionModel with _$WalletTransactionModel {
-  const factory WalletTransactionModel({
-    required String id,
-    required String walletId,
-    required String userId,
-    required String type, // 'credit' or 'debit'
-    required double amount,
-    String? description,
-    String? referenceId,
-    @Default('completed') String status,
-    DateTime? createdAt,
-  }) = _WalletTransactionModel;
+class WalletTransactionModel {
+  final String id;
+  final String walletId;
+  final String userId;
+  final String type; // 'credit' or 'debit'
+  final double amount;
+  final String? description;
+  final String? referenceId;
+  final String status;
+  final DateTime? createdAt;
 
-  factory WalletTransactionModel.fromJson(Map<String, dynamic> json) =>
-      _$WalletTransactionModelFromJson(json);
+  const WalletTransactionModel({
+    required this.id,
+    required this.walletId,
+    required this.userId,
+    required this.type,
+    required this.amount,
+    this.description,
+    this.referenceId,
+    this.status = 'completed',
+    this.createdAt,
+  });
 }
 
 /// Women Earnings Model
-@freezed
-class WomenEarningsModel with _$WomenEarningsModel {
-  const factory WomenEarningsModel({
-    required String id,
-    required String userId,
-    required double amount,
-    required String earningType, // 'chat', 'video_call', 'gift'
-    String? chatSessionId,
-    String? description,
-    DateTime? createdAt,
-  }) = _WomenEarningsModel;
+class WomenEarningsModel {
+  final String id;
+  final String userId;
+  final double amount;
+  final String earningType; // 'chat', 'video_call', 'gift'
+  final String? chatSessionId;
+  final String? description;
+  final DateTime? createdAt;
 
-  factory WomenEarningsModel.fromJson(Map<String, dynamic> json) =>
-      _$WomenEarningsModelFromJson(json);
+  const WomenEarningsModel({
+    required this.id,
+    required this.userId,
+    required this.amount,
+    required this.earningType,
+    this.chatSessionId,
+    this.description,
+    this.createdAt,
+  });
 }
 
 /// Withdrawal Request Model
-@freezed
-class WithdrawalRequestModel with _$WithdrawalRequestModel {
-  const factory WithdrawalRequestModel({
-    required String id,
-    required String userId,
-    required double amount,
-    String? paymentMethod,
-    Map<String, dynamic>? paymentDetails,
-    @Default('pending') String status,
-    String? processedBy,
-    DateTime? processedAt,
-    String? notes,
-    DateTime? createdAt,
-  }) = _WithdrawalRequestModel;
+class WithdrawalRequestModel {
+  final String id;
+  final String userId;
+  final double amount;
+  final String? paymentMethod;
+  final Map<String, dynamic>? paymentDetails;
+  final String status;
+  final String? processedBy;
+  final DateTime? processedAt;
+  final String? notes;
+  final DateTime? createdAt;
 
-  factory WithdrawalRequestModel.fromJson(Map<String, dynamic> json) =>
-      _$WithdrawalRequestModelFromJson(json);
+  const WithdrawalRequestModel({
+    required this.id,
+    required this.userId,
+    required this.amount,
+    this.paymentMethod,
+    this.paymentDetails,
+    this.status = 'pending',
+    this.processedBy,
+    this.processedAt,
+    this.notes,
+    this.createdAt,
+  });
 }
 
 /// Transaction Result
-@freezed
-class TransactionResult with _$TransactionResult {
-  const factory TransactionResult({
-    required bool success,
-    String? transactionId,
-    double? previousBalance,
-    double? newBalance,
-    String? error,
-  }) = _TransactionResult;
+class TransactionResult {
+  final bool success;
+  final String? transactionId;
+  final double? previousBalance;
+  final double? newBalance;
+  final String? error;
 
-  factory TransactionResult.fromJson(Map<String, dynamic> json) =>
-      _$TransactionResultFromJson(json);
+  const TransactionResult({
+    required this.success,
+    this.transactionId,
+    this.previousBalance,
+    this.newBalance,
+    this.error,
+  });
 }
