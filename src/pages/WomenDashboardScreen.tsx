@@ -357,22 +357,19 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount === 0) return t('available', 'Available');
     if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
-    return t('busy', 'Busy') + `(${activeChatCount})`;
+    return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    // Green = Available, Yellow/Amber = 1-2 chats, Red = 3 chats (full)
-    if (activeChatCount === 0) return "bg-green-500";
-    if (activeChatCount >= 3) return "bg-red-500";
-    return "bg-amber-500";
+    // Green = Online/Available, Red = Full (3 chats)
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-online";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount === 0) return "bg-green-500";
-    if (activeChatCount >= 3) return "bg-red-500";
-    return "bg-amber-500";
+    if (activeChatCount >= 3) return "bg-destructive";
+    return "bg-online";
   };
 
   const MAX_PARALLEL_CHATS = 3;
@@ -839,14 +836,12 @@ const WomenDashboardScreen = () => {
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            {/* Status indicator: Green=Available, Yellow=1-2 chats, Red=Full */}
+            {/* Status indicator: Green=Online, Red=Full */}
             <div className={cn(
               "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
-              (user.activeChatCount || 0) === 0 ? "bg-green-500" :
-              (user.activeChatCount || 0) >= 3 ? "bg-red-500" : "bg-amber-500"
+              (user.activeChatCount || 0) >= 3 ? "bg-destructive" : "bg-online"
             )} title={
-              (user.activeChatCount || 0) === 0 ? "Available" :
-              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : `Busy (${user.activeChatCount}/3)`
+              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : "Available"
             } />
             {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
@@ -1011,8 +1006,7 @@ const WomenDashboardScreen = () => {
                 </div>
                 <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
                   <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount === 0 ? "bg-green-300" : 
-                    activeChatCount >= 3 ? "bg-red-300" : "bg-amber-300"
+                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
                   )} />
                   {getStatusText()}
                 </Badge>
