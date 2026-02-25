@@ -293,11 +293,24 @@ export const TransactionHistoryWidget = ({
 
         // women_earnings is the SINGLE source of truth for women's deposits
         earnings?.forEach(e => {
+          // Use actual description from DB if it contains specific info (group calls, tips)
           let description = e.description || `${e.earning_type} earnings`;
-          if (e.earning_type === 'chat') description = `💬 Chat earnings`;
-          else if (e.earning_type === 'video_call') description = `📹 Video call earnings`;
-          else if (e.earning_type === 'gift') description = `🎁 Gift earnings`;
-          else if (e.earning_type === 'private_call') description = `📞 Private call earnings`;
+          if (!e.description || e.description === e.earning_type) {
+            // Only use generic fallback if no detailed description exists
+            if (e.earning_type === 'chat') description = `💬 Chat earnings`;
+            else if (e.earning_type === 'video_call') description = `📹 Video call earnings`;
+            else if (e.earning_type === 'gift') description = `🎁 Gift earnings`;
+            else if (e.earning_type === 'private_call') description = `📞 Private call earnings`;
+          } else {
+            // Prefix with emoji based on type if not already present
+            const desc = e.description;
+            if (desc.toLowerCase().includes('group tip')) description = `🎫 ${desc}`;
+            else if (desc.toLowerCase().includes('private group')) description = `👥 ${desc}`;
+            else if (e.earning_type === 'chat' && !desc.startsWith('💬')) description = `💬 ${desc}`;
+            else if (e.earning_type === 'video_call' && !desc.startsWith('📹')) description = `📹 ${desc}`;
+            else if (e.earning_type === 'gift' && !desc.startsWith('🎁')) description = `🎁 ${desc}`;
+            else if (e.earning_type === 'private_call' && !desc.startsWith('📞')) description = `📞 ${desc}`;
+          }
 
           unified.push({
             id: `earning-${e.id}`,

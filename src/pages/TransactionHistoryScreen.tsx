@@ -19,7 +19,8 @@ import {
   Video,
   Gift,
   Wallet,
-  Home
+  Home,
+  Users
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
