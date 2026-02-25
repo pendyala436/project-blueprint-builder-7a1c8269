@@ -133,12 +133,16 @@ export const useMatchingService = () => {
 
       const femaleUserIds = femaleProfiles.map(p => p.user_id);
 
-      // Fetch availability, wallets, and languages in parallel
-      const [availabilityData, walletsData, languagesData] = await Promise.all([
-        supabase.from("women_availability").select("user_id, is_available, current_chat_count, max_concurrent_chats").in("user_id", femaleUserIds),
+      // Fetch availability, wallets, languages, and active video calls in parallel
+      const [availabilityData, walletsData, languagesData, activeVideoCallsData] = await Promise.all([
+        supabase.from("women_availability").select("user_id, is_available, current_chat_count, current_call_count, max_concurrent_chats").in("user_id", femaleUserIds),
         supabase.from("wallets").select("user_id, balance").in("user_id", femaleUserIds),
-        supabase.from("user_languages").select("user_id, language_name, language_code").in("user_id", femaleUserIds)
+        supabase.from("user_languages").select("user_id, language_name, language_code").in("user_id", femaleUserIds),
+        supabase.from("video_call_sessions").select("woman_user_id").in("woman_user_id", femaleUserIds).eq("status", "active")
       ]);
+
+      // Track users in active video calls
+      const usersInVideoCall = new Set(activeVideoCallsData.data?.map(v => v.woman_user_id) || []);
 
       const availabilityMap = new Map(availabilityData.data?.map(a => [a.user_id, a]) || []);
       const walletMap = new Map(walletsData.data?.map(w => [w.user_id, Number(w.balance)]) || []);
@@ -155,14 +159,15 @@ export const useMatchingService = () => {
         const availability = availabilityMap.get(profile.user_id);
         const walletBalance = walletMap.get(profile.user_id) || 0;
         
-        // Check availability
+        // Check availability (also consider active video calls)
+        const isInVideoCall = usersInVideoCall.has(profile.user_id);
         const isBusy = availability 
           ? availability.current_chat_count >= availability.max_concurrent_chats 
           : false;
         const isAvailable = availability?.is_available !== false;
 
-        // Skip unavailable or busy users
-        if (!isAvailable || isBusy) continue;
+        // Skip unavailable, busy, or in-video-call users
+        if (!isAvailable || isBusy || isInVideoCall) continue;
 
         // Check language compatibility
         const isSameLanguage = womanLanguage.toLowerCase() === userLanguage.toLowerCase();
@@ -265,12 +270,16 @@ export const useMatchingService = () => {
         if (maleProfiles && maleProfiles.length > 0) {
           const maleUserIds = maleProfiles.map(p => p.user_id);
 
-          // Fetch wallets, languages, and active chat counts in parallel
-          const [walletsData, languagesData, chatCountsData] = await Promise.all([
+          // Fetch wallets, languages, active chat counts, and active video calls in parallel
+          const [walletsData, languagesData, chatCountsData, activeVideoCallsData] = await Promise.all([
             supabase.from("wallets").select("user_id, balance").in("user_id", maleUserIds),
             supabase.from("user_languages").select("user_id, language_name, language_code").in("user_id", maleUserIds),
-            supabase.from("active_chat_sessions").select("man_user_id").in("man_user_id", maleUserIds).eq("status", "active")
+            supabase.from("active_chat_sessions").select("man_user_id").in("man_user_id", maleUserIds).eq("status", "active"),
+            supabase.from("video_call_sessions").select("man_user_id").in("man_user_id", maleUserIds).eq("status", "active")
           ]);
+
+          // Track men in active video calls
+          const menInVideoCall = new Set(activeVideoCallsData.data?.map(v => v.man_user_id) || []);
 
           const walletMap = new Map(walletsData.data?.map(w => [w.user_id, Number(w.balance)]) || []);
           const languageMap = new Map(languagesData.data?.map(l => [l.user_id, { name: l.language_name, code: l.language_code }]) || []);
@@ -295,8 +304,9 @@ export const useMatchingService = () => {
             // WOMEN SEE ALL MEN - with or without wallet balance
             // No wallet balance filter - women can see all online men
 
-            // Skip users who are already at max chats (3)
+            // Skip users who are already at max chats (3) or in a video call
             if (currentChatCount >= 3) continue;
+            if (menInVideoCall.has(profile.user_id)) continue;
 
             // Check if same language for display purposes
             const isSameLanguage = manLanguage.toLowerCase() === userLanguage.toLowerCase();
