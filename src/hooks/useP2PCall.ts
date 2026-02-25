@@ -63,6 +63,7 @@ export const useP2PCall = ({
     isVideoEnabled: true,
     isAudioEnabled: true,
   });
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -303,8 +304,11 @@ export const useP2PCall = ({
     // Handle incoming remote stream
     pc.ontrack = (event) => {
       console.log('[P2P] Received remote track:', event.track.kind);
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
+      if (event.streams[0]) {
+        setRemoteStream(event.streams[0]);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
         setState(prev => ({ ...prev, callStatus: 'active', isConnected: true }));
         // Sync status to busy when call becomes active
         syncCallStatus(true);
