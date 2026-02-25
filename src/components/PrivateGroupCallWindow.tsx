@@ -171,6 +171,7 @@ export function PrivateGroupCallWindow({
     cleanup,
   } = usePrivateGroupCall({
     groupId: group.id,
+    groupName: group.name,
     currentUserId,
     userName,
     userPhoto,
