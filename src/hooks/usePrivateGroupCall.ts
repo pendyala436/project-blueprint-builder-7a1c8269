@@ -781,13 +781,8 @@ export function usePrivateGroupCall({
 
   // End stream (host only)
   const endStream = useCallback(async (processRefundsFlag = true) => {
-    if (processRefundsFlag && sessionRef.current) {
-      const elapsedMinutes = Math.floor((Date.now() - sessionRef.current.startTime) / 60000);
-      if (elapsedMinutes < MAX_DURATION_MINUTES) {
-        // Host ending early - process refunds
-        await processRefunds();
-      }
-    }
+    // No time-based refunds needed since there's no time limit
+    // Just end the stream
 
     // Notify all participants
     channelRef.current?.send({
@@ -876,7 +871,7 @@ export function usePrivateGroupCall({
       participants: [],
       viewerCount: 0,
       error: null,
-      remainingTime: MAX_DURATION_MINUTES * 60,
+      remainingTime: 0,
       totalEarnings: 0,
       isRefunding: false,
       hostStream: null,
