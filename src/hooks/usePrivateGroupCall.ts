@@ -347,99 +347,74 @@ export function usePrivateGroupCall({
       billingInProgressRef.current = true;
 
       try {
-      const session = sessionRef.current;
-      let totalDeducted = 0;
-      const participantsToRemove: string[] = [];
+        const session = sessionRef.current;
 
-      // Process billing for each participant
-      for (const [participantId, participant] of session.participants) {
-        if (participant.isOwner) continue;
-
-        const costPerMinute = pricing.ratePerMinute; // ₹4/min for men
-        
-        // Check participant balance
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', participantId)
-          .single();
-
-        const currentBalance = wallet?.balance || 0;
-
-        if (currentBalance < costPerMinute) {
-          // No balance - remove participant without refund
-          participantsToRemove.push(participantId);
-          onParticipantLeave?.(participantId, 'insufficient_balance');
-          continue;
-        }
-
-        // Deduct from participant wallet (men pay ₹4/min)
-        const { error: deductError } = await supabase.rpc('process_wallet_transaction', {
-          p_user_id: participantId,
-          p_amount: costPerMinute,
-          p_type: 'debit',
-          p_description: `Group call: ${groupName} (₹${costPerMinute}/min)`,
-          p_reference_id: session.sessionId
+        // Call atomic server-side billing RPC
+        const { data, error } = await supabase.rpc('process_group_billing' as any, {
+          p_group_id: session.groupId,
         });
 
-        if (deductError) {
-          console.error('Billing error:', deductError);
-          continue;
+        if (error) {
+          console.error('[GROUP] Billing RPC error:', error);
+          return;
         }
 
-        // Update participant tracking
-        participant.amountPaid += costPerMinute;
-        participant.balanceRemaining = currentBalance - costPerMinute;
-        totalDeducted += costPerMinute;
-      }
+        const result = data as {
+          success: boolean;
+          duplicate_skipped?: boolean;
+          active_count?: number;
+          total_charged?: number;
+          host_earned?: number;
+          removed_users?: string[];
+          error?: string;
+        };
 
-      // Credit earnings to host via women_earnings (single source of truth for women deposits)
-      // Host earns ₹2/min per man participant (chat earning rate)
-      if (totalDeducted > 0) {
-        const activeParticipantCount = Array.from(session.participants.values()).filter(p => !p.isOwner).length - participantsToRemove.length;
-        const hostEarning = totalDeducted * (pricing.womenEarningRate / pricing.ratePerMinute);
-        
-        // Insert into women_earnings (NOT wallet_transactions credit)
-        // No admin revenue needed - admin already received 100% at recharge time
-        await supabase
-          .from('women_earnings')
-          .insert({
-            user_id: session.hostId,
-            amount: hostEarning,
-            earning_type: 'chat',
-            chat_session_id: session.sessionId,
-            description: `Group call earnings: ${groupName} - ${activeParticipantCount} participant(s) × ₹${pricing.womenEarningRate}/min`
-          });
+        if (!result.success) {
+          console.error('[GROUP] Billing failed:', result.error);
+          return;
+        }
 
-        session.totalEarnings += hostEarning;
-        setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
-      }
+        if (result.duplicate_skipped) {
+          console.log('[GROUP] Duplicate billing skipped');
+          return;
+        }
 
-      // Remove participants with no balance
-      for (const id of participantsToRemove) {
-        session.participants.delete(id);
-        
-        // Notify participant to leave
-        channelRef.current?.send({
-          type: 'broadcast',
-          event: 'participant-removed',
-          payload: { participantId: id, reason: 'insufficient_balance' },
-        });
-      }
+        // Update host earnings
+        if (result.host_earned && result.host_earned > 0) {
+          session.totalEarnings += result.host_earned;
+          setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
+        }
 
-      // Update participant count in state
-      setState(prev => ({
-        ...prev,
-        participants: Array.from(session.participants.values()),
-        viewerCount: session.participants.size,
-      }));
+        // Handle removed users (insufficient balance)
+        if (result.removed_users && result.removed_users.length > 0) {
+          for (const removedId of result.removed_users) {
+            session.participants.delete(removedId);
+            onParticipantLeave?.(removedId, 'insufficient_balance');
+
+            // Notify participant to leave
+            channelRef.current?.send({
+              type: 'broadcast',
+              event: 'participant-removed',
+              payload: { participantId: removedId, reason: 'insufficient_balance' },
+            });
+          }
+        }
+
+        // Update participant count in state
+        setState(prev => ({
+          ...prev,
+          participants: Array.from(session.participants.values()),
+          viewerCount: session.participants.size,
+        }));
+
+        console.log(`[GROUP] Billing: ${result.active_count} men billed ₹${result.total_charged}, host earned ₹${result.host_earned}`);
       } catch (err) {
         console.error('[GROUP] Billing error:', err);
       } finally {
         billingInProgressRef.current = false;
       }
     }, BILLING_INTERVAL_SECONDS * 1000);
-  }, [isOwner, pricing, onParticipantLeave]);
+  }, [isOwner, onParticipantLeave]);
 
   // Start elapsed time tracker (no time limit)
   const startCountdownTimer = useCallback(() => {
