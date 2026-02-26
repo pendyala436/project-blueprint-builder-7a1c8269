@@ -4104,10 +4104,9 @@ export type Database = {
         }
         Returns: Json
       }
-      process_video_billing: {
-        Args: { p_minutes: number; p_session_id: string }
-        Returns: Json
-      }
+      process_video_billing:
+        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
+        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
       process_wallet_transaction: {
         Args: {
           p_amount: number
