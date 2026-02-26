@@ -110,7 +110,6 @@ export function PrivateGroupCallWindow({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
   
   // View mode: show both panels, video only, or chat only
   const [viewMode, setViewMode] = useState<'both' | 'video' | 'chat'>('video'); // Default to video only, chat hidden
@@ -516,9 +515,10 @@ export function PrivateGroupCallWindow({
   };
 
   const handleEndStream = async () => {
-    setShowEndConfirm(false);
-    await endStream(true); // Process refunds
+    
+    await endStream(true);
     toast.success('Stream ended');
+    onClose();
   };
 
   const handleToggleVideo = () => {
@@ -534,8 +534,12 @@ export function PrivateGroupCallWindow({
     toggleAudio(newState);
   };
 
-  const handleClose = () => {
-    cleanup();
+  const handleClose = async () => {
+    if (isOwner && isLive) {
+      await endStream(true);
+    } else {
+      cleanup();
+    }
     onClose();
   };
 
@@ -930,7 +934,10 @@ export function PrivateGroupCallWindow({
                     <Button 
                       variant="destructive" 
                       size="sm"
-                      onClick={() => setShowEndConfirm(true)} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEndStream();
+                      }} 
                       className="gap-1"
                       disabled={isRefunding}
                     >
@@ -945,7 +952,10 @@ export function PrivateGroupCallWindow({
                 <Button 
                   variant="destructive" 
                   size="sm"
-                  onClick={handleClose}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClose();
+                  }}
                   className="gap-1"
                 >
                   <PhoneOff className="h-4 w-4" />
@@ -1091,29 +1101,6 @@ export function PrivateGroupCallWindow({
                 <p>No gifts available</p>
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* End Stream Confirmation */}
-      <Dialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              End Stream Early?
-            </DialogTitle>
-            <DialogDescription>
-              Ending the stream will disconnect all participants. Are you sure?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowEndConfirm(false)}>
-              Continue Stream
-            </Button>
-            <Button variant="destructive" onClick={handleEndStream}>
-              End Stream
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
