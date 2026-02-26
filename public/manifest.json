@@ -1,7 +1,7 @@
 {
-  "name": "Meow Meow - Dating & Chat",
+  "name": "Meow Meow - Friend & Chat",
   "short_name": "Meow Meow",
-  "description": "Connect, chat, and find meaningful relationships with Meow Meow dating app. Available on all devices.",
+  "description": "Connect, chat, and find meaningful friendships with Meow Meow friend app. Available on all devices.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
@@ -12,7 +12,7 @@
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["social", "lifestyle", "dating", "entertainment"],
+  "categories": ["social", "lifestyle", "friends", "entertainment"],
   "icons": [
     {
       "src": "/icons/icon-180x180.png",
