@@ -185,6 +185,15 @@ export function usePrivateGroupCall({
   // Handle incoming WebRTC offer
   const handleOffer = useCallback(async (offer: RTCSessionDescriptionInit, fromId: string) => {
     let pc = peerConnections.current.get(fromId);
+    
+    // If existing PC is already stable/connected, close and recreate for clean renegotiation
+    if (pc && (pc.signalingState === 'stable' || pc.connectionState === 'connected')) {
+      console.log(`[PrivateGroupCall] Closing existing connection to ${fromId} for renegotiation`);
+      pc.close();
+      peerConnections.current.delete(fromId);
+      pc = undefined;
+    }
+    
     if (!pc) {
       pc = createPeerConnection(fromId);
     }
@@ -212,6 +221,11 @@ export function usePrivateGroupCall({
   const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit, fromId: string) => {
     const pc = peerConnections.current.get(fromId);
     if (pc) {
+      // Guard: only set remote description if we're waiting for an answer
+      if (pc.signalingState !== 'have-local-offer') {
+        console.log(`[PrivateGroupCall] Ignoring duplicate answer from ${fromId} (state: ${pc.signalingState})`);
+        return;
+      }
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
       } catch (error) {
@@ -234,6 +248,13 @@ export function usePrivateGroupCall({
 
   // Initiate WebRTC connection to a participant (host sends offer)
   const connectToParticipant = useCallback(async (participantId: string) => {
+    // Guard: skip if a working connection already exists
+    const existingPc = peerConnections.current.get(participantId);
+    if (existingPc && existingPc.connectionState !== 'failed' && existingPc.connectionState !== 'closed') {
+      console.log(`[PrivateGroupCall] Already connected to ${participantId} (state: ${existingPc.connectionState}), skipping`);
+      return;
+    }
+
     try {
       const pc = createPeerConnection(participantId);
       const offer = await pc.createOffer();
@@ -436,6 +457,12 @@ export function usePrivateGroupCall({
 
   // Setup signaling channel
   const setupSignaling = useCallback(() => {
+    // Clean up existing channel to prevent duplicates
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase.channel(`private-group-${groupId}`, {
       config: {
         broadcast: { self: false },
