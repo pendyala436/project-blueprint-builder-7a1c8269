@@ -48,7 +48,7 @@ const legalDocuments: LegalDocument[] = [
     title: "Terms of Service",
     icon: <ScrollText className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – GLOBAL CHAT-ONLY DATING APP
+    content: `MEOW MEOW – GLOBAL CHAT-ONLY FRIEND APP
 Terms of Service (TOS)
 
 1. Acceptance of Terms
@@ -61,7 +61,7 @@ By creating an account or using Meow Meow, you agree to these Terms of Service. 
 • You must provide accurate information.
 
 3. Nature of Service
-• Chat-only global dating platform
+• Chat-only global friend platform
 • No video calls
 • No audio calls
 • No media sharing (temporary only, auto-deleted)

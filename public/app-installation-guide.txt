@@ -1,6 +1,6 @@
 ================================================================================
                         APP INSTALLATION GUIDE
-                      Meow Meow - Dating & Chat
+                       Meow Meow - Friend & Chat
 ================================================================================
 
 This guide explains how to install the Meow Meow app on all devices and 
@@ -259,6 +259,6 @@ Website: Visit our Help Center in the app
 
 
 ================================================================================
-                     © Meow Meow - Dating & Chat
+                     © Meow Meow - Friend & Chat
                          All Rights Reserved
 ================================================================================
