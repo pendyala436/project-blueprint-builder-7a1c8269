@@ -528,7 +528,9 @@ const TransactionHistoryScreen = () => {
     });
 
     // Add wallet_transactions (both genders)
+    // For women: ONLY include debit entries — credits come from women_earnings (single source of truth)
     walletTx.forEach(tx => {
+      if (!isMale && tx.type === 'credit') return; // Skip women's credit entries to prevent duplicates
       if (seenIds.has(tx.id)) return;
       seenIds.add(tx.id);
 

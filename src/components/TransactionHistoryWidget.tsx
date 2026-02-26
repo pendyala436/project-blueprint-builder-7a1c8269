@@ -125,6 +125,7 @@ export const TransactionHistoryWidget = ({
     setLoading(true);
     try {
       const unified: UnifiedTransaction[] = [];
+      const seenIds = new Set<string>();
       let openingBalance = 0;
 
       const { data: wallet } = await supabase
@@ -196,7 +197,15 @@ export const TransactionHistoryWidget = ({
           });
         }
 
+
         txData?.forEach(tx => {
+          // For women: ONLY include debit transactions from wallet_transactions
+          // Credits for women come exclusively from women_earnings (single source of truth)
+          if (userGender === 'female' && tx.type === 'credit') return;
+
+          if (seenIds.has(tx.id)) return;
+          seenIds.add(tx.id);
+
           const desc = tx.description?.toLowerCase() || '';
           let type: UnifiedTransaction['type'] = 'other';
           if (desc.includes('recharge')) type = 'recharge';
@@ -293,6 +302,10 @@ export const TransactionHistoryWidget = ({
 
         // women_earnings is the SINGLE source of truth for women's deposits
         earnings?.forEach(e => {
+          const earningId = `earning-${e.id}`;
+          if (seenIds.has(earningId)) return;
+          seenIds.add(earningId);
+
           // Use actual description from DB if it contains specific info (group calls, tips)
           let description = e.description || `${e.earning_type} earnings`;
           if (!e.description || e.description === e.earning_type) {
@@ -313,7 +326,7 @@ export const TransactionHistoryWidget = ({
           }
 
           unified.push({
-            id: `earning-${e.id}`,
+            id: earningId,
             type: 'earning',
             amount: Number(e.amount),
             description,
