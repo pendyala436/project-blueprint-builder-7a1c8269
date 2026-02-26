@@ -428,6 +428,23 @@ const TransactionHistoryScreen = () => {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
+        const dedupeWomenEarnings = (rows: WomenEarning[]) => {
+          return [...rows]
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            .filter((earning, index, arr) => {
+              if (index === 0) return true;
+              const prev = arr[index - 1];
+              const descA = (earning.description || '').trim().toLowerCase();
+              const descB = (prev.description || '').trim().toLowerCase();
+              const sameAmount = Math.abs(Number(earning.amount) - Number(prev.amount)) < 0.0001;
+              const sameDescription = descA === descB;
+              const isGroupBillingLine = descA.includes('group call') || descA.includes('group tip');
+              const closeInTime = Math.abs(new Date(earning.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
+              return !(sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+            })
+            .reverse();
+        };
+
         if (earnings && earnings.length > 0) {
           const sessionIds = earnings.filter(e => e.chat_session_id).map(e => e.chat_session_id);
           
@@ -455,12 +472,12 @@ const TransactionHistoryScreen = () => {
                 };
               });
 
-              setWomenEarnings(enrichedEarnings);
+              setWomenEarnings(dedupeWomenEarnings(enrichedEarnings as WomenEarning[]));
             } else {
-              setWomenEarnings(earnings);
+              setWomenEarnings(dedupeWomenEarnings(earnings as WomenEarning[]));
             }
           } else {
-            setWomenEarnings(earnings);
+            setWomenEarnings(dedupeWomenEarnings(earnings as WomenEarning[]));
           }
         }
       }
@@ -615,6 +632,23 @@ const TransactionHistoryScreen = () => {
       });
     }
 
+    // Remove known duplicate group-billing rows created within the same billing window
+    const dedupedUnified = unified
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .filter((tx, index, arr) => {
+        if (index === 0) return true;
+        const prev = arr[index - 1];
+
+        const sameDirection = prev.is_credit === tx.is_credit;
+        const sameType = prev.type === tx.type;
+        const sameAmount = Math.abs(prev.amount - tx.amount) < 0.0001;
+        const sameDescription = (prev.description || '').trim().toLowerCase() === (tx.description || '').trim().toLowerCase();
+        const isGroupBillingLine = (tx.description || '').toLowerCase().includes('group call') || (tx.description || '').toLowerCase().includes('group tip');
+        const closeInTime = Math.abs(new Date(tx.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
+
+        return !(sameDirection && sameType && sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+      });
+
     // Current month boundaries
     const currentMonthStart = new Date();
     currentMonthStart.setDate(1);
@@ -623,7 +657,7 @@ const TransactionHistoryScreen = () => {
     currentMonthEnd.setMonth(currentMonthEnd.getMonth() + 1);
 
     // Filter to current month for the statement view
-    const currentMonthEntries = unified.filter(tx => {
+    const currentMonthEntries = dedupedUnified.filter(tx => {
       const txDate = new Date(tx.created_at);
       return txDate >= currentMonthStart && txDate < currentMonthEnd;
     });

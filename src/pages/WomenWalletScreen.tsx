@@ -139,11 +139,21 @@ const WomenWalletScreen = () => {
         setMinWithdrawal(pricing.min_withdrawal_balance);
       }
 
+      const isLikelyDuplicateGroupEarning = (a: { amount: number; description: string | null; created_at: string }, b: { amount: number; description: string | null; created_at: string }) => {
+        const descA = (a.description || '').trim().toLowerCase();
+        const descB = (b.description || '').trim().toLowerCase();
+        const sameAmount = Math.abs(Number(a.amount) - Number(b.amount)) < 0.0001;
+        const sameDescription = descA === descB;
+        const isGroupBillingLine = descA.includes('group call') || descA.includes('group tip');
+        const closeInTime = Math.abs(new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) <= 50000;
+        return sameAmount && sameDescription && isGroupBillingLine && closeInTime;
+      };
+
       // Fetch all earnings and all wallet debits for accurate balance
       const [{ data: allEarningsData }, { data: allDebitsData }] = await Promise.all([
         supabase
           .from("women_earnings")
-          .select("amount")
+          .select("amount, description, created_at")
           .eq("user_id", user.id),
         supabase
           .from("wallet_transactions")
@@ -152,7 +162,11 @@ const WomenWalletScreen = () => {
           .eq("type", "debit")
       ]);
 
-      const total = allEarningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const allEarningsDeduped = [...(allEarningsData || [])]
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .filter((earning, index, arr) => index === 0 || !isLikelyDuplicateGroupEarning(earning, arr[index - 1]));
+
+      const total = allEarningsDeduped.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const totalDebits = allDebitsData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
       setTotalEarnings(total);
 
@@ -164,7 +178,12 @@ const WomenWalletScreen = () => {
         .order("created_at", { ascending: false })
         .limit(50);
 
-      setEarnings(earningsData || []);
+      const dedupedRecentEarnings = [...(earningsData || [])]
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .filter((earning, index, arr) => index === 0 || !isLikelyDuplicateGroupEarning(earning, arr[index - 1]))
+        .reverse();
+
+      setEarnings(dedupedRecentEarnings);
 
       // Fetch withdrawal requests
       const { data: withdrawalsData } = await supabase
