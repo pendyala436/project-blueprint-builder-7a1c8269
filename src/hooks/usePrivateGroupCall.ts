@@ -105,9 +105,18 @@ export function usePrivateGroupCall({
   const billingInProgressRef = useRef<boolean>(false);
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-  // ICE servers for WebRTC - single STUN server to reduce overhead
+  // ICE servers for WebRTC - STUN + TURN for reliable connectivity behind NATs
   const iceServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ];
 
   // Create a peer connection to a specific participant
@@ -173,8 +182,22 @@ export function usePrivateGroupCall({
       console.log(`[PrivateGroupCall] Connection state with ${participantId}:`, pc.connectionState);
       if (pc.connectionState === 'failed') {
         console.warn(`[PrivateGroupCall] Connection failed with ${participantId}, attempting reconnect...`);
-        // Remove failed connection
+        pc.close();
         peerConnections.current.delete(participantId);
+        
+        // Auto-retry after a delay
+        setTimeout(() => {
+          if (!isOwner && channelRef.current) {
+            // Participant: resend ready signal so host re-initiates
+            console.log(`[PrivateGroupCall] Participant resending ready signal after failure`);
+            channelRef.current.send({
+              type: 'broadcast',
+              event: 'participant-ready',
+              payload: { participantId: currentUserId },
+            });
+          }
+          // Host retry is handled via participant-ready handler
+        }, 1000);
       }
     };
 
