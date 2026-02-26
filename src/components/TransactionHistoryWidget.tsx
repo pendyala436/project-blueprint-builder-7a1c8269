@@ -342,13 +342,28 @@ export const TransactionHistoryWidget = ({
       // All charges (chat, video, gift) and credits (recharge) are already recorded there
       // No need to re-calculate from active_chat_sessions
 
-      // Sort chronologically to calculate running balance
+      // Sort chronologically before dedupe + running balance
       unified.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      // Remove known duplicate group-billing entries created within the same billing window
+      const dedupedUnified = unified.filter((tx, index, arr) => {
+        if (index === 0) return true;
+        const prev = arr[index - 1];
+
+        const sameDirection = prev.is_credit === tx.is_credit;
+        const sameType = prev.type === tx.type;
+        const sameAmount = Math.abs(prev.amount - tx.amount) < 0.0001;
+        const sameDescription = (prev.description || '').trim().toLowerCase() === (tx.description || '').trim().toLowerCase();
+        const isGroupBillingLine = (tx.description || '').toLowerCase().includes('group call') || (tx.description || '').toLowerCase().includes('group tip');
+        const closeInTime = Math.abs(new Date(tx.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
+
+        return !(sameDirection && sameType && sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+      });
       
       // ACID: Calculate running balance starting from opening balance (carry forward from previous month)
       setOpeningBalance(openingBalance);
       let runningBal = openingBalance;
-      unified.forEach(tx => {
+      dedupedUnified.forEach(tx => {
         if (tx.is_credit) {
           runningBal += tx.amount;
         } else {
@@ -358,8 +373,8 @@ export const TransactionHistoryWidget = ({
       });
 
       // Reverse for display (newest first)
-      unified.reverse();
-      setTransactions(unified);
+      dedupedUnified.reverse();
+      setTransactions(dedupedUnified);
     } catch (error) {
       console.error("Error loading transactions:", error);
     } finally {

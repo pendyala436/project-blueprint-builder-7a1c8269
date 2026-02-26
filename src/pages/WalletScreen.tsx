@@ -237,7 +237,24 @@ const WalletScreen = () => {
         .limit(20);
 
       if (txError) throw txError;
-      setTransactions(txData || []);
+
+      const sortedAsc = [...(txData || [])].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      const dedupedTx = sortedAsc.filter((tx, index, arr) => {
+        if (index === 0) return true;
+        const prev = arr[index - 1];
+        const sameType = prev.type === tx.type;
+        const sameAmount = Math.abs(Number(prev.amount) - Number(tx.amount)) < 0.0001;
+        const sameDescription = (prev.description || '').trim().toLowerCase() === (tx.description || '').trim().toLowerCase();
+        const isGroupBillingLine = (tx.description || '').toLowerCase().includes('group call') || (tx.description || '').toLowerCase().includes('group tip');
+        const closeInTime = Math.abs(new Date(tx.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
+
+        return !(sameType && sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+      });
+
+      setTransactions(dedupedTx.reverse());
 
     } catch (error) {
       console.error("Error fetching wallet:", error);
