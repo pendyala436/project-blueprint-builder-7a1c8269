@@ -92,6 +92,9 @@ const DraggableVideoCallWindow = ({
     isAudioEnabled,
     localVideoRef,
     remoteVideoRef,
+    localStream,
+    remoteStream,
+    bindStreamToVideo,
     endCall,
     toggleVideo,
     toggleAudio,
@@ -129,20 +132,23 @@ const DraggableVideoCallWindow = ({
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<{ startWidth: number; startHeight: number; startX: number; startY: number } | null>(null);
 
-  // Video refs
-  const localVideoElement = useRef<HTMLVideoElement>(null);
-  const remoteVideoElement = useRef<HTMLVideoElement>(null);
-
-  // Load relationship status
-  useEffect(() => {
-    if (currentUserId && remoteUserId) {
-      loadRelationshipStatus();
+  // Callback refs: bind streams to video elements when they mount
+  const setLocalVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && localStream) {
+      bindStreamToVideo(el, localStream);
     }
-  }, [currentUserId, remoteUserId]);
+  }, [localVideoRef, localStream, bindStreamToVideo]);
+
+  const setRemoteVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && remoteStream) {
+      bindStreamToVideo(el, remoteStream);
+    }
+  }, [remoteVideoRef, remoteStream, bindStreamToVideo]);
 
   const loadRelationshipStatus = async () => {
     try {
-      // Check if blocked by me
       const { data: blockData } = await supabase
         .from("user_blocks")
         .select("id")
@@ -151,7 +157,6 @@ const DraggableVideoCallWindow = ({
         .maybeSingle();
       setIsBlocked(!!blockData);
 
-      // Check friendship status
       const { data: friendData } = await supabase
         .from("user_friends")
         .select("id, status, user_id")
@@ -170,29 +175,12 @@ const DraggableVideoCallWindow = ({
     }
   };
 
-  // Auto-close if blocked by either party
+  // Load relationship status
   useEffect(() => {
-    if (isBlockedByEither) {
-      toast({
-        title: "Call Ended",
-        description: isBlockedByThem 
-          ? "This user has blocked you" 
-          : "You have blocked this user",
-        variant: "destructive"
-      });
-      handleEndCall();
+    if (currentUserId && remoteUserId) {
+      loadRelationshipStatus();
     }
-  }, [isBlockedByEither]);
-
-  // Connect refs to video elements
-  useEffect(() => {
-    if (localVideoElement.current) {
-      (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = localVideoElement.current;
-    }
-    if (remoteVideoElement.current) {
-      (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = remoteVideoElement.current;
-    }
-  }, [localVideoRef, remoteVideoRef]);
+  }, [currentUserId, remoteUserId]);
 
   // Handle window resize
   useEffect(() => {
@@ -626,7 +614,7 @@ const DraggableVideoCallWindow = ({
             ) : (
               <>
                 <video
-                  ref={remoteVideoElement}
+                  ref={setRemoteVideoEl}
                   autoPlay
                   playsInline
                   className="w-full h-full object-cover"
@@ -635,7 +623,7 @@ const DraggableVideoCallWindow = ({
                 {/* Local Video (Picture-in-picture) */}
                 <div className="absolute bottom-20 right-2 w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
                   <video
-                    ref={localVideoElement}
+                    ref={setLocalVideoEl}
                     autoPlay
                     playsInline
                     muted

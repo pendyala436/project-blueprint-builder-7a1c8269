@@ -48,6 +48,9 @@ const P2PVideoCallModal = ({
     isAudioEnabled,
     localVideoRef,
     remoteVideoRef,
+    localStream,
+    remoteStream,
+    bindStreamToVideo,
     endCall,
     toggleVideo,
     toggleAudio,
@@ -77,16 +80,20 @@ const P2PVideoCallModal = ({
     }
   }, [isBlocked]);
 
-  // Callback refs that also trigger stream binding when video elements mount
+  // Callback refs that bind streams when video elements mount
   const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    // The useP2PCall effect will handle binding via bindStreamToVideo
-  }, [localVideoRef]);
+    if (element && localStream) {
+      bindStreamToVideo(element, localStream);
+    }
+  }, [localVideoRef, localStream, bindStreamToVideo]);
 
   const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
     (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    // The useP2PCall effect will handle binding via bindStreamToVideo
-  }, [remoteVideoRef]);
+    if (element && remoteStream) {
+      bindStreamToVideo(element, remoteStream);
+    }
+  }, [remoteVideoRef, remoteStream, bindStreamToVideo]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
