@@ -299,11 +299,15 @@ export function PrivateGroupCallWindow({
     }
   }, [group.id, hasChat]);
 
-  // Auto-start: host auto-goes-live, participants auto-join
+  // Auto-start: host auto-goes-live, participants auto-join (run only once)
+  const hasAutoStarted = useRef(false);
   useEffect(() => {
+    if (hasAutoStarted.current) return;
     if (isOwner && !isConnected && !isConnecting && !isLive) {
+      hasAutoStarted.current = true;
       goLive();
     } else if (hasVideo && !isOwner && group.is_live && !isConnected && !isConnecting) {
+      hasAutoStarted.current = true;
       joinStream();
     }
   }, [isOwner, group.is_live, isConnected, isConnecting, joinStream, hasVideo, goLive, isLive]);
