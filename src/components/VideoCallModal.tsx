@@ -48,6 +48,9 @@ const VideoCallModal = ({
     isAudioEnabled,
     localVideoRef,
     remoteVideoRef,
+    localStream,
+    remoteStream,
+    bindStreamToVideo,
     endCall,
     toggleVideo,
     toggleAudio,
@@ -56,7 +59,7 @@ const VideoCallModal = ({
     currentUserId,
     remoteUserId,
     isInitiator,
-    ratePerMinute: 8, // ₹8/min for video calls (spec default)
+    ratePerMinute: 8,
     onCallEnded: onClose,
   });
 
@@ -77,14 +80,20 @@ const VideoCallModal = ({
     }
   }, [isBlocked]);
 
-  // Callback refs that also trigger stream binding when video elements mount
+  // Callback refs that bind streams when video elements mount
   const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
     (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-  }, [localVideoRef]);
+    if (element && localStream) {
+      bindStreamToVideo(element, localStream);
+    }
+  }, [localVideoRef, localStream, bindStreamToVideo]);
 
   const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
     (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-  }, [remoteVideoRef]);
+    if (element && remoteStream) {
+      bindStreamToVideo(element, remoteStream);
+    }
+  }, [remoteVideoRef, remoteStream, bindStreamToVideo]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
