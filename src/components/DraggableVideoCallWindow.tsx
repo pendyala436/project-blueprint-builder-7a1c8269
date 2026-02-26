@@ -696,20 +696,7 @@ const DraggableVideoCallWindow = ({
                   <TooltipContent>End Call</TooltipContent>
                 </Tooltip>
 
-                {/* Gift Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <GiftSendButton
-                        senderId={currentUserId}
-                        receiverId={remoteUserId}
-                        receiverName={remoteName}
-                        className="rounded-full w-10 h-10 bg-white/10 border border-white/20 text-white hover:bg-white/20 hover:text-white"
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>Send Gift</TooltipContent>
-                </Tooltip>
+
               </div>
 
               {/* Secondary controls row */}
