@@ -87,6 +87,7 @@ export const useP2PCall = ({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -398,14 +399,21 @@ export const useP2PCall = ({
     // Handle incoming remote stream
     pc.ontrack = (event) => {
       console.log('[P2P] Received remote track:', event.track.kind);
-      if (event.streams[0]) {
-        const stream = event.streams[0];
-        setRemoteStream(stream);
-        bindStreamToVideo(remoteVideoRef.current, stream);
-        setState(prev => ({ ...prev, callStatus: 'active', isConnected: true }));
-        // Sync status to busy when call becomes active
-        syncCallStatus(true);
+
+      // Some browsers may provide empty event.streams on one side.
+      // Build/fallback to a persistent remote MediaStream to avoid black screen.
+      const incomingStream = event.streams?.[0] ?? remoteStreamRef.current ?? new MediaStream();
+
+      if (!event.streams?.[0]) {
+        incomingStream.addTrack(event.track);
       }
+
+      remoteStreamRef.current = incomingStream;
+      setRemoteStream(incomingStream);
+      bindStreamToVideo(remoteVideoRef.current, incomingStream);
+      setState(prev => ({ ...prev, callStatus: 'active', isConnected: true }));
+      // Sync status to busy when call becomes active
+      syncCallStatus(true);
     };
 
     // Handle ICE candidates - send to remote peer via signaling
@@ -909,6 +917,7 @@ export const useP2PCall = ({
 
     lastLocalAnswerRef.current = null;
     iceCandidateQueueRef.current = [];
+    remoteStreamRef.current = null;
     setRemoteStream(null);
   }, [stopOfferRetry, stopAnswerRetry]);
 
