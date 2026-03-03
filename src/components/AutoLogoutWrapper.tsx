@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+const MEN_IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const WOMEN_IDLE_TIMEOUT = 45 * 60 * 1000; // 45 minutes
 
 interface AutoLogoutWrapperProps {
   children: React.ReactNode;
@@ -13,36 +14,61 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isFemale, setIsFemale] = useState(false);
+  const userIdRef = useRef<string | null>(null);
 
-  // Check auth state
+  // Check auth state and gender
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
+      if (session?.user) {
+        userIdRef.current = session.user.id;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        setIsFemale(profile?.gender?.toLowerCase() === 'female');
+      }
     };
     
     checkAuth();
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setIsAuthenticated(!!session);
+      if (session?.user) {
+        userIdRef.current = session.user.id;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        setIsFemale(profile?.gender?.toLowerCase() === 'female');
+      } else {
+        userIdRef.current = null;
+        setIsFemale(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  const idleTimeout = isFemale ? WOMEN_IDLE_TIMEOUT : MEN_IDLE_TIMEOUT;
+  const idleMinutes = isFemale ? 45 : 15;
+
   const logout = useCallback(async () => {
     if (!isAuthenticated) return;
     
-    console.log('Auto-logout: User idle for 10 minutes');
+    console.log(`Auto-logout: User idle for ${idleMinutes} minutes`);
     
-    // Get current user to set offline status before logout
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    const userId = userIdRef.current;
+    if (userId) {
       // Set user offline
       await supabase
         .from('user_status')
         .update({ is_online: false, last_seen: new Date().toISOString() })
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
       
       // End any active chat sessions
       await supabase
@@ -50,16 +76,16 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
         .update({ 
           status: 'ended', 
           ended_at: new Date().toISOString(),
-          end_reason: 'user_inactive_10min'
+          end_reason: `user_inactive_${idleMinutes}min`
         })
-        .or(`man_user_id.eq.${user.id},woman_user_id.eq.${user.id}`)
+        .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`)
         .eq('status', 'active');
     }
     
-    toast.info('You have been logged out due to 10 minutes of inactivity');
+    toast.info(`You have been logged out due to ${idleMinutes} minutes of inactivity`);
     await supabase.auth.signOut();
     navigate('/');
-  }, [navigate, isAuthenticated]);
+  }, [navigate, isAuthenticated, idleMinutes]);
 
   const resetTimer = useCallback(() => {
     if (!isAuthenticated) return;
@@ -67,8 +93,8 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    timeoutRef.current = setTimeout(logout, IDLE_TIMEOUT);
-  }, [logout, isAuthenticated]);
+    timeoutRef.current = setTimeout(logout, idleTimeout);
+  }, [logout, isAuthenticated, idleTimeout]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -78,23 +104,18 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
       return;
     }
 
-    // Activity events to track
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
-    // Reset timer on any activity
     const handleActivity = () => {
       resetTimer();
     };
 
-    // Add event listeners
     events.forEach(event => {
       document.addEventListener(event, handleActivity, { passive: true });
     });
 
-    // Start the initial timer
     resetTimer();
 
-    // Cleanup
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
