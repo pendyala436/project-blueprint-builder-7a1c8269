@@ -129,12 +129,13 @@ const WelcomeTutorialScreen = () => {
       
       if (!user) return;
 
+      // Always mark completed=true so user goes directly to dashboard on next login
       await supabase
         .from("tutorial_progress")
         .upsert({
           user_id: user.id,
-          current_step: currentStep,
-          completed: !skipped,
+          current_step: skipped ? currentStep : totalSteps - 1,
+          completed: true,
           skipped,
           steps_viewed: stepsViewed,
           completed_at: new Date().toISOString(),
