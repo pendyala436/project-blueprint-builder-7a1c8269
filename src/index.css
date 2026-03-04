@@ -38,7 +38,7 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
+    --border: 220 20% 90%;
     --input: 220 20% 92%;
     --ring: 174 72% 40%;
 
@@ -118,7 +118,7 @@
     --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 25% 20%;
+    --border: 230 25% 18%;
     --input: 230 25% 18%;
     --ring: 174 72% 50%;
 
@@ -986,9 +986,11 @@
   button, [role="button"] {
     color: inherit;
     cursor: pointer;
-    /* Minimum tap target size (44px is WCAG recommendation) */
-    min-height: 44px;
-    min-width: 44px;
+  }
+
+  /* Only enforce min tap target on standalone buttons, not inline/small ones */
+  button:not([class*="h-6"]):not([class*="h-7"]):not([class*="h-8"]):not([class*="h-9"]):not([class*="w-7"]):not([class*="w-8"]):not([class*="p-0"]):not([class*="p-1"]):not([class*="p-2"]):not([class*="inline"]) {
+    min-height: 36px;
   }
 
   /* Hide scrollbars on mobile for cleaner look */
@@ -1082,6 +1084,56 @@
   /* Ensure lists are visible */
   ul, ol {
     list-style-position: inside;
+  }
+}
+
+/* ========================================
+   MOBILE-NATIVE LAYOUT OVERRIDES
+   Borderless cards, tighter spacing on small screens
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Reduce border radius for a flatter mobile feel */
+  :root {
+    --radius: 0.625rem;
+  }
+
+  /* Cards: subtle borders, minimal shadow on mobile */
+  .border {
+    border-width: 1px;
+  }
+
+  /* Tighter section spacing on mobile */
+  main {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Dialogs and sheets take full width on mobile */
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem) !important;
+    margin: 0.5rem;
+  }
+
+  /* Badges: smaller on mobile */
+  [class*="badge"] {
+    font-size: 0.625rem;
+  }
+
+  /* Reduce heading sizes on mobile */
+  h1 {
+    font-size: 1.25rem !important;
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 1rem !important;
+    line-height: 1.35;
+  }
+
+  h3 {
+    font-size: 0.875rem !important;
+    line-height: 1.4;
   }
 }
 
