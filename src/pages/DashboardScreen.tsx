@@ -1158,45 +1158,47 @@ const DashboardScreen = () => {
       <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
         {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={isOnline}
-                    onCheckedChange={(checked) => {
-                      toggleOnlineStatus(checked);
-                      toast({
-                        title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
-                        description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
-                      });
-                    }}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
-                  <span className="text-sm text-muted-foreground">
-                    {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                  </span>
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Switch
+                      checked={isOnline}
+                      onCheckedChange={(checked) => {
+                        toggleOnlineStatus(checked);
+                        toast({
+                          title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
+                          description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
+                        });
+                      }}
+                      className="data-[state=checked]:bg-primary"
+                    />
+                    <Power className={`w-4 h-4 shrink-0 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
+                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                      {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
+                    </span>
+                  </div>
+                  <Badge className={cn("text-[10px] sm:text-xs text-white flex items-center gap-1", getStatusColor())}>
+                    <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
+                      activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
+                    )} />
+                    {getStatusText()}
+                  </Badge>
                 </div>
-                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
-                  )} />
-                  {getStatusText()}
-                </Badge>
+                <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
+                  {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                  {t('readyToConnect', 'Ready to make new connections today?')}
+                </p>
               </div>
-              <h1 className="text-xl sm:text-3xl font-bold text-foreground">
-                {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {t('readyToConnect', 'Ready to make new connections today?')}
-              </p>
+              <MatchFiltersPanel 
+                filters={matchFilters} 
+                onFiltersChange={setMatchFilters}
+                userCountry={userCountryName}
+              />
             </div>
-            <MatchFiltersPanel 
-              filters={matchFilters} 
-              onFiltersChange={setMatchFilters}
-              userCountry={userCountryName}
-            />
           </div>
         </div>
 
@@ -1270,7 +1272,7 @@ const DashboardScreen = () => {
                               {woman.primary_language}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-wrap shrink-0">
                             <Button
                               variant="auroraOutline"
                               size="sm"
@@ -1371,7 +1373,7 @@ const DashboardScreen = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-wrap shrink-0">
                             <Button
                               variant="auroraOutline"
                               size="sm"
@@ -1513,42 +1515,42 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-2.5 rounded-full bg-primary/15">
-                <Users className="w-5 h-5 text-primary" />
+          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
-                <p className="text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
+                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
               </div>
             </div>
           </Card>
 
           {/* Matches */}
-          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-2.5 rounded-full bg-primary/15">
-                <Heart className="w-5 h-5 text-primary" />
+          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
+                <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
-                <p className="text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
+                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.matchCount}</p>
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
               </div>
             </div>
           </Card>
 
           {/* Notifications */}
-          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-2.5 rounded-full bg-primary/15">
-                <BellRing className="w-5 h-5 text-primary" />
+          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
+                <BellRing className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
-                <p className="text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
+                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
               </div>
             </div>
           </Card>
@@ -1556,18 +1558,18 @@ const DashboardScreen = () => {
 
         {/* Section 3: Wallet & Primary Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <Card className="p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20 shadow-md">
+          <Card className="p-3 sm:p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20 shadow-md">
             <div className="flex flex-col items-center gap-4">
               {/* Balance */}
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-inner">
-                  <WalletCards className="w-7 h-7 text-primary" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-inner">
+                  <WalletCards className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                 </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
-                  <p className="text-2xl font-bold text-foreground">
+                <div className="text-center sm:text-left min-w-0">
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">
                     ₹{walletBalance.toLocaleString()}
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                    <span className="text-[10px] sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2 block sm:inline">
                       ({formatLocalCurrency(walletBalance)})
                     </span>
                   </p>
@@ -1668,9 +1670,9 @@ const DashboardScreen = () => {
               Private Group Video Calls
             </h2>
           </div>
-          <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground mb-4 border border-border">
+          <div className="p-3 rounded-lg bg-muted/50 text-xs sm:text-sm text-muted-foreground mb-4 border border-border">
             <p className="font-medium text-foreground mb-1">💰 How to Join</p>
-            <p>Join any live private group call at the chat rate of <span className="font-semibold text-primary">₹{pricing?.ratePerMinute || 4}/min</span>. Your wallet balance must have at least 5 minutes worth to join.</p>
+            <p>Join any live private group call at the chat rate of <span className="font-semibold text-primary">₹{pricing?.ratePerMinute || 4}/min</span>. Your wallet must have at least 5 min worth to join.</p>
           </div>
           <AvailableGroupsSection
             currentUserId={currentUserId}
@@ -1726,17 +1728,17 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 shadow-md animate-fade-in" style={{ animationDelay: "0.35s" }}>
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-lg">
-              <Sparkles className="w-7 h-7" />
+        <Card className="p-3 sm:p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 shadow-md animate-fade-in" style={{ animationDelay: "0.35s" }}>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shrink-0">
+              <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
-              <p className="text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge wallet for more connections')}</p>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge wallet for more connections')}</p>
             </div>
-            <Button variant="aurora" size="sm" className="rounded-xl shadow-md" onClick={() => setRechargeDialogOpen(true)}>
-              <CreditCard className="w-4 h-4 mr-1.5" />
+            <Button variant="aurora" size="sm" className="rounded-xl shadow-md shrink-0 text-xs sm:text-sm" onClick={() => setRechargeDialogOpen(true)}>
+              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
               {t('upgrade', 'Recharge')}
             </Button>
           </div>

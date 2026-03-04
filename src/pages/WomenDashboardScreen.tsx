@@ -1008,45 +1008,47 @@ const WomenDashboardScreen = () => {
       <main className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={isOnline}
-                    onCheckedChange={(checked) => {
-                      toggleOnlineStatus(checked);
-                      toast({
-                        title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
-                        description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
-                      });
-                    }}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="text-sm text-muted-foreground">
-                    {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                  </span>
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Switch
+                      checked={isOnline}
+                      onCheckedChange={(checked) => {
+                        toggleOnlineStatus(checked);
+                        toast({
+                          title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
+                          description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
+                        });
+                      }}
+                      className="data-[state=checked]:bg-primary"
+                    />
+                    <Power className={`w-4 h-4 shrink-0 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                      {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
+                    </span>
+                  </div>
+                  <Badge className={cn("text-[10px] sm:text-xs text-white flex items-center gap-1", getStatusColor())}>
+                    <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
+                      activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
+                    )} />
+                    {getStatusText()}
+                  </Badge>
                 </div>
-                <Badge className={cn("text-xs text-white flex items-center gap-1.5", getStatusColor())}>
-                  <span className={cn("w-2 h-2 rounded-full animate-pulse", 
-                    activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
-                  )} />
-                  {getStatusText()}
-                </Badge>
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground leading-tight">
+                  {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                  {stats.totalOnlineMen} {t('onlineMen', 'men online right now')}
+                </p>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-                {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                {stats.totalOnlineMen} {t('onlineMen', 'men online right now')}
-              </p>
+              <MatchFiltersPanel 
+                filters={matchFilters} 
+                onFiltersChange={setMatchFilters}
+                userCountry={currentWomanCountry}
+              />
             </div>
-            <MatchFiltersPanel 
-              filters={matchFilters} 
-              onFiltersChange={setMatchFilters}
-              userCountry={currentWomanCountry}
-            />
           </div>
         </div>
 
@@ -1117,27 +1119,29 @@ const WomenDashboardScreen = () => {
         {isIndianWoman && (
           <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
             {hasGoldenBadge ? (
-              <Card className="p-4 bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-primary/20">
-                    <Star className="w-6 h-6 text-primary fill-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
-                      <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 sm:p-3 rounded-xl bg-primary/20 shrink-0">
+                      <Star className="w-5 h-5 sm:w-6 sm:h-6 text-primary fill-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      You can initiate chats & video calls with Indian men who speak your language
-                    </p>
-                    {goldenBadgeExpiry && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
+                        <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        You can initiate chats & video calls with Indian men who speak your language
                       </p>
-                    )}
+                      {goldenBadgeExpiry && (
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                          Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   {/* Golden Badge action buttons */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 w-full sm:w-auto">
                     <RandomChatButton
                       userGender="female"
                       userLanguage={currentWomanLanguage}
@@ -1151,14 +1155,14 @@ const WomenDashboardScreen = () => {
                 </div>
               </Card>
             ) : (
-              <Card className="p-5 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <Star className="w-7 h-7 text-primary" />
+              <Card className="p-3 sm:p-5 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-primary/10 shrink-0">
+                    <Star className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-foreground">🌟 Golden Badge</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                       Buy for ₹1,000/month to initiate chats & video calls with men
                     </p>
                   </div>
@@ -1167,7 +1171,7 @@ const WomenDashboardScreen = () => {
                     size="sm"
                     onClick={handlePurchaseGoldenBadge}
                     disabled={isPurchasingBadge}
-                    className="gap-1 whitespace-nowrap"
+                    className="gap-1 whitespace-nowrap shrink-0 text-xs"
                   >
                     {isPurchasingBadge ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1287,7 +1291,7 @@ const WomenDashboardScreen = () => {
         </Tabs>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           <Card className="p-4 bg-gradient-aurora border-primary/30 shadow-glow">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/20">
