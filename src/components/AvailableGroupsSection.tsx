@@ -37,6 +37,12 @@ const FLOWER_EMOJIS: Record<string, string> = {
   Lily: '🌸',
   Jasmine: '🌼',
   Orchid: '🌺',
+  Sunflower: '🌻',
+  Tulip: '🌷',
+  Lotus: '🪷',
+  Daisy: '🌼',
+  Lavender: '💜',
+  Marigold: '🏵️',
 };
 
 const MIN_BALANCE_MINUTES = 5;
@@ -123,7 +129,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
 
     if (group.participant_count >= MAX_PARTICIPANTS) {
-      toast.error('This group is full (max 50 participants)');
+      toast.error('This group is full (max 100 participants)');
       return;
     }
 

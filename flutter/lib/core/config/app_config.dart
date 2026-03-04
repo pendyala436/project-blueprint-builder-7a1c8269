@@ -31,7 +31,7 @@ class AppConfig {
   static const int pausedSessionTimeoutMinutes = 10; // Auto-end paused sessions
 
   /// Private Group Call Configuration
-  static const int maxGroupCallParticipants = 50;
+  static const int maxGroupCallParticipants = 100;
   static const int maxGroupCallDurationMinutes = 30;
   static const int extensionsPerMonthPerGroup = 1; // Only one extension per month
 
