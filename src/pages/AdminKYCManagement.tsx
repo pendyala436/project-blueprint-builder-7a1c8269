@@ -77,9 +77,9 @@ interface IndianWoman {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case "approved":
-      return <Badge className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+      return <Badge className="bg-success text-success-foreground"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
     case "pending":
-      return <Badge className="bg-yellow-500"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      return <Badge className="bg-warning text-warning-foreground"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
     case "rejected":
       return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
     default:
@@ -280,7 +280,7 @@ const AdminKYCManagement = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4 text-center">
               <p className="text-2xl font-bold">{stats.total}</p>
@@ -289,13 +289,13 @@ const AdminKYCManagement = () => {
           </Card>
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-yellow-500">{stats.pending}</p>
+              <p className="text-2xl font-bold text-warning">{stats.pending}</p>
               <p className="text-xs text-muted-foreground">Pending</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold text-green-500">{stats.approved}</p>
+              <p className="text-2xl font-bold text-success">{stats.approved}</p>
               <p className="text-xs text-muted-foreground">Approved</p>
             </CardContent>
           </Card>
@@ -401,7 +401,7 @@ const AdminKYCManagement = () => {
                     </div>
                     <div className="flex gap-2">
                       {selectedKYC.verification_status !== "approved" && (
-                        <Button size="sm" onClick={handleApproveKYC} className="bg-green-600 hover:bg-green-700">
+                        <Button size="sm" onClick={handleApproveKYC} className="bg-success hover:bg-success/90 text-success-foreground">
                           <CheckCircle className="h-4 w-4 mr-1" /> Approve
                         </Button>
                       )}

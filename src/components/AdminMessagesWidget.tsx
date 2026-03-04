@@ -30,12 +30,11 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
 
   const loadMessages = useCallback(async () => {
     try {
-      // Calculate 7-day cutoff
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      // Fetch broadcasts and direct admin messages (not chat messages)
-      const { data, error } = await supabase
+      // Fetch from admin_broadcast_messages (broadcast + direct)
+      const { data: broadcastMsgs } = await supabase
         .from('admin_broadcast_messages')
         .select('*')
         .or(`is_broadcast.eq.true,recipient_id.eq.${currentUserId}`)
@@ -43,12 +42,53 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) {
-        console.error('Error loading admin messages:', error);
-        return;
+      // Also fetch from admin_user_messages (admin-sent messages to this user or broadcasts)
+      const { data: adminUserMsgs } = await supabase
+        .from('admin_user_messages')
+        .select('id, message, sender_role, target_group, target_user_id, is_read, created_at')
+        .eq('sender_role', 'admin')
+        .or(`target_user_id.eq.${currentUserId},target_user_id.is.null`)
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Merge both sources, dedup by id
+      const allMessages: AdminMessage[] = [];
+      const seenIds = new Set<string>();
+
+      for (const msg of (broadcastMsgs || [])) {
+        if (!seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
+          allMessages.push({
+            id: msg.id,
+            subject: msg.subject || 'Admin Message',
+            message: msg.message,
+            is_broadcast: msg.is_broadcast,
+            is_read: msg.is_read,
+            created_at: msg.created_at,
+            admin_id: msg.admin_id,
+          });
+        }
       }
 
-      setMessages(data || []);
+      for (const msg of (adminUserMsgs || [])) {
+        if (!seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
+          allMessages.push({
+            id: msg.id,
+            subject: msg.target_user_id ? 'Message from Admin' : `Broadcast to ${msg.target_group || 'all'}`,
+            message: msg.message,
+            is_broadcast: !msg.target_user_id,
+            is_read: msg.is_read,
+            created_at: msg.created_at,
+            admin_id: '',
+          });
+        }
+      }
+
+      // Sort by date desc
+      allMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setMessages(allMessages.slice(0, 50));
     } catch (err) {
       console.error('Error loading admin messages:', err);
     } finally {
@@ -59,12 +99,17 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
   useEffect(() => {
     loadMessages();
 
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates from both tables
     const channel = supabase
       .channel(`admin-messages-${currentUserId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'admin_broadcast_messages' },
+        () => loadMessages()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'admin_user_messages' },
         () => loadMessages()
       )
       .subscribe();
