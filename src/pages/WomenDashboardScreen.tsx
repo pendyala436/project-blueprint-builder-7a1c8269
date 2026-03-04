@@ -898,7 +898,8 @@ const WomenDashboardScreen = () => {
                   <MessageCircleIcon className="h-4 w-4 mr-1" />
                   Chat
                 </Button>
-                {user.isSameLanguage && isIndianWoman && (
+                {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
+                {user.isSameLanguage && isIndianWoman && user.country?.toLowerCase().includes('india') && (
                   <DirectVideoCallButton
                     currentUserId={currentUserId}
                     targetUserId={user.userId}
@@ -910,6 +911,19 @@ const WomenDashboardScreen = () => {
                   />
                 )}
               </>
+            )}
+            {/* Show disabled video call hint for women without golden badge */}
+            {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && user.country?.toLowerCase().includes('india') && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="opacity-50 gap-1 text-xs"
+                title="Purchase Golden Badge to enable video calls"
+              >
+                <Video className="h-3.5 w-3.5" />
+                🔒 Badge Required
+              </Button>
             )}
             <Button 
               size="sm" 
@@ -1110,7 +1124,7 @@ const WomenDashboardScreen = () => {
                       <Badge className="bg-amber-500 text-white text-[10px]">PRO</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      You can initiate chats with men
+                      You can initiate chats & video calls with Indian men who speak your language
                     </p>
                     {goldenBadgeExpiry && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -1141,7 +1155,7 @@ const WomenDashboardScreen = () => {
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-foreground">🌟 Golden Badge</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Buy for ₹1,000/month to initiate chats with men
+                      Buy for ₹1,000/month to initiate chats & video calls with men
                     </p>
                   </div>
                   <Button

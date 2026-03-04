@@ -1282,7 +1282,8 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
-                            {userCountry === "IN" && (
+                            {/* Video call: Indian man + Indian woman + same language (already in same-language section) */}
+                            {userCountry === "IN" && woman.country?.toLowerCase().includes('india') && (
                               <DirectVideoCallButton
                                 currentUserId={currentUserId}
                                 targetUserId={woman.user_id}
