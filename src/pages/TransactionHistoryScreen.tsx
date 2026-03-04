@@ -200,26 +200,30 @@ const TransactionHistoryScreen = () => {
       const gender = profile?.gender?.toLowerCase() || null;
       setUserGender(gender);
 
-      // Fetch wallet and current balance
+      // Fetch wallet id for transaction query, and balance via server-side RPCs
       const { data: wallet } = await supabase
         .from("wallets")
-        .select("id, balance")
+        .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (wallet) {
-        const walletBalance = Number(wallet.balance) || 0;
-
-        // For men: use wallet balance. For women: calculate from earnings - debits
+        let walletBalance = 0;
+        // Use server-side RPCs for both genders (avoids row limits, bypasses RLS)
         if (gender === 'male') {
+          const { data: menRpc } = await supabase.rpc('get_men_wallet_balance', {
+            p_user_id: user.id
+          });
+          const md = menRpc as Record<string, number> | null;
+          walletBalance = Number(md?.balance) || 0;
           setCurrentBalance(walletBalance);
         } else {
-          // Use server-side RPC to avoid 1000-row limit
           const { data: balanceRpc } = await supabase.rpc('get_women_wallet_balance', {
             p_user_id: user.id
           });
           const bd = balanceRpc as Record<string, number> | null;
-          setCurrentBalance(Number(bd?.available_balance) || 0);
+          walletBalance = Number(bd?.available_balance) || 0;
+          setCurrentBalance(walletBalance);
         }
 
         // Fetch ALL wallet transactions (no limit)

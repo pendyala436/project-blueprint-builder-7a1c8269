@@ -3966,6 +3966,7 @@ export type Database = {
           state: string
         }[]
       }
+      get_men_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       get_men_with_balance: {
         Args: { p_user_ids: string[] }
         Returns: {
