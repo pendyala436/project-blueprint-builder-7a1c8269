@@ -10,6 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -49,7 +55,10 @@ import {
   Zap,
   Globe2,
   Video,
-  Gift
+  Gift,
+  Shield,
+  Sliders,
+  Mail
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -163,6 +172,8 @@ const DashboardScreen = () => {
   const [rechargeDialogOpen, setRechargeDialogOpen] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
+  const [showAdminChat, setShowAdminChat] = useState(false);
+  const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState("stripe");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -1114,6 +1125,24 @@ const DashboardScreen = () => {
           </div>
           
           <div className="flex items-center gap-0.5">
+            {/* Admin Messages */}
+            <button 
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              onClick={() => setShowAdminMessages(true)}
+              title="Admin Messages"
+            >
+              <Mail className="w-[18px] h-[18px] text-foreground/70" />
+            </button>
+
+            {/* Admin Chat */}
+            <button 
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              onClick={() => setShowAdminChat(true)}
+              title="Chat with Admin"
+            >
+              <Shield className="w-[18px] h-[18px] text-foreground/70" />
+            </button>
+
             {/* Notifications */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
@@ -1913,15 +1942,39 @@ const DashboardScreen = () => {
         />
       )}
 
-      {/* Admin Messages */}
-      {currentUserId && (
-        <AdminMessagesWidget currentUserId={currentUserId} />
-      )}
+      {/* Admin Messages Sheet */}
+      <Sheet open={showAdminMessages} onOpenChange={setShowAdminMessages}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              Admin Messages
+            </SheetTitle>
+          </SheetHeader>
+          {currentUserId && (
+            <div className="mt-4">
+              <AdminMessagesWidget currentUserId={currentUserId} />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
-      {/* Admin Chat */}
-      {currentUserId && (
-        <UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} />
-      )}
+      {/* Admin Chat Sheet */}
+      <Sheet open={showAdminChat} onOpenChange={setShowAdminChat}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Chat with Admin
+            </SheetTitle>
+          </SheetHeader>
+          {currentUserId && (
+            <div className="mt-4">
+              <UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} embedded />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
