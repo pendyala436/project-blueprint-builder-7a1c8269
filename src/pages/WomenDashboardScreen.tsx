@@ -590,24 +590,19 @@ const WomenDashboardScreen = () => {
 
   const fetchWalletBalance = async (userId: string) => {
     try {
-      // Total earnings
-      const { data: earnings } = await supabase
-        .from("women_earnings")
-        .select("amount")
-        .eq("user_id", userId);
+      // Fetch all earnings, all debits, and pending withdrawals in parallel
+      const [{ data: earnings }, { data: debits }, { data: pendingWd }] = await Promise.all([
+        supabase.from("women_earnings").select("amount").eq("user_id", userId),
+        supabase.from("wallet_transactions").select("amount").eq("user_id", userId).eq("type", "debit"),
+        supabase.from("withdrawal_requests").select("amount").eq("user_id", userId).in("status", ["pending", "approved"])
+      ]);
       
       const totalEarnings = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+      const totalDebits = debits?.reduce((acc, d) => acc + Number(d.amount), 0) || 0;
+      const totalPending = pendingWd?.reduce((acc, w) => acc + Number(w.amount), 0) || 0;
 
-      // Total withdrawals
-      const { data: withdrawals } = await supabase
-        .from("wallet_transactions")
-        .select("amount")
-        .eq("user_id", userId)
-        .eq("type", "debit");
-      
-      const totalWithdrawals = withdrawals?.reduce((acc, w) => acc + Number(w.amount), 0) || 0;
-
-      setMyWalletBalance(totalEarnings - totalWithdrawals);
+      // Available balance = total earnings - all debits - pending withdrawals
+      setMyWalletBalance(totalEarnings - totalDebits - totalPending);
     } catch (error) {
       console.error("Error fetching wallet balance:", error);
     }

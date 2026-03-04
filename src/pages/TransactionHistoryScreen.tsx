@@ -214,13 +214,15 @@ const TransactionHistoryScreen = () => {
         if (gender === 'male') {
           setCurrentBalance(walletBalance);
         } else {
-          const [{ data: allEarnings }, { data: allDebits }] = await Promise.all([
+          const [{ data: allEarnings }, { data: allDebits }, { data: pendingWd }] = await Promise.all([
             supabase.from("women_earnings").select("amount").eq("user_id", user.id),
-            supabase.from("wallet_transactions").select("amount").eq("user_id", user.id).eq("type", "debit")
+            supabase.from("wallet_transactions").select("amount").eq("user_id", user.id).eq("type", "debit"),
+            supabase.from("withdrawal_requests").select("amount").eq("user_id", user.id).in("status", ["pending", "approved"])
           ]);
           const totalEarnings = allEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
           const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-          setCurrentBalance(totalEarnings - totalDebits);
+          const totalPending = pendingWd?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
+          setCurrentBalance(totalEarnings - totalDebits - totalPending);
         }
 
         // Fetch ALL wallet transactions (no limit)
