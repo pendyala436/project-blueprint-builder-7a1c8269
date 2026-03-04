@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 interface UserAdminChatProps {
   currentUserId: string;
   userName: string;
+  embedded?: boolean;
 }
 
 interface Message {
@@ -29,8 +30,8 @@ interface Message {
   created_at: string;
 }
 
-export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function UserAdminChat({ currentUserId, userName, embedded = false }: UserAdminChatProps) {
+  const [isOpen, setIsOpen] = useState(embedded);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -126,6 +127,72 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
       setIsSending(false);
     }
   };
+
+  if (embedded) {
+    return (
+      <div className="flex flex-col h-[60vh]">
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-2.5 sm:p-3">
+          <div className="space-y-2">
+            {messages.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                <MessageCircle className="h-7 w-7 mx-auto mb-2 opacity-40" />
+                <p className="text-xs sm:text-sm">Send a message to Admin</p>
+                <p className="text-[10px] sm:text-xs">We'll respond as soon as possible</p>
+              </div>
+            )}
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  'max-w-[85%] p-2 sm:p-2.5 rounded-xl text-xs sm:text-sm',
+                  msg.sender_role === 'user'
+                    ? 'ml-auto bg-primary text-primary-foreground rounded-br-sm'
+                    : 'mr-auto bg-muted rounded-bl-sm'
+                )}
+              >
+                {msg.sender_role === 'admin' && (
+                  <p className="text-[10px] sm:text-xs font-semibold mb-0.5 flex items-center gap-1">
+                    <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Admin
+                  </p>
+                )}
+                <p className="break-words">{msg.message}</p>
+                <p className="text-[9px] sm:text-xs opacity-60 mt-1">
+                  {format(new Date(msg.created_at), 'MMM dd, hh:mm a')}
+                </p>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="p-2 sm:p-3 border-t border-border flex gap-1.5 sm:gap-2">
+          <Textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            rows={1}
+            className="resize-none flex-1 min-h-[36px] max-h-[72px] text-xs sm:text-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+          />
+          <Button
+            size="icon"
+            className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || isSending}
+          >
+            {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
