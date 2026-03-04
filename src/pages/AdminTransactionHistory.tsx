@@ -149,6 +149,7 @@ const AdminTransactionHistory = () => {
   const [dateRange, setDateRange] = useState("7");
   const [searchQuery, setSearchQuery] = useState("");
   const [userFilter, setUserFilter] = useState<"all" | "men" | "women">("all");
+  const [regionFilter, setRegionFilter] = useState<"all" | "indian" | "world">("all");
   
   // Data states
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
@@ -267,7 +268,7 @@ const AdminTransactionHistory = () => {
       // Fetch profiles for enrichment
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, full_name, gender")
+        .select("user_id, full_name, gender, country")
         .in("user_id", Array.from(allUserIds));
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
@@ -284,7 +285,8 @@ const AdminTransactionHistory = () => {
       const enrichedWalletTxns = (walletTxnsResult.data || []).map(t => ({
         ...t,
         user_name: profileMap.get(t.user_id)?.full_name || "Unknown",
-        user_gender: profileMap.get(t.user_id)?.gender || "Unknown"
+        user_gender: profileMap.get(t.user_id)?.gender || "Unknown",
+        user_country: profileMap.get(t.user_id)?.country || "Unknown"
       }));
 
       const enrichedChatSessions = (chatSessionsResult.data || []).map(s => ({
@@ -433,7 +435,7 @@ const AdminTransactionHistory = () => {
     return `${hours}h ${mins}m`;
   };
 
-  const filterBySearch = <T extends { user_name?: string; man_name?: string; woman_name?: string; sender_name?: string; receiver_name?: string; user_gender?: string }>(
+  const filterBySearch = <T extends { user_name?: string; man_name?: string; woman_name?: string; sender_name?: string; receiver_name?: string; user_gender?: string; user_country?: string }>(
     items: T[]
   ): T[] => {
     let filtered = items;
@@ -444,6 +446,17 @@ const AdminTransactionHistory = () => {
         const gender = (item as any).user_gender?.toLowerCase();
         if (userFilter === "men") return gender === "male";
         if (userFilter === "women") return gender === "female";
+        return true;
+      });
+    }
+
+    // Filter by region (Indian vs World)
+    if (regionFilter !== "all") {
+      filtered = filtered.filter(item => {
+        const country = ((item as any).user_country || "").toLowerCase();
+        const isIndian = country === "india" || country === "in";
+        if (regionFilter === "indian") return isIndian;
+        if (regionFilter === "world") return !isIndian;
         return true;
       });
     }
@@ -518,6 +531,16 @@ const AdminTransactionHistory = () => {
                   <SelectItem value="all">All Users</SelectItem>
                   <SelectItem value="men">Men Only</SelectItem>
                   <SelectItem value="women">Women Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={regionFilter} onValueChange={(v) => setRegionFilter(v as "all" | "indian" | "world")}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Region" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Regions</SelectItem>
+                  <SelectItem value="indian">Indian</SelectItem>
+                  <SelectItem value="world">Worldwide</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={dateRange} onValueChange={setDateRange}>
