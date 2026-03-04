@@ -77,6 +77,9 @@ serve(async (req) => {
       case 'get_available_woman':
         return await getAvailableWoman(supabase, data);
       
+      case 'create_direct_call':
+        return await createDirectCall(supabase, data);
+      
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),
@@ -556,5 +559,41 @@ async function getAvailableWoman(supabase: any, data: any) {
   return new Response(
     JSON.stringify({ error: 'Invalid type' }),
     { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Create a direct video call session to a specific user
+async function createDirectCall(supabase: any, data: any) {
+  const { call_id, man_user_id, woman_user_id, rate_per_minute = 8 } = data;
+
+  if (!call_id || !man_user_id || !woman_user_id) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Missing required fields: call_id, man_user_id, woman_user_id' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const { error } = await supabase
+    .from('video_call_sessions')
+    .insert({
+      call_id,
+      man_user_id,
+      woman_user_id,
+      status: 'ringing',
+      rate_per_minute,
+    });
+
+  if (error) {
+    console.error('[DirectCall] Error creating session:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`[DirectCall] Created session: ${call_id} (man: ${man_user_id}, woman: ${woman_user_id})`);
+  return new Response(
+    JSON.stringify({ success: true, call_id }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
