@@ -1659,6 +1659,16 @@ const DashboardScreen = () => {
 
         {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              Private Group Video Calls
+            </h2>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground mb-4 border border-border">
+            <p className="font-medium text-foreground mb-1">💰 How to Join</p>
+            <p>Join any live private group call at the chat rate of <span className="font-semibold text-primary">₹{pricing?.ratePerMinute || 4}/min</span>. Your wallet balance must have at least 5 minutes worth to join.</p>
+          </div>
           <AvailableGroupsSection
             currentUserId={currentUserId}
             userName={userName || 'User'}
