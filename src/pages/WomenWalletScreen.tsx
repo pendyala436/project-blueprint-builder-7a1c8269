@@ -139,6 +139,21 @@ const WomenWalletScreen = () => {
         setMinWithdrawal(pricing.min_withdrawal_balance);
       }
 
+      // Use server-side RPC to calculate balance (avoids 1000-row limit)
+      const { data: balanceData, error: balanceError } = await supabase.rpc('get_women_wallet_balance', {
+        p_user_id: user.id
+      });
+
+      if (balanceError) {
+        console.error("Error fetching balance:", balanceError);
+      }
+
+      const bd = balanceData as Record<string, number> | null;
+      const total = Number(bd?.total_earnings) || 0;
+      const totalPendingWd = Number(bd?.pending_withdrawals) || 0;
+      setTotalEarnings(total);
+      setAvailableBalance(Number(bd?.available_balance) || 0);
+
       const isLikelyDuplicateGroupEarning = (a: { amount: number; description: string | null; created_at: string }, b: { amount: number; description: string | null; created_at: string }) => {
         const descA = (a.description || '').trim().toLowerCase();
         const descB = (b.description || '').trim().toLowerCase();
@@ -149,31 +164,7 @@ const WomenWalletScreen = () => {
         return sameAmount && sameDescription && isGroupBillingLine && closeInTime;
       };
 
-      // Fetch all earnings, all wallet debits, and pending withdrawals for accurate balance
-      // Use raw totals (no dedup) — DB is source of truth for amounts
-      const [{ data: allEarningsData }, { data: allDebitsData }, { data: pendingWdData }] = await Promise.all([
-        supabase
-          .from("women_earnings")
-          .select("amount")
-          .eq("user_id", user.id),
-        supabase
-          .from("wallet_transactions")
-          .select("amount")
-          .eq("user_id", user.id)
-          .eq("type", "debit"),
-        supabase
-          .from("withdrawal_requests")
-          .select("amount")
-          .eq("user_id", user.id)
-          .in("status", ["pending", "approved"])
-      ]);
-
-      const total = allEarningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-      const totalDebits = allDebitsData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-      const totalPendingWd = pendingWdData?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
-      setTotalEarnings(total);
-
-      // Fetch recent earnings for display (limited, with dedup for display only)
+      // Fetch recent earnings for display only (limited)
       const { data: earningsData } = await supabase
         .from("women_earnings")
         .select("*")
@@ -200,10 +191,6 @@ const WomenWalletScreen = () => {
         ?.filter(w => w.status === "pending" || w.status === "approved")
         .reduce((sum, w) => sum + Number(w.amount), 0) || 0;
       setPendingWithdrawals(pending);
-
-      // Available balance = total earnings - all debits - pending withdrawals
-      // Consistent formula across Dashboard, Wallet, and TransactionHistory
-      setAvailableBalance(total - totalDebits - totalPendingWd);
 
     } catch (error) {
       console.error("Error loading wallet data:", error);

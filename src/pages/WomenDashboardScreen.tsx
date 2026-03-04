@@ -590,41 +590,32 @@ const WomenDashboardScreen = () => {
 
   const fetchWalletBalance = async (userId: string) => {
     try {
-      // Fetch all earnings, all debits, and pending withdrawals in parallel
-      const [{ data: earnings }, { data: debits }, { data: pendingWd }] = await Promise.all([
-        supabase.from("women_earnings").select("amount").eq("user_id", userId),
-        supabase.from("wallet_transactions").select("amount").eq("user_id", userId).eq("type", "debit"),
-        supabase.from("withdrawal_requests").select("amount").eq("user_id", userId).in("status", ["pending", "approved"])
-      ]);
-      
-      const totalEarnings = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
-      const totalDebits = debits?.reduce((acc, d) => acc + Number(d.amount), 0) || 0;
-      const totalPending = pendingWd?.reduce((acc, w) => acc + Number(w.amount), 0) || 0;
+      // Use server-side RPC to avoid Supabase 1000-row limit on client queries
+      const { data, error } = await supabase.rpc('get_women_wallet_balance', {
+        p_user_id: userId
+      });
 
-      // Available balance = total earnings - all debits - pending withdrawals
-      setMyWalletBalance(totalEarnings - totalDebits - totalPending);
+      if (error) {
+        console.error("Error fetching wallet balance:", error);
+        return;
+      }
+
+      if (data) {
+        const balanceData = data as Record<string, number>;
+        setMyWalletBalance(Number(balanceData.available_balance) || 0);
+      }
     } catch (error) {
       console.error("Error fetching wallet balance:", error);
     }
   };
 
   const fetchTodayEarnings = async (userId: string) => {
-    // Get today's start in local time
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
-    
-    // Fetch current user's earnings today from women_earnings table
-    const { data: myEarnings, error: myError } = await supabase
-      .from("women_earnings")
-      .select("amount")
-      .eq("user_id", userId)
-      .gte("created_at", todayStart)
-      .lte("created_at", todayEnd);
+    // Use the same RPC to get today's earnings (server-side, no row limit)
+    const { data: balanceData } = await supabase.rpc('get_women_wallet_balance', {
+      p_user_id: userId
+    });
 
-    console.log("[Earnings] My earnings query:", { myEarnings, myError, todayStart, todayEnd });
-    
-    const myTotal = myEarnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
+    const myTotal = Number((balanceData as Record<string, number>)?.today_earnings) || 0;
     setMyTodayEarnings(myTotal);
     setStats(prev => ({ ...prev, todayEarnings: myTotal }));
 

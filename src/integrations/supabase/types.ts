@@ -4038,6 +4038,7 @@ export type Database = {
         Args: { p_month_start: string; p_user_id: string }
         Returns: number
       }
+      get_women_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
