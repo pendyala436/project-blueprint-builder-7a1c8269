@@ -34,7 +34,8 @@ import {
   Loader2,
   MessageCircle as MessageCircleIcon,
   Video,
-  Eye
+  Eye,
+  Sparkles
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
@@ -169,26 +170,26 @@ const WomenDashboardScreen = () => {
   const quickActions = [
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Messages'), 
+      label: t('messages', 'Chats'), 
       color: "from-primary to-primary/80",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <Wallet className="w-6 h-6" />, 
-      label: t('withdraw', 'Withdraw'), 
-      color: "from-success to-success/80",
+      label: t('withdraw', 'Earnings'), 
+      color: "from-emerald-500 to-emerald-400",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-accent to-accent/80",
+      color: "from-rose-500 to-pink-400",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
-      label: t('profile', 'Profile'), 
-      color: "from-secondary to-secondary/80",
+      label: t('profile', 'My Profile'), 
+      color: "from-violet-500 to-purple-400",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -948,33 +949,38 @@ const WomenDashboardScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <MeowLogo size="sm" />
-          
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <MeowLogo size="sm" />
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-foreground leading-tight">Meow Meow</p>
+              <p className="text-[10px] text-muted-foreground">Connect & Earn</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowFriendsPanel(true)}
               title="Friends & Blocked Users"
             >
-              <Users2 className="w-5 h-5 text-primary" />
+              <Users2 className="w-5 h-5 text-foreground/70" />
             </button>
 
-
             <button 
-              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
               onClick={() => navigate("/settings")}
             >
-              <Settings className="w-5 h-5 text-primary" />
+              <Settings className="w-5 h-5 text-foreground/70" />
             </button>
 
             <button 
-              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="p-2.5 rounded-xl hover:bg-destructive/10 transition-all duration-200"
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5 text-primary" />
+              <LogOut className="w-5 h-5 text-destructive/70" />
             </button>
           </div>
         </div>
@@ -1384,18 +1390,21 @@ const WomenDashboardScreen = () => {
 
         {/* Section 5: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            {t('quickActions', 'Quick Actions')}
+          </h2>
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
+                className="group flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
                   {action.icon}
                 </div>
-                <p className="text-sm font-medium text-foreground">{action.label}</p>
+                <p className="text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
               </button>
             ))}
           </div>

@@ -41,7 +41,15 @@ import {
   Filter,
   Eye,
   Power,
-  Users2
+  Users2,
+  Compass,
+  UserCircle,
+  BellRing,
+  WalletCards,
+  Zap,
+  Globe2,
+  Video,
+  Gift
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -1060,26 +1068,26 @@ const DashboardScreen = () => {
 
   const quickActions = [
     { 
-      icon: <Search className="w-6 h-6" />, 
-      label: t('findMatch', 'Find Match'), 
+      icon: <Compass className="w-6 h-6" />, 
+      label: t('findMatch', 'Discover'), 
       color: "from-primary to-rose-400",
-      action: () => navigate("/find-match")
+      action: () => navigate("/match-discovery")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Messages'), 
+      label: t('messages', 'Chats'), 
       color: "from-blue-500 to-blue-400",
       action: () => navigate("/match-discovery")
     },
     { 
-      icon: <Heart className="w-6 h-6" />, 
-      label: t('matches', 'Matches'), 
+      icon: <Gift className="w-6 h-6" />, 
+      label: t('gifts', 'Send Gift'), 
       color: "from-rose-500 to-pink-400",
-      action: () => navigate("/match-discovery")
+      action: () => navigate("/gift-sending")
     },
     { 
-      icon: <User className="w-6 h-6" />, 
-      label: t('profile', 'Profile'), 
+      icon: <UserCircle className="w-6 h-6" />, 
+      label: t('profile', 'My Profile'), 
       color: "from-violet-500 to-purple-400",
       action: () => setProfileEditOpen(true)
     },
@@ -1099,35 +1107,51 @@ const DashboardScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-          <MeowLogo size="sm" />
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MeowLogo size="sm" />
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-foreground leading-tight">Meow Meow</p>
+              <p className="text-[10px] text-muted-foreground">Connect & Chat</p>
+            </div>
+          </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Notifications */}
+            <button 
+              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              title="Notifications"
+            >
+              <BellRing className="w-5 h-5 text-foreground/70" />
+              {stats.unreadNotifications > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive animate-pulse" />
+              )}
+            </button>
+
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowFriendsPanel(true)}
               title="Friends & Blocked Users"
             >
-              <Users2 className="w-5 h-5 text-primary" />
+              <Users2 className="w-5 h-5 text-foreground/70" />
             </button>
-
 
             {/* Settings */}
             <button 
-              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
               onClick={() => navigate('/settings')}
             >
-              <Settings className="w-5 h-5 text-primary" />
+              <Settings className="w-5 h-5 text-foreground/70" />
             </button>
 
             {/* Logout */}
             <button 
-              className="p-2 rounded-full hover:bg-primary/10 transition-colors"
+              className="p-2.5 rounded-xl hover:bg-destructive/10 transition-all duration-200"
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5 text-primary" />
+              <LogOut className="w-5 h-5 text-destructive/70" />
             </button>
           </div>
         </div>
@@ -1180,12 +1204,13 @@ const DashboardScreen = () => {
           </div>
         </div>
 
-        {/* Section 2: Online Women - Two Columns (Moved to top) */}
+        {/* Section 2: Online Women */}
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-success" />
+              <Globe2 className="w-5 h-5 text-emerald-500" />
               {t('onlineWomen', 'Women Online')}
+              <Badge variant="outline" className="text-[10px] font-normal">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
             </h2>
             <Button
               variant="ghost"
@@ -1480,42 +1505,42 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-emerald-500/20">
-                <Users className="w-6 h-6 text-emerald-500" />
+          <Card className="p-4 text-center bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-2">
+              <div className="p-2.5 rounded-full bg-emerald-500/15">
+                <Users className="w-5 h-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.onlineUsersCount}</p>
-                <p className="text-sm text-muted-foreground">{t('onlineNow', 'Online Now')}</p>
+                <p className="text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
+                <p className="text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
               </div>
             </div>
           </Card>
 
           {/* Matches */}
-          <Card className="p-5 bg-gradient-aurora border-primary/30 hover:shadow-glow transition-all">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-primary/20">
-                <Heart className="w-6 h-6 text-primary" />
+          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-2">
+              <div className="p-2.5 rounded-full bg-primary/15">
+                <Heart className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.matchCount}</p>
-                <p className="text-sm text-muted-foreground">{t('matches', 'Matches')}</p>
+                <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+                <p className="text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
               </div>
             </div>
           </Card>
 
           {/* Notifications */}
-          <Card className="p-5 bg-gradient-aurora border-accent/30 hover:shadow-glow transition-all sm:col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-accent/20">
-                <Bell className="w-6 h-6 text-accent" />
+          <Card className="p-4 text-center bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:shadow-lg transition-all">
+            <div className="flex flex-col items-center gap-2">
+              <div className="p-2.5 rounded-full bg-amber-500/15">
+                <BellRing className="w-5 h-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.unreadNotifications}</p>
-                <p className="text-sm text-muted-foreground">{t('notifications', 'Notifications')}</p>
+                <p className="text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
+                <p className="text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
               </div>
             </div>
           </Card>
@@ -1523,15 +1548,15 @@ const DashboardScreen = () => {
 
         {/* Section 3: Wallet & Primary Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <Card className="p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20 shadow-md">
             <div className="flex flex-col items-center gap-4">
               {/* Balance */}
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-primary/20">
-                  <Wallet className="w-6 h-6 text-primary" />
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-inner">
+                  <WalletCards className="w-7 h-7 text-primary" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <p className="text-sm text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
                   <p className="text-2xl font-bold text-foreground">
                     ₹{walletBalance.toLocaleString()}
                     <span className="text-sm font-normal text-muted-foreground ml-2">
@@ -1579,18 +1604,21 @@ const DashboardScreen = () => {
 
         {/* Section 4: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">{t('quickActions', 'Quick Actions')}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-amber-500" />
+            {t('quickActions', 'Quick Actions')}
+          </h2>
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="group p-6 rounded-2xl bg-gradient-aurora border border-primary/20 hover:border-primary/40 hover:shadow-glow transition-all duration-300"
+                className="group flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
                   {action.icon}
                 </div>
-                <p className="text-sm font-medium text-foreground">{action.label}</p>
+                <p className="text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
               </button>
             ))}
           </div>
@@ -1692,17 +1720,18 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-6 bg-gradient-aurora border-primary/30 shadow-glow animate-fade-in" style={{ animationDelay: "0.35s" }}>
+        <Card className="p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 shadow-md animate-fade-in" style={{ animationDelay: "0.35s" }}>
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary via-accent to-primary/80 text-white">
-              <Sparkles className="w-8 h-8" />
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-lg">
+              <Sparkles className="w-7 h-7" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">{t('boostYourProfile', 'Boost your profile!')}</h3>
-              <p className="text-sm text-muted-foreground">{t('getMoreMatchesWithPremium', 'Get more matches with premium features')}</p>
+              <h3 className="font-semibold text-foreground text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
+              <p className="text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge wallet for more connections')}</p>
             </div>
-            <Button variant="aurora" size="sm" onClick={() => navigate("/wallet")}>
-              {t('upgrade', 'Upgrade')}
+            <Button variant="aurora" size="sm" className="rounded-xl shadow-md" onClick={() => setRechargeDialogOpen(true)}>
+              <CreditCard className="w-4 h-4 mr-1.5" />
+              {t('upgrade', 'Recharge')}
             </Button>
           </div>
         </Card>
