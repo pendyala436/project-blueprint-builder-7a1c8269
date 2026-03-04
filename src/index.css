@@ -1098,9 +1098,17 @@
     --radius: 0.625rem;
   }
 
-  /* Cards: subtle borders, minimal shadow on mobile */
-  .border {
+  /* Softer, thinner borders on mobile for a cleaner look */
+  .border,
+  [class*="border-"] {
     border-width: 1px;
+  }
+
+  /* Make card/section borders nearly invisible on mobile */
+  .border-border,
+  .border-border\/40,
+  .border-border\/50 {
+    border-color: hsl(var(--border) / 0.3);
   }
 
   /* Tighter section spacing on mobile */
@@ -1134,6 +1142,18 @@
   h3 {
     font-size: 0.875rem !important;
     line-height: 1.4;
+  }
+
+  /* Separator / divider lines thinner on mobile */
+  [data-orientation="horizontal"] {
+    height: 1px;
+  }
+
+  hr,
+  .border-b,
+  .border-t {
+    border-width: 1px;
+    border-color: hsl(var(--border) / 0.25);
   }
 }
 
