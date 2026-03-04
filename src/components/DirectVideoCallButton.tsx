@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Video, Loader2, Wallet } from "lucide-react";
+import { Video, Loader2, Wallet, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { useChatPricing } from "@/hooks/useChatPricing";
+import { useVideoCallCircuitBreaker } from "@/hooks/useVideoCallCircuitBreaker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,7 @@ const DirectVideoCallButton = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { pricing } = useChatPricing();
+  const { isVideoCallsDisabled, reason: circuitBreakerReason } = useVideoCallCircuitBreaker();
   const [isSearching, setIsSearching] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
@@ -52,6 +54,18 @@ const DirectVideoCallButton = ({
 
   const startDirectVideoCall = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Circuit breaker check
+    if (isVideoCallsDisabled) {
+      toast({
+        title: "Video Calls Temporarily Disabled",
+        description: circuitBreakerReason
+          ? `Server under high load (${circuitBreakerReason}). Video calls will resume automatically in ~2 hours.`
+          : "Video calls are temporarily disabled due to high server load. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check super user
     const { data: { user } } = await supabase.auth.getUser();
@@ -189,14 +203,16 @@ const DirectVideoCallButton = ({
     <>
       <Button
         onClick={startDirectVideoCall}
-        disabled={isSearching || !!activeCall}
+        disabled={isSearching || !!activeCall || isVideoCallsDisabled}
         variant={variant}
         size={size}
         className={iconOnly ? "h-8 w-8 p-0" : "gap-1 text-xs h-8"}
-        title={`Video Call ${targetName}`}
+        title={isVideoCallsDisabled ? "Video calls temporarily disabled (server overload)" : `Video Call ${targetName}`}
       >
         {isSearching ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : isVideoCallsDisabled ? (
+          <ShieldAlert className="w-3.5 h-3.5 text-destructive" />
         ) : (
           <>
             <Video className="w-3.5 h-3.5" />

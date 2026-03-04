@@ -54,6 +54,9 @@ verify_jwt = false
 [functions.auto-approve-kyc]
 verify_jwt = false
 
+[functions.video-call-circuit-breaker]
+verify_jwt = false
+
 [functions.check-libretranslate]
 verify_jwt = false
 
