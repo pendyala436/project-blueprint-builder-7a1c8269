@@ -377,12 +377,13 @@ const DashboardScreen = () => {
 
   const loadWalletBalance = async () => {
     if (!currentUserId) return;
-    const { data } = await supabase
-      .from("wallets")
-      .select("balance")
-      .eq("user_id", currentUserId)
-      .maybeSingle();
-    if (data) setWalletBalance(data.balance || 0);
+    const { data } = await supabase.rpc('get_men_wallet_balance', {
+      p_user_id: currentUserId
+    });
+    if (data) {
+      const bd = data as Record<string, number>;
+      setWalletBalance(Number(bd.balance) || 0);
+    }
   };
 
   const loadActiveChatCount = async () => {
@@ -496,15 +497,14 @@ const DashboardScreen = () => {
         setUserCountry(countryCodeMap[userCountryValue] || "IN");
       }
 
-      // Fetch wallet balance
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Fetch wallet balance via server-side RPC
+      const { data: walletRpc } = await supabase.rpc('get_men_wallet_balance', {
+        p_user_id: user.id
+      });
 
-      if (wallet) {
-        setWalletBalance(wallet.balance);
+      if (walletRpc) {
+        const wd = walletRpc as Record<string, number>;
+        setWalletBalance(Number(wd.balance) || 0);
       }
 
       // Fetch stats in parallel

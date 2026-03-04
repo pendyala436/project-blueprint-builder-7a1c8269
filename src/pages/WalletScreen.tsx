@@ -226,6 +226,14 @@ const WalletScreen = () => {
         walletData = newWallet;
       }
 
+      // Override balance with server-side RPC for accuracy
+      const { data: rpcData } = await supabase.rpc('get_men_wallet_balance', {
+        p_user_id: user.id
+      });
+      if (rpcData) {
+        const bd = rpcData as Record<string, number>;
+        walletData = { ...walletData, balance: Number(bd.balance) || 0 };
+      }
       setWallet(walletData);
 
       // Fetch transactions
