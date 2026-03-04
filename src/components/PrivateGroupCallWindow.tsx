@@ -592,6 +592,11 @@ export function PrivateGroupCallWindow({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Video className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Private Group Call</span>
+            <span className="text-muted-foreground">•</span>
+          </div>
           <h3 className="font-semibold">{group.name}</h3>
           {isLive && (
             <Badge variant="destructive" className="gap-1">
