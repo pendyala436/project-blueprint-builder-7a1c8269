@@ -57,6 +57,7 @@ import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
+import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 
 import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget";
 import { RecentActivityWidget } from "@/components/RecentActivityWidget";
@@ -887,15 +888,39 @@ const WomenDashboardScreen = () => {
 
           <div className="flex flex-col gap-2">
             {hasGoldenBadge && (
-              <Button 
-                size="sm" 
-                variant="aurora"
-                onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-                title="Start Chat (Golden Badge)"
-              >
-                <MessageCircleIcon className="h-4 w-4 mr-1" />
-                Chat
-              </Button>
+              <>
+                <Button 
+                  size="sm" 
+                  variant="aurora"
+                  onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
+                  title="Start Chat (Golden Badge)"
+                >
+                  <MessageCircleIcon className="h-4 w-4 mr-1" />
+                  Chat
+                </Button>
+                {user.isSameLanguage && (
+                  <DirectVideoCallButton
+                    currentUserId={currentUserId}
+                    targetUserId={user.userId}
+                    targetName={user.fullName}
+                    targetPhoto={user.photoUrl}
+                    walletBalance={myWalletBalance}
+                    onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
+                    iconOnly={false}
+                  />
+                )}
+              </>
+            )}
+            {user.isSameLanguage && !hasGoldenBadge && (
+              <DirectVideoCallButton
+                currentUserId={currentUserId}
+                targetUserId={user.userId}
+                targetName={user.fullName}
+                targetPhoto={user.photoUrl}
+                walletBalance={myWalletBalance}
+                onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
+                iconOnly={false}
+              />
             )}
             <Button 
               size="sm" 
