@@ -19,6 +19,7 @@ import {
   Users,
   Loader2,
   RefreshCw,
+  Phone,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -33,9 +34,10 @@ interface RecentContact {
   primaryLanguage: string | null;
   isOnline: boolean;
   lastInteractionAt: string;
-  interactionType: "chat" | "video" | "both";
+  interactionType: "chat" | "video" | "group" | "multiple";
   chatCount: number;
   videoCount: number;
+  groupCallCount: number;
 }
 
 interface RecentActivityWidgetProps {
@@ -58,16 +60,16 @@ export const RecentActivityWidget = ({
     setIsLoading(true);
 
     try {
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      const sinceDate = threeDaysAgo.toISOString();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sinceDate = sevenDaysAgo.toISOString();
 
       // Determine which column refers to the current user vs the opposite user
       const myCol = userGender === "male" ? "man_user_id" : "woman_user_id";
       const theirCol = userGender === "male" ? "woman_user_id" : "man_user_id";
 
-      // Fetch chat sessions from last 3 days
-      const [chatResult, videoResult] = await Promise.all([
+      // Fetch chat, video, and group call sessions from last 7 days
+      const [chatResult, videoResult, groupResult] = await Promise.all([
         supabase
           .from("active_chat_sessions")
           .select(`${theirCol}, started_at`)
@@ -80,6 +82,13 @@ export const RecentActivityWidget = ({
           .eq(myCol, currentUserId)
           .gte("started_at", sinceDate)
           .order("started_at", { ascending: false }),
+        supabase
+          .from("group_video_access")
+          .select("group_id, user_id, access_granted_at")
+          .eq("user_id", currentUserId)
+          .eq("is_active", true)
+          .gte("access_granted_at", sinceDate)
+          .order("access_granted_at", { ascending: false }),
       ]);
 
       // Build a map of unique users with their interaction details
@@ -87,6 +96,7 @@ export const RecentActivityWidget = ({
         lastAt: string;
         chatCount: number;
         videoCount: number;
+        groupCallCount: number;
       }>();
 
       (chatResult.data || []).forEach((row: any) => {
@@ -97,7 +107,7 @@ export const RecentActivityWidget = ({
           existing.chatCount++;
           if (row.started_at > existing.lastAt) existing.lastAt = row.started_at;
         } else {
-          contactMap.set(id, { lastAt: row.started_at, chatCount: 1, videoCount: 0 });
+          contactMap.set(id, { lastAt: row.started_at, chatCount: 1, videoCount: 0, groupCallCount: 0 });
         }
       });
 
@@ -109,7 +119,7 @@ export const RecentActivityWidget = ({
           existing.videoCount++;
           if (row.started_at > existing.lastAt) existing.lastAt = row.started_at;
         } else {
-          contactMap.set(id, { lastAt: row.started_at, chatCount: 0, videoCount: 1 });
+          contactMap.set(id, { lastAt: row.started_at, chatCount: 0, videoCount: 1, groupCallCount: 0 });
         }
       });
 
@@ -151,10 +161,13 @@ export const RecentActivityWidget = ({
           primaryLanguage: profile?.primary_language ?? null,
           isOnline: onlineMap.get(id) ?? false,
           lastInteractionAt: info.lastAt,
-          interactionType: info.chatCount > 0 && info.videoCount > 0 ? "both" :
-                           info.videoCount > 0 ? "video" : "chat",
+          interactionType: 
+            [info.chatCount > 0, info.videoCount > 0, info.groupCallCount > 0].filter(Boolean).length > 1 ? "multiple" :
+            info.videoCount > 0 ? "video" :
+            info.groupCallCount > 0 ? "group" : "chat",
           chatCount: info.chatCount,
           videoCount: info.videoCount,
+          groupCallCount: info.groupCallCount,
         };
       });
 
@@ -232,7 +245,7 @@ export const RecentActivityWidget = ({
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Users className="h-10 w-10 mb-2 opacity-50" />
           <p className="text-sm">No recent chats or calls</p>
-          <p className="text-xs mt-1">Your 3-day chat & call history will appear here</p>
+          <p className="text-xs mt-1">Your 7-day chat, video & group call history will appear here</p>
         </div>
       ) : (
         <ScrollArea className="max-h-[350px]">
@@ -272,6 +285,11 @@ export const RecentActivityWidget = ({
                           <Video className="h-2.5 w-2.5" /> {contact.videoCount}
                         </Badge>
                       )}
+                      {contact.groupCallCount > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
+                          <Phone className="h-2.5 w-2.5" /> {contact.groupCallCount}
+                        </Badge>
+                      )}
                       <span className="text-[10px] text-muted-foreground">
                         {formatDistanceToNow(new Date(contact.lastInteractionAt), { addSuffix: true })}
                       </span>
@@ -293,6 +311,19 @@ export const RecentActivityWidget = ({
                       <MessageCircle className="h-3.5 w-3.5" />
                     )}
                     Chat
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1 text-xs h-8"
+                    disabled={!contact.isOnline}
+                    onClick={() => {
+                      // Video call - navigate or invoke callback
+                      window.dispatchEvent(new CustomEvent('start-video-call', { detail: { targetUserId: contact.userId, targetName: contact.fullName } }));
+                    }}
+                  >
+                    <Video className="h-3.5 w-3.5" />
+                    Call
                   </Button>
                 </div>
               </div>
