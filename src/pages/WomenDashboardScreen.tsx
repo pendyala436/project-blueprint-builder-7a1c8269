@@ -1334,15 +1334,6 @@ const WomenDashboardScreen = () => {
 
         {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
 
-        {/* Recent Activity - Chat/Call history from last 3 days */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.152s" }}>
-            <RecentActivityWidget
-              currentUserId={currentUserId}
-              userGender="female"
-            />
-          </div>
-        )}
 
         {/* Transaction History for Women */}
         {currentUserId && (
