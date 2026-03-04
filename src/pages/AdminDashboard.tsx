@@ -354,81 +354,84 @@ const AdminDashboard = () => {
 
   return (
     <AdminNav>
-      <div className="space-y-8">
+      <div className="space-y-4 sm:space-y-8">
         {/* Welcome Section */}
-        <div className="animate-fade-in flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and monitor the Meow Meow platform • {adminEmail}
+        <div className="animate-fade-in flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">
+              Manage & monitor • {adminEmail}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <Button 
               onClick={handleRunCleanup} 
               disabled={runningCleanup}
               variant="outline"
+              size="sm"
+              className="text-xs sm:text-sm"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {runningCleanup ? "Cleaning..." : "Run Cleanup"}
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+              {runningCleanup ? "Cleaning..." : "Cleanup"}
             </Button>
             <Button 
               onClick={handleSeedSuperUsers} 
               disabled={seedingUsers}
-              className="bg-gradient-to-r from-primary to-secondary"
+              size="sm"
+              className="bg-gradient-to-r from-primary to-secondary text-xs sm:text-sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              {seedingUsers ? "Seeding..." : "Seed Super Users"}
+              <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+              {seedingUsers ? "Seeding..." : "Seed Users"}
             </Button>
           </div>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-4 bg-gradient-to-br from-info/10 to-info/5 border-info/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-info/20">
-                <Users className="w-5 h-5 text-info" />
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-info/10 to-info/5 border-info/20">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-info/20">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-info" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.totalUsers}</p>
-                <p className="text-xs text-muted-foreground">Total Users</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-success/20">
-                <TrendingUp className="w-5 h-5 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.onlineUsers}</p>
-                <p className="text-xs text-muted-foreground">Online Now</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.totalUsers}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Total Users</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-secondary/20">
-                <MessageCircle className="w-5 h-5 text-secondary" />
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-success/20">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.activeChats}</p>
-                <p className="text-xs text-muted-foreground">Active Chats</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.onlineUsers}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Online Now</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-success/20">
-                <DollarSign className="w-5 h-5 text-success" />
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-secondary/20">
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">₹{stats.todayEarnings}</p>
-                <p className="text-xs text-muted-foreground">Today's Revenue</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">{stats.activeChats}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Active Chats</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-success/20">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold">₹{stats.todayEarnings}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenue</p>
               </div>
             </div>
           </Card>
@@ -436,34 +439,34 @@ const AdminDashboard = () => {
 
         {/* Admin Modules Grid */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Admin Modules</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Admin Modules</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {adminModules.map((module) => (
               <Card
                 key={module.path}
                 className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/30"
                 onClick={() => navigate(module.path)}
               >
-                <CardContent className="p-5">
+                <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${module.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br ${module.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
                       {module.icon}
                     </div>
                     {module.badge && (
-                      <Badge variant="destructive" className="text-xs">
+                      <Badge variant="destructive" className="text-[10px] sm:text-xs">
                         {module.badge}
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <div className="mt-2.5 sm:mt-4">
+                    <h3 className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors leading-tight">
                       {module.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-[10px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 hidden sm:block">
                       {module.description}
                     </p>
                   </div>
-                  <div className="mt-4 flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="mt-2 sm:mt-4 hidden sm:flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     Open <ChevronRight className="w-4 h-4 ml-1" />
                   </div>
                 </CardContent>
@@ -479,27 +482,29 @@ const AdminDashboard = () => {
 
         {/* Alerts Section */}
         {(stats.pendingApprovals > 0 || stats.policyAlerts > 0) && (
-          <Card className="p-6 bg-gradient-to-r from-warning/10 to-warning/10 border-warning/20 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-warning/20">
-                <Bell className="w-6 h-6 text-warning" />
+          <Card className="p-3 sm:p-6 bg-gradient-to-r from-warning/10 to-warning/10 border-warning/20 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-warning/20 shrink-0">
+                  <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base text-foreground">Pending Actions</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {stats.pendingApprovals > 0 && `${stats.pendingApprovals} approvals. `}
+                    {stats.policyAlerts > 0 && `${stats.policyAlerts} alerts.`}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Pending Actions Required</h3>
-                <p className="text-sm text-muted-foreground">
-                  {stats.pendingApprovals > 0 && `${stats.pendingApprovals} user approvals pending. `}
-                  {stats.policyAlerts > 0 && `${stats.policyAlerts} policy alerts to review.`}
-                </p>
-              </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 {stats.pendingApprovals > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => navigate("/admin/users")}>
-                    Review Users
+                  <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate("/admin/users")}>
+                    Review
                   </Button>
                 )}
                 {stats.policyAlerts > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => navigate("/admin/policy-alerts")}>
-                    View Alerts
+                  <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate("/admin/policy-alerts")}>
+                    Alerts
                   </Button>
                 )}
               </div>
