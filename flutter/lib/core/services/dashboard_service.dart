@@ -607,14 +607,14 @@ class DashboardService {
 
       if (response != null) {
         return (
-          ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 10,
-          videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 15,
-          womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 5,
+          ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 4,
+          videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 8,
+          womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2,
         );
       }
-      return (ratePerMinute: 10, videoRatePerMinute: 15, womenEarningRate: 5);
+      return (ratePerMinute: 4, videoRatePerMinute: 8, womenEarningRate: 2);
     } catch (e) {
-      return (ratePerMinute: 10, videoRatePerMinute: 15, womenEarningRate: 5);
+      return (ratePerMinute: 4, videoRatePerMinute: 8, womenEarningRate: 2);
     }
   }
 
