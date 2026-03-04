@@ -125,13 +125,38 @@ except:
     # ---- Resource Usage ----
     echo -e "${BOLD}💻 Resources${NC}"
     
+    # CPU utilization (average across all cores)
+    CPU_PERCENT=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}' | cut -d. -f1 2>/dev/null || echo "0")
+    echo "  CPU Usage:    ${CPU_PERCENT}%"
+    
+    # Memory utilization
+    MEM_PERCENT=$(free | awk '/^Mem:/ {printf "%.0f", $3/$2 * 100}' 2>/dev/null || echo "0")
+    MEM_INFO=$(free -h | awk '/^Mem:/ {printf "%s / %s (%s free)", $3, $2, $4}')
+    echo "  Memory:       $MEM_INFO (${MEM_PERCENT}%)"
+    
     # System load
     LOAD=$(uptime | awk -F'load average:' '{print $2}' | xargs)
     echo "  System Load:  $LOAD"
     
-    # Memory
-    MEM_INFO=$(free -h | awk '/^Mem:/ {printf "%s / %s (%s free)", $3, $2, $4}')
-    echo "  Memory:       $MEM_INFO"
+    # ---- Circuit Breaker: Auto-trip if CPU or Memory > 95% ----
+    SUPABASE_URL="${SUPABASE_URL:-}"
+    SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
+    
+    if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+        if [ "$CPU_PERCENT" -gt 95 ] || [ "$MEM_PERCENT" -gt 95 ]; then
+            echo -e "  ${RED}${BOLD}⚠ CRITICAL: Resource utilization > 95% — Tripping circuit breaker!${NC}"
+            curl -sf -X POST "${SUPABASE_URL}/functions/v1/video-call-circuit-breaker" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+                -d "{\"action\":\"report_high_utilization\",\"cpu_percent\":${CPU_PERCENT},\"memory_percent\":${MEM_PERCENT},\"source\":\"webrtc-monitor\"}" \
+                > /dev/null 2>&1
+            echo -e "  ${RED}Video calls disabled for 2 hours${NC}"
+        else
+            echo -e "  ${GREEN}✓ Resources within safe limits${NC}"
+        fi
+    else
+        echo -e "  ${DIM}Set SUPABASE_URL and SUPABASE_ANON_KEY to enable circuit breaker${NC}"
+    fi
     
     # Docker container stats
     if sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q srs-server; then

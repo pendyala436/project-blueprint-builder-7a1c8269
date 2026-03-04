@@ -262,6 +262,41 @@ serve(async (req) => {
       }
     }
 
+    // --- Circuit Breaker Check for new call actions ---
+    const NEW_CALL_ACTIONS = ['srs_publish', 'create_room'];
+    if (NEW_CALL_ACTIONS.includes(action)) {
+      const { data: breakerSetting } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'video_call_circuit_breaker')
+        .maybeSingle();
+
+      if (breakerSetting) {
+        let bState: { active?: boolean; resumes_at?: string } = {};
+        try {
+          bState = typeof breakerSetting.setting_value === 'string'
+            ? JSON.parse(breakerSetting.setting_value)
+            : breakerSetting.setting_value as typeof bState;
+        } catch { /* ignore */ }
+
+        if (bState.active) {
+          const resumeTime = bState.resumes_at ? new Date(bState.resumes_at).getTime() : Infinity;
+          if (Date.now() < resumeTime) {
+            console.log(`[VideoCallServer] Circuit breaker active — blocking ${action}`);
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: 'Video calls are temporarily disabled due to high server load. Please try again later.',
+                error_code: 'CIRCUIT_BREAKER_ACTIVE',
+                resumes_at: bState.resumes_at,
+              }),
+              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      }
+    }
+
     switch (action) {
       // SRS WebRTC Publish
       case 'srs_publish': {
