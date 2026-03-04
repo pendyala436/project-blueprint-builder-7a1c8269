@@ -172,7 +172,8 @@ const AuthScreen = () => {
       }
 
       if (!authData.user) {
-        navigate("/welcome-tutorial");
+        toast({ title: "Login", description: "Login failed. Please try again.", variant: "destructive" });
+        setIsLoading(false);
         return;
       }
 
