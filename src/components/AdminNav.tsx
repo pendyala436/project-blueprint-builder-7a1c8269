@@ -195,7 +195,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
         {/* Main Content */}
         <main className="flex-1 lg:pl-64">
-          <div className="p-6">
+          <div className="p-3 sm:p-4 md:p-6">
             {children}
           </div>
         </main>
