@@ -1080,12 +1080,6 @@ const DashboardScreen = () => {
       action: () => navigate("/match-discovery")
     },
     { 
-      icon: <Gift className="w-6 h-6" />, 
-      label: t('gifts', 'Send Gift'), 
-      color: "from-rose-500 to-pink-400",
-      action: () => navigate("/gift-sending")
-    },
-    { 
       icon: <UserCircle className="w-6 h-6" />, 
       label: t('profile', 'My Profile'), 
       color: "from-violet-500 to-purple-400",
