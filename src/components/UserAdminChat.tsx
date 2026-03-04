@@ -133,14 +133,14 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all',
+          'fixed bottom-20 right-3 z-40 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center transition-all',
           'bg-primary text-primary-foreground hover:scale-105 active:scale-95',
           isOpen && 'hidden'
         )}
       >
-        <Shield className="h-6 w-6" />
+        <Shield className="h-5 w-5 sm:h-6 sm:w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-destructive text-destructive-foreground text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold">
             {unreadCount}
           </span>
         )}
@@ -148,14 +148,14 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-4 right-4 z-50 w-80 sm:w-96 max-h-[500px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-2 right-2 left-2 sm:left-auto sm:right-4 sm:bottom-4 z-50 sm:w-96 max-h-[85vh] sm:max-h-[500px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
+          <div className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 bg-primary text-primary-foreground">
             <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
               <div>
-                <p className="font-semibold text-sm">Contact Admin</p>
-                <p className="text-xs opacity-80">Messages kept for 1 week</p>
+                <p className="font-semibold text-xs sm:text-sm">Contact Admin</p>
+                <p className="text-[10px] sm:text-xs opacity-80">Messages kept for 1 week</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="p-1 rounded-full hover:bg-white/20 transition-colors">
@@ -164,32 +164,32 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 max-h-[340px] p-3">
+          <ScrollArea className="flex-1 max-h-[50vh] sm:max-h-[340px] p-2.5 sm:p-3">
             <div className="space-y-2">
               {messages.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Send a message to Admin</p>
-                  <p className="text-xs">We'll respond as soon as possible</p>
+                <div className="text-center py-6 text-muted-foreground">
+                  <MessageCircle className="h-7 w-7 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs sm:text-sm">Send a message to Admin</p>
+                  <p className="text-[10px] sm:text-xs">We'll respond as soon as possible</p>
                 </div>
               )}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(
-                    'max-w-[85%] p-2.5 rounded-xl text-sm',
+                    'max-w-[85%] p-2 sm:p-2.5 rounded-xl text-xs sm:text-sm',
                     msg.sender_role === 'user'
                       ? 'ml-auto bg-primary text-primary-foreground rounded-br-sm'
                       : 'mr-auto bg-muted rounded-bl-sm'
                   )}
                 >
                   {msg.sender_role === 'admin' && (
-                    <p className="text-xs font-semibold mb-0.5 flex items-center gap-1">
-                      <Shield className="h-3 w-3" /> Admin
+                    <p className="text-[10px] sm:text-xs font-semibold mb-0.5 flex items-center gap-1">
+                      <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Admin
                     </p>
                   )}
-                  <p>{msg.message}</p>
-                  <p className="text-xs opacity-60 mt-1">
+                  <p className="break-words">{msg.message}</p>
+                  <p className="text-[9px] sm:text-xs opacity-60 mt-1">
                     {format(new Date(msg.created_at), 'MMM dd, hh:mm a')}
                   </p>
                 </div>
@@ -199,13 +199,13 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
           </ScrollArea>
 
           {/* Input */}
-          <div className="p-3 border-t border-border flex gap-2">
+          <div className="p-2 sm:p-3 border-t border-border flex gap-1.5 sm:gap-2">
             <Textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
               rows={1}
-              className="resize-none flex-1 min-h-[40px] max-h-[80px]"
+              className="resize-none flex-1 min-h-[36px] max-h-[72px] text-xs sm:text-sm"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -215,11 +215,11 @@ export function UserAdminChat({ currentUserId, userName }: UserAdminChatProps) {
             />
             <Button
               size="icon"
-              className="shrink-0 h-10 w-10"
+              className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
               onClick={sendMessage}
               disabled={!newMessage.trim() || isSending}
             >
-              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>

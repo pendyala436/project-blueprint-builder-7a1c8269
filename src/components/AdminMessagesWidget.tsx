@@ -146,14 +146,14 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
   if (messages.length === 0) return null;
 
   return (
-    <Card className="border-border bg-card">
-      <CardHeader className="pb-2 px-3 sm:px-4 pt-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
-            <Megaphone className="h-4 w-4 text-primary" />
-            Admin Messages
+    <Card className="border-border bg-card overflow-hidden max-w-full">
+      <CardHeader className="pb-2 px-2.5 sm:px-4 pt-2.5 sm:pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 text-foreground min-w-0">
+            <Megaphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
+            <span className="truncate">Admin Messages</span>
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 min-w-[16px]">
+              <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1 py-0 h-3.5 sm:h-4 min-w-[14px]">
                 {unreadCount}
               </Badge>
             )}
@@ -161,29 +161,29 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
             onClick={() => setExpanded(!expanded)}
           >
             {expanded ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             )}
           </Button>
         </div>
       </CardHeader>
 
       {expanded && (
-        <CardContent className="px-3 sm:px-4 pb-3 pt-0">
-          <ScrollArea className="max-h-[300px]">
-            <div className="space-y-2">
+        <CardContent className="px-2.5 sm:px-4 pb-2.5 sm:pb-3 pt-0">
+          <ScrollArea className="max-h-[250px] sm:max-h-[300px]">
+            <div className="space-y-1.5 sm:space-y-2">
               {messages.map((msg) => {
                 const isExpanded = expandedMessageId === msg.id;
                 return (
                   <div
                     key={msg.id}
                     className={cn(
-                      "p-2.5 rounded-lg border transition-all cursor-pointer",
+                      "p-2 sm:p-2.5 rounded-lg border transition-all cursor-pointer",
                       msg.is_read
                         ? "border-border bg-muted/30"
                         : "border-primary/40 bg-primary/5"
@@ -193,43 +193,43 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
                       setExpandedMessageId(isExpanded ? null : msg.id);
                     }}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-1.5 sm:gap-2">
                       <div className={cn(
-                        "mt-0.5 shrink-0 rounded-full p-1",
+                        "mt-0.5 shrink-0 rounded-full p-0.5 sm:p-1",
                         msg.is_broadcast ? "bg-primary/10" : "bg-accent/10"
                       )}>
                         {msg.is_broadcast ? (
-                          <Megaphone className="h-3 w-3 text-primary" />
+                          <Megaphone className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary" />
                         ) : (
-                          <Mail className="h-3 w-3 text-accent-foreground" />
+                          <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-accent-foreground" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center justify-between gap-1.5">
                           <p className={cn(
-                            "text-xs font-medium truncate",
+                            "text-[11px] sm:text-xs font-medium truncate",
                             msg.is_read ? "text-foreground" : "text-foreground font-semibold"
                           )}>
                             {msg.subject}
                           </p>
                           {!msg.is_read && (
-                            <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-primary shrink-0" />
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-muted-foreground shrink-0" />
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground">
                             {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                           </span>
                           <Badge
                             variant="secondary"
-                            className="text-[9px] px-1 py-0 h-3.5"
+                            className="text-[8px] sm:text-[9px] px-1 py-0 h-3 sm:h-3.5"
                           >
                             {msg.is_broadcast ? "Broadcast" : "Direct"}
                           </Badge>
                         </div>
                         {isExpanded && (
-                          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap leading-relaxed">
+                          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap leading-relaxed break-words">
                             {msg.message}
                           </p>
                         )}
