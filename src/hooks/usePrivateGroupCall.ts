@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatPricing } from './useChatPricing';
 import { toast } from 'sonner';
 
-export const MAX_PARTICIPANTS = 50;
+export const MAX_PARTICIPANTS = 100;
 export const MAX_DURATION_MINUTES = 0; // No time limit
 export const BILLING_INTERVAL_SECONDS = 60; // Bill every minute
 

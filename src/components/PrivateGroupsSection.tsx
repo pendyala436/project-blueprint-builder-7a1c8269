@@ -15,6 +15,12 @@ const FLOWER_EMOJIS: Record<string, string> = {
   Lily: '🌸',
   Jasmine: '🌼',
   Orchid: '🌺',
+  Sunflower: '🌻',
+  Tulip: '🌷',
+  Lotus: '🪷',
+  Daisy: '🌼',
+  Lavender: '💜',
+  Marigold: '🏵️',
 };
 
 interface PrivateGroup {
