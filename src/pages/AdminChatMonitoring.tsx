@@ -34,7 +34,9 @@ import {
   Globe,
   EyeOff,
   Languages,
-  Home
+  Home,
+  Video,
+  Radio,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -109,10 +111,22 @@ const AdminChatMonitoring = () => {
   const [languageGroups, setLanguageGroups] = useState<{ id: string; name: string; languages: string[] }[]>([]);
   const [loadingChats, setLoadingChats] = useState(false);
 
+  // Video call monitoring states
+  const [activeVideoCalls, setActiveVideoCalls] = useState<any[]>([]);
+  const [loadingVideoCalls, setLoadingVideoCalls] = useState(false);
+
+  // Private group monitoring states
+  const [liveGroups, setLiveGroups] = useState<any[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [monitoringGroupId, setMonitoringGroupId] = useState<string | null>(null);
+  const [groupMessages, setGroupMessages] = useState<any[]>([]);
+
   useEffect(() => {
     loadMessages();
     loadActiveChats();
     loadLanguageGroups();
+    loadActiveVideoCalls();
+    loadLiveGroups();
     
     // Subscribe to real-time updates
     const channel = supabase
@@ -140,6 +154,23 @@ const AdminChatMonitoring = () => {
         },
         () => {
           loadActiveChats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'video_call_sessions' },
+        () => { loadActiveVideoCalls(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'private_groups' },
+        () => { loadLiveGroups(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'group_messages' },
+        () => {
+          if (monitoringGroupId) loadGroupMessages(monitoringGroupId);
         }
       )
       .subscribe();
@@ -296,6 +327,121 @@ const AdminChatMonitoring = () => {
     } catch (error) {
       console.error("Error loading language groups:", error);
     }
+  };
+
+  // Load active video calls for silent monitoring
+  const loadActiveVideoCalls = async () => {
+    setLoadingVideoCalls(true);
+    try {
+      const { data: sessions, error } = await supabase
+        .from("video_call_sessions")
+        .select("*")
+        .in("status", ["active", "ringing"])
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      if (!sessions || sessions.length === 0) {
+        setActiveVideoCalls([]);
+        return;
+      }
+
+      const userIds = new Set<string>();
+      sessions.forEach((s: any) => {
+        userIds.add(s.man_user_id);
+        userIds.add(s.woman_user_id);
+      });
+
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, country, primary_language")
+        .in("user_id", Array.from(userIds));
+
+      const profileMap = new Map<string, any>();
+      profilesData?.forEach((p: any) => profileMap.set(p.user_id, p));
+
+      const enriched = sessions.map((s: any) => ({
+        ...s,
+        man_name: profileMap.get(s.man_user_id)?.full_name || "Unknown",
+        woman_name: profileMap.get(s.woman_user_id)?.full_name || "Unknown",
+        man_country: profileMap.get(s.man_user_id)?.country || "Unknown",
+        woman_country: profileMap.get(s.woman_user_id)?.country || "Unknown",
+      }));
+
+      setActiveVideoCalls(enriched);
+    } catch (error) {
+      console.error("Error loading video calls:", error);
+    } finally {
+      setLoadingVideoCalls(false);
+    }
+  };
+
+  // Load live private groups for silent monitoring
+  const loadLiveGroups = async () => {
+    setLoadingGroups(true);
+    try {
+      const { data, error } = await supabase
+        .from("private_groups")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_live", true)
+        .not("current_host_id", "is", null)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setLiveGroups(data || []);
+    } catch (error) {
+      console.error("Error loading live groups:", error);
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  // Load group messages for silent monitoring
+  const loadGroupMessages = async (groupId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("group_messages")
+        .select("*")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
+
+      const userIds = new Set<string>();
+      data?.forEach((m: any) => userIds.add(m.sender_id));
+
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", Array.from(userIds));
+
+      const profileMap = new Map<string, string>();
+      profilesData?.forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+
+      const enriched = (data || []).map((m: any) => ({
+        ...m,
+        sender_name: profileMap.get(m.sender_id) || "Unknown",
+      }));
+
+      setGroupMessages(enriched);
+    } catch (error) {
+      console.error("Error loading group messages:", error);
+    }
+  };
+
+  const startGroupMonitoring = (groupId: string) => {
+    setMonitoringGroupId(groupId);
+    loadGroupMessages(groupId);
+    toast({
+      title: "Silent Monitoring Started",
+      description: "You are now silently monitoring this group's chat",
+    });
+  };
+
+  const stopGroupMonitoring = () => {
+    setMonitoringGroupId(null);
+    setGroupMessages([]);
   };
 
   const loadSilentMonitorMessages = async (chatId: string) => {
@@ -652,14 +798,22 @@ const AdminChatMonitoring = () => {
         </div>
 
         <Tabs defaultValue="messages" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="messages" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Messages
             </TabsTrigger>
             <TabsTrigger value="monitoring" className="gap-2">
               <EyeOff className="h-4 w-4" />
-              Silent Monitor
+              Chat Monitor
+            </TabsTrigger>
+            <TabsTrigger value="video-monitor" className="gap-2">
+              <Video className="h-4 w-4" />
+              Video Monitor
+            </TabsTrigger>
+            <TabsTrigger value="group-monitor" className="gap-2">
+              <Radio className="h-4 w-4" />
+              Group Monitor
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -957,6 +1111,207 @@ const AdminChatMonitoring = () => {
                   </div>
                 </ScrollArea>
               </>
+            )}
+          </TabsContent>
+
+          {/* Video Call Silent Monitor Tab */}
+          <TabsContent value="video-monitor" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Video className="h-5 w-5 text-primary" />
+                    Active Video Calls ({activeVideoCalls.length})
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={loadActiveVideoCalls} className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </Button>
+                </div>
+                <CardDescription>
+                  Silently monitor active 1-on-1 video calls. Participants cannot see you.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingVideoCalls ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                  </div>
+                ) : activeVideoCalls.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Video className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">No active video calls at the moment</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[500px]">
+                    <div className="space-y-3">
+                      {activeVideoCalls.map((call: any) => (
+                        <Card key={call.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="gap-1">
+                                    <User className="h-3 w-3" />
+                                    {call.man_name}
+                                  </Badge>
+                                  <span className="text-muted-foreground">↔</span>
+                                  <Badge variant="secondary" className="gap-1">
+                                    <User className="h-3 w-3" />
+                                    {call.woman_name}
+                                  </Badge>
+                                  <Badge className="bg-destructive/20 text-destructive gap-1">
+                                    <Video className="h-3 w-3" />
+                                    {call.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Globe className="h-3 w-3" />
+                                    {call.man_country} ↔ {call.woman_country}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Started: {call.started_at ? format(new Date(call.started_at), "HH:mm:ss") : "N/A"}
+                                  </span>
+                                  {call.rate_per_minute && (
+                                    <span>₹{call.rate_per_minute}/min</span>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="gap-1">
+                                <EyeOff className="h-3 w-3" />
+                                Monitored
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Private Group Silent Monitor Tab */}
+          <TabsContent value="group-monitor" className="space-y-4">
+            {monitoringGroupId ? (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <EyeOff className="h-5 w-5 text-primary" />
+                      Silent Group Monitoring Active
+                    </CardTitle>
+                    <Button variant="destructive" size="sm" onClick={stopGroupMonitoring}>
+                      Stop Monitoring
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Group: {liveGroups.find((g: any) => g.id === monitoringGroupId)?.name || monitoringGroupId} — Messages update in real-time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px] border rounded-lg p-4 bg-muted/30">
+                    <div className="space-y-3">
+                      {groupMessages.map((msg: any) => (
+                        <div
+                          key={msg.id}
+                          className="p-3 rounded-lg max-w-[80%] bg-muted"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {msg.sender_name}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(msg.created_at), "HH:mm:ss")}
+                            </span>
+                          </div>
+                          <p className="text-sm">{msg.message}</p>
+                        </div>
+                      ))}
+                      {groupMessages.length === 0 && (
+                        <p className="text-center text-muted-foreground py-8">
+                          No messages in this group yet
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Radio className="h-5 w-5 text-primary" />
+                      Live Private Groups ({liveGroups.length})
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={loadLiveGroups} className="gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      Refresh
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Silently monitor active private group calls and their chat messages. Not visible to participants.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingGroups ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  ) : liveGroups.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Radio className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No private groups are live at the moment</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="max-h-[500px]">
+                      <div className="space-y-3">
+                        {liveGroups.map((group: any) => (
+                          <Card key={group.id} className="hover:shadow-md transition-shadow border-destructive/30">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xl">{group.name === "Rose" ? "🌹" : group.name === "Lily" ? "🌸" : group.name === "Jasmine" ? "🌼" : group.name === "Orchid" ? "🌺" : "🌸"}</span>
+                                    <span className="font-semibold">{group.name}</span>
+                                    <Badge variant="destructive" className="gap-1 animate-pulse">
+                                      <Radio className="h-3 w-3" />
+                                      LIVE
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      Host: {group.current_host_name || "Unknown"}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <Users className="h-3 w-3" />
+                                      {group.participant_count} participants
+                                    </span>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2"
+                                  onClick={() => startGroupMonitoring(group.id)}
+                                >
+                                  <EyeOff className="h-4 w-4" />
+                                  Monitor Chat
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 

@@ -79,6 +79,8 @@ import {
   Eye,
   ExternalLink,
   Home,
+  Crown,
+  Loader2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
@@ -190,6 +192,7 @@ const AdminUserManagement = () => {
   });
   
   const [runningAI, setRunningAI] = useState(false);
+  const [assigningBadge, setAssigningBadge] = useState<string | null>(null);
 
   const checkAdminAccess = async () => {
     try {
@@ -700,6 +703,65 @@ const AdminUserManagement = () => {
     }
   };
 
+  // Golden Badge assignment
+  const handleToggleGoldenBadge = async (user: UserProfile) => {
+    setAssigningBadge(user.user_id);
+    try {
+      // Check if user already has an active golden badge
+      const { data: existing } = await supabase
+        .from("golden_badge_subscriptions")
+        .select("id, status")
+        .eq("user_id", user.user_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (existing) {
+        // Revoke: set status to expired
+        const { error } = await supabase
+          .from("golden_badge_subscriptions")
+          .update({ status: "expired", expires_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+
+        // Update female_profiles
+        await supabase
+          .from("female_profiles")
+          .update({ has_golden_badge: false, golden_badge_expires_at: null })
+          .eq("user_id", user.user_id);
+
+        toast.success(`Golden Badge revoked from ${user.full_name || "user"}`);
+      } else {
+        // Assign: create 30-day subscription (admin grant, ₹0)
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        const { error } = await supabase
+          .from("golden_badge_subscriptions")
+          .insert({
+            user_id: user.user_id,
+            status: "active",
+            amount: 0,
+            purchased_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+          });
+        if (error) throw error;
+
+        // Update female_profiles
+        await supabase
+          .from("female_profiles")
+          .update({ has_golden_badge: true, golden_badge_expires_at: expiresAt.toISOString() })
+          .eq("user_id", user.user_id);
+
+        toast.success(`Golden Badge assigned to ${user.full_name || "user"} for 30 days`);
+      }
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error toggling golden badge:", error);
+      toast.error(error.message || "Failed to toggle golden badge");
+    } finally {
+      setAssigningBadge(null);
+    }
+  };
   // Update language group max women
   const handleUpdateLanguageGroupLimit = async () => {
     if (!selectedLanguageGroup || !maxWomenInput) return;
@@ -1176,9 +1238,18 @@ const AdminUserManagement = () => {
                                   
                                   {/* View KYC (only for women) */}
                                   {user.gender?.toLowerCase() === "female" && (
-                                    <DropdownMenuItem onClick={() => handleViewKYC(user)}>
-                                      <FileText className="h-4 w-4 mr-2" /> View KYC
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem onClick={() => handleViewKYC(user)}>
+                                        <FileText className="h-4 w-4 mr-2" /> View KYC
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem 
+                                        onClick={() => handleToggleGoldenBadge(user)}
+                                        disabled={assigningBadge === user.user_id}
+                                      >
+                                        <Crown className="h-4 w-4 mr-2 text-yellow-500" />
+                                        {assigningBadge === user.user_id ? 'Processing...' : 'Toggle Golden Badge'}
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                   
                                   {/* Send Message */}
