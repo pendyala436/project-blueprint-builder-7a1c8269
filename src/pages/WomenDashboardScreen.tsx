@@ -178,19 +178,19 @@ const WomenDashboardScreen = () => {
     { 
       icon: <Wallet className="w-6 h-6" />, 
       label: t('withdraw', 'Earnings'), 
-      color: "from-emerald-500 to-emerald-400",
+      color: "from-primary/90 to-primary/70",
       action: () => navigate("/women-wallet")
     },
     { 
       icon: <Heart className="w-6 h-6" />, 
       label: t('matches', 'Matches'), 
-      color: "from-rose-500 to-pink-400",
+      color: "from-primary/80 to-primary/60",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <User className="w-6 h-6" />, 
       label: t('profile', 'My Profile'), 
-      color: "from-violet-500 to-purple-400",
+      color: "from-primary/70 to-primary/50",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -833,7 +833,7 @@ const WomenDashboardScreen = () => {
             } />
             {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
-                <Crown className="h-4 w-4 text-amber-500" />
+                <Crown className="h-4 w-4 text-primary" />
               </div>
             )}
           </div>
@@ -855,14 +855,14 @@ const WomenDashboardScreen = () => {
             
             {/* Wallet Balance - Always visible and prominent */}
             <div className="flex items-center gap-2 mt-2">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                <IndianRupee className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-bold text-green-600">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
+                <IndianRupee className="h-4 w-4 text-primary" />
+                <span className="text-sm font-bold text-primary">
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
               </div>
               {isPremium && (
-                <Badge variant="outline" className="text-[10px] bg-amber-500/10 border-amber-500/30 text-amber-600">
+                <Badge variant="outline" className="text-[10px] bg-primary/10 border-primary/30 text-primary">
                   <Crown className="h-2.5 w-2.5 mr-1" />
                   Premium
                 </Badge>
@@ -1017,9 +1017,9 @@ const WomenDashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-emerald-500"
+                    className="data-[state=checked]:bg-primary"
                   />
-                  <Power className={`w-4 h-4 ${isOnline ? "text-emerald-500" : "text-muted-foreground"}`} />
+                  <Power className={`w-4 h-4 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
                     {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                   </span>
@@ -1055,19 +1055,19 @@ const WomenDashboardScreen = () => {
               onClick={() => navigate("/women-wallet")}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/20">
-                  <Wallet className="w-5 h-5 text-blue-600" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <Wallet className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
-                  <p className="text-xl font-bold text-blue-600">₹{myWalletBalance.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-primary">₹{myWalletBalance.toLocaleString()}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full mt-3 gap-2 text-blue-600 border-blue-500/30 hover:bg-blue-500/10"
+                className="w-full mt-3 gap-2 text-primary border-primary/30 hover:bg-primary/10"
                 onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}
               >
                 <IndianRupee className="w-3.5 h-3.5" />
@@ -1075,30 +1075,30 @@ const WomenDashboardScreen = () => {
               </Button>
             </Card>
             {/* My Today's Earnings */}
-            <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
+            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500/20">
-                  <IndianRupee className="w-5 h-5 text-emerald-600" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <IndianRupee className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-emerald-600">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-primary">₹{myTodayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
 
             {/* Biggest Earner Today */}
-            <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-500/20">
-                  <Crown className="w-5 h-5 text-amber-600" />
+                <div className="p-2 rounded-xl bg-primary/20">
+                  <Crown className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
                   {biggestEarner ? (
                     <>
                       <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
-                      <p className="text-lg font-bold text-amber-600">₹{biggestEarner.amount.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</p>
                     </>
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
@@ -1113,15 +1113,15 @@ const WomenDashboardScreen = () => {
         {isIndianWoman && (
           <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
             {hasGoldenBadge ? (
-              <Card className="p-4 bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-500/30 shadow-lg">
+              <Card className="p-4 bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-amber-500/20">
-                    <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
+                  <div className="p-3 rounded-xl bg-primary/20">
+                    <Star className="w-6 h-6 text-primary fill-primary" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
-                      <Badge className="bg-amber-500 text-white text-[10px]">PRO</Badge>
+                      <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       You can initiate chats & video calls with Indian men who speak your language
@@ -1147,10 +1147,10 @@ const WomenDashboardScreen = () => {
                 </div>
               </Card>
             ) : (
-              <Card className="p-5 bg-gradient-to-br from-amber-500/5 to-amber-600/10 border-amber-500/20">
+              <Card className="p-5 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-amber-500/10">
-                    <Star className="w-7 h-7 text-amber-500" />
+                  <div className="p-3 rounded-xl bg-primary/10">
+                    <Star className="w-7 h-7 text-primary" />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-foreground">🌟 Golden Badge</h3>
@@ -1396,7 +1396,7 @@ const WomenDashboardScreen = () => {
         {/* Section 5: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
+            <Sparkles className="w-5 h-5 text-primary" />
             {t('quickActions', 'Quick Actions')}
           </h2>
           <div className="grid grid-cols-4 gap-2 sm:gap-3">
@@ -1432,8 +1432,8 @@ const WomenDashboardScreen = () => {
                   className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className={`p-2 rounded-full ${
-                    notification.type === "match" ? "bg-rose-500/10 text-rose-500" :
-                    notification.type === "message" ? "bg-blue-500/10 text-blue-500" :
+                    notification.type === "match" ? "bg-primary/10 text-primary" :
+                    notification.type === "message" ? "bg-primary/10 text-primary" :
                     "bg-primary/10 text-primary"
                   }`}>
                     {notification.type === "match" ? <Heart className="w-5 h-5" /> :

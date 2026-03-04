@@ -182,7 +182,7 @@ const IncomingVideoCallWindow = ({
         
         {/* Show chat pause warning */}
         {pausedChatCount > 0 && (
-          <div className="flex items-center gap-1 text-amber-400 text-xs mb-1">
+          <div className="flex items-center gap-1 text-warning text-xs mb-1">
             <PauseCircle className="w-3 h-3" />
             <span>{pausedChatCount} chat(s) will be paused</span>
           </div>

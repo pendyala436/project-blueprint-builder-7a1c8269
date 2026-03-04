@@ -170,7 +170,7 @@ const IncomingChatPopup = ({
               {partnerName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-online border-2 border-background" />
         </div>
         
         <div className="flex-1 min-w-0">
@@ -198,7 +198,7 @@ const IncomingChatPopup = ({
           </Badge>
         )}
         {userGender === "female" && (
-          <Badge className="text-xs bg-green-500/20 text-green-600 border-green-500/30">
+          <Badge className="text-xs bg-primary/20 text-primary border-primary/30">
             Start earning
           </Badge>
         )}
