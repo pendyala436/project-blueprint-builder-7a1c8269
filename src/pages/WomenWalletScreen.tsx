@@ -149,28 +149,31 @@ const WomenWalletScreen = () => {
         return sameAmount && sameDescription && isGroupBillingLine && closeInTime;
       };
 
-      // Fetch all earnings and all wallet debits for accurate balance
-      const [{ data: allEarningsData }, { data: allDebitsData }] = await Promise.all([
+      // Fetch all earnings, all wallet debits, and pending withdrawals for accurate balance
+      // Use raw totals (no dedup) — DB is source of truth for amounts
+      const [{ data: allEarningsData }, { data: allDebitsData }, { data: pendingWdData }] = await Promise.all([
         supabase
           .from("women_earnings")
-          .select("amount, description, created_at")
+          .select("amount")
           .eq("user_id", user.id),
         supabase
           .from("wallet_transactions")
           .select("amount")
           .eq("user_id", user.id)
-          .eq("type", "debit")
+          .eq("type", "debit"),
+        supabase
+          .from("withdrawal_requests")
+          .select("amount")
+          .eq("user_id", user.id)
+          .in("status", ["pending", "approved"])
       ]);
 
-      const allEarningsDeduped = [...(allEarningsData || [])]
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-        .filter((earning, index, arr) => index === 0 || !isLikelyDuplicateGroupEarning(earning, arr[index - 1]));
-
-      const total = allEarningsDeduped.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const total = allEarningsData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const totalDebits = allDebitsData?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      const totalPendingWd = pendingWdData?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
       setTotalEarnings(total);
 
-      // Fetch recent earnings for display (limited)
+      // Fetch recent earnings for display (limited, with dedup for display only)
       const { data: earningsData } = await supabase
         .from("women_earnings")
         .select("*")
@@ -198,9 +201,9 @@ const WomenWalletScreen = () => {
         .reduce((sum, w) => sum + Number(w.amount), 0) || 0;
       setPendingWithdrawals(pending);
 
-      // Available balance = total earnings - all debits (Golden Badge, etc.) - pending withdrawals
-      // Note: completed withdrawals are already in wallet_transactions as debits
-      setAvailableBalance(total - totalDebits - pending);
+      // Available balance = total earnings - all debits - pending withdrawals
+      // Consistent formula across Dashboard, Wallet, and TransactionHistory
+      setAvailableBalance(total - totalDebits - totalPendingWd);
 
     } catch (error) {
       console.error("Error loading wallet data:", error);
