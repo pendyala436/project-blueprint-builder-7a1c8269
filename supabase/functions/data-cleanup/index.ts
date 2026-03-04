@@ -408,6 +408,24 @@ Deno.serve(async (req) => {
       await supabase.rpc('cleanup_video_sessions');
 
       console.log('[Data Cleanup] Additional cleanup completed');
+
+      // --- Admin Messages Cleanup (7-day retention) ---
+      const adminMsgCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const { error: adminBroadcastErr } = await supabase
+        .from('admin_broadcast_messages')
+        .delete()
+        .lt('created_at', adminMsgCutoff.toISOString());
+      if (adminBroadcastErr) {
+        console.error('[Data Cleanup] Admin broadcast cleanup error:', adminBroadcastErr);
+      }
+      const { error: adminUserMsgErr } = await supabase
+        .from('admin_user_messages')
+        .delete()
+        .lt('created_at', adminMsgCutoff.toISOString());
+      if (adminUserMsgErr) {
+        console.error('[Data Cleanup] Admin user messages cleanup error:', adminUserMsgErr);
+      }
+      console.log('[Data Cleanup] Admin messages older than 7 days cleaned up');
     } catch (error: any) {
       console.error('[Data Cleanup] Error in additional cleanup:', error);
       results.errors.push(`Additional cleanup: ${error.message}`);

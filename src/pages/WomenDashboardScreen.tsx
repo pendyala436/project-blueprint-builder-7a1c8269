@@ -55,6 +55,7 @@ import { useWomenChatMode } from "@/hooks/useWomenChatMode";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
+import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
@@ -1512,6 +1513,11 @@ const WomenDashboardScreen = () => {
           userGender="female"
           onClose={() => setShowFriendsPanel(false)}
         />
+      )}
+
+      {/* Admin Messages */}
+      {currentUserId && (
+        <AdminMessagesWidget currentUserId={currentUserId} />
       )}
 
       {/* Admin Chat */}
