@@ -1579,14 +1579,12 @@ const DashboardScreen = () => {
                 />
                 {/* Video Call Button - India Only */}
                 {userCountry === "IN" && (
-                  <div className="w-full">
                     <VideoCallMiniButton
                       currentUserId={currentUserId}
                       userLanguage={userLanguage}
                       walletBalance={walletBalance}
                       onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
                     />
-                  </div>
                 )}
                 <Button 
                   variant="aurora" 

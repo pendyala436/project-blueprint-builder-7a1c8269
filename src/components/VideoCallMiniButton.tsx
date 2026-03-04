@@ -144,7 +144,7 @@ const VideoCallMiniButton = ({
         disabled={isSearching || !!activeCall}
         variant="aurora"
         size="lg"
-        className="gap-2"
+        className="gap-2 w-full"
       >
         {isSearching ? (
           <>
