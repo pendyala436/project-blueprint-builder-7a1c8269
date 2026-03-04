@@ -66,6 +66,7 @@ import { TransactionHistoryWidget } from "@/components/TransactionHistoryWidget"
 import { RecentActivityWidget } from "@/components/RecentActivityWidget";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
+import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 
@@ -1909,6 +1910,11 @@ const DashboardScreen = () => {
           userGender="male"
           onClose={() => setShowFriendsPanel(false)}
         />
+      )}
+
+      {/* Admin Messages */}
+      {currentUserId && (
+        <AdminMessagesWidget currentUserId={currentUserId} />
       )}
 
       {/* Admin Chat */}
