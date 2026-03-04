@@ -1071,19 +1071,19 @@ const DashboardScreen = () => {
     { 
       icon: <Compass className="w-6 h-6" />, 
       label: t('findMatch', 'Discover'), 
-      color: "from-primary to-rose-400",
+      color: "from-primary to-primary/80",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <MessageCircle className="w-6 h-6" />, 
       label: t('messages', 'Chats'), 
-      color: "from-blue-500 to-blue-400",
+      color: "from-primary/90 to-primary/70",
       action: () => navigate("/match-discovery")
     },
     { 
       icon: <UserCircle className="w-6 h-6" />, 
       label: t('profile', 'My Profile'), 
-      color: "from-violet-500 to-purple-400",
+      color: "from-primary/80 to-primary/60",
       action: () => setProfileEditOpen(true)
     },
   ];
@@ -1170,7 +1170,7 @@ const DashboardScreen = () => {
                         description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                       });
                     }}
-                    className="data-[state=checked]:bg-emerald-500"
+                    className="data-[state=checked]:bg-primary"
                   />
                   <Power className={`w-4 h-4 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
                   <span className="text-sm text-muted-foreground">
@@ -1203,7 +1203,7 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Globe2 className="w-5 h-5 text-emerald-500" />
+              <Globe2 className="w-5 h-5 text-primary" />
               {t('onlineWomen', 'Women Online')}
               <Badge variant="outline" className="text-[10px] font-normal">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
             </h2>
@@ -1513,10 +1513,10 @@ const DashboardScreen = () => {
         {/* Section 3: Key Stats */}
         <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-4 text-center bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 hover:shadow-lg transition-all">
+          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
             <div className="flex flex-col items-center gap-2">
-              <div className="p-2.5 rounded-full bg-emerald-500/15">
-                <Users className="w-5 h-5 text-emerald-500" />
+              <div className="p-2.5 rounded-full bg-primary/15">
+                <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
@@ -1539,10 +1539,10 @@ const DashboardScreen = () => {
           </Card>
 
           {/* Notifications */}
-          <Card className="p-4 text-center bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20 hover:shadow-lg transition-all">
+          <Card className="p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
             <div className="flex flex-col items-center gap-2">
-              <div className="p-2.5 rounded-full bg-amber-500/15">
-                <BellRing className="w-5 h-5 text-amber-500" />
+              <div className="p-2.5 rounded-full bg-primary/15">
+                <BellRing className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
@@ -1609,7 +1609,7 @@ const DashboardScreen = () => {
         {/* Section 4: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber-500" />
+            <Zap className="w-5 h-5 text-primary" />
             {t('quickActions', 'Quick Actions')}
           </h2>
           <div className="grid grid-cols-4 gap-2 sm:gap-3">
@@ -1783,9 +1783,9 @@ const DashboardScreen = () => {
                       htmlFor={`gateway-${gateway.id}`}
                       className={cn(
                         "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20",
+                        "hover:border-primary/50 hover:bg-primary/5",
                         selectedGateway === gateway.id
-                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
+                          ? "border-primary bg-primary/10"
                           : "border-border"
                       )}
                     >
@@ -1793,7 +1793,7 @@ const DashboardScreen = () => {
                       <span className="font-semibold text-sm">{gateway.name}</span>
                       <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
                       {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-orange-500" />
+                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
                       )}
                     </Label>
                   </div>
