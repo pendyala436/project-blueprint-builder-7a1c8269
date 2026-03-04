@@ -214,15 +214,12 @@ const TransactionHistoryScreen = () => {
         if (gender === 'male') {
           setCurrentBalance(walletBalance);
         } else {
-          const [{ data: allEarnings }, { data: allDebits }, { data: pendingWd }] = await Promise.all([
-            supabase.from("women_earnings").select("amount").eq("user_id", user.id),
-            supabase.from("wallet_transactions").select("amount").eq("user_id", user.id).eq("type", "debit"),
-            supabase.from("withdrawal_requests").select("amount").eq("user_id", user.id).in("status", ["pending", "approved"])
-          ]);
-          const totalEarnings = allEarnings?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
-          const totalDebits = allDebits?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-          const totalPending = pendingWd?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
-          setCurrentBalance(totalEarnings - totalDebits - totalPending);
+          // Use server-side RPC to avoid 1000-row limit
+          const { data: balanceRpc } = await supabase.rpc('get_women_wallet_balance', {
+            p_user_id: user.id
+          });
+          const bd = balanceRpc as Record<string, number> | null;
+          setCurrentBalance(Number(bd?.available_balance) || 0);
         }
 
         // Fetch ALL wallet transactions (no limit)
