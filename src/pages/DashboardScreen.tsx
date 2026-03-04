@@ -1103,9 +1103,9 @@ const DashboardScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm">
-        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/20 shadow-sm">
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <MeowLogo size="sm" />
             <div className="hidden sm:block">
               <p className="text-sm font-semibold text-foreground leading-tight">Meow Meow</p>
@@ -1113,41 +1113,41 @@ const DashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-0.5">
             {/* Notifications */}
             <button 
-              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
               title="Notifications"
             >
-              <BellRing className="w-5 h-5 text-foreground/70" />
+              <BellRing className="w-[18px] h-[18px] text-foreground/70" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
               )}
             </button>
 
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowFriendsPanel(true)}
               title="Friends & Blocked Users"
             >
-              <Users2 className="w-5 h-5 text-foreground/70" />
+              <Users2 className="w-[18px] h-[18px] text-foreground/70" />
             </button>
 
             {/* Settings */}
             <button 
-              className="p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => navigate('/settings')}
             >
-              <Settings className="w-5 h-5 text-foreground/70" />
+              <Settings className="w-[18px] h-[18px] text-foreground/70" />
             </button>
 
             {/* Logout */}
             <button 
-              className="p-2.5 rounded-xl hover:bg-destructive/10 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-destructive/10 transition-all duration-200"
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5 text-destructive/70" />
+              <LogOut className="w-[18px] h-[18px] text-destructive/70" />
             </button>
           </div>
         </div>
@@ -1155,14 +1155,14 @@ const DashboardScreen = () => {
 
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="px-3 py-3 space-y-4 sm:max-w-4xl sm:mx-auto sm:px-6 sm:py-8 sm:space-y-8">
         {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
-          <div className="flex flex-col gap-3 mb-4">
-            <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-2 mb-3">
+            <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <div className="flex items-center gap-1">
                     <Switch
                       checked={isOnline}
                       onCheckedChange={(checked) => {
@@ -1172,24 +1172,24 @@ const DashboardScreen = () => {
                           description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
                         });
                       }}
-                      className="data-[state=checked]:bg-primary"
+                      className="data-[state=checked]:bg-primary scale-90"
                     />
-                    <Power className={`w-4 h-4 shrink-0 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
-                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                    <Power className={`w-3.5 h-3.5 shrink-0 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
+                    <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                       {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                     </span>
                   </div>
-                  <Badge className={cn("text-[10px] sm:text-xs text-white flex items-center gap-1", getStatusColor())}>
-                    <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
+                  <Badge className={cn("text-[9px] px-1.5 py-0.5 text-white flex items-center gap-0.5", getStatusColor())}>
+                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", 
                       activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
                     )} />
                     {getStatusText()}
                   </Badge>
                 </div>
-                <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
+                <h1 className="text-base sm:text-3xl font-bold text-foreground leading-tight">
                   {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
                 </h1>
-                <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                <p className="text-xs sm:text-base text-muted-foreground mt-0.5">
                   {t('readyToConnect', 'Ready to make new connections today?')}
                 </p>
               </div>
@@ -1204,21 +1204,21 @@ const DashboardScreen = () => {
 
         {/* Section 2: Online Women */}
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Globe2 className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
+              <Globe2 className="w-4 h-4 text-primary" />
               {t('onlineWomen', 'Women Online')}
-              <Badge variant="outline" className="text-[10px] font-normal">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
+              <Badge variant="outline" className="text-[9px] font-normal ml-1">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => fetchOnlineWomen(userLanguage)}
               disabled={loadingOnlineWomen}
-              className="gap-1"
+              className="gap-1 h-7 text-xs px-2"
             >
-              <RefreshCw className={cn("w-4 h-4", loadingOnlineWomen && "animate-spin")} />
-              {t('refresh', 'Refresh')}
+              <RefreshCw className={cn("w-3.5 h-3.5", loadingOnlineWomen && "animate-spin")} />
+              Refresh
             </Button>
           </div>
 
@@ -1418,23 +1418,23 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Matches Section - Women this man has matched with */}
+        {/* Matches Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.07s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Heart className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
+              <Heart className="w-4 h-4 text-primary" />
               {t('yourMatches', 'Your Matches')}
-              <span className="text-xs text-muted-foreground">({matchedWomen.length})</span>
+              <span className="text-[10px] text-muted-foreground">({matchedWomen.length})</span>
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => currentUserId && fetchMatchedWomen(currentUserId)}
               disabled={loadingMatches}
-              className="gap-1"
+              className="gap-1 h-7 text-xs px-2"
             >
-              <RefreshCw className={cn("w-4 h-4", loadingMatches && "animate-spin")} />
-              {t('refresh', 'Refresh')}
+              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
+              Refresh
             </Button>
           </div>
 
@@ -1443,18 +1443,18 @@ const DashboardScreen = () => {
               <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
           ) : matchedWomen.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 sm:gap-3 max-h-[350px] overflow-y-auto pr-1">
               {matchedWomen.map((woman) => (
                 <Card
                   key={woman.matchId}
-                  className="p-3 hover:shadow-lg transition-all cursor-pointer group border-primary/20"
+                  className="p-2.5 hover:shadow-lg transition-all cursor-pointer group border-primary/20"
                   onClick={() => navigate(`/profile/${woman.userId}`)}
                 >
-                  <div className="flex flex-col items-center text-center gap-2">
+                  <div className="flex flex-col items-center text-center gap-1.5">
                     <div className="relative">
-                      <Avatar className="w-16 h-16 border-2 border-primary/30 shadow-md">
+                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/30 shadow-md">
                         <AvatarImage src={woman.photoUrl || undefined} alt={woman.fullName} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm sm:text-lg">
                           {woman.fullName.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
@@ -1515,42 +1515,42 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+        <div className="grid grid-cols-3 gap-2 animate-fade-in" style={{ animationDelay: "0.1s" }}>
           {/* Online Users */}
-          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
-              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
+                <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
+                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
               </div>
             </div>
           </Card>
 
           {/* Matches */}
-          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
-              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
+                <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.matchCount}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">{stats.matchCount}</p>
+                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
               </div>
             </div>
           </Card>
 
           {/* Notifications */}
-          <Card className="p-2.5 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:shadow-lg transition-all">
-            <div className="flex flex-col items-center gap-1.5 sm:gap-2">
-              <div className="p-2 sm:p-2.5 rounded-full bg-primary/15">
-                <BellRing className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <div className="flex flex-col items-center gap-1">
+              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
+                <BellRing className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg sm:text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
+                <p className="text-base sm:text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
+                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
               </div>
             </div>
           </Card>
@@ -1558,25 +1558,25 @@ const DashboardScreen = () => {
 
         {/* Section 3: Wallet & Primary Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <Card className="p-3 sm:p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20 shadow-md">
-            <div className="flex flex-col items-center gap-4">
+          <Card className="p-2.5 sm:p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20">
+            <div className="flex flex-col items-center gap-3">
               {/* Balance */}
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-inner">
-                  <WalletCards className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                  <WalletCards className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
                 </div>
                 <div className="text-center sm:text-left min-w-0">
-                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">
+                  <p className="text-[9px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">
                     ₹{walletBalance.toLocaleString()}
-                    <span className="text-[10px] sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2 block sm:inline">
+                    <span className="text-[9px] sm:text-sm font-normal text-muted-foreground ml-1 block sm:inline">
                       ({formatLocalCurrency(walletBalance)})
                     </span>
                   </p>
                 </div>
               </div>
-              {/* Action Buttons - stacked vertically */}
-              <div className="flex flex-col gap-3 w-full">
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 w-full">
                 <RandomChatButton 
                   userGender="male"
                   userLanguage={userLanguage}
@@ -1587,7 +1587,6 @@ const DashboardScreen = () => {
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
                   className="w-full"
                 />
-                {/* Video Call Button - Available for Indian users only */}
                 {userCountry === "IN" && (
                   <VideoCallMiniButton
                     currentUserId={currentUserId}
@@ -1598,11 +1597,11 @@ const DashboardScreen = () => {
                 )}
                 <Button 
                   variant="aurora" 
-                  size="lg"
+                  size="default"
                   onClick={() => setRechargeDialogOpen(true)}
-                  className="gap-2 w-full"
+                  className="gap-1.5 w-full text-sm"
                 >
-                  <CreditCard className="w-5 h-5" />
+                  <CreditCard className="w-4 h-4" />
                   {t('rechargeWallet', 'Recharge')}
                 </Button>
               </div>
@@ -1612,21 +1611,21 @@ const DashboardScreen = () => {
 
         {/* Section 4: Quick Actions */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
+          <h2 className="text-sm sm:text-lg font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-primary" />
             {t('quickActions', 'Quick Actions')}
           </h2>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="group flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
+                className="group flex flex-col items-center gap-1 p-2 sm:p-4 rounded-xl bg-card hover:bg-accent/50 border border-border/30 hover:border-primary/30 transition-all duration-200"
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
+                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-all duration-200`}>
                   {action.icon}
                 </div>
-                <p className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
+                <p className="text-[10px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
               </button>
             ))}
           </div>
@@ -1664,15 +1663,15 @@ const DashboardScreen = () => {
 
         {/* Private Groups Section */}
         <div className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Video className="h-5 w-5 text-primary" />
-              Private Group Video Calls
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
+              <Video className="h-4 w-4 text-primary" />
+              Private Groups
             </h2>
           </div>
-          <div className="p-3 rounded-lg bg-muted/50 text-xs sm:text-sm text-muted-foreground mb-4 border border-border">
-            <p className="font-medium text-foreground mb-1">💰 How to Join</p>
-            <p>Join any live private group call at the chat rate of <span className="font-semibold text-primary">₹{pricing?.ratePerMinute || 4}/min</span>. Your wallet must have at least 5 min worth to join.</p>
+          <div className="p-2.5 rounded-lg bg-muted/50 text-[11px] sm:text-sm text-muted-foreground mb-3 border border-border/20">
+            <p className="font-medium text-foreground mb-0.5 text-xs">💰 How to Join</p>
+            <p>Join any live private group call at <span className="font-semibold text-primary">₹{pricing?.ratePerMinute || 4}/min</span>. Min 5 min balance required.</p>
           </div>
           <AvailableGroupsSection
             currentUserId={currentUserId}
@@ -1683,44 +1682,44 @@ const DashboardScreen = () => {
 
         {/* Section 7: Recent Notifications */}
         <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
-            <button className="text-sm text-primary hover:underline flex items-center gap-1">
-              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-sm sm:text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
+            <button className="text-xs text-primary hover:underline flex items-center gap-0.5">
+              View all <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {notifications.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {notifications.map((notification) => (
                 <Card 
                   key={notification.id}
-                  className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
+                  className="p-2.5 sm:p-4 flex items-start gap-2.5 hover:bg-accent/50 transition-colors cursor-pointer"
                 >
-                  <div className={`p-2 rounded-full ${
+                  <div className={`p-1.5 rounded-full shrink-0 ${
                     notification.type === "match" ? "bg-female/10 text-female" :
                     notification.type === "message" ? "bg-info/10 text-info" :
                     "bg-primary/10 text-primary"
                   }`}>
-                    {notification.type === "match" ? <Heart className="w-5 h-5" /> :
-                     notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
-                     <Bell className="w-5 h-5" />}
+                    {notification.type === "match" ? <Heart className="w-4 h-4" /> :
+                     notification.type === "message" ? <MessageCircle className="w-4 h-4" /> :
+                     <Bell className="w-4 h-4" />}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{notification.title}</p>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-xs sm:text-sm text-foreground truncate">{notification.title}</p>
+                    <p className="text-[11px] sm:text-sm text-muted-foreground line-clamp-1">{notification.message}</p>
                   </div>
                   {!notification.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0 mt-1" />
                   )}
                 </Card>
               ))}
             </div>
           ) : (
-            <Card className="p-8 text-center">
-              <Sparkles className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">{t('noNotifications', 'No new activity yet')}</p>
-              <p className="text-sm text-muted-foreground mt-1">
+            <Card className="p-5 sm:p-8 text-center">
+              <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('noNotifications', 'No new activity yet')}</p>
+              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1">
                 {t('startExploringToGetMatches', 'Start exploring to get matches and notifications!')}
               </p>
             </Card>
@@ -1728,18 +1727,18 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 8: CTA Banner */}
-        <Card className="p-3 sm:p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 shadow-md animate-fade-in" style={{ animationDelay: "0.35s" }}>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shrink-0">
-              <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
+        <Card className="p-2.5 sm:p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-7 sm:h-7" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge wallet for more connections')}</p>
+              <h3 className="font-semibold text-foreground text-[11px] sm:text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
+              <p className="text-[9px] sm:text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge for more connections')}</p>
             </div>
-            <Button variant="aurora" size="sm" className="rounded-xl shadow-md shrink-0 text-xs sm:text-sm" onClick={() => setRechargeDialogOpen(true)}>
-              <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-              {t('upgrade', 'Recharge')}
+            <Button variant="aurora" size="sm" className="rounded-lg shadow-sm shrink-0 text-[11px] sm:text-sm h-8 px-2.5" onClick={() => setRechargeDialogOpen(true)}>
+              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              Recharge
             </Button>
           </div>
         </Card>
