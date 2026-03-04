@@ -136,6 +136,20 @@ const AdminDashboard = () => {
       badge: stats.pendingApprovals > 0 ? `${stats.pendingApprovals} pending` : undefined
     },
     {
+      title: "User Lookup",
+      description: "Search users by name, email, or phone",
+      icon: <MessageCircle className="h-6 w-6" />,
+      path: "/admin/user-lookup",
+      color: "from-violet-500 to-violet-600"
+    },
+    {
+      title: "KYC Management",
+      description: "Review and approve KYC submissions",
+      icon: <Shield className="h-6 w-6" />,
+      path: "/admin/kyc",
+      color: "from-rose-500 to-rose-600"
+    },
+    {
       title: "Analytics Dashboard",
       description: "View platform analytics and insights",
       icon: <BarChart3 className="h-6 w-6" />,
@@ -151,11 +165,25 @@ const AdminDashboard = () => {
       badge: stats.activeChats > 0 ? `${stats.activeChats} active` : undefined
     },
     {
+      title: "Admin Messaging",
+      description: "Inbox, broadcast, and direct user messaging",
+      icon: <Bell className="h-6 w-6" />,
+      path: "/admin/messaging",
+      color: "from-sky-500 to-sky-600"
+    },
+    {
       title: "Finance Dashboard",
       description: "Revenue, transactions, and payouts",
       icon: <DollarSign className="h-6 w-6" />,
       path: "/admin/finance",
       color: "from-emerald-500 to-emerald-600"
+    },
+    {
+      title: "Transaction History",
+      description: "View all user transactions",
+      icon: <Activity className="h-6 w-6" />,
+      path: "/admin/transactions",
+      color: "from-lime-500 to-lime-600"
     },
     {
       title: "Chat Pricing",
@@ -263,12 +291,12 @@ const AdminDashboard = () => {
         .select("*", { count: "exact", head: true })
         .eq("status", "active");
 
-      // Get pending approvals
+      // Get pending approvals (case-insensitive match)
       const { count: pendingApprovals } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("approval_status", "pending")
-        .eq("gender", "Female");
+        .ilike("gender", "female");
 
       // Get policy alerts
       const { count: policyAlerts } = await supabase

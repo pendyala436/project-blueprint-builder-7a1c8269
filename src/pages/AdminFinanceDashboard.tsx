@@ -313,7 +313,6 @@ const AdminFinanceDashboard = () => {
               <Button onClick={() => navigate("/admin/finance-reports")} className="gap-2">
                 <FileText className="h-4 w-4" />
                 Monthly Reports
-                Export CSV
               </Button>
             </div>
           </div>
