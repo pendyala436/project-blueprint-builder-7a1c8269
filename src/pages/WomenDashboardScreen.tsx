@@ -898,7 +898,7 @@ const WomenDashboardScreen = () => {
                   <MessageCircleIcon className="h-4 w-4 mr-1" />
                   Chat
                 </Button>
-                {user.isSameLanguage && (
+                {user.isSameLanguage && isIndianWoman && (
                   <DirectVideoCallButton
                     currentUserId={currentUserId}
                     targetUserId={user.userId}
@@ -910,17 +910,6 @@ const WomenDashboardScreen = () => {
                   />
                 )}
               </>
-            )}
-            {user.isSameLanguage && !hasGoldenBadge && (
-              <DirectVideoCallButton
-                currentUserId={currentUserId}
-                targetUserId={user.userId}
-                targetName={user.fullName}
-                targetPhoto={user.photoUrl}
-                walletBalance={myWalletBalance}
-                onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                iconOnly={false}
-              />
             )}
             <Button 
               size="sm" 

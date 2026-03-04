@@ -1282,14 +1282,16 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
-                            <DirectVideoCallButton
-                              currentUserId={currentUserId}
-                              targetUserId={woman.user_id}
-                              targetName={woman.full_name || "User"}
-                              targetPhoto={woman.photo_url}
-                              walletBalance={walletBalance}
-                              onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                            />
+                            {userCountry === "IN" && (
+                              <DirectVideoCallButton
+                                currentUserId={currentUserId}
+                                targetUserId={woman.user_id}
+                                targetName={woman.full_name || "User"}
+                                targetPhoto={woman.photo_url}
+                                walletBalance={walletBalance}
+                                onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                              />
+                            )}
                             <Button
                               variant="aurora"
                               size="sm"
@@ -1580,13 +1582,15 @@ const DashboardScreen = () => {
                   onInsufficientBalance={() => setRechargeDialogOpen(true)}
                   className="w-full"
                 />
-                {/* Video Call Button - Available for all users */}
-                <VideoCallMiniButton
-                  currentUserId={currentUserId}
-                  userLanguage={userLanguage}
-                  walletBalance={walletBalance}
-                  onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                />
+                {/* Video Call Button - Available for Indian users only */}
+                {userCountry === "IN" && (
+                  <VideoCallMiniButton
+                    currentUserId={currentUserId}
+                    userLanguage={userLanguage}
+                    walletBalance={walletBalance}
+                    onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                  />
+                )}
                 <Button 
                   variant="aurora" 
                   size="lg"
