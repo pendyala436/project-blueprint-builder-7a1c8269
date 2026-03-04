@@ -1269,18 +1269,18 @@ const DashboardScreen = () => {
                               {woman.primary_language}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <Button
                               variant="auroraOutline"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/profile/${woman.user_id}`);
                               }}
                               title="View Profile"
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              <Eye className="w-3 h-3" />
                             </Button>
                             {/* Video call: Indian man + Indian woman + same language (already in same-language section) */}
                             {userCountry === "IN" && woman.country?.toLowerCase().includes('india') && (
@@ -1291,13 +1291,14 @@ const DashboardScreen = () => {
                                 targetPhoto={woman.photo_url}
                                 walletBalance={walletBalance}
                                 onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                                iconOnly={true}
                               />
                             )}
                             <Button
                               variant="aurora"
                               size="sm"
                               className={cn(
-                                "gap-1 text-xs h-8",
+                                "gap-1 text-[11px] h-7 px-2",
                                 (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                               )}
                               disabled={(woman.active_chat_count || 0) >= 3}
@@ -1307,7 +1308,7 @@ const DashboardScreen = () => {
                               }}
                             >
                               <MessageCircle className="w-3 h-3" />
-                              {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                              {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
                             </Button>
                           </div>
                         </div>
@@ -1369,24 +1370,24 @@ const DashboardScreen = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <Button
                               variant="auroraOutline"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/profile/${woman.user_id}`);
                               }}
                               title="View Profile"
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              <Eye className="w-3 h-3" />
                             </Button>
                             <Button
                               variant="aurora"
                               size="sm"
                               className={cn(
-                                "gap-1 text-xs h-8",
+                                "gap-1 text-[11px] h-7 px-2",
                                 (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
                               )}
                               disabled={(woman.active_chat_count || 0) >= 3}
@@ -1396,7 +1397,7 @@ const DashboardScreen = () => {
                               }}
                             >
                               <MessageCircle className="w-3 h-3" />
-                              {(woman.active_chat_count || 0) >= 3 ? t('busy', 'Busy') : t('chat', 'Chat')}
+                              {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
                             </Button>
                           </div>
                         </div>
@@ -1612,17 +1613,17 @@ const DashboardScreen = () => {
             <Zap className="w-5 h-5 text-primary" />
             {t('quickActions', 'Quick Actions')}
           </h2>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="group flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
+                className="group flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
               >
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
                   {action.icon}
                 </div>
-                <p className="text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
+                <p className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
               </button>
             ))}
           </div>

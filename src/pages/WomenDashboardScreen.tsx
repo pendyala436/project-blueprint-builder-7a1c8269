@@ -815,125 +815,128 @@ const WomenDashboardScreen = () => {
       )}
       onClick={() => handleViewProfile(user.userId)}
     >
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-14 w-14 border-2 border-background shadow-md">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-11 w-11 sm:h-14 sm:w-14 border-2 border-background shadow-md">
               <AvatarImage src={user.photoUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-lg">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm sm:text-lg">
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
             {/* Status indicator: Green=Online, Red=Full */}
             <div className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background",
+              "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
               (user.activeChatCount || 0) >= 3 ? "bg-destructive" : "bg-online"
             )} title={
               (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : "Available"
             } />
             {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
-                <Crown className="h-4 w-4 text-primary" />
+                <Crown className="h-3.5 w-3.5 text-primary" />
               </div>
             )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-foreground truncate">{user.fullName}</h3>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate max-w-[120px] sm:max-w-none">{user.fullName}</h3>
               {user.age && (
-                <Badge variant="outline" className="text-xs font-medium">
-                  {user.age} {t('yearsOld', 'yrs')}
+                <Badge variant="outline" className="text-[10px] sm:text-xs font-medium px-1.5">
+                  {user.age}
                 </Badge>
               )}
               {user.isSameLanguage && (
-                <Badge variant="default" className="text-[10px] bg-primary/90">
-                  {t('sameLanguage', 'Same Language')}
+                <Badge variant="default" className="text-[9px] sm:text-[10px] bg-primary/90 px-1.5 hidden xs:inline-flex">
+                  Same
                 </Badge>
               )}
             </div>
             
-            {/* Wallet Balance - Always visible and prominent */}
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
-                <IndianRupee className="h-4 w-4 text-primary" />
-                <span className="text-sm font-bold text-primary">
+            {/* Wallet Balance */}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                <IndianRupee className="h-3 w-3 text-primary" />
+                <span className="text-xs font-bold text-primary">
                   ₹{user.walletBalance.toFixed(0)}
                 </span>
               </div>
               {isPremium && (
-                <Badge variant="outline" className="text-[10px] bg-primary/10 border-primary/30 text-primary">
-                  <Crown className="h-2.5 w-2.5 mr-1" />
-                  Premium
+                <Badge variant="outline" className="text-[9px] bg-primary/10 border-primary/30 text-primary px-1">
+                  <Crown className="h-2.5 w-2.5 mr-0.5" />
+                  Pro
                 </Badge>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-1">
-              <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap mt-1">
+              <div className="flex items-center gap-0.5">
                 <Languages className="h-3 w-3" />
-                <span>{user.motherTongue}</span>
+                <span className="truncate max-w-[60px] sm:max-w-none">{user.motherTongue}</span>
               </div>
               {(user.state || user.country) && (
                 <>
                   <span>•</span>
-                  <div className="flex items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3" />
-                    {[user.state, user.country].filter(Boolean).join(", ")}
+                  <div className="flex items-center gap-0.5 truncate">
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate max-w-[80px] sm:max-w-none">{[user.state, user.country].filter(Boolean).join(", ")}</span>
                   </div>
                 </>
               )}
             </div>
-          </div>
 
-          <div className="flex flex-col gap-2">
-            {hasGoldenBadge && (
-              <>
-                <Button 
-                  size="sm" 
-                  variant="aurora"
-                  onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-                  title="Start Chat (Golden Badge)"
+            {/* Action buttons - horizontal on mobile for better fit */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {hasGoldenBadge && (
+                <>
+                  <Button 
+                    size="sm" 
+                    variant="aurora"
+                    className="h-7 text-xs gap-1 px-2"
+                    onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
+                    title="Start Chat (Golden Badge)"
+                  >
+                    <MessageCircleIcon className="h-3.5 w-3.5" />
+                    Chat
+                  </Button>
+                  {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
+                  {user.isSameLanguage && isIndianWoman && user.country?.toLowerCase().includes('india') && (
+                    <DirectVideoCallButton
+                      currentUserId={currentUserId}
+                      targetUserId={user.userId}
+                      targetName={user.fullName}
+                      targetPhoto={user.photoUrl}
+                      walletBalance={myWalletBalance}
+                      onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
+                      iconOnly={true}
+                    />
+                  )}
+                </>
+              )}
+              {/* Show disabled video call hint for women without golden badge */}
+              {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && user.country?.toLowerCase().includes('india') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="opacity-50 gap-1 text-[10px] h-7 px-2"
+                  title="Purchase Golden Badge to enable video calls"
                 >
-                  <MessageCircleIcon className="h-4 w-4 mr-1" />
-                  Chat
+                  <Video className="h-3 w-3" />
+                  🔒
                 </Button>
-                {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
-                {user.isSameLanguage && isIndianWoman && user.country?.toLowerCase().includes('india') && (
-                  <DirectVideoCallButton
-                    currentUserId={currentUserId}
-                    targetUserId={user.userId}
-                    targetName={user.fullName}
-                    targetPhoto={user.photoUrl}
-                    walletBalance={myWalletBalance}
-                    onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                    iconOnly={false}
-                  />
-                )}
-              </>
-            )}
-            {/* Show disabled video call hint for women without golden badge */}
-            {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && user.country?.toLowerCase().includes('india') && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled
-                className="opacity-50 gap-1 text-xs"
-                title="Purchase Golden Badge to enable video calls"
+              )}
+              <Button 
+                size="sm" 
+                variant="auroraOutline"
+                className="h-7 text-xs gap-1 px-2"
+                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}
+                title={t('viewProfile', 'View Profile')}
               >
-                <Video className="h-3.5 w-3.5" />
-                🔒 Badge Required
+                <Eye className="h-3.5 w-3.5" />
+                View
               </Button>
-            )}
-            <Button 
-              size="sm" 
-              variant="auroraOutline"
-              onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}
-              title={t('viewProfile', 'View Profile')}
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              {t('viewProfile', 'View')}
-            </Button>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -1001,7 +1004,7 @@ const WomenDashboardScreen = () => {
       </header>
 
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Section 1: Welcome & Status */}
         <div className="animate-fade-in">
           <div className="flex items-center justify-between mb-4">
@@ -1051,7 +1054,7 @@ const WomenDashboardScreen = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Wallet Balance (Total Earnings - Total Withdrawals) */}
             <Card 
-              className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 cursor-pointer hover:shadow-md transition-all"
+              className="p-3 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 cursor-pointer hover:shadow-md transition-all"
               onClick={() => navigate("/women-wallet")}
             >
               <div className="flex items-center gap-3">
@@ -1399,17 +1402,17 @@ const WomenDashboardScreen = () => {
             <Sparkles className="w-5 h-5 text-primary" />
             {t('quickActions', 'Quick Actions')}
           </h2>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 sm:gap-3">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="group flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
+                className="group flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
               >
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
                   {action.icon}
                 </div>
-                <p className="text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
+                <p className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
               </button>
             ))}
           </div>

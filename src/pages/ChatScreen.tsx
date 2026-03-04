@@ -1361,7 +1361,7 @@ const ChatScreen = () => {
                   />
                 ) : (
                   // Fallback avatar with initial
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-rose-500/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                     <span className="text-lg font-bold text-primary">
                       {chatPartner.fullName.charAt(0).toUpperCase()}
                     </span>
@@ -1417,7 +1417,7 @@ const ChatScreen = () => {
             <DropdownMenuContent align="end" className="w-48">
               {/* Friend Status Indicator */}
               {isFriend && (
-                <div className="px-2 py-1.5 text-xs text-emerald-500 flex items-center gap-1">
+                <div className="px-2 py-1.5 text-xs text-success flex items-center gap-1">
                   <Heart className="w-3 h-3 fill-current" />
                   Friends
                 </div>
@@ -1495,7 +1495,7 @@ const ChatScreen = () => {
               {/* Go Offline - Available for both genders */}
               <DropdownMenuItem 
                 onClick={handleGoOffline}
-                className="text-amber-600 focus:text-amber-600"
+                className="text-warning focus:text-warning"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Go Offline
@@ -1675,7 +1675,7 @@ const ChatScreen = () => {
                               className="w-8 h-8 rounded-full object-cover"
                             />
                           ) : showAvatar ? (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-rose-500/20 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                               <span className="text-xs font-bold text-primary">
                                 {chatPartner?.fullName.charAt(0).toUpperCase()}
                               </span>
@@ -1749,7 +1749,7 @@ const ChatScreen = () => {
                           {/* Read receipt icons (only for sender) */}
                           {isMine && (
                             message.isRead ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-blue-500" /> // Double check = read
+                              <CheckCheck className="w-3.5 h-3.5 text-info" /> // Double check = read
                             ) : (
                               <Check className="w-3.5 h-3.5 text-muted-foreground" /> // Single check = sent
                             )
@@ -1870,7 +1870,7 @@ const ChatScreen = () => {
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
                   >
-                    <FileText className="w-5 h-5 text-blue-500" />
+                    <FileText className="w-5 h-5 text-info" />
                     <span className="text-sm">File</span>
                   </button>
                   <button
@@ -1878,7 +1878,7 @@ const ChatScreen = () => {
                     onClick={openCamera}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
                   >
-                    <Camera className="w-5 h-5 text-emerald-500" />
+                    <Camera className="w-5 h-5 text-success" />
                     <span className="text-sm">Selfie</span>
                   </button>
                 </div>
