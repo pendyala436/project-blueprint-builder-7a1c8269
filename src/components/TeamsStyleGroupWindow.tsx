@@ -263,6 +263,15 @@ export function TeamsStyleGroupWindow({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Content moderation - block documents, vCards, and suspicious files
+    const { moderateAttachment } = await import('@/lib/content-moderation');
+    const attachmentResult = moderateAttachment(file.name, file.type);
+    if (attachmentResult.isBlocked) {
+      toast.error(attachmentResult.reason || 'This file type is not allowed.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     // Check file size (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       toast.error('File size must be less than 50MB');
