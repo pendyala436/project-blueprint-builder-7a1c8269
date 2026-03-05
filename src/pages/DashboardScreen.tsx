@@ -1697,8 +1697,17 @@ const DashboardScreen = () => {
           </div>
         )}
 
-
-
+        {/* Section 6: Transaction Statement */}
+        {currentUserId && (
+          <div className="animate-fade-in" style={{ animationDelay: "0.24s" }}>
+            <TransactionHistoryWidget
+              userId={currentUserId}
+              userGender="male"
+              maxItems={8}
+              showViewAll={true}
+            />
+          </div>
+        )}
 
 
         {/* Private Groups Section */}
