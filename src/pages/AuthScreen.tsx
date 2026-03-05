@@ -233,10 +233,10 @@ const AuthScreen = () => {
           <Suspense fallback={<div className="w-20 h-20 mx-auto mb-4 bg-primary/20 rounded-full animate-pulse" />}>
             <MeowLogo size="lg" className="mx-auto mb-4" />
           </Suspense>
-          <h1 className="font-display text-4xl font-bold text-foreground mb-2 drop-shadow-sm">
+          <h1 className="font-display text-4xl font-bold text-primary mb-2 drop-shadow-sm">
             {t('app.name', 'MEOW MEOW')}
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-primary/80 text-lg">
             {t('app.tagline', 'Real People. Real Connections')}
           </p>
         </div>
