@@ -366,14 +366,16 @@ export function moderateMessage(message: string): ModerationResult {
 
 /**
  * Check if a file attachment should be blocked
- * Blocks documents, vCards, and files with suspicious names
+ * Only blocks vCard/contact files outright.
+ * Documents are allowed but their TEXT CONTENT must be checked separately
+ * via moderateMessage() after extraction.
  */
 export function moderateAttachment(fileName: string, fileType?: string): ModerationResult {
   if (!fileName) return { isBlocked: false };
 
   const lowerName = fileName.toLowerCase();
 
-  // Block vCard files (contact sharing)
+  // Block vCard files (direct contact sharing)
   if (lowerName.endsWith('.vcf') || lowerName.endsWith('.vcard')) {
     return {
       isBlocked: true,
@@ -382,41 +384,21 @@ export function moderateAttachment(fileName: string, fileType?: string): Moderat
     };
   }
 
-  // Block documents that can embed contact info
-  const ext = '.' + lowerName.split('.').pop();
-  if (BLOCKED_ATTACHMENT_EXTENSIONS.includes(ext)) {
+  // Block suspicious MIME types for contacts
+  if (fileType && (fileType === 'text/vcard' || fileType === 'text/x-vcard')) {
     return {
       isBlocked: true,
-      reason: 'Sending documents is not allowed. Only images are permitted.',
+      reason: 'Sharing contact files is not allowed.',
       detectedType: 'blocked_attachment',
     };
   }
 
-  // Block filenames that suggest contact sharing
+  // Block filenames that explicitly suggest contact sharing
   for (const pattern of CONTACT_FILENAME_PATTERNS) {
     if (pattern.test(lowerName)) {
       return {
         isBlocked: true,
         reason: 'This file appears to contain contact information and is blocked.',
-        detectedType: 'blocked_attachment',
-      };
-    }
-  }
-
-  // Block suspicious MIME types
-  if (fileType) {
-    const blockedMimeTypes = [
-      'text/vcard', 'text/x-vcard',
-      'text/plain', 'text/html', 'text/csv',
-      'application/pdf',
-      'application/msword', 'application/vnd.openxmlformats-officedocument',
-      'application/vnd.ms-excel',
-      'application/vnd.ms-powerpoint',
-    ];
-    if (blockedMimeTypes.some(mime => fileType.startsWith(mime))) {
-      return {
-        isBlocked: true,
-        reason: 'This file type is not allowed. Only images are permitted.',
         detectedType: 'blocked_attachment',
       };
     }
