@@ -1132,7 +1132,7 @@ const DashboardScreen = () => {
             {/* Transaction Statement */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => navigate('/transaction-history?tab=statement')}
+              onClick={() => window.open('/transaction-history?tab=statement', '_blank')}
               title="Transaction Statement"
             >
               <FileText className="w-[18px] h-[18px] text-foreground/70" />
@@ -1141,7 +1141,7 @@ const DashboardScreen = () => {
             {/* Transaction History */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => navigate('/transaction-history')}
+              onClick={() => window.open('/transaction-history', '_blank')}
               title="Transaction History"
             >
               <History className="w-[18px] h-[18px] text-foreground/70" />
@@ -1188,7 +1188,7 @@ const DashboardScreen = () => {
             {/* Settings */}
             <button 
               className="p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => navigate('/settings')}
+              onClick={() => window.open('/settings', '_blank')}
             >
               <Settings className="w-[18px] h-[18px] text-foreground/70" />
             </button>
