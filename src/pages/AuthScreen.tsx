@@ -183,11 +183,9 @@ const AuthScreen = () => {
       // Fetch all user context in parallel
       const context = await preloadUserContext(authData.user.id);
 
-      // Navigate based on context
+      // Navigate based on context - tutorial/registration-complete only shown during registration flow
       if (context.isAdmin) {
         navigate("/admin");
-      } else if (!context.tutorialCompleted) {
-        navigate("/welcome-tutorial");
       } else if (context.isFemale) {
         // Check approval status for female users
         const approvalStatus = context.femaleProfile?.approval_status || context.profile?.approval_status;
