@@ -101,20 +101,26 @@ const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotF
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 // Translation test pages removed
 
-// Ultra-optimized React Query - maximum caching
+// Ultra-optimized React Query - maximum caching, sub-2ms response for cached data
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 15 * 60 * 1000, // 15 minutes
       gcTime: 60 * 60 * 1000, // 1 hour gc
-      retry: 0, // No retries for speed
+      retry: 1, // Single retry for reliability
+      retryDelay: 500,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: false,
+      refetchOnReconnect: 'always',
       networkMode: 'offlineFirst',
+      // Structural sharing for sub-2ms re-render checks
+      structuralSharing: true,
+      // Placeholder data to prevent loading flicker
+      placeholderData: (prev: unknown) => prev,
     },
     mutations: {
-      retry: 0,
+      retry: 1,
+      retryDelay: 500,
       networkMode: 'offlineFirst',
     },
   },

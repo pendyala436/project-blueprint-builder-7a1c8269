@@ -1,13 +1,15 @@
 /**
  * Optimized Query Hooks for Performance
+ * - Sub-2ms cached responses via fast-cache layer
  * - Stale-while-revalidate pattern
  * - Request deduplication
- * - Smart caching
+ * - Smart caching with structural sharing
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useMemo } from "react";
+import { fastGet, fastSet, fastDelete, fastInvalidatePrefix, fastClear } from "@/lib/fast-cache";
 
 // Cache keys
 export const queryKeys = {
@@ -28,52 +30,73 @@ export const queryKeys = {
   notifications: (userId: string) => ['notifications', userId] as const,
 };
 
-// Optimized profile query with smart caching
+// Optimized profile query with dual-layer caching (fast-cache + react-query)
 export function useOptimizedProfile(userId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.profile(userId || ''),
     queryFn: async () => {
       if (!userId) return null;
+      
+      // Check fast-cache first (~0.001ms)
+      const cacheKey = `profile:${userId}`;
+      const cached = fastGet(cacheKey);
+      if (cached) return cached;
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, age, gender, country, state, bio, photo_url, interests, occupation, is_verified, account_status, approval_status')
         .eq('user_id', userId)
         .single();
       if (error) throw error;
+      
+      // Store in fast-cache for sub-2ms on next access
+      fastSet(cacheKey, data, 10 * 60 * 1000);
       return data;
     },
     enabled: !!userId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
-// Optimized wallet balance (frequently accessed)
+// Optimized wallet balance with fast-cache
 export function useOptimizedWalletBalance(userId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.walletBalance(userId || ''),
     queryFn: async () => {
       if (!userId) return null;
+      
+      const cacheKey = `wallet:${userId}`;
+      const cached = fastGet(cacheKey);
+      if (cached) return cached;
+      
       const { data, error } = await supabase
         .from('wallets')
         .select('balance, currency')
         .eq('user_id', userId)
         .single();
       if (error) throw error;
+      
+      fastSet(cacheKey, data, 30 * 1000);
       return data;
     },
     enabled: !!userId,
-    staleTime: 30 * 1000, // 30 seconds - balance changes frequently
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 }
 
-// Optimized transactions with pagination
+// Optimized transactions with fast-cache
 export function useOptimizedTransactions(userId: string | undefined, limit = 20) {
   return useQuery({
     queryKey: queryKeys.transactions(userId || '', limit),
     queryFn: async () => {
       if (!userId) return [];
+      
+      const cacheKey = `txn:${userId}:${limit}`;
+      const cached = fastGet<unknown[]>(cacheKey);
+      if (cached) return cached;
+      
       const { data, error } = await supabase
         .from('wallet_transactions')
         .select('id, type, amount, description, status, created_at')
@@ -81,11 +104,14 @@ export function useOptimizedTransactions(userId: string | undefined, limit = 20)
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return data || [];
+      
+      const result = data || [];
+      fastSet(cacheKey, result, 60 * 1000);
+      return result;
     },
     enabled: !!userId,
-    staleTime: 60 * 1000, // 1 minute
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -204,60 +230,82 @@ export function useOptimizedActiveChats(userId: string | undefined) {
   });
 }
 
-// Optimized gifts list (rarely changes)
+// Optimized gifts list with fast-cache (rarely changes)
 export function useOptimizedGifts() {
   return useQuery({
     queryKey: queryKeys.gifts(),
     queryFn: async () => {
+      const cacheKey = 'gifts:active';
+      const cached = fastGet<unknown[]>(cacheKey);
+      if (cached) return cached;
+      
       const { data, error } = await supabase
         .from('gifts')
         .select('id, name, emoji, price, currency, category, description')
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return data || [];
+      
+      const result = data || [];
+      fastSet(cacheKey, result, 30 * 60 * 1000);
+      return result;
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes - gifts rarely change
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 }
 
-// Optimized chat pricing (rarely changes)
+// Optimized chat pricing with fast-cache (rarely changes)
 export function useOptimizedChatPricing() {
   return useQuery({
     queryKey: queryKeys.chatPricing(),
     queryFn: async () => {
+      const cacheKey = 'pricing:active';
+      const cached = fastGet(cacheKey);
+      if (cached) return cached;
+      
       const { data, error } = await supabase
         .from('chat_pricing')
         .select('rate_per_minute, video_rate_per_minute, women_earning_rate, video_women_earning_rate, currency')
         .eq('is_active', true)
         .single();
       if (error) throw error;
+      
+      fastSet(cacheKey, data, 60 * 60 * 1000);
       return data;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour - pricing rarely changes
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 }
 
-// Batch invalidation helper
+// Batch invalidation helper - clears both fast-cache and react-query
 export function useInvalidateQueries() {
   const queryClient = useQueryClient();
   
   return useMemo(() => ({
-    invalidateProfile: (userId: string) => 
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile(userId) }),
-    invalidateWallet: (userId: string) => 
-      queryClient.invalidateQueries({ queryKey: queryKeys.walletBalance(userId) }),
-    invalidateTransactions: (userId: string) => 
-      queryClient.invalidateQueries({ queryKey: ['transactions', userId] }),
+    invalidateProfile: (userId: string) => {
+      fastDelete(`profile:${userId}`);
+      return queryClient.invalidateQueries({ queryKey: queryKeys.profile(userId) });
+    },
+    invalidateWallet: (userId: string) => {
+      fastDelete(`wallet:${userId}`);
+      return queryClient.invalidateQueries({ queryKey: queryKeys.walletBalance(userId) });
+    },
+    invalidateTransactions: (userId: string) => {
+      fastInvalidatePrefix(`txn:${userId}`);
+      return queryClient.invalidateQueries({ queryKey: ['transactions', userId] });
+    },
     invalidateEarnings: (userId: string) => 
       queryClient.invalidateQueries({ queryKey: queryKeys.earnings(userId) }),
     invalidateChats: (userId: string) => 
       queryClient.invalidateQueries({ queryKey: queryKeys.activeChats(userId) }),
     invalidateMessages: (chatId: string) => 
       queryClient.invalidateQueries({ queryKey: queryKeys.chatMessages(chatId) }),
-    invalidateAll: () => queryClient.invalidateQueries(),
+    invalidateAll: () => {
+      fastClear();
+      return queryClient.invalidateQueries();
+    },
   }), [queryClient]);
 }
 

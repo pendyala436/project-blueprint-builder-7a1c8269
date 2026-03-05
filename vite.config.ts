@@ -18,22 +18,48 @@ export default defineConfig(({ mode }) => ({
           // Core React bundle - loaded first
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           // UI components bundle
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-tooltip', '@radix-ui/react-popover'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog', 
+            '@radix-ui/react-tooltip', 
+            '@radix-ui/react-popover',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-switch',
+          ],
           // Query and data
           'query-vendor': ['@tanstack/react-query'],
+          // Supabase client
+          'supabase-vendor': ['@supabase/supabase-js'],
+          // i18n
+          'i18n-vendor': ['i18next', 'react-i18next'],
         },
       },
     },
     // Minimize chunk sizes
     chunkSizeWarningLimit: 500,
-    // Enable minification
+    // Enable minification with CSS minification
     minify: 'esbuild',
+    cssMinify: true,
     // Target modern browsers for smaller output
     target: 'es2020',
+    // Source maps off for production speed
+    sourcemap: false,
+    // Compress assets
+    assetsInlineLimit: 4096,
   },
   // Enable dependency pre-bundling
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom', 
+      '@tanstack/react-query',
+      '@supabase/supabase-js',
+      'i18next',
+      'react-i18next',
+    ],
+    // Exclude heavy optional deps from pre-bundling
+    exclude: ['face-api.js', '@huggingface/transformers'],
   },
   plugins: [
     react(),

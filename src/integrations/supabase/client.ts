@@ -22,6 +22,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   global: {
     headers: {
       'x-client-info': 'meow-app/1.0',
+      'Connection': 'keep-alive',
+    },
+    fetch: (url, options = {}) => {
+      // Add keepalive for connection reuse and faster subsequent requests
+      return fetch(url, {
+        ...options,
+        keepalive: true,
+      });
     },
   },
   realtime: {

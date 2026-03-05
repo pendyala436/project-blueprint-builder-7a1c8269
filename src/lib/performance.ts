@@ -3,29 +3,34 @@
  * Optimized for < 2ms operations
  */
 
+// Re-export fast cache for convenience
+export { fastGet, fastSet, fastDelete, fastClear, withCache, memoize } from './fast-cache';
+
 // Performance mark helpers with minimal overhead
+// Uses a simple object (no Map) for fastest access
 const perfMarks: Record<string, number> = Object.create(null);
+
+// Cache performance.now reference to avoid property lookup
+const _now = typeof performance !== 'undefined' ? performance.now.bind(performance) : Date.now;
 
 export const perfMark = {
   start: (name: string) => {
-    // Use simple Date.now() for fastest timing in hot paths
-    // performance.now() is more precise but has overhead
-    perfMarks[name] = performance.now();
+    perfMarks[name] = _now();
   },
   end: (name: string): number | undefined => {
     const startTime = perfMarks[name];
     if (startTime === undefined) return undefined;
     
-    const duration = performance.now() - startTime;
+    const duration = _now() - startTime;
     delete perfMarks[name];
     
-    if (process.env.NODE_ENV === 'development' && duration > 2) {
-      console.debug(`[Perf] ${name}: ${duration.toFixed(2)}ms`);
+    if (import.meta.env.DEV && duration > 2) {
+      console.debug(`[Perf] ${name}: ${duration.toFixed(2)}ms ⚠️ >2ms`);
     }
     return duration;
   },
-  // Ultra-fast inline timing for hot paths (no function call overhead)
-  now: () => performance.now(),
+  // Ultra-fast inline timing for hot paths
+  now: _now,
 };
 
 // Request batching for reducing API calls
