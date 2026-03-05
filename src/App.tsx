@@ -97,8 +97,6 @@ const AdminTransactionHistory = lazy(() => import(/* webpackChunkName: "admin" *
 const AdminKYCManagement = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminKYCManagement"));
 const AdminUserLookup = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminUserLookup"));
 const AdminMessaging = lazy(() => import(/* webpackChunkName: "admin" */ "./pages/AdminMessaging"));
-const UserAdminMessagesPage = lazy(() => import(/* webpackChunkName: "user-support" */ "./pages/UserAdminMessagesPage"));
-const UserAdminChatPage = lazy(() => import(/* webpackChunkName: "user-support" */ "./pages/UserAdminChatPage"));
 const NotFound = lazy(() => import(/* webpackChunkName: "error" */ "./pages/NotFound"));
 const InstallApp = lazy(() => import(/* webpackChunkName: "pwa" */ "./pages/InstallApp"));
 // Translation test pages removed
@@ -228,8 +226,6 @@ const App = () => (
             <Route path="/admin/kyc" element={<LazyRoute component={AdminKYCManagement} />} />
             <Route path="/admin/user-lookup" element={<LazyRoute component={AdminUserLookup} />} />
             <Route path="/admin/messaging" element={<LazyRoute component={AdminMessaging} />} />
-            <Route path="/user-admin-messages" element={<LazyRoute component={UserAdminMessagesPage} />} />
-            <Route path="/user-admin-chat" element={<LazyRoute component={UserAdminChatPage} />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             {/* Translation test routes removed */}
             <Route path="*" element={<LazyRoute component={NotFound} />} />

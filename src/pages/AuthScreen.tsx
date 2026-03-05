@@ -6,9 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { preloadUserContext } from "@/hooks/useOptimizedAuth";
 
 // Lazy load non-critical components
 const MeowLogo = lazy(() => import("@/components/MeowLogo"));
@@ -117,7 +114,6 @@ PasswordInput.displayName = 'PasswordInput';
 
 const AuthScreen = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -153,7 +149,14 @@ const AuthScreen = () => {
     setIsLoading(true);
 
     try {
-      // Start auth and preload routes in parallel
+      // Dynamic imports for auth
+      const [{ supabase }, { toast }, { preloadUserContext }] = await Promise.all([
+        import("@/integrations/supabase/client"),
+        import("@/hooks/use-toast"),
+        import("@/hooks/useOptimizedAuth"),
+      ]);
+      
+      // Start auth, preload routes, and start translation model loading in parallel
       const [authResult] = await Promise.all([
         supabase.auth.signInWithPassword({ email, password }),
         import("./DashboardScreen").catch(() => {}),
@@ -186,6 +189,7 @@ const AuthScreen = () => {
       } else if (!context.tutorialCompleted) {
         navigate("/welcome-tutorial");
       } else if (context.isFemale) {
+        // Check approval status for female users
         const approvalStatus = context.femaleProfile?.approval_status || context.profile?.approval_status;
         if (approvalStatus === 'pending') {
           navigate("/approval-pending");
@@ -196,11 +200,12 @@ const AuthScreen = () => {
         navigate("/dashboard");
       }
     } catch (error: any) {
+      const { toast } = await import("@/hooks/use-toast");
       toast({ title: "Login", description: error.message || "Unknown error", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, navigate, validateEmail, toast]);
+  }, [email, password, navigate, validateEmail, t]);
 
   const handleEmailChange = useCallback((value: string) => {
     setEmail(value);
