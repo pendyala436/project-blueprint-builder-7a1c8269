@@ -72,7 +72,7 @@ const LanguageCountryScreen = () => {
         {/* Logo & Title */}
         <ScreenTitle
           title="MEOW MEOW"
-          subtitle="Find your purrfect match worldwide"
+          subtitle="Real People. Real Connections"
           logoSize="lg"
           className="mb-10"
         />
