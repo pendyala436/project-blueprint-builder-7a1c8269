@@ -838,7 +838,7 @@ const TransactionHistoryScreen = () => {
               <Home className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-semibold">Transaction History</h1>
+              <h1 className="text-xl font-semibold">{activeTab === 'statement' ? 'Transaction Statement' : 'Transaction History'}</h1>
               <p className="text-xs text-muted-foreground">
                 {isMale ? "Your spending & activity" : "Your earnings & activity"}
               </p>
