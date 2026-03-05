@@ -1132,7 +1132,7 @@ const DashboardScreen = () => {
             {/* Transaction Statement */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => window.open('/transaction-history?tab=statement', '_blank')}
+              onClick={() => navigate('/transaction-history?tab=statement')}
               title="Transaction Statement"
             >
               <FileText className="w-[18px] h-[18px] text-foreground/70" />
@@ -1141,7 +1141,7 @@ const DashboardScreen = () => {
             {/* Transaction History */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => window.open('/transaction-history?tab=chats', '_blank')}
+              onClick={() => navigate('/transaction-history?tab=chats')}
               title="Transaction History"
             >
               <History className="w-[18px] h-[18px] text-foreground/70" />
@@ -1150,7 +1150,7 @@ const DashboardScreen = () => {
             {/* Admin Messages */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => setShowAdminMessages(true)}
+              onClick={() => navigate('/admin/messaging')}
               title="Admin Messages"
             >
               <Mail className="w-[18px] h-[18px] text-foreground/70" />
@@ -1159,7 +1159,7 @@ const DashboardScreen = () => {
             {/* Admin Chat */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => setShowAdminChat(true)}
+              onClick={() => navigate('/admin/messaging?view=chat')}
               title="Chat with Admin"
             >
               <Shield className="w-[18px] h-[18px] text-foreground/70" />
@@ -1188,7 +1188,7 @@ const DashboardScreen = () => {
             {/* Settings */}
             <button 
               className="p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => window.open('/settings', '_blank')}
+              onClick={() => navigate('/settings')}
             >
               <Settings className="w-[18px] h-[18px] text-foreground/70" />
             </button>
