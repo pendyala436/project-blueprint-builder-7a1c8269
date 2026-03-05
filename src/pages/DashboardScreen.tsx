@@ -1766,23 +1766,8 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Section 8: CTA Banner */}
-        <Card className="p-2.5 sm:p-5 bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 border-primary/20 animate-fade-in" style={{ animationDelay: "0.35s" }}>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shrink-0">
-              <Sparkles className="w-4 h-4 sm:w-7 sm:h-7" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground text-[11px] sm:text-sm">{t('boostYourProfile', '✨ Boost your profile!')}</h3>
-              <p className="text-[9px] sm:text-xs text-muted-foreground">{t('getMoreMatchesWithPremium', 'Recharge for more connections')}</p>
-            </div>
-            <Button variant="aurora" size="sm" className="rounded-lg shadow-sm shrink-0 text-[11px] sm:text-sm h-8 px-2.5" onClick={() => setRechargeDialogOpen(true)}>
-              <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              Recharge
-            </Button>
-          </div>
-        </Card>
       </main>
+
 
       {/* Recharge Dialog */}
       <Dialog open={rechargeDialogOpen} onOpenChange={setRechargeDialogOpen}>
