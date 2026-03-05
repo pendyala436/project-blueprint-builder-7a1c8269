@@ -761,70 +761,7 @@ export function usePrivateGroupCall({
     }
   }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, pricing.ratePerMinute]);
 
-  // End stream (host only)
-  const endStream = useCallback(async (processRefundsFlag = true) => {
-    // No time-based refunds needed since there's no time limit
-    // Just end the stream
-
-    // Notify all participants
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'stream-ended',
-      payload: { refunded: processRefundsFlag },
-    });
-
-    // Update database
-    await supabase
-      .from('private_groups')
-      .update({ is_live: false, stream_id: null, current_host_id: null, current_host_name: null, participant_count: 0 } as any)
-      .eq('id', groupId);
-
-    // Recalculate host (woman) status after stream ends
-    const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
-      supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true })
-        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
-      supabase.from('video_call_sessions').select('*', { count: 'exact', head: true })
-        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
-    ]);
-    
-    const totalVideo = videoCount || 0;
-    const totalChats = chatCount || 0;
-    const newStatus = totalVideo > 0 ? 'busy' : totalChats >= 3 ? 'busy' : 'online';
-    
-    await supabase.from('user_status')
-      .update({ status_text: newStatus, last_seen: new Date().toISOString() })
-      .eq('user_id', currentUserId);
-    
-    await supabase.from('women_availability')
-      .update({ 
-        is_available: totalChats < 3 && totalVideo === 0,
-        is_available_for_calls: totalVideo === 0,
-      })
-      .eq('user_id', currentUserId);
-
-    cleanup();
-    onSessionEnd?.(processRefundsFlag);
-  }, [groupId, processRefunds, onSessionEnd]);
-
-  // Toggle video (host only)
-  const toggleVideo = useCallback((enabled: boolean) => {
-    if (localStream.current && isOwner) {
-      localStream.current.getVideoTracks().forEach(track => {
-        track.enabled = enabled;
-      });
-    }
-  }, [isOwner]);
-
-  // Toggle audio
-  const toggleAudio = useCallback((enabled: boolean) => {
-    if (localStream.current) {
-      localStream.current.getAudioTracks().forEach(track => {
-        track.enabled = enabled;
-      });
-    }
-  }, []);
-
-  // Cleanup
+  // Cleanup - stops media, peer connections, channel
   const cleanup = useCallback(() => {
     // Stop timers
     if (timerRef.current) clearInterval(timerRef.current);
@@ -858,6 +795,40 @@ export function usePrivateGroupCall({
       isRefunding: false,
       hostStream: null,
     });
+  }, []);
+
+  // End stream (host only) - broadcasts to participants and cleans up WebRTC
+  // DB cleanup is handled by the parent component's handleStopLive
+  const endStream = useCallback(async (processRefundsFlag = true) => {
+    // Notify all participants before cleanup
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'stream-ended',
+      payload: { refunded: processRefundsFlag },
+    });
+
+    // Small delay to ensure broadcast is sent before channel cleanup
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    cleanup();
+    onSessionEnd?.(processRefundsFlag);
+  }, [cleanup, onSessionEnd]);
+  // Toggle video (host only)
+  const toggleVideo = useCallback((enabled: boolean) => {
+    if (localStream.current && isOwner) {
+      localStream.current.getVideoTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  }, [isOwner]);
+
+  // Toggle audio
+  const toggleAudio = useCallback((enabled: boolean) => {
+    if (localStream.current) {
+      localStream.current.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
   }, []);
 
   // Cleanup on unmount

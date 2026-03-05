@@ -190,7 +190,8 @@ export function PrivateGroupCallWindow({
       if (refunded && !isOwner) {
         toast.success('Call ended by host. Unused balance has been refunded.');
       }
-      onClose();
+      // Don't call onClose here - it's called by handleEndStream/handleClose
+      // to prevent double invocation of handleStopLive
     },
   });
 
@@ -515,7 +516,7 @@ export function PrivateGroupCallWindow({
   };
 
   const handleEndStream = async () => {
-    
+    // Use endStream to broadcast stream-ended to participants, then cleanup
     await endStream(true);
     toast.success('Stream ended');
     onClose();
@@ -536,6 +537,7 @@ export function PrivateGroupCallWindow({
 
   const handleClose = async () => {
     if (isOwner && isLive) {
+      // Broadcast stream-ended to participants before cleanup
       await endStream(true);
     } else {
       cleanup();
