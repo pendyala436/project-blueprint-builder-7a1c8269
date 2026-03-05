@@ -97,19 +97,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
     setGoingLive(group.id);
     try {
-      const { error } = await supabase
-        .from('private_groups')
-        .update({
-          is_live: true,
-          current_host_id: currentUserId,
-          current_host_name: userName,
-          participant_count: 1,
-        } as any)
-        .eq('id', group.id);
-
-      if (error) throw error;
-
-      // Add owner as member
+      // Add owner as member first
       await supabase.from('group_memberships').upsert({
         group_id: group.id,
         user_id: currentUserId,
@@ -117,13 +105,11 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         gift_amount_paid: 0,
       }, { onConflict: 'group_id,user_id' });
 
-      toast.success(`You are now live in ${group.name}!`);
-      
-      // Auto-open the call window immediately
-      const updatedGroup = { ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName, participant_count: 1 };
+      // Just open the call window - the hook's goLive() will handle
+      // all DB updates (is_live, current_host_id, signaling, media, etc.)
+      // This prevents the race condition of double DB updates.
+      const updatedGroup = { ...group, participant_count: 1 };
       setActiveGroup(updatedGroup);
-      
-      fetchGroups();
     } catch (error: any) {
       toast.error(error.message || 'Failed to go live');
     } finally {
@@ -133,10 +119,12 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
   const handleStopLive = async (group: PrivateGroup) => {
     try {
+      // Update DB to mark group as not live
       const { error } = await supabase
         .from('private_groups')
         .update({
           is_live: false,
+          stream_id: null,
           current_host_id: null,
           current_host_name: null,
           participant_count: 0,
@@ -147,6 +135,30 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
       // Clean up memberships
       await supabase.from('group_memberships').delete().eq('group_id', group.id);
+
+      // Restore host availability
+      const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
+        supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true })
+          .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
+        supabase.from('video_call_sessions').select('*', { count: 'exact', head: true })
+          .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`).eq('status', 'active'),
+      ]);
+      
+      const totalVideo = videoCount || 0;
+      const totalChats = chatCount || 0;
+      const newStatus = totalVideo > 0 ? 'busy' : totalChats >= 3 ? 'busy' : 'online';
+      
+      await Promise.all([
+        supabase.from('user_status')
+          .update({ status_text: newStatus, last_seen: new Date().toISOString() })
+          .eq('user_id', currentUserId),
+        supabase.from('women_availability')
+          .update({ 
+            is_available: totalChats < 3 && totalVideo === 0,
+            is_available_for_calls: totalVideo === 0,
+          })
+          .eq('user_id', currentUserId),
+      ]);
 
       toast.success(`Stopped live in ${group.name}`);
       setActiveGroup(null);
@@ -306,6 +318,9 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           userName={userName}
           userPhoto={userPhoto}
           onClose={() => {
+            // The hook's endStream/cleanup already handles WebRTC teardown
+            // and broadcasts stream-ended to participants.
+            // We handle DB cleanup and UI state here.
             handleStopLive(activeGroup);
           }}
           isOwner={true}
