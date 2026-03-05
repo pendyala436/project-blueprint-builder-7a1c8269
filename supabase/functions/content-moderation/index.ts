@@ -6,19 +6,71 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Content moderation patterns
+// Content moderation patterns - multi-language sexual content blocking
 const VIOLATION_PATTERNS = {
   sexual_content: [
-    /\b(sex|nude|naked|porn|xxx|nsfw|erotic|intimate|hookup)\b/gi,
-    /\b(send\s*(me\s*)?(nudes?|pics?|photos?))\b/gi,
-    /\b(whatsapp|telegram|signal)\s*number/gi,
+    // English
+    /\b(sex|nude[s]?|naked|porn|xxx|nsfw|erotic|orgasm|masturbat|blowjob|handjob|anal\s*sex|oral\s*sex|threesome|gangbang|fetish|bondage|bdsm|strip\s*tease|hookup|hook\s*up|booty\s*call|cum\s*shot|creampie|milf|dildo|vibrator|slutt?y?|whor[e]?)\b/gi,
+    /\b(send\s*(me\s*)?(nudes?|pics?|photos?|body\s*pics?))\b/gi,
+    /\b(show\s*(me\s*)?(your\s*)?(body|boobs?|tits?|ass|butt|privates?))\b/gi,
+    /\b(let'?s?\s*(have\s*)?sex|wanna\s*(f[*]?ck|bang|smash|screw))\b/gi,
+    /\b(horny|turned\s*on|get\s*laid|make\s*love|sleep\s*with\s*me)\b/gi,
+    /\b(f[*\s]?u[*\s]?c[*\s]?k|d[*\s]?i[*\s]?c[*\s]?k|p[*\s]?u[*\s]?s[*\s]?s[*\s]?y|c[*\s]?o[*\s]?c[*\s]?k)\b/gi,
+    // Hindi/Urdu (Romanized + Devanagari)
+    /\b(chod|chud|lund|gaand|bhosdi|randi|chut|maderchod|behenchod|chudai|jhaant|muth|hilana)\b/gi,
+    /\b(चोद|चूत|लंड|गांड|भोसडी|रंडी|चुदाई|मादरचोद|बहनचोद|मूठ|हिलाना)\b/g,
+    // Tamil
+    /\b(otha|thevdiya|pundai|sunni|oombu|koothi|myiru)\b/gi,
+    /\b(ஓத்தா|தேவடியா|புண்டை|சுன்னி|ஊம்பு|கூதி)\b/g,
+    // Telugu
+    /\b(dengey|modda|gudda|lanja|pooku|sulli)\b/gi,
+    /\b(దెంగేయ్|మొడ్డ|గుద్ద|లంజ|పూకు|సుల్లి)\b/g,
+    // Bengali
+    /\b(choda|baal|magir?|gud|dhon|magi|chudi)\b/gi,
+    /\b(চোদা|বাল|মাগি|গুদ|ধোন|চুদি)\b/g,
+    // Kannada
+    /\b(tunne|tull|sule|bolimaga|ninge)\b/gi,
+    /\b(ತುನ್ನೆ|ತುಳ್ಳ|ಸೂಳೆ|ಬೋಳಿಮಗ)\b/g,
+    // Malayalam
+    /\b(kunna|pooru|thendi|myiru|poorr)\b/gi,
+    /\b(കുണ്ണ|പൂറ്|തെണ്ടി|മൈര്)\b/g,
+    // Marathi
+    /\b(zavadya|jhavla|madharchod|zhavne|randya)\b/gi,
+    // Gujarati
+    /\b(chodu|chodvu|gand|lodo|bhosad)\b/gi,
+    // Punjabi
+    /\b(lann|phuddi|kanjri|kutti)\b/gi,
+    // Arabic
+    /\b(kos|ayre|sharmouta|nikni|zobb|teezi|manyak|sharmoot)\b/gi,
+    /\b(كس|زب|شرموطة|طيزي|منيك)\b/g,
+    // Spanish
+    /\b(puta|verga|coger|chingar|polla|follar|coño)\b/gi,
+    // French
+    /\b(putain|baise[r]?|salope|niquer|enculer|bite)\b/gi,
+    // Portuguese
+    /\b(foder|buceta|caralho|porra|safado)\b/gi,
+    // Chinese
+    /[操肏屌屄婊鸡巴逼骚淫荡]/g,
+    // Korean
+    /\b(씨발|존나|보지|자지|씹|좆)\b/g,
+    // Indonesian
+    /\b(kontol|memek|ngentot|pepek|jembut)\b/gi,
+    // Turkish
+    /\b(sik|amcık|orospu|götveren|sikis|yarrak)\b/gi,
+    // Russian
+    /\b(blyad|suka|huy|pizda|yebat|nahui)\b/gi,
+    /\b(блядь|сука|хуй|пизда|ебать|нахуй)\b/g,
+    // Thai
+    /\b(เย็ด|หี|ควย)\b/g,
+    // Vietnamese
+    /\b(địt|lồn|cặc|đụ|đĩ)\b/gi,
+    // German
+    /\b(ficken|hurensohn|schlampe|schwanz|fotze|wichser)\b/gi,
+    // Obfuscation
+    /\b(s[3e]x|n[u0]d[3e]|p[o0]rn|fck|f[*#@]ck|d[!1]ck|p[*#@]ssy)\b/gi,
   ],
   harassment: [
     /\b(kill|die|hurt|harm|attack|threat)\s*(you|yourself|him|her|them)\b/gi,
-    /\b(stupid|idiot|moron|dumb|retard)\b/gi,
-  ],
-  hate_speech: [
-    /\b(hate|racist|sexist)\b/gi,
   ],
   spam: [
     /\b(buy\s*now|click\s*here|free\s*money|earn\s*\$|bitcoin|crypto\s*investment)\b/gi,
