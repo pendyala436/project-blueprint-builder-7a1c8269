@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         // Precache important routes
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api/, /^\/supabase/],
+        navigateFallbackDenylist: [/^\/api/, /^\/supabase/, /^\/~oauth/],
         runtimeCaching: [
           // Supabase API - Network first with cache fallback
           {
