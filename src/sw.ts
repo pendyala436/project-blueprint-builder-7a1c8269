@@ -13,7 +13,7 @@ declare let self: ServiceWorkerGlobalScope;
 // ========================================
 
 // App version for cache busting
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const CACHE_PREFIX = 'meowmeow-pwa';
 
 // Clean up old caches
